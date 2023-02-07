@@ -190,7 +190,7 @@ private:
         kWait,
         kNoWait,
     };
-    void close(close_option option) const;
+    void close(close_option option);
 
     void set_attributes(const attr_map &attrs);
 
@@ -425,17 +425,17 @@ class metric_registry : public utils::singleton<metric_registry>
 {
 public:
     using entity_map = std::unordered_map<std::string, metric_entity_ptr>;
-    using stale_entity_list = std::unordered_set<std::string>;
+    using collected_entity_list = std::unordered_set<std::string>;
 
-    struct collected_stale_entities_info
+    struct collected_entities_info
     {
-        // The stale entities are collected to be processed by retire_stale_entities(). Following
-        // kinds of stale entities will be collected:
+        // The collected entities that will be processed by retire_stale_entities(). Following
+        // kinds of entities will be collected:
         // * entities that should be retired immediately. The entities that are still within
         // the retention interval will not be collected.
         // * entities that were previously considered stale however have already been reemployed,
         // which means its retirement should be cancelled by retire_stale_entities().
-        stale_entity_list stale_entities;
+        collected_entity_list collected_entities;
 
         // The number of all entities in the registry.
         size_t num_all_entities = 0;
@@ -443,7 +443,7 @@ public:
         // The number of the entities that have been scheduled to be retired.
         size_t num_scheduled_entities = 0;
 
-        collected_stale_entities_info() = default;
+        collected_entities_info() = default;
     };
 
     struct retired_entities_stat
@@ -497,16 +497,16 @@ private:
     // * should be retired immediately, or
     // * previously were scheduled to be retired, now has been reemployed.
     //
-    // The "check" operation just needs read lock which is lightweight. If some entities were
-    // found following above conditions, albeit infrequenly, they would be collected to be
-    // processed at the next phase.
+    // All operations in the first phase are read-only, needing just read lock which is more
+    // lightweight. If some entities were found following above conditions, albeit infrequenly,
+    // they would be collected to be processed at the next phase.
     //
     // Collected entities, if any, will be processed at the second phase "retire":
     // * stale entities will be schedule to be retired;
     // * the expired entities will be retired;
     // * reset the retirement timestamp to 0 for reemployed entities.
-    collected_stale_entities_info collect_stale_entities() const;
-    retired_entities_stat retire_stale_entities(const stale_entity_list &stale_entities);
+    collected_entities_info collect_stale_entities() const;
+    retired_entities_stat retire_stale_entities(const collected_entity_list &collected_entities);
     void process_stale_entities();
 
     mutable utils::rw_lock_nr _lock;

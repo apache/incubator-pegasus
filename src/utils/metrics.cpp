@@ -48,15 +48,14 @@ metric_entity::~metric_entity()
     close(close_option::kWait);
 }
 
-void metric_entity::close(close_option option) const
+void metric_entity::close(close_option option)
 {
     utils::auto_write_lock l(_lock);
 
     // To close all metrics owned by an entity, it's more efficient to firstly issue an asynchronous
     // close request to each metric; then, just wait for all of the close operations to be finished.
     // It's inefficient to wait for each metric to be closed one by one. Therefore, the metric is
-    // not
-    // closed in its destructor.
+    // not closed in its destructor.
     for (auto &m : _metrics) {
         if (m.second->prototype()->type() == metric_type::kPercentile) {
             auto p = down_cast<closeable_metric *>(m.second.get());
@@ -434,9 +433,9 @@ metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_pro
     return entity;
 }
 
-metric_registry::collected_stale_entities_info metric_registry::collect_stale_entities() const
+metric_registry::collected_entities_info metric_registry::collect_stale_entities() const
 {
-    collected_stale_entities_info collected_info;
+    collected_entities_info collected_info;
 
     auto now = dsn_now_ms();
 
@@ -448,7 +447,7 @@ metric_registry::collected_stale_entities_info metric_registry::collect_stale_en
                 // This entity had been scheduled to be retired. However, it was reemployed
                 // after that. It has been in use since then, therefore its scheduled time
                 // for retirement should be reset to 0.
-                collected_info.stale_entities.insert(entity.first);
+                collected_info.collected_entities.insert(entity.first);
             }
             continue;
         }
@@ -460,7 +459,7 @@ metric_registry::collected_stale_entities_info metric_registry::collect_stale_en
             continue;
         }
 
-        collected_info.stale_entities.insert(entity.first);
+        collected_info.collected_entities.insert(entity.first);
     }
 
     collected_info.num_all_entities = _entities.size();
@@ -468,9 +467,9 @@ metric_registry::collected_stale_entities_info metric_registry::collect_stale_en
 }
 
 metric_registry::retired_entities_stat
-metric_registry::retire_stale_entities(const stale_entity_list &stale_entities)
+metric_registry::retire_stale_entities(const collected_entity_list &collected_entities)
 {
-    if (stale_entities.empty()) {
+    if (collected_entities.empty()) {
         // Do not lock for empty list.
         return retired_entities_stat();
     }
@@ -481,8 +480,8 @@ metric_registry::retire_stale_entities(const stale_entity_list &stale_entities)
 
     utils::auto_write_lock l(_lock);
 
-    for (const auto &stale_entity : stale_entities) {
-        auto iter = _entities.find(stale_entity);
+    for (const auto &collected_entity : collected_entities) {
+        auto iter = _entities.find(collected_entity);
         if (dsn_unlikely(iter == _entities.end())) {
             // The entity has been removed from the registry for some unusual reason.
             continue;
@@ -527,12 +526,12 @@ void metric_registry::process_stale_entities()
     LOG_INFO("begin to process stale metric entities");
 
     const auto &collected_info = collect_stale_entities();
-    const auto &retired_stat = retire_stale_entities(collected_info.stale_entities);
+    const auto &retired_stat = retire_stale_entities(collected_info.collected_entities);
 
     LOG_INFO("stat for metric entities: total={}, collected={}, retired={}, scheduled={}, "
              "recently_scheduled={}, reemployed={}",
              collected_info.num_all_entities,
-             collected_info.stale_entities.size(),
+             collected_info.collected_entities.size(),
              retired_stat.num_retired_entities,
              collected_info.num_scheduled_entities,
              retired_stat.num_recently_scheduled_entities,
