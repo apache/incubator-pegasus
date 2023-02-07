@@ -401,6 +401,7 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
         -DUSE_RTTI=ON
+        -DCMAKE_BUILD_TYPE=Release
         -DWITH_JEMALLOC=${USE_JEMALLOC}
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
