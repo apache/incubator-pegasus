@@ -56,6 +56,7 @@ struct replica_base
 private:
     const gpid _gpid;
     const std::string _name;
+    // TODO(wangdan): drop `_app_name` or make it changeable, since a table could be renamed.
     const std::string _app_name;
     const metric_entity_ptr _replica_metric_entity;
 };

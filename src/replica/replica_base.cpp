@@ -34,13 +34,19 @@ metric_entity_ptr instantiate_replica_metric_entity(const gpid &id)
 
     // Do NOT add `replica_base._app_name` as the table name to the attributes of entity, since
     // it is read-only and will never be updated even if the table is renamed.
-    return METRIC_ENTITY_replica.instantiate(entity_id, {{"table_id", std::to_string(id.get_app_id())}, {"partition_id", std::to_string(id.get_partition_index())}});
+    return METRIC_ENTITY_replica.instantiate(
+        entity_id,
+        {{"table_id", std::to_string(id.get_app_id())},
+         {"partition_id", std::to_string(id.get_partition_index())}});
 }
 
 } // anonymous namespace
 
 replica_base::replica_base(gpid id, string_view name, string_view app_name)
-    : _gpid(id), _name(name), _app_name(app_name), _replica_metric_entity(instantiate_replica_metric_entity(id))
+    : _gpid(id),
+      _name(name),
+      _app_name(app_name),
+      _replica_metric_entity(instantiate_replica_metric_entity(id))
 {
 }
 
