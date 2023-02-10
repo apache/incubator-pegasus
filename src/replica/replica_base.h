@@ -27,6 +27,7 @@
 #pragma once
 
 #include "common/gpid.h"
+#include "utils/metrics.h"
 #include "utils/string_view.h"
 
 namespace dsn {
@@ -35,10 +36,7 @@ namespace replication {
 /// Base class for types that are one-instance-per-replica.
 struct replica_base
 {
-    replica_base(gpid id, string_view name, string_view app_name)
-        : _gpid(id), _name(name), _app_name(app_name)
-    {
-    }
+    replica_base(gpid id, string_view name, string_view app_name);
 
     explicit replica_base(replica_base *rhs)
         : replica_base(rhs->get_gpid(), rhs->replica_name(), rhs->_app_name)
@@ -53,10 +51,13 @@ struct replica_base
 
     const char *log_prefix() const { return _name.c_str(); }
 
+    const metric_entity_ptr &replica_metric_entity() const { return _replica_metric_entity; }
+
 private:
     const gpid _gpid;
     const std::string _name;
     const std::string _app_name;
+    const metric_entity_ptr _replica_metric_entity;
 };
 
 } // namespace replication
