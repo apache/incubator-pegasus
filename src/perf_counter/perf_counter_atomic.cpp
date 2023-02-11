@@ -17,7 +17,17 @@
 
 #include "perf_counter/perf_counter_atomic.h"
 
+#include <stdlib.h>
+#include <functional>
+#include <new>
+
+#include "boost/asio/deadline_timer.hpp"
+#include "boost/asio/detail/impl/epoll_reactor.hpp"
+#include "boost/asio/detail/impl/timer_queue_ptime.ipp"
+#include "boost/date_time/posix_time/posix_time_duration.hpp"
+#include "boost/system/error_code.hpp"
 #include "utils/flags.h"
+#include "utils/shared_io_service.h"
 
 namespace dsn {
 
@@ -59,7 +69,7 @@ void perf_counter_number_percentile_atomic::on_timer(
     // as the callback is not in tls context, so the log system calls like LOG_INFO, CHECK
     // will cause a lock
     if (!ec) {
-        calc(boost::make_shared<compute_context>());
+        calc(std::make_shared<compute_context>());
 
         timer->expires_from_now(
             boost::posix_time::seconds(FLAGS_counter_computation_interval_seconds));

@@ -17,24 +17,18 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <atomic>
+#include <memory>
+#include <string>
+
 #include "common//duplication_common.h"
-#include "runtime/pipeline.h"
-#include "replica/replica_base.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
 #include "common/replication_other_types.h"
-#include "common/replication.codes.h"
+#include "duplication_types.h"
+#include "replica/replica_base.h"
+#include "runtime/pipeline.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/errors.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -64,11 +58,11 @@ public:
     }
 };
 
-class load_mutation;
-class ship_mutation;
 class load_from_private_log;
+class load_mutation;
 class replica;
 class replica_stub;
+class ship_mutation;
 
 // Each replica_duplicator is responsible for one duplication.
 // It works in THREAD_POOL_REPLICATION (LPC_DUPLICATE_MUTATIONS),

@@ -26,14 +26,26 @@
 
 #pragma once
 
-#include "utils/autoref_ptr.h"
-#include "utils/error_code.h"
+#include <stdint.h>
+#include <chrono>
+#include <functional>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "common/gpid.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class task_tracker;
+
 namespace replication {
 
 class partition_resolver : public ref_counter

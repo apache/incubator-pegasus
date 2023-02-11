@@ -26,21 +26,27 @@
 
 #pragma once
 
-#include "runtime/task/task.h"
-
-#include "utils/synchronize.h"
-#include "runtime/rpc/message_parser.h"
-#include "rpc_address.h"
-#include "utils/exp_delay.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include <atomic>
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "perf_counter/perf_counter_wrapper.h"
+#include "rpc_address.h"
+#include "runtime/rpc/message_parser.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/join_point.h"
+#include "utils/link.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 
 class rpc_engine;
 class service_node;
-class task_worker_pool;
-class task_queue;
 
 /*!
 @addtogroup tool-api-providers
@@ -191,12 +197,8 @@ protected:
 /*!
   session managements (both client and server types)
 */
-
-namespace security {
-class negotiation;
-}
-
 class rpc_client_matcher;
+
 class rpc_session : public ref_counter
 {
 public:

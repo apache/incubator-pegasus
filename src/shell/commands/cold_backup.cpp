@@ -17,7 +17,27 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <bits/getopt_core.h>
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+#include <getopt.h>
+#include <inttypes.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <cstdint>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "client/replication_ddl_client.h"
+#include "shell/command_executor.h"
 #include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "utils/error_code.h"
+#include "utils/strings.h"
 
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {

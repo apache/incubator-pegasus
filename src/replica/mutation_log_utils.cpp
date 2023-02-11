@@ -24,10 +24,13 @@
  * THE SOFTWARE.
  */
 
-#include "utils/fmt_logging.h"
-#include "utils/fail_point.h"
+#include <fmt/core.h>
+#include <utility>
 
 #include "mutation_log_utils.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {

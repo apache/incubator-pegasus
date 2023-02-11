@@ -17,11 +17,14 @@
 
 #pragma once
 
-#include <string>
+#include <cstddef>
 #include <cstdint>
+// IWYU pragma: no_include <experimental/string_view>
 #include <functional>
-#include "errors.h"
+#include <string>
+
 #include "enum_helper.h"
+#include "errors.h"
 #include "utils.h"
 
 enum class flag_tag

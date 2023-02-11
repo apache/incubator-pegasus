@@ -17,12 +17,13 @@
  * under the License.
  */
 
-#include <unistd.h>
+#include <fmt/core.h>
 #include <pegasus/client.h>
-#include "utils/fmt_logging.h"
-#include "runtime/app_model.h"
+#include <stdio.h>
+#include <unistd.h>
 
 #include "benchmark.h"
+#include "runtime/app_model.h"
 
 int db_bench_tool(const char *config_file)
 {

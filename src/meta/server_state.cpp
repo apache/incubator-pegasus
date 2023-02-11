@@ -34,23 +34,57 @@
  *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
  */
 
-#include <cinttypes>
-#include <sstream>
-#include <string>
-
+// IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <string.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <set>
+#include <sstream> // IWYU pragma: keep
+#include <string>
+#include <thread>
+#include <unordered_map>
 
 #include "app_env_validator.h"
+#include "common/duplication_common.h"
+#include "common/json_helper.h"
 #include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
 #include "dump_file.h"
+#include "meta/meta_data.h"
+#include "meta/meta_service.h"
+#include "meta/meta_state_service.h"
+#include "meta/partition_guardian.h"
+#include "meta_admin_types.h"
 #include "meta_bulk_load_service.h"
+#include "metadata_types.h"
+#include "perf_counter/perf_counter.h"
+#include "replica_admin_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
+#include "runtime/task/task_spec.h"
 #include "server_load_balancer.h"
 #include "server_state.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 #include "utils/command_manager.h"
-#include "utils/factory_store.h"
+#include "utils/config_api.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/singleton.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 

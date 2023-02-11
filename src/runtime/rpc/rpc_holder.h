@@ -17,27 +17,32 @@
 
 #pragma once
 
-#include "runtime/api_layer1.h"
-#include "runtime/api_task.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "rpc_address.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_tracker.h"
-#include "utils/smart_pointers.h"
-#include "utils/chrono_literals.h"
+#include <stdint.h>
+#include <algorithm>
+#include <chrono>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "client/partition_resolver.h"
+#include "dsn.layer2_types.h"
+#include "rpc_address.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/function_traits.h"
+#include "utils/ports.h"
 
 namespace dsn {
+class task_tracker;
 
 using literals::chrono_literals::operator"" _ms;
 
@@ -54,7 +59,7 @@ using literals::chrono_literals::operator"" _ms;
 //
 //   void write() {
 //       ....
-//       auto request = make_unique<write_request>();
+//       auto request = std::make_unique<write_request>();
 //       request->data = "abc";
 //       request->timestamp = 12;
 //       write_rpc rpc(std::move(request), RPC_WRITE);
@@ -239,8 +244,8 @@ public:
     {
         CHECK(_mail_box == nullptr && _forward_mail_box == nullptr,
               "remember to call clear_mocking_env after testing");
-        _mail_box = make_unique<mail_box_t>();
-        _forward_mail_box = make_unique<mail_box_t>();
+        _mail_box = std::make_unique<mail_box_t>();
+        _forward_mail_box = std::make_unique<mail_box_t>();
     }
 
     // Only use this function when testing.
@@ -272,7 +277,7 @@ private:
     struct internal
     {
         explicit internal(message_ex *req)
-            : dsn_request(req), thrift_request(make_unique<TRequest>()), auto_reply(false)
+            : dsn_request(req), thrift_request(std::make_unique<TRequest>()), auto_reply(false)
         {
             // we must hold one reference for the request, or rdsn will delete it after
             // the rpc call ends.

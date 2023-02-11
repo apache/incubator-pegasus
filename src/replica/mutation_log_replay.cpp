@@ -15,11 +15,30 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <stddef.h>
+#include <stdint.h>
+#include <functional>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "consensus_types.h"
 #include "mutation_log.h"
 #include "mutation_log_utils.h"
-#include "utils/fail_point.h"
+#include "replica/log_block.h"
+#include "replica/log_file.h"
+#include "replica/mutation.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_reader.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -75,7 +94,7 @@ namespace replication {
         return error_s::make(err, "failed to read log block");
     }
 
-    reader = dsn::make_unique<binary_reader>(bb);
+    reader = std::make_unique<binary_reader>(bb);
     end_offset += sizeof(log_block_header);
 
     // The first block is log_file_header.

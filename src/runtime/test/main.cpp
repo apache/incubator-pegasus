@@ -33,12 +33,16 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <chrono>
 #include <iostream>
-#include "gtest/gtest.h"
+#include <thread>
 
+#include "gtest/gtest.h"
+#include "runtime/app_model.h"
+#include "runtime/service_app.h"
 #include "test_utils.h"
-#include "utils/strings.h"
 #include "utils/flags.h"
+#include "utils/strings.h"
 
 DSN_DEFINE_string(core, tool, "simulator", "");
 

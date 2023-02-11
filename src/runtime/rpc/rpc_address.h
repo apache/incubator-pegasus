@@ -26,6 +26,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <sstream>
 #include <string>
 

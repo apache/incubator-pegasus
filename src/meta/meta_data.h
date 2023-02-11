@@ -34,30 +34,38 @@
  */
 #pragma once
 
+#include <stdint.h>
+#include <algorithm>
+#include <atomic>
+#include <functional>
+#include <map>
 #include <memory>
 #include <set>
-#include <deque>
-#include <vector>
-#include <map>
+#include <string>
 #include <unordered_map>
-#include <functional>
-#include "utils/utils.h"
-#include "utils/extensible_object.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
-#include "common/replication_other_types.h"
-#include "common/json_helper.h"
-#include "utils/zlocks.h"
-#include "block_service/block_service.h"
+#include <utility>
+#include <vector>
 
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "meta/duplication/duplication_info.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/enum_helper.h"
+#include "utils/error_code.h"
+#include "utils/extensible_object.h"
 
 namespace dsn {
+class message_ex;
+
 namespace replication {
 
 enum class config_status
@@ -307,6 +315,7 @@ struct split_state
 };
 
 class app_state;
+
 class app_state_helper
 {
 public:

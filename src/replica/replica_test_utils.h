@@ -27,9 +27,10 @@
 /// This file contains utilities for upper level applications (pegasus) which
 /// needs the hidden abstraction of rDSN in order to make unit test.
 
-#include "common/serialization_helper/dsn.layer2_types.h"
-
 namespace dsn {
+class app_info;
+class gpid;
+
 namespace replication {
 
 class replica;

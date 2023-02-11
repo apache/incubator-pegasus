@@ -17,11 +17,16 @@
 
 #include "app_env_validator.h"
 
-#include "common/replication_common.h"
-#include <fmt/format.h>
-#include "utils/string_conv.h"
-#include "utils/fmt_logging.h"
+#include <fmt/core.h>
+#include <stdint.h>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "common/replica_envs.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 
 namespace dsn {

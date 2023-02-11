@@ -16,11 +16,14 @@
 // under the License.
 
 #include "sasl_wrapper.h"
-#include "sasl_server_wrapper.h"
-#include "sasl_client_wrapper.h"
 
 #include <sasl/sasl.h>
+
+#include "sasl_client_wrapper.h"
+#include "sasl_server_wrapper.h"
+#include "utils/error_code.h"
 #include "utils/fail_point.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace security {
@@ -88,9 +91,9 @@ error_s sasl_wrapper::wrap_error(int sasl_err)
 std::unique_ptr<sasl_wrapper> create_sasl_wrapper(bool is_client)
 {
     if (is_client) {
-        return make_unique<sasl_client_wrapper>();
+        return std::make_unique<sasl_client_wrapper>();
     } else {
-        return make_unique<sasl_server_wrapper>();
+        return std::make_unique<sasl_server_wrapper>();
     }
 }
 } // namespace security

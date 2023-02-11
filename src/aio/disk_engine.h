@@ -26,13 +26,17 @@
 
 #pragma once
 
-#include "aio_provider.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <memory>
 
-#include "runtime/tool_api.h"
-#include "utils/synchronize.h"
+#include "aio/aio_task.h"
+#include "aio_provider.h"
+#include "utils/singleton.h"
 #include "utils/work_queue.h"
 
 namespace dsn {
+class error_code;
 
 class disk_write_queue : public work_queue<aio_task>
 {

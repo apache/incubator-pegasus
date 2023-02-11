@@ -18,6 +18,12 @@
  */
 
 #include "value_schema_manager.h"
+
+#include <iterator>
+#include <utility>
+
+#include "utils/endians.h"
+#include "utils/fmt_logging.h"
 #include "value_schema_v0.h"
 #include "value_schema_v1.h"
 #include "value_schema_v2.h"
@@ -29,9 +35,9 @@ value_schema_manager::value_schema_manager()
      * If someone wants to add a new data version, he only need to implement the new value schema,
      * and register it here.
      */
-    register_schema(dsn::make_unique<value_schema_v0>());
-    register_schema(dsn::make_unique<value_schema_v1>());
-    register_schema(dsn::make_unique<value_schema_v2>());
+    register_schema(std::make_unique<value_schema_v0>());
+    register_schema(std::make_unique<value_schema_v1>());
+    register_schema(std::make_unique<value_schema_v2>());
 }
 
 void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)

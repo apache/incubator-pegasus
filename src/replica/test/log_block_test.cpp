@@ -15,9 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stddef.h>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "consensus_types.h"
+#include "replica/log_block.h"
+#include "replica/mutation.h"
 #include "replica_test_base.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 
 namespace dsn {
 namespace replication {

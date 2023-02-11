@@ -26,16 +26,35 @@
 
 #pragma once
 
-#include "common/replication_common.h"
+#include <stdint.h>
+#include <atomic>
+#include <map>
+#include <string>
+#include <vector>
+
 #include "failure_detector/failure_detector.h"
-#include "meta_options.h"
-#include "utils/distributed_lock_service.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
 #include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+namespace dist {
+class distributed_lock_service;
+} // namespace dist
+namespace fd {
+class beacon_ack;
+class beacon_msg;
+} // namespace fd
+template <typename TResponse>
+class rpc_replier;
+
 namespace replication {
 
+class fd_suboptions;
 class meta_service;
+
 namespace test {
 class test_checker;
 }

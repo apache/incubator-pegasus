@@ -15,12 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "http/http_server.h"
+#include <functional>
+#include <string>
 
-#include "replica_stub.h"
+#include "http/http_server.h"
+#include "metadata_types.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
+class replica_stub;
 
 class replica_http_service : public http_server_base
 {

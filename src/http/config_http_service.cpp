@@ -15,9 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <string>
+#include <unordered_map>
+#include <utility>
+
 #include "http_server.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
-#include "utils/output_utils.h"
 
 namespace dsn {
 void list_all_configs(const http_request &req, http_response &resp)

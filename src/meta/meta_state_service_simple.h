@@ -33,12 +33,34 @@
  *     2015-11-11, Tianyi WANG, first version done
  */
 
+#include <stddef.h>
+#include <stdint.h>
+#include <functional>
+#include <memory>
 #include <queue>
-#include "utils/zlocks.h"
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "meta/meta_state_service.h"
-#include "common/replication_common.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/future_types.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class binary_reader;
+class disk_file;
+
 namespace dist {
 DEFINE_TASK_CODE_AIO(LPC_META_STATE_SERVICE_SIMPLE_INTERNAL,
                      TASK_PRIORITY_HIGH,
@@ -195,6 +217,7 @@ private:
 
     template <operation_type op, typename... Args>
     struct log_struct;
+
     template <operation_type op, typename Head, typename... Tail>
     struct log_struct<op, Head, Tail...>
     {

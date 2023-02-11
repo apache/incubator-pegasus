@@ -18,11 +18,11 @@
  */
 
 #include <cstdio>
-#include <cstring>
 
 #include "data_verifier.h"
-#include "process_kill_testor.h"
 #include "partition_kill_testor.h"
+#include "process_kill_testor.h"
+#include "test/kill_test/kill_testor.h"
 #include "utils/strings.h"
 
 int main(int argc, const char **argv)

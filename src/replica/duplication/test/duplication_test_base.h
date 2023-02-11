@@ -35,9 +35,9 @@ public:
     duplication_test_base()
     {
         mutation_duplicator::creator = [](replica_base *r, dsn::string_view, dsn::string_view) {
-            return make_unique<mock_mutation_duplicator>(r);
+            return std::make_unique<mock_mutation_duplicator>(r);
         };
-        stub->_duplication_sync_timer = make_unique<duplication_sync_timer>(stub.get());
+        stub->_duplication_sync_timer = std::make_unique<duplication_sync_timer>(stub.get());
     }
 
     void add_dup(mock_replica *r, replica_duplicator_u_ptr dup)
@@ -63,7 +63,7 @@ public:
         dup_ent.status = duplication_status::DS_PAUSE;
         dup_ent.progress[_replica->get_gpid().get_partition_index()] = confirmed;
 
-        auto duplicator = make_unique<replica_duplicator>(dup_ent, _replica.get());
+        auto duplicator = std::make_unique<replica_duplicator>(dup_ent, _replica.get());
         duplicator->_start_point_decree = start;
         return duplicator;
     }

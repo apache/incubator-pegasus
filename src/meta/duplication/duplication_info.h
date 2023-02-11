@@ -17,28 +17,31 @@
 
 #pragma once
 
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
-#include "common/replication_other_types.h"
+#include <fmt/core.h>
+#include <algorithm>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "common//duplication_common.h"
 #include "common/json_helper.h"
-#include "utils/zlocks.h"
+#include "common/replication_other_types.h"
+#include "duplication_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-
-#include <utility>
-#include <fmt/format.h>
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
 
 class app_state;
-
 class duplication_info;
+
 using duplication_info_s_ptr = std::shared_ptr<duplication_info>;
 
 /// This class is thread-safe.

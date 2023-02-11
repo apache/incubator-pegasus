@@ -15,19 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "client/replication_ddl_client.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/filesystem.h"
-#include <fmt/format.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "backup_types.h"
+#include "base/pegasus_const.h"
+#include "client/replication_ddl_client.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "include/pegasus/client.h"
 #include "include/pegasus/error.h"
-
-#include "base/pegasus_const.h"
-#include "test/function_test/utils/global_env.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/utils.h"
 
 using namespace dsn;
 using namespace dsn::replication;

@@ -18,14 +18,34 @@
  */
 
 #include "server/pegasus_mutation_duplicator.h"
-#include "base/pegasus_rpc_types.h"
-#include "base/value_schema_manager.h"
-#include "pegasus_server_test_base.h"
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "runtime/message_utils.h"
+#include <pegasus/error.h>
+#include <sys/types.h>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "backup_types.h"
+#include "base/pegasus_rpc_types.h"
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "duplication_internal_types.h"
+#include "pegasus_key_schema.h"
+#include "pegasus_server_test_base.h"
 #include "replica/replica_base.h"
-#include <condition_variable>
+#include "rrdb/rrdb.code.definition.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/message_utils.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "server/pegasus_write_service.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 
 namespace pegasus {
 namespace server {

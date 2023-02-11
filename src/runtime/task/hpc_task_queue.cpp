@@ -25,9 +25,16 @@
  */
 
 #include "hpc_task_queue.h"
-#include <boost/function_output_iterator.hpp>
+
+#include "boost/iterator/function_output_iterator.hpp"
+#include "concurrentqueue/concurrentqueue.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/task_spec.h"
 
 namespace dsn {
+class task_worker_pool;
+
 namespace tools {
 
 hpc_concurrent_task_queue::hpc_concurrent_task_queue(task_worker_pool *pool,

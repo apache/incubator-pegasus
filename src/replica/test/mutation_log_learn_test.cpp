@@ -24,17 +24,36 @@
  * THE SOFTWARE.
  */
 
-#include <chrono>
-#include <condition_variable>
-
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "replica/mutation.h"
 #include "replica/mutation_log.h"
+#include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 #include "utils/filesystem.h"
 #include "utils/strings.h"
 
 namespace dsn {
+class message_ex;
+
 namespace replication {
 
 class mutation_log_test : public replica_test_base

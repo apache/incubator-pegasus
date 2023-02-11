@@ -25,11 +25,29 @@
 */
 #pragma once
 
-#include "utils/zlocks.h"
+#include <stdint.h>
+#include <map>
+#include <string>
+
+#include "metadata_types.h"
+#include "replica/replication_app_base.h"
+#include "replica/storage/simple_kv/simple_kv.code.definition.h"
 #include "replica/storage/simple_kv/simple_kv.server.h"
+#include "utils/error_code.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class blob;
+template <typename TResponse>
+class rpc_replier;
+
 namespace replication {
+class learn_state;
+class replica;
+namespace application {
+class kv_pair;
+} // namespace application
+
 namespace test {
 
 using namespace dsn::replication::application;

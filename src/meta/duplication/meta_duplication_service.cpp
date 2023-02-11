@@ -15,16 +15,42 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common//duplication_common.h"
-#include "utils/fmt_logging.h"
-#include "common/common.h"
-#include "utils/chrono_literals.h"
-#include "utils/string_conv.h"
-#include "runtime/rpc/group_address.h"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <algorithm>
+#include <cstdint>
+#include <iosfwd>
+#include <queue>
+#include <type_traits>
 
+#include "common//duplication_common.h"
+#include "common/common.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "duplication_types.h"
 #include "meta/meta_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta_admin_types.h"
 #include "meta_duplication_service.h"
+#include "metadata_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/string_conv.h"
+#include "utils/string_view.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {

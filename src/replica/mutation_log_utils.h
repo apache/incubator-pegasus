@@ -26,11 +26,14 @@
 
 #pragma once
 
-#include "utils/errors.h"
-#include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
+#include <map>
+#include <string>
+#include <vector>
 
-#include "mutation_log.h"
+#include "replica/log_file.h"
+#include "utils/autoref_ptr.h"
+#include "utils/errors.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {

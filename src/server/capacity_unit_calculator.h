@@ -19,12 +19,22 @@
 
 #pragma once
 
-#include "replica/replica_base.h"
-#include "runtime/rpc/rpc_message.h"
+#include <stdint.h>
+#include <memory>
+#include <vector>
+
 #include "perf_counter/perf_counter_wrapper.h"
-#include <rrdb/rrdb_types.h>
+#include "replica/replica_base.h"
 
 namespace dsn {
+class blob;
+class message_ex;
+namespace apps {
+class full_data;
+class key_value;
+class mutate;
+} // namespace apps
+
 namespace utils {
 class token_bucket_throttling_controller;
 } // namespace utils

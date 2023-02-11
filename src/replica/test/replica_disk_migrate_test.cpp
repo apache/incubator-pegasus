@@ -17,11 +17,37 @@
  * under the License.
  */
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fail_point.h"
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "replica/test/replica_disk_test_base.h"
+#include "common/fs_manager.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "metadata_types.h"
+#include "replica/replica.h"
 #include "replica/replica_disk_migrator.h"
+#include "replica/replica_stub.h"
+#include "replica/replication_app_base.h"
+#include "replica/test/mock_utils.h"
+#include "replica/test/replica_disk_test_base.h"
+#include "replica_admin_types.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {
@@ -118,7 +144,7 @@ private:
     void generate_fake_rpc()
     {
         // create RPC_REPLICA_DISK_MIGRATE fake request
-        auto migrate_request = dsn::make_unique<replica_disk_migrate_request>();
+        auto migrate_request = std::make_unique<replica_disk_migrate_request>();
         fake_migrate_rpc = disk_migrate_rpc(std::move(migrate_request), RPC_REPLICA_DISK_MIGRATE);
     }
 };

@@ -33,14 +33,23 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "runtime/tool_api.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdlib.h>
+#include <chrono>
+#include <functional>
+#include <memory>
 #include <thread>
-#include <cmath>
 #include <vector>
 
+#include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_atomic.h"
+#include "utils/autoref_ptr.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/shared_io_service.h"
 
 using namespace dsn;
 using namespace dsn::tools;

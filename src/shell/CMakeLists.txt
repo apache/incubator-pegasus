@@ -45,6 +45,9 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
+    PocoCrypto
+    PocoUtil
+    PocoXML
     pegasus_geo_lib
     RocksDB::rocksdb
     s2

@@ -17,20 +17,38 @@
  * under the License.
  */
 
-#include "geo/lib/geo_client.h"
-#include <gtest/gtest.h>
-#include <s2/s2cap.h>
-#include <s2/s2testing.h>
-#include <s2/s2earth.h>
-#include <s2/s2cell.h>
-#include "utils/strings.h"
-#include "utils/string_conv.h"
 #include <base/pegasus_key_schema.h>
-#include "utils/fmt_logging.h"
-#include "common/replication_other_types.h"
-#include "client/replication_ddl_client.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <math.h>
+#include <pegasus/error.h>
+#include <s2/s1angle.h>
+#include <s2/s2cap.h>
+#include <s2/s2cell.h>
+#include <s2/s2cell_id.h>
+#include <s2/s2earth.h>
+#include <s2/s2latlng.h>
+#include <s2/s2testing.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
+#include <list>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "base/pegasus_const.h"
+#include "client/replication_ddl_client.h"
+#include "common/replication_other_types.h"
+#include "geo/lib/geo_client.h"
+#include "pegasus/client.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace pegasus {
 namespace geo {

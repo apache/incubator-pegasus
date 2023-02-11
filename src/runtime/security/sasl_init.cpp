@@ -16,15 +16,16 @@
 // under the License.
 
 #include "sasl_init.h"
-#include "kinit_context.h"
 
 #include <sasl/sasl.h>
 #include <sasl/saslplug.h>
-#include <functional>
+#include <string>
 
+#include "kinit_context.h"
 #include "utils/api_utilities.h"
-#include "utils/fmt_logging.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
 
 namespace dsn {

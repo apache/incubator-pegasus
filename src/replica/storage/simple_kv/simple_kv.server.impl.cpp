@@ -34,12 +34,30 @@
  */
 
 #include "simple_kv.server.impl.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
+#include <atomic>
 #include <fstream>
-#include <sstream>
+#include <utility>
+#include <vector>
+
+#include "consensus_types.h"
+#include "replica/storage/simple_kv/simple_kv.server.h"
+#include "runtime/serverlet.h"
+#include "simple_kv_types.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
+class blob;
+
 namespace replication {
+class replica;
+
 namespace application {
 
 simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r), _lock(true)

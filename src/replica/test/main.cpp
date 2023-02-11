@@ -15,15 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <cmath>
-#include <fstream>
-#include <iostream>
-#include <thread>
-
 #include <gtest/gtest.h>
-#include "replica/replication_service_app.h"
+#include <chrono>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "replication_service_test_app.h"
+#include "runtime/app_model.h"
+#include "runtime/service_app.h"
+#include "utils/error_code.h"
 
 int gtest_flags = 0;
 int gtest_ret = 0;

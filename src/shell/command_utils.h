@@ -19,12 +19,14 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <stdio.h>
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 
 #include "shell/argh.h"
-#include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
 namespace dsn {

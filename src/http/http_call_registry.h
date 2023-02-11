@@ -20,6 +20,7 @@
 #include "utils/fmt_logging.h"
 #include "http_server.h"
 #include "utils/errors.h"
+#include "utils/singleton.h"
 
 namespace dsn {
 

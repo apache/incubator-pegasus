@@ -17,7 +17,37 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <bits/getopt_core.h>
+#include <getopt.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "client/replication_ddl_client.h"
+#include "common/json_helper.h"
+#include "common/replication_enums.h"
+#include "dsn.layer2_types.h"
+#include "meta_admin_types.h"
+#include "perf_counter/perf_counter_utils.h"
+#include "runtime/rpc/rpc_address.h"
+#include "shell/command_executor.h"
+#include "shell/command_helper.h"
+#include "shell/command_utils.h"
 #include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/output_utils.h"
+#include "utils/strings.h"
 #include "utils/utils.h"
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)

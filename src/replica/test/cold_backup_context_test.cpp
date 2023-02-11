@@ -15,9 +15,34 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "backup_block_service_mock.h"
+#include "backup_types.h"
+#include "block_service/block_service.h"
+#include "block_service/test/block_service_mock.h"
+#include "common/backup_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "metadata_types.h"
 #include "replica/backup/cold_backup_context.h"
+#include "replica/replica.h"
+#include "replica/test/replication_service_test_app.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/filesystem.h"
 
 ref_ptr<block_file_mock> current_chkpt_file = new block_file_mock("", 0, "");
 ref_ptr<block_file_mock> backup_metadata_file = new block_file_mock("", 0, "");

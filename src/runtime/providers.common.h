@@ -26,8 +26,6 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
-
 namespace dsn {
 namespace tools {
 extern void register_common_providers();

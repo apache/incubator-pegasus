@@ -26,23 +26,40 @@
 
 #pragma once
 
-#include <vector>
+#include <stddef.h>
+#include <stdint.h>
+#include <atomic>
+#include <chrono>
 #include <deque>
-#include <iostream>
-#include "runtime/task/task_tracker.h"
-#include "utils/zlocks.h"
-#include "perf_counter/perf_counter_wrapper.h"
-#include "nfs/nfs_node.h"
-#include "utils/defer.h"
-#include "utils/TokenBucket.h"
-#include "utils/flags.h"
-#include "runtime/task/async_calls.h"
-#include "utils/token_buckets.h"
+#include <list>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "nfs_types.h"
+#include "aio/aio_task.h"
+#include "aio/file_io.h"
 #include "nfs_code_definition.h"
+#include "nfs_types.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/TokenBucket.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class command_deregister;
+class disk_file;
+namespace utils {
+class token_buckets;
+} // namespace utils
+struct remote_copy_request;
+
 namespace service {
 
 using TokenBucket = folly::BasicTokenBucket<std::chrono::steady_clock>;
@@ -74,10 +91,10 @@ task_ptr async_nfs_copy(const copy_request &request,
 class nfs_client_impl
 {
 public:
-    struct user_request;
-    struct file_context;
     struct copy_request_ex;
+    struct file_context;
     struct file_wrapper;
+    struct user_request;
 
     typedef ::dsn::ref_ptr<user_request> user_request_ptr;
     typedef ::dsn::ref_ptr<file_context> file_context_ptr;

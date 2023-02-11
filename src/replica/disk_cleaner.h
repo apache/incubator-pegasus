@@ -18,9 +18,11 @@
  */
 #pragma once
 
+#include <string>
 #include <vector>
+
 #include "utils/errors.h"
-#include "perf_counter/perf_counter_wrapper.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace replication {

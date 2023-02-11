@@ -19,13 +19,29 @@
 
 #pragma once
 
-#include <queue>
+#include <s2/third_party/absl/base/port.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <atomic>
 #include <deque>
 #include <list>
-#include "proxy_layer.h"
+#include <memory>
+#include <queue>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "geo/lib/geo_client.h"
+#include "proxy_layer.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "utils/blob.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class binary_writer;
+
 namespace apps {
 class rrdb_client;
 }

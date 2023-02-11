@@ -16,14 +16,25 @@
 // under the License.
 
 #include "remote_cmd/remote_command.h"
-#include "utils/command_manager.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/api_layer1.h"
-#include "utils/smart_pointers.h"
+
+#include <algorithm> // IWYU pragma: keep
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 #include "command_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/task_code.h"
+#include "utils/command_manager.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
+class message_ex;
+
 namespace dist {
 namespace cmd {
 
@@ -37,7 +48,7 @@ task_ptr async_call_remote(rpc_address remote,
                            std::function<void(error_code, const std::string &)> callback,
                            std::chrono::milliseconds timeout)
 {
-    std::unique_ptr<command> request = make_unique<command>();
+    std::unique_ptr<command> request = std::make_unique<command>();
     request->cmd = cmd;
     request->arguments = arguments;
     remote_command_rpc rpc(std::move(request), RPC_CLI_CLI_CALL, timeout);

@@ -24,30 +24,25 @@
  * THE SOFTWARE.
  */
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <queue>
+#include <string>
+#include <vector>
+
 #include "meta/meta_state_service.h"
-#include <fmt/format.h>
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
-
 #include "meta/meta_state_service_utils.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/factory_store.h"
 
-using namespace dsn;
-using namespace dsn::replication;
-
+namespace dsn {
 struct meta_state_service_utils_test : ::testing::Test
 {
     void SetUp() override
@@ -58,7 +53,7 @@ struct meta_state_service_utils_test : ::testing::Test
         error_code err = _svc->initialize({});
         ASSERT_EQ(err, ERR_OK);
 
-        _storage = new mss::meta_storage(_svc, &_tracker);
+        _storage = new replication::mss::meta_storage(_svc, &_tracker);
     }
 
     void TearDown() override
@@ -69,7 +64,7 @@ struct meta_state_service_utils_test : ::testing::Test
 
 protected:
     dist::meta_state_service *_svc;
-    mss::meta_storage *_storage;
+    replication::mss::meta_storage *_storage;
     task_tracker _tracker;
 };
 
@@ -194,3 +189,4 @@ TEST_F(meta_state_service_utils_test, get_children)
     });
     _tracker.wait_outstanding_tasks();
 }
+} // namespace dsn

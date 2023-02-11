@@ -19,8 +19,7 @@
 
 #include "config.h"
 
-#include "utils/config_api.h"
-#include "utils/flags.h"
+#include <rocksdb/env.h>
 
 namespace pegasus {
 namespace test {

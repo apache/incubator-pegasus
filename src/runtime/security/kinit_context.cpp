@@ -16,23 +16,35 @@
 // under the License.
 
 #include "kinit_context.h"
-#include "utils/shared_io_service.h"
 
 #include <boost/asio/deadline_timer.hpp>
-#include <fmt/format.h>
 #include <krb5/krb5.h>
+#include <stdint.h>
+#include <memory>
+#include <mutex>
+#include <new>
 
+#include "boost/asio/basic_deadline_timer.hpp"
+#include "boost/asio/detail/impl/epoll_reactor.hpp"
+#include "boost/asio/detail/impl/timer_queue_ptime.ipp"
+#include "boost/date_time/posix_time/posix_time_duration.hpp"
+#include "boost/system/error_code.hpp"
+#include "fmt/core.h"
 #include "utils/defer.h"
-#include "utils/time_utils.h"
-#include "utils/fmt_logging.h"
-#include "utils/flags.h"
+#include "utils/error_code.h"
 #include "utils/filesystem.h"
-#include "utils/smart_pointers.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
+#include "utils/shared_io_service.h"
+#include "utils/singleton.h"
 #include "utils/strings.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace security {
+class kinit_context;
+
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
 

@@ -17,11 +17,17 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+#include <memory>
+
+#include "common/replication_other_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
-
 #include "replica/mutation.h"
 #include "replica/prepare_list.h"
+#include "replica/replica_base.h"
+#include "utils/errors.h"
 
 namespace dsn {
 namespace replication {

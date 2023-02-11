@@ -24,11 +24,21 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stdint.h>
+#include <string.h>
 #include <algorithm>
 #include <fstream>
-#include <gtest/gtest.h>
+#include <limits>
+#include <list>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "utils/configuration.h"
+#include "utils/string_view.h"
 
 using namespace ::dsn;
 

@@ -26,8 +26,15 @@
 
 #include "prepare_list.h"
 
-#include "utils/latency_tracer.h"
+#include <memory>
+#include <utility>
+
+#include "common/replication_enums.h"
+#include "consensus_types.h"
+#include "replica/mutation_cache.h"
+#include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
+#include "utils/latency_tracer.h"
 
 namespace dsn {
 namespace replication {

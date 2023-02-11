@@ -24,23 +24,17 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/utils.h"
-#include "utils/filesystem.h"
+#include <stdint.h>
+#include <time.h>
 #include <fstream>
+#include <string>
+#include <vector>
+
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
 
 static void file_utils_test_setup()
 {

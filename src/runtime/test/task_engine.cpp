@@ -34,10 +34,22 @@
  */
 
 #include "runtime/task/task_engine.h"
-#include "test_utils.h"
-#include "runtime/tool_api.h"
+
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <sstream>
+#include <stdio.h>
+
+#include "runtime/global_config.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "test_utils.h"
+#include "utils/enum_helper.h"
+#include "utils/threadpool_code.h"
+
+namespace dsn {
+class task_queue;
+} // namespace dsn
 
 using namespace ::dsn;
 

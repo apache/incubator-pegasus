@@ -43,6 +43,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <iosfwd>
+#include <iterator>
 #include <stdexcept>
 #include <string>
 

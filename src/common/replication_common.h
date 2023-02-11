@@ -26,25 +26,24 @@
 
 #pragma once
 
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
+#include <stdint.h>
 #include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/task.h"
 
 namespace dsn {
 namespace replication {
+class configuration_update_app_env_request;
+class configuration_update_app_env_response;
+class query_app_info_request;
+class query_app_info_response;
+class query_replica_info_request;
+class query_replica_info_response;
 
 typedef std::unordered_map<::dsn::rpc_address, partition_status::type> node_statuses;
 typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;

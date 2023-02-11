@@ -17,8 +17,14 @@
  * under the License.
  */
 
-#include "../pegasus_utils.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <list>
+#include <string>
+
+#include "../pegasus_utils.h"
 
 namespace pegasus {
 namespace utils {

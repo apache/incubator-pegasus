@@ -15,15 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "backup_types.h"
-#include "bulk_load_types.h"
-#include "consensus_types.h"
-#include "duplication_types.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <iosfwd>
+#include <memory>
+#include <set>
+#include <string>
+
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
 #include "replica_admin_types.h"
+#include "runtime/rpc/rpc_address.h"
 #include "shell/argh.h"
+#include "shell/command_executor.h"
+#include "shell/command_utils.h"
 #include "shell/commands.h"
+#include "utils/error_code.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,

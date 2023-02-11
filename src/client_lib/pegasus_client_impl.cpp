@@ -17,22 +17,37 @@
  * under the License.
  */
 
-#include <cctype>
+#include <pegasus/error.h>
 #include <algorithm>
+#include <chrono>
+#include <cstdint>
 #include <string>
-#include <stdint.h>
+#include <type_traits>
+#include <utility>
 
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/group_address.h"
+#include "base/pegasus_const.h"
 #include "common/replication_other_types.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
-#include <rrdb/rrdb.code.definition.h>
-#include <pegasus/error.h>
+#include "pegasus/client.h"
 #include "pegasus_client_impl.h"
-#include "base/pegasus_const.h"
+#include "pegasus_key_schema.h"
+#include "pegasus_utils.h"
+#include "rrdb/rrdb.client.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+#include "utils/synchronize.h"
+#include "utils/threadpool_code.h"
+#include "utils/utils.h"
+
+namespace dsn {
+class message_ex;
+class task_tracker;
+} // namespace dsn
 
 using namespace ::dsn;
 
@@ -1283,6 +1298,7 @@ const char *pegasus_client_impl::get_error_string(int error_code) const
     _client_error_to_string.clear();
 #define PEGASUS_ERR_CODE(x, y, z) _client_error_to_string[y] = z
 #include <pegasus/error_def.h>
+
 #undef PEGASUS_ERR_CODE
 
     _server_error_to_client.clear();

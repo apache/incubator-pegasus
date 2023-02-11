@@ -27,6 +27,7 @@
 #pragma once
 
 #include <memory>
+#include <cstring>
 
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TProtocol.h>

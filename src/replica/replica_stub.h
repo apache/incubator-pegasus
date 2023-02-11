@@ -32,20 +32,54 @@
 //   replica_stub(singleton) --> replica --> replication_app_base
 //
 
+#include <gtest/gtest_prod.h>
+#include <stdint.h>
+#include <atomic>
 #include <functional>
+#include <map>
+#include <memory>
+#include <string>
 #include <tuple>
-#include "perf_counter/perf_counter_wrapper.h"
-#include "failure_detector/failure_detector_multimaster.h"
-#include "nfs/nfs_node.h"
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include "common/replication_common.h"
+#include "block_service/block_service_manager.h"
+#include "bulk_load_types.h"
 #include "common/bulk_load_common.h"
 #include "common/fs_manager.h"
-#include "block_service/block_service_manager.h"
+#include "common/gpid.h"
+#include "common/replication_common.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
+#include "failure_detector/failure_detector_multimaster.h"
+#include "metadata_types.h"
+#include "partition_split_types.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
+#include "replica/mutation_log.h"
+#include "replica_admin_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/serverlet.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class command_deregister;
+class message_ex;
+class nfs_node;
+
 namespace replication {
+class configuration_query_by_node_response;
+class configuration_update_request;
+class potential_secondary_context;
 
 DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
 
@@ -65,7 +99,6 @@ typedef rpc_holder<group_bulk_load_request, group_bulk_load_response> group_bulk
 typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
 typedef rpc_holder<add_new_disk_request, add_new_disk_response> add_new_disk_rpc;
 
-class mutation_log;
 namespace test {
 class test_checker;
 }
@@ -78,12 +111,11 @@ typedef std::function<void(
     replica_state_subscriber;
 
 class replica_stub;
+
 typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
 class duplication_sync_timer;
-class replica_bulk_loader;
 class replica_backup_server;
-class replica_split_manager;
 
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {

@@ -17,10 +17,40 @@
 
 #include "meta/meta_bulk_load_service.h"
 
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+
+#include "block_service/block_service.h"
+#include "block_service/block_service_manager.h"
 #include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_bulk_load_ingestion_context.h"
+#include "meta/meta_data.h"
+#include "meta/meta_service.h"
+#include "meta/meta_state_service.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
+#include "utils/smart_pointers.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -57,7 +87,7 @@ void bulk_load_service::initialize_bulk_load_service()
 {
     _sync_bulk_load_storage =
         make_unique<mss::meta_storage>(_meta_svc->get_remote_storage(), &_sync_tracker);
-    _ingestion_context = make_unique<ingestion_context>();
+    _ingestion_context = std::make_unique<ingestion_context>();
 
     create_bulk_load_root_dir();
     _sync_tracker.wait_outstanding_tasks();
@@ -394,7 +424,7 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
     }
 
     rpc_address primary_addr = pconfig.primary;
-    auto req = make_unique<bulk_load_request>();
+    auto req = std::make_unique<bulk_load_request>();
     {
         zauto_read_lock l(_lock);
         const app_bulk_load_info &ainfo = _app_bulk_load_info[pid.get_app_id()];

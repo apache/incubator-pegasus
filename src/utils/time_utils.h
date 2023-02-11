@@ -25,8 +25,12 @@
  */
 #pragma once
 
+// IWYU pragma: no_include <bits/types/struct_tm.h>
+#include <stdint.h>
+#include <time.h>
 #include <chrono>
 #include <cstdio>
+#include <string>
 
 #include "string_view.h"
 

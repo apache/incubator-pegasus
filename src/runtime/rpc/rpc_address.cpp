@@ -30,15 +30,13 @@
 #include <ifaddrs.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <string.h>
 #include <sys/socket.h>
 
-#include <thrift/protocol/TProtocol.h>
-
 #include "runtime/rpc/group_address.h"
-#include "utils/api_utilities.h"
 #include "utils/fixed_size_buffer_pool.h"
+#include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 #include "utils/string_view.h"
 #include "utils/strings.h"

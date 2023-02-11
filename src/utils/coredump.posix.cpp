@@ -24,11 +24,14 @@
  * THE SOFTWARE.
  */
 
-#include "coredump.h"
-#include "runtime/tool_api.h"
-#include <sys/types.h>
 #include <signal.h>
+#include <stdio.h>
+#include <list>
+
+#include "coredump.h"
 #include "runtime/app_model.h"
+#include "utils/join_point.h"
+#include "utils/sys_exit_hook.h"
 
 namespace dsn {
 namespace utils {

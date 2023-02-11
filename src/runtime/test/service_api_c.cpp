@@ -33,24 +33,30 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "runtime/tool_api.h"
-#include "aio/file_io.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "utils/zlocks.h"
-#include "utils/utils.h"
-#include "utils/filesystem.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <chrono>
+#include <map>
+#include <string>
 #include <thread>
-#include "utils/rand.h"
+#include <vector>
+
+#include "runtime/api_layer1.h"
+#include "runtime/global_config.h"
+#include "runtime/service_app.h"
 #include "runtime/service_engine.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/tool_api.h"
+#include "utils/config_api.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/process_utils.h"
+#include "utils/rand.h"
+#include "utils/threadpool_code.h"
+#include "utils/zlocks.h"
 
 DSN_DECLARE_string(tool);
 

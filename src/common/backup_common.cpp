@@ -16,7 +16,10 @@
 // under the License.
 
 #include "backup_common.h"
-#include "replica/backup/cold_backup_context.h"
+
+#include "common/gpid.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
 
 namespace dsn {
 namespace replication {

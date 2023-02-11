@@ -20,8 +20,12 @@
 #pragma once
 
 #include <string>
-#include <rocksdb/env.h>
+
 #include "utils/singleton.h"
+
+namespace rocksdb {
+class Env;
+} // namespace rocksdb
 
 namespace pegasus {
 namespace test {

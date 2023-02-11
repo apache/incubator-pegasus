@@ -26,7 +26,30 @@
 
 #include "simple_task_queue.h"
 
+#include <stdio.h>
+#include <memory>
+#include <new>
+
+#include "boost/asio/basic_deadline_timer.hpp"
+#include "boost/asio/deadline_timer.hpp"
+#include "boost/asio/detail/impl/epoll_reactor.hpp"
+#include "boost/asio/detail/impl/timer_queue_ptime.ipp"
+#include "boost/asio/error.hpp"
+#include "boost/asio/impl/io_context.hpp"
+#include "boost/asio/impl/io_context.ipp"
+#include "boost/date_time/posix_time/posix_time_duration.hpp"
+#include "boost/system/error_code.hpp"
+#include "runtime/task/task.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
+#include "runtime/tool_api.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_spec.h"
+
 namespace dsn {
+class service_node;
+class task_worker_pool;
+
 namespace tools {
 
 simple_timer_service::simple_timer_service(service_node *node, timer_service *inner_provider)

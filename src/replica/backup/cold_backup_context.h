@@ -17,15 +17,32 @@
 
 #pragma once
 
+#include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
+#include <atomic>
+#include <functional>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "backup_types.h"
 #include "block_service/block_service.h"
 #include "common/backup_common.h"
+#include "common/gpid.h"
 #include "common/json_helper.h"
+#include "common/replication_other_types.h"
+#include "metadata_types.h"
+#include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
 class replication_service_test_app;
 
 namespace dsn {
+class blob;
+
 namespace replication {
 
 class replica;

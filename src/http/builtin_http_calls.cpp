@@ -15,13 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/output_utils.h"
-#include "utils/time_utils.h"
+#include <iosfwd>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "builtin_http_calls.h"
+#include "http/http_server.h"
 #include "http_call_registry.h"
 #include "pprof_http_service.h"
 #include "service_version.h"
+#include "utils/output_utils.h"
+#include "utils/process_utils.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 

@@ -26,14 +26,14 @@
 
 #pragma once
 
-#include "utils/ports.h"
-#include "utils/singleton.h"
-#include "runtime/task/task_spec.h"
-#include "runtime/rpc/rpc_message.h"
-#include "utils/autoref_ptr.h"
-#include "utils/utils.h"
-#include "utils/blob.h"
+#include <stddef.h>
+#include <string>
 #include <vector>
+
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 
 namespace dsn {
 
@@ -76,9 +76,8 @@ public:
 };
 
 class message_parser;
-typedef ref_ptr<message_parser> message_parser_ptr;
 
-class message_ex;
+typedef ref_ptr<message_parser> message_parser_ptr;
 
 class message_parser : public ref_counter
 {

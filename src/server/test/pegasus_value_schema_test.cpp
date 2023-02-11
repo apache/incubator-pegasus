@@ -19,7 +19,10 @@
 
 #include "base/pegasus_value_schema.h"
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <limits>
 
 using namespace pegasus;
 

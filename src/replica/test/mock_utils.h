@@ -120,7 +120,7 @@ public:
                  bool is_duplication_follower = false)
         : replica(stub, gpid, app, dir, need_restore, is_duplication_follower)
     {
-        _app = make_unique<replication::mock_replication_app_base>(this);
+        _app = std::make_unique<replication::mock_replication_app_base>(this);
     }
 
     void register_service()
@@ -241,7 +241,7 @@ inline std::unique_ptr<mock_replica> create_mock_replica(replica_stub *stub,
     app_info.app_type = "replica";
     app_info.app_name = "temp";
 
-    return make_unique<mock_replica>(stub, gpid, app_info, dir);
+    return std::make_unique<mock_replica>(stub, gpid, app_info, dir);
 }
 
 class mock_replica_stub : public replica_stub

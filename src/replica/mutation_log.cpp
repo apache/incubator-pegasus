@@ -25,16 +25,35 @@
  */
 
 #include "mutation_log.h"
-#include "replica.h"
-#include "mutation_log_utils.h"
 
-#include "utils/latency_tracer.h"
-#include "utils/filesystem.h"
-#include "utils/crc.h"
+#include <fmt/core.h>
+#include <algorithm>
+#include <cstdint>
+#include <ctime>
+#include <iterator>
+#include <list>
+#include <unordered_map>
+
+#include "aio/aio_task.h"
+#include "aio/file_io.h"
+#include "common/replication.codes.h"
+#include "consensus_types.h"
+#include "mutation_log_utils.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica.h"
+#include "replica/log_block.h"
+#include "replica/log_file.h"
+#include "replica/mutation.h"
+#include "runtime/api_layer1.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 #include "utils/defer.h"
-#include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "runtime/task/async_calls.h"
+#include "utils/latency_tracer.h"
+#include "utils/ports.h"
 
 namespace dsn {
 namespace replication {
@@ -227,7 +246,7 @@ mutation_log_private::mutation_log_private(const std::string &dir,
 
     // init pending buffer
     if (nullptr == _pending_write) {
-        _pending_write = make_unique<log_appender>(mark_new_offset(0, true).second);
+        _pending_write = std::make_unique<log_appender>(mark_new_offset(0, true).second);
     }
     _pending_write->append_mutation(mu, cb);
 

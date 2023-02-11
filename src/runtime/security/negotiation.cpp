@@ -16,12 +16,14 @@
 // under the License.
 
 #include "negotiation.h"
-#include "client_negotiation.h"
-#include "server_negotiation.h"
-#include "negotiation_utils.h"
 
+#include <set>
+
+#include "client_negotiation.h"
+#include "negotiation_utils.h"
+#include "runtime/security/sasl_wrapper.h"
+#include "server_negotiation.h"
 #include "utils/flags.h"
-#include "utils/smart_pointers.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
@@ -43,9 +45,9 @@ negotiation::~negotiation() {}
 std::unique_ptr<negotiation> create_negotiation(bool is_client, rpc_session *session)
 {
     if (is_client) {
-        return make_unique<client_negotiation>(session);
+        return std::make_unique<client_negotiation>(session);
     } else {
-        return make_unique<server_negotiation>(session);
+        return std::make_unique<server_negotiation>(session);
     }
 }
 

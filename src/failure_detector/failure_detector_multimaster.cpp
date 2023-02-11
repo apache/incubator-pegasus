@@ -33,10 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <cinttypes>
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/group_address.h"
+#include <stdint.h>
+#include <utility>
+
 #include "failure_detector/failure_detector_multimaster.h"
+#include "fd_types.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/error_code.h"
 #include "utils/rand.h"
 
 namespace dsn {

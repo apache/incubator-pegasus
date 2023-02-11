@@ -17,10 +17,15 @@
 
 #pragma once
 
-#include "utils/synchronize.h"
+#include <string>
+#include <unordered_set>
+
 #include "access_controller.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
+class message_ex;
+
 namespace security {
 class replica_access_controller : public access_controller
 {

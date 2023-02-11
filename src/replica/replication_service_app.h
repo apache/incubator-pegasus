@@ -26,12 +26,17 @@
 
 #pragma once
 
-#include "utils/autoref_ptr.h"
+#include <string>
+#include <vector>
+
+#include "replica/replica_stub.h"
 #include "runtime/service_app.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 
 namespace dsn {
-
-class version_http_service;
+class gpid;
+class message_ex;
 
 namespace replication {
 
@@ -39,7 +44,6 @@ namespace test {
 class test_checker;
 }
 
-class replica_stub;
 typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
 class replication_service_app : public ::dsn::service_app

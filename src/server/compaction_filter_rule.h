@@ -19,10 +19,16 @@
 
 #pragma once
 
-#include "utils/enum_helper.h"
-#include "common/json_helper.h"
-#include <gtest/gtest.h>
+#include <gtest/gtest_prod.h>
+#include <stdint.h>
+#include <string>
+
 #include "base/pegasus_value_schema.h"
+#include "common/json_helper.h"
+#include "utils/blob.h"
+#include "utils/enum_helper.h"
+#include "utils/factory_store.h"
+#include "utils/string_view.h"
 
 namespace pegasus {
 namespace server {

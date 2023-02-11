@@ -34,14 +34,30 @@
  */
 
 #include "runtime/fault_injector.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/rand.h"
+
+#include <chrono>
+#include <cstdint>
+#include <string>
+#include <thread>
+#include <vector>
+
 #include "aio/aio_task.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/blob.h"
+#include "utils/config_api.h"
+#include "utils/config_helper.h"
+#include "utils/error_code.h"
+#include "utils/extensible_object.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/rand.h"
 
 namespace dsn {
+struct service_spec;
+
 namespace tools {
 
 struct fj_opt

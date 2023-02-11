@@ -24,11 +24,19 @@
  * THE SOFTWARE.
  */
 
-#include "utils/string_view.h"
-#include "utils/errors.h"
-#include "utils/fmt_logging.h"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <iosfwd>
+
+#include "common/gpid.h"
 #include "common/replication.codes.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {

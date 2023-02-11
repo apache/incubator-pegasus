@@ -19,12 +19,17 @@
 
 #pragma once
 
-#include <rocksdb/db.h>
+#include <rocksdb/options.h>
+#include <stdint.h>
+#include <string>
+
 #include "replica/replica_base.h"
+#include "utils/error_code.h"
 
-#include <rrdb/rrdb_types.h>
-
-#include "pegasus_server_impl.h"
+namespace rocksdb {
+class ColumnFamilyHandle;
+class DB;
+} // namespace rocksdb
 
 namespace pegasus {
 namespace server {

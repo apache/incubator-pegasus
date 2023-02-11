@@ -17,7 +17,22 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
+#include "meta_admin_types.h"
 #include "meta_data.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/command_manager.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {

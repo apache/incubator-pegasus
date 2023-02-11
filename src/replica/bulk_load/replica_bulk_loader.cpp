@@ -15,16 +15,48 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "block_service/block_service.h"
-#include "utils/fmt_logging.h"
+#include <fmt/core.h>
+#include <functional>
+#include <memory>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "block_service/block_service_manager.h"
+#include "common/bulk_load_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "dsn.layer2_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/disk_cleaner.h"
+#include "replica/mutation.h"
+#include "replica/replica_context.h"
+#include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
+#include "replica_bulk_loader.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/async_calls.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
-
-#include "replica_bulk_loader.h"
-#include "replica/disk_cleaner.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
+namespace dist {
+namespace block_service {
+class block_filesystem;
+} // namespace block_service
+} // namespace dist
+
 namespace replication {
 
 replica_bulk_loader::replica_bulk_loader(replica *r)
@@ -113,7 +145,7 @@ void replica_bulk_loader::broadcast_group_bulk_load(const bulk_load_request &met
         if (addr == _stub->_primary_address)
             continue;
 
-        auto request = make_unique<group_bulk_load_request>();
+        auto request = std::make_unique<group_bulk_load_request>();
         request->app_name = _replica->_app_info.app_name;
         request->target_address = addr;
         _replica->_primary_states.get_replica_config(partition_status::PS_SECONDARY,

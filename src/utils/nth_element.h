@@ -17,17 +17,13 @@
 
 #pragma once
 
+#include <fmt/format.h>
 #include <algorithm>
-#include <cstdint>
 #include <functional>
 #include <limits>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
-#include <fmt/format.h>
-
-#include "utils/api_utilities.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 

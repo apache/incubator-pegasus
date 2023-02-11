@@ -17,21 +17,24 @@
  * under the License.
  */
 
-#include <vector>
-#include <bitset>
-#include <thread>
-#include <iostream>
-#include <cstdio>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <unistd.h>
 #include <chrono>
-#include <thread>
-#include <atomic>
 #include <memory>
-#include <sys/time.h>
-#include "remote_cmd/remote_command.h"
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
 #include "partition_kill_testor.h"
+#include "remote_cmd/remote_command.h"
+#include "runtime/task/task.h"
+#include "test/kill_test/kill_testor.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace test {

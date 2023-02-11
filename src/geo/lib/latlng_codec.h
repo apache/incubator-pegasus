@@ -19,10 +19,12 @@
 
 #pragma once
 
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
 #include <string>
 #include <vector>
-#include <s2/s2latlng.h>
-#include "utils/strings.h"
+
+class S2LatLng;
 
 namespace dsn {
 class error_s;

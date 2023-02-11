@@ -26,14 +26,15 @@
 
 #include "task_spec.h"
 
+#include <string.h>
 #include <array>
+#include <memory>
+#include <thread>
 
 #include "runtime/rpc/rpc_message.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/command_manager.h"
 #include "utils/threadpool_spec.h"
-#include "utils/smart_pointers.h"
 
 namespace dsn {
 namespace tools {
@@ -59,7 +60,8 @@ void task_spec::register_task_code(task_code code,
     CHECK_GE(code, 0);
     CHECK_LT(code, TASK_SPEC_STORE_CAPACITY);
     if (!s_task_spec_store[code]) {
-        s_task_spec_store[code] = make_unique<task_spec>(code, code.to_string(), type, pri, pool);
+        s_task_spec_store[code] =
+            std::make_unique<task_spec>(code, code.to_string(), type, pri, pool);
         auto &spec = s_task_spec_store[code];
 
         if (type == TASK_TYPE_RPC_REQUEST) {

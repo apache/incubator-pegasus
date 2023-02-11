@@ -17,9 +17,13 @@
  * under the License.
  */
 
+#include <cstdint>
+
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
 #include "compaction_operation.h"
+#include "server/compaction_filter_rule.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace server {

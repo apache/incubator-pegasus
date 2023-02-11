@@ -16,10 +16,21 @@
 // under the License.
 
 #include "runtime/security/server_negotiation.h"
-#include "runtime/security/negotiation_utils.h"
-#include "runtime/rpc/network.sim.h"
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <memory>
+#include <utility>
+
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/security/negotiation.h"
+#include "runtime/security/negotiation_utils.h"
+#include "security_types.h"
+#include "utils/blob.h"
 #include "utils/fail_point.h"
 
 namespace dsn {
@@ -33,12 +44,12 @@ public:
             new tools::sim_network_provider(nullptr, nullptr));
         _sim_session =
             sim_net->create_server_session(rpc_address("localhost", 10086), rpc_session_ptr());
-        _srv_negotiation = make_unique<server_negotiation>(_sim_session);
+        _srv_negotiation = std::make_unique<server_negotiation>(_sim_session);
     }
 
     negotiation_rpc create_negotiation_rpc(negotiation_status::type status, const std::string &msg)
     {
-        auto request = make_unique<negotiation_request>();
+        auto request = std::make_unique<negotiation_request>();
         request->status = status;
         request->msg = dsn::blob::create_from_bytes(msg.data(), msg.length());
         return negotiation_rpc(std::move(request), RPC_NEGOTIATION);

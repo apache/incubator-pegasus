@@ -15,7 +15,16 @@
  */
 
 #include "TokenBucketTest.h"
+
+#include <boost/optional/optional.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+#include <gtest/gtest-param-test.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stddef.h>
+#include <algorithm>
+#include <vector>
+
 #include "utils/TokenBucket.h"
 
 using namespace folly;

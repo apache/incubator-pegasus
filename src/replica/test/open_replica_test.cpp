@@ -15,12 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <gtest/gtest-death-test.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include "replica/replica.h"
-#include "mock_utils.h"
+#include "common/fs_manager.h"
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
+#include "meta_admin_types.h"
+#include "mock_utils.h"
+#include "replica/replica_stub.h"
 #include "replica_test_base.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {

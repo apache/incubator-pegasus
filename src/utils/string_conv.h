@@ -17,8 +17,15 @@
 
 #pragma once
 
+#include <ctype.h>
+#include <errno.h>
+#include <stdint.h>
+#include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
+#include <string>
+#include <type_traits>
 
 #include "string_view.h"
 

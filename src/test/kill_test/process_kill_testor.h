@@ -17,12 +17,17 @@
  * under the License.
  */
 
-#include "kill_testor.h"
-#include "killer_handler.h"
+#include <stdint.h>
+#include <memory>
+#include <vector>
+
 #include "job.h"
+#include "kill_testor.h"
 
 namespace pegasus {
 namespace test {
+class killer_handler;
+
 class process_kill_testor : public kill_testor
 {
 public:

@@ -19,15 +19,35 @@
 
 #pragma once
 
-#include "replica/duplication/mutation_duplicator.h"
-#include "replica/replica_base.h"
-#include <rrdb/rrdb.code.definition.h>
-#include "utils/flags.h"
-#include "common//duplication_common.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <deque>
+#include <map>
+#include <string>
 
-#include "client_lib/pegasus_client_factory_impl.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/duplication/mutation_duplicator.h"
+#include "rrdb/rrdb.client.h"
+#include "runtime/pipeline.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/chrono_literals.h"
+#include "utils/string_view.h"
+#include "utils/zlocks.h"
+
+namespace dsn {
+class blob;
+class error_code;
+namespace replication {
+struct replica_base;
+} // namespace replication
+} // namespace dsn
 
 namespace pegasus {
+namespace client {
+class pegasus_client_impl;
+} // namespace client
+
 namespace server {
 
 using namespace dsn::literals::chrono_literals;

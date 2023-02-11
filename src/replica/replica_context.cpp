@@ -33,15 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "utils/filesystem.h"
-#include "utils/utils.h"
+#include <algorithm>
+#include <atomic>
+#include <vector>
 
-#include "replica_context.h"
-#include "replica.h"
-#include "replica_stub.h"
+#include "bulk_load_types.h"
+#include "common/replication_enums.h"
 #include "mutation.h"
-#include "mutation_log.h"
-#include "block_service/block_service_manager.h"
+#include "replica.h"
+#include "replica_context.h"
+#include "replica_stub.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {

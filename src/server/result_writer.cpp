@@ -18,7 +18,17 @@
  */
 
 #include "result_writer.h"
+
+#include <pegasus/error.h>
+#include <chrono>
+#include <utility>
+
+#include "pegasus/client.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 
 namespace pegasus {
 namespace server {

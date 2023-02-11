@@ -33,24 +33,16 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #include <boost/lexical_cast.hpp>
+#include <cstdint>
 
-#include "utils/fmt_logging.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
 #include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/flags.h"
-
+#include "common/replication_enums.h"
 #include "meta_data.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

@@ -17,30 +17,25 @@
  * under the License.
  */
 
-#include <list>
-
-#include "utils/api_utilities.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "client/replication_ddl_client.h"
 #include <pegasus/client.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+#include <algorithm>
+#include <string>
+#include <unordered_set>
+#include <utility>
 
 #include "base/pegasus_const.h"
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
 #include "kill_testor.h"
-#include "killer_handler.h"
-#include "killer_handler_shell.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace test {

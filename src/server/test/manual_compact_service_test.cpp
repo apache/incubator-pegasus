@@ -17,10 +17,23 @@
  * under the License.
  */
 
-#include "utils/time_utils.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <rocksdb/options.h>
+#include <stdint.h>
+#include <atomic>
+#include <map>
+#include <memory>
+#include <string>
 
+#include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
+#include "runtime/api_layer1.h"
 #include "server/pegasus_manual_compact_service.h"
+#include "utils/flags.h"
+#include "utils/strings.h"
+#include "utils/time_utils.h"
 
 namespace pegasus {
 namespace server {
@@ -37,7 +50,7 @@ public:
     manual_compact_service_test()
     {
         start();
-        manual_compact_svc = dsn::make_unique<pegasus_manual_compact_service>(_server.get());
+        manual_compact_svc = std::make_unique<pegasus_manual_compact_service>(_server.get());
     }
 
     void set_compact_time(int64_t ts)

@@ -26,16 +26,16 @@
 
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <map>
+#include <assert.h>
+#include <inttypes.h>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <string>
+#include <iosfwd>
 #include <list>
+#include <map>
 #include <mutex>
-#include <inttypes.h>
+#include <string>
+#include <vector>
 
 #include "string_conv.h"
 

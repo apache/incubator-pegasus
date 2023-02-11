@@ -19,13 +19,27 @@
 
 #pragma once
 
-#include "replica/replica_base.h"
+#include <stdint.h>
+#include <functional>
+#include <map>
+#include <memory>
+#include <vector>
 
 #include "base/pegasus_rpc_types.h"
 #include "pegasus_write_service.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/replica_base.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/task/task_code.h"
+
+namespace dsn {
+class blob;
+class message_ex;
+} // namespace dsn
 
 namespace pegasus {
 namespace server {
+class pegasus_server_impl;
 
 /// This class implements the interface of `pegasus_sever_impl::on_batched_write_requests`.
 class pegasus_server_write : public dsn::replication::replica_base

@@ -15,29 +15,45 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+#include <rapidjson/ostreamwrapper.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <set>
+#include <sstream>
 #include <string>
+#include <unordered_map>
+#include <utility>
 
-#include "runtime/api_layer1.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
-#include "common/replica_envs.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
 #include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
+#include "bulk_load_types.h"
 #include "common//duplication_common.h"
-#include "utils/config_api.h"
-#include "utils/output_utils.h"
-#include "utils/time_utils.h"
-
+#include "common/bulk_load_common.h"
+#include "common/gpid.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "duplication_types.h"
+#include "meta/duplication/meta_duplication_service.h"
+#include "meta/meta_backup_service.h"
+#include "meta/meta_bulk_load_service.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_service.h"
+#include "meta_admin_types.h"
 #include "meta_http_service.h"
 #include "meta_server_failure_detector.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
 #include "server_load_balancer.h"
 #include "server_state.h"
-#include "meta/duplication/meta_duplication_service.h"
-#include "meta/meta_bulk_load_service.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/output_utils.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace dist {
@@ -546,7 +562,7 @@ void meta_http_service::query_backup_policy_handler(const http_request &req, htt
         resp.status_code = http_status_code::not_found;
         return;
     }
-    auto request = dsn::make_unique<configuration_query_backup_policy_request>();
+    auto request = std::make_unique<configuration_query_backup_policy_request>();
     std::vector<std::string> policy_names;
     for (const auto &p : req.query_args) {
         if (p.first == "name") {
@@ -658,7 +674,7 @@ void meta_http_service::start_bulk_load_handler(const http_request &req, http_re
         return;
     }
 
-    auto rpc_req = dsn::make_unique<start_bulk_load_request>(request);
+    auto rpc_req = std::make_unique<start_bulk_load_request>(request);
     start_bulk_load_rpc rpc(std::move(rpc_req), LPC_META_CALLBACK);
     _service->_bulk_load_svc->on_start_bulk_load(rpc);
 
@@ -692,7 +708,7 @@ void meta_http_service::query_bulk_load_handler(const http_request &req, http_re
         return;
     }
 
-    auto rpc_req = dsn::make_unique<query_bulk_load_request>();
+    auto rpc_req = std::make_unique<query_bulk_load_request>();
     rpc_req->app_name = it->second;
     query_bulk_load_rpc rpc(std::move(rpc_req), LPC_META_CALLBACK);
     _service->_bulk_load_svc->on_query_bulk_load_status(rpc);
@@ -843,7 +859,7 @@ void meta_http_service::update_app_env(const std::string &app_name,
     request.__set_keys(keys);
     request.__set_values(values);
 
-    auto rpc_req = dsn::make_unique<configuration_update_app_env_request>(request);
+    auto rpc_req = std::make_unique<configuration_update_app_env_request>(request);
     update_app_env_rpc rpc(std::move(rpc_req), LPC_META_STATE_NORMAL);
     _service->_state->set_app_envs(rpc);
 

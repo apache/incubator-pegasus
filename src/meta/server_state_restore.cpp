@@ -15,15 +15,42 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <boost/lexical_cast.hpp>
-#include "block_service/block_service.h"
-#include "utils/fmt_logging.h"
-#include "utils/filesystem.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
+#include "backup_types.h"
+#include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"
 #include "common/backup_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
+#include "meta/meta_rpc_types.h"
+#include "meta_admin_types.h"
 #include "meta_service.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
 #include "server_state.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 using namespace dsn::dist::block_service;
 

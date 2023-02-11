@@ -17,15 +17,18 @@
 
 #pragma once
 
-#include "utils/string_view.h"
-#include "utils/binary_writer.h"
-#include "utils/binary_reader.h"
+#include <stdint.h>
+
 #include "runtime/rpc/rpc_stream.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_message.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "thrift_helper.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 
 namespace dsn {
+class message_ex;
 
 /// Move the content inside message `m` into a blob.
 inline blob move_message_to_blob(message_ex *m)

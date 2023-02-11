@@ -15,12 +15,41 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/fmt_logging.h"
-#include "utils/filesystem.h"
+#include <chrono>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "backup_types.h"
+#include "block_service/block_service.h"
+#include "block_service/block_service_manager.h"
 #include "common/backup_common.h"
-#include "common/replication_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/backup_engine.h"
+#include "meta/meta_backup_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_service.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
 #include "server_state.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {

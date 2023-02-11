@@ -17,17 +17,36 @@
  * under the License.
  */
 
-#include <libgen.h>
-
-#include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
-#include "client/replication_ddl_client.h"
-#include "include/pegasus/client.h"
-#include <gtest/gtest.h>
+#include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <unistd.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "base/pegasus_const.h"
+#include "client/partition_resolver.h"
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "include/pegasus/client.h"
+#include "pegasus/error.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;

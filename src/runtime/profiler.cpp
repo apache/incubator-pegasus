@@ -48,19 +48,32 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
  END
 */
 #include "runtime/profiler.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+
+#include <stddef.h>
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <memory>
+#include <string>
+
 #include "aio/aio_task.h"
-#include "utils/shared_io_service.h"
-#include "profiler_header.h"
-#include "utils/command_manager.h"
+#include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
+#include "profiler_header.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/config_api.h"
+#include "utils/extensible_object.h"
 #include "utils/fmt_logging.h"
 #include "utils/flags.h"
+#include "utils/join_point.h"
 
 namespace dsn {
+struct service_spec;
+
 namespace tools {
 
 DSN_DEFINE_bool(task..default, is_profile, false, "whether to profile this kind of task");

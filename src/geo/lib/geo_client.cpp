@@ -19,28 +19,37 @@
 
 #include "geo_client.h"
 
-#include <s2/s2earth.h>
-#include <s2/s2region_coverer.h>
+#include <fmt/core.h>
+#include <math.h>
+#include <pegasus/error.h>
+#include <s2/s1angle.h>
 #include <s2/s2cap.h>
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/flags.h"
-#include "utils/fmt_logging.h"
-#include "utils/errors.h"
+#include <s2/s2cell.h>
+#include <s2/s2cell_id.h>
+#include <s2/s2cell_union.h>
+#include <s2/s2earth.h>
+#include <s2/s2latlng.h>
+#include <s2/s2region_coverer.h>
+#include <s2/util/units/length-units.h>
+#include <stddef.h>
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <limits>
+#include <mutex>
+#include <type_traits>
+#include <vector>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
+#include "geo/lib/latlng_codec.h"
+#include "pegasus/client.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/synchronize.h"
 
 namespace pegasus {
 namespace geo {

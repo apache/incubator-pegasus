@@ -17,14 +17,34 @@
  * under the License.
  */
 
-#include "pegasus_server_test_base.h"
-#include "message_utils.h"
-#include "server/pegasus_server_write.h"
-#include "server/pegasus_write_service_impl.h"
-#include "base/pegasus_key_schema.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <rocksdb/write_batch.h>
+#include <stdint.h>
+#include <memory>
+#include <ostream>
+#include <string>
+#include <vector>
 
+#include "base/pegasus_key_schema.h"
+#include "common/gpid.h"
+#include "message_utils.h"
+#include "pegasus_rpc_types.h"
+#include "pegasus_server_test_base.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "server/pegasus_server_write.h"
+#include "server/pegasus_write_service.h"
+#include "server/pegasus_write_service_impl.h"
+#include "server/rocksdb_wrapper.h"
+#include "utils/blob.h"
 #include "utils/fail_point.h"
-#include "utils/defer.h"
+#include "utils/rand.h"
+
+namespace dsn {
+class message_ex;
+} // namespace dsn
 
 namespace pegasus {
 namespace server {
@@ -37,7 +57,7 @@ public:
     pegasus_server_write_test() : pegasus_server_test_base()
     {
         start();
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get());
+        _server_write = std::make_unique<pegasus_server_write>(_server.get());
     }
 
     void test_batch_writes()

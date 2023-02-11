@@ -15,17 +15,57 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/fmt_logging.h"
-#include "utils/defer.h"
+#include <boost/filesystem/path.hpp>
+#include <fcntl.h>
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "duplication_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/duplication/mutation_duplicator.h"
+#include "replica/duplication/replica_duplicator.h"
+#include "replica/log_file.h"
+#include "replica/mutation.h"
+#include "replica/mutation_log.h"
+#include "replica/test/mock_utils.h"
+#include "runtime/pipeline.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem/operations.hpp>
+#include <chrono>
+#include <functional>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #undef BOOST_NO_CXX11_SCOPED_ENUMS
 
-#include "replica/mutation_log_utils.h"
-#include "replica/duplication/load_from_private_log.h"
 #include "duplication_test_base.h"
+#include "replica/duplication/load_from_private_log.h"
+#include "replica/mutation_log_utils.h"
 
 namespace dsn {
 namespace replication {
@@ -340,10 +380,10 @@ public:
         mlog = create_private_log();
         _replica->init_private_log(mlog);
         duplicator = create_test_duplicator(1);
-        load = make_unique<load_from_private_log>(_replica.get(), duplicator.get());
+        load = std::make_unique<load_from_private_log>(_replica.get(), duplicator.get());
         load->TEST_set_repeat_delay(0_ms); // no delay
         load->set_start_decree(duplicator->progress().last_decree + 1);
-        end_stage = make_unique<end_stage_t>(
+        end_stage = std::make_unique<end_stage_t>(
             [this, num_entries](decree &&d, mutation_tuple_set &&mutations) {
                 load->set_start_decree(d + 1);
                 if (d < num_entries - 1) {

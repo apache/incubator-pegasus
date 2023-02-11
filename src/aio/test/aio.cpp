@@ -24,13 +24,33 @@
  * THE SOFTWARE.
  */
 
+#include <alloca.h>
+#include <fcntl.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <string.h>
+#include <list>
+#include <memory>
+#include <string>
 
-#include "runtime/task/async_calls.h"
+#include "aio/aio_task.h"
+#include "aio/file_io.h"
+#include "runtime/task/task_code.h"
+#include "runtime/tool_api.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
-#include "utils/smart_pointers.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
+#include "utils/threadpool_code.h"
+
+namespace dsn {
+class disk_file;
+} // namespace dsn
 
 using namespace ::dsn;
 
@@ -154,8 +174,8 @@ TEST(core, operation_failed)
     auto fp = file::open("tmp_test_file", O_WRONLY, 0600);
     EXPECT_TRUE(fp == nullptr);
 
-    auto err = dsn::make_unique<dsn::error_code>();
-    auto count = dsn::make_unique<size_t>();
+    auto err = std::make_unique<dsn::error_code>();
+    auto count = std::make_unique<size_t>();
     auto io_callback = [&err, &count](::dsn::error_code e, size_t n) {
         *err = e;
         *count = n;

@@ -24,34 +24,42 @@
  * THE SOFTWARE.
  */
 
-#include <cmath>
-#include <fstream>
+#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <algorithm>
+#include <cstdint>
+#include <fstream> // IWYU pragma: keep
 #include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
-#include <gtest/gtest.h>
-
 #include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
 #include "meta/meta_service.h"
+#include "meta/meta_state_service.h"
 #include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
+#include "meta_admin_types.h"
 #include "meta_service_test_app.h"
-#include "runtime/api_layer1.h"
-#include "runtime/api_task.h"
-#include "runtime/app_model.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/task/task_code.h"
 #include "runtime/rpc/rpc_address.h"
-#include "utils/api_utilities.h"
+#include "runtime/task/task.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
 #include "utils/strings.h"
-#include "utils/threadpool_code.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace replication {
+class meta_options;
+
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
 

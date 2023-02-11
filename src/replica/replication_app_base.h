@@ -26,23 +26,28 @@
 
 #pragma once
 
-#include "runtime/serverlet.h"
-#include "common/json_helper.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
-#include "replica/replica_base.h"
+#include <stdint.h>
+#include <string.h>
 #include <atomic>
+#include <map>
+#include <string>
+
+#include "bulk_load_types.h"
+#include "common/json_helper.h"
+#include "common/replication_other_types.h"
+#include "metadata_types.h"
+#include "replica/replica_base.h"
+#include "replica_admin_types.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class app_info;
+class blob;
+class message_ex;
+
 namespace replication {
 
+class learn_state;
 class mutation;
 class replica;
 

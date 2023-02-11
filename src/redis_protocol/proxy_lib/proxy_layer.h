@@ -19,22 +19,21 @@
 
 #pragma once
 
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/zlocks.h"
-#include <unordered_map>
+#include <atomic>
 #include <functional>
+#include <memory>
+#include <string>
+#include <unordered_map>
+
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/serverlet.h"
+#include "runtime/task/task_code.h"
+#include "utils/threadpool_code.h"
+#include "utils/zlocks.h"
+
+namespace dsn {
+class message_ex;
+} // namespace dsn
 
 namespace pegasus {
 namespace proxy {
@@ -45,6 +44,7 @@ DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT,
 DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 class proxy_stub;
+
 class proxy_session : public std::enable_shared_from_this<proxy_session>
 {
 public:

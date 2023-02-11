@@ -26,29 +26,36 @@
 
 #include "replication_ddl_client.h"
 
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/socket.h>
-
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <string.h>
+#include <algorithm>
+#include <cctype>
+#include <chrono>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <set>
+#include <thread>
 
-#include <boost/lexical_cast.hpp>
-#include "utils/fmt_logging.h"
+#include "backup_types.h"
 #include "common//duplication_common.h"
-#include "common/replication_other_types.h"
+#include "common/bulk_load_common.h"
+#include "common/gpid.h"
+#include "common/manual_compact.h"
+#include "common/partition_split_common.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "fmt/core.h"
+#include "meta/meta_rpc_types.h"
+#include "runtime/api_layer1.h"
 #include "runtime/rpc/group_address.h"
 #include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
-#include <fmt/format.h>
 #include "utils/time_utils.h"
-
-#include "common/replication_common.h"
-#include "common/bulk_load_common.h"
-#include "common/partition_split_common.h"
-#include "common/manual_compact.h"
-#include "meta/meta_rpc_types.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace replication {
@@ -1050,7 +1057,7 @@ dsn::error_code replication_ddl_client::add_backup_policy(const std::string &pol
 error_with<start_backup_app_response> replication_ddl_client::backup_app(
     int32_t app_id, const std::string &backup_provider_type, const std::string &backup_path)
 {
-    auto req = make_unique<start_backup_app_request>();
+    auto req = std::make_unique<start_backup_app_request>();
     req->app_id = app_id;
     req->backup_provider_type = backup_provider_type;
     if (!backup_path.empty()) {
@@ -1062,7 +1069,7 @@ error_with<start_backup_app_response> replication_ddl_client::backup_app(
 error_with<query_backup_status_response> replication_ddl_client::query_backup(int32_t app_id,
                                                                               int64_t backup_id)
 {
-    auto req = make_unique<query_backup_status_request>();
+    auto req = std::make_unique<query_backup_status_request>();
     req->app_id = app_id;
 
     if (backup_id > 0) {
@@ -1382,7 +1389,7 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
 error_with<duplication_add_response> replication_ddl_client::add_dup(
     std::string app_name, std::string remote_cluster_name, bool is_duplicating_checkpoint)
 {
-    auto req = make_unique<duplication_add_request>();
+    auto req = std::make_unique<duplication_add_request>();
     req->app_name = std::move(app_name);
     req->remote_cluster_name = std::move(remote_cluster_name);
     req->is_duplicating_checkpoint = is_duplicating_checkpoint;
@@ -1392,7 +1399,7 @@ error_with<duplication_add_response> replication_ddl_client::add_dup(
 error_with<duplication_modify_response> replication_ddl_client::change_dup_status(
     std::string app_name, int dupid, duplication_status::type status)
 {
-    auto req = make_unique<duplication_modify_request>();
+    auto req = std::make_unique<duplication_modify_request>();
     req->app_name = std::move(app_name);
     req->dupid = dupid;
     req->__set_status(status);
@@ -1406,7 +1413,7 @@ error_with<duplication_modify_response> replication_ddl_client::update_dup_fail_
         _duplication_fail_mode_VALUES_TO_NAMES.end()) {
         return FMT_ERR(ERR_INVALID_PARAMETERS, "unexpected duplication_fail_mode {}", fmode);
     }
-    auto req = make_unique<duplication_modify_request>();
+    auto req = std::make_unique<duplication_modify_request>();
     req->app_name = std::move(app_name);
     req->dupid = dupid;
     req->__set_fail_mode(fmode);
@@ -1415,7 +1422,7 @@ error_with<duplication_modify_response> replication_ddl_client::update_dup_fail_
 
 error_with<duplication_query_response> replication_ddl_client::query_dup(std::string app_name)
 {
-    auto req = make_unique<duplication_query_request>();
+    auto req = std::make_unique<duplication_query_request>();
     req->app_name = std::move(app_name);
     return call_rpc_sync(duplication_query_rpc(std::move(req), RPC_CM_QUERY_DUPLICATION));
 }
@@ -1468,7 +1475,7 @@ replication_ddl_client::set_app_envs(const std::string &app_name,
                                      const std::vector<std::string> &keys,
                                      const std::vector<std::string> &values)
 {
-    auto req = make_unique<configuration_update_app_env_request>();
+    auto req = std::make_unique<configuration_update_app_env_request>();
     req->__set_app_name(app_name);
     req->__set_keys(keys);
     req->__set_values(values);
@@ -1573,7 +1580,7 @@ void replication_ddl_client::query_disk_info(
 {
     std::map<dsn::rpc_address, query_disk_info_rpc> query_disk_info_rpcs;
     for (const auto &target : targets) {
-        auto request = make_unique<query_disk_info_request>();
+        auto request = std::make_unique<query_disk_info_request>();
         request->node = target;
         request->app_name = app_name;
         query_disk_info_rpcs.emplace(target,
@@ -1589,7 +1596,7 @@ replication_ddl_client::start_bulk_load(const std::string &app_name,
                                         const std::string &remote_root_path,
                                         const bool ingest_behind)
 {
-    auto req = make_unique<start_bulk_load_request>();
+    auto req = std::make_unique<start_bulk_load_request>();
     req->app_name = app_name;
     req->cluster_name = cluster_name;
     req->file_provider_type = file_provider_type;
@@ -1602,7 +1609,7 @@ error_with<control_bulk_load_response>
 replication_ddl_client::control_bulk_load(const std::string &app_name,
                                           const bulk_load_control_type::type control_type)
 {
-    auto req = make_unique<control_bulk_load_request>();
+    auto req = std::make_unique<control_bulk_load_request>();
     req->app_name = app_name;
     req->type = control_type;
     return call_rpc_sync(control_bulk_load_rpc(std::move(req), RPC_CM_CONTROL_BULK_LOAD));
@@ -1612,7 +1619,7 @@ error_with<query_bulk_load_response>
 replication_ddl_client::query_bulk_load(const std::string &app_name)
 {
 
-    auto req = make_unique<query_bulk_load_request>();
+    auto req = std::make_unique<query_bulk_load_request>();
     req->app_name = app_name;
     return call_rpc_sync(query_bulk_load_rpc(std::move(req), RPC_CM_QUERY_BULK_LOAD_STATUS));
 }
@@ -1620,7 +1627,7 @@ replication_ddl_client::query_bulk_load(const std::string &app_name)
 error_with<clear_bulk_load_state_response>
 replication_ddl_client::clear_bulk_load(const std::string &app_name)
 {
-    auto req = make_unique<clear_bulk_load_state_request>();
+    auto req = std::make_unique<clear_bulk_load_state_request>();
     req->app_name = app_name;
     return call_rpc_sync(clear_bulk_load_rpc(std::move(req), RPC_CM_CLEAR_BULK_LOAD));
 }
@@ -1630,7 +1637,7 @@ error_code replication_ddl_client::detect_hotkey(const dsn::rpc_address &target,
                                                  detect_hotkey_response &resp)
 {
     std::map<dsn::rpc_address, detect_hotkey_rpc> detect_hotkey_rpcs;
-    auto request = make_unique<detect_hotkey_request>(req);
+    auto request = std::make_unique<detect_hotkey_request>(req);
     detect_hotkey_rpcs.emplace(target, detect_hotkey_rpc(std::move(request), RPC_DETECT_HOTKEY));
     std::map<dsn::rpc_address, error_with<detect_hotkey_response>> resps;
     call_rpcs_sync(detect_hotkey_rpcs, resps);
@@ -1641,7 +1648,7 @@ error_code replication_ddl_client::detect_hotkey(const dsn::rpc_address &target,
 error_with<start_partition_split_response>
 replication_ddl_client::start_partition_split(const std::string &app_name, int new_partition_count)
 {
-    auto req = make_unique<start_partition_split_request>();
+    auto req = std::make_unique<start_partition_split_request>();
     req->__set_app_name(app_name);
     req->__set_new_partition_count(new_partition_count);
     return call_rpc_sync(start_split_rpc(std::move(req), RPC_CM_START_PARTITION_SPLIT));
@@ -1674,7 +1681,7 @@ replication_ddl_client::control_partition_split(const std::string &app_name,
                                                 const int32_t parent_pidx,
                                                 const int32_t old_partition_count)
 {
-    auto req = make_unique<control_split_request>();
+    auto req = std::make_unique<control_split_request>();
     req->__set_app_name(app_name);
     req->__set_control_type(control_type);
     req->__set_parent_pidx(parent_pidx);
@@ -1685,7 +1692,7 @@ replication_ddl_client::control_partition_split(const std::string &app_name,
 error_with<query_split_response>
 replication_ddl_client::query_partition_split(const std::string &app_name)
 {
-    auto req = make_unique<query_split_request>();
+    auto req = std::make_unique<query_split_request>();
     req->__set_app_name(app_name);
     return call_rpc_sync(query_split_rpc(std::move(req), RPC_CM_QUERY_PARTITION_SPLIT));
 }
@@ -1693,7 +1700,7 @@ replication_ddl_client::query_partition_split(const std::string &app_name)
 error_with<add_new_disk_response>
 replication_ddl_client::add_new_disk(const rpc_address &target_node, const std::string &disk_str)
 {
-    auto req = make_unique<add_new_disk_request>();
+    auto req = std::make_unique<add_new_disk_request>();
     req->disk_str = disk_str;
 
     std::map<rpc_address, add_new_disk_rpc> add_new_disk_rpcs;
@@ -1707,7 +1714,7 @@ replication_ddl_client::add_new_disk(const rpc_address &target_node, const std::
 error_with<start_app_manual_compact_response> replication_ddl_client::start_app_manual_compact(
     const std::string &app_name, bool bottommost, const int32_t level, const int32_t max_count)
 {
-    auto req = make_unique<start_app_manual_compact_request>();
+    auto req = std::make_unique<start_app_manual_compact_request>();
     req->app_name = app_name;
     req->__set_trigger_time(dsn_now_s());
     req->__set_target_level(level);
@@ -1721,7 +1728,7 @@ error_with<start_app_manual_compact_response> replication_ddl_client::start_app_
 error_with<query_app_manual_compact_response>
 replication_ddl_client::query_app_manual_compact(const std::string &app_name)
 {
-    auto req = make_unique<query_app_manual_compact_request>();
+    auto req = std::make_unique<query_app_manual_compact_request>();
     req->app_name = app_name;
     return call_rpc_sync(
         query_manual_compact_rpc(std::move(req), RPC_CM_QUERY_MANUAL_COMPACT_STATUS));
@@ -1730,7 +1737,7 @@ replication_ddl_client::query_app_manual_compact(const std::string &app_name)
 error_with<configuration_get_max_replica_count_response>
 replication_ddl_client::get_max_replica_count(const std::string &app_name)
 {
-    auto req = make_unique<configuration_get_max_replica_count_request>();
+    auto req = std::make_unique<configuration_get_max_replica_count_request>();
     req->__set_app_name(app_name);
     return call_rpc_sync(
         configuration_get_max_replica_count_rpc(std::move(req), RPC_CM_GET_MAX_REPLICA_COUNT));
@@ -1740,7 +1747,7 @@ error_with<configuration_set_max_replica_count_response>
 replication_ddl_client::set_max_replica_count(const std::string &app_name,
                                               int32_t max_replica_count)
 {
-    auto req = make_unique<configuration_set_max_replica_count_request>();
+    auto req = std::make_unique<configuration_set_max_replica_count_request>();
     req->__set_app_name(app_name);
     req->__set_max_replica_count(max_replica_count);
     return call_rpc_sync(

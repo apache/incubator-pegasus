@@ -26,14 +26,18 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
-#include "utils/utils.h"
-#include "utils/binary_reader.h"
-#include "utils/binary_writer.h"
+#include <string>
+#include <vector>
+
 #include "aio/aio_task.h"
+#include "runtime/api_task.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class task_tracker;
 
 struct remote_copy_request
 {

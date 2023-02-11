@@ -161,7 +161,7 @@ public:
     void operator()()
     {
         _perf_counter.calc(
-            boost::make_shared<dsn::perf_counter_number_percentile_atomic::compute_context>());
+            std::make_shared<dsn::perf_counter_number_percentile_atomic::compute_context>());
         std::copy(_perf_counter._results,
                   _perf_counter._results + COUNTER_PERCENTILE_COUNT,
                   _elements.begin());

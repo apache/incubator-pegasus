@@ -25,9 +25,13 @@
  */
 
 #include "aio_provider.h"
+
+// IWYU pragma: no_include <string>
+
 #include "disk_engine.h"
 
 namespace dsn {
+class aio_task;
 
 aio_provider::aio_provider(disk_engine *disk) : _engine(disk) {}
 

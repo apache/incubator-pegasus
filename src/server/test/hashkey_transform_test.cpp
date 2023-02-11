@@ -19,10 +19,14 @@
 
 #include "server/hashkey_transform.h"
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <rocksdb/comparator.h>
+#include <string>
 
 #include "base/pegasus_key_schema.h"
+#include "utils/blob.h"
 
 // User define SliceTransform must obey the 4 rules of ColumnFamilyOptions.prefix_extractor:
 // 1) key.starts_with(prefix(key))

@@ -15,14 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/fmt_logging.h"
+#include <iterator>
+#include <utility>
 
-#include "replica/replica_stub.h"
-#include "replica/replica.h"
-#include "replica/mutation_log_utils.h"
+#include "common/duplication_common.h"
+#include "duplication_types.h"
 #include "load_from_private_log.h"
+#include "perf_counter/perf_counter.h"
+#include "replica/duplication/mutation_batch.h"
+#include "replica/mutation.h"
+#include "replica/mutation_log_utils.h"
+#include "replica/replica.h"
 #include "replica_duplicator.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {

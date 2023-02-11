@@ -35,18 +35,22 @@
 
 #pragma once
 
-#include "runtime/service_app.h"
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
-#include "replica/storage/simple_kv/simple_kv.client.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/service_app.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {
+namespace application {
+class simple_kv_client;
+} // namespace application
+
 namespace test {
 
 class simple_kv_client_app : public ::dsn::service_app

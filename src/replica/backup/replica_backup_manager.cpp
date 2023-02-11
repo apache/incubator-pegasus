@@ -16,13 +16,33 @@
 // under the License.
 
 #include "replica_backup_manager.h"
-#include "cold_backup_context.h"
-#include "replica/replica.h"
 
-#include "utils/fmt_logging.h"
+#include <stdint.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <map>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "backup_types.h"
+#include "cold_backup_context.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "metadata_types.h"
+#include "replica/replica.h"
+#include "replica/replica_context.h"
+#include "replica/replication_app_base.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
+#include "utils/autoref_ptr.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
-#include "replica/replication_app_base.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {

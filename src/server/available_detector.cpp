@@ -19,15 +19,34 @@
 
 #include "available_detector.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <pegasus/error.h>
+#include <stdlib.h>
 #include <algorithm>
-#include "common/common.h"
-#include "utils/time_utils.h"
-#include <iomanip>
+#include <chrono>
+#include <cstdint>
+#include <functional>
 #include <sstream>
+#include <type_traits>
+#include <utility>
 
 #include "base/pegasus_key_schema.h"
+#include "client/replication_ddl_client.h"
+#include "common/common.h"
+#include "common/replication_other_types.h"
+#include "pegasus/client.h"
+#include "perf_counter/perf_counter.h"
 #include "result_writer.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
+#include "utils/threadpool_code.h"
+#include "utils/time_utils.h"
 
 namespace pegasus {
 namespace server {
@@ -83,7 +102,7 @@ available_detector::available_detector()
     }
     _client = pegasus_client_factory::get_client(_cluster_name.c_str(), FLAGS_available_detect_app);
     CHECK_NOTNULL(_client, "Initialize the _client failed");
-    _result_writer = dsn::make_unique<result_writer>(_client);
+    _result_writer = std::make_unique<result_writer>(_client);
     _ddl_client.reset(new replication_ddl_client(_meta_list));
     CHECK_NOTNULL(_ddl_client, "Initialize the _ddl_client failed");
     if (!dsn::utils::is_empty(FLAGS_available_detect_alert_email_address)) {

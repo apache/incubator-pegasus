@@ -35,17 +35,25 @@
 
 #pragma once
 
-#include "runtime/service_engine.h"
-#include "task_queue.h"
-#include "task_worker.h"
-#include "timer_service.h"
+#include <iosfwd>
+#include <list>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "runtime/task/task_code.h"
 #include "utils/command_manager.h"
+#include "utils/threadpool_spec.h"
 
 namespace dsn {
 
+class service_node;
+class task;
 class task_engine;
-class task_worker_pool;
+class task_queue;
 class task_worker;
+class threadpool_code;
+class timer_service;
 
 //
 // a task_worker_pool is a set of TaskWorkers share the same configs;

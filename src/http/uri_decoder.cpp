@@ -17,8 +17,10 @@
 
 #include "uri_decoder.h"
 
-#include <fmt/format.h>
+#include <stddef.h>
 
+#include "fmt/core.h"
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {

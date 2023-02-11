@@ -26,13 +26,28 @@
 
 #include "runtime/task/task_engine.h"
 
-#include <fmt/format.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <limits.h>
+#include <algorithm>
+#include <mutex>
+#include <ostream>
 
+#include "fmt/core.h"
+#include "runtime/global_config.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
+#include "runtime/task/timer_service.h"
 #include "utils/command_manager.h"
+#include "utils/factory_store.h"
 #include "utils/fmt_logging.h"
+#include "utils/join_point.h"
 #include "utils/string_conv.h"
+#include "utils/threadpool_code.h"
 
-using namespace dsn::utils;
+using dsn::utils::factory_store;
 
 namespace dsn {
 

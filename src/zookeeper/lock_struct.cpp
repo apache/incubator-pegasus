@@ -24,6 +24,8 @@
  * THE SOFTWARE.
  */
 
+#include <ctype.h>
+#include <chrono>
 /*
  * Description:
  *     distributed lock service implemented with zookeeper, the implementation
@@ -33,21 +35,25 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 #include <functional>
-#include <string>
 #include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
-
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
-
-#include "utils/thread_access_checker.h"
-#include "runtime/task/async_calls.h"
 
 #include "distributed_lock_service_zookeeper.h"
 #include "lock_struct.h"
 #include "lock_types.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
+#include "utils/thread_access_checker.h"
+#include "zookeeper/zookeeper.h"
+#include "zookeeper/zookeeper.jute.h"
 #include "zookeeper_session.h"
-#include "zookeeper_error.h"
 
 namespace dsn {
 namespace dist {

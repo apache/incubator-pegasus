@@ -53,6 +53,8 @@ is_profile = false
 */
 
 namespace dsn {
+struct service_spec;
+
 namespace tools {
 
 class profiler : public toollet

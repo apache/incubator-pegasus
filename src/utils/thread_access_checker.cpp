@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include "utils/api_utilities.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
 #include "utils/thread_access_checker.h"

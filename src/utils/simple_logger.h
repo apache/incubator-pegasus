@@ -26,10 +26,13 @@
 
 #pragma once
 
+#include <stdarg.h>
 #include <cstdio>
-#include <thread>
+#include <string>
 
-#include "runtime/tool_api.h"
+#include "utils/api_utilities.h"
+#include "utils/logging_provider.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace tools {

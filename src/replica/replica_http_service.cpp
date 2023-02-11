@@ -17,12 +17,20 @@
 
 #include "replica/replica_http_service.h"
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <stdint.h>
+#include <map>
+#include <memory>
+#include <unordered_map>
+#include <utility>
 
+#include "common/duplication_common.h"
+#include "common/gpid.h"
 #include "duplication/duplication_sync_timer.h"
 #include "http/http_server.h"
-#include "utils/output_utils.h"
+#include "replica/replica_stub.h"
 #include "utils/string_conv.h"
 
 namespace dsn {

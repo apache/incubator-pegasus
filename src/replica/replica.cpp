@@ -25,28 +25,46 @@
  */
 
 #include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
-#include "replica_stub.h"
+
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <inttypes.h>
+#include <algorithm>
+#include <functional>
+#include <iosfwd>
+#include <set>
+
+#include "backup/replica_backup_manager.h"
+#include "bulk_load/replica_bulk_loader.h"
+#include "common/backup_common.h"
+#include "common/fs_manager.h"
+#include "common/gpid.h"
+#include "common/replica_envs.h"
+#include "common/replication_enums.h"
+#include "consensus_types.h"
 #include "duplication/replica_duplicator_manager.h"
 #include "duplication/replica_follower.h"
-#include "backup/replica_backup_manager.h"
-#include "backup/cold_backup_context.h"
-#include "bulk_load/replica_bulk_loader.h"
-#include "split/replica_split_manager.h"
-#include "replica_disk_migrator.h"
-#include "runtime/security/access_controller.h"
-
-#include "utils/latency_tracer.h"
-#include "common/json_helper.h"
+#include "mutation.h"
+#include "mutation_log.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counters.h"
+#include "replica/prepare_list.h"
+#include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
-#include "common/replica_envs.h"
-#include "utils/fmt_logging.h"
-#include "utils/filesystem.h"
-#include "utils/rand.h"
-#include "utils/string_conv.h"
-#include "utils/strings.h"
+#include "replica_admin_types.h"
+#include "replica_disk_migrator.h"
+#include "replica_stub.h"
 #include "runtime/rpc/rpc_message.h"
+#include "runtime/security/access_controller.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "split/replica_split_manager.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/latency_tracer.h"
+#include "utils/ports.h"
+#include "utils/rand.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -109,10 +127,10 @@ replica::replica(replica_stub *stub,
     _options = &stub->options();
     init_state();
     _config.pid = gpid;
-    _bulk_loader = make_unique<replica_bulk_loader>(this);
-    _split_mgr = make_unique<replica_split_manager>(this);
-    _disk_migrator = make_unique<replica_disk_migrator>(this);
-    _replica_follower = make_unique<replica_follower>(this);
+    _bulk_loader = std::make_unique<replica_bulk_loader>(this);
+    _split_mgr = std::make_unique<replica_split_manager>(this);
+    _disk_migrator = std::make_unique<replica_disk_migrator>(this);
+    _replica_follower = std::make_unique<replica_follower>(this);
 
     std::string counter_str = fmt::format("private.log.size(MB)@{}", gpid);
     _counter_private_log_size.init_app_counter(
@@ -198,7 +216,7 @@ void replica::init_state()
 {
     _inactive_is_transient = false;
     _is_initializing = false;
-    _prepare_list = dsn::make_unique<prepare_list>(
+    _prepare_list = std::make_unique<prepare_list>(
         this,
         0,
         FLAGS_max_mutation_count_in_prepare_list,

@@ -17,9 +17,18 @@
 
 #pragma once
 
-#include "meta/meta_state_service.h"
+#include <functional>
+#include <queue>
+#include <string>
+#include <vector>
 
 namespace dsn {
+class blob;
+class task_tracker;
+namespace dist {
+class meta_state_service;
+} // namespace dist
+
 namespace replication {
 namespace mss { // abbreviation of meta_state_service
 

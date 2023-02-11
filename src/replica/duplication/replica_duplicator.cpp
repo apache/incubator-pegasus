@@ -16,13 +16,31 @@
 // under the License.
 
 #include "replica_duplicator.h"
-#include "load_from_private_log.h"
-#include "duplication_pipeline.h"
-#include "replica/replica_stub.h"
 
-#include "replica/replication_app_base.h"
-#include "utils/fmt_logging.h"
+#include <rapidjson/document.h>
+#include <rapidjson/encodings.h>
+#include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <algorithm>
+#include <cstdint>
+#include <map>
+#include <utility>
+
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "duplication_pipeline.h"
+#include "load_from_private_log.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/mutation_log.h"
+#include "replica/replica.h"
+#include "replica/replica_stub.h"
+#include "runtime/task/async_calls.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -83,9 +101,9 @@ void replica_duplicator::start_dup_log()
     /// ===== pipeline declaration ===== ///
 
     // load -> ship -> load
-    _ship = make_unique<ship_mutation>(this);
-    _load_private = make_unique<load_from_private_log>(_replica, this);
-    _load = make_unique<load_mutation>(this, _replica, _load_private.get());
+    _ship = std::make_unique<ship_mutation>(this);
+    _load_private = std::make_unique<load_from_private_log>(_replica, this);
+    _load = std::make_unique<load_mutation>(this, _replica, _load_private.get());
 
     from(*_load).link(*_ship).link(*_load);
     fork(*_load_private, LPC_REPLICATION_LONG_LOW, 0).link(*_ship);

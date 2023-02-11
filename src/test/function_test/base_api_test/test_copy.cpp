@@ -17,27 +17,34 @@
  * under the License.
  */
 
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <map>
-
-#include "utils/fmt_logging.h"
-#include "client/replication_ddl_client.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "include/pegasus/client.h"
-#include <unistd.h>
+#include <limits.h>
+#include <s2/third_party/absl/base/port.h>
+#include <string.h>
+#include <time.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstdlib>
+#include <functional>
+#include <map>
+#include <memory>
+#include <ostream>
+#include <string>
+#include <thread>
+#include <vector>
 
-#include "base/pegasus_const.h"
-#include "base/pegasus_utils.h"
-#include "test/function_test/utils/global_env.h"
-#include "shell/commands.h"
-#include "test/function_test/utils/utils.h"
+#include "client/replication_ddl_client.h"
+#include "include/pegasus/client.h"
+#include "pegasus/error.h"
+#include "runtime/task/async_calls.h"
+#include "shell/command_helper.h"
 #include "test/function_test/utils/test_util.h"
+#include "test/function_test/utils/utils.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 using namespace ::pegasus;
 using std::map;

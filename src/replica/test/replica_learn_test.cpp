@@ -15,11 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <memory>
+#include <ostream>
+#include <string>
+#include <utility>
 
-#include "replica/replica.h"
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
 #include "mock_utils.h"
 #include "replica/duplication/test/duplication_test_base.h"
+#include "replica/prepare_list.h"
+#include "replica/replica_context.h"
 
 namespace dsn {
 namespace replication {
@@ -37,7 +48,7 @@ public:
         app_info app_info;
         app_info.app_type = "replica";
         app_info.duplicating = true;
-        auto r = make_unique<mock_replica>(stub.get(), gpid, app_info, "./");
+        auto r = std::make_unique<mock_replica>(stub.get(), gpid, app_info, "./");
         r->as_primary();
         return r;
     }

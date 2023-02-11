@@ -17,9 +17,12 @@
 
 #include "token_bucket_throttling_controller.h"
 
-#include "api_utilities.h"
+#include <boost/optional/optional.hpp>
+#include <algorithm>
+
 #include "string_conv.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace dsn {
 namespace utils {

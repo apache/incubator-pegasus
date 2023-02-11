@@ -24,15 +24,49 @@
  * THE SOFTWARE.
  */
 
-#include "utils/rand.h"
-#include <memory>
-
 #include "asio_net_provider.h"
+
+#include <boost/asio.hpp> // IWYU pragma: keep
+#include <boost/system/error_code.hpp>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <cstddef>
+#include <limits>
+#include <memory>
+#include <new>
+
 #include "asio_rpc_session.h"
+// IWYU pragma: no_include "boost/asio/basic_datagram_socket.hpp"
+// IWYU pragma: no_include "boost/asio/basic_socket_acceptor.hpp"
+// IWYU pragma: no_include "boost/asio/basic_stream_socket.hpp"
+// IWYU pragma: no_include "boost/asio/buffer.hpp"
+// IWYU pragma: no_include "boost/asio/detail/impl/reactive_socket_service_base.ipp"
+// IWYU pragma: no_include "boost/asio/detail/impl/service_registry.hpp"
+// IWYU pragma: no_include "boost/asio/impl/io_context.hpp"
+// IWYU pragma: no_include "boost/asio/impl/io_context.ipp"
+// IWYU pragma: no_include "boost/asio/io_context.hpp"
+// IWYU pragma: no_include "boost/asio/ip/address.hpp"
+// IWYU pragma: no_include "boost/asio/ip/address_v4.hpp"
+// IWYU pragma: no_include "boost/asio/ip/basic_endpoint.hpp"
+// IWYU pragma: no_include "boost/asio/ip/impl/address.ipp"
+// IWYU pragma: no_include "boost/asio/ip/impl/address_v4.ipp"
+// IWYU pragma: no_include "boost/asio/socket_base.hpp"
+// IWYU pragma: no_include "boost/system/error_code.hpp
+#include "runtime/task/task.h"
+#include "runtime/task/task_worker.h"
+#include "runtime/tool_api.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/customizable_id.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/rand.h"
 
 namespace dsn {
+class rpc_engine;
+
 namespace tools {
 
 DSN_DEFINE_uint32(network,
@@ -178,6 +212,7 @@ void asio_network_provider::do_accept()
     });
 }
 
+const size_t asio_udp_provider::max_udp_packet_size = 1000;
 void asio_udp_provider::send_message(message_ex *request)
 {
     auto parser = get_message_parser(request->hdr_format);

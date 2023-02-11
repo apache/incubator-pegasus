@@ -16,8 +16,11 @@
 // under the License.
 #pragma once
 
+#include <stdint.h>
 #include <chrono>
 #include <memory>
+#include <string>
+
 #include "utils/TokenBucket.h"
 
 namespace dsn {

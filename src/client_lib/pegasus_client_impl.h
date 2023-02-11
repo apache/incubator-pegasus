@@ -19,12 +19,28 @@
 
 #pragma once
 
-#include <string>
 #include <pegasus/client.h>
 #include <rrdb/rrdb.client.h>
+#include <stdint.h>
+#include <functional>
+#include <list>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
 #include "utils/zlocks.h"
-#include "base/pegasus_key_schema.h"
-#include "base/pegasus_utils.h"
+
+namespace dsn {
+class error_code;
+class message_ex;
+class task_tracker;
+} // namespace dsn
 
 namespace pegasus {
 namespace client {

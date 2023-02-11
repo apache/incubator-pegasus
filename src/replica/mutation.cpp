@@ -34,10 +34,25 @@
  */
 
 #include "mutation.h"
-#include "mutation_log.h"
+
+#include <inttypes.h>
+#include <string.h>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
+#include "common/gpid.h"
+#include "common/replication.codes.h"
 #include "replica.h"
-#include "utils/fmt_logging.h"
+#include "runtime/api_task.h"
+#include "runtime/task/task_spec.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/latency_tracer.h"
+#include "utils/ports.h"
 
 namespace dsn {
 namespace replication {

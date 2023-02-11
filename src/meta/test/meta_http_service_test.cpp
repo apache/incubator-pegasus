@@ -15,17 +15,41 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <iostream>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fmt_logging.h"
-#include "http/http_server.h"
-#include "utils/fail_point.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
+#include "backup_types.h"
+#include "bulk_load_types.h"
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
+#include "http/http_server.h"
+#include "meta/meta_backup_service.h"
+#include "meta/meta_bulk_load_service.h"
+#include "meta/meta_data.h"
 #include "meta/meta_http_service.h"
 #include "meta/meta_service.h"
-#include "meta_test_base.h"
+#include "meta/meta_state_service.h"
 #include "meta_service_test_app.h"
-#include "meta/meta_bulk_load_service.h"
+#include "meta_test_base.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {
@@ -37,7 +61,7 @@ public:
     {
         meta_test_base::SetUp();
         FLAGS_enable_http_server = false; // disable http server
-        _mhs = dsn::make_unique<meta_http_service>(_ms.get());
+        _mhs = std::make_unique<meta_http_service>(_ms.get());
         create_app(test_app);
     }
 
@@ -104,7 +128,7 @@ public:
             ->create_node(
                 _policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
             ->wait();
-        _mhs = dsn::make_unique<meta_http_service>(_ms.get());
+        _mhs = std::make_unique<meta_http_service>(_ms.get());
         create_app(test_app);
     }
 
@@ -199,7 +223,7 @@ public:
     {
         meta_test_base::SetUp();
         FLAGS_enable_http_server = false;
-        _mhs = dsn::make_unique<meta_http_service>(_ms.get());
+        _mhs = std::make_unique<meta_http_service>(_ms.get());
         create_app(APP_NAME);
     }
 

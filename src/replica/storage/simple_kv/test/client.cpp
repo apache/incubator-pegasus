@@ -34,11 +34,28 @@
  */
 
 #include "client.h"
-#include "case.h"
-#include "runtime/rpc/group_address.h"
-#include "common/replication_other_types.h"
 
-#include <sstream>
+#include <stdint.h>
+#include <algorithm>
+#include <chrono>
+#include <functional>
+#include <utility>
+
+#include "case.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "replica/storage/simple_kv/simple_kv.client.h"
+#include "replica/storage/simple_kv/test/common.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "simple_kv_types.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {

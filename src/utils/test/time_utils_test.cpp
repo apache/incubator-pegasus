@@ -25,8 +25,10 @@
  */
 
 #include "utils/time_utils.h"
+
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "runtime/api_layer1.h"
 
 namespace dsn {
 namespace utils {

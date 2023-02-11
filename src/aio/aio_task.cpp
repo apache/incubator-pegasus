@@ -15,10 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/task/task_engine.h"
+#include <string.h>
+#include <functional>
+#include <list>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "aio/aio_task.h"
 #include "aio/file_io.h"
+#include "runtime/api_task.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
 #include "utils/latency_tracer.h"
+#include "utils/threadpool_code.h"
+#include "utils/utils.h"
 
 namespace dsn {
 

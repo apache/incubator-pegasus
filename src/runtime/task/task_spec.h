@@ -35,19 +35,21 @@
 
 #pragma once
 
-#include "utils/utils.h"
-#include "utils/config_helper.h"
-#include "utils/enum_helper.h"
-#include "utils/customizable_id.h"
-#include "utils/join_point.h"
-#include "utils/extensible_object.h"
-#include "utils/exp_delay.h"
-#include "perf_counter/perf_counter.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
+#include <stdint.h>
+#include <set>
+#include <string>
+#include <vector>
+
 #include "runtime/task/task_code.h"
-#include "common/gpid.h"
 #include "utils/api_utilities.h"
+#include "utils/config_api.h"
+#include "utils/config_helper.h"
+#include "utils/customizable_id.h"
+#include "utils/enum_helper.h"
+#include "utils/exp_delay.h"
+#include "utils/extensible_object.h"
+#include "utils/join_point.h"
+#include "utils/threadpool_code.h"
 
 ENUM_BEGIN(dsn_log_level_t, LOG_LEVEL_INVALID)
 ENUM_REG(LOG_LEVEL_DEBUG)
@@ -132,12 +134,11 @@ DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_TCP)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
 
-class task;
-class task_queue;
 class aio_task;
+class message_ex;
 class rpc_request_task;
 class rpc_response_task;
-class message_ex;
+class task;
 
 std::set<dsn::task_code> &get_storage_rpc_req_codes();
 

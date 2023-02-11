@@ -26,16 +26,24 @@
 
 #pragma once
 
-#include "runtime/task/task_tracker.h"
-#include "utils/zlocks.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include <stdint.h>
+#include <deque>
+#include <functional>
+#include <memory>
+#include <unordered_map>
+
 #include "client/partition_resolver.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class message_ex;
+
 namespace replication {
 
 class partition_resolver_simple : public partition_resolver

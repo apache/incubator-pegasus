@@ -19,17 +19,15 @@
 
 #include "killer_handler_shell.h"
 
-#include <cstdlib>
-#include <cstring>
+#include <stdio.h>
 #include <cerrno>
-#include <sstream>
-#include <fstream>
+#include <cstdlib>
+#include <sstream> // IWYU pragma: keep
 
-#include "utils/api_utilities.h"
-#include "utils/config_api.h"
-#include "utils/fmt_logging.h"
-#include "utils/safe_strerror_posix.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
 
 namespace pegasus {

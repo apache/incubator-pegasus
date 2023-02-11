@@ -18,22 +18,18 @@
  */
 
 #include <gtest/gtest.h>
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
+#include <atomic>
+#include <chrono>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "replica/replication_app_base.h"
 #include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "replica/replication_service_app.h"
 #include "server/compaction_operation.h"
 #include "server/pegasus_server_impl.h"
+#include "utils/error_code.h"
 
 std::atomic_bool gtest_done{false};
 std::atomic_int gtest_ret{false};

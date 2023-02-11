@@ -26,10 +26,16 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "runtime/tool_api.h"
-#include "runtime/service_app.h"
+#include "utils/sys_exit_hook.h"
 
 namespace dsn {
+class service_app;
+struct service_spec;
+
 namespace tools {
 
 class checker

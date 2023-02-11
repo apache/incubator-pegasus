@@ -17,9 +17,16 @@
 
 #include "meta/meta_bulk_load_ingestion_context.h"
 
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {

@@ -19,22 +19,13 @@
 
 #include "latlng_codec.h"
 
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/fmt_logging.h"
+#include <s2/s1angle.h>
+#include <s2/s2latlng.h>
+#include <stddef.h>
+
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 
 namespace pegasus {

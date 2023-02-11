@@ -26,9 +26,14 @@
 
 #pragma once
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <stdint.h>
+#include <functional>
 #include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"

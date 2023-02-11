@@ -17,30 +17,34 @@
 
 #include "block_service/fds/fds_service.h"
 
-#include <cstring>
-#include <fstream>
-#include <memory>
-
+#include <Poco/Net/HTTPResponse.h>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/scoped_ptr.hpp>
+#include <errno.h>
 #include <fds_client_configuration.h>
 #include <galaxy_fds_client.h>
 #include <galaxy_fds_client_exception.h>
 #include <model/delete_multi_objects_result.h>
 #include <model/fds_object.h>
-#include <model/fds_object_metadata.h>
 #include <model/fds_object_listing.h>
+#include <model/fds_object_metadata.h>
 #include <model/fds_object_summary.h>
-#include <Poco/Net/HTTPResponse.h>
+#include <algorithm>
+#include <fstream>
+#include <map>
+#include <memory>
+#include <utility>
 
-#include "utils/defer.h"
+#include "Poco/Exception.h"
+#include "runtime/task/async_calls.h"
+#include "utils/TokenBucket.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
-#include "utils/TokenBucket.h"
 
 namespace dsn {
 namespace dist {

@@ -17,11 +17,7 @@
  * under the License.
  */
 
-#include "client/replication_ddl_client.h"
-#include <pegasus/client.h>
-
 #include "kill_testor.h"
-#include "killer_registry.h"
 
 namespace pegasus {
 namespace test {

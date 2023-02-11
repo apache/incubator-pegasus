@@ -17,11 +17,11 @@
 
 #include "access_controller.h"
 
-#include "utils/flags.h"
-#include "utils/strings.h"
-#include "utils/smart_pointers.h"
 #include "meta_access_controller.h"
 #include "replica_access_controller.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace security {
@@ -63,12 +63,12 @@ bool access_controller::is_super_user(const std::string &user_name) const
 
 std::unique_ptr<access_controller> create_meta_access_controller()
 {
-    return make_unique<meta_access_controller>();
+    return std::make_unique<meta_access_controller>();
 }
 
 std::unique_ptr<access_controller> create_replica_access_controller(const std::string &name)
 {
-    return make_unique<replica_access_controller>(name);
+    return std::make_unique<replica_access_controller>(name);
 }
 } // namespace security
 } // namespace dsn

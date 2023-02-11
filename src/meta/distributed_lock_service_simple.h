@@ -35,8 +35,21 @@
 
 #pragma once
 
-#include "utils/zlocks.h"
+#include <stdint.h>
+#include <list>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "runtime/task/future_types.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
+#include "utils/error_code.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace dist {

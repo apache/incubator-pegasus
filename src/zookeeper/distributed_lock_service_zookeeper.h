@@ -33,14 +33,29 @@
  */
 #pragma once
 
-#include "utils/distributed_lock_service.h"
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "boost/container/detail/std_fwd.hpp"
 #include "lock_types.h"
+#include "runtime/task/future_types.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/distributed_lock_service.h"
+#include "utils/error_code.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace dist {
 
 class zookeeper_session;
+
 class distributed_lock_service_zookeeper : public distributed_lock_service, public ref_counter
 {
 public:

@@ -17,10 +17,55 @@
  * under the License.
  */
 
-#include "shell/commands.h"
+// IWYU pragma: no_include <bits/getopt_core.h>
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/printf.h>
+#include <getopt.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <pegasus/error.h>
+#include <rocksdb/statistics.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "client/replication_ddl_client.h"
+#include "dsn.layer2_types.h"
+#include "geo/lib/geo_client.h"
 #include "idl_utils.h"
+#include "pegasus/client.h"
+#include "pegasus_key_schema.h"
+#include "pegasus_utils.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/async_calls.h"
+#include "shell/args.h"
+#include "shell/command_executor.h"
+#include "shell/command_helper.h"
+#include "shell/command_utils.h"
+#include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "utils/blob.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/output_utils.h"
+#include "utils/string_conv.h"
 
 DSN_DEFINE_int32(threadpool.THREAD_POOL_DEFAULT,
                  worker_count,

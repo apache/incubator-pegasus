@@ -35,13 +35,19 @@
 
 #pragma once
 
-#include "task_queue.h"
-#include "utils/extensible_object.h"
-#include "utils/synchronize.h"
-#include "perf_counter/perf_counter.h"
+#include <stdint.h>
+#include <memory>
+#include <string>
 #include <thread>
 
+#include "utils/extensible_object.h"
+#include "utils/join_point.h"
+#include "utils/synchronize.h"
+#include "utils/threadpool_spec.h"
+
 namespace dsn {
+class task_queue;
+class task_worker_pool;
 
 /*!
 @addtogroup tool-api-providers

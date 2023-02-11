@@ -16,11 +16,17 @@
 // under the License.
 
 #pragma once
-#include "utils/synchronize.h"
-#include "utils/flags.h"
-#include "utils/fmt_logging.h"
-#include "runtime/task/task_code.h"
+#include <stdint.h>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 #include "common/replication.codes.h"
+#include "runtime/task/task_code.h"
+#include "utils/flags.h"
+#include "utils/ports.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace utils {

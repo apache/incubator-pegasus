@@ -17,13 +17,22 @@
 
 #include "hotkey_collector.h"
 
-#include "common/replication_enums.h"
-#include "utils/smart_pointers.h"
-#include <boost/functional/hash.hpp>
-#include "utils/fmt_logging.h"
-#include "utils/flags.h"
+#include <boost/container_hash/extensions.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <unordered_map>
+
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
+#include "common/replication_enums.h"
+#include "runtime/api_layer1.h"
+#include "server/hotkey_collector_state.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace server {

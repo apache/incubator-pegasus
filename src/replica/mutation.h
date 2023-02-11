@@ -35,16 +35,36 @@
 
 #pragma once
 
-#include "common/replication_common.h"
-#include <list>
+#include <stdint.h>
 #include <atomic>
+#include <functional>
+#include <memory>
+#include <vector>
+
+#include "common/replication_common.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/fmt_logging.h"
 #include "utils/link.h"
-#include "utils/latency_tracer.h"
 
 namespace dsn {
+class binary_reader;
+class binary_writer;
+class blob;
+class gpid;
+namespace utils {
+class latency_tracer;
+} // namespace utils
+
 namespace replication {
 
 class mutation;
+
 typedef dsn::ref_ptr<mutation> mutation_ptr;
 
 // mutation is the 2pc unit of PacificA, which wraps one or more client requests and add
@@ -182,6 +202,7 @@ private:
 };
 
 class replica;
+
 // mutation queue are queues for mutations waiting to send.
 // more precisely: for client requests waiting to send.
 // mutations are queued as "_hdr + _pending_mutation". that is to say, _hdr.first is the first

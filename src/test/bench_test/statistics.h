@@ -19,9 +19,15 @@
 
 #pragma once
 
-#include <rocksdb/statistics.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
 
 #include "utils.h"
+
+namespace rocksdb {
+class Statistics;
+} // namespace rocksdb
 
 namespace pegasus {
 namespace test {

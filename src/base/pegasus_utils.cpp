@@ -20,12 +20,13 @@
 #include "pegasus_utils.h"
 
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <netdb.h>
-#include <stdlib.h>
-#include <errno.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <cctype>
 
-#include "utils/api_utilities.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
 
 namespace pegasus {

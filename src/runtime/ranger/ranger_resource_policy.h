@@ -17,16 +17,12 @@
 
 #pragma once
 
-#include <map>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
-#include <rapidjson/document.h>
-
 #include "access_type.h"
 #include "common/json_helper.h"
-#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace ranger {

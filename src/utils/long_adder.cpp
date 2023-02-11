@@ -24,13 +24,11 @@
 #include <mm_malloc.h>
 #endif //__aarch64__
 
+#include <fmt/format.h>
 #include <unistd.h>
-
 #include <cstdlib>
 #include <new>
-#include <string>
 
-#include "utils/api_utilities.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"

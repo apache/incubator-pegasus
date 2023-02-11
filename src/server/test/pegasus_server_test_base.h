@@ -54,12 +54,12 @@ public:
         _replica = dsn::replication::create_test_replica(
             _replica_stub, _gpid, app_info, "./", false, false);
 
-        _server = dsn::make_unique<mock_pegasus_server_impl>(_replica);
+        _server = std::make_unique<mock_pegasus_server_impl>(_replica);
     }
 
     dsn::error_code start(const std::map<std::string, std::string> &envs = {})
     {
-        std::unique_ptr<char *[]> argvs = dsn::make_unique<char *[]>(1 + envs.size() * 2);
+        std::unique_ptr<char *[]> argvs = std::make_unique<char *[]>(1 + envs.size() * 2);
         char **argv = argvs.get();
         int idx = 0;
         argv[idx++] = const_cast<char *>("unit_test_app");

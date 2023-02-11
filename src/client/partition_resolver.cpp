@@ -24,11 +24,16 @@
  * THE SOFTWARE.
  */
 
-#include "utils/zlocks.h"
-#include "runtime/rpc/group_address.h"
 #include "client/partition_resolver.h"
-#include "partition_resolver_simple.h"
+
+// IWYU pragma: no_include <type_traits>
+
 #include "partition_resolver_manager.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/task/task_spec.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {

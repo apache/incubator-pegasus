@@ -16,24 +16,24 @@
 // under the License.
 
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
-
-#include "meta/meta_data.h"
+#include "meta/meta_service.h" // IWYU pragma: keep
 
 namespace dsn {
+class rpc_address;
+
 namespace replication {
 
-class meta_split_service;
-class meta_duplication_service;
+class app_state;
 class bulk_load_service;
-class meta_service;
+class meta_duplication_service;
+class meta_split_service;
+class node_state;
 class server_state;
 
 class meta_test_base : public testing::Test

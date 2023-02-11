@@ -33,11 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "nfs_node_simple.h"
+#include <memory>
+
+#include "nfs/nfs_node.h"
 #include "nfs_client_impl.h"
+#include "nfs_node_simple.h"
 #include "nfs_server_impl.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class aio_task;
+
 namespace service {
 
 nfs_node_simple::nfs_node_simple() : nfs_node()

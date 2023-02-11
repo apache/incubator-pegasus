@@ -20,8 +20,10 @@
 #include <sasl/sasl.h>
 
 #include "utils/blob.h"
-#include "utils/flags.h"
+#include "utils/error_code.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace security {

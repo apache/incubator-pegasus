@@ -17,11 +17,21 @@
 
 #pragma once
 
-#include "server_negotiation.h"
+#include <memory>
+#include <unordered_map>
 
+#include "runtime/security/negotiation.h"
 #include "runtime/serverlet.h"
+#include "utils/singleton.h"
 
 namespace dsn {
+class error_code;
+class message_ex;
+class rpc_session;
+namespace utils {
+class rw_lock_nr;
+} // namespace utils
+
 namespace security {
 typedef std::unordered_map<rpc_session *, std::shared_ptr<negotiation>> negotiation_map;
 

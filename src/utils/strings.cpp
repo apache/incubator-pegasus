@@ -24,17 +24,15 @@
  * THE SOFTWARE.
  */
 
+#include <openssl/md5.h>
+#include <stdio.h>
+#include <strings.h>
 #include <algorithm>
 #include <cstring>
-#include <sstream>
-#include <strings.h>
+#include <sstream> // IWYU pragma: keep
 #include <utility>
 
-#include <openssl/md5.h>
-
-#include "utils/api_utilities.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 #include "utils/strings.h"
 
 namespace dsn {

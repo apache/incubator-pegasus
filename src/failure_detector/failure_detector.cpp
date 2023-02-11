@@ -28,9 +28,22 @@
 
 #include <chrono>
 #include <ctime>
+#include <mutex>
+#include <ostream>
+#include <type_traits>
+#include <utility>
 
+#include "failure_detector/fd.code.definition.h"
+#include "fd_types.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/api_layer1.h"
+#include "runtime/serverlet.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
 #include "utils/command_manager.h"
 #include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
 
 namespace dsn {
 namespace fd {

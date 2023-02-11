@@ -33,10 +33,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <string>
+
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "dsn.layer2_types.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
 #include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
+#include "replica/replica_context.h"
 #include "replica_stub.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

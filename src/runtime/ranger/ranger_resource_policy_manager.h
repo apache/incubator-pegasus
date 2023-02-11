@@ -17,14 +17,18 @@
 
 #pragma once
 
-#include <memory>
+#include <algorithm>
+#include <map>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
-#include "meta/meta_service.h"
+#include "common/json_helper.h"
+#include "gtest/gtest_prod.h"
 #include "ranger_resource_policy.h"
-#include "runtime/api_task.h"
-#include "utils/error_code.h"
+#include "rapidjson/document.h"
+#include "runtime/ranger/access_type.h"
+#include "utils/enum_helper.h"
 
 namespace dsn {
 

@@ -17,16 +17,26 @@
  * under the License.
  */
 
-#include <atomic>
-#include <memory>
-#include <signal.h>
-#include <unistd.h>
-
 #include <pegasus/version.h>
+#include <s2/third_party/absl/base/port.h>
+#include <signal.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include "proxy_layer.h"
 #include "redis_parser.h"
 #include "reporter/pegasus_counter_reporter.h"
+#include "runtime/app_model.h"
+#include "runtime/service_app.h"
+#include "utils/error_code.h"
 #include "utils/strings.h"
+
+namespace dsn {
+class message_ex;
+} // namespace dsn
 
 namespace pegasus {
 namespace proxy {
@@ -45,7 +55,7 @@ public:
         proxy_session::factory f = [](proxy_stub *p, dsn::message_ex *m) {
             return std::make_shared<redis_parser>(p, m);
         };
-        _proxy = dsn::make_unique<proxy_stub>(
+        _proxy = std::make_unique<proxy_stub>(
             f, args[1].c_str(), args[2].c_str(), args.size() > 3 ? args[3].c_str() : "");
 
         pegasus::server::pegasus_counter_reporter::instance().start();

@@ -27,11 +27,15 @@
 #pragma once
 
 #include <concurrentqueue/concurrentqueue.h>
-#include <concurrentqueue/blockingconcurrentqueue.h>
 
+#include "concurrentqueue/lightweightsemaphore.h"
+#include "runtime/task/task_code.h"
 #include "task_queue.h"
 
 namespace dsn {
+class task;
+class task_worker_pool;
+
 namespace tools {
 class hpc_concurrent_task_queue : public task_queue
 {

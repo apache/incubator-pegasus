@@ -17,14 +17,31 @@
  * under the License.
  */
 
-#include "shell/commands.h"
-#include "shell/argh.h"
+#include <fmt/core.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <iostream>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
-#include <fmt/ostream.h>
-#include "utils/errors.h"
-#include "utils/output_utils.h"
-#include "utils/string_conv.h"
+#include "client/partition_resolver.h"
+#include "client/replication_ddl_client.h"
 #include "common//duplication_common.h"
+#include "duplication_types.h"
+#include "shell/argh.h"
+#include "shell/command_executor.h"
+#include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
+#include "utils/output_utils.h"
+#include "utils/ports.h"
+#include "utils/string_conv.h"
+#include "utils/time_utils.h"
 
 using dsn::replication::dupid_t;
 using dsn::replication::duplication_status;

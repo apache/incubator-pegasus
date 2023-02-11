@@ -26,13 +26,22 @@
 
 #include "common/replication_common.h"
 
+#include <algorithm>
 #include <fstream>
+#include <memory>
 
+#include "common/gpid.h"
 #include "common/replica_envs.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "fmt/core.h"
+#include "runtime/service_app.h"
+#include "utils/config_api.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace replication {

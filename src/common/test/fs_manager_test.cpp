@@ -17,10 +17,14 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fail_point.h"
+#include <memory>
 
 #include "common/fs_manager.h"
+#include "metadata_types.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {
