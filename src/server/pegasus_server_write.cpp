@@ -17,29 +17,28 @@
  * under the License.
  */
 
-#include "runtime/message_utils.h"
-#include "common//duplication_common.h"
-#include "utils/defer.h"
+#include "server/pegasus_server_write.h"
 
 #include "base/pegasus_key_schema.h"
-#include "pegasus_server_write.h"
-#include "pegasus_server_impl.h"
-#include "logging_utils.h"
-#include "pegasus_mutation_duplicator.h"
+#include "common/duplication_common.h"
+#include "runtime/message_utils.h"
+#include "server/logging_utils.h"
+#include "server/pegasus_mutation_duplicator.h"
+#include "server/pegasus_server_impl.h"
+#include "utils/defer.h"
+
+METRIC_DEFINE_counter(replica,
+                      corrupt_writes,
+                      dsn::metric_unit::kRequests,
+                      "corrupt write count for each replica");
 
 namespace pegasus {
 namespace server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
-    : replica_base(server), _write_svc(new pegasus_write_service(server)), _verbose_log(verbose_log)
+    : replica_base(server), _write_svc(new pegasus_write_service(server)), _verbose_log(verbose_log),
+    _corrupt_write_counter(METRIC_corrupt_writes.instantiate(replica_metric_entity()))
 {
-    char name[256];
-    snprintf(name, 255, "recent_corrupt_write_count@%s", get_gpid().to_string());
-    _pfc_recent_corrupt_write_count.init_app_counter("app.pegasus",
-                                                     name,
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "statistic the recent corrupt write count");
-
     init_non_batch_write_handlers();
 }
 
@@ -65,7 +64,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
             return iter->second(requests[0]);
         }
     } catch (TTransportException &ex) {
-        _pfc_recent_corrupt_write_count->increment();
+        _corrupt_write_counter->increment();
         LOG_ERROR_PREFIX("pegasus not batch write handler failed, from = {}, exception = {}",
                          requests[0]->header->from_address.to_string(),
                          ex.what());
@@ -109,7 +108,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                     }
                 }
             } catch (TTransportException &ex) {
-                _pfc_recent_corrupt_write_count->increment();
+                _corrupt_write_counter->increment();
                 LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
                                  requests[i]->header->from_address.to_string(),
                                  ex.what());

@@ -26,6 +26,11 @@
 #include "common/replication.codes.h"
 #include "utils/defer.h"
 
+METRIC_DEFINE_counter(replica,
+                      put_requests,
+                      dsn::metric_unit::kRequests,
+                      "put request count for each replica");
+
 namespace pegasus {
 namespace server {
 
@@ -36,15 +41,12 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       _server(server),
       _impl(new impl(server)),
       _batch_start_time(0),
-      _cu_calculator(server->_cu_calculator.get())
+      _cu_calculator(server->_cu_calculator.get()),
+      _put_counter(METRIC_put_requests.instantiate(replica_metric_entity())),
 {
     std::string str_gpid = fmt::format("{}", server->get_gpid());
 
     std::string name;
-
-    name = fmt::format("put_qps@{}", str_gpid);
-    _pfc_put_qps.init_app_counter(
-        "app.pegasus", name.c_str(), COUNTER_TYPE_RATE, "statistic the qps of PUT request");
 
     name = fmt::format("multi_put_qps@{}", str_gpid);
     _pfc_multi_put_qps.init_app_counter(

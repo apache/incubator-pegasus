@@ -19,22 +19,20 @@
 
 #pragma once
 
-#include "perf_counter/perf_counter_wrapper.h"
-#include "replica/replica_base.h"
+#include "base/pegasus_utils.h"
+#include "base/pegasus_value_schema.h"
+#include "backup_types.h"
+#include "bulk_load_types.h"
 #include "common/common.h"
-#include "common//duplication_common.h"
+#include "common/duplication_common.h"
+#include "consensus_types.h"
+#include "duplication_internal_types.h"
+#include "duplication_types.h"
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
+#include "replica/replica_base.h"
 #include "replica_admin_types.h"
-
-#include "base/pegasus_value_schema.h"
-#include "base/pegasus_utils.h"
 #include "rrdb/rrdb_types.h"
-#include "duplication_internal_types.h"
 
 namespace pegasus {
 namespace server {
@@ -199,24 +197,24 @@ private:
     capacity_unit_calculator *_cu_calculator;
     int64_t _dup_lagging_write_threshold_ms;
 
-    ::dsn::perf_counter_wrapper _pfc_put_qps;
-    ::dsn::perf_counter_wrapper _pfc_multi_put_qps;
-    ::dsn::perf_counter_wrapper _pfc_remove_qps;
-    ::dsn::perf_counter_wrapper _pfc_multi_remove_qps;
-    ::dsn::perf_counter_wrapper _pfc_incr_qps;
-    ::dsn::perf_counter_wrapper _pfc_check_and_set_qps;
-    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_qps;
-    ::dsn::perf_counter_wrapper _pfc_duplicate_qps;
-    ::dsn::perf_counter_wrapper _pfc_dup_time_lag;
-    ::dsn::perf_counter_wrapper _pfc_dup_lagging_writes;
+    dsn::counter_ptr _put_counter;
+    dsn::counter_ptr _multi_put_counter;
+    dsn::counter_ptr _remove_counter;
+    dsn::counter_ptr _multi_remove_counter;
+    dsn::counter_ptr _incr_counter;
+    dsn::counter_ptr _check_and_set_counter;
+    dsn::counter_ptr _check_and_mutate_counter;
+    dsn::counter_ptr _duplicate_counter;
+    dsn::percentile_ptr<int64_t> _pfc_dup_time_lag;
+    dsn::counter_ptr _pfc_dup_lagging_writes;
 
-    ::dsn::perf_counter_wrapper _pfc_put_latency;
-    ::dsn::perf_counter_wrapper _pfc_multi_put_latency;
-    ::dsn::perf_counter_wrapper _pfc_remove_latency;
-    ::dsn::perf_counter_wrapper _pfc_multi_remove_latency;
-    ::dsn::perf_counter_wrapper _pfc_incr_latency;
-    ::dsn::perf_counter_wrapper _pfc_check_and_set_latency;
-    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_latency;
+    dsn::percentile_ptr<int64_t> _put_latency;
+    dsn::percentile_ptr<int64_t> _multi_put_latency;
+    dsn::percentile_ptr<int64_t> _remove_latency;
+    dsn::percentile_ptr<int64_t> _multi_remove_latency;
+    dsn::percentile_ptr<int64_t> _incr_latency;
+    dsn::percentile_ptr<int64_t> _check_and_set_latency;
+    dsn::percentile_ptr<int64_t> _check_and_mutate_latency;
 
     // Records all requests.
     std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
