@@ -197,13 +197,13 @@ private:
     capacity_unit_calculator *_cu_calculator;
     int64_t _dup_lagging_write_threshold_ms;
 
-    dsn::counter_ptr _put_counter;
-    dsn::counter_ptr _multi_put_counter;
-    dsn::counter_ptr _remove_counter;
-    dsn::counter_ptr _multi_remove_counter;
-    dsn::counter_ptr _incr_counter;
-    dsn::counter_ptr _check_and_set_counter;
-    dsn::counter_ptr _check_and_mutate_counter;
+    dsn::counter_ptr<> _put_counter;
+    dsn::counter_ptr<> _multi_put_counter;
+    dsn::counter_ptr<> _remove_counter;
+    dsn::counter_ptr<> _multi_remove_counter;
+    dsn::counter_ptr<> _incr_counter;
+    dsn::counter_ptr<> _check_and_set_counter;
+    dsn::counter_ptr<> _check_and_mutate_counter;
 
     dsn::percentile_ptr<int64_t> _put_latency_ns;
     dsn::percentile_ptr<int64_t> _multi_put_latency_ns;
@@ -213,9 +213,9 @@ private:
     dsn::percentile_ptr<int64_t> _check_and_set_latency_ns;
     dsn::percentile_ptr<int64_t> _check_and_mutate_latency_ns;
 
-    dsn::counter_ptr _dup_counter;
+    dsn::counter_ptr<> _dup_counter;
     dsn::percentile_ptr<int64_t> _dup_time_lag_ms;
-    dsn::counter_ptr _dup_lagging_write_counter;
+    dsn::counter_ptr<> _dup_lagging_write_counter;
 
     // Record batch size for put and remove requests.
     uint32_t _put_batch_size;

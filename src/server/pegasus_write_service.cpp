@@ -62,54 +62,56 @@ METRIC_DEFINE_counter(replica,
                       "The number of CHECK_AND_MUTATE requests for each replica");
 
 METRIC_DEFINE_percentile_int64(replica,
-                      put_latency_ns,
-                      dsn::metric_unit::kNanoSeconds,
-                      "The latency of PUT requests for each replica");
+                               put_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of PUT requests for each replica");
 
 METRIC_DEFINE_percentile_int64(replica,
-                      multi_put_latency_ns,
-                      dsn::metric_unit::kNanoSeconds,
-                      "The latency of MULTI_PUT requests for each replica");
+                               multi_put_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of MULTI_PUT requests for each replica");
 
 METRIC_DEFINE_percentile_int64(replica,
-                      remove_latency_ns,
-                      dsn::metric_unit::kNanoSeconds,
-                      "The latency of REMOVE requests for each replica");
+                               remove_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of REMOVE requests for each replica");
 
 METRIC_DEFINE_percentile_int64(replica,
-                      multi_remove_latency_ns,
-                      dsn::metric_unit::kNanoSeconds,
-                      "The latency of MULTI_REMOVE requests for each replica");
+                               multi_remove_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of MULTI_REMOVE requests for each replica");
 
 METRIC_DEFINE_percentile_int64(replica,
-                      incr_latency_ns,
-                      dsn::metric_unit::kNanoSeconds,
-                      "The latency of INCR requests for each replica");
+                               incr_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of INCR requests for each replica");
 
 METRIC_DEFINE_percentile_int64(replica,
-                      check_and_set_latency_ns,
-                      dsn::metric_unit::kNanoSeconds,
-                      "The latency of CHECK_AND_SET requests for each replica");
+                               check_and_set_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of CHECK_AND_SET requests for each replica");
 
 METRIC_DEFINE_percentile_int64(replica,
-                      check_and_mutate_latency_ns,
-                      dsn::metric_unit::kNanoSeconds,
-                      "The latency of CHECK_AND_MUTATE requests for each replica");
+                               check_and_mutate_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of CHECK_AND_MUTATE requests for each replica");
 
 METRIC_DEFINE_counter(replica,
                       dup_requests,
                       dsn::metric_unit::kRequests,
                       "The number of DUPLICATE requests for each replica");
 
-METRIC_DEFINE_percentile_int64(replica,
-                      dup_time_lag_ms,
-                      dsn::metric_unit::kMilliSeconds,
-        "the time lag (in ms) between master and slave in the duplication for each replica");
+METRIC_DEFINE_percentile_int64(
+    replica,
+    dup_time_lag_ms,
+    dsn::metric_unit::kMilliSeconds,
+    "the time lag (in ms) between master and slave in the duplication for each replica");
 
-METRIC_DEFINE_counter(replica,
-                      dup_lagging_writes,
-                      dsn::metric_unit::kRequests,
-        "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
+METRIC_DEFINE_counter(
+    replica,
+    dup_lagging_writes,
+    dsn::metric_unit::kRequests,
+    "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
 
 namespace pegasus {
 namespace server {
@@ -128,14 +130,17 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       _multi_remove_counter(METRIC_multi_remove_requests.instantiate(replica_metric_entity())),
       _incr_counter(METRIC_incr_requests.instantiate(replica_metric_entity())),
       _check_and_set_counter(METRIC_check_and_set_requests.instantiate(replica_metric_entity())),
-      _check_and_mutate_counter(METRIC_check_and_mutate_requests.instantiate(replica_metric_entity())),
+      _check_and_mutate_counter(
+          METRIC_check_and_mutate_requests.instantiate(replica_metric_entity())),
       _put_latency_ns(METRIC_put_latency_ns.instantiate(replica_metric_entity())),
       _multi_put_latency_ns(METRIC_multi_put_latency_ns.instantiate(replica_metric_entity())),
       _remove_latency_ns(METRIC_remove_latency_ns.instantiate(replica_metric_entity())),
       _multi_remove_latency_ns(METRIC_multi_remove_latency_ns.instantiate(replica_metric_entity())),
       _incr_latency_ns(METRIC_incr_latency_ns.instantiate(replica_metric_entity())),
-      _check_and_set_latency_ns(METRIC_check_and_set_latency_ns.instantiate(replica_metric_entity())),
-      _check_and_mutate_latency_ns(METRIC_check_and_mutate_latency_ns.instantiate(replica_metric_entity())),
+      _check_and_set_latency_ns(
+          METRIC_check_and_set_latency_ns.instantiate(replica_metric_entity())),
+      _check_and_mutate_latency_ns(
+          METRIC_check_and_mutate_latency_ns.instantiate(replica_metric_entity())),
       _dup_counter(METRIC_dup_requests.instantiate(replica_metric_entity())),
       _dup_time_lag_ms(METRIC_dup_time_lag_ms.instantiate(replica_metric_entity())),
       _dup_lagging_write_counter(METRIC_dup_lagging_writes.instantiate(replica_metric_entity())),
@@ -301,13 +306,13 @@ void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_t
 
 void pegasus_write_service::clear_up_batch_states()
 {
-#define PROCESS_WRITE_BATCH(op) \
-    do {\
-        _##op##_counter->increment_by(static_cast<int64_t>(_##op##_batch_size)); \
-        for (uint32_t i = 0; i < _##op##_batch_size; ++i) { \
-            _##op##_latency_ns->set(latency_ns); \
-        } \
-        _##op##_batch_size = 0; \
+#define PROCESS_WRITE_BATCH(op)                                                                    \
+    do {                                                                                           \
+        _##op##_counter->increment_by(static_cast<int64_t>(_##op##_batch_size));                   \
+        for (uint32_t i = 0; i < _##op##_batch_size; ++i) {                                        \
+            _##op##_latency_ns->set(latency_ns);                                                   \
+        }                                                                                          \
+        _##op##_batch_size = 0;                                                                    \
     } while (0)
 
     auto latency_ns = static_cast<int64_t>(dsn_now_ns() - _batch_start_time);

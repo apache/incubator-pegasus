@@ -36,8 +36,10 @@ namespace pegasus {
 namespace server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
-    : replica_base(server), _write_svc(new pegasus_write_service(server)), _verbose_log(verbose_log),
-    _corrupt_write_counter(METRIC_corrupt_writes.instantiate(replica_metric_entity()))
+    : replica_base(server),
+      _write_svc(new pegasus_write_service(server)),
+      _verbose_log(verbose_log),
+      _corrupt_write_counter(METRIC_corrupt_writes.instantiate(replica_metric_entity()))
 {
     init_non_batch_write_handlers();
 }
