@@ -30,7 +30,7 @@
 METRIC_DEFINE_counter(replica,
                       corrupt_writes,
                       dsn::metric_unit::kRequests,
-                      "corrupt write count for each replica");
+                      "The number of corrupt writes for each replica");
 
 namespace pegasus {
 namespace server {

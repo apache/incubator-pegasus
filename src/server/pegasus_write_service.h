@@ -204,21 +204,22 @@ private:
     dsn::counter_ptr _incr_counter;
     dsn::counter_ptr _check_and_set_counter;
     dsn::counter_ptr _check_and_mutate_counter;
-    dsn::counter_ptr _duplicate_counter;
-    dsn::percentile_ptr<int64_t> _pfc_dup_time_lag;
-    dsn::counter_ptr _pfc_dup_lagging_writes;
 
-    dsn::percentile_ptr<int64_t> _put_latency;
-    dsn::percentile_ptr<int64_t> _multi_put_latency;
-    dsn::percentile_ptr<int64_t> _remove_latency;
-    dsn::percentile_ptr<int64_t> _multi_remove_latency;
-    dsn::percentile_ptr<int64_t> _incr_latency;
-    dsn::percentile_ptr<int64_t> _check_and_set_latency;
-    dsn::percentile_ptr<int64_t> _check_and_mutate_latency;
+    dsn::percentile_ptr<int64_t> _put_latency_ns;
+    dsn::percentile_ptr<int64_t> _multi_put_latency_ns;
+    dsn::percentile_ptr<int64_t> _remove_latency_ns;
+    dsn::percentile_ptr<int64_t> _multi_remove_latency_ns;
+    dsn::percentile_ptr<int64_t> _incr_latency_ns;
+    dsn::percentile_ptr<int64_t> _check_and_set_latency_ns;
+    dsn::percentile_ptr<int64_t> _check_and_mutate_latency_ns;
 
-    // Records all requests.
-    std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
-    std::vector<::dsn::perf_counter *> _batch_latency_perfcounters;
+    dsn::counter_ptr _dup_counter;
+    dsn::percentile_ptr<int64_t> _dup_time_lag_ms;
+    dsn::counter_ptr _dup_lagging_write_counter;
+
+    // Record batch size for put and remove requests.
+    uint32_t _put_batch_size;
+    uint32_t _remove_batch_size;
 
     // TODO(wutao1): add perf counters for failed rpc.
 };
