@@ -27,17 +27,19 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 #include "runtime/task/async_calls.h"
-
 #include "pegasus/client.h"
+#include "utils/flags.h"
 
 using namespace std;
 using namespace ::pegasus;
 
 DEFINE_TASK_CODE(LPC_DEFAUT_TASK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
 
-static int32_t hashkey_len;
-static int32_t sortkey_len;
-static int32_t value_len;
+DSN_DEFINE_int32(pressureclient, qps, 0, "qps of pressure client");
+DSN_DEFINE_int32(pressureclient, hashkey_len, 64, "hashkey length");
+DSN_DEFINE_int32(pressureclient, sortkey_len, 64, "sortkey length");
+DSN_DEFINE_int32(pressureclient, value_len, 64, "value length");
+DSN_DEFINE_validator(qps, [](int32_t value) -> bool { return value > 0; });
 
 // generate hashkey/sortkey between [0, ****key_limit]
 static int64_t hashkey_limit;
@@ -47,7 +49,6 @@ static int64_t sortkey_limit;
 static pegasus_client *pg_client = nullptr;
 static string cluster_name;
 static string app_name;
-static int32_t qps = 0;
 static string op_name; // set/get/scan/del
 // fill string in prefix, until with size(len)
 std::string fill_string(const std::string &str, int len)
@@ -59,20 +60,20 @@ std::string fill_string(const std::string &str, int len)
 std::string get_hashkey()
 {
     std::string key = to_string(dsn::rand::next_u64(0, hashkey_limit));
-    if (key.size() >= hashkey_len) {
+    if (key.size() >= FLAGS_hashkey_len) {
         return key;
     } else {
-        return fill_string(key, hashkey_len);
+        return fill_string(key, FLAGS_hashkey_len);
     }
 }
 
 std::string get_sortkey()
 {
     std::string key = to_string(dsn::rand::next_u64(0, sortkey_limit));
-    if (key.size() >= sortkey_len) {
+    if (key.size() >= FLAGS_sortkey_len) {
         return key;
     } else {
-        return fill_string(key, sortkey_len);
+        return fill_string(key, FLAGS_sortkey_len);
     }
 }
 
@@ -101,7 +102,7 @@ std::string get_value(const std::string &hashkey, const std::string &sortkey, in
 
 bool verify(const std::string &hashkey, const std::string &sortkey, const std::string &value)
 {
-    return (value == get_value(hashkey, sortkey, value_len));
+    return (value == get_value(hashkey, sortkey, FLAGS_value_len));
 }
 
 void test_set(int32_t qps)
@@ -117,7 +118,7 @@ void test_set(int32_t qps)
             while (cnt > 0) {
                 std::string hashkey = get_hashkey();
                 std::string sortkey = get_sortkey();
-                std::string value = get_value(hashkey, sortkey, value_len);
+                std::string value = get_value(hashkey, sortkey, FLAGS_value_len);
                 pg_client->async_set(hashkey, sortkey, value);
                 cnt -= 1;
             }
@@ -150,7 +151,7 @@ void test_get(int32_t qps)
                                   "hashkey({}) - sortkey({}) - value({}), but value({})",
                                   hashkey,
                                   sortkey,
-                                  get_value(hashkey, sortkey, value_len),
+                                  get_value(hashkey, sortkey, FLAGS_value_len),
                                   val);
                         } else if (ec == PERR_NOT_FOUND) {
                             // don't output info
@@ -227,9 +228,6 @@ int main(int argc, const char **argv)
 
     app_name = dsn_config_get_value_string("pressureclient", "app_name", "temp", "app name");
 
-    qps =
-        (int32_t)dsn_config_get_value_uint64("pressureclient", "qps", 0, "qps of pressure client");
-
     op_name = dsn_config_get_value_string("pressureclient", "operation_name", "", "operation name");
 
     hashkey_limit =
@@ -238,27 +236,17 @@ int main(int argc, const char **argv)
     sortkey_limit =
         (int64_t)dsn_config_get_value_uint64("pressureclient", "sortkey_limit", 0, "sortkey limit");
 
-    hashkey_len =
-        (int32_t)dsn_config_get_value_uint64("pressureclient", "hashkey_len", 64, "hashkey length");
-
-    sortkey_len =
-        (int32_t)dsn_config_get_value_uint64("pressureclient", "sortkey_len", 64, "sortkey length");
-
-    value_len =
-        (int32_t)dsn_config_get_value_uint64("pressureclient", "value_len", 64, "value length");
-
-    CHECK_GT(qps, 0);
     CHECK(!op_name.empty(), "must assign operation name");
 
-    LOG_INFO("pressureclient {} qps = {}", op_name, qps);
+    LOG_INFO("pressureclient {} qps = {}", op_name, FLAGS_qps);
 
     pg_client = pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
     CHECK_NOTNULL(pg_client, "initialize pg_client failed");
 
     auto it = _all_funcs.find(op_name);
     if (it != _all_funcs.end()) {
-        LOG_INFO("start pressureclient with {} qps({})", op_name, qps);
-        it->second(qps);
+        LOG_INFO("start pressureclient with {} qps({})", op_name, FLAGS_qps);
+        it->second(FLAGS_qps);
     } else {
         CHECK(false, "Unknown operation name({})", op_name);
     }

@@ -27,11 +27,17 @@
 
 #include "base/pegasus_key_schema.h"
 #include "result_writer.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+DSN_DEFINE_int32(pegasus.collector,
+                 available_detect_alert_fail_count,
+                 30,
+                 "available detect alert fail count");
 
 available_detector::available_detector()
     : _client(nullptr),
@@ -68,10 +74,6 @@ available_detector::available_detector()
                                               "available_detect_interval_seconds",
                                               3, // default value 3s
                                               "detect interval seconds");
-    _alert_fail_count = (int32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                                             "available_detect_alert_fail_count",
-                                                             30,
-                                                             "available detect alert fail count");
     _detect_timeout =
         (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
                                               "available_detect_timeout",
@@ -350,9 +352,9 @@ void available_detector::on_detect(int32_t idx)
 void available_detector::check_and_send_email(std::atomic<int> *cnt, int32_t idx)
 {
     bool send_email = false;
-    if (cnt->load() >= _alert_fail_count) {
+    if (cnt->load() >= FLAGS_available_detect_alert_fail_count) {
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_alert_lock);
-        if (cnt->load() >= _alert_fail_count) {
+        if (cnt->load() >= FLAGS_available_detect_alert_fail_count) {
             for (auto i = 0; i < _partition_count; i++) {
                 std::atomic<int> &c = (*_fail_count[i]);
                 c.store(0);

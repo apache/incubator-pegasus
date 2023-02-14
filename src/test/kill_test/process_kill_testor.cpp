@@ -38,9 +38,34 @@
 #include "killer_handler.h"
 #include "killer_handler_shell.h"
 #include "process_kill_testor.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace test {
+
+DSN_DEFINE_int32(section, total_meta_count, 0, "total meta count");
+DSN_DEFINE_int32(section, total_replica_count, 0, "total replica count");
+DSN_DEFINE_int32(section, total_zookeeper_count, 0, "total zookeeper count");
+DSN_DEFINE_int32(section,
+                 kill_replica_max_count,
+                 FLAGS_total_replica_count,
+                 "replica killed max count");
+DSN_DEFINE_int32(section, kill_meta_max_count, FLAGS_total_meta_count, "meta killed max count");
+DSN_DEFINE_int32(section,
+                 kill_zookeeper_max_count,
+                 FLAGS_total_zookeeper_count,
+                 "zookeeper killed max count");
+DSN_DEFINE_group_validator(kill_test_role_count, [](std::string &message) -> bool {
+    if (FLAGS_total_meta_count == 0 && FLAGS_total_replica_count == 0 &&
+        FLAGS_total_zookeeper_count == 0) {
+        message = fmt::format("[section].total_meta_count, total_replica_count and "
+                              "total_zookeeper_count should not all be 0.");
+        return false;
+    }
+
+    return true;
+});
+
 process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(config_file)
 {
     register_kill_handlers();
@@ -59,24 +84,6 @@ process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(
     _job_index_to_kill.resize(JOB_LENGTH);
     _sleep_time_before_recover_seconds = (uint32_t)dsn_config_get_value_uint64(
         section, "sleep_time_before_recover_seconds", 30, "sleep time before recover seconds");
-
-    _total_meta_count =
-        (int32_t)dsn_config_get_value_uint64(section, "total_meta_count", 0, "total meta count");
-    _total_replica_count = (int32_t)dsn_config_get_value_uint64(
-        section, "total_replica_count", 0, "total replica count");
-    _total_zookeeper_count = (int32_t)dsn_config_get_value_uint64(
-        section, "total_zookeeper_count", 0, "total zookeeper count");
-
-    if (_total_meta_count == 0 && _total_replica_count == 0 && _total_zookeeper_count == 0) {
-        CHECK(false, "total number of meta/replica/zookeeper is 0");
-    }
-
-    _kill_replica_max_count = (int32_t)dsn_config_get_value_uint64(
-        section, "kill_replica_max_count", _total_replica_count, "replica killed max count");
-    _kill_meta_max_count = (int32_t)dsn_config_get_value_uint64(
-        section, "kill_meta_max_count", _total_meta_count, "meta killed max count");
-    _kill_zk_max_count = (int32_t)dsn_config_get_value_uint64(
-        section, "kill_zookeeper_max_count", _total_zookeeper_count, "zookeeper killed max count");
 }
 
 process_kill_testor::~process_kill_testor() {}
@@ -117,20 +124,20 @@ void process_kill_testor::run()
     }
 
     if (kill_round == 0) {
-        LOG_INFO("Number of meta-server: {}", _total_meta_count);
-        LOG_INFO("Number of replica-server: {}", _total_replica_count);
-        LOG_INFO("Number of zookeeper: {}", _total_zookeeper_count);
+        LOG_INFO("Number of meta-server: {}", FLAGS_total_meta_count);
+        LOG_INFO("Number of replica-server: {}", FLAGS_total_replica_count);
+        LOG_INFO("Number of zookeeper: {}", FLAGS_total_zookeeper_count);
     }
     kill_round += 1;
     int meta_cnt = 0;
     int replica_cnt = 0;
     int zk_cnt = 0;
     while ((meta_cnt == 0 && replica_cnt == 0 && zk_cnt == 0) ||
-           (meta_cnt == _total_meta_count && replica_cnt == _total_replica_count &&
-            zk_cnt == _total_zookeeper_count)) {
-        meta_cnt = generate_one_number(0, _kill_meta_max_count);
-        replica_cnt = generate_one_number(0, _kill_replica_max_count);
-        zk_cnt = generate_one_number(0, _kill_zk_max_count);
+           (meta_cnt == FLAGS_total_meta_count && replica_cnt == FLAGS_total_replica_count &&
+            zk_cnt == FLAGS_total_zookeeper_count)) {
+        meta_cnt = generate_one_number(0, FLAGS_kill_meta_max_count);
+        replica_cnt = generate_one_number(0, FLAGS_kill_replica_max_count);
+        zk_cnt = generate_one_number(0, FLAGS_kill_zookeeper_max_count);
     }
     LOG_INFO("************************");
     LOG_INFO("Round [{}]", kill_round);
@@ -157,7 +164,7 @@ bool process_kill_testor::kill(int meta_cnt, int replica_cnt, int zookeeper_cnt)
 {
     std::vector<int> kill_counts = {meta_cnt, replica_cnt, zookeeper_cnt};
     std::vector<int> total_count = {
-        _total_meta_count, _total_replica_count, _total_zookeeper_count};
+        FLAGS_total_meta_count, FLAGS_total_replica_count, FLAGS_total_zookeeper_count};
     std::vector<int> random_idxs;
     generate_random(random_idxs, JOB_LENGTH, META, ZOOKEEPER);
     for (auto id : random_idxs) {
@@ -230,14 +237,14 @@ bool process_kill_testor::check_coredump()
     bool has_core = false;
 
     // make sure all generated core are logged
-    for (int i = 1; i <= _total_meta_count; ++i) {
+    for (int i = 1; i <= FLAGS_total_meta_count; ++i) {
         if (_killer_handler->has_meta_dumped_core(i)) {
             LOG_ERROR("meta server {} generate core dump", i);
             has_core = true;
         }
     }
 
-    for (int i = 1; i <= _total_replica_count; ++i) {
+    for (int i = 1; i <= FLAGS_total_replica_count; ++i) {
         if (_killer_handler->has_replica_dumped_core(i)) {
             LOG_ERROR("replica server {} generate core dump", i);
             has_core = true;

@@ -40,9 +40,12 @@
 #include "env.sim.h"
 #include "runtime/task/task_engine.sim.h"
 #include "sim_clock.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace tools {
+
+DSN_DECLARE_int32(random_seed);
 
 /*static*/
 void simulator::register_checker(const std::string &name, checker::factory f)
@@ -121,8 +124,7 @@ void simulator::install(service_spec &spec)
 
 void simulator::on_system_exit(sys_exit_type st)
 {
-    LOG_ERROR("system exits, you can replay this process using random seed {}",
-              sim_env_provider::seed());
+    LOG_INFO("system exits, you can replay this process using random seed {}", FLAGS_random_seed);
 }
 
 void simulator::run()

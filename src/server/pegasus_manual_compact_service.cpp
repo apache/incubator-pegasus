@@ -33,6 +33,12 @@ namespace server {
 
 DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
 
+DSN_DEFINE_int32(pegasus.server,
+                 manual_compact_min_interval_seconds,
+                 0,
+                 "minimal interval time in seconds to start a new manual compaction, <= 0 "
+                 "means no interval limit");
+
 pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_impl *app)
     : replica_base(*app),
       _app(app),
@@ -43,13 +49,6 @@ pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_im
       _manual_compact_last_finish_time_ms(0),
       _manual_compact_last_time_used_ms(0)
 {
-    _manual_compact_min_interval_seconds = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.server",
-        "manual_compact_min_interval_seconds",
-        0,
-        "minimal interval time in seconds to start a new manual compaction, "
-        "<= 0 means no interval limit");
-
     _pfc_manual_compact_enqueue_count.init_app_counter("app.pegasus",
                                                        "manual.compact.enqueue.count",
                                                        COUNTER_TYPE_NUMBER,
@@ -260,10 +259,10 @@ bool pegasus_manual_compact_service::check_manual_compact_state()
 {
     uint64_t not_enqueue = 0;
     uint64_t now = now_timestamp();
-    if (_manual_compact_min_interval_seconds <= 0 ||       // no interval limit
+    if (FLAGS_manual_compact_min_interval_seconds <= 0 ||  // no interval limit
         _manual_compact_last_finish_time_ms.load() == 0 || // has not compacted yet
         now - _manual_compact_last_finish_time_ms.load() >
-            (uint64_t)_manual_compact_min_interval_seconds * 1000) { // interval past
+            (uint64_t)FLAGS_manual_compact_min_interval_seconds * 1000) { // interval past
         // when _manual_compact_enqueue_time_ms is `not_enqueue`(which is 0), return true to allow a
         // compact task enqueue, and update the value to `now`,
         // otherwise, return false to not allow, and keep the old value.

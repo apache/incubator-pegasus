@@ -55,35 +55,36 @@
 namespace dsn {
 namespace replication {
 
-// There is an option `max_replicas_in_group` which restricts the max replica count of the whole
+// There is an option FLAGS_max_replicas_in_group which restricts the max replica count of the whole
 // cluster. It's a cluster-level option. However, now that it's allowed to update the replication
 // factor of each table, this cluster-level option should be replaced.
 //
-// Conceptually `max_replicas_in_group` is the total number of alive and dropped replicas. Its
-// default value is 4. For a table that has replication factor 3, that `max_replicas_in_group`
+// Conceptually FLAGS_max_replicas_in_group is the total number of alive and dropped replicas. Its
+// default value is 4. For a table that has replication factor 3, that FLAGS_max_replicas_in_group
 // is set to 4 means 3 alive replicas plus a dropped replica.
 //
-// `max_replicas_in_group` can also be loaded from configuration file, which means its default
-// value will be overridden. The value of `max_replicas_in_group` will be assigned to another
+// FLAGS_max_replicas_in_group can also be loaded from configuration file, which means its default
+// value will be overridden. The value of FLAGS_max_replicas_in_group will be assigned to another
 // static variable `MAX_REPLICA_COUNT_IN_GRROUP`, whose default value is also 4.
 //
 // For unit tests, `MAX_REPLICA_COUNT_IN_GRROUP` is set to the default value 4; for production
-// environments, `MAX_REPLICA_COUNT_IN_GRROUP` is set to 3 since `max_replicas_in_group` is
+// environments, `MAX_REPLICA_COUNT_IN_GRROUP` is set to 3 since FLAGS_max_replicas_in_group is
 // configured as 3 in `.ini` file.
 //
-// Since the cluster-level option `max_replicas_in_group` contains the alive and dropped replicas,
-// we can use the replication factor of each table as the number of alive replicas, and introduce
-// another option `max_reserved_dropped_replicas` representing the max reserved number allowed for
-// dropped replicas.
+// Since the cluster-level option FLAGS_max_replicas_in_group contains the alive and dropped
+// replicas, we can use the replication factor of each table as the number of alive replicas, and
+// introduce another option FLAGS_max_reserved_dropped_replicas representing the max reserved number
+// allowed for dropped replicas.
 //
-// If `max_reserved_dropped_replicas` is set to 1, there is at most one dropped replicas reserved,
-// which means, once the number of alive replicas reaches max_replica_count, at most one dropped
-// replica can be reserved and others will be eliminated; If `max_reserved_dropped_replicas` is
-// set to 0, however, none of dropped replicas can be reserved.
+// If FLAGS_max_reserved_dropped_replicas is set to 1, there is at most one dropped replicas
+// reserved, which means, once the number of alive replicas reaches max_replica_count, at most one
+// dropped replica can be reserved and others will be eliminated; If
+// FLAGS_max_reserved_dropped_replicas is set to 0, however, none of dropped replicas can be
+// reserved.
 //
-// To be consistent with `max_replicas_in_group`, default value of `max_reserved_dropped_replicas`
-// is set to 1 so that the unit tests can be passed. For production environments, it should be set
-// to 0.
+// To be consistent with FLAGS_max_replicas_in_group, default value of
+// FLAGS_max_reserved_dropped_replicas is set to 1 so that the unit tests can be passed. For
+// production environments, it should be set to 0.
 DSN_DEFINE_uint32(meta_server,
                   max_reserved_dropped_replicas,
                   1,

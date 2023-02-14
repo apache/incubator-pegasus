@@ -38,12 +38,15 @@
 #include <boost/lexical_cast.hpp>
 
 #include "meta_state_service_zookeeper.h"
+#include "utils/flags.h"
 #include "zookeeper/zookeeper_session_mgr.h"
 #include "zookeeper/zookeeper_session.h"
 #include "zookeeper/zookeeper_error.h"
 
 namespace dsn {
 namespace dist {
+
+DSN_DECLARE_int32(timeout_ms);
 
 class zoo_transaction : public meta_state_service::transaction_entries
 {
@@ -163,7 +166,7 @@ error_code meta_state_service_zookeeper::initialize(const std::vector<std::strin
                                             ref_this(this),
                                             std::placeholders::_1));
     if (_zoo_state != ZOO_CONNECTED_STATE) {
-        _notifier.wait_for(zookeeper_session_mgr::instance().timeout());
+        _notifier.wait_for(FLAGS_timeout_ms);
         if (_zoo_state != ZOO_CONNECTED_STATE)
             return ERR_TIMEOUT;
     }

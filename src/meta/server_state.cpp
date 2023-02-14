@@ -88,6 +88,14 @@ DSN_DEFINE_group_validator(min_max_allowed_replica_count, [](std::string &messag
     return true;
 });
 
+DSN_DEFINE_int32(meta_server,
+                 hold_seconds_for_dropped_app,
+                 604800,
+                 "how long to hold data for dropped apps");
+DSN_DEFINE_int32(meta_server,
+                 add_secondary_max_count_for_one_node,
+                 10,
+                 "add secondary max count for one node when flow control enabled");
 static const char *lock_state = "lock";
 static const char *unlock_state = "unlock";
 
@@ -145,7 +153,7 @@ void server_state::register_cli_commands()
             } else {
                 if (args[0] == "DEFAULT") {
                     _add_secondary_max_count_for_one_node =
-                        _meta_svc->get_meta_options().add_secondary_max_count_for_one_node;
+                        FLAGS_add_secondary_max_count_for_one_node;
                 } else {
                     int32_t v = 0;
                     if (!dsn::buf2int32(args[0], v) || v < 0) {
@@ -165,8 +173,7 @@ void server_state::initialize(meta_service *meta_svc, const std::string &apps_ro
     _apps_root = apps_root;
     _add_secondary_enable_flow_control =
         _meta_svc->get_meta_options().add_secondary_enable_flow_control;
-    _add_secondary_max_count_for_one_node =
-        _meta_svc->get_meta_options().add_secondary_max_count_for_one_node;
+    _add_secondary_max_count_for_one_node = FLAGS_add_secondary_max_count_for_one_node;
 
     _dead_partition_count.init_app_counter("eon.server_state",
                                            "dead_partition_count",
@@ -433,6 +440,8 @@ error_code server_state::initialize_default_apps()
 
     app_info default_app;
     for (int i = 0; i < sections.size(); i++) {
+        // TODO(yingchun): dose it mean sections[i] equals to "meta_server.apps" or
+        //  "replication.app" ?
         if (strstr(sections[i], "meta_server.apps") == sections[i] ||
             utils::equals(sections[i], "replication.app")) {
             const char *s = sections[i];
@@ -440,6 +449,8 @@ error_code server_state::initialize_default_apps()
             default_app.status = app_status::AS_CREATING;
             default_app.app_id = _all_apps.size() + 1;
 
+            // TODO(yingchun): the old configuration launch methods should be kept to launch repeat
+            //  configs.
             default_app.app_name = dsn_config_get_value_string(s, "app_name", "", "app name");
             if (default_app.app_name.length() == 0) {
                 LOG_WARNING("'[{}] app_name' not specified, ignore this section", s);
@@ -1213,8 +1224,7 @@ void server_state::drop_app(dsn::message_ex *msg)
                     request.options.reserve_seconds > 0) {
                     app->expire_second = app->drop_second + request.options.reserve_seconds;
                 } else {
-                    app->expire_second = app->drop_second +
-                                         _meta_svc->get_meta_options().hold_seconds_for_dropped_app;
+                    app->expire_second = app->drop_second + FLAGS_hold_seconds_for_dropped_app;
                 }
                 app->helpers->pending_response = msg;
                 CHECK_EQ(app->helpers->partitions_in_progress.load(), 0);

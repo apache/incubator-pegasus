@@ -44,6 +44,8 @@
 #include "runtime/rpc/rpc_address.h"
 #include <vector>
 
+DSN_DECLARE_int32(max_succssive_unstable_restart);
+
 using namespace dsn;
 using namespace dsn::fd;
 
@@ -203,7 +205,7 @@ public:
     error_code start(const std::vector<std::string> &args) override
     {
         _opts.stable_rs_min_running_seconds = 10;
-        _opts.max_succssive_unstable_restart = 10;
+        FLAGS_max_succssive_unstable_restart = 10;
 
         _master_fd = new master_fd_test();
         _master_fd->set_options(&_opts);
@@ -619,7 +621,7 @@ TEST(fd, update_stability)
 
     replication::fd_suboptions opts;
     opts.stable_rs_min_running_seconds = 5;
-    opts.max_succssive_unstable_restart = 2;
+    FLAGS_max_succssive_unstable_restart = 2;
     fd->set_options(&opts);
 
     replication::meta_server_failure_detector::stability_map *smap =

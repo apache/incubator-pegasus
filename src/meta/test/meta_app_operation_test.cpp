@@ -103,7 +103,7 @@ public:
 
         // dropped app can only be find by app_id
         auto app = _ss->get_app(app_id);
-        // hold_seconds_for_dropped_app = 604800 in unit test config
+        // FLAGS_hold_seconds_for_dropped_app = 604800 in unit test config
         // make app expired immediatly
         app->expire_second -= 604800;
     }

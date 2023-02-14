@@ -35,6 +35,7 @@
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
 #include "runtime/rpc/rpc_address.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/errors.h"
 
@@ -43,6 +44,30 @@
 
 namespace pegasus {
 namespace geo {
+DSN_DEFINE_int32(geo_client.lib,
+                 min_level,
+                 12,
+                 "Min cell level for a scan. Cell id at this level is the hash-key in Pegasus. "
+                 "min_level is immutable after geo_client data has been inserted into DB. "
+                 "Edge length at level 12 is about 2 km");
+DSN_DEFINE_int32(geo_client.lib,
+                 max_level,
+                 16,
+                 "Max cell level for a scan. Cell id at this level is the prefix of sort-key "
+                 "in Pegasus, and it's convenient for scan operation. max_level is mutable "
+                 "at any time, and geo_client-lib users can change it to a appropriate "
+                 "value to improve performance in their scenario. Edge length at level 16 "
+                 "is about 150 m");
+DSN_DEFINE_group_validator(min_max_level, [](std::string &message) -> bool {
+    if (FLAGS_min_level >= FLAGS_max_level) {
+        message = fmt::format("[geo_client.lib].min_level({}) should be < "
+                              "[geo_client.lib].max_level({})",
+                              FLAGS_min_level,
+                              FLAGS_max_level);
+        return false;
+    }
+    return true;
+});
 
 struct SearchResultNearer
 {
@@ -74,14 +99,6 @@ geo_client::geo_client(const char *config_file,
     _geo_data_client = pegasus_client_factory::get_client(cluster_name, geo_app_name);
     CHECK_NOTNULL(_geo_data_client, "init pegasus _geo_data_client failed");
 
-    _min_level = (int32_t)dsn_config_get_value_uint64(
-        "geo_client.lib", "min_level", 12, "min cell level for scan");
-
-    _max_level = (int32_t)dsn_config_get_value_uint64(
-        "geo_client.lib", "max_level", 16, "max cell level for scan");
-
-    CHECK_LT(_min_level, _max_level);
-
     uint32_t latitude_index = (uint32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "latitude_index", 5, "latitude index in value");
 
@@ -94,14 +111,14 @@ geo_client::geo_client(const char *config_file,
 
 dsn::error_s geo_client::set_max_level(int level)
 {
-    if (level <= _min_level) {
+    if (level <= FLAGS_min_level) {
         return dsn::FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
-                            "level({}) must be larger than _min_level({})",
+                            "level({}) must be larger than FLAGS_min_level({})",
                             level,
-                            _min_level);
+                            FLAGS_min_level);
     }
 
-    _max_level = level;
+    FLAGS_max_level = level;
     return dsn::error_s::ok();
 }
 
@@ -561,7 +578,7 @@ void geo_client::gen_search_cap(const S2LatLng &latlng, double radius_m, S2Cap &
 void geo_client::gen_cells_covered_by_cap(const S2Cap &cap, S2CellUnion &cids)
 {
     S2RegionCoverer rc;
-    rc.mutable_options()->set_fixed_level(_min_level);
+    rc.mutable_options()->set_fixed_level(FLAGS_min_level);
     cids = rc.GetCovering(cap);
 }
 
@@ -593,7 +610,8 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
 
     for (const auto &cid : cids) {
         if (cap_ptr->Contains(S2Cell(cid))) {
-            // for the full contained cell, scan all data in this cell(which is at the `_min_level`)
+            // for the full contained cell, scan all data in this cell(which is at the
+            // FLAGS_min_level)
             results->emplace_back(std::list<SearchResult>());
             scan_count->fetch_add(1);
             start_scan(cid.ToString(),
@@ -605,15 +623,16 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
                        single_scan_finish_callback,
                        results->back());
         } else {
-            // for the partial contained cell, scan cells covered by the cap at the `_max_level`
-            // which is more accurate than the ones at `_min_level`, but it will cost more time on
-            // calculating here.
-            std::string hash_key = cid.parent(_min_level).ToString();
+            // for the partial contained cell, scan cells covered by the cap at the FLAGS_max_level
+            // which is more accurate than the ones at FLAGS_min_level, but it will cost more time
+            // on calculating here.
+            std::string hash_key = cid.parent(FLAGS_min_level).ToString();
             std::pair<std::string, std::string> start_stop_sort_keys;
             S2CellId pre;
-            // traverse all sub cell ids of `cid` on `_max_level` along the Hilbert curve, to find
-            // the needed ones.
-            for (S2CellId cur = cid.child_begin(_max_level); cur != cid.child_end(_max_level);
+            // traverse all sub cell ids of `cid` on FLAGS_max_level along the Hilbert curve, to
+            // find the needed ones.
+            for (S2CellId cur = cid.child_begin(FLAGS_max_level);
+                 cur != cid.child_end(FLAGS_max_level);
                  cur = cur.next()) {
                 if (cap_ptr->MayIntersect(S2Cell(cur))) {
                     // only cells whose any vertex is contained by the cap is needed
@@ -646,7 +665,8 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
             }
 
             CHECK(!start_stop_sort_keys.first.empty(), "");
-            // the last sub slice of current `cid` on `_max_level` in Hilbert curve covered by `cap`
+            // the last sub slice of current `cid` on FLAGS_max_level in Hilbert curve covered by
+            // `cap`
             if (start_stop_sort_keys.second.empty()) {
                 start_stop_sort_keys.second = gen_stop_sort_key(pre, hash_key);
                 results->emplace_back(std::list<SearchResult>());
@@ -710,14 +730,14 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
 
     // generate hash key
     S2CellId leaf_cell_id = S2Cell(latlng).id();
-    S2CellId parent_cell_id = leaf_cell_id.parent(_min_level);
-    geo_hash_key = parent_cell_id.ToString(); // [0,5]{1}/[0,3]{_min_level}
+    S2CellId parent_cell_id = leaf_cell_id.parent(FLAGS_min_level);
+    geo_hash_key = parent_cell_id.ToString(); // [0,5]{1}/[0,3]{FLAGS_min_level}
 
     // generate sort key
     dsn::blob sort_key_postfix;
     pegasus_generate_key(sort_key_postfix, hash_key, sort_key);
     geo_sort_key = leaf_cell_id.ToString().substr(geo_hash_key.length()) + ":" +
-                   sort_key_postfix.to_string(); // [0,3]{30-_min_level}:combine_keys
+                   sort_key_postfix.to_string(); // [0,3]{30-FLAGS_min_level}:combine_keys
 
     return true;
 }
@@ -726,8 +746,8 @@ bool geo_client::restore_origin_keys(const std::string &geo_sort_key,
                                      std::string &origin_hash_key,
                                      std::string &origin_sort_key)
 {
-    // geo_sort_key: [0,3]{30-_min_level}:combine_keys
-    int cid_prefix_len = 30 - _min_level + 1; // '1' is for ':' in geo_sort_key
+    // geo_sort_key: [0,3]{30-FLAGS_min_level}:combine_keys
+    int cid_prefix_len = 30 - FLAGS_min_level + 1; // '1' is for ':' in geo_sort_key
     if (geo_sort_key.length() <= cid_prefix_len) {
         return false;
     }

@@ -40,11 +40,17 @@
 #include <vector>
 
 #include "perf_counter/perf_counter_atomic.h"
+#include "utils/flags.h"
 
 using namespace dsn;
 using namespace dsn::tools;
 
 const int count_times = 10000;
+
+DSN_DEFINE_int32(components.simple_perf_counter,
+                 counter_computation_interval_seconds_for_testing,
+                 3,
+                 "period");
 
 static void adder_function(perf_counter_ptr pc, int id, const std::vector<int> &vec)
 {
@@ -90,9 +96,6 @@ TEST(perf_counter, perf_counter_atomic)
         vec[i] = rand() % 100;
     }
     std::vector<int> gen_numbers{1, 5, 1043};
-    int sleep_interval = (int)dsn_config_get_value_uint64(
-        "components.simple_perf_counter", "counter_computation_interval_seconds", 3, "period");
-
     perf_counter_ptr counter = new perf_counter_number_atomic(
         "", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER, "");
     perf_counter_inc_dec(counter);
@@ -113,11 +116,11 @@ TEST(perf_counter, perf_counter_atomic)
 
     counter = new perf_counter_number_percentile_atomic(
         "", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES, "");
-    std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
+    std::this_thread::sleep_for(
+        std::chrono::seconds(FLAGS_counter_computation_interval_seconds_for_testing));
     for (auto &count : gen_numbers) {
         for (unsigned int i = 0; i != count; ++i)
             counter->set(rand() % 10000);
-        // std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
         for (int i = 0; i != COUNTER_PERCENTILE_COUNT; ++i)
             LOG_INFO("{}", counter->get_percentile((dsn_perf_counter_percentile_type_t)i));
     }

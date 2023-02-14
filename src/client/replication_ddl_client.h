@@ -68,7 +68,8 @@ public:
                                bool is_stateless,
                                bool success_if_exist = true);
 
-    // reserve_seconds == 0 means use default value in configuration 'hold_seconds_for_dropped_app'
+    // 'reserve_seconds' == 0 means use default value in configuration
+    // FLAGS_hold_seconds_for_dropped_app.
     dsn::error_code drop_app(const std::string &app_name, int reserve_seconds);
 
     dsn::error_code recall_app(int32_t app_id, const std::string &new_app_name);

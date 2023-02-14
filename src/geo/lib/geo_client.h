@@ -472,17 +472,6 @@ private:
                  std::list<SearchResult> &result);
 
 private:
-    // cell id at this level is the hash-key in pegasus
-    // `_min_level` is immutable after geo_client data has been inserted into DB.
-    int _min_level = 12; // edge length at level 12 is about 2km
-
-    // cell id at this level is the prefix of sort-key in pegasus, and
-    // it's convenient for scan operation
-    // `_max_level` is mutable at any time, and geo_client-lib users can change it to a appropriate
-    // value
-    // to improve performance in their scenario.
-    int _max_level = 16; // edge length at level 16 is about 150m
-
     dsn::task_tracker _tracker;
 
     latlng_codec _codec;
