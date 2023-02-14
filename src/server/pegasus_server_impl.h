@@ -456,8 +456,6 @@ private:
     std::unique_ptr<capacity_unit_calculator> _cu_calculator;
     std::unique_ptr<pegasus_server_write> _server_write;
 
-    uint32_t _checkpoint_reserve_min_count_in_config;
-    uint32_t _checkpoint_reserve_time_seconds_in_config;
     uint32_t _checkpoint_reserve_min_count;
     uint32_t _checkpoint_reserve_time_seconds;
     std::atomic_bool _is_checkpointing;         // whether the db is doing checkpoint

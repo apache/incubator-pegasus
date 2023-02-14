@@ -42,9 +42,16 @@
 #include "utils/rand.h"
 #include "runtime/node_scoper.h"
 #include "network.sim.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace tools {
+
+DSN_DEFINE_uint32(tools.simulator, min_message_delay_microseconds, 1, "min message delay (us)");
+DSN_DEFINE_uint32(tools.simulator,
+                  max_message_delay_microseconds,
+                  100000,
+                  "max message delay (us)");
 
 // switch[channel][header_format]
 // multiple machines connect to the same switch
@@ -153,20 +160,6 @@ sim_network_provider::sim_network_provider(rpc_engine *rpc, network *inner_provi
     : connection_oriented_network(rpc, inner_provider)
 {
     _address.assign_ipv4("localhost", 1);
-
-    _min_message_delay_microseconds = 1;
-    _max_message_delay_microseconds = 100000;
-
-    _min_message_delay_microseconds =
-        (uint32_t)dsn_config_get_value_uint64("tools.simulator",
-                                              "min_message_delay_microseconds",
-                                              _min_message_delay_microseconds,
-                                              "min message delay (us)");
-    _max_message_delay_microseconds =
-        (uint32_t)dsn_config_get_value_uint64("tools.simulator",
-                                              "max_message_delay_microseconds",
-                                              _max_message_delay_microseconds,
-                                              "max message delay (us)");
 }
 
 error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
@@ -194,8 +187,8 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
 
 uint32_t sim_network_provider::net_delay_milliseconds() const
 {
-    return static_cast<uint32_t>(
-               rand::next_u32(_min_message_delay_microseconds, _max_message_delay_microseconds)) /
+    return static_cast<uint32_t>(rand::next_u32(FLAGS_min_message_delay_microseconds,
+                                                FLAGS_max_message_delay_microseconds)) /
            1000;
 }
 }

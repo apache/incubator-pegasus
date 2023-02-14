@@ -51,6 +51,8 @@ namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DSN_DECLARE_int32(read_amp_bytes_per_bit);
+DSN_DECLARE_uint32(checkpoint_reserve_min_count);
+DSN_DECLARE_uint32(checkpoint_reserve_time_seconds);
 
 DSN_DEFINE_int32(pegasus.server,
                  hotkey_analyse_time_interval_s,
@@ -2622,10 +2624,11 @@ void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::st
     }
 }
 
+// TODO(yingchun): change by http
 void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, std::string> &envs)
 {
-    int32_t count = _checkpoint_reserve_min_count_in_config;
-    int32_t time = _checkpoint_reserve_time_seconds_in_config;
+    int32_t count = FLAGS_checkpoint_reserve_min_count;
+    int32_t time = FLAGS_checkpoint_reserve_time_seconds;
 
     auto find = envs.find(ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT);
     if (find != envs.end()) {

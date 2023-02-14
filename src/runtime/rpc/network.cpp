@@ -35,6 +35,11 @@
 #include "utils/strings.h"
 
 namespace dsn {
+DSN_DEFINE_uint32(network,
+                  conn_threshold_per_ip,
+                  0,
+                  "max connection count to each server per ip, 0 means no limit");
+
 /*static*/ join_point<void, rpc_session *>
     rpc_session::on_rpc_session_connected("rpc.session.connected");
 /*static*/ join_point<void, rpc_session *>
@@ -582,7 +587,6 @@ uint32_t network::get_local_ipv4()
 connection_oriented_network::connection_oriented_network(rpc_engine *srv, network *inner_provider)
     : network(srv, inner_provider)
 {
-    _cfg_conn_threshold_per_ip = 0;
     _client_session_count.init_global_counter("server",
                                               "network",
                                               "client_session_count",
@@ -744,7 +748,7 @@ void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr
 
 bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_address ep)
 {
-    if (_cfg_conn_threshold_per_ip <= 0) {
+    if (FLAGS_conn_threshold_per_ip <= 0) {
         LOG_DEBUG("new client from {} is connecting to server {}, no connection threshold",
                   ep.ipv4_str(),
                   address());
@@ -760,7 +764,7 @@ bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_ad
             ip_conn_count = it->second;
         }
     }
-    if (ip_conn_count >= _cfg_conn_threshold_per_ip) {
+    if (ip_conn_count >= FLAGS_conn_threshold_per_ip) {
         exceeded = true;
     }
 
@@ -769,7 +773,7 @@ bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_ad
               ep.ipv4_str(),
               address(),
               ip_conn_count,
-              _cfg_conn_threshold_per_ip);
+              FLAGS_conn_threshold_per_ip);
 
     return exceeded;
 }

@@ -185,7 +185,6 @@ protected:
     ip_connection_count _ip_conn_count; // from_ip => connection count
     utils::rw_lock_nr _servers_lock;
 
-    uint32_t _cfg_conn_threshold_per_ip;
     perf_counter_wrapper _client_session_count;
 };
 

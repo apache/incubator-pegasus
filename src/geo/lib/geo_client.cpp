@@ -68,6 +68,8 @@ DSN_DEFINE_group_validator(min_max_level, [](std::string &message) -> bool {
     }
     return true;
 });
+DSN_DEFINE_uint32(geo_client.lib, latitude_index, 5, "latitude index in value");
+DSN_DEFINE_uint32(geo_client.lib, longitude_index, 4, "longitude index in value");
 
 struct SearchResultNearer
 {
@@ -99,14 +101,11 @@ geo_client::geo_client(const char *config_file,
     _geo_data_client = pegasus_client_factory::get_client(cluster_name, geo_app_name);
     CHECK_NOTNULL(_geo_data_client, "init pegasus _geo_data_client failed");
 
-    uint32_t latitude_index = (uint32_t)dsn_config_get_value_uint64(
-        "geo_client.lib", "latitude_index", 5, "latitude index in value");
-
-    uint32_t longitude_index = (uint32_t)dsn_config_get_value_uint64(
-        "geo_client.lib", "longitude_index", 4, "longitude index in value");
-
-    dsn::error_s s = _codec.set_latlng_indices(latitude_index, longitude_index);
-    CHECK(s.is_ok(), "set_latlng_indices({}, {}) failed", latitude_index, longitude_index);
+    dsn::error_s s = _codec.set_latlng_indices(FLAGS_latitude_index, FLAGS_longitude_index);
+    CHECK(s.is_ok(),
+          "set_latlng_indices({}, {}) failed",
+          FLAGS_latitude_index,
+          FLAGS_longitude_index);
 }
 
 dsn::error_s geo_client::set_max_level(int level)

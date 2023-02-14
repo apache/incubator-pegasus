@@ -176,6 +176,25 @@ DSN_DEFINE_uint64(pegasus.server,
                   "specify the maximal numbers of info log files to be kept: once the number of "
                   "info logs goes beyond this option, stale log files will be cleaned.");
 
+DSN_DEFINE_uint32(pegasus.server,
+                  rocksdb_multi_get_max_iteration_count,
+                  3000,
+                  "max iteration count for each range read for multi-get operation, if exceed this "
+                  "threshold, iterator will be stopped.");
+DSN_DEFINE_uint32(pegasus.server,
+                  rocksdb_max_iteration_count,
+                  1000,
+                  "max iteration count for each range read, if exceed this threshold, iterator "
+                  "will be stopped.");
+DSN_DEFINE_uint32(pegasus.server,
+                  checkpoint_reserve_min_count,
+                  2,
+                  "Minimum count of checkpoint to reserve.");
+DSN_DEFINE_uint32(pegasus.server,
+                  checkpoint_reserve_time_seconds,
+                  1800,
+                  "Minimum seconds of checkpoint to reserve, 0 means no check.");
+
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
@@ -236,13 +255,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
-    _rng_rd_opts.multi_get_max_iteration_count = (uint32_t)dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_multi_get_max_iteration_count",
-        3000,
-        "max iteration count for each range read for multi-get operation, if "
-        "exceed this threshold,"
-        "iterator will be stopped");
+    _rng_rd_opts.multi_get_max_iteration_count = FLAGS_rocksdb_multi_get_max_iteration_count;
 
     _rng_rd_opts.multi_get_max_iteration_size =
         dsn_config_get_value_uint64("pegasus.server",
@@ -251,13 +264,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     "multi-get operation total key-value size exceed "
                                     "this threshold will stop iterating rocksdb, 0 means no check");
 
-    _rng_rd_opts.rocksdb_max_iteration_count =
-        (uint32_t)dsn_config_get_value_uint64("pegasus.server",
-                                              "rocksdb_max_iteration_count",
-                                              1000,
-                                              "max iteration count for each range "
-                                              "read, if exceed this threshold, "
-                                              "iterator will be stopped");
+    _rng_rd_opts.rocksdb_max_iteration_count = FLAGS_rocksdb_max_iteration_count;
 
     _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config = dsn_config_get_value_uint64(
         "pegasus.server",
@@ -283,12 +290,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                   false,
                                   "rocksdb options.use_direct_io_for_flush_and_compaction");
 
+    // TODO(yingchun): size_t, uint64_t
     _db_opts.compaction_readahead_size =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_compaction_readahead_size",
                                     2 * 1024 * 1024,
                                     "rocksdb options.compaction_readahead_size");
-
+    // TODO(yingchun): size_t, uint64_t
     _db_opts.writable_file_max_buffer_size =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_writable_file_max_buffer_size",
@@ -305,6 +313,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.max_background_compactions = FLAGS_rocksdb_max_background_compactions;
 
     // init rocksdb::ColumnFamilyOptions for data column family
+    // TODO(yingchun): size_t, uint64_t
     _data_cf_opts.write_buffer_size =
         (size_t)dsn_config_get_value_uint64("pegasus.server",
                                             "rocksdb_write_buffer_size",
@@ -313,7 +322,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     _data_cf_opts.max_write_buffer_number = FLAGS_rocksdb_max_write_buffer_number;
     _data_cf_opts.num_levels = FLAGS_rocksdb_num_levels;
-
+    // TODO(yingchun): size_t, uint64_t
     _data_cf_opts.target_file_size_base =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_target_file_size_base",
@@ -321,7 +330,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     "rocksdb options.target_file_size_base");
 
     _data_cf_opts.target_file_size_multiplier = FLAGS_rocksdb_target_file_size_multiplier;
-
+    // TODO(yingchun): size_t, uint64_t
     _data_cf_opts.max_bytes_for_level_base =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_max_bytes_for_level_base",
@@ -581,18 +590,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     "rocksdb_periodic_compaction_seconds",
                                     0,
                                     "periodic_compaction_seconds, 0 means no periodic compaction");
+    _checkpoint_reserve_min_count = FLAGS_checkpoint_reserve_min_count;
+    _checkpoint_reserve_time_seconds = FLAGS_checkpoint_reserve_time_seconds;
 
-    // get the checkpoint reserve options.
-    _checkpoint_reserve_min_count_in_config = (uint32_t)dsn_config_get_value_uint64(
-        "pegasus.server", "checkpoint_reserve_min_count", 2, "checkpoint_reserve_min_count");
-    _checkpoint_reserve_min_count = _checkpoint_reserve_min_count_in_config;
-    _checkpoint_reserve_time_seconds_in_config =
-        (uint32_t)dsn_config_get_value_uint64("pegasus.server",
-                                              "checkpoint_reserve_time_seconds",
-                                              1800,
-                                              "checkpoint_reserve_time_seconds, 0 means no check");
-    _checkpoint_reserve_time_seconds = _checkpoint_reserve_time_seconds_in_config;
-
+    // TODO(yingchun): signed integral type of at least 35 bits, int64_t
     _update_rdb_stat_interval = std::chrono::seconds(dsn_config_get_value_uint64(
         "pegasus.server", "update_rdb_stat_interval", 60, "update_rdb_stat_interval, in seconds"));
 

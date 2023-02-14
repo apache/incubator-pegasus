@@ -61,7 +61,6 @@ private:
     pegasus_client *_client;
     std::shared_ptr<replication_ddl_client> _ddl_client;
     std::vector<dsn::rpc_address> _meta_list;
-    uint32_t _detect_interval_seconds;
     ::dsn::utils::ex_lock_nr _alert_lock;
     // for record partition fail times.
     std::vector<std::shared_ptr<std::atomic<int32_t>>> _fail_count;
@@ -72,7 +71,6 @@ private:
     int32_t _app_id;
     int32_t _partition_count;
     std::vector<::dsn::partition_configuration> partitions;
-    uint32_t _detect_timeout;
 
     std::string _send_alert_email_cmd;
     std::string _send_availability_info_email_cmd;

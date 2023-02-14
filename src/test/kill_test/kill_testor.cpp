@@ -40,9 +40,12 @@
 #include "kill_testor.h"
 #include "killer_handler.h"
 #include "killer_handler_shell.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace test {
+DSN_DEFINE_uint32(pegasus.killtest, kill_interval_seconds, 30, "");
+DSN_DEFINE_uint32(pegasus.killtest, max_seconds_for_all_partitions_to_recover, 600, "");
 
 kill_testor::kill_testor(const char *config_file)
 {
@@ -75,11 +78,6 @@ kill_testor::kill_testor(const char *config_file)
         LOG_ERROR("Initialize the _ddl_client failed");
         exit(-1);
     }
-
-    kill_interval_seconds =
-        (uint32_t)dsn_config_get_value_uint64(section, "kill_interval_seconds", 30, "");
-    max_seconds_for_partitions_recover = (uint32_t)dsn_config_get_value_uint64(
-        section, "max_seconds_for_all_partitions_to_recover", 600, "");
     srand((unsigned)time(nullptr));
 }
 
@@ -166,10 +164,11 @@ bool kill_testor::check_cluster_status()
     int healthy_partition_cnt = 0;
     int unhealthy_partition_cnt = 0;
     int try_count = 1;
-    while (try_count <= max_seconds_for_partitions_recover) {
-        dsn::error_code err = get_partition_info(try_count == max_seconds_for_partitions_recover,
-                                                 healthy_partition_cnt,
-                                                 unhealthy_partition_cnt);
+    while (try_count <= FLAGS_max_seconds_for_all_partitions_to_recover) {
+        dsn::error_code err =
+            get_partition_info(try_count == FLAGS_max_seconds_for_all_partitions_to_recover,
+                               healthy_partition_cnt,
+                               unhealthy_partition_cnt);
         if (err == dsn::ERR_OK) {
             if (unhealthy_partition_cnt > 0) {
                 LOG_DEBUG("query partition status success, but still have unhealthy partition, "

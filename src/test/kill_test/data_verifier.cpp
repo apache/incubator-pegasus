@@ -46,6 +46,7 @@
 #include "pegasus/client.h"
 #include "data_verifier.h"
 #include "utils/fmt_logging.h"
+#include "utils/flags.h"
 
 using namespace std;
 using namespace ::pegasus;
@@ -53,11 +54,8 @@ using namespace ::pegasus;
 static pegasus_client *client = nullptr;
 static string app_name;
 static string pegasus_cluster_name;
-static uint32_t set_and_get_timeout_milliseconds;
-static int set_thread_count = 0;
 
 static std::atomic_llong set_next(0);
-static int get_thread_count = 0;
 static std::vector<long long> set_thread_setting_id;
 
 static const char *set_next_key = "set_next";
@@ -73,6 +71,16 @@ static const long stat_p999_pos = stat_batch - stat_batch / 1000 - 1;
 static const long stat_p9999_pos = stat_batch - stat_batch / 10000 - 1;
 static const long stat_max_pos = stat_batch - 1;
 
+DSN_DEFINE_uint32(pegasus.killtest,
+                  set_and_get_timeout_milliseconds,
+                  3000,
+                  "set() and get() timeout in milliseconds.");
+DSN_DEFINE_uint32(pegasus.killtest, set_thread_count, 5, "Thread count of the setter.");
+DSN_DEFINE_uint32(pegasus.killtest,
+                  get_thread_count,
+                  FLAGS_set_thread_count * 4,
+                  "Thread count of the getter.");
+
 // return time in us.
 long get_time()
 {
@@ -84,7 +92,7 @@ long get_time()
 long long get_min_thread_setting_id()
 {
     long long id = set_thread_setting_id[0];
-    for (int i = 1; i < set_thread_count; ++i) {
+    for (int i = 1; i < FLAGS_set_thread_count; ++i) {
         if (set_thread_setting_id[i] < id)
             id = set_thread_setting_id[i];
     }
@@ -115,8 +123,8 @@ void do_set(int thread_id)
             value.assign(buf);
         }
         pegasus_client::internal_info info;
-        int ret =
-            client->set(hash_key, sort_key, value, set_and_get_timeout_milliseconds, 0, &info);
+        int ret = client->set(
+            hash_key, sort_key, value, FLAGS_set_and_get_timeout_milliseconds, 0, &info);
         if (ret == PERR_OK) {
             long cur_time = get_time();
             LOG_INFO("SetThread[{}]: set succeed: id={}, try={}, time={} (gpid={}.{}, decree={}, "
@@ -197,8 +205,8 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
         }
         pegasus_client::internal_info info;
         std::string get_value;
-        int ret =
-            client->get(hash_key, sort_key, get_value, set_and_get_timeout_milliseconds, &info);
+        int ret = client->get(
+            hash_key, sort_key, get_value, FLAGS_set_and_get_timeout_milliseconds, &info);
         if (ret == PERR_OK || ret == PERR_NOT_FOUND) {
             long cur_time = get_time();
             if (ret == PERR_NOT_FOUND) {
@@ -317,7 +325,7 @@ void do_check(int thread_count)
         while (true) {
             char buf[1024];
             sprintf(buf, "%lld", range_end);
-            int ret = client->set(check_max_key, "", buf, set_and_get_timeout_milliseconds);
+            int ret = client->set(check_max_key, "", buf, FLAGS_set_and_get_timeout_milliseconds);
             if (ret == PERR_OK) {
                 LOG_INFO("CheckThread: round({}): update \"{}\" succeed: check_max={}",
                          round_id,
@@ -354,7 +362,7 @@ void do_mark()
         }
         sprintf(buf, "%lld", new_id);
         value.assign(buf);
-        int ret = client->set(set_next_key, "", value, set_and_get_timeout_milliseconds);
+        int ret = client->set(set_next_key, "", value, FLAGS_set_and_get_timeout_milliseconds);
         if (ret == PERR_OK) {
             long cur_time = get_time();
             LOG_INFO("MarkThread: update \"{}\" succeed: set_next={}, time={}",
@@ -392,13 +400,6 @@ void verifier_initialize(const char *config_file)
         LOG_ERROR("Initialize the _client failed");
         exit(-1);
     }
-
-    set_and_get_timeout_milliseconds = (uint32_t)dsn_config_get_value_uint64(
-        section, "set_and_get_timeout_milliseconds", 3000, "set and get timeout milliseconds");
-    set_thread_count =
-        (uint32_t)dsn_config_get_value_uint64(section, "set_thread_count", 5, "set thread count");
-    get_thread_count = (uint32_t)dsn_config_get_value_uint64(
-        section, "get_thread_count", set_thread_count * 4, "get thread count");
 }
 
 void verifier_start()
@@ -406,7 +407,8 @@ void verifier_start()
     // check the set_next
     while (true) {
         std::string set_next_value;
-        int ret = client->get(set_next_key, "", set_next_value, set_and_get_timeout_milliseconds);
+        int ret =
+            client->get(set_next_key, "", set_next_value, FLAGS_set_and_get_timeout_milliseconds);
         if (ret == PERR_OK) {
             long long i = atoll(set_next_value.c_str());
             if (i == 0 && !set_next_value.empty()) {
@@ -427,17 +429,17 @@ void verifier_start()
                       client->get_error_string(ret));
         }
     }
-    set_thread_setting_id.resize(set_thread_count);
+    set_thread_setting_id.resize(FLAGS_set_thread_count);
 
     std::vector<std::thread> set_threads;
-    for (int i = 0; i < set_thread_count; ++i) {
+    for (int i = 0; i < FLAGS_set_thread_count; ++i) {
         set_threads.emplace_back(do_set, i);
     }
     std::thread mark_thread(do_mark);
 
     // start several threads to read data from pegasus cluster and check data correctness,
     // block until the check failed
-    do_check(get_thread_count);
+    do_check(FLAGS_get_thread_count);
 
     mark_thread.join();
     for (auto &t : set_threads) {
