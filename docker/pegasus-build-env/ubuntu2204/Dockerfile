@@ -1,0 +1,72 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+FROM ubuntu:22.04
+
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get update -y; \
+    apt-get install -y --no-install-recommends \
+                       build-essential \
+                       software-properties-common \
+                       clang-14 \
+                       libclang-14-dev \
+                       llvm-14-dev \
+                       openjdk-8-jdk \
+                       pkg-config \
+                       python3-pip \
+                       libaio-dev \
+                       libsnappy-dev \
+                       libbz2-dev \
+                       libzstd-dev \
+                       liblz4-dev \
+                       zlib1g \
+                       zlib1g.dev \
+                       patch \
+                       netcat \
+                       wget \
+                       ccache \
+                       git \
+                       curl \
+                       zip \
+                       unzip \
+                       gdb \
+                       vim \
+                       automake \
+                       libtool \
+                       libssl-dev \
+                       bison \
+                       maven \
+                       flex; \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --no-cache-dir --upgrade pip
+RUN pip3 install --no-cache-dir cmake
+
+RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -P /opt/thrift && \
+    cd /opt/thrift && tar xzf 0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
+    ./configure --enable-libs=no && \
+    make -j$(($(nproc)/2+1)) && make install && cd - && \
+    rm -rf thrift-0.11.0 0.11.0.tar.gz
+
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV CLASSPATH=$JAVA_HOME/lib/
+ENV PATH=$JAVA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$LD_LIBRARY_PATH
+
+WORKDIR /root/apache
