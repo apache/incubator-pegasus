@@ -35,6 +35,12 @@ using namespace ::pegasus;
 
 DEFINE_TASK_CODE(LPC_DEFAUT_TASK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
 
+DSN_DEFINE_int32(pressureclient, qps, 0, "qps of pressure client");
+DSN_DEFINE_int32(pressureclient, hashkey_len, 64, "hashkey length");
+DSN_DEFINE_int32(pressureclient, sortkey_len, 64, "sortkey length");
+DSN_DEFINE_int32(pressureclient, value_len, 64, "value length");
+DSN_DEFINE_validator(qps, [](int32_t value) -> bool { return value > 0; });
+
 // generate hashkey/sortkey between [0, ****key_limit]
 static int64_t hashkey_limit;
 static int64_t sortkey_limit;
@@ -43,12 +49,6 @@ static int64_t sortkey_limit;
 static pegasus_client *pg_client = nullptr;
 static string cluster_name;
 static string app_name;
-
-DSN_DEFINE_int32(pressureclient, qps, 0, "qps of pressure client");
-DSN_DEFINE_int32(pressureclient, hashkey_len, 64, "hashkey length");
-DSN_DEFINE_int32(pressureclient, sortkey_len, 64, "sortkey length");
-DSN_DEFINE_int32(pressureclient, value_len, 64, "value length");
-
 static string op_name; // set/get/scan/del
 // fill string in prefix, until with size(len)
 std::string fill_string(const std::string &str, int len)
@@ -236,7 +236,6 @@ int main(int argc, const char **argv)
     sortkey_limit =
         (int64_t)dsn_config_get_value_uint64("pressureclient", "sortkey_limit", 0, "sortkey limit");
 
-    CHECK_GT(FLAGS_qps, 0);
     CHECK(!op_name.empty(), "must assign operation name");
 
     LOG_INFO("pressureclient {} qps = {}", op_name, FLAGS_qps);

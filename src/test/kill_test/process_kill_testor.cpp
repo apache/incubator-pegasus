@@ -46,7 +46,6 @@ namespace test {
 DSN_DEFINE_int32(section, total_meta_count, 0, "total meta count");
 DSN_DEFINE_int32(section, total_replica_count, 0, "total replica count");
 DSN_DEFINE_int32(section, total_zookeeper_count, 0, "total zookeeper count");
-// TODO
 DSN_DEFINE_int32(section,
                  kill_replica_max_count,
                  FLAGS_total_replica_count,
@@ -56,6 +55,16 @@ DSN_DEFINE_int32(section,
                  kill_zookeeper_max_count,
                  FLAGS_total_zookeeper_count,
                  "zookeeper killed max count");
+DSN_DEFINE_group_validator(kill_test_role_count, [](std::string &message) -> bool {
+    if (FLAGS_total_meta_count == 0 && FLAGS_total_replica_count == 0 &&
+        FLAGS_total_zookeeper_count == 0) {
+        message = fmt::format("[section].total_meta_count, total_replica_count and "
+                              "total_zookeeper_count should not all be 0.");
+        return false;
+    }
+
+    return true;
+});
 
 process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(config_file)
 {
@@ -75,11 +84,6 @@ process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(
     _job_index_to_kill.resize(JOB_LENGTH);
     _sleep_time_before_recover_seconds = (uint32_t)dsn_config_get_value_uint64(
         section, "sleep_time_before_recover_seconds", 30, "sleep time before recover seconds");
-
-    if (FLAGS_total_meta_count == 0 && FLAGS_total_replica_count == 0 &&
-        FLAGS_total_zookeeper_count == 0) {
-        CHECK(false, "total number of meta/replica/zookeeper is 0");
-    }
 }
 
 process_kill_testor::~process_kill_testor() {}

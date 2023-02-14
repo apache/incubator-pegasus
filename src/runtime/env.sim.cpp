@@ -62,7 +62,7 @@ sim_env_provider::sim_env_provider(env_provider *inner_provider) : env_provider(
         FLAGS_random_seed = std::random_device{}();
     }
 
-    LOG_ERROR("simulation.random seed for this round is {}", FLAGS_random_seed);
+    LOG_INFO("simulation.random seed for this round is {}", FLAGS_random_seed);
 }
 
 } // namespace tools
