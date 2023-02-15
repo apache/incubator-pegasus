@@ -41,7 +41,7 @@ namespace dsn {
 DSN_DEFINE_uint32(core,
                   local_hash,
                   0,
-                  "a same hash value from two processes indicate the rpc code are registered in "
+                  "a same hash value from two processes indicate the rpc codes are registered in "
                   "the same order, and therefore the mapping between rpc code string and integer "
                   "is the same, which we leverage for fast rpc handler lookup optimization");
 
