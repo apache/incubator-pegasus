@@ -83,8 +83,8 @@ TEST(meta, app_envs_basic_test) { g_app->app_envs_basic_test(); }
 dsn::error_code meta_service_test_app::start(const std::vector<std::string> &args)
 {
     if (FLAGS_random_seed == 0) {
-        FLAGS_random_seed = time(0);
-        LOG_ERROR("initial seed: {}", FLAGS_random_seed);
+        FLAGS_random_seed = static_cast<uint32_t>(time(nullptr));
+        LOG_INFO("initial seed: {}", FLAGS_random_seed);
     }
     srand(FLAGS_random_seed);
 
