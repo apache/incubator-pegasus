@@ -58,11 +58,15 @@ jobs:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
+          - ubuntu2204
           - centos6
           - centos7
         compiler-family:
           - gcc
         include:
+          - compiler-family: clang
+            compiler: "clang-14,clang++-14"
+            os: ubuntu2204
           - compiler-family: clang
             compiler: "clang-10,clang++-10"
             os: ubuntu2004

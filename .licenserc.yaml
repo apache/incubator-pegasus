@@ -87,6 +87,7 @@ header:
     - 'thirdparty/fix_fds_for_macos.patch'
     - 'thirdparty/fix_jemalloc_for_m1_on_macos.patch'
     - 'thirdparty/fix_libevent_for_macos.patch'
+    - 'thirdparty/fix_prometheus-cpp_limits.patch'
     - 'thirdparty/fix_s2_for_aarch64.patch'
     - 'thirdparty/fix_thrift_for_cpp11.patch'
     - 'thirdparty/rocksdb_fix_atomic_flush_0879c240.patch'

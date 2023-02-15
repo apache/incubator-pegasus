@@ -340,7 +340,8 @@ ExternalProject_Add(prometheus-cpp
         https://codeload.github.com/jupp0r/prometheus-cpp/tar.gz/v0.7.0
         URL_MD5 dc75c31ceaefd160e978365bdca8eb01
         DEPENDS civetweb curl
-        PATCH_COMMAND rm -rf 3rdparty/civetweb && cp -R ${civetweb_SRC} 3rdparty/civetweb # replace the submodule
+        # TODO(yingchun): replace the submodule
+        PATCH_COMMAND rm -rf 3rdparty/civetweb && cp -R ${civetweb_SRC} 3rdparty/civetweb && patch -p0 < ${TP_DIR}/fix_prometheus-cpp_limits.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DENABLE_TESTING=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
