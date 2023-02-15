@@ -187,8 +187,8 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
 
 uint32_t sim_network_provider::net_delay_milliseconds() const
 {
-    return static_cast<uint32_t>(rand::next_u32(FLAGS_min_message_delay_microseconds,
-                                                FLAGS_max_message_delay_microseconds)) /
+    return rand::next_u32(FLAGS_min_message_delay_microseconds,
+                          FLAGS_max_message_delay_microseconds) /
            1000;
 }
 }
