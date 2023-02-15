@@ -31,9 +31,13 @@
 #include "remote_cmd/remote_command.h"
 
 #include "partition_kill_testor.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace test {
+
+DSN_DECLARE_uint32(kill_interval_seconds);
+
 partition_kill_testor::partition_kill_testor(const char *config_file) : kill_testor(config_file) {}
 
 void partition_kill_testor::Run()
@@ -45,8 +49,8 @@ void partition_kill_testor::Run()
         } else {
             run();
         }
-        LOG_INFO("sleep {} seconds before checking", kill_interval_seconds);
-        sleep(kill_interval_seconds);
+        LOG_INFO("sleep {} seconds before checking", FLAGS_kill_interval_seconds);
+        sleep(FLAGS_kill_interval_seconds);
     }
 }
 

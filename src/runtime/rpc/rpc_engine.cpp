@@ -39,8 +39,10 @@
 #include "runtime/rpc/serialization.h"
 #include "utils/rand.h"
 #include <set>
+#include "utils/flags.h"
 
 namespace dsn {
+DSN_DECLARE_uint32(local_hash);
 
 DEFINE_TASK_CODE(LPC_RPC_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
@@ -735,7 +737,7 @@ void rpc_engine::reply(message_ex *response, error_code err)
             sizeof(response->header->server.error_name) - 1);
     response->header->server.error_name[sizeof(response->header->server.error_name) - 1] = '\0';
     response->header->server.error_code.local_code = err;
-    response->header->server.error_code.local_hash = message_ex::s_local_hash;
+    response->header->server.error_code.local_hash = FLAGS_local_hash;
 
     // response rpc code may be TASK_CODE_INVALID when request rpc code is not exist
     auto sp = response->local_rpc_code == TASK_CODE_INVALID

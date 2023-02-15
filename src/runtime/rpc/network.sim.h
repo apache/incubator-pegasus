@@ -99,8 +99,6 @@ public:
 
 private:
     ::dsn::rpc_address _address;
-    uint32_t _min_message_delay_microseconds;
-    uint32_t _max_message_delay_microseconds;
 };
 
 //------------- inline implementations -------------

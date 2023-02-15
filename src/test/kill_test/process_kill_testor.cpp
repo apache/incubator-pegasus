@@ -43,22 +43,25 @@
 namespace pegasus {
 namespace test {
 
-DSN_DEFINE_int32(section, total_meta_count, 0, "total meta count");
-DSN_DEFINE_int32(section, total_replica_count, 0, "total replica count");
-DSN_DEFINE_int32(section, total_zookeeper_count, 0, "total zookeeper count");
-DSN_DEFINE_int32(section,
+DSN_DEFINE_int32(pegasus.killtest, total_meta_count, 0, "total meta count");
+DSN_DEFINE_int32(pegasus.killtest, total_replica_count, 0, "total replica count");
+DSN_DEFINE_int32(pegasus.killtest, total_zookeeper_count, 0, "total zookeeper count");
+DSN_DEFINE_int32(pegasus.killtest,
                  kill_replica_max_count,
                  FLAGS_total_replica_count,
                  "replica killed max count");
-DSN_DEFINE_int32(section, kill_meta_max_count, FLAGS_total_meta_count, "meta killed max count");
-DSN_DEFINE_int32(section,
+DSN_DEFINE_int32(pegasus.killtest,
+                 kill_meta_max_count,
+                 FLAGS_total_meta_count,
+                 "meta killed max count");
+DSN_DEFINE_int32(pegasus.killtest,
                  kill_zookeeper_max_count,
                  FLAGS_total_zookeeper_count,
                  "zookeeper killed max count");
 DSN_DEFINE_group_validator(kill_test_role_count, [](std::string &message) -> bool {
     if (FLAGS_total_meta_count == 0 && FLAGS_total_replica_count == 0 &&
         FLAGS_total_zookeeper_count == 0) {
-        message = fmt::format("[section].total_meta_count, total_replica_count and "
+        message = fmt::format("[pegasus.killtest].total_meta_count, total_replica_count and "
                               "total_zookeeper_count should not all be 0.");
         return false;
     }
@@ -66,24 +69,28 @@ DSN_DEFINE_group_validator(kill_test_role_count, [](std::string &message) -> boo
     return true;
 });
 
+DSN_DEFINE_uint32(pegasus.killtest,
+                  sleep_time_before_recover_seconds,
+                  30,
+                  "sleep time before recover seconds");
+
+DSN_DECLARE_uint32(kill_interval_seconds);
+
 process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(config_file)
 {
     register_kill_handlers();
 
-    const char *section = "pegasus.killtest";
     kill_round = 0;
 
     // initialize killer_handler
     std::string killer_name =
-        dsn_config_get_value_string(section, "killer_handler", "", "killer handler");
+        dsn_config_get_value_string("pegasus.killtest", "killer_handler", "", "killer handler");
     CHECK(!killer_name.empty(), "");
     _killer_handler.reset(killer_handler::new_handler(killer_name.c_str()));
     CHECK(_killer_handler, "invalid killer_name({})", killer_name);
 
     _job_types = {META, REPLICA, ZOOKEEPER};
     _job_index_to_kill.resize(JOB_LENGTH);
-    _sleep_time_before_recover_seconds = (uint32_t)dsn_config_get_value_uint64(
-        section, "sleep_time_before_recover_seconds", 30, "sleep time before recover seconds");
 }
 
 process_kill_testor::~process_kill_testor() {}
@@ -112,8 +119,8 @@ void process_kill_testor::Run()
             stop_verifier_and_exit("the verifier process is dead");
         }
         run();
-        LOG_INFO("sleep {} seconds before checking", kill_interval_seconds);
-        sleep(kill_interval_seconds);
+        LOG_INFO("sleep {} seconds before checking", FLAGS_kill_interval_seconds);
+        sleep(FLAGS_kill_interval_seconds);
     }
 }
 
@@ -148,7 +155,8 @@ void process_kill_testor::run()
         stop_verifier_and_exit("kill jobs failed");
     }
 
-    auto sleep_time_random_seconds = generate_one_number(1, _sleep_time_before_recover_seconds);
+    auto sleep_time_random_seconds =
+        generate_one_number(1, FLAGS_sleep_time_before_recover_seconds);
     LOG_INFO("sleep {} seconds before recovery", sleep_time_random_seconds);
     sleep(sleep_time_random_seconds);
 

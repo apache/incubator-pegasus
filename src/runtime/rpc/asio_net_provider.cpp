@@ -72,10 +72,6 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
     if (_acceptor != nullptr)
         return ERR_SERVICE_ALREADY_RUNNING;
 
-    // get connection threshold from config, default value 0 means no threshold
-    _cfg_conn_threshold_per_ip = (uint32_t)dsn_config_get_value_uint64(
-        "network", "conn_threshold_per_ip", 0, "max connection count to each server per ip");
-
     for (int i = 0; i < FLAGS_io_service_worker_count; i++) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);

@@ -233,9 +233,6 @@ private:
     int _rw_offset;     // current buffer offset
     bool _rw_committed; // mark if it is in middle state of reading/writing
     bool _is_read;      // is for read(recv) or write(send)
-
-public:
-    static uint32_t s_local_hash; // used by fast_rpc_name
 };
 typedef dsn::ref_ptr<message_ex> message_ptr;
 

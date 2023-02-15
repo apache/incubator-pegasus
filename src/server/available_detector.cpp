@@ -38,7 +38,14 @@ DSN_DEFINE_int32(pegasus.collector,
                  available_detect_alert_fail_count,
                  30,
                  "available detect alert fail count");
-
+DSN_DEFINE_uint32(pegasus.collector,
+                  available_detect_interval_seconds,
+                  3,
+                  "detect interval seconds");
+DSN_DEFINE_uint32(pegasus.collector,
+                  available_detect_timeout,
+                  1000,
+                  "available detect timeout in millisecond");
 available_detector::available_detector()
     : _client(nullptr),
       _ddl_client(nullptr),
@@ -69,16 +76,6 @@ available_detector::available_detector()
     _meta_list.clear();
     dsn::replication::replica_helper::load_meta_servers(_meta_list);
     CHECK(!_meta_list.empty(), "");
-    _detect_interval_seconds =
-        (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                              "available_detect_interval_seconds",
-                                              3, // default value 3s
-                                              "detect interval seconds");
-    _detect_timeout =
-        (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                              "available_detect_timeout",
-                                              1000, // unit is millisecond,default is 1s = 1000ms
-                                              "available detect timeout");
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {
         CHECK(false, "Initialize the pegasus client failed");
@@ -175,11 +172,11 @@ void available_detector::detect_available()
         _fail_count[i].reset(new std::atomic<int32_t>(0));
         _fail_count[i]->store(0);
         auto call_func = std::bind(&available_detector::on_detect, this, i);
-        _detect_tasks[i] =
-            ::dsn::tasking::enqueue_timer(LPC_DETECT_AVAILABLE,
-                                          &_tracker,
-                                          std::move(call_func),
-                                          std::chrono::seconds(_detect_interval_seconds));
+        _detect_tasks[i] = ::dsn::tasking::enqueue_timer(
+            LPC_DETECT_AVAILABLE,
+            &_tracker,
+            std::move(call_func),
+            std::chrono::seconds(FLAGS_available_detect_interval_seconds));
     }
 }
 
@@ -341,12 +338,15 @@ void available_detector::on_detect(int32_t idx)
             check_and_send_email(&cnt, idx);
         } else {
             LOG_DEBUG("async_set partition[{}] ok, hash_key = {}", idx, _hash_keys[idx]);
-            _client->async_get(
-                _hash_keys[idx], "", std::move(user_async_get_callback), _detect_timeout);
+            _client->async_get(_hash_keys[idx],
+                               "",
+                               std::move(user_async_get_callback),
+                               FLAGS_available_detect_timeout);
         }
     };
 
-    _client->async_set(_hash_keys[idx], "", value, std::move(async_set_callback), _detect_timeout);
+    _client->async_set(
+        _hash_keys[idx], "", value, std::move(async_set_callback), FLAGS_available_detect_timeout);
 }
 
 void available_detector::check_and_send_email(std::atomic<int> *cnt, int32_t idx)

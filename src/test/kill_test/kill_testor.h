@@ -63,10 +63,6 @@ protected:
     vector<dsn::rpc_address> meta_list;
 
     std::vector<partition_configuration> partitions;
-
-    int kill_interval_seconds;
-    uint32_t _sleep_time_before_recover_seconds;
-    uint32_t max_seconds_for_partitions_recover;
 };
 } // namespace test
 } // namespace pegasus

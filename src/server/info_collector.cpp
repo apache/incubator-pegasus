@@ -45,6 +45,16 @@ DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
                  TASK_PRIORITY_COMMON,
                  ::dsn::THREAD_POOL_DEFAULT)
 
+DSN_DEFINE_uint32(pegasus.collector, app_stat_interval_seconds, 10, "app stat interval seconds");
+DSN_DEFINE_uint32(pegasus.collector,
+                  capacity_unit_fetch_interval_seconds,
+                  8,
+                  "capacity unit fetch interval seconds");
+DSN_DEFINE_uint32(pegasus.collector,
+                  storage_size_fetch_interval_seconds,
+                  3600,
+                  "storage size fetch interval seconds");
+
 info_collector::info_collector()
 {
     std::vector<::dsn::rpc_address> meta_servers;
@@ -62,11 +72,6 @@ info_collector::info_collector()
     _shell_context->meta_list = meta_servers;
     _shell_context->ddl_client.reset(new replication_ddl_client(meta_servers));
 
-    _app_stat_interval_seconds = (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                                                       "app_stat_interval_seconds",
-                                                                       10, // default value 10s
-                                                                       "app stat interval seconds");
-
     _usage_stat_app = dsn_config_get_value_string(
         "pegasus.collector", "usage_stat_app", "", "app for recording usage statistics");
     CHECK(!_usage_stat_app.empty(), "");
@@ -76,29 +81,18 @@ info_collector::info_collector()
     CHECK_NOTNULL(_client, "Initialize the client failed");
     _result_writer = dsn::make_unique<result_writer>(_client);
 
-    _capacity_unit_fetch_interval_seconds =
-        (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                              "capacity_unit_fetch_interval_seconds",
-                                              8, // default value 8s
-                                              "capacity unit fetch interval seconds");
     // _capacity_unit_retry_wait_seconds is in range of [1, 10]
     _capacity_unit_retry_wait_seconds =
-        std::min(10u, std::max(1u, _capacity_unit_fetch_interval_seconds / 10));
+        std::min(10u, std::max(1u, FLAGS_capacity_unit_fetch_interval_seconds / 10));
     // _capacity_unit_retry_max_count is in range of [0, 3]
-    _capacity_unit_retry_max_count =
-        std::min(3u, _capacity_unit_fetch_interval_seconds / _capacity_unit_retry_wait_seconds);
-
-    _storage_size_fetch_interval_seconds =
-        (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
-                                              "storage_size_fetch_interval_seconds",
-                                              3600, // default value 1h
-                                              "storage size fetch interval seconds");
+    _capacity_unit_retry_max_count = std::min(
+        3u, FLAGS_capacity_unit_fetch_interval_seconds / _capacity_unit_retry_wait_seconds);
     // _storage_size_retry_wait_seconds is in range of [1, 60]
     _storage_size_retry_wait_seconds =
-        std::min(60u, std::max(1u, _storage_size_fetch_interval_seconds / 10));
+        std::min(60u, std::max(1u, FLAGS_storage_size_fetch_interval_seconds / 10));
     // _storage_size_retry_max_count is in range of [0, 3]
     _storage_size_retry_max_count =
-        std::min(3u, _storage_size_fetch_interval_seconds / _storage_size_retry_wait_seconds);
+        std::min(3u, FLAGS_storage_size_fetch_interval_seconds / _storage_size_retry_wait_seconds);
 }
 
 info_collector::~info_collector()
@@ -115,7 +109,7 @@ void info_collector::start()
         ::dsn::tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
                                       &_tracker,
                                       [this] { on_app_stat(); },
-                                      std::chrono::seconds(_app_stat_interval_seconds),
+                                      std::chrono::seconds(FLAGS_app_stat_interval_seconds),
                                       0,
                                       std::chrono::minutes(1));
 
@@ -123,7 +117,7 @@ void info_collector::start()
         LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
         &_tracker,
         [this] { on_capacity_unit_stat(_capacity_unit_retry_max_count); },
-        std::chrono::seconds(_capacity_unit_fetch_interval_seconds),
+        std::chrono::seconds(FLAGS_capacity_unit_fetch_interval_seconds),
         0,
         std::chrono::minutes(1));
 
@@ -131,7 +125,7 @@ void info_collector::start()
         LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
         &_tracker,
         [this] { on_storage_size_stat(_storage_size_retry_max_count); },
-        std::chrono::seconds(_storage_size_fetch_interval_seconds),
+        std::chrono::seconds(FLAGS_storage_size_fetch_interval_seconds),
         0,
         std::chrono::minutes(1));
 }

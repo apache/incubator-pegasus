@@ -32,13 +32,20 @@
 #include <cctype>
 
 #include "runtime/task/task_engine.h"
+#include "utils/flags.h"
 
 using namespace dsn::utils;
 
 namespace dsn {
+// init common for all per-node providers
+DSN_DEFINE_uint32(core,
+                  local_hash,
+                  0,
+                  "a same hash value from two processes indicate the rpc codes are registered in "
+                  "the same order, and therefore the mapping between rpc code string and integer "
+                  "is the same, which we leverage for fast rpc handler lookup optimization");
 
 std::atomic<uint64_t> message_ex::_id(0);
-uint32_t message_ex::s_local_hash = 0;
 
 message_ex::message_ex()
     : header(nullptr),
@@ -82,11 +89,11 @@ error_code message_ex::error()
 {
     dsn::error_code code;
     auto binary_hash = header->server.error_code.local_hash;
-    if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash) {
+    if (binary_hash != 0 && binary_hash == FLAGS_local_hash) {
         code = dsn::error_code(header->server.error_code.local_code);
     } else {
         code = error_code::try_get(header->server.error_name, dsn::ERR_UNKNOWN);
-        header->server.error_code.local_hash = ::dsn::message_ex::s_local_hash;
+        header->server.error_code.local_hash = FLAGS_local_hash;
         header->server.error_code.local_code = code;
     }
     return code;
@@ -99,11 +106,11 @@ task_code message_ex::rpc_code()
     }
 
     auto binary_hash = header->rpc_code.local_hash;
-    if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash) {
+    if (binary_hash != 0 && binary_hash == FLAGS_local_hash) {
         local_rpc_code = dsn::task_code(header->rpc_code.local_code);
     } else {
         local_rpc_code = dsn::task_code::try_get(header->rpc_name, ::dsn::TASK_CODE_INVALID);
-        header->rpc_code.local_hash = ::dsn::message_ex::s_local_hash;
+        header->rpc_code.local_hash = FLAGS_local_hash;
         header->rpc_code.local_code = local_rpc_code.code();
     }
 
@@ -307,7 +314,7 @@ message_ex *message_ex::create_request(dsn::task_code rpc_code,
     strncpy(hdr.rpc_name, sp->name.c_str(), sizeof(hdr.rpc_name) - 1);
     hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
     hdr.rpc_code.local_code = (uint32_t)rpc_code;
-    hdr.rpc_code.local_hash = s_local_hash;
+    hdr.rpc_code.local_hash = FLAGS_local_hash;
 
     hdr.id = new_id();
 
@@ -348,7 +355,7 @@ message_ex *message_ex::create_response()
         strncpy(hdr.rpc_name, response_sp->name.c_str(), sizeof(hdr.rpc_name) - 1);
         hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
         hdr.rpc_code.local_code = msg->local_rpc_code;
-        hdr.rpc_code.local_hash = s_local_hash;
+        hdr.rpc_code.local_hash = FLAGS_local_hash;
 
         // join point
         request_sp->on_rpc_create_response.execute(this, msg);
@@ -359,7 +366,7 @@ message_ex *message_ex::create_response()
         strncpy(hdr.rpc_name, ack_rpc_name.c_str(), sizeof(hdr.rpc_name) - 1);
         hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
         hdr.rpc_code.local_code = TASK_CODE_INVALID;
-        hdr.rpc_code.local_hash = s_local_hash;
+        hdr.rpc_code.local_hash = FLAGS_local_hash;
     }
 
     return msg;
