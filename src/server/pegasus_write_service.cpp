@@ -17,14 +17,15 @@
  * under the License.
  */
 
-#include "base/pegasus_rpc_types.h"
-#include "pegasus_write_service.h"
-#include "pegasus_write_service_impl.h"
-#include "capacity_unit_calculator.h"
+#include "server/pegasus_write_service.h"
 
-#include "runtime/message_utils.h"
+#include "base/pegasus_rpc_types.h"
 #include "common/replication.codes.h"
+#include "runtime/message_utils.h"
+#include "server/capacity_unit_calculator.h"
+#include "server/pegasus_write_service_impl.h"
 #include "utils/defer.h"
+#include "utils/time_utils.h"
 
 METRIC_DEFINE_counter(replica,
                       put_requests,
@@ -163,7 +164,7 @@ int pegasus_write_service::multi_put(const db_write_context &ctx,
                                      const dsn::apps::multi_put_request &update,
                                      dsn::apps::update_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
+    dsn::utils::chronograph chrono;
     _multi_put_counter->increment();
     int err = _impl->multi_put(ctx, update, resp);
 
@@ -171,7 +172,7 @@ int pegasus_write_service::multi_put(const db_write_context &ctx,
         _cu_calculator->add_multi_put_cu(resp.error, update.hash_key, update.kvs);
     }
 
-    _multi_put_latency_ns->set(dsn_now_ns() - start_time);
+    _multi_put_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -179,7 +180,7 @@ int pegasus_write_service::multi_remove(int64_t decree,
                                         const dsn::apps::multi_remove_request &update,
                                         dsn::apps::multi_remove_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
+    dsn::utils::chronograph chrono;
     _multi_remove_counter->increment();
     int err = _impl->multi_remove(decree, update, resp);
 
@@ -187,7 +188,7 @@ int pegasus_write_service::multi_remove(int64_t decree,
         _cu_calculator->add_multi_remove_cu(resp.error, update.hash_key, update.sort_keys);
     }
 
-    _multi_remove_latency_ns->set(dsn_now_ns() - start_time);
+    _multi_remove_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -195,7 +196,7 @@ int pegasus_write_service::incr(int64_t decree,
                                 const dsn::apps::incr_request &update,
                                 dsn::apps::incr_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
+    dsn::utils::chronograph chrono;
     _incr_counter->increment();
     int err = _impl->incr(decree, update, resp);
 
@@ -203,7 +204,7 @@ int pegasus_write_service::incr(int64_t decree,
         _cu_calculator->add_incr_cu(resp.error, update.key);
     }
 
-    _incr_latency_ns->set(dsn_now_ns() - start_time);
+    _incr_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -211,7 +212,7 @@ int pegasus_write_service::check_and_set(int64_t decree,
                                          const dsn::apps::check_and_set_request &update,
                                          dsn::apps::check_and_set_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
+    dsn::utils::chronograph chrono;
     _check_and_set_counter->increment();
     int err = _impl->check_and_set(decree, update, resp);
 
@@ -223,7 +224,7 @@ int pegasus_write_service::check_and_set(int64_t decree,
                                              update.set_value);
     }
 
-    _check_and_set_latency_ns->set(dsn_now_ns() - start_time);
+    _check_and_set_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -231,7 +232,7 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
                                             const dsn::apps::check_and_mutate_request &update,
                                             dsn::apps::check_and_mutate_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
+    dsn::utils::chronograph chrono;
     _check_and_mutate_counter->increment();
     int err = _impl->check_and_mutate(decree, update, resp);
 
@@ -240,7 +241,7 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
             resp.error, update.hash_key, update.check_sort_key, update.mutate_list);
     }
 
-    _check_and_mutate_latency_ns->set(dsn_now_ns() - start_time);
+    _check_and_mutate_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
