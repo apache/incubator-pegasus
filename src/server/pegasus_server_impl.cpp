@@ -58,6 +58,10 @@ DSN_DEFINE_int32(pegasus.server,
                  hotkey_analyse_time_interval_s,
                  10,
                  "hotkey analyse interval in seconds");
+DSN_DEFINE_int32(pegasus.server,
+                 update_rdb_stat_interval,
+                 60,
+                 "The interval seconds to update RocksDB statistics, in seconds.");
 
 static std::string chkpt_get_dir_name(int64_t decree)
 {
@@ -1695,7 +1699,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
                                     &_tracker,
                                     [this]() { this->update_replica_rocksdb_statistics(); },
-                                    _update_rdb_stat_interval);
+                                    std::chrono::seconds(FLAGS_update_rdb_stat_interval));
 
     // These counters are singletons on this server shared by all replicas, their metrics update
     // task should be scheduled once an interval on the server view.

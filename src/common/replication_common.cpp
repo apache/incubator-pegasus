@@ -100,7 +100,6 @@ replication_options::replication_options()
     group_check_disabled = false;
 
     checkpoint_disabled = false;
-    checkpoint_min_decree_gap = 10000;
 
     gc_disabled = false;
 
@@ -209,11 +208,6 @@ void replication_options::initialize()
                                                     "checkpoint_disabled",
                                                     checkpoint_disabled,
                                                     "whether checkpoint is disabled");
-    checkpoint_min_decree_gap =
-        (int64_t)dsn_config_get_value_uint64("replication",
-                                             "checkpoint_min_decree_gap",
-                                             checkpoint_min_decree_gap,
-                                             "minimum decree gap that triggers checkpoint");
 
     gc_disabled = dsn_config_get_value_bool(
         "replication", "gc_disabled", gc_disabled, "whether to disable garbage collection");

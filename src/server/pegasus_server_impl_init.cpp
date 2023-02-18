@@ -194,6 +194,11 @@ DSN_DEFINE_uint32(pegasus.server,
                   checkpoint_reserve_time_seconds,
                   1800,
                   "Minimum seconds of checkpoint to reserve, 0 means no check.");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_max_open_files,
+                 -1,
+                 "The number of opened files that can be used by a replica(namely a DB instance). "
+                 "The default value is -1 which means always keep files opened.");
 
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
@@ -445,12 +450,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         _db_opts.write_buffer_manager = _s_write_buffer_manager;
     }
 
-    int64_t max_open_files = dsn_config_get_value_int64(
-        "pegasus.server",
-        "rocksdb_max_open_files",
-        -1, /* always keep files opened, default by rocksdb */
-        "number of opened files that can be used by a replica(namely a DB instance)");
-    _db_opts.max_open_files = static_cast<int>(max_open_files);
+    _db_opts.max_open_files = FLAGS_rocksdb_max_open_files;
     LOG_INFO_PREFIX("rocksdb_max_open_files = {}", _db_opts.max_open_files);
 
     _db_opts.max_log_file_size = static_cast<size_t>(FLAGS_rocksdb_max_log_file_size);
@@ -592,10 +592,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     "periodic_compaction_seconds, 0 means no periodic compaction");
     _checkpoint_reserve_min_count = FLAGS_checkpoint_reserve_min_count;
     _checkpoint_reserve_time_seconds = FLAGS_checkpoint_reserve_time_seconds;
-
-    // TODO(yingchun): signed integral type of at least 35 bits, int64_t
-    _update_rdb_stat_interval = std::chrono::seconds(dsn_config_get_value_uint64(
-        "pegasus.server", "update_rdb_stat_interval", 60, "update_rdb_stat_interval, in seconds"));
 
     // TODO: move the qps/latency counters and it's statistics to replication_app_base layer
     std::string str_gpid = _gpid.to_string();

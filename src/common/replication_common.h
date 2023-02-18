@@ -76,7 +76,6 @@ public:
     bool group_check_disabled;
 
     bool checkpoint_disabled;
-    int64_t checkpoint_min_decree_gap;
 
     bool gc_disabled;
 
