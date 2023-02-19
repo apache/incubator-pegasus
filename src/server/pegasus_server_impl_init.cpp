@@ -199,6 +199,77 @@ DSN_DEFINE_int32(pegasus.server,
                  -1,
                  "The number of opened files that can be used by a replica(namely a DB instance). "
                  "The default value is -1 which means always keep files opened.");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_slow_query_threshold_ns,
+                  100000000,
+                  "get/multi-get operation duration exceed this threshold will be logged");
+DSN_DEFINE_uint64(
+    pegasus.server,
+    rocksdb_abnormal_get_size_threshold,
+    1000000,
+    "get operation value size exceed this threshold will be logged, 0 means no check");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_abnormal_multi_get_size_threshold,
+                  10000000,
+                  "multi-get operation total key-value size exceed this threshold will be logged, "
+                  "0 means no check");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_abnormal_multi_get_iterate_count_threshold,
+                  1000,
+                  "multi-get operation iterate count exceed this threshold will be logged, 0 means "
+                  "no check");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_multi_get_max_iteration_size,
+                  30 << 20,
+                  "multi-get operation total key-value size exceed this threshold will stop "
+                  "iterating rocksdb, 0 means no check");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_iteration_threshold_time_ms,
+                  30000,
+                  "max duration for handling one pegasus scan request(sortkey_count/multiget/scan) "
+                  "if exceed this threshold, iterator will be stopped, 0 means no check");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_compaction_readahead_size,
+                  2 * 1024 * 1024,
+                  "rocksdb options.compaction_readahead_size");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_writable_file_max_buffer_size,
+                  1024 * 1024,
+                  "rocksdb options.writable_file_max_buffer_size");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_write_buffer_size,
+                  64 * 1024 * 1024,
+                  "rocksdb options.write_buffer_size");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_target_file_size_base,
+                  64 * 1024 * 1024,
+                  "rocksdb options.target_file_size_base");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_max_bytes_for_level_base,
+                  10 * 64 * 1024 * 1024,
+                  "rocksdb options.max_bytes_for_level_base");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_block_cache_capacity,
+                  10 * 1024 * 1024 * 1024ULL,
+                  "block cache capacity for one pegasus server, shared by all rocksdb instances");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_total_size_across_write_buffer,
+                  0,
+                  "total size limit used by memtables across multiple replicas");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_metadata_block_size,
+                  4096,
+                  "Block size for partitioned metadata. Currently applied to indexes when "
+                  "two_level_index_search is used and to filters when partition_filters is used. "
+                  "Note: Since in the current implementation the filters and index partitions "
+                  "are aligned, an index/filter block is created when either index or filter "
+                  "block size reaches the specified limit. "
+                  "Note: this limit is currently applied to only index blocks; a filter "
+                  "partition is cut right after an index block is cut");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_periodic_compaction_seconds,
+                  0,
+                  "periodic_compaction_seconds, 0 means no periodic compaction");
 
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
@@ -236,47 +307,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                              "rocksdb_verbose_log",
                                              false,
                                              "whether to print verbose log for debugging");
-    _slow_query_threshold_ns_in_config = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_slow_query_threshold_ns",
-        100000000,
-        "get/multi-get operation duration exceed this threshold will be logged");
-    _slow_query_threshold_ns = _slow_query_threshold_ns_in_config;
+    _slow_query_threshold_ns = FLAGS_rocksdb_slow_query_threshold_ns;
     CHECK_GT(_slow_query_threshold_ns, 0);
-    _abnormal_get_size_threshold = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_abnormal_get_size_threshold",
-        1000000,
-        "get operation value size exceed this threshold will be logged, 0 means no check");
-    _abnormal_multi_get_size_threshold =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_abnormal_multi_get_size_threshold",
-                                    10000000,
-                                    "multi-get operation total key-value size exceed this "
-                                    "threshold will be logged, 0 means no check");
-    _abnormal_multi_get_iterate_count_threshold = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_abnormal_multi_get_iterate_count_threshold",
-        1000,
-        "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
-
     _rng_rd_opts.multi_get_max_iteration_count = FLAGS_rocksdb_multi_get_max_iteration_count;
-
-    _rng_rd_opts.multi_get_max_iteration_size =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_multi_get_max_iteration_size",
-                                    30 << 20,
-                                    "multi-get operation total key-value size exceed "
-                                    "this threshold will stop iterating rocksdb, 0 means no check");
-
+    _rng_rd_opts.multi_get_max_iteration_size = FLAGS_rocksdb_multi_get_max_iteration_size;
     _rng_rd_opts.rocksdb_max_iteration_count = FLAGS_rocksdb_max_iteration_count;
-
-    _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_iteration_threshold_time_ms",
-        30000,
-        "max duration for handling one pegasus scan request(sortkey_count/multiget/scan) if exceed "
-        "this threshold, iterator will be stopped, 0 means no check");
+    _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config =
+        FLAGS_rocksdb_iteration_threshold_time_ms;
     _rng_rd_opts.rocksdb_iteration_threshold_time_ms =
         _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config;
 
@@ -294,54 +331,22 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                   "rocksdb_use_direct_io_for_flush_and_compaction",
                                   false,
                                   "rocksdb options.use_direct_io_for_flush_and_compaction");
-
-    // TODO(yingchun): size_t, uint64_t
-    _db_opts.compaction_readahead_size =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_compaction_readahead_size",
-                                    2 * 1024 * 1024,
-                                    "rocksdb options.compaction_readahead_size");
-    // TODO(yingchun): size_t, uint64_t
-    _db_opts.writable_file_max_buffer_size =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_writable_file_max_buffer_size",
-                                    1024 * 1024,
-                                    "rocksdb options.writable_file_max_buffer_size");
+    _db_opts.compaction_readahead_size = FLAGS_rocksdb_compaction_readahead_size;
 
     _statistics = rocksdb::CreateDBStatistics();
     _statistics->set_stats_level(rocksdb::kExceptDetailedTimers);
     _db_opts.statistics = _statistics;
 
     _db_opts.listeners.emplace_back(new pegasus_event_listener(this));
-
     _db_opts.max_background_flushes = FLAGS_rocksdb_max_background_flushes;
     _db_opts.max_background_compactions = FLAGS_rocksdb_max_background_compactions;
-
     // init rocksdb::ColumnFamilyOptions for data column family
-    // TODO(yingchun): size_t, uint64_t
-    _data_cf_opts.write_buffer_size =
-        (size_t)dsn_config_get_value_uint64("pegasus.server",
-                                            "rocksdb_write_buffer_size",
-                                            64 * 1024 * 1024,
-                                            "rocksdb options.write_buffer_size");
-
+    _data_cf_opts.write_buffer_size = FLAGS_rocksdb_write_buffer_size;
     _data_cf_opts.max_write_buffer_number = FLAGS_rocksdb_max_write_buffer_number;
     _data_cf_opts.num_levels = FLAGS_rocksdb_num_levels;
-    // TODO(yingchun): size_t, uint64_t
-    _data_cf_opts.target_file_size_base =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_target_file_size_base",
-                                    64 * 1024 * 1024,
-                                    "rocksdb options.target_file_size_base");
-
+    _data_cf_opts.target_file_size_base = FLAGS_rocksdb_target_file_size_base;
     _data_cf_opts.target_file_size_multiplier = FLAGS_rocksdb_target_file_size_multiplier;
-    // TODO(yingchun): size_t, uint64_t
-    _data_cf_opts.max_bytes_for_level_base =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_max_bytes_for_level_base",
-                                    10 * 64 * 1024 * 1024,
-                                    "rocksdb options.max_bytes_for_level_base");
-
+    _data_cf_opts.max_bytes_for_level_base = FLAGS_rocksdb_max_bytes_for_level_base;
     _data_cf_opts.max_bytes_for_level_multiplier =
         dsn_config_get_value_double("pegasus.server",
                                     "rocksdb_max_bytes_for_level_multiplier",
@@ -388,15 +393,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         // algorithm used by the block cache object can be more efficient in this way.
         static std::once_flag flag;
         std::call_once(flag, [&]() {
-            uint64_t capacity = dsn_config_get_value_uint64(
-                "pegasus.server",
-                "rocksdb_block_cache_capacity",
-                10 * 1024 * 1024 * 1024ULL,
-                "block cache capacity for one pegasus server, shared by all rocksdb instances");
-
             // init block cache
-            _s_block_cache =
-                rocksdb::NewLRUCache(capacity, FLAGS_rocksdb_block_cache_num_shard_bits);
+            _s_block_cache = rocksdb::NewLRUCache(FLAGS_rocksdb_block_cache_capacity,
+                                                  FLAGS_rocksdb_block_cache_num_shard_bits);
         });
 
         // every replica has the same block cache
@@ -432,20 +431,16 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         // thus the same block cache object. It's convenient to control the total memory
         // of memtables and block caches used by this server.
         //
-        // While write buffer manager is enabled, total_size_across_write_buffer = 0
+        // While write buffer manager is enabled, FLAGS_rocksdb_total_size_across_write_buffer = 0
         // indicates no limit on memory, for details see:
         // https://github.com/facebook/rocksdb/blob/v6.6.4/include/rocksdb/write_buffer_manager.h#L23-24
         static std::once_flag flag;
         std::call_once(flag, [&]() {
-            uint64_t total_size_across_write_buffer = dsn_config_get_value_uint64(
-                "pegasus.server",
-                "rocksdb_total_size_across_write_buffer",
-                0,
-                "total size limit used by memtables across multiple replicas");
             LOG_INFO_PREFIX("rocksdb_total_size_across_write_buffer = {}",
-                            total_size_across_write_buffer);
+                            FLAGS_rocksdb_total_size_across_write_buffer);
             _s_write_buffer_manager = std::make_shared<rocksdb::WriteBufferManager>(
-                static_cast<size_t>(total_size_across_write_buffer), tbl_opts.block_cache);
+                static_cast<size_t>(FLAGS_rocksdb_total_size_across_write_buffer),
+                tbl_opts.block_cache);
         });
         _db_opts.write_buffer_manager = _s_write_buffer_manager;
     }
@@ -483,17 +478,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "incompatibile with block-based filters.");
     LOG_INFO_PREFIX("rocksdb_partition_filters = {}", tbl_opts.partition_filters);
 
-    tbl_opts.metadata_block_size = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_metadata_block_size",
-        4096,
-        "Block size for partitioned metadata. Currently applied to indexes when "
-        "two_level_index_search is used and to filters when partition_filters is used. "
-        "Note: Since in the current implementation the filters and index partitions "
-        "are aligned, an index/filter block is created when either index or filter "
-        "block size reaches the specified limit. "
-        "Note: this limit is currently applied to only index blocks; a filter "
-        "partition is cut right after an index block is cut");
+    tbl_opts.metadata_block_size = FLAGS_rocksdb_metadata_block_size;
     LOG_INFO_PREFIX("rocksdb_metadata_block_size = {}", tbl_opts.metadata_block_size);
 
     tbl_opts.cache_index_and_filter_blocks = dsn_config_get_value_bool(
@@ -584,12 +569,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     _key_ttl_compaction_filter_factory = std::make_shared<KeyWithTTLCompactionFilterFactory>();
     _data_cf_opts.compaction_filter_factory = _key_ttl_compaction_filter_factory;
-
-    _data_cf_opts.periodic_compaction_seconds =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_periodic_compaction_seconds",
-                                    0,
-                                    "periodic_compaction_seconds, 0 means no periodic compaction");
+    _data_cf_opts.periodic_compaction_seconds = FLAGS_rocksdb_periodic_compaction_seconds;
     _checkpoint_reserve_min_count = FLAGS_checkpoint_reserve_min_count;
     _checkpoint_reserve_time_seconds = FLAGS_checkpoint_reserve_time_seconds;
 

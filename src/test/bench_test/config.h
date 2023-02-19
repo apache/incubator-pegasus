@@ -32,10 +32,6 @@ struct config : public dsn::utils::singleton<config>
     std::string pegasus_app_name;
     // Comma-separated list of operations to run
     std::string benchmarks;
-    // Number of key/values to place in database
-    uint64_t num;
-    // Seed base for random number generators
-    uint64_t seed;
     // Default environment suitable for the current operating system
     rocksdb::Env *env;
 

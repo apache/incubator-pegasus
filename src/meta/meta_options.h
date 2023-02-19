@@ -59,15 +59,12 @@ class fd_suboptions
 public:
     std::string distributed_lock_service_type;
     std::vector<std::string> distributed_lock_service_args;
-
-    uint64_t stable_rs_min_running_seconds;
 };
 
 class lb_suboptions
 {
 public:
     std::string server_load_balancer_type;
-    uint64_t replica_assign_delay_ms_for_dropouts;
 
     bool balancer_in_turn;
     bool only_primary_balancer;
@@ -81,7 +78,6 @@ public:
     std::string meta_state_service_type;
     std::vector<std::string> meta_state_service_args;
 
-    uint64_t node_live_percentage_threshold_for_update;
     meta_function_level::type meta_function_level_on_start;
     bool recover_from_replica_server;
 

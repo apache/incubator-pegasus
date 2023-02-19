@@ -43,11 +43,14 @@
 #include "runtime/service_app.h"
 #include "runtime/rpc/rpc_address.h"
 #include <vector>
+#include "utils/flags.h"
 
 DSN_DECLARE_int32(max_succssive_unstable_restart);
 
 using namespace dsn;
 using namespace dsn::fd;
+
+DSN_DECLARE_uint64(stable_rs_min_running_seconds);
 
 #define MPORT_START 30001
 #define WPORT 40001
@@ -204,7 +207,7 @@ public:
 
     error_code start(const std::vector<std::string> &args) override
     {
-        _opts.stable_rs_min_running_seconds = 10;
+        FLAGS_stable_rs_min_running_seconds = 10;
         FLAGS_max_succssive_unstable_restart = 10;
 
         _master_fd = new master_fd_test();
@@ -620,7 +623,7 @@ TEST(fd, update_stability)
     fd->toggle_response_ping(true);
 
     replication::fd_suboptions opts;
-    opts.stable_rs_min_running_seconds = 5;
+    FLAGS_stable_rs_min_running_seconds = 5;
     FLAGS_max_succssive_unstable_restart = 2;
     fd->set_options(&opts);
 

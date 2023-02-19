@@ -64,6 +64,11 @@ DSN_DEFINE_int32(replication,
                  log_shared_pending_size_throttling_delay_ms,
                  0,
                  "log_shared_pending_size_throttling_delay_ms");
+DSN_DEFINE_uint64(
+    replication,
+    max_allowed_write_size,
+    1 << 20,
+    "write operation exceed this threshold will be logged and reject, 0 means not check");
 
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
 DSN_DECLARE_int32(staleness_for_commit);
@@ -89,17 +94,17 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    if (dsn_unlikely(_stub->_max_allowed_write_size &&
-                     request->body_size() > _stub->_max_allowed_write_size)) {
+    if (dsn_unlikely(FLAGS_max_allowed_write_size &&
+                     request->body_size() > FLAGS_max_allowed_write_size)) {
         std::string request_info = _app->dump_write_request(request);
         LOG_WARNING_PREFIX(
             "client from {} write request body size exceed threshold, request = [{}], "
             "request_body_size "
-            "= {}, max_allowed_write_size = {}, it will be rejected!",
+            "= {}, FLAGS_max_allowed_write_size = {}, it will be rejected!",
             request->header->from_address.to_string(),
             request_info,
             request->body_size(),
-            _stub->_max_allowed_write_size);
+            FLAGS_max_allowed_write_size);
         _stub->_counter_recent_write_size_exceed_threshold_count->increment();
         response_client_write(request, ERR_INVALID_DATA);
         return;

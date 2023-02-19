@@ -24,9 +24,24 @@
 #include <rocksdb/status.h>
 #include "hotkey_collector.h"
 #include "utils/fmt_logging.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace server {
+
+DSN_DEFINE_uint64(pegasus.server,
+                  perf_counter_read_capacity_unit_size,
+                  4 * 1024,
+                  "capacity unit size of read requests, default 4KB");
+DSN_DEFINE_validator(perf_counter_read_capacity_unit_size,
+                     [](const uint64_t value) -> bool { return powerof2(value); });
+
+DSN_DEFINE_uint64(pegasus.server,
+                  perf_counter_write_capacity_unit_size,
+                  4 * 1024,
+                  "capacity unit size of write requests, default 4KB");
+DSN_DEFINE_validator(perf_counter_write_capacity_unit_size,
+                     [](const uint64_t value) -> bool { return powerof2(value); });
 
 capacity_unit_calculator::capacity_unit_calculator(
     replica_base *r,
@@ -42,22 +57,8 @@ capacity_unit_calculator::capacity_unit_calculator(
     CHECK(_write_hotkey_collector, "write hotkey collector is a nullptr");
     CHECK(_read_size_throttling_controller, "_read_size_throttling_controller is a nullptr");
 
-    _read_capacity_unit_size =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "perf_counter_read_capacity_unit_size",
-                                    4 * 1024,
-                                    "capacity unit size of read requests, default 4KB");
-    _write_capacity_unit_size =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "perf_counter_write_capacity_unit_size",
-                                    4 * 1024,
-                                    "capacity unit size of write requests, default 4KB");
-    CHECK(powerof2(_read_capacity_unit_size),
-          "'perf_counter_read_capacity_unit_size' must be a power of 2");
-    CHECK(powerof2(_write_capacity_unit_size),
-          "'perf_counter_write_capacity_unit_size' must be a power of 2");
-    _log_read_cu_size = log(_read_capacity_unit_size) / log(2);
-    _log_write_cu_size = log(_write_capacity_unit_size) / log(2);
+    _log_read_cu_size = log(FLAGS_perf_counter_read_capacity_unit_size) / log(2);
+    _log_write_cu_size = log(FLAGS_perf_counter_write_capacity_unit_size) / log(2);
 
     std::string str_gpid = r->get_gpid().to_string();
     char name[256];
@@ -111,9 +112,10 @@ capacity_unit_calculator::capacity_unit_calculator(
 
 int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
 {
-    int64_t read_cu = read_data_size > 0
-                          ? (read_data_size + _read_capacity_unit_size - 1) >> _log_read_cu_size
-                          : 1;
+    int64_t read_cu =
+        read_data_size > 0
+            ? (read_data_size + FLAGS_perf_counter_read_capacity_unit_size - 1) >> _log_read_cu_size
+            : 1;
     _pfc_recent_read_cu->add(read_cu);
     _read_size_throttling_controller->consume_token(read_data_size);
     return read_cu;
@@ -122,7 +124,8 @@ int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
 int64_t capacity_unit_calculator::add_write_cu(int64_t write_data_size)
 {
     int64_t write_cu = write_data_size > 0
-                           ? (write_data_size + _write_capacity_unit_size - 1) >> _log_write_cu_size
+                           ? (write_data_size + FLAGS_perf_counter_write_capacity_unit_size - 1) >>
+                                 _log_write_cu_size
                            : 1;
     _pfc_recent_write_cu->add(write_cu);
     return write_cu;

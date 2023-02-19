@@ -50,6 +50,9 @@ namespace server {
 
 DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_bytes_threshold);
 DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_count_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_get_size_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_multi_get_iterate_count_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_multi_get_size_threshold);
 
 class meta_store;
 class capacity_unit_calculator;
@@ -349,11 +352,12 @@ private:
 
     bool is_multi_get_abnormal(uint64_t time_used, uint64_t size, uint64_t iterate_count)
     {
-        if (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) {
+        if (FLAGS_rocksdb_abnormal_multi_get_size_threshold &&
+            size >= FLAGS_rocksdb_abnormal_multi_get_size_threshold) {
             return true;
         }
-        if (_abnormal_multi_get_iterate_count_threshold &&
-            iterate_count >= _abnormal_multi_get_iterate_count_threshold) {
+        if (FLAGS_rocksdb_abnormal_multi_get_iterate_count_threshold &&
+            iterate_count >= FLAGS_rocksdb_abnormal_multi_get_iterate_count_threshold) {
             return true;
         }
         if (time_used >= _slow_query_threshold_ns) {
@@ -382,7 +386,8 @@ private:
 
     bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
     {
-        if (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) {
+        if (FLAGS_rocksdb_abnormal_get_size_threshold &&
+            value_size >= FLAGS_rocksdb_abnormal_get_size_threshold) {
             return true;
         }
         if (time_used >= _slow_query_threshold_ns) {
@@ -416,12 +421,8 @@ private:
     dsn::gpid _gpid;
     std::string _primary_address;
     bool _verbose_log;
-    uint64_t _abnormal_get_size_threshold;
-    uint64_t _abnormal_multi_get_size_threshold;
-    uint64_t _abnormal_multi_get_iterate_count_threshold;
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
-    uint64_t _slow_query_threshold_ns_in_config;
 
     range_read_limiter_options _rng_rd_opts;
 

@@ -67,13 +67,6 @@ void meta_options::initialize()
                                     "meta_state_service provider parameters");
     utils::split_args(meta_state_service_parameters, meta_state_service_args);
 
-    node_live_percentage_threshold_for_update = dsn_config_get_value_uint64(
-        "meta_server",
-        "node_live_percentage_threshold_for_update",
-        65,
-        "if live_node_count * 100 < total_node_count * node_live_percentage_threshold_for_update, "
-        "then freeze the cluster; default is 65");
-
     meta_function_level_on_start = meta_function_level::fl_invalid;
     const char *level_str = dsn_config_get_value_string(
         "meta_server", "meta_function_level_on_start", "steady", "meta function level on start");
@@ -113,11 +106,6 @@ void meta_options::initialize()
                                     "",
                                     "distributed_lock_service provider parameters");
     utils::split_args(distributed_lock_service_parameters, _fd_opts.distributed_lock_service_args);
-    _fd_opts.stable_rs_min_running_seconds =
-        dsn_config_get_value_uint64("meta_server",
-                                    "stable_rs_min_running_seconds",
-                                    600,
-                                    "min running seconds for a stable replica server");
 
     /// load balancer options
     _lb_opts.server_load_balancer_type =
@@ -125,11 +113,6 @@ void meta_options::initialize()
                                     "server_load_balancer_type",
                                     "greedy_load_balancer",
                                     "server load balancer provider");
-    _lb_opts.replica_assign_delay_ms_for_dropouts =
-        dsn_config_get_value_uint64("meta_server",
-                                    "replica_assign_delay_ms_for_dropouts",
-                                    300000,
-                                    "replica_assign_delay_ms_for_dropouts, default is 300000");
     _lb_opts.balancer_in_turn = dsn_config_get_value_bool(
         "meta_server", "balancer_in_turn", false, "balance the apps one-by-one/concurrently");
     _lb_opts.only_primary_balancer = dsn_config_get_value_bool(

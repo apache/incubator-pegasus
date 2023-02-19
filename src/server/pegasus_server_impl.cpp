@@ -53,6 +53,7 @@ DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_P
 DSN_DECLARE_int32(read_amp_bytes_per_bit);
 DSN_DECLARE_uint32(checkpoint_reserve_min_count);
 DSN_DECLARE_uint32(checkpoint_reserve_time_seconds);
+DSN_DECLARE_uint64(rocksdb_slow_query_threshold_ns);
 
 DSN_DEFINE_int32(pegasus.server,
                  hotkey_analyse_time_interval_s,
@@ -2700,7 +2701,7 @@ void pegasus_server_impl::update_throttling_controller(
 void pegasus_server_impl::update_slow_query_threshold(
     const std::map<std::string, std::string> &envs)
 {
-    uint64_t threshold_ns = _slow_query_threshold_ns_in_config;
+    uint64_t threshold_ns = FLAGS_rocksdb_slow_query_threshold_ns;
     auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
         // get slow query from env(the unit of slow query from env is ms)

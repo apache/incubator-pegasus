@@ -54,6 +54,8 @@ namespace dsn {
 namespace replication {
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
+DSN_DECLARE_uint64(node_live_percentage_threshold_for_update);
+DSN_DECLARE_uint64(replica_assign_delay_ms_for_dropouts);
 
 class fake_sender_meta_service : public dsn::replication::meta_service
 {
@@ -267,7 +269,7 @@ void meta_service_test_app::update_configuration_test()
     };
     // the default delay for add node is 5 miniutes
     ASSERT_FALSE(wait_state(ss, validator3, 10));
-    svc->_meta_opts._lb_opts.replica_assign_delay_ms_for_dropouts = 0;
+    FLAGS_replica_assign_delay_ms_for_dropouts = 0;
     svc->_partition_guardian.reset(new partition_guardian(svc.get()));
     svc->_balancer.reset(new dummy_balancer(svc.get()));
     ASSERT_TRUE(wait_state(ss, validator3, 10));
@@ -452,7 +454,7 @@ void meta_service_test_app::cannot_run_balancer_test()
     // set FLAGS_min_live_node_count_for_unfreeze directly to bypass its flag validator
     FLAGS_min_live_node_count_for_unfreeze = 0;
 
-    svc->_meta_opts.node_live_percentage_threshold_for_update = 0;
+    FLAGS_node_live_percentage_threshold_for_update = 0;
 
     svc->_state->initialize(svc.get(), "/");
     svc->_failure_detector.reset(new meta_server_failure_detector(svc.get()));
