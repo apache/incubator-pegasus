@@ -46,6 +46,22 @@ DSN_DEFINE_uint32(pegasus.collector,
                   available_detect_timeout,
                   1000,
                   "available detect timeout in millisecond");
+DSN_DEFINE_string(pegasus.collector, available_detect_app, "", "available detector app name");
+DSN_DEFINE_validator(available_detect_app,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+DSN_DEFINE_string(pegasus.collector,
+                  available_detect_alert_script_dir,
+                  ".",
+                  "available detect alert script dir");
+DSN_DEFINE_validator(available_detect_alert_script_dir,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+DSN_DEFINE_string(pegasus.collector,
+                  available_detect_alert_email_address,
+                  "",
+                  "available detect alert email address, empty means not send email");
+DSN_DEFINE_validator(available_detect_alert_email_address,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
 available_detector::available_detector()
     : _client(nullptr),
       _ddl_client(nullptr),
@@ -60,19 +76,6 @@ available_detector::available_detector()
 {
     // initialize information for available_detector.
     _cluster_name = dsn::get_current_cluster_name();
-    _app_name = dsn_config_get_value_string(
-        "pegasus.collector", "available_detect_app", "", "available detector app name");
-    CHECK(!_app_name.empty(), "");
-    _alert_script_dir = dsn_config_get_value_string("pegasus.collector",
-                                                    "available_detect_alert_script_dir",
-                                                    ".",
-                                                    "available detect alert script dir");
-    CHECK(!_alert_script_dir.empty(), "");
-    _alert_email_address = dsn_config_get_value_string(
-        "pegasus.collector",
-        "available_detect_alert_email_address",
-        "",
-        "available detect alert email address, empty means not send email");
     _meta_list.clear();
     dsn::replication::replica_helper::load_meta_servers(_meta_list);
     CHECK(!_meta_list.empty(), "");
@@ -80,17 +83,20 @@ available_detector::available_detector()
     if (!pegasus_client_factory::initialize(nullptr)) {
         CHECK(false, "Initialize the pegasus client failed");
     }
-    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _app_name.c_str());
+    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), FLAGS_available_detect_app);
     CHECK_NOTNULL(_client, "Initialize the _client failed");
     _result_writer = dsn::make_unique<result_writer>(_client);
     _ddl_client.reset(new replication_ddl_client(_meta_list));
     CHECK_NOTNULL(_ddl_client, "Initialize the _ddl_client failed");
-    if (!_alert_email_address.empty()) {
-        _send_alert_email_cmd = "cd " + _alert_script_dir + "; bash sendmail.sh alert " +
-                                _alert_email_address + " " + _cluster_name + " " + _app_name + " ";
-        _send_availability_info_email_cmd = "cd " + _alert_script_dir +
-                                            "; bash sendmail.sh availability_info " +
-                                            _alert_email_address + " " + _cluster_name + " ";
+    if (strlen(FLAGS_available_detect_alert_email_address) > 0) {
+        _send_alert_email_cmd = std::string("cd ") + FLAGS_available_detect_alert_script_dir +
+                                "; bash sendmail.sh alert " +
+                                FLAGS_available_detect_alert_email_address + " " + _cluster_name +
+                                " " + FLAGS_available_detect_app + " ";
+        _send_availability_info_email_cmd =
+            std::string("cd ") + FLAGS_available_detect_alert_script_dir +
+            "; bash sendmail.sh availability_info " + FLAGS_available_detect_alert_email_address +
+            " " + _cluster_name + " ";
     }
 
     _pfc_detect_times_day.init_app_counter("app.pegasus",
@@ -238,7 +244,8 @@ void available_detector::report_availability_info()
 bool available_detector::generate_hash_keys()
 {
     // get app_id and partition_count.
-    auto err = _ddl_client->list_app(_app_name, _app_id, _partition_count, partitions);
+    auto err =
+        _ddl_client->list_app(FLAGS_available_detect_app, _app_id, _partition_count, partitions);
     if (err == ::dsn::ERR_OK && _app_id >= 0) {
         _hash_keys.clear();
         for (auto pidx = 0; pidx < _partition_count; pidx++) {
@@ -259,8 +266,9 @@ bool available_detector::generate_hash_keys()
         }
         return true;
     } else {
-        LOG_WARNING(
-            "Get partition count of table '{}' on cluster '{}' failed", _app_name, _cluster_name);
+        LOG_WARNING("Get partition count of table '{}' on cluster '{}' failed",
+                    FLAGS_available_detect_app,
+                    _cluster_name);
         return false;
     }
 }
@@ -272,7 +280,7 @@ void available_detector::on_detect(int32_t idx)
                  "recent_day_detect_times({}), recent_day_fail_times({}), "
                  "recent_hour_detect_times({}), recent_hour_fail_times({}) "
                  "recent_minute_detect_times({}), recent_minute_fail_times({})",
-                 _app_name,
+                 FLAGS_available_detect_app,
                  _app_id,
                  _partition_count,
                  _cluster_name,
@@ -286,7 +294,7 @@ void available_detector::on_detect(int32_t idx)
     LOG_DEBUG("available_detector begin to detect partition[{}] of table[{}] with id[{}] on the "
               "cluster[{}]",
               idx,
-              _app_name,
+              FLAGS_available_detect_app,
               _app_id,
               _cluster_name);
     auto time = dsn_now_ms();

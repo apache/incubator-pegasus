@@ -50,6 +50,9 @@
 #include <thread>
 #include "utils/rand.h"
 #include "runtime/service_engine.h"
+#include "utils/flags.h"
+
+DSN_DECLARE_string(tool);
 
 using namespace dsn;
 
@@ -219,7 +222,7 @@ TEST(core, dsn_system)
 {
     ASSERT_TRUE(tools::is_engine_ready());
     tools::tool_app *tool = tools::get_current_tool();
-    ASSERT_EQ(tool->name(), dsn_config_get_value_string("core", "tool", "", ""));
+    ASSERT_EQ(tool->name(), FLAGS_tool);
 
     int app_count = 5;
     int type_count = 1;

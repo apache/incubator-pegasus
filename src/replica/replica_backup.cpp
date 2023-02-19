@@ -38,6 +38,8 @@ DSN_DEFINE_uint64(replication,
                   10,
                   "concurrent uploading file count to block service");
 
+DSN_DECLARE_string(cold_backup_root);
+
 void replica::on_cold_backup(const backup_request &request, /*out*/ backup_response &response)
 {
     _checker.only_one_thread_access();
@@ -77,8 +79,8 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             backup_context->block_service = block_service;
             backup_context->backup_root = request.__isset.backup_path
                                               ? dsn::utils::filesystem::path_combine(
-                                                    request.backup_path, _options->cold_backup_root)
-                                              : _options->cold_backup_root;
+                                                    request.backup_path, FLAGS_cold_backup_root)
+                                              : FLAGS_cold_backup_root;
         }
 
         CHECK_EQ_PREFIX(backup_context->request.policy.policy_name, policy_name);

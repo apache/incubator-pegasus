@@ -333,6 +333,25 @@ DSN_DEFINE_double(pegasus.server,
                   rocksdb_bloom_filter_bits_per_key,
                   10,
                   "average bits allocated per key in bloom filter");
+DSN_DEFINE_string(pegasus.server,
+                  rocksdb_compression_type,
+                  "lz4",
+                  "rocksdb options.compression. Available config: '[none|snappy|zstd|lz4]' for all "
+                  "level 2 and higher levels, and "
+                  "'per_level:[none|snappy|zstd|lz4],[none|snappy|zstd|lz4],...' for each level "
+                  "0,1,..., the last compression type will be used for levels not specified in the "
+                  "list.");
+DSN_DEFINE_string(pegasus.server,
+                  rocksdb_index_type,
+                  "binary_search",
+                  "The index type that will be used for this table.");
+DSN_DEFINE_string(pegasus.server,
+                  rocksdb_filter_type,
+                  "prefix",
+                  "Bloom filter type, should be either 'common' or 'prefix'");
+DSN_DEFINE_validator(rocksdb_filter_type, [](const char *value) -> bool {
+    return dsn::utils::equals(value, "common") || dsn::utils::equals(value, "prefix");
+});
 
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
@@ -405,15 +424,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _data_cf_opts.level0_slowdown_writes_trigger = FLAGS_rocksdb_level0_slowdown_writes_trigger;
     _data_cf_opts.level0_stop_writes_trigger = FLAGS_rocksdb_level0_stop_writes_trigger;
 
-    std::string compression_str = dsn_config_get_value_string(
-        "pegasus.server",
-        "rocksdb_compression_type",
-        "lz4",
-        "rocksdb options.compression. Available config: '[none|snappy|zstd|lz4]' "
-        "for all level 2 and higher levels, and "
-        "'per_level:[none|snappy|zstd|lz4],[none|snappy|zstd|lz4],...' for each level 0,1,..., the "
-        "last compression type will be used for levels not specified in the list.");
-    CHECK(parse_compression_types(compression_str, _data_cf_opts.compression_per_level),
+    CHECK(parse_compression_types(FLAGS_rocksdb_compression_type,
+                                  _data_cf_opts.compression_per_level),
           "parse rocksdb_compression_type failed.");
 
     _meta_cf_opts = _data_cf_opts;
@@ -494,17 +506,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.keep_log_file_num = static_cast<size_t>(FLAGS_rocksdb_keep_log_file_num);
     LOG_INFO_PREFIX("rocksdb_keep_log_file_num = {}", _db_opts.keep_log_file_num);
 
-    std::string index_type =
-        dsn_config_get_value_string("pegasus.server",
-                                    "rocksdb_index_type",
-                                    "binary_search",
-                                    "The index type that will be used for this table.");
-    auto index_type_item = INDEX_TYPE_STRING_MAP.find(index_type);
+    auto index_type_item = INDEX_TYPE_STRING_MAP.find(FLAGS_rocksdb_index_type);
     CHECK(index_type_item != INDEX_TYPE_STRING_MAP.end(),
           "[pegasus.server]rocksdb_index_type should be one among binary_search, "
           "hash_search, two_level_index_search or binary_search_with_first_key.");
     tbl_opts.index_type = index_type_item->second;
-    LOG_INFO_PREFIX("rocksdb_index_type = {}", index_type.c_str());
+    LOG_INFO_PREFIX("rocksdb_index_type = {}", FLAGS_rocksdb_index_type);
 
     tbl_opts.partition_filters = FLAGS_rocksdb_partition_filters;
     // TODO(yingchun): clean up these useless log ?
@@ -550,14 +557,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         tbl_opts.filter_policy.reset(
             rocksdb::NewBloomFilterPolicy(FLAGS_rocksdb_bloom_filter_bits_per_key, false));
 
-        std::string filter_type =
-            dsn_config_get_value_string("pegasus.server",
-                                        "rocksdb_filter_type",
-                                        "prefix",
-                                        "Bloom filter type, should be either 'common' or 'prefix'");
-        CHECK(filter_type == "common" || filter_type == "prefix",
-              "[pegasus.server]rocksdb_filter_type should be either 'common' or 'prefix'.");
-        if (filter_type == "prefix") {
+        if (dsn::utils::equals(FLAGS_rocksdb_filter_type, "prefix")) {
             _data_cf_opts.prefix_extractor.reset(new HashkeyTransform());
             _data_cf_opts.memtable_prefix_bloom_size_ratio = 0.1;
 

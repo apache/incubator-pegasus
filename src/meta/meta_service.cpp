@@ -48,6 +48,10 @@
 #include "meta_bulk_load_service.h"
 
 namespace dsn {
+namespace dist {
+DSN_DECLARE_string(hosts_list);
+} // namespace dist
+
 namespace replication {
 DSN_DEFINE_bool(meta_server,
                 recover_from_replica_server,
@@ -75,12 +79,29 @@ DSN_DEFINE_uint64(meta_server,
                   65,
                   "If live_node_count * 100 < total_node_count * "
                   "node_live_percentage_threshold_for_update, then freeze the cluster.");
+DSN_DEFINE_string(meta_server,
+                  meta_state_service_type,
+                  "meta_state_service_simple",
+                  "meta_state_service provider type");
+DSN_DEFINE_string(meta_server,
+                  cluster_root,
+                  "/",
+                  "The root of the cluster meta state service to be stored on remote storage");
+DSN_DEFINE_string(meta_server,
+                  server_load_balancer_type,
+                  "greedy_load_balancer",
+                  "server load balancer provider");
+DSN_DEFINE_string(meta_server,
+                  partition_guardian_type,
+                  "partition_guardian",
+                  "partition guardian provider");
 
 DSN_DECLARE_bool(duplication_enabled);
 DSN_DECLARE_int32(fd_beacon_interval_seconds);
 DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
 DSN_DECLARE_int32(fd_lease_seconds);
+DSN_DECLARE_string(cold_backup_root);
 
 meta_service::meta_service()
     : serverlet("meta_service"), _failure_detector(nullptr), _started(false), _recovering(false)
@@ -144,7 +165,7 @@ error_code meta_service::remote_storage_initialize()
     // create storage
     dsn::dist::meta_state_service *storage =
         dsn::utils::factory_store<::dsn::dist::meta_state_service>::create(
-            _meta_opts.meta_state_service_type.c_str(), PROVIDER_TYPE_MAIN);
+            FLAGS_meta_state_service_type, PROVIDER_TYPE_MAIN);
     error_code err = storage->initialize(_meta_opts.meta_state_service_args);
     if (err != ERR_OK) {
         LOG_ERROR("init meta_state_service failed, err = {}", err);
@@ -154,7 +175,7 @@ error_code meta_service::remote_storage_initialize()
     _meta_storage.reset(new mss::meta_storage(_storage.get(), &_tracker));
 
     std::vector<std::string> slices;
-    utils::split_args(_meta_opts.cluster_root.c_str(), slices, '/');
+    utils::split_args(FLAGS_cluster_root, slices, '/');
     std::string current = "";
     for (unsigned int i = 0; i != slices.size(); ++i) {
         current = meta_options::concat_path_unix_style(current, slices[i]);
@@ -357,13 +378,13 @@ error_code meta_service::start()
 
     // initialize the load balancer
     server_load_balancer *balancer = utils::factory_store<server_load_balancer>::create(
-        _meta_opts._lb_opts.server_load_balancer_type.c_str(), PROVIDER_TYPE_MAIN, this);
+        FLAGS_server_load_balancer_type, PROVIDER_TYPE_MAIN, this);
     _balancer.reset(balancer);
     // register control command to singleton-container for load balancer
     _balancer->register_ctrl_commands();
 
     partition_guardian *guardian = utils::factory_store<partition_guardian>::create(
-        _meta_opts.partition_guardian_type.c_str(), PROVIDER_TYPE_MAIN, this);
+        FLAGS_partition_guardian_type, PROVIDER_TYPE_MAIN, this);
     _partition_guardian.reset(guardian);
     _partition_guardian->register_ctrl_commands();
 
@@ -374,7 +395,7 @@ error_code meta_service::start()
         _backup_handler = std::make_shared<backup_service>(
             this,
             meta_options::concat_path_unix_style(_cluster_root, "backup"),
-            _opts.cold_backup_root,
+            FLAGS_cold_backup_root,
             [](backup_service *bs) { return std::make_shared<policy_context>(bs); });
     }
 
@@ -633,11 +654,8 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
     response.values.push_back(oss.str());
     response.keys.push_back("primary_meta_server");
     response.values.push_back(dsn_primary_address().to_std_string());
-    std::string zk_hosts =
-        dsn_config_get_value_string("zookeeper", "hosts_list", "", "zookeeper_hosts");
-    zk_hosts.erase(std::remove_if(zk_hosts.begin(), zk_hosts.end(), ::isspace), zk_hosts.end());
     response.keys.push_back("zookeeper_hosts");
-    response.values.push_back(zk_hosts);
+    response.values.push_back(dsn::dist::FLAGS_hosts_list);
     response.keys.push_back("zookeeper_root");
     response.values.push_back(_cluster_root);
     response.keys.push_back("meta_function_level");

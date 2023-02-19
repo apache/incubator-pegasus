@@ -52,6 +52,8 @@
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_string(cluster_root);
+DSN_DECLARE_string(meta_state_service_type);
 
 static void random_assign_partition_config(std::shared_ptr<app_state> &app,
                                            const std::vector<dsn::rpc_address> &server_list,
@@ -119,8 +121,8 @@ void meta_service_test_app::state_sync_test()
     std::shared_ptr<meta_service> meta_svc = std::make_shared<meta_service>();
     meta_service *svc = meta_svc.get();
     meta_options &opt = svc->_meta_opts;
-    opt.cluster_root = "/meta_test";
-    opt.meta_state_service_type = "meta_state_service_simple";
+    FLAGS_cluster_root = "/meta_test";
+    FLAGS_meta_state_service_type = "meta_state_service_simple";
     svc->remote_storage_initialize();
 
     std::string apps_root = "/meta_test/apps";
@@ -197,7 +199,7 @@ void meta_service_test_app::state_sync_test()
         file_data_compare("meta_state.dump1", "meta_state.dump2");
     }
 
-    opt.meta_state_service_type = "meta_state_service_zookeeper";
+    FLAGS_meta_state_service_type = "meta_state_service_zookeeper";
     svc->remote_storage_initialize();
     // first clean up
     std::cerr << "start to clean up zookeeper storage" << std::endl;

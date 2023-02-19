@@ -54,7 +54,6 @@ private:
 private:
     dsn::task_tracker _tracker;
     std::string _cluster_name;
-    std::string _app_name;
     // for writing detect result
     std::unique_ptr<result_writer> _result_writer;
     // client to access server.
@@ -74,8 +73,6 @@ private:
 
     std::string _send_alert_email_cmd;
     std::string _send_availability_info_email_cmd;
-    std::string _alert_script_dir;
-    std::string _alert_email_address;
 
     // total detect times and total fail times
     std::atomic<int64_t> _recent_day_detect_times;

@@ -47,37 +47,30 @@ namespace test {
 DSN_DEFINE_uint32(pegasus.killtest, kill_interval_seconds, 30, "");
 DSN_DEFINE_uint32(pegasus.killtest, max_seconds_for_all_partitions_to_recover, 600, "");
 
+DSN_DECLARE_string(pegasus_cluster_name);
+DSN_DECLARE_string(verify_app_name);
+
 kill_testor::kill_testor(const char *config_file)
 {
-    const char *section = "pegasus.killtest";
     // initialize the _client.
     if (!pegasus_client_factory::initialize(config_file)) {
         exit(-1);
     }
 
-    app_name = dsn_config_get_value_string(
-        section, "verify_app_name", "temp", "verify app name"); // default using temp
-    pegasus_cluster_name =
-        dsn_config_get_value_string(section, "pegasus_cluster_name", "", "pegasus cluster name");
-    if (pegasus_cluster_name.empty()) {
-        LOG_ERROR("Should config the cluster name for killer");
-        exit(-1);
-    }
-
     // load meta_list
-    meta_list.clear();
     dsn::replication::replica_helper::load_meta_servers(
-        meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), pegasus_cluster_name.c_str());
+        meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), FLAGS_pegasus_cluster_name);
     if (meta_list.empty()) {
         LOG_ERROR("Should config the meta address for killer");
         exit(-1);
     }
 
     ddl_client.reset(new replication_ddl_client(meta_list));
-    if (ddl_client == nullptr) {
+    if (!ddl_client) {
         LOG_ERROR("Initialize the _ddl_client failed");
         exit(-1);
     }
+
     srand((unsigned)time(nullptr));
 }
 
@@ -116,7 +109,8 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
     int32_t app_id;
     int32_t partition_count;
     partitions.clear();
-    dsn::error_code err = ddl_client->list_app(app_name, app_id, partition_count, partitions);
+    dsn::error_code err =
+        ddl_client->list_app(FLAGS_verify_app_name, app_id, partition_count, partitions);
 
     if (err == ::dsn::ERR_OK) {
         LOG_DEBUG("access meta and query partition status success");

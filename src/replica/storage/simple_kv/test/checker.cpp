@@ -54,6 +54,8 @@
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_string(partition_guardian_type);
+
 namespace test {
 
 class checker_partition_guardian : public partition_guardian
@@ -174,7 +176,7 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
             meta_service_app *meta_app = (meta_service_app *)app;
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                 std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
-            meta_app->_service->_meta_opts.partition_guardian_type = "checker_partition_guardian";
+            FLAGS_partition_guardian_type = "checker_partition_guardian";
             _meta_servers.push_back(meta_app);
         } else if (app->info().type == "replica") {
             replication_service_app *replica_app = (replication_service_app *)app;

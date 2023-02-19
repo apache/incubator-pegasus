@@ -19,5 +19,9 @@
 
 #pragma once
 
+namespace pegasus {
+namespace test {
 void verifier_initialize(const char *config_file);
 void verifier_start();
+} // namespace test
+} // namespace pegasus

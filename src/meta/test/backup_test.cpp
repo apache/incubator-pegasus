@@ -42,6 +42,8 @@ namespace dsn {
 namespace replication {
 
 DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+DSN_DECLARE_string(cluster_root);
+DSN_DECLARE_string(meta_state_service_type);
 
 struct method_record
 {
@@ -728,11 +730,11 @@ protected:
         meta_test_base::SetUp();
 
         meta_options &opt = _meta_svc->_meta_opts;
-        opt.cluster_root = "/meta_test";
-        opt.meta_state_service_type = "meta_state_service_simple";
+        FLAGS_cluster_root = "/meta_test";
+        FLAGS_meta_state_service_type = "meta_state_service_simple";
         _meta_svc->remote_storage_initialize();
         std::string backup_root = "/backup_test";
-        std::string policy_meta_root = opt.cluster_root + "/backup_policies";
+        std::string policy_meta_root = std::string(FLAGS_cluster_root) + "/backup_policies";
         _meta_svc->_backup_handler = std::make_shared<backup_service>(
             _meta_svc.get(), policy_meta_root, backup_root, [](backup_service *bs) {
                 return std::make_shared<mock_policy>(bs);

@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <chrono>
 #include <thread>
+#include <cstring>
 #include <atomic>
 #include <memory>
 #include <sys/time.h>
@@ -48,12 +49,10 @@
 #include "utils/fmt_logging.h"
 #include "utils/flags.h"
 
-using namespace std;
-using namespace ::pegasus;
+namespace pegasus {
+namespace test {
 
 static pegasus_client *client = nullptr;
-static string app_name;
-static string pegasus_cluster_name;
 
 static std::atomic_llong set_next(0);
 static std::vector<long long> set_thread_setting_id;
@@ -80,6 +79,12 @@ DSN_DEFINE_uint32(pegasus.killtest,
                   get_thread_count,
                   FLAGS_set_thread_count * 4,
                   "Thread count of the getter.");
+DSN_DEFINE_string(pegasus.killtest, pegasus_cluster_name, "onebox", "The Pegasus cluster name");
+DSN_DEFINE_validator(pegasus_cluster_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+DSN_DEFINE_string(pegasus.killtest, verify_app_name, "temp", "verify app name");
+DSN_DEFINE_validator(verify_app_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 // return time in us.
 long get_time()
@@ -382,20 +387,11 @@ void do_mark()
 
 void verifier_initialize(const char *config_file)
 {
-    const char *section = "pegasus.killtest";
     if (!pegasus_client_factory::initialize(config_file)) {
         exit(-1);
     }
 
-    app_name = dsn_config_get_value_string(
-        section, "verify_app_name", "temp", "verify app name"); // default using temp
-    pegasus_cluster_name =
-        dsn_config_get_value_string(section, "pegasus_cluster_name", "", "pegasus cluster name");
-    if (pegasus_cluster_name.empty()) {
-        LOG_ERROR("Should config the cluster name for verifier");
-        exit(-1);
-    }
-    client = pegasus_client_factory::get_client(pegasus_cluster_name.c_str(), app_name.c_str());
+    client = pegasus_client_factory::get_client(FLAGS_pegasus_cluster_name, FLAGS_verify_app_name);
     if (client == nullptr) {
         LOG_ERROR("Initialize the _client failed");
         exit(-1);
@@ -446,3 +442,5 @@ void verifier_start()
         t.join();
     }
 }
+} // namespace test
+} // namespace pegasus

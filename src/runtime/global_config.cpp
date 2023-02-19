@@ -47,6 +47,8 @@
 
 namespace dsn {
 
+DSN_DEFINE_string(apps.mimic, type, "", "");
+
 static bool build_client_network_confs(const char *section,
                                        /*out*/ network_client_configs &nss,
                                        network_client_configs *default_spec)
@@ -325,9 +327,8 @@ bool service_spec::init_app_specs()
             dsn_config_set("apps.mimic", "pools", "THREAD_POOL_DEFAULT", "");
             all_section_names.push_back("apps.mimic");
         } else {
-            auto type = dsn_config_get_value_string("apps.mimic", "type", "", "");
-            if (!utils::equals(type, mimic_app_role_name)) {
-                printf("invalid config value '%s' for [apps.mimic] type", type);
+            if (!utils::equals(FLAGS_type, mimic_app_role_name)) {
+                printf("invalid config value '%s' for [apps.mimic] type", FLAGS_type);
                 return false;
             }
         }

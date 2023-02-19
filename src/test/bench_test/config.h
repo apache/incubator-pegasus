@@ -28,8 +28,6 @@ namespace test {
 /** Thread safety singleton */
 struct config : public dsn::utils::singleton<config>
 {
-    std::string pegasus_cluster_name;
-    std::string pegasus_app_name;
     // Comma-separated list of operations to run
     std::string benchmarks;
     // Default environment suitable for the current operating system
