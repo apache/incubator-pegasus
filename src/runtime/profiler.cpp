@@ -58,9 +58,17 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include "utils/command_manager.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "utils/fmt_logging.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace tools {
+
+DSN_DEFINE_bool(task..default, is_profile, false, "whether to profile this kind of task");
+DSN_DEFINE_bool(task..default,
+                collect_call_count,
+                true,
+                "whether to collect how many time this kind of tasks invoke each of other kinds "
+                "tasks");
 
 typedef uint64_extension_helper<task_spec_profiler, task> task_ext_for_profiler;
 typedef uint64_extension_helper<task_spec_profiler, message_ex> message_ext_for_profiler;
@@ -352,14 +360,6 @@ void profiler::install(service_spec &)
     message_ext_for_profiler::register_ext();
     CHECK_EQ(sizeof(counter_info_ptr) / sizeof(counter_info *), PERF_COUNTER_COUNT);
 
-    auto profile = dsn_config_get_value_bool(
-        "task..default", "is_profile", false, "whether to profile this kind of task");
-    auto collect_call_count = dsn_config_get_value_bool(
-        "task..default",
-        "collect_call_count",
-        true,
-        "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
-
     for (int i = 0; i <= s_task_code_max; i++) {
         if (i == TASK_CODE_INVALID)
             continue;
@@ -372,15 +372,18 @@ void profiler::install(service_spec &)
         s_spec_profilers[i].collect_call_count = dsn_config_get_value_bool(
             section_name.c_str(),
             "collect_call_count",
-            collect_call_count,
+            FLAGS_collect_call_count,
             "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
         s_spec_profilers[i].call_counts = new std::atomic<int64_t>[ s_task_code_max + 1 ];
         std::fill(s_spec_profilers[i].call_counts,
                   s_spec_profilers[i].call_counts + s_task_code_max + 1,
                   0);
 
-        s_spec_profilers[i].is_profile = dsn_config_get_value_bool(
-            section_name.c_str(), "is_profile", profile, "whether to profile this kind of task");
+        s_spec_profilers[i].is_profile =
+            dsn_config_get_value_bool(section_name.c_str(),
+                                      "is_profile",
+                                      FLAGS_is_profile,
+                                      "whether to profile this kind of task");
 
         if (!s_spec_profilers[i].is_profile)
             continue;

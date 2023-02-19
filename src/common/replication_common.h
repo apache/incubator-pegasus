@@ -65,36 +65,12 @@ public:
     std::vector<std::string> data_dirs;
     std::vector<std::string> data_dir_tags;
 
-    bool deny_client_on_start;
-    bool verbose_client_log_on_start;
-    bool verbose_commit_log_on_start;
-    bool delay_for_fd_timeout_on_start;
-    bool duplication_enabled;
-
-    bool batch_write_disabled;
-
-    bool group_check_disabled;
-
-    bool checkpoint_disabled;
-
-    bool gc_disabled;
-
-    bool disk_stat_disabled;
-
-    bool fd_disabled;
-
-    bool log_shared_force_flush;
-
-    bool config_sync_disabled;
-
-    bool mem_release_enabled;
-
     std::string cold_backup_root;
 
     int32_t max_concurrent_bulk_load_downloading_count;
 
 public:
-    replication_options();
+    replication_options() = default;
     ~replication_options();
 
     void initialize();

@@ -38,7 +38,6 @@
 
 namespace dsn {
 namespace replication {
-
 std::string meta_options::concat_path_unix_style(const std::string &prefix,
                                                  const std::string &postfix)
 {
@@ -82,18 +81,6 @@ void meta_options::initialize()
                  "invalid function level: {}",
                  level_str);
 
-    recover_from_replica_server = dsn_config_get_value_bool(
-        "meta_server",
-        "recover_from_replica_server",
-        false,
-        "whether to recover from replica server when no apps in remote storage");
-
-    add_secondary_enable_flow_control =
-        dsn_config_get_value_bool("meta_server",
-                                  "add_secondary_enable_flow_control",
-                                  false,
-                                  "enable flow control for add secondary proposal");
-
     /// failure detector options
     _fd_opts.distributed_lock_service_type =
         dsn_config_get_value_string("meta_server",
@@ -113,26 +100,11 @@ void meta_options::initialize()
                                     "server_load_balancer_type",
                                     "greedy_load_balancer",
                                     "server load balancer provider");
-    _lb_opts.balancer_in_turn = dsn_config_get_value_bool(
-        "meta_server", "balancer_in_turn", false, "balance the apps one-by-one/concurrently");
-    _lb_opts.only_primary_balancer = dsn_config_get_value_bool(
-        "meta_server", "only_primary_balancer", false, "only try to make the primary balanced");
-    _lb_opts.only_move_primary = dsn_config_get_value_bool(
-        "meta_server", "only_move_primary", false, "only try to make the primary balanced by move");
 
     partition_guardian_type = dsn_config_get_value_string("meta_server",
                                                           "partition_guardian_type",
                                                           "partition_guardian",
                                                           "partition guardian provider");
-
-    cold_backup_disabled = dsn_config_get_value_bool(
-        "meta_server", "cold_backup_disabled", true, "whether to disable cold backup");
-
-    enable_white_list =
-        dsn_config_get_value_bool("meta_server",
-                                  "enable_white_list",
-                                  false,
-                                  "whether to enable white list of replica servers");
 
     const char *replica_white_list_raw = dsn_config_get_value_string(
         "meta_server", "replica_white_list", "", "white list of replica-servers in meta-server");

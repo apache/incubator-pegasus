@@ -420,7 +420,6 @@ private:
 
     dsn::gpid _gpid;
     std::string _primary_address;
-    bool _verbose_log;
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
 

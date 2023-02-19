@@ -39,7 +39,7 @@ public:
     void SetUp() override
     {
         start();
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
+        _server_write = dsn::make_unique<pegasus_server_write>(_server.get());
         _write_svc = _server_write->_write_svc.get();
     }
 

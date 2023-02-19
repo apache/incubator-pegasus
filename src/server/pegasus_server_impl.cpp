@@ -57,6 +57,10 @@ DSN_DECLARE_uint32(checkpoint_reserve_time_seconds);
 DSN_DECLARE_uint64(rocksdb_iteration_threshold_time_ms);
 DSN_DECLARE_uint64(rocksdb_slow_query_threshold_ns);
 
+DSN_DEFINE_bool(pegasus.server,
+                rocksdb_verbose_log,
+                false,
+                "whether to print verbose log for debugging");
 DSN_DEFINE_int32(pegasus.server,
                  hotkey_analyse_time_interval_s,
                  10,
@@ -293,7 +297,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     if (status.ok()) {
         if (check_if_record_expired(utils::epoch_now(), value)) {
             _pfc_recent_expire_count->increment();
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("rocksdb data expired for get from {}", rpc.remote_address());
             }
             status = rocksdb::Status::NotFound();
@@ -301,7 +305,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     }
 
     if (!status.ok()) {
-        if (_verbose_log) {
+        if (FLAGS_rocksdb_verbose_log) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
             LOG_ERROR_PREFIX("rocksdb get failed for get from {}: hash_key = \"{}\", sort_key = "
@@ -439,7 +443,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         int c = start.compare(stop);
         if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
             // empty sort key range
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_WARNING_PREFIX(
                     "empty sort key range for multi_get from {}: hash_key = \"{}\", start_sort_key "
                     "= \"{}\" ({}), stop_sort_key = \"{}\" ({}), sort_key_filter_type = {}, "
@@ -619,7 +623,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         resp.error = it->status().code();
         if (!it->status().ok()) {
             // error occur
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("rocksdb scan failed for multi_get from {}: hash_key = \"{}\", "
                                  "reverse = {}, error = {}",
                                  rpc.remote_address(),
@@ -667,7 +671,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             std::string &value = values[i];
             // print log
             if (!status.ok()) {
-                if (_verbose_log) {
+                if (FLAGS_rocksdb_verbose_log) {
                     LOG_ERROR_PREFIX("rocksdb get failed for multi_get from {}: hash_key = \"{}\", "
                                      "sort_key = \"{}\", error = {}",
                                      rpc.remote_address(),
@@ -685,7 +689,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                 uint32_t expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
                 if (expire_ts > 0 && expire_ts <= epoch_now) {
                     expire_count++;
-                    if (_verbose_log) {
+                    if (FLAGS_rocksdb_verbose_log) {
                         LOG_ERROR_PREFIX("rocksdb data expired for multi_get from {}",
                                          rpc.remote_address());
                     }
@@ -828,7 +832,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 
         if (dsn_likely(status.ok())) {
             if (check_if_record_expired(epoch_now, value)) {
-                if (_verbose_log) {
+                if (FLAGS_rocksdb_verbose_log) {
                     LOG_ERROR_PREFIX(
                         "rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
                         rpc.remote_address().to_string(),
@@ -847,7 +851,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
             total_data_size += current_data.value.size();
             response.data.emplace_back(std::move(current_data));
         } else {
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX(
                     "rocksdb get failed for batch_get from {}:  error = {}, key size = {}",
                     rpc.remote_address().to_string(),
@@ -929,7 +933,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 
         if (check_if_record_expired(epoch_now, it->value())) {
             expire_count++;
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("rocksdb data expired for sortkey_count from {}",
                                  rpc.remote_address());
             }
@@ -945,7 +949,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     resp.error = it->status().code();
     if (!it->status().ok()) {
         // error occur
-        if (_verbose_log) {
+        if (FLAGS_rocksdb_verbose_log) {
             LOG_ERROR_PREFIX(
                 "rocksdb scan failed for sortkey_count from {}: hash_key = \"{}\", error = {}",
                 rpc.remote_address(),
@@ -995,7 +999,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
         expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
         if (check_if_ts_expired(now_ts, expire_ts)) {
             _pfc_recent_expire_count->increment();
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("rocksdb data expired for ttl from {}", rpc.remote_address());
             }
             status = rocksdb::Status::NotFound();
@@ -1003,7 +1007,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
     }
 
     if (!status.ok()) {
-        if (_verbose_log) {
+        if (FLAGS_rocksdb_verbose_log) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
             LOG_ERROR_PREFIX("rocksdb get failed for ttl from {}: hash_key = \"{}\", sort_key = "
@@ -1115,7 +1119,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     int c = start.compare(stop);
     if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
         // empty key range
-        if (_verbose_log) {
+        if (FLAGS_rocksdb_verbose_log) {
             LOG_WARNING_PREFIX("empty key range for get_scanner from {}: start_key = \"{}\" ({}), "
                                "stop_key = \"{}\" ({})",
                                rpc.remote_address(),
@@ -1221,7 +1225,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     resp.error = it->status().code();
     if (!it->status().ok()) {
         // error occur
-        if (_verbose_log) {
+        if (FLAGS_rocksdb_verbose_log) {
             LOG_ERROR_PREFIX("rocksdb scan failed for get_scanner from {}: start_key = \"{}\" "
                              "({}), stop_key = \"{}\" ({}), batch_size = {}, read_count = {}, "
                              "error = {}",
@@ -1392,7 +1396,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         resp.error = it->status().code();
         if (!it->status().ok()) {
             // error occur
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("rocksdb scan failed for scan from {}: context_id= {}, stop_key = "
                                  "\"{}\" ({}), batch_size = {}, read_count = {}, error = {}",
                                  rpc.remote_address(),
@@ -1720,7 +1724,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     // initialize cu calculator and write service after server being initialized.
     _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
         this, _read_hotkey_collector, _write_hotkey_collector, _read_size_throttling_controller);
-    _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
+    _server_write = dsn::make_unique<pegasus_server_write>(this);
 
     dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
                                 &_tracker,
@@ -2250,7 +2254,7 @@ range_iteration_state pegasus_server_impl::validate_key_value_for_scan(
     bool request_validate_hash)
 {
     if (check_if_record_expired(epoch_now, value)) {
-        if (_verbose_log) {
+        if (FLAGS_rocksdb_verbose_log) {
             LOG_ERROR_PREFIX("rocksdb data expired for scan");
         }
         return range_iteration_state::kExpired;
@@ -2259,7 +2263,7 @@ range_iteration_state pegasus_server_impl::validate_key_value_for_scan(
     if (request_validate_hash && _validate_partition_hash) {
         if (_partition_version < 0 || _gpid.get_partition_index() > _partition_version ||
             !check_pegasus_key_hash(key, _gpid.get_partition_index(), _partition_version)) {
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("not serve hash key while scan");
             }
             return range_iteration_state::kHashInvalid;
@@ -2274,14 +2278,14 @@ range_iteration_state pegasus_server_impl::validate_key_value_for_scan(
         pegasus_restore_key(raw_key, hash_key, sort_key);
         if (hash_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
             !validate_filter(hash_key_filter_type, hash_key_filter_pattern, hash_key)) {
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("hash key filtered for scan");
             }
             return range_iteration_state::kFiltered;
         }
         if (sort_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
             !validate_filter(sort_key_filter_type, sort_key_filter_pattern, sort_key)) {
-            if (_verbose_log) {
+            if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("sort key filtered for scan");
             }
             return range_iteration_state::kFiltered;
@@ -2329,7 +2333,7 @@ range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
     bool no_value)
 {
     if (check_if_record_expired(epoch_now, value)) {
-        if (_verbose_log) {
+        if (FLAGS_rocksdb_verbose_log) {
             LOG_ERROR_PREFIX("rocksdb data expired for multi get");
         }
         return range_iteration_state::kExpired;
@@ -2344,7 +2348,7 @@ range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
 
     if (sort_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
         !validate_filter(sort_key_filter_type, sort_key_filter_pattern, sort_key)) {
-        if (_verbose_log) {
+        if (FLAGS_rocksdb_verbose_log) {
             LOG_ERROR_PREFIX("sort key filtered for multi get");
         }
         return range_iteration_state::kFiltered;

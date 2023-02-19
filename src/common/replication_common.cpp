@@ -37,6 +37,7 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled");
 DSN_DEFINE_int32(replication,
                  max_concurrent_bulk_load_downloading_count,
                  5,
@@ -87,33 +88,6 @@ DSN_DEFINE_bool(replication,
                 "whether to disable empty write, default is false");
 DSN_TAG_VARIABLE(empty_write_disabled, FT_MUTABLE);
 
-replication_options::replication_options()
-{
-    deny_client_on_start = false;
-    verbose_client_log_on_start = false;
-    verbose_commit_log_on_start = false;
-    delay_for_fd_timeout_on_start = false;
-    duplication_enabled = true;
-
-    batch_write_disabled = false;
-
-    group_check_disabled = false;
-
-    checkpoint_disabled = false;
-
-    gc_disabled = false;
-
-    disk_stat_disabled = false;
-
-    fd_disabled = false;
-
-    log_shared_force_flush = false;
-
-    config_sync_disabled = false;
-
-    mem_release_enabled = true;
-}
-
 replication_options::~replication_options() {}
 
 void replication_options::initialize()
@@ -160,80 +134,6 @@ void replication_options::initialize()
     }
 
     CHECK(!data_dirs.empty(), "no replica data dir found, maybe not set or excluded by black list");
-
-    deny_client_on_start = dsn_config_get_value_bool("replication",
-                                                     "deny_client_on_start",
-                                                     deny_client_on_start,
-                                                     "whether to deny client read "
-                                                     "and write requests when "
-                                                     "starting the server, default "
-                                                     "is false");
-    verbose_client_log_on_start = dsn_config_get_value_bool("replication",
-                                                            "verbose_client_log_on_start",
-                                                            verbose_client_log_on_start,
-                                                            "whether to print verbose error "
-                                                            "log when reply to client read "
-                                                            "and write requests when "
-                                                            "starting the server, default "
-                                                            "is false");
-    verbose_commit_log_on_start = dsn_config_get_value_bool("replication",
-                                                            "verbose_commit_log_on_start",
-                                                            verbose_commit_log_on_start,
-                                                            "whether to print verbose log "
-                                                            "when commit mutation when "
-                                                            "starting the server, default "
-                                                            "is false");
-    delay_for_fd_timeout_on_start =
-        dsn_config_get_value_bool("replication",
-                                  "delay_for_fd_timeout_on_start",
-                                  delay_for_fd_timeout_on_start,
-                                  "whether to delay for beacon grace period to make failure "
-                                  "detector timeout when starting the server, default is false");
-
-    duplication_enabled = dsn_config_get_value_bool(
-        "replication", "duplication_enabled", duplication_enabled, "is duplication enabled");
-
-    batch_write_disabled =
-        dsn_config_get_value_bool("replication",
-                                  "batch_write_disabled",
-                                  batch_write_disabled,
-                                  "whether to disable auto-batch of replicated write requests");
-
-    group_check_disabled = dsn_config_get_value_bool("replication",
-                                                     "group_check_disabled",
-                                                     group_check_disabled,
-                                                     "whether group check is disabled");
-
-    checkpoint_disabled = dsn_config_get_value_bool("replication",
-                                                    "checkpoint_disabled",
-                                                    checkpoint_disabled,
-                                                    "whether checkpoint is disabled");
-
-    gc_disabled = dsn_config_get_value_bool(
-        "replication", "gc_disabled", gc_disabled, "whether to disable garbage collection");
-
-    disk_stat_disabled = dsn_config_get_value_bool(
-        "replication", "disk_stat_disabled", disk_stat_disabled, "whether to disable disk stat");
-
-    fd_disabled = dsn_config_get_value_bool(
-        "replication", "fd_disabled", fd_disabled, "whether to disable failure detection");
-
-    log_shared_force_flush =
-        dsn_config_get_value_bool("replication",
-                                  "log_shared_force_flush",
-                                  log_shared_force_flush,
-                                  "when write shared log, whether to flush file after write done");
-
-    config_sync_disabled = dsn_config_get_value_bool(
-        "replication",
-        "config_sync_disabled",
-        config_sync_disabled,
-        "whether to disable replica configuration periodical sync with the meta server");
-
-    mem_release_enabled = dsn_config_get_value_bool("replication",
-                                                    "mem_release_enabled",
-                                                    mem_release_enabled,
-                                                    "whether to enable periodic memory release");
 
     cold_backup_root = dsn_config_get_value_string(
         "replication", "cold_backup_root", "", "cold backup remote storage path prefix");

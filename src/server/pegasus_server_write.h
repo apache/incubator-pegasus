@@ -31,7 +31,7 @@ namespace server {
 class pegasus_server_write : public dsn::replication::replica_base
 {
 public:
-    pegasus_server_write(pegasus_server_impl *server, bool verbose_log);
+    pegasus_server_write(pegasus_server_impl *server);
 
     /// \return error code returned by rocksdb, i.e rocksdb::Status::code.
     /// **NOTE**
@@ -84,8 +84,6 @@ private:
 
     db_write_context _write_ctx;
     int64_t _decree;
-
-    const bool _verbose_log;
 
     typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
     non_batch_writes_map _non_batch_write_handlers;

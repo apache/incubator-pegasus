@@ -51,6 +51,10 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_bool(replication,
+                batch_write_disabled,
+                false,
+                "whether to disable auto-batch of replicated write requests");
 DSN_DEFINE_int32(replication,
                  staleness_for_commit,
                  10,
@@ -83,7 +87,7 @@ replica::replica(replica_stub *stub,
     : serverlet<replica>("replica"),
       replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str), app.app_name),
       _app_info(app),
-      _primary_states(gpid, FLAGS_staleness_for_commit, stub->options().batch_write_disabled),
+      _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),
       _cold_backup_running_count(0),
       _cold_backup_max_duration_time_ms(0),

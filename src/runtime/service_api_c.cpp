@@ -50,6 +50,11 @@
 #include "utils/time_utils.h"
 #include "utils/process_utils.h"
 
+DSN_DEFINE_bool(core,
+                pause_on_start,
+                false,
+                "whether to pause at startup time for easier debugging");
+
 #ifdef DSN_ENABLE_GPERF
 DSN_DEFINE_double(core,
                   tcmalloc_release_rate,
@@ -372,10 +377,7 @@ bool run(const char *config_file,
     dsn_all.magic = 0xdeadbeef;
 
     // pause when necessary
-    if (dsn_config_get_value_bool("core",
-                                  "pause_on_start",
-                                  false,
-                                  "whether to pause at startup time for easier debugging")) {
+    if (FLAGS_pause_on_start) {
         printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(getpid()));
         getchar();
     }

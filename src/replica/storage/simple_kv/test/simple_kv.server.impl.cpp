@@ -27,12 +27,15 @@
 #include <fstream>
 #include <sstream>
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 
 #define VALUE_NOT_EXIST "<<not-exist>>"
 
 namespace dsn {
 namespace replication {
 namespace test {
+
+DSN_DECLARE_bool(test_file_learning);
 
 bool simple_kv_service_impl::s_simple_kv_open_fail = false;
 bool simple_kv_service_impl::s_simple_kv_close_fail = false;
@@ -45,11 +48,7 @@ simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r
     LOG_INFO("simple_kv_service_impl inited");
 }
 
-void simple_kv_service_impl::reset_state()
-{
-    _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
-    _last_durable_decree = 0;
-}
+void simple_kv_service_impl::reset_state() { _last_durable_decree = 0; }
 
 // RPC_SIMPLE_KV_READ
 void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply)

@@ -19,16 +19,25 @@
 #include "utils/fmt_logging.h"
 #include "app_balance_policy.h"
 #include "meta_service.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace replication {
-
+// TODO(yingchun): update?
+DSN_DEFINE_bool(meta_server, balancer_in_turn, false, "balance the apps one-by-one/concurrently");
+// TODO(yingchun): update?
+DSN_DEFINE_bool(meta_server, only_primary_balancer, false, "only try to make the primary balanced");
+// TODO(yingchun): update?
+DSN_DEFINE_bool(meta_server,
+                only_move_primary,
+                false,
+                "only try to make the primary balanced by move");
 app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(svc)
 {
     if (_svc != nullptr) {
-        _balancer_in_turn = _svc->get_meta_options()._lb_opts.balancer_in_turn;
-        _only_primary_balancer = _svc->get_meta_options()._lb_opts.only_primary_balancer;
-        _only_move_primary = _svc->get_meta_options()._lb_opts.only_move_primary;
+        _balancer_in_turn = FLAGS_balancer_in_turn;
+        _only_primary_balancer = FLAGS_only_primary_balancer;
+        _only_move_primary = FLAGS_only_move_primary;
     } else {
         _balancer_in_turn = false;
         _only_primary_balancer = false;

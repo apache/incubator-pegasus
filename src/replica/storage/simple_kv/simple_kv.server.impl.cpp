@@ -37,10 +37,13 @@
 #include <fstream>
 #include <sstream>
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace replication {
 namespace application {
+
+DSN_DEFINE_bool(test, test_file_learning, true, "");
 
 simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r), _lock(true)
 {
@@ -48,11 +51,7 @@ simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r
     LOG_INFO("simple_kv_service_impl inited");
 }
 
-void simple_kv_service_impl::reset_state()
-{
-    _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
-    _last_durable_decree = 0;
-}
+void simple_kv_service_impl::reset_state() { _last_durable_decree = 0; }
 
 // RPC_SIMPLE_KV_READ
 void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply)

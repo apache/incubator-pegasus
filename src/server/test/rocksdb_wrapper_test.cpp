@@ -34,7 +34,7 @@ public:
     void SetUp() override
     {
         start();
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
+        _server_write = dsn::make_unique<pegasus_server_write>(_server.get());
         _rocksdb_wrapper = _server_write->_write_svc->_impl->_rocksdb_wrapper.get();
 
         pegasus::pegasus_generate_key(

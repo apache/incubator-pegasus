@@ -65,10 +65,6 @@ class lb_suboptions
 {
 public:
     std::string server_load_balancer_type;
-
-    bool balancer_in_turn;
-    bool only_primary_balancer;
-    bool only_move_primary;
 };
 
 class meta_options
@@ -79,17 +75,10 @@ public:
     std::vector<std::string> meta_state_service_args;
 
     meta_function_level::type meta_function_level_on_start;
-    bool recover_from_replica_server;
-
-    bool add_secondary_enable_flow_control;
 
     fd_suboptions _fd_opts;
     lb_suboptions _lb_opts;
     std::string partition_guardian_type;
-
-    bool cold_backup_disabled;
-
-    bool enable_white_list;
     std::vector<std::string> replica_white_list;
 
 public:

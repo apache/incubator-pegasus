@@ -58,7 +58,10 @@ using namespace dsn;
 
 namespace dsn {
 namespace replication {
-
+DSN_DEFINE_bool(meta_server,
+                add_secondary_enable_flow_control,
+                false,
+                "enable flow control for add secondary proposal");
 DSN_DEFINE_int32(meta_server,
                  max_allowed_replica_count,
                  5,
@@ -96,6 +99,9 @@ DSN_DEFINE_int32(meta_server,
                  add_secondary_max_count_for_one_node,
                  10,
                  "add secondary max count for one node when flow control enabled");
+
+DSN_DECLARE_bool(recover_from_replica_server);
+
 static const char *lock_state = "lock";
 static const char *unlock_state = "unlock";
 
@@ -171,8 +177,7 @@ void server_state::initialize(meta_service *meta_svc, const std::string &apps_ro
 {
     _meta_svc = meta_svc;
     _apps_root = apps_root;
-    _add_secondary_enable_flow_control =
-        _meta_svc->get_meta_options().add_secondary_enable_flow_control;
+    _add_secondary_enable_flow_control = FLAGS_add_secondary_enable_flow_control;
     _add_secondary_max_count_for_one_node = FLAGS_add_secondary_max_count_for_one_node;
 
     _dead_partition_count.init_app_counter("eon.server_state",
@@ -761,14 +766,14 @@ error_code server_state::initialize_data_structure()
 {
     error_code err = sync_apps_from_remote_storage();
     if (err == ERR_OBJECT_NOT_FOUND) {
-        if (_meta_svc->get_meta_options().recover_from_replica_server) {
+        if (FLAGS_recover_from_replica_server) {
             return ERR_OBJECT_NOT_FOUND;
         } else {
             LOG_INFO("can't find apps from remote storage, start to initialize default apps");
             err = initialize_default_apps();
         }
     } else if (err == ERR_OK) {
-        if (_meta_svc->get_meta_options().recover_from_replica_server) {
+        if (FLAGS_recover_from_replica_server) {
             CHECK(false,
                   "find apps from remote storage, but "
                   "[meta_server].recover_from_replica_server = true");

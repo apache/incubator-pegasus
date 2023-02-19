@@ -37,7 +37,7 @@ public:
     pegasus_server_write_test() : pegasus_server_test_base()
     {
         start();
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
+        _server_write = dsn::make_unique<pegasus_server_write>(_server.get());
     }
 
     void test_batch_writes()
