@@ -222,7 +222,7 @@ replica::~replica(void)
 
 void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
 {
-    if (!_access_controller->allowed(request)) {
+    if (!_access_controller->allowed(request, security::client_request_replica_type::KRead)) {
         response_client_read(request, ERR_ACL_DENY);
         return;
     }
@@ -574,6 +574,13 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
         LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);
     }
     return err;
+}
+
+bool replica::access_controller_allowed(message_ex *msg,
+                                        security::client_request_replica_type req_type)
+{
+    return !_access_controller->is_enable_ranger_acl() ||
+           _access_controller->allowed(msg, req_type);
 }
 
 } // namespace replication

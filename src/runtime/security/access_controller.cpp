@@ -16,40 +16,50 @@
 // under the License.
 
 #include "access_controller.h"
-
+#include "meta_access_controller.h"
+#include "replica_access_controller.h"
 #include "utils/flags.h"
 #include "utils/strings.h"
 #include "utils/smart_pointers.h"
-#include "meta_access_controller.h"
-#include "replica_access_controller.h"
 
 namespace dsn {
 namespace security {
 DSN_DEFINE_bool(security, enable_acl, false, "whether enable access controller or not");
-DSN_TAG_VARIABLE(enable_acl, FT_MUTABLE);
 
-DSN_DEFINE_string(security, super_users, "", "super user for access controller");
+DSN_DEFINE_bool(security, enable_ranger_acl, false, "whether enable access controller or not");
 
-access_controller::access_controller() { utils::split_args(FLAGS_super_users, _super_users, ','); }
+DSN_DEFINE_string(security,
+                  super_users,
+                  "",
+                  "super users for access controller, comma-separated list of user names");
+
+access_controller::access_controller()
+{
+    // when FLAGS_enable_ranger_acl is true, FLAGS_enable_acl must be true.
+    // TODO(wanghao): check with DSN_DEFINE_group_validator().
+    CHECK(!FLAGS_enable_ranger_acl || FLAGS_enable_acl,
+          "when FLAGS_enable_ranger_acl is true, FLAGS_enable_acl must be true too");
+    utils::split_args(FLAGS_super_users, _super_users, ',');
+}
 
 access_controller::~access_controller() {}
 
-bool access_controller::pre_check(const std::string &user_name)
+bool access_controller::is_enable_ranger_acl() { return FLAGS_enable_ranger_acl; }
+
+bool access_controller::is_super_user(const std::string &user_name) const
 {
-    if (!FLAGS_enable_acl || _super_users.find(user_name) != _super_users.end()) {
-        return true;
-    }
-    return false;
+    return _super_users.find(user_name) != _super_users.end();
 }
 
-std::unique_ptr<access_controller> create_meta_access_controller()
+std::shared_ptr<access_controller> create_meta_access_controller(
+    const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager)
 {
-    return make_unique<meta_access_controller>();
+    return std::make_shared<meta_access_controller>(policy_manager);
 }
 
-std::unique_ptr<access_controller> create_replica_access_controller(const std::string &name)
+std::unique_ptr<access_controller> create_replica_access_controller(const std::string &replica_name)
 {
-    return make_unique<replica_access_controller>(name);
+    return std::make_unique<replica_access_controller>(replica_name);
 }
 } // namespace security
 } // namespace dsn

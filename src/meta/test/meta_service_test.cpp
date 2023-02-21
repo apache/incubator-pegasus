@@ -38,8 +38,7 @@ public:
             rpc_address leader;
             auto rpc = create_fake_rpc();
             rpc.dsn_request()->header->context.u.is_forward_supported = false;
-            bool res = _ms->check_status(rpc, &leader);
-            ASSERT_EQ(false, res);
+            ASSERT_FALSE(_ms->check_status_and_authz(rpc, &leader));
             ASSERT_EQ(ERR_FORWARD_TO_OTHERS, rpc.response().err);
             ASSERT_EQ(leader.to_std_string(), "1.2.3.4:10086");
             ASSERT_EQ(app_env_rpc::forward_mail_box().size(), 0);
@@ -49,8 +48,7 @@ public:
         RPC_MOCKING(app_env_rpc)
         {
             auto rpc = create_fake_rpc();
-            bool res = _ms->check_status(rpc);
-            ASSERT_EQ(false, res);
+            ASSERT_FALSE(_ms->check_status_and_authz(rpc));
             ASSERT_EQ(app_env_rpc::forward_mail_box().size(), 1);
             ASSERT_EQ(app_env_rpc::forward_mail_box()[0].remote_address().to_std_string(),
                       "1.2.3.4:10086");
@@ -68,8 +66,7 @@ public:
         {
             rpc_address leader;
             auto rpc = create_fake_rpc();
-            auto res = _ms->check_status(rpc, &leader);
-            ASSERT_EQ(true, res);
+            ASSERT_TRUE(_ms->check_status_and_authz(rpc, &leader));
             ASSERT_EQ(app_env_rpc::forward_mail_box().size(), 0);
         }
 

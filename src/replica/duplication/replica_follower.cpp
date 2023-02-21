@@ -224,6 +224,7 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
     request->dest_dir = dest_dir;
     request->overwrite = true;
     request->high_priority = false;
+    request->pid = _replica->get_gpid();
 
     _replica->_stub->_nfs->copy_remote_files(
         request,

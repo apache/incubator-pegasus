@@ -20,38 +20,60 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace dsn {
 class message_ex;
+
+namespace ranger {
+class ranger_resource_policy_manager;
+}
 namespace security {
+
+enum class client_request_replica_type
+{
+    KRead,
+    KWrite
+};
 
 class access_controller
 {
 public:
     access_controller();
-    virtual ~access_controller() = 0;
+    virtual ~access_controller();
 
-    /**
-     * update the access controller
-     *    acls - the new acls to update
-     **/
-    virtual void update(const std::string &acls){};
+    // Update the access controller.
+    // users - the new allowed users to update
+    virtual void update_allowed_users(const std::string &users) {}
 
-    /**
-     * check if the message received is allowd to do something.
-     *   msg - the message received
-     **/
-    virtual bool allowed(message_ex *msg) = 0;
+    // Check whether the Ranger ACL is enabled or not
+    bool is_enable_ranger_acl();
+
+    // Update the access controller policy
+    // policies -  the new Ranger policies to update
+    virtual void start_to_dump_and_sync_policies(const std::string &policies) {}
+
+    // Check if the message received is allowd to access the system.
+    // msg - the message received
+    virtual bool allowed(message_ex *msg, client_request_replica_type req_type) { return false; }
+
+    // Check if the message received is allowd to access the table.
+    // msg - the message received
+    // app_name - tables involved in ACL
+    virtual bool allowed(message_ex *msg, const std::string &app_name = "") { return false; }
 
 protected:
-    bool pre_check(const std::string &user_name);
+    // Check if 'user_name' is the super user.
+    bool is_super_user(const std::string &user_name) const;
     friend class meta_access_controller_test;
 
     std::unordered_set<std::string> _super_users;
 };
 
-std::unique_ptr<access_controller> create_meta_access_controller();
+std::shared_ptr<access_controller> create_meta_access_controller(
+    const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager);
 
-std::unique_ptr<access_controller> create_replica_access_controller(const std::string &name);
+std::unique_ptr<access_controller>
+create_replica_access_controller(const std::string &replica_name);
 } // namespace security
 } // namespace dsn

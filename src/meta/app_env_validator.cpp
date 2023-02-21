@@ -207,7 +207,8 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, nullptr},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, nullptr},
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, nullptr},
-        {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr}};
+        {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr},
+        {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, nullptr}};
 }
 
 } // namespace replication

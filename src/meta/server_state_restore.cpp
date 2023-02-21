@@ -212,29 +212,24 @@ void server_state::on_query_restore_status(configuration_query_restore_rpc rpc)
     response.err = ERR_OK;
 
     std::shared_ptr<app_state> app = get_app(request.restore_app_id);
-    if (app == nullptr) {
-        response.err = ERR_APP_NOT_EXIST;
-    } else {
-        if (app->status == app_status::AS_DROPPED) {
-            response.err = ERR_APP_DROPPED;
-        } else {
-            response.restore_progress.resize(app->partition_count,
-                                             cold_backup_constant::PROGRESS_FINISHED);
-            response.restore_status.resize(app->partition_count, ERR_OK);
-            for (int32_t i = 0; i < app->partition_count; i++) {
-                const auto &r_state = app->helpers->restore_states[i];
-                const auto &p = app->partitions[i];
-                if (!p.primary.is_invalid() || !p.secondaries.empty()) {
-                    // already have primary, restore succeed
-                    continue;
-                } else {
-                    if (r_state.progress < response.restore_progress[i]) {
-                        response.restore_progress[i] = r_state.progress;
-                    }
-                }
-                response.restore_status[i] = r_state.restore_status;
-            }
+    CHECK(app, "app must be valid");
+    if (app->status == app_status::AS_DROPPED) {
+        response.err = ERR_APP_DROPPED;
+        return;
+    }
+    response.restore_progress.resize(app->partition_count, cold_backup_constant::PROGRESS_FINISHED);
+    response.restore_status.resize(app->partition_count, ERR_OK);
+    for (int32_t i = 0; i < app->partition_count; i++) {
+        const auto &r_state = app->helpers->restore_states[i];
+        const auto &p = app->partitions[i];
+        if (!p.primary.is_invalid() || !p.secondaries.empty()) {
+            // already have primary, restore succeed
+            continue;
         }
+        if (r_state.progress < response.restore_progress[i]) {
+            response.restore_progress[i] = r_state.progress;
+        }
+        response.restore_status[i] = r_state.restore_status;
     }
 }
 }

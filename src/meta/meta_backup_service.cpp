@@ -1224,6 +1224,7 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     configuration_add_backup_policy_request request;
     configuration_add_backup_policy_response response;
 
+    dsn::message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
     ::dsn::unmarshall(msg, request);
     std::set<int32_t> app_ids;
     std::map<int32_t, std::string> app_names;
@@ -1252,6 +1253,20 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
                           request.policy_name);
                 response.err = ERR_INVALID_PARAMETERS;
                 response.hint_message = "invalid app " + std::to_string(app_id);
+                _meta_svc->reply_data(msg, response);
+                msg->release_ref();
+                return;
+            }
+            // when the Ranger ACL is enabled, access control will be checked for each table.
+            auto access_controller = _meta_svc->get_access_controller();
+            // adding multiple judgments here is to adapt to the old ACL and avoid checking again.
+            if (access_controller->is_enable_ranger_acl() &&
+                !access_controller->allowed(copied_msg, app->app_name)) {
+                response.err = ERR_ACL_DENY;
+                response.hint_message =
+                    fmt::format("not authorized to add backup policy({}) for app id: {}",
+                                request.policy_name,
+                                app_id);
                 _meta_svc->reply_data(msg, response);
                 msg->release_ref();
                 return;
@@ -1486,16 +1501,24 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
 
         for (const auto &appid : request.add_appids) {
             const auto &app = _state->get_app(appid);
+            auto access_controller = _meta_svc->get_access_controller();
             // TODO: if app is dropped, how to process
             if (app == nullptr) {
                 LOG_WARNING("{}: add app to policy failed, because invalid app({}), ignore it",
                             cur_policy.policy_name,
                             appid);
-            } else {
-                valid_app_ids_to_add.emplace_back(appid);
-                id_to_app_names.insert(std::make_pair(appid, app->app_name));
-                have_modify_policy = true;
+                continue;
             }
+            if (access_controller->is_enable_ranger_acl() &&
+                !access_controller->allowed(rpc.dsn_request(), app->app_name)) {
+                LOG_WARNING("not authorized to modify backup policy({}) for app id: {}, skip it",
+                            cur_policy.policy_name,
+                            appid);
+                continue;
+            }
+            valid_app_ids_to_add.emplace_back(appid);
+            id_to_app_names.insert(std::make_pair(appid, app->app_name));
+            have_modify_policy = true;
         }
     }
 

@@ -1399,14 +1399,17 @@ void server_state::recall_app(dsn::message_ex *msg)
 }
 
 void server_state::list_apps(const configuration_list_apps_request &request,
-                             configuration_list_apps_response &response)
+                             configuration_list_apps_response &response,
+                             dsn::message_ex *msg)
 {
     LOG_DEBUG("list app request, status({})", request.status);
     zauto_read_lock l(_lock);
     for (auto &kv : _all_apps) {
         app_state &app = *(kv.second);
         if (request.status == app_status::AS_INVALID || request.status == app.status) {
-            response.infos.push_back(app);
+            if (nullptr == msg || _meta_svc->get_access_controller()->allowed(msg, app.app_name)) {
+                response.infos.push_back(app);
+            }
         }
     }
     response.err = dsn::ERR_OK;
@@ -1765,10 +1768,10 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     request.config.partition_flags |= pc_flags::dropped;
 
     // NOTICE this mis-understanding: if a old state is DDD, we may not need to udpate the ballot.
-    // Actually it is necessary. Coz we may send a proposal due to the old DDD state
-    // and laterly a update_config may arrive.
-    // An updated ballot annouces a previous state is INVALID and all actions taken
-    // due to the old one should be staled
+    // Actually it is necessary. Coz we may send a proposal due to the old DDD state and laterly a
+    // update_config may arrive.
+    // An updated ballot annouces a previous state is INVALID and all actions taken due to the old
+    // one should be staled
     request.config.ballot++;
 
     if (config_status::pending_remote_sync == cc.stage) {

@@ -29,6 +29,7 @@
 #include <map>
 #include <unordered_map>
 #include <set>
+#include <unordered_set>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -488,6 +489,26 @@ inline bool json_decode(const JsonObject &in, std::set<T> &t)
     for (rapidjson::Value::ConstValueIterator it = in.Begin(); it != in.End(); ++it) {
         T value;
         dverify(json_forwarder<T>::decode(*it, value));
+        dverify(t.emplace(std::move(value)).second);
+    }
+    return true;
+}
+
+template <typename T1, typename T2>
+inline void json_encode(JsonWriter &out, const std::unordered_set<T1, T2> &t)
+{
+    json_encode_iterable(out, t);
+}
+
+template <typename T1, typename T2>
+inline bool json_decode(const JsonObject &in, std::unordered_set<T1, T2> &t)
+{
+    dverify(in.IsArray());
+    t.clear();
+
+    for (rapidjson::Value::ConstValueIterator it = in.Begin(); it != in.End(); ++it) {
+        T1 value;
+        dverify(json_forwarder<T1>::decode(*it, value));
         dverify(t.emplace(std::move(value)).second);
     }
     return true;

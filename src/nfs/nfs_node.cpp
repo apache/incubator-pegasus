@@ -42,6 +42,7 @@ aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,
                                              const std::string &source_dir,
                                              const std::string &dest_disk_tag,
                                              const std::string &dest_dir,
+                                             const dsn::gpid &pid,
                                              bool overwrite,
                                              bool high_priority,
                                              task_code callback_code,
@@ -55,6 +56,7 @@ aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,
                              {},
                              dest_disk_tag,
                              dest_dir,
+                             pid,
                              overwrite,
                              high_priority,
                              callback_code,
@@ -69,6 +71,7 @@ aio_task_ptr nfs_node::copy_remote_files(const rpc_address &remote,
                                          const std::vector<std::string> &files,
                                          const std::string &dest_disk_tag,
                                          const std::string &dest_dir,
+                                         const dsn::gpid &pid,
                                          bool overwrite,
                                          bool high_priority,
                                          task_code callback_code,
@@ -85,6 +88,7 @@ aio_task_ptr nfs_node::copy_remote_files(const rpc_address &remote,
     rci->files = files;
     rci->dest_disk_tag = dest_disk_tag;
     rci->dest_dir = dest_dir;
+    rci->pid = pid;
     rci->overwrite = overwrite;
     rci->high_priority = high_priority;
     call(rci, cb);

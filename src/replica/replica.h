@@ -55,6 +55,7 @@
 #include "prepare_list.h"
 #include "replica_context.h"
 #include "utils/throttling_controller.h"
+#include "runtime/security/access_controller.h"
 
 namespace dsn {
 namespace security {
@@ -474,6 +475,9 @@ private:
     // update allowed users for access controller
     void update_ac_allowed_users(const std::map<std::string, std::string> &envs);
 
+    // update replica access controller Ranger policies
+    void update_ac_ranger_policies(const std::map<std::string, std::string> &envs);
+
     // update bool app envs
     void update_bool_envs(const std::map<std::string, std::string> &envs,
                           const std::string &name,
@@ -497,6 +501,9 @@ private:
 
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_name(const std::string &app_name);
+
+    // access control
+    bool access_controller_allowed(message_ex *msg, security::client_request_replica_type req_type);
 
 private:
     friend class ::dsn::replication::test::test_checker;

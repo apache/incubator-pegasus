@@ -88,7 +88,10 @@ inline dsn::message_ex *create_corresponding_receive(dsn::message_ex *request_ms
 class fake_receiver_meta_service : public dsn::replication::meta_service
 {
 public:
-    fake_receiver_meta_service() : meta_service() {}
+    fake_receiver_meta_service() : meta_service()
+    {
+        _access_controller = security::create_meta_access_controller(nullptr);
+    }
     virtual ~fake_receiver_meta_service() {}
     virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override
     {

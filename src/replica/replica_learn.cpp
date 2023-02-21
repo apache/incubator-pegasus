@@ -874,6 +874,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             resp.state.files,
             get_replica_disk_tag(),
             learn_dir,
+            get_gpid(),
             true, // overwrite
             high_priority,
             LPC_REPLICATION_COPY_REMOTE_FILES,
