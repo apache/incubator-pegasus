@@ -39,7 +39,7 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool ver
     : replica_base(server),
       _write_svc(new pegasus_write_service(server)),
       _verbose_log(verbose_log),
-      _corrupt_write_counter(METRIC_corrupt_writes.instantiate(replica_metric_entity()))
+      METRIC_INIT_VAR_REPLICA(corrupt_writes)
 {
     init_non_batch_write_handlers();
 }
@@ -66,7 +66,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
             return iter->second(requests[0]);
         }
     } catch (TTransportException &ex) {
-        _corrupt_write_counter->increment();
+        METRIC_INCREMENT(corrupt_writes);
         LOG_ERROR_PREFIX("pegasus not batch write handler failed, from = {}, exception = {}",
                          requests[0]->header->from_address.to_string(),
                          ex.what());
@@ -110,7 +110,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                     }
                 }
             } catch (TTransportException &ex) {
-                _corrupt_write_counter->increment();
+                METRIC_INCREMENT(corrupt_writes);
                 LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
                                  requests[i]->header->from_address.to_string(),
                                  ex.what());

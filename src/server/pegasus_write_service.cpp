@@ -125,26 +125,23 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       _impl(new impl(server)),
       _batch_start_time(0),
       _cu_calculator(server->_cu_calculator.get()),
-      _put_counter(METRIC_put_requests.instantiate(replica_metric_entity())),
-      _multi_put_counter(METRIC_multi_put_requests.instantiate(replica_metric_entity())),
-      _remove_counter(METRIC_remove_requests.instantiate(replica_metric_entity())),
-      _multi_remove_counter(METRIC_multi_remove_requests.instantiate(replica_metric_entity())),
-      _incr_counter(METRIC_incr_requests.instantiate(replica_metric_entity())),
-      _check_and_set_counter(METRIC_check_and_set_requests.instantiate(replica_metric_entity())),
-      _check_and_mutate_counter(
-          METRIC_check_and_mutate_requests.instantiate(replica_metric_entity())),
-      _put_latency_ns(METRIC_put_latency_ns.instantiate(replica_metric_entity())),
-      _multi_put_latency_ns(METRIC_multi_put_latency_ns.instantiate(replica_metric_entity())),
-      _remove_latency_ns(METRIC_remove_latency_ns.instantiate(replica_metric_entity())),
-      _multi_remove_latency_ns(METRIC_multi_remove_latency_ns.instantiate(replica_metric_entity())),
-      _incr_latency_ns(METRIC_incr_latency_ns.instantiate(replica_metric_entity())),
-      _check_and_set_latency_ns(
-          METRIC_check_and_set_latency_ns.instantiate(replica_metric_entity())),
-      _check_and_mutate_latency_ns(
-          METRIC_check_and_mutate_latency_ns.instantiate(replica_metric_entity())),
-      _dup_counter(METRIC_dup_requests.instantiate(replica_metric_entity())),
-      _dup_time_lag_ms(METRIC_dup_time_lag_ms.instantiate(replica_metric_entity())),
-      _dup_lagging_write_counter(METRIC_dup_lagging_writes.instantiate(replica_metric_entity())),
+      METRIC_INIT_VAR_REPLICA(put_requests),
+      METRIC_INIT_VAR_REPLICA(multi_put_requests),
+      METRIC_INIT_VAR_REPLICA(remove_requests),
+      METRIC_INIT_VAR_REPLICA(multi_remove_requests),
+      METRIC_INIT_VAR_REPLICA(incr_requests),
+      METRIC_INIT_VAR_REPLICA(check_and_set_requests),
+      METRIC_INIT_VAR_REPLICA(check_and_mutate_requests),
+      METRIC_INIT_VAR_REPLICA(put_latency_ns),
+      METRIC_INIT_VAR_REPLICA(multi_put_latency_ns),
+      METRIC_INIT_VAR_REPLICA(remove_latency_ns),
+      METRIC_INIT_VAR_REPLICA(multi_remove_latency_ns),
+      METRIC_INIT_VAR_REPLICA(incr_latency_ns),
+      METRIC_INIT_VAR_REPLICA(check_and_set_latency_ns),
+      METRIC_INIT_VAR_REPLICA(check_and_mutate_latency_ns),
+      METRIC_INIT_VAR_REPLICA(dup_requests),
+      METRIC_INIT_VAR_REPLICA(dup_time_lag_ms),
+      METRIC_INIT_VAR_REPLICA(dup_lagging_writes),
       _put_batch_size(0),
       _remove_batch_size(0)
 {
@@ -164,15 +161,15 @@ int pegasus_write_service::multi_put(const db_write_context &ctx,
                                      const dsn::apps::multi_put_request &update,
                                      dsn::apps::update_response &resp)
 {
-    dsn::utils::chronograph chrono;
-    _multi_put_counter->increment();
+    METRIC_AUTO_LATENCY(multi_put_latency_ns);
+    METRIC_INCREMENT(multi_put_requests);
+
     int err = _impl->multi_put(ctx, update, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_multi_put_cu(resp.error, update.hash_key, update.kvs);
     }
 
-    _multi_put_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -180,15 +177,15 @@ int pegasus_write_service::multi_remove(int64_t decree,
                                         const dsn::apps::multi_remove_request &update,
                                         dsn::apps::multi_remove_response &resp)
 {
-    dsn::utils::chronograph chrono;
-    _multi_remove_counter->increment();
+    METRIC_AUTO_LATENCY(multi_remove_latency_ns);
+    METRIC_INCREMENT(multi_remove_requests);
+
     int err = _impl->multi_remove(decree, update, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_multi_remove_cu(resp.error, update.hash_key, update.sort_keys);
     }
 
-    _multi_remove_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -196,15 +193,15 @@ int pegasus_write_service::incr(int64_t decree,
                                 const dsn::apps::incr_request &update,
                                 dsn::apps::incr_response &resp)
 {
-    dsn::utils::chronograph chrono;
-    _incr_counter->increment();
+    METRIC_AUTO_LATENCY(incr_latency_ns);
+    METRIC_INCREMENT(incr_requests);
+
     int err = _impl->incr(decree, update, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_incr_cu(resp.error, update.key);
     }
 
-    _incr_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -212,8 +209,9 @@ int pegasus_write_service::check_and_set(int64_t decree,
                                          const dsn::apps::check_and_set_request &update,
                                          dsn::apps::check_and_set_response &resp)
 {
-    dsn::utils::chronograph chrono;
-    _check_and_set_counter->increment();
+    METRIC_AUTO_LATENCY(check_and_set_latency_ns);
+    METRIC_INCREMENT(check_and_set_requests);
+
     int err = _impl->check_and_set(decree, update, resp);
 
     if (_server->is_primary()) {
@@ -224,7 +222,6 @@ int pegasus_write_service::check_and_set(int64_t decree,
                                              update.set_value);
     }
 
-    _check_and_set_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -232,8 +229,9 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
                                             const dsn::apps::check_and_mutate_request &update,
                                             dsn::apps::check_and_mutate_response &resp)
 {
-    dsn::utils::chronograph chrono;
-    _check_and_mutate_counter->increment();
+    METRIC_AUTO_LATENCY(check_and_mutate_latency_ns);
+    METRIC_INCREMENT(check_and_mutate_requests);
+
     int err = _impl->check_and_mutate(decree, update, resp);
 
     if (_server->is_primary()) {
@@ -241,7 +239,6 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
             resp.error, update.hash_key, update.check_sort_key, update.mutate_list);
     }
 
-    _check_and_mutate_latency_ns->set(chrono.duration_ns<int64_t>());
     return err;
 }
 
@@ -309,10 +306,8 @@ void pegasus_write_service::clear_up_batch_states()
 {
 #define PROCESS_WRITE_BATCH(op)                                                                    \
     do {                                                                                           \
-        _##op##_counter->increment_by(static_cast<int64_t>(_##op##_batch_size));                   \
-        for (uint32_t i = 0; i < _##op##_batch_size; ++i) {                                        \
-            _##op##_latency_ns->set(latency_ns);                                                   \
-        }                                                                                          \
+        METRIC_INCREMENT_BY(op##_requests, static_cast<int64_t>(_##op##_batch_size));              \
+        METRIC_SET(op##_latency_ns, static_cast<size_t>(_##op##_batch_size), latency_ns);          \
         _##op##_batch_size = 0;                                                                    \
     } while (0)
 
@@ -343,13 +338,11 @@ int pegasus_write_service::duplicate(int64_t decree,
             return empty_put(decree);
         }
 
-        _dup_counter->increment();
-        auto cleanup = dsn::defer([this, &request]() {
-            uint64_t latency_ms = (dsn_now_us() - request.timestamp) / 1000;
-            if (latency_ms > _dup_lagging_write_threshold_ms) {
-                _dup_lagging_write_counter->increment();
+        METRIC_INCREMENT(dup_requests);
+        METRIC_AUTO_LATENCY(dup_time_lag_ms, request.timestamp * 1000, [this](uint64_t latency) {
+            if (latency > _dup_lagging_write_threshold_ms) {
+                METRIC_INCREMENT(dup_lagging_writes);
             }
-            _dup_time_lag_ms->set(latency_ms);
         });
         dsn::message_ex *write =
             dsn::from_blob_to_received_msg(request.task_code, request.raw_message);

@@ -197,25 +197,25 @@ private:
     capacity_unit_calculator *_cu_calculator;
     int64_t _dup_lagging_write_threshold_ms;
 
-    dsn::counter_ptr<> _put_counter;
-    dsn::counter_ptr<> _multi_put_counter;
-    dsn::counter_ptr<> _remove_counter;
-    dsn::counter_ptr<> _multi_remove_counter;
-    dsn::counter_ptr<> _incr_counter;
-    dsn::counter_ptr<> _check_and_set_counter;
-    dsn::counter_ptr<> _check_and_mutate_counter;
+    METRIC_DECLARE_VAR_counter(put_requests);
+    METRIC_DECLARE_VAR_counter(multi_put_requests);
+    METRIC_DECLARE_VAR_counter(remove_requests);
+    METRIC_DECLARE_VAR_counter(multi_remove_requests);
+    METRIC_DECLARE_VAR_counter(incr_requests);
+    METRIC_DECLARE_VAR_counter(check_and_set_requests);
+    METRIC_DECLARE_VAR_counter(check_and_mutate_requests);
 
-    dsn::percentile_ptr<int64_t> _put_latency_ns;
-    dsn::percentile_ptr<int64_t> _multi_put_latency_ns;
-    dsn::percentile_ptr<int64_t> _remove_latency_ns;
-    dsn::percentile_ptr<int64_t> _multi_remove_latency_ns;
-    dsn::percentile_ptr<int64_t> _incr_latency_ns;
-    dsn::percentile_ptr<int64_t> _check_and_set_latency_ns;
-    dsn::percentile_ptr<int64_t> _check_and_mutate_latency_ns;
+    METRIC_DECLARE_VAR_percentile_int64(put_latency_ns);
+    METRIC_DECLARE_VAR_percentile_int64(multi_put_latency_ns);
+    METRIC_DECLARE_VAR_percentile_int64(remove_latency_ns);
+    METRIC_DECLARE_VAR_percentile_int64(multi_remove_latency_ns);
+    METRIC_DECLARE_VAR_percentile_int64(incr_latency_ns);
+    METRIC_DECLARE_VAR_percentile_int64(check_and_set_latency_ns);
+    METRIC_DECLARE_VAR_percentile_int64(check_and_mutate_latency_ns);
 
-    dsn::counter_ptr<> _dup_counter;
-    dsn::percentile_ptr<int64_t> _dup_time_lag_ms;
-    dsn::counter_ptr<> _dup_lagging_write_counter;
+    METRIC_DECLARE_VAR_counter(dup_requests);
+    METRIC_DECLARE_VAR_percentile_int64(dup_time_lag_ms);
+    METRIC_DECLARE_VAR_counter(dup_lagging_writes);
 
     // Record batch size for put and remove requests.
     uint32_t _put_batch_size;

@@ -89,7 +89,7 @@ private:
     typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
     non_batch_writes_map _non_batch_write_handlers;
 
-    dsn::counter_ptr<> _corrupt_write_counter;
+    METRIC_DECLARE_VAR_counter(corrupt_writes);
 };
 
 } // namespace server

@@ -139,13 +139,12 @@ public:
 
     inline void reset_start_time() { _start_time_ns = dsn_now_ns(); }
 
-    template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
-    inline T duration_ns()
+    inline uint64_t duration_ns()
     {
         auto now = dsn_now_ns();
         CHECK_GE(now, _start_time_ns);
 
-        return static_cast<T>(now - _start_time_ns);
+        return now - _start_time_ns;
     }
 
 private:
