@@ -2726,7 +2726,7 @@ void pegasus_server_impl::update_slow_query_threshold(
 void pegasus_server_impl::update_rocksdb_iteration_threshold(
     const std::map<std::string, std::string> &envs)
 {
-    uint64_t threshold_ms = _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config;
+    uint64_t threshold_ms = FLAGS_rocksdb_iteration_threshold_time_ms;
     auto find = envs.find(ROCKSDB_ITERATION_THRESHOLD_TIME_MS);
     if (find != envs.end()) {
         // the unit of iteration threshold from env is ms

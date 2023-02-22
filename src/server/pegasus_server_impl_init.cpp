@@ -203,6 +203,8 @@ DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_slow_query_threshold_ns,
                   100000000,
                   "get/multi-get operation duration exceed this threshold will be logged");
+DSN_DEFINE_validator(rocksdb_slow_query_threshold_ns,
+                     [](uint64_t value) -> bool { return value > 0; });
 DSN_DEFINE_uint64(
     pegasus.server,
     rocksdb_abnormal_get_size_threshold,
@@ -308,14 +310,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                              false,
                                              "whether to print verbose log for debugging");
     _slow_query_threshold_ns = FLAGS_rocksdb_slow_query_threshold_ns;
-    CHECK_GT(_slow_query_threshold_ns, 0);
     _rng_rd_opts.multi_get_max_iteration_count = FLAGS_rocksdb_multi_get_max_iteration_count;
     _rng_rd_opts.multi_get_max_iteration_size = FLAGS_rocksdb_multi_get_max_iteration_size;
     _rng_rd_opts.rocksdb_max_iteration_count = FLAGS_rocksdb_max_iteration_count;
-    _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config =
-        FLAGS_rocksdb_iteration_threshold_time_ms;
-    _rng_rd_opts.rocksdb_iteration_threshold_time_ms =
-        _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config;
+    _rng_rd_opts.rocksdb_iteration_threshold_time_ms = FLAGS_rocksdb_iteration_threshold_time_ms;
 
     // init rocksdb::DBOptions
     _db_opts.create_if_missing = true;
