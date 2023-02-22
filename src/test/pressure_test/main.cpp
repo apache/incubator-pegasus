@@ -40,10 +40,14 @@ DSN_DEFINE_int32(pressureclient, hashkey_len, 64, "hashkey length");
 DSN_DEFINE_int32(pressureclient, sortkey_len, 64, "sortkey length");
 DSN_DEFINE_int32(pressureclient, value_len, 64, "value length");
 DSN_DEFINE_validator(qps, [](int32_t value) -> bool { return value > 0; });
-
-// generate hashkey/sortkey between [0, ****key_limit]
-static int64_t hashkey_limit;
-static int64_t sortkey_limit;
+DSN_DEFINE_int64(pressureclient,
+                 hashkey_limit,
+                 0,
+                 "The hashkey range to generate, in format [0, ****key_limit].");
+DSN_DEFINE_int64(pressureclient,
+                 sortkey_limit,
+                 0,
+                 "The sortkey range to generate, in format [0, ****key_limit].");
 
 // for app
 static pegasus_client *pg_client = nullptr;
@@ -59,7 +63,7 @@ std::string fill_string(const std::string &str, int len)
 
 std::string get_hashkey()
 {
-    std::string key = to_string(dsn::rand::next_u64(0, hashkey_limit));
+    std::string key = to_string(dsn::rand::next_u64(0, FLAGS_hashkey_limit));
     if (key.size() >= FLAGS_hashkey_len) {
         return key;
     } else {
@@ -69,7 +73,7 @@ std::string get_hashkey()
 
 std::string get_sortkey()
 {
-    std::string key = to_string(dsn::rand::next_u64(0, sortkey_limit));
+    std::string key = to_string(dsn::rand::next_u64(0, FLAGS_sortkey_limit));
     if (key.size() >= FLAGS_sortkey_len) {
         return key;
     } else {
@@ -229,12 +233,6 @@ int main(int argc, const char **argv)
     app_name = dsn_config_get_value_string("pressureclient", "app_name", "temp", "app name");
 
     op_name = dsn_config_get_value_string("pressureclient", "operation_name", "", "operation name");
-
-    hashkey_limit =
-        (int64_t)dsn_config_get_value_uint64("pressureclient", "hashkey_limit", 0, "hashkey limit");
-
-    sortkey_limit =
-        (int64_t)dsn_config_get_value_uint64("pressureclient", "sortkey_limit", 0, "sortkey limit");
 
     CHECK(!op_name.empty(), "must assign operation name");
 

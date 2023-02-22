@@ -464,7 +464,6 @@ private:
 
     pegasus_context_cache _context_cache;
 
-    std::chrono::seconds _update_rdb_stat_interval;
     ::dsn::task_ptr _update_replica_rdb_stat;
     static ::dsn::task_ptr _update_server_rdb_stat;
 

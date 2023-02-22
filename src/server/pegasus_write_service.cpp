@@ -29,6 +29,12 @@
 namespace pegasus {
 namespace server {
 
+DSN_DEFINE_int64(pegasus.server,
+                 dup_lagging_write_threshold_ms,
+                 10 * 1000,
+                 "If the duration that a write flows from master to slave is larger than this "
+                 "threshold, the write is defined a lagging write.");
+
 DEFINE_TASK_CODE(LPC_INGESTION, TASK_PRIORITY_COMMON, THREAD_POOL_INGESTION)
 
 pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
@@ -130,12 +136,6 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
         COUNTER_TYPE_NUMBER_PERCENTILES,
         "the time (in ms) lag between master and slave in the duplication");
 
-    _dup_lagging_write_threshold_ms = dsn_config_get_value_int64(
-        "pegasus.server",
-        "dup_lagging_write_threshold_ms",
-        10 * 1000,
-        "If the duration that a write flows from master to slave is larger than this threshold, "
-        "the write is defined a lagging write.");
     _pfc_dup_lagging_writes.init_app_counter(
         "app.pegasus",
         fmt::format("dup.lagging_writes@{}", app_name()).c_str(),
@@ -327,7 +327,7 @@ int pegasus_write_service::duplicate(int64_t decree,
         _pfc_duplicate_qps->increment();
         auto cleanup = dsn::defer([this, &request]() {
             uint64_t latency_ms = (dsn_now_us() - request.timestamp) / 1000;
-            if (latency_ms > _dup_lagging_write_threshold_ms) {
+            if (latency_ms > FLAGS_dup_lagging_write_threshold_ms) {
                 _pfc_dup_lagging_writes->increment();
             }
             _pfc_dup_time_lag->set(latency_ms);
