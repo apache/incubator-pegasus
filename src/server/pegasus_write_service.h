@@ -19,22 +19,20 @@
 
 #pragma once
 
-#include "perf_counter/perf_counter_wrapper.h"
-#include "replica/replica_base.h"
+#include "base/pegasus_utils.h"
+#include "base/pegasus_value_schema.h"
+#include "backup_types.h"
+#include "bulk_load_types.h"
 #include "common/common.h"
-#include "common//duplication_common.h"
+#include "common/duplication_common.h"
+#include "consensus_types.h"
+#include "duplication_internal_types.h"
+#include "duplication_types.h"
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
+#include "replica/replica_base.h"
 #include "replica_admin_types.h"
-
-#include "base/pegasus_value_schema.h"
-#include "base/pegasus_utils.h"
 #include "rrdb/rrdb_types.h"
-#include "duplication_internal_types.h"
 
 namespace pegasus {
 namespace server {
@@ -199,28 +197,29 @@ private:
     capacity_unit_calculator *_cu_calculator;
     int64_t _dup_lagging_write_threshold_ms;
 
-    ::dsn::perf_counter_wrapper _pfc_put_qps;
-    ::dsn::perf_counter_wrapper _pfc_multi_put_qps;
-    ::dsn::perf_counter_wrapper _pfc_remove_qps;
-    ::dsn::perf_counter_wrapper _pfc_multi_remove_qps;
-    ::dsn::perf_counter_wrapper _pfc_incr_qps;
-    ::dsn::perf_counter_wrapper _pfc_check_and_set_qps;
-    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_qps;
-    ::dsn::perf_counter_wrapper _pfc_duplicate_qps;
-    ::dsn::perf_counter_wrapper _pfc_dup_time_lag;
-    ::dsn::perf_counter_wrapper _pfc_dup_lagging_writes;
+    METRIC_VAR_DECLARE_counter(put_requests);
+    METRIC_VAR_DECLARE_counter(multi_put_requests);
+    METRIC_VAR_DECLARE_counter(remove_requests);
+    METRIC_VAR_DECLARE_counter(multi_remove_requests);
+    METRIC_VAR_DECLARE_counter(incr_requests);
+    METRIC_VAR_DECLARE_counter(check_and_set_requests);
+    METRIC_VAR_DECLARE_counter(check_and_mutate_requests);
 
-    ::dsn::perf_counter_wrapper _pfc_put_latency;
-    ::dsn::perf_counter_wrapper _pfc_multi_put_latency;
-    ::dsn::perf_counter_wrapper _pfc_remove_latency;
-    ::dsn::perf_counter_wrapper _pfc_multi_remove_latency;
-    ::dsn::perf_counter_wrapper _pfc_incr_latency;
-    ::dsn::perf_counter_wrapper _pfc_check_and_set_latency;
-    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_latency;
+    METRIC_VAR_DECLARE_percentile_int64(put_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(multi_put_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(remove_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(multi_remove_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(incr_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(check_and_set_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(check_and_mutate_latency_ns);
 
-    // Records all requests.
-    std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
-    std::vector<::dsn::perf_counter *> _batch_latency_perfcounters;
+    METRIC_VAR_DECLARE_counter(dup_requests);
+    METRIC_VAR_DECLARE_percentile_int64(dup_time_lag_ms);
+    METRIC_VAR_DECLARE_counter(dup_lagging_writes);
+
+    // Record batch size for put and remove requests.
+    uint32_t _put_batch_size;
+    uint32_t _remove_batch_size;
 
     // TODO(wutao1): add perf counters for failed rpc.
 };

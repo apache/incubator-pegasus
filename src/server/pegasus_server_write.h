@@ -19,10 +19,9 @@
 
 #pragma once
 
-#include "replica/replica_base.h"
-
 #include "base/pegasus_rpc_types.h"
-#include "pegasus_write_service.h"
+#include "server/pegasus_write_service.h"
+#include "utils/metrics.h"
 
 namespace pegasus {
 namespace server {
@@ -90,7 +89,7 @@ private:
     typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
     non_batch_writes_map _non_batch_write_handlers;
 
-    ::dsn::perf_counter_wrapper _pfc_recent_corrupt_write_count;
+    METRIC_VAR_DECLARE_counter(corrupt_writes);
 };
 
 } // namespace server

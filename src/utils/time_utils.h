@@ -27,8 +27,12 @@
 
 #include <chrono>
 #include <cstdio>
+#include <type_traits>
 
-#include "string_view.h"
+#include "runtime/api_layer1.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace utils {
@@ -125,6 +129,29 @@ inline int64_t hh_mm_today_to_unix_sec(string_view hhmm_of_day)
 
     return get_unix_sec_today_midnight() + sec_of_day;
 }
+
+class chronograph
+{
+public:
+    chronograph() : chronograph(dsn_now_ns()) {}
+    chronograph(uint64_t start_time_ns) : _start_time_ns(start_time_ns) {}
+    ~chronograph() = default;
+
+    inline void reset_start_time() { _start_time_ns = dsn_now_ns(); }
+
+    inline uint64_t duration_ns()
+    {
+        auto now = dsn_now_ns();
+        CHECK_GE(now, _start_time_ns);
+
+        return now - _start_time_ns;
+    }
+
+private:
+    uint64_t _start_time_ns;
+
+    DISALLOW_COPY_AND_ASSIGN(chronograph);
+};
 
 } // namespace utils
 } // namespace dsn

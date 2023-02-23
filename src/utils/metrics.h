@@ -49,6 +49,7 @@
 #include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
+#include "utils/time_utils.h"
 
 // A metric library (for details pls see https://github.com/apache/incubator-pegasus/issues/922)
 // inspired by Kudu metrics (https://github.com/apache/kudu/blob/master/src/kudu/util/metrics.h).
@@ -81,7 +82,8 @@
 // Instantiating the metric in whatever class represents it with some initial arguments, if any:
 // metric_instance = METRIC_my_gauge_name.instantiate(entity_instance, ...);
 
-// Convenient macros are provided to define entity types and metric prototypes.
+// The following are convenient macros provided to define entity types and metric prototypes.
+
 #define METRIC_DEFINE_entity(name) ::dsn::metric_entity_prototype METRIC_ENTITY_##name(#name)
 #define METRIC_DEFINE_gauge_int64(entity_type, name, unit, desc, ...)                              \
     ::dsn::gauge_prototype<int64_t> METRIC_##name(                                                 \
@@ -89,6 +91,7 @@
 #define METRIC_DEFINE_gauge_double(entity_type, name, unit, desc, ...)                             \
     ::dsn::gauge_prototype<double> METRIC_##name(                                                  \
         {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
+
 // There are 2 kinds of counters:
 // - `counter` is the general type of counter that is implemented by striped_long_adder, which can
 //   achieve high performance while consuming less memory if it's not updated very frequently.
@@ -132,6 +135,42 @@
     extern dsn::percentile_prototype<int64_t> METRIC_##name
 #define METRIC_DECLARE_percentile_double(name)                                                     \
     extern dsn::floating_percentile_prototype<double> METRIC_##name
+
+// Following METRIC_*VAR* macros are introduced so that:
+// * only need to use prototype name to operate each metric variable;
+// * uniformly name each variable in user class;
+// * differentiate operations on metrics significantly from main logic, improving code readability.
+
+// Declare a metric variable in user class.
+//
+// Since a type tends to be a class template where there might be commas, use variadic arguments
+// instead of a single fixed argument to represent a type.
+#define METRIC_VAR_DECLARE(name, ...) __VA_ARGS__ _##name
+#define METRIC_VAR_DECLARE_gauge_int64(name) METRIC_VAR_DECLARE(name, dsn::gauge_ptr<int64_t>)
+#define METRIC_VAR_DECLARE_counter(name)                                                           \
+    METRIC_VAR_DECLARE(name, dsn::counter_ptr<dsn::striped_long_adder, false>)
+#define METRIC_VAR_DECLARE_percentile_int64(name)                                                  \
+    METRIC_VAR_DECLARE(name, dsn::percentile_ptr<int64_t>)
+
+// Initialize a metric variable in user class.
+#define METRIC_VAR_INIT(name, entity) _##name(METRIC_##name.instantiate(entity##_metric_entity()))
+#define METRIC_VAR_INIT_replica(name) METRIC_VAR_INIT(name, replica)
+
+// Perform increment-related operations on metrics including gauge and counter.
+#define METRIC_VAR_INCREMENT_BY(name, x) _##name->increment_by(x)
+#define METRIC_VAR_INCREMENT(name) _##name->increment()
+
+// Perform set() operations on metrics including gauge and percentile.
+//
+// There are 2 kinds of invocations of set() for a metric:
+// * set(val): set a single value for a metric, such as gauge, percentile;
+// * set(n, val): set multiple repeated values (the number of duplicates is n) for a metric,
+// such as percentile.
+#define METRIC_VAR_SET(name, ...) _##name->set(__VA_ARGS__)
+
+// Convenient macro that is used to compute latency automatically, which is dedicated to percentile.
+#define METRIC_VAR_AUTO_LATENCY(name, ...)                                                         \
+    dsn::auto_latency __##name##_auto_latency(_##name, ##__VA_ARGS__)
 
 namespace dsn {
 
@@ -543,7 +582,7 @@ ENUM_REG_WITH_CUSTOM_NAME(metric_type::kVolatileCounter, volatile_counter)
 ENUM_REG_WITH_CUSTOM_NAME(metric_type::kPercentile, percentile)
 ENUM_END(metric_type)
 
-enum class metric_unit
+enum class metric_unit : size_t
 {
     kNanoSeconds,
     kMicroSeconds,
@@ -552,6 +591,31 @@ enum class metric_unit
     kRequests,
     kInvalidUnit,
 };
+
+#define METRIC_ASSERT_UNIT_LATENCY(unit, index)                                                    \
+    static_assert(static_cast<size_t>(metric_unit::unit) == index,                                 \
+                  #unit " should be at index " #index)
+
+METRIC_ASSERT_UNIT_LATENCY(kNanoSeconds, 0);
+METRIC_ASSERT_UNIT_LATENCY(kMicroSeconds, 1);
+METRIC_ASSERT_UNIT_LATENCY(kMilliSeconds, 2);
+METRIC_ASSERT_UNIT_LATENCY(kSeconds, 3);
+
+const std::vector<uint64_t> kMetricLatencyConverterFromNS = {
+    1, 1000, 1000 * 1000, 1000 * 1000 * 1000};
+
+inline uint64_t convert_metric_latency_from_ns(uint64_t latency_ns, metric_unit target_unit)
+{
+    if (dsn_likely(target_unit == metric_unit::kNanoSeconds)) {
+        // Since nanoseconds are used as the latency unit more frequently, eliminate unnecessary
+        // conversion by branch prediction.
+        return latency_ns;
+    }
+
+    auto index = static_cast<size_t>(target_unit);
+    CHECK_LT(index, kMetricLatencyConverterFromNS.size());
+    return latency_ns / kMetricLatencyConverterFromNS[index];
+}
 
 ENUM_BEGIN(metric_unit, metric_unit::kInvalidUnit)
 ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kNanoSeconds, nanoseconds)
@@ -1057,6 +1121,13 @@ public:
         _samples.get()[index & (_sample_size - 1)] = val;
     }
 
+    void set(size_t n, const value_type &val)
+    {
+        for (size_t i = 0; i < n; ++i) {
+            set(val);
+        }
+    }
+
     // If `type` is not configured, it will return false with zero value stored in `val`;
     // otherwise, it will always return true with the value corresponding to `type`.
     bool get(kth_percentile_type type, value_type &val) const
@@ -1168,6 +1239,7 @@ private:
 
     friend class metric_entity;
     friend class ref_ptr<percentile<value_type, NthElementFinder>>;
+    friend class MetricVarTest;
 
     virtual void close() override
     {
@@ -1190,6 +1262,20 @@ private:
         release_ref();
     }
 
+    std::vector<value_type> samples_for_test()
+    {
+        size_type real_sample_size = std::min(static_cast<size_type>(_tail.load()), _sample_size);
+        if (real_sample_size == 0) {
+            return std::vector<value_type>();
+        }
+
+        std::vector<value_type> real_samples(real_sample_size);
+        std::copy(_samples.get(), _samples.get() + real_sample_size, real_samples.begin());
+        return real_samples;
+    }
+
+    void reset_tail_for_test() { _tail.store(0); }
+
     value_type value(size_t index) const
     {
         return _full_nth_elements[index].load(std::memory_order_relaxed);
@@ -1210,7 +1296,7 @@ private:
         }
 
         // Find nth elements.
-        std::vector<T> array(real_sample_size);
+        std::vector<value_type> array(real_sample_size);
         std::copy(_samples.get(), _samples.get() + real_sample_size, array.begin());
         _nth_element_finder(array.begin(), array.begin(), array.end());
 
@@ -1278,5 +1364,48 @@ template <typename T,
           typename = typename std::enable_if<std::is_floating_point<T>::value>::type>
 using floating_percentile_prototype =
     metric_prototype_with<floating_percentile<T, NthElementFinder>>;
+
+// Compute latency automatically at the end of the scope, which is set to percentile which it has
+// bound to.
+class auto_latency
+{
+public:
+    auto_latency(const percentile_ptr<int64_t> &percentile) : _percentile(percentile) {}
+
+    auto_latency(const percentile_ptr<int64_t> &percentile, std::function<void(uint64_t)> callback)
+        : _percentile(percentile), _callback(std::move(callback))
+    {
+    }
+
+    auto_latency(const percentile_ptr<int64_t> &percentile, uint64_t start_time_ns)
+        : _percentile(percentile), _chrono(start_time_ns)
+    {
+    }
+
+    auto_latency(const percentile_ptr<int64_t> &percentile,
+                 uint64_t start_time_ns,
+                 std::function<void(uint64_t)> callback)
+        : _percentile(percentile), _chrono(start_time_ns), _callback(std::move(callback))
+    {
+    }
+
+    ~auto_latency()
+    {
+        auto latency =
+            convert_metric_latency_from_ns(_chrono.duration_ns(), _percentile->prototype()->unit());
+        _percentile->set(static_cast<int64_t>(latency));
+
+        if (_callback) {
+            _callback(latency);
+        }
+    }
+
+private:
+    percentile_ptr<int64_t> _percentile;
+    utils::chronograph _chrono;
+    std::function<void(uint64_t)> _callback;
+
+    DISALLOW_COPY_AND_ASSIGN(auto_latency);
+};
 
 } // namespace dsn
