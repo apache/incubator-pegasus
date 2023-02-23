@@ -27,7 +27,6 @@
 
 #include "base/pegasus_rpc_types.h"
 #include "pegasus_write_service.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica_base.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/task/task_code.h"
@@ -102,7 +101,7 @@ private:
     typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
     non_batch_writes_map _non_batch_write_handlers;
 
-    ::dsn::perf_counter_wrapper _pfc_recent_corrupt_write_count;
+    METRIC_VAR_DECLARE_counter(corrupt_writes);
 };
 
 } // namespace server
