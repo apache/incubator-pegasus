@@ -144,7 +144,7 @@
 // Declare a metric variable in user class.
 //
 // Since a type tends to be a class template where there might be commas, use variadic arguments
-// instead of a single fixed argumen to represent a type.
+// instead of a single fixed argument to represent a type.
 #define METRIC_VAR_DECLARE(name, ...) __VA_ARGS__ _##name
 #define METRIC_VAR_DECLARE_gauge_int64(name) METRIC_VAR_DECLARE(name, dsn::gauge_ptr<int64_t>)
 #define METRIC_VAR_DECLARE_counter(name)                                                           \
@@ -606,7 +606,7 @@ const std::vector<uint64_t> kMetricLatencyConverterFromNS = {
 
 inline uint64_t convert_metric_latency_from_ns(uint64_t latency_ns, metric_unit target_unit)
 {
-    if (target_unit == metric_unit::kNanoSeconds) {
+    if (dsn_likely(target_unit == metric_unit::kNanoSeconds)) {
         // Since nanoseconds are used as the latency unit more frequently, eliminate unnecessary
         // conversion by branch prediction.
         return latency_ns;
