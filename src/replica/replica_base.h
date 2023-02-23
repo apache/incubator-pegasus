@@ -51,7 +51,14 @@ struct replica_base
 
     const char *log_prefix() const { return _name.c_str(); }
 
-    const metric_entity_ptr &replica_metric_entity() const { return _replica_metric_entity; }
+    const metric_entity_ptr &replica_metric_entity() const
+    {
+        CHECK_NOTNULL(_replica_metric_entity,
+                      "replica metric entity should has been instantiated: "
+                      "uninitialized entity cannot be used to instantiate "
+                      "metric");
+        return _replica_metric_entity;
+    }
 
 private:
     const gpid _gpid;
