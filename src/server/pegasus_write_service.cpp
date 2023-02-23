@@ -125,23 +125,23 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       _impl(new impl(server)),
       _batch_start_time(0),
       _cu_calculator(server->_cu_calculator.get()),
-      METRIC_INIT_VAR_REPLICA(put_requests),
-      METRIC_INIT_VAR_REPLICA(multi_put_requests),
-      METRIC_INIT_VAR_REPLICA(remove_requests),
-      METRIC_INIT_VAR_REPLICA(multi_remove_requests),
-      METRIC_INIT_VAR_REPLICA(incr_requests),
-      METRIC_INIT_VAR_REPLICA(check_and_set_requests),
-      METRIC_INIT_VAR_REPLICA(check_and_mutate_requests),
-      METRIC_INIT_VAR_REPLICA(put_latency_ns),
-      METRIC_INIT_VAR_REPLICA(multi_put_latency_ns),
-      METRIC_INIT_VAR_REPLICA(remove_latency_ns),
-      METRIC_INIT_VAR_REPLICA(multi_remove_latency_ns),
-      METRIC_INIT_VAR_REPLICA(incr_latency_ns),
-      METRIC_INIT_VAR_REPLICA(check_and_set_latency_ns),
-      METRIC_INIT_VAR_REPLICA(check_and_mutate_latency_ns),
-      METRIC_INIT_VAR_REPLICA(dup_requests),
-      METRIC_INIT_VAR_REPLICA(dup_time_lag_ms),
-      METRIC_INIT_VAR_REPLICA(dup_lagging_writes),
+      METRIC_VAR_INIT_replica(put_requests),
+      METRIC_VAR_INIT_replica(multi_put_requests),
+      METRIC_VAR_INIT_replica(remove_requests),
+      METRIC_VAR_INIT_replica(multi_remove_requests),
+      METRIC_VAR_INIT_replica(incr_requests),
+      METRIC_VAR_INIT_replica(check_and_set_requests),
+      METRIC_VAR_INIT_replica(check_and_mutate_requests),
+      METRIC_VAR_INIT_replica(put_latency_ns),
+      METRIC_VAR_INIT_replica(multi_put_latency_ns),
+      METRIC_VAR_INIT_replica(remove_latency_ns),
+      METRIC_VAR_INIT_replica(multi_remove_latency_ns),
+      METRIC_VAR_INIT_replica(incr_latency_ns),
+      METRIC_VAR_INIT_replica(check_and_set_latency_ns),
+      METRIC_VAR_INIT_replica(check_and_mutate_latency_ns),
+      METRIC_VAR_INIT_replica(dup_requests),
+      METRIC_VAR_INIT_replica(dup_time_lag_ms),
+      METRIC_VAR_INIT_replica(dup_lagging_writes),
       _put_batch_size(0),
       _remove_batch_size(0)
 {
@@ -161,8 +161,8 @@ int pegasus_write_service::multi_put(const db_write_context &ctx,
                                      const dsn::apps::multi_put_request &update,
                                      dsn::apps::update_response &resp)
 {
-    METRIC_AUTO_LATENCY(multi_put_latency_ns);
-    METRIC_INCREMENT(multi_put_requests);
+    METRIC_VAR_AUTO_LATENCY(multi_put_latency_ns);
+    METRIC_VAR_INCREMENT(multi_put_requests);
 
     int err = _impl->multi_put(ctx, update, resp);
 
@@ -177,8 +177,8 @@ int pegasus_write_service::multi_remove(int64_t decree,
                                         const dsn::apps::multi_remove_request &update,
                                         dsn::apps::multi_remove_response &resp)
 {
-    METRIC_AUTO_LATENCY(multi_remove_latency_ns);
-    METRIC_INCREMENT(multi_remove_requests);
+    METRIC_VAR_AUTO_LATENCY(multi_remove_latency_ns);
+    METRIC_VAR_INCREMENT(multi_remove_requests);
 
     int err = _impl->multi_remove(decree, update, resp);
 
@@ -193,8 +193,8 @@ int pegasus_write_service::incr(int64_t decree,
                                 const dsn::apps::incr_request &update,
                                 dsn::apps::incr_response &resp)
 {
-    METRIC_AUTO_LATENCY(incr_latency_ns);
-    METRIC_INCREMENT(incr_requests);
+    METRIC_VAR_AUTO_LATENCY(incr_latency_ns);
+    METRIC_VAR_INCREMENT(incr_requests);
 
     int err = _impl->incr(decree, update, resp);
 
@@ -209,8 +209,8 @@ int pegasus_write_service::check_and_set(int64_t decree,
                                          const dsn::apps::check_and_set_request &update,
                                          dsn::apps::check_and_set_response &resp)
 {
-    METRIC_AUTO_LATENCY(check_and_set_latency_ns);
-    METRIC_INCREMENT(check_and_set_requests);
+    METRIC_VAR_AUTO_LATENCY(check_and_set_latency_ns);
+    METRIC_VAR_INCREMENT(check_and_set_requests);
 
     int err = _impl->check_and_set(decree, update, resp);
 
@@ -229,8 +229,8 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
                                             const dsn::apps::check_and_mutate_request &update,
                                             dsn::apps::check_and_mutate_response &resp)
 {
-    METRIC_AUTO_LATENCY(check_and_mutate_latency_ns);
-    METRIC_INCREMENT(check_and_mutate_requests);
+    METRIC_VAR_AUTO_LATENCY(check_and_mutate_latency_ns);
+    METRIC_VAR_INCREMENT(check_and_mutate_requests);
 
     int err = _impl->check_and_mutate(decree, update, resp);
 
@@ -306,8 +306,8 @@ void pegasus_write_service::clear_up_batch_states()
 {
 #define PROCESS_WRITE_BATCH(op)                                                                    \
     do {                                                                                           \
-        METRIC_INCREMENT_BY(op##_requests, static_cast<int64_t>(_##op##_batch_size));              \
-        METRIC_SET(op##_latency_ns, static_cast<size_t>(_##op##_batch_size), latency_ns);          \
+        METRIC_VAR_INCREMENT_BY(op##_requests, static_cast<int64_t>(_##op##_batch_size));          \
+        METRIC_VAR_SET(op##_latency_ns, static_cast<size_t>(_##op##_batch_size), latency_ns);      \
         _##op##_batch_size = 0;                                                                    \
     } while (0)
 
@@ -338,12 +338,13 @@ int pegasus_write_service::duplicate(int64_t decree,
             return empty_put(decree);
         }
 
-        METRIC_INCREMENT(dup_requests);
-        METRIC_AUTO_LATENCY(dup_time_lag_ms, request.timestamp * 1000, [this](uint64_t latency) {
-            if (latency > _dup_lagging_write_threshold_ms) {
-                METRIC_INCREMENT(dup_lagging_writes);
-            }
-        });
+        METRIC_VAR_INCREMENT(dup_requests);
+        METRIC_VAR_AUTO_LATENCY(
+            dup_time_lag_ms, request.timestamp * 1000, [this](uint64_t latency) {
+                if (latency > _dup_lagging_write_threshold_ms) {
+                    METRIC_VAR_INCREMENT(dup_lagging_writes);
+                }
+            });
         dsn::message_ex *write =
             dsn::from_blob_to_received_msg(request.task_code, request.raw_message);
         bool is_delete = request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE ||

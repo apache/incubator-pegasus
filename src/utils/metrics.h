@@ -82,7 +82,8 @@
 // Instantiating the metric in whatever class represents it with some initial arguments, if any:
 // metric_instance = METRIC_my_gauge_name.instantiate(entity_instance, ...);
 
-// Convenient macros are provided to define entity types and metric prototypes.
+// The following are convenient macros provided to define entity types and metric prototypes.
+
 #define METRIC_DEFINE_entity(name) ::dsn::metric_entity_prototype METRIC_ENTITY_##name(#name)
 #define METRIC_DEFINE_gauge_int64(entity_type, name, unit, desc, ...)                              \
     ::dsn::gauge_prototype<int64_t> METRIC_##name(                                                 \
@@ -90,6 +91,7 @@
 #define METRIC_DEFINE_gauge_double(entity_type, name, unit, desc, ...)                             \
     ::dsn::gauge_prototype<double> METRIC_##name(                                                  \
         {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
+
 // There are 2 kinds of counters:
 // - `counter` is the general type of counter that is implemented by striped_long_adder, which can
 //   achieve high performance while consuming less memory if it's not updated very frequently.
@@ -134,25 +136,42 @@
 #define METRIC_DECLARE_percentile_double(name)                                                     \
     extern dsn::floating_percentile_prototype<double> METRIC_##name
 
-#define METRIC_DECLARE_VAR(name, ...) __VA_ARGS__ _##name
-#define METRIC_DECLARE_VAR_counter(name)                                                           \
-    METRIC_DECLARE_VAR(name, dsn::counter_ptr<dsn::striped_long_adder, false>)
-#define METRIC_DECLARE_VAR_percentile_int64(name)                                                  \
-    METRIC_DECLARE_VAR(name, dsn::percentile_ptr<int64_t>)
+// Following METRIC_*VAR* macros are introduced so that:
+// * only need to use prototype name to operate each metric variable;
+// * uniformly name each variable in user class;
+// * differentiate operations on metrics significantly from main logic, improving code readability.
 
-#define METRIC_INIT_VAR(name, entity) _##name(METRIC_##name.instantiate(entity##_metric_entity()))
-#define METRIC_INIT_VAR_REPLICA(name) METRIC_INIT_VAR(name, replica)
+// Declare a metric variable in user class.
+//
+// Since a type tends to be a class template where there might be commas, use variadic arguments
+// instead of a single fixed argumen to represent a type.
+#define METRIC_VAR_DECLARE(name, ...) __VA_ARGS__ _##name
+#define METRIC_VAR_DECLARE_gauge_int64(name) METRIC_VAR_DECLARE(name, dsn::gauge_ptr<int64_t>)
+#define METRIC_VAR_DECLARE_counter(name)                                                           \
+    METRIC_VAR_DECLARE(name, dsn::counter_ptr<dsn::striped_long_adder, false>)
+#define METRIC_VAR_DECLARE_percentile_int64(name)                                                  \
+    METRIC_VAR_DECLARE(name, dsn::percentile_ptr<int64_t>)
 
-#define METRIC_INCREMENT_BY(name, x) _##name->increment_by(x)
-#define METRIC_INCREMENT(name) _##name->increment()
+// Initialize a metric variable in user class.
+#define METRIC_VAR_INIT(name, entity) _##name(METRIC_##name.instantiate(entity##_metric_entity()))
+#define METRIC_VAR_INIT_replica(name) METRIC_VAR_INIT(name, replica)
 
+// Perform increment-related operations on metrics including gauge and counter.
+#define METRIC_VAR_INCREMENT_BY(name, x) _##name->increment_by(x)
+#define METRIC_VAR_INCREMENT(name) _##name->increment()
+
+// Perform set() operations on metrics including gauge and percentile.
+//
 // There are 2 kinds of invocations of set() for a metric:
 // * set(val): set a single value for a metric, such as gauge, percentile;
 // * set(n, val): set multiple repeated values (the number of duplicates is n) for a metric,
 // such as percentile.
-#define METRIC_SET(name, ...) _##name->set(__VA_ARGS__)
+#define METRIC_VAR_SET(name, ...) _##name->set(__VA_ARGS__)
 
-#define METRIC_AUTO_LATENCY(name, ...)                                                             \
+#define METRIC_VAR_VALUE(name) _##name->value()
+
+// Convenient macro that is used to compute latency automatically, which is dedicated to percentile.
+#define METRIC_VAR_AUTO_LATENCY(name, ...)                                                         \
     dsn::auto_latency __##name##_auto_latency(_##name, ##__VA_ARGS__)
 
 namespace dsn {
@@ -590,8 +609,8 @@ const std::vector<uint64_t> kMetricLatencyConverterFromNS = {
 inline uint64_t convert_metric_latency_from_ns(uint64_t latency_ns, metric_unit target_unit)
 {
     if (target_unit == metric_unit::kNanoSeconds) {
-        // Since nanoseconds are used as the latency unit very frequently, use branch prediction
-        // to optimize.
+        // Since nanoseconds are used as the latency unit more frequently, eliminate unnecessary
+        // conversion by branch prediction.
         return latency_ns;
     }
 
@@ -1222,6 +1241,7 @@ private:
 
     friend class metric_entity;
     friend class ref_ptr<percentile<value_type, NthElementFinder>>;
+    friend class MetricVarTest;
 
     virtual void close() override
     {
@@ -1244,6 +1264,20 @@ private:
         release_ref();
     }
 
+    std::vector<value_type> samples_for_test()
+    {
+        size_type real_sample_size = std::min(static_cast<size_type>(_tail.load()), _sample_size);
+        if (real_sample_size == 0) {
+            return std::vector<value_type>();
+        }
+
+        std::vector<value_type> real_samples(real_sample_size);
+        std::copy(_samples.get(), _samples.get() + real_sample_size, real_samples.begin());
+        return real_samples;
+    }
+
+    void reset_tail_for_test() { _tail.store(0); }
+
     value_type value(size_t index) const
     {
         return _full_nth_elements[index].load(std::memory_order_relaxed);
@@ -1264,7 +1298,7 @@ private:
         }
 
         // Find nth elements.
-        std::vector<T> array(real_sample_size);
+        std::vector<value_type> array(real_sample_size);
         std::copy(_samples.get(), _samples.get() + real_sample_size, array.begin());
         _nth_element_finder(array.begin(), array.begin(), array.end());
 
@@ -1333,6 +1367,8 @@ template <typename T,
 using floating_percentile_prototype =
     metric_prototype_with<floating_percentile<T, NthElementFinder>>;
 
+// Compute latency automatically at the end of the scope, which is set to percentile which it has
+// bound to.
 class auto_latency
 {
 public:

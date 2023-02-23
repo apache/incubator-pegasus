@@ -197,25 +197,25 @@ private:
     capacity_unit_calculator *_cu_calculator;
     int64_t _dup_lagging_write_threshold_ms;
 
-    METRIC_DECLARE_VAR_counter(put_requests);
-    METRIC_DECLARE_VAR_counter(multi_put_requests);
-    METRIC_DECLARE_VAR_counter(remove_requests);
-    METRIC_DECLARE_VAR_counter(multi_remove_requests);
-    METRIC_DECLARE_VAR_counter(incr_requests);
-    METRIC_DECLARE_VAR_counter(check_and_set_requests);
-    METRIC_DECLARE_VAR_counter(check_and_mutate_requests);
+    METRIC_VAR_DECLARE_counter(put_requests);
+    METRIC_VAR_DECLARE_counter(multi_put_requests);
+    METRIC_VAR_DECLARE_counter(remove_requests);
+    METRIC_VAR_DECLARE_counter(multi_remove_requests);
+    METRIC_VAR_DECLARE_counter(incr_requests);
+    METRIC_VAR_DECLARE_counter(check_and_set_requests);
+    METRIC_VAR_DECLARE_counter(check_and_mutate_requests);
 
-    METRIC_DECLARE_VAR_percentile_int64(put_latency_ns);
-    METRIC_DECLARE_VAR_percentile_int64(multi_put_latency_ns);
-    METRIC_DECLARE_VAR_percentile_int64(remove_latency_ns);
-    METRIC_DECLARE_VAR_percentile_int64(multi_remove_latency_ns);
-    METRIC_DECLARE_VAR_percentile_int64(incr_latency_ns);
-    METRIC_DECLARE_VAR_percentile_int64(check_and_set_latency_ns);
-    METRIC_DECLARE_VAR_percentile_int64(check_and_mutate_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(put_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(multi_put_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(remove_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(multi_remove_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(incr_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(check_and_set_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(check_and_mutate_latency_ns);
 
-    METRIC_DECLARE_VAR_counter(dup_requests);
-    METRIC_DECLARE_VAR_percentile_int64(dup_time_lag_ms);
-    METRIC_DECLARE_VAR_counter(dup_lagging_writes);
+    METRIC_VAR_DECLARE_counter(dup_requests);
+    METRIC_VAR_DECLARE_percentile_int64(dup_time_lag_ms);
+    METRIC_VAR_DECLARE_counter(dup_lagging_writes);
 
     // Record batch size for put and remove requests.
     uint32_t _put_batch_size;

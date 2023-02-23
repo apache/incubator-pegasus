@@ -70,6 +70,8 @@ METRIC_DEFINE_entity(my_server);
 METRIC_DEFINE_entity(my_table);
 METRIC_DEFINE_entity(my_replica);
 
+#define METRIC_VAR_INIT_my_replica(name) METRIC_VAR_INIT(name, my_replica)
+
 // Dedicated entity for getting metrics by http service.
 METRIC_DEFINE_entity(my_app);
 
@@ -160,6 +162,26 @@ METRIC_DEFINE_percentile_double(my_server,
                                 test_server_percentile_double,
                                 dsn::metric_unit::kNanoSeconds,
                                 "a server-level percentile of double type for test");
+
+METRIC_DEFINE_percentile_int64(my_replica,
+                               test_replica_percentile_int64_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "a replica-level percentile of int64 type in nanoseconds for test");
+
+METRIC_DEFINE_percentile_int64(my_replica,
+                               test_replica_percentile_int64_us,
+                               dsn::metric_unit::kMicroSeconds,
+                               "a replica-level percentile of int64 type in microseconds for test");
+
+METRIC_DEFINE_percentile_int64(my_replica,
+                               test_replica_percentile_int64_ms,
+                               dsn::metric_unit::kMilliSeconds,
+                               "a replica-level percentile of int64 type in milliseconds for test");
+
+METRIC_DEFINE_percentile_int64(my_replica,
+                               test_replica_percentile_int64_s,
+                               dsn::metric_unit::kSeconds,
+                               "a replica-level percentile of int64 type in seconds for test");
 
 namespace dsn {
 
@@ -724,9 +746,7 @@ void run_percentile(const metric_entity_ptr &my_entity,
     auto my_metric = prototype.instantiate(my_entity, interval_ms, kth_percentiles, sample_size);
 
     // Preload zero in current thread.
-    for (size_t i = 0; i < num_preload; ++i) {
-        my_metric->set(0);
-    }
+    my_metric->set(num_preload, 0);
 
     // Load other data in each spawned thread evenly.
     const size_t num_operations = data.size() / num_threads;
@@ -3042,5 +3062,124 @@ const std::vector<surviving_metrics_case> metrics_retirement_tests = {
 INSTANTIATE_TEST_CASE_P(MetricsTest,
                         MetricsRetirementTest,
                         testing::ValuesIn(metrics_retirement_tests));
+
+class MetricVarTest : public testing::Test
+{
+protected:
+    MetricVarTest();
+
+    void SetUp() override
+    {
+        _test_replica_gauge_int64->set(0);
+        _test_replica_counter->reset();
+        _test_replica_percentile_int64_ns->reset_tail_for_test();
+        _test_replica_percentile_int64_us->reset_tail_for_test();
+        _test_replica_percentile_int64_ms->reset_tail_for_test();
+        _test_replica_percentile_int64_s->reset_tail_for_test();
+    }
+
+    const metric_entity_ptr &my_replica_metric_entity() const { return _my_replica_metric_entity; }
+
+    void test_set_percentile(const std::vector<int64_t> &expected_samples);
+    void test_set_percentile(size_t n, int64_t val);
+
+    const metric_entity_ptr _my_replica_metric_entity;
+    METRIC_VAR_DECLARE_gauge_int64(test_replica_gauge_int64);
+    METRIC_VAR_DECLARE_counter(test_replica_counter);
+    METRIC_VAR_DECLARE_percentile_int64(test_replica_percentile_int64_ns);
+    METRIC_VAR_DECLARE_percentile_int64(test_replica_percentile_int64_us);
+    METRIC_VAR_DECLARE_percentile_int64(test_replica_percentile_int64_ms);
+    METRIC_VAR_DECLARE_percentile_int64(test_replica_percentile_int64_s);
+
+    DISALLOW_COPY_AND_ASSIGN(MetricVarTest);
+};
+
+MetricVarTest::MetricVarTest()
+    : _my_replica_metric_entity(METRIC_ENTITY_my_replica.instantiate("replica_var_test")),
+      METRIC_VAR_INIT_my_replica(test_replica_gauge_int64),
+      METRIC_VAR_INIT_my_replica(test_replica_counter),
+      METRIC_VAR_INIT_my_replica(test_replica_percentile_int64_ns),
+      METRIC_VAR_INIT_my_replica(test_replica_percentile_int64_us),
+      METRIC_VAR_INIT_my_replica(test_replica_percentile_int64_ms),
+      METRIC_VAR_INIT_my_replica(test_replica_percentile_int64_s)
+{
+}
+
+#define METRIC_VAR_SAMPLES(name) _##name->samples_for_test()
+
+void MetricVarTest::test_set_percentile(const std::vector<int64_t> &expected_samples)
+{
+    for (const auto &val : expected_samples) {
+        METRIC_VAR_SET(test_replica_percentile_int64_ns, val);
+    }
+    EXPECT_EQ(expected_samples, METRIC_VAR_SAMPLES(test_replica_percentile_int64_ns));
+}
+
+void MetricVarTest::test_set_percentile(size_t n, int64_t val)
+{
+    METRIC_VAR_SET(test_replica_percentile_int64_ns, n, val);
+    EXPECT_EQ(std::vector<int64_t>(n, val), METRIC_VAR_SAMPLES(test_replica_percentile_int64_ns));
+}
+
+#define TEST_METRIC_VAR_INCREMENT(name)                                                            \
+    do {                                                                                           \
+        ASSERT_EQ(0, METRIC_VAR_VALUE(name));                                                      \
+                                                                                                   \
+        METRIC_VAR_INCREMENT(name);                                                                \
+        ASSERT_EQ(1, METRIC_VAR_VALUE(name));                                                      \
+                                                                                                   \
+        METRIC_VAR_INCREMENT(name);                                                                \
+        ASSERT_EQ(2, METRIC_VAR_VALUE(name));                                                      \
+                                                                                                   \
+        METRIC_VAR_INCREMENT_BY(name, 5);                                                          \
+        ASSERT_EQ(7, METRIC_VAR_VALUE(name));                                                      \
+                                                                                                   \
+        METRIC_VAR_INCREMENT_BY(name, 18);                                                         \
+        ASSERT_EQ(25, METRIC_VAR_VALUE(name));                                                     \
+    } while (0);
+
+TEST_F(MetricVarTest, IncrementGauge) { TEST_METRIC_VAR_INCREMENT(test_replica_gauge_int64); }
+
+TEST_F(MetricVarTest, IncrementCounter) { TEST_METRIC_VAR_INCREMENT(test_replica_counter); }
+
+TEST_F(MetricVarTest, SetGauge)
+{
+    ASSERT_EQ(0, METRIC_VAR_VALUE(test_replica_gauge_int64));
+
+    METRIC_VAR_SET(test_replica_gauge_int64, 5);
+    ASSERT_EQ(5, METRIC_VAR_VALUE(test_replica_gauge_int64));
+
+    METRIC_VAR_SET(test_replica_gauge_int64, 18);
+    ASSERT_EQ(18, METRIC_VAR_VALUE(test_replica_gauge_int64));
+}
+
+TEST_F(MetricVarTest, SetPercentileIndividually) { test_set_percentile({20, 50, 10, 25, 16}); }
+
+TEST_F(MetricVarTest, SetPercentileRepeatedly) { test_set_percentile(5, 100); }
+
+#define TEST_METRIC_VAR_AUTO_LATENCY(unit_abbr, factor)                                            \
+    do {                                                                                           \
+        auto start_time_ns = dsn_now_ns();                                                         \
+        uint64_t actual_latency_ns = 0;                                                            \
+        {                                                                                          \
+            METRIC_VAR_AUTO_LATENCY(test_replica_percentile_int64_##unit_abbr,                     \
+                                    start_time_ns,                                                 \
+                                    [&actual_latency_ns](uint64_t latency) mutable {               \
+                                        actual_latency_ns = latency * factor;                      \
+                                    });                                                            \
+        }                                                                                          \
+                                                                                                   \
+        uint64_t expected_latency_ns = dsn_now_ns() - start_time_ns;                               \
+        ASSERT_GE(expected_latency_ns, actual_latency_ns);                                         \
+        EXPECT_LT(expected_latency_ns - actual_latency_ns, 1000 * 1000);                           \
+    } while (0)
+
+TEST_F(MetricVarTest, AutoLatencyNanoSeconds) { TEST_METRIC_VAR_AUTO_LATENCY(ns, 1); }
+
+TEST_F(MetricVarTest, AutoLatencyMicroSeconds) { TEST_METRIC_VAR_AUTO_LATENCY(us, 1000); }
+
+TEST_F(MetricVarTest, AutoLatencyMilliSeconds) { TEST_METRIC_VAR_AUTO_LATENCY(ms, 1000 * 1000); }
+
+TEST_F(MetricVarTest, AutoLatencySeconds) { TEST_METRIC_VAR_AUTO_LATENCY(s, 1000 * 1000 * 1000); }
 
 } // namespace dsn
