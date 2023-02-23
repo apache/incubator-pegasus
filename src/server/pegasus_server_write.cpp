@@ -30,7 +30,6 @@
 #include "pegasus_server_impl.h"
 #include "pegasus_server_write.h"
 #include "pegasus_utils.h"
-#include "perf_counter/perf_counter.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
@@ -41,20 +40,20 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
+METRIC_DEFINE_counter(replica,
+                      corrupt_writes,
+                      dsn::metric_unit::kRequests,
+                      "The number of corrupt writes for each replica");
+
 namespace pegasus {
 namespace server {
 DSN_DECLARE_bool(rocksdb_verbose_log);
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
-    : replica_base(server), _write_svc(new pegasus_write_service(server))
+    : replica_base(server),
+      _write_svc(new pegasus_write_service(server)),
+      METRIC_VAR_INIT_replica(corrupt_writes)
 {
-    char name[256];
-    snprintf(name, 255, "recent_corrupt_write_count@%s", get_gpid().to_string());
-    _pfc_recent_corrupt_write_count.init_app_counter("app.pegasus",
-                                                     name,
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "statistic the recent corrupt write count");
-
     init_non_batch_write_handlers();
 }
 
@@ -80,7 +79,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
             return iter->second(requests[0]);
         }
     } catch (TTransportException &ex) {
-        _pfc_recent_corrupt_write_count->increment();
+        METRIC_VAR_INCREMENT(corrupt_writes);
         LOG_ERROR_PREFIX("pegasus not batch write handler failed, from = {}, exception = {}",
                          requests[0]->header->from_address.to_string(),
                          ex.what());
@@ -124,7 +123,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                     }
                 }
             } catch (TTransportException &ex) {
-                _pfc_recent_corrupt_write_count->increment();
+                METRIC_VAR_INCREMENT(corrupt_writes);
                 LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
                                  requests[i]->header->from_address.to_string(),
                                  ex.what());
