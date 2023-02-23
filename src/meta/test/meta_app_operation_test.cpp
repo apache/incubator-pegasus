@@ -35,7 +35,6 @@ namespace replication {
 DSN_DECLARE_int32(max_allowed_replica_count);
 DSN_DECLARE_int32(min_allowed_replica_count);
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
-DSN_DECLARE_uint64(node_live_percentage_threshold_for_update);
 
 class meta_app_operation_test : public meta_test_base
 {

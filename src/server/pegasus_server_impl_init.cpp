@@ -330,6 +330,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                   false,
                                   "rocksdb options.use_direct_io_for_flush_and_compaction");
     _db_opts.compaction_readahead_size = FLAGS_rocksdb_compaction_readahead_size;
+    _db_opts.writable_file_max_buffer_size = FLAGS_rocksdb_writable_file_max_buffer_size;
 
     _statistics = rocksdb::CreateDBStatistics();
     _statistics->set_stats_level(rocksdb::kExceptDetailedTimers);

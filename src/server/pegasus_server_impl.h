@@ -352,11 +352,11 @@ private:
 
     bool is_multi_get_abnormal(uint64_t time_used, uint64_t size, uint64_t iterate_count)
     {
-        if (FLAGS_rocksdb_abnormal_multi_get_size_threshold &&
+        if (FLAGS_rocksdb_abnormal_multi_get_size_threshold > 0 &&
             size >= FLAGS_rocksdb_abnormal_multi_get_size_threshold) {
             return true;
         }
-        if (FLAGS_rocksdb_abnormal_multi_get_iterate_count_threshold &&
+        if (FLAGS_rocksdb_abnormal_multi_get_iterate_count_threshold > 0 &&
             iterate_count >= FLAGS_rocksdb_abnormal_multi_get_iterate_count_threshold) {
             return true;
         }
@@ -386,7 +386,7 @@ private:
 
     bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
     {
-        if (FLAGS_rocksdb_abnormal_get_size_threshold &&
+        if (FLAGS_rocksdb_abnormal_get_size_threshold > 0 &&
             value_size >= FLAGS_rocksdb_abnormal_get_size_threshold) {
             return true;
         }

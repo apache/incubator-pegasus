@@ -86,7 +86,10 @@ void benchmark::run_benchmark(int thread_count, operation_type op_type)
     std::vector<std::shared_ptr<thread_arg>> args;
     for (int i = 0; i < thread_count; i++) {
         args.push_back(std::make_shared<thread_arg>(
-            i + FLAGS_benchmark_seed == 0 ? 1000 : FLAGS_benchmark_seed, hist_stats, method, this));
+            i + (FLAGS_benchmark_seed == 0 ? 1000 : FLAGS_benchmark_seed),
+            hist_stats,
+            method,
+            this));
         config::instance().env->StartThread(thread_body, args[i].get());
     }
 
