@@ -106,8 +106,8 @@ public:
                 // make sure everything is cleanup after batch write.
                 ASSERT_TRUE(_server_write->_put_rpc_batch.empty());
                 ASSERT_TRUE(_server_write->_remove_rpc_batch.empty());
-                ASSERT_TRUE(_server_write->_write_svc->_batch_qps_perfcounters.empty());
-                ASSERT_TRUE(_server_write->_write_svc->_batch_latency_perfcounters.empty());
+                ASSERT_EQ(_server_write->_write_svc->_put_batch_size, 0);
+                ASSERT_EQ(_server_write->_write_svc->_remove_batch_size, 0);
                 ASSERT_EQ(_server_write->_write_svc->_batch_start_time, 0);
                 ASSERT_EQ(_server_write->_write_svc->_impl->_rocksdb_wrapper->_write_batch->Count(),
                           0);
