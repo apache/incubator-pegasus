@@ -25,12 +25,15 @@ namespace dsn {
 namespace replication {
 
 DSN_DEFINE_int32(meta_server, max_replicas_in_group, 4, "max replicas(alive & dead) in a group");
+DSN_DEFINE_uint64(meta_server,
+                  replica_assign_delay_ms_for_dropouts,
+                  300000,
+                  "The delay milliseconds to dropout replicas assign");
 
 partition_guardian::partition_guardian(meta_service *svc) : _svc(svc)
 {
     if (svc != nullptr) {
-        _replica_assign_delay_ms_for_dropouts =
-            svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
+        _replica_assign_delay_ms_for_dropouts = FLAGS_replica_assign_delay_ms_for_dropouts;
         config_context::MAX_REPLICA_COUNT_IN_GRROUP = FLAGS_max_replicas_in_group;
     } else {
         _replica_assign_delay_ms_for_dropouts = 0;
@@ -483,7 +486,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
             _svc->get_options().app_mutation_2pc_min_replica_count(pc.max_replica_count)) {
         // ATTENTION:
         // when max_replica_count == 2, even if there is only 1 replica alive now, we will still
-        // wait for replica_assign_delay_ms_for_dropouts before recover the second replica.
+        // wait for '_replica_assign_delay_ms_for_dropouts' before recover the second replica.
         is_emergency = true;
         LOG_INFO("gpid({}): is emergency due to too few replicas", gpid);
     } else if (cc.dropped.empty()) {
@@ -669,6 +672,7 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
 
 void partition_guardian::register_ctrl_commands()
 {
+    // TODO(yingchun): update _replica_assign_delay_ms_for_dropouts by http
     _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"meta.lb.assign_delay_ms"},
         "lb.assign_delay_ms [num | DEFAULT]",
@@ -691,8 +695,7 @@ std::string partition_guardian::ctrl_assign_delay_ms(const std::vector<std::stri
         result = std::to_string(_replica_assign_delay_ms_for_dropouts);
     } else {
         if (args[0] == "DEFAULT") {
-            _replica_assign_delay_ms_for_dropouts =
-                _svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
+            _replica_assign_delay_ms_for_dropouts = FLAGS_replica_assign_delay_ms_for_dropouts;
         } else {
             int32_t v = 0;
             if (!dsn::buf2int32(args[0], v) || v <= 0) {

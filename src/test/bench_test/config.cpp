@@ -48,14 +48,6 @@ config::config()
         "\tfillrandom_pegasus       -- pegasus write N values in random key order\n"
         "\treadrandom_pegasus       -- pegasus read N times in random order\n"
         "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n");
-    num = dsn_config_get_value_uint64(
-        "pegasus.benchmark", "num", 10000, "Number of key/values to place in database");
-    seed = dsn_config_get_value_uint64(
-        "pegasus.benchmark",
-        "seed",
-        1000,
-        "Seed base for random number generators. When 0 it is deterministic");
-    seed = seed ? seed : 1000;
     env = rocksdb::Env::Default();
 }
 } // namespace test

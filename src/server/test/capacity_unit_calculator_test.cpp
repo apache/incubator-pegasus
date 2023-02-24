@@ -24,9 +24,13 @@
 #include "utils/token_bucket_throttling_controller.h"
 #include "pegasus_key_schema.h"
 #include "server/hotkey_collector.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace server {
+
+DSN_DECLARE_uint64(perf_counter_read_capacity_unit_size);
+DSN_DECLARE_uint64(perf_counter_write_capacity_unit_size);
 
 class mock_capacity_unit_calculator : public capacity_unit_calculator
 {
@@ -90,8 +94,8 @@ public:
 
     void test_init()
     {
-        ASSERT_EQ(_cal->_read_capacity_unit_size, 4096);
-        ASSERT_EQ(_cal->_write_capacity_unit_size, 4096);
+        ASSERT_EQ(FLAGS_perf_counter_read_capacity_unit_size, 4096);
+        ASSERT_EQ(FLAGS_perf_counter_write_capacity_unit_size, 4096);
 
         ASSERT_EQ(_cal->_log_read_cu_size, 12);
         ASSERT_EQ(_cal->_log_write_cu_size, 12);

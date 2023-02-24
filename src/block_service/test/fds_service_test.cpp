@@ -36,6 +36,9 @@
 using namespace dsn;
 using namespace dsn::dist::block_service;
 
+DSN_DEFINE_uint64(fds_concurrent_test, min_size, 64, "");
+DSN_DEFINE_uint64(fds_concurrent_test, max_size, 64, "");
+
 static std::string example_server_address = "<server-address>";
 // please modify the the paras below to enable fds_service_test, default fds_service_test will be
 // skipped and return true
@@ -675,8 +678,6 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
 
     DSN_DEFINE_int32(fds_concurrent_test, total_files, 64, "");
     int total_files = FLAGS_total_files;
-    unsigned long min_size = dsn_config_get_value_uint64("fds_concurrent_test", "min_size", 64, "");
-    unsigned long max_size = dsn_config_get_value_uint64("fds_concurrent_test", "min_size", 64, "");
 
     std::vector<std::string> filenames;
     filenames.reserve(total_files);
@@ -688,7 +689,7 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
     for (int i = 0; i < total_files; ++i) {
         char index[64];
         snprintf(index, 64, "%04d", i);
-        unsigned long random_size = rand::next_u64(min_size, max_size);
+        unsigned long random_size = rand::next_u64(FLAGS_min_size, FLAGS_max_size);
         std::string filename = "randomfile" + std::string(index);
         filenames.push_back(filename);
         filesize.push_back(random_size);

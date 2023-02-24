@@ -32,9 +32,9 @@
 namespace dsn {
 namespace replication {
 
-DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
-DSN_DECLARE_int32(min_allowed_replica_count);
 DSN_DECLARE_int32(max_allowed_replica_count);
+DSN_DECLARE_int32(min_allowed_replica_count);
+DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
 class meta_app_operation_test : public meta_test_base
 {
@@ -394,7 +394,7 @@ TEST_F(meta_app_operation_test, create_app)
     std::vector<rpc_address> nodes = ensure_enough_alive_nodes(total_node_count);
 
     // the meta function level will become freezed once
-    // alive_nodes * 100 < total_nodes * node_live_percentage_threshold_for_update
+    // alive_nodes * 100 < total_nodes * _node_live_percentage_threshold_for_update
     // even if alive_nodes >= min_live_node_count_for_unfreeze
     set_node_live_percentage_threshold_for_update(0);
 
@@ -726,9 +726,9 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
                   << ", max_allowed_replica_count=" << test.max_allowed_replica_count
                   << ", expected_err=" << test.expected_err << std::endl;
 
-        // disable node_live_percentage_threshold_for_update
+        // disable _node_live_percentage_threshold_for_update
         // for the reason that the meta function level will become freezed once
-        // alive_nodes * 100 < total_nodes * node_live_percentage_threshold_for_update
+        // alive_nodes * 100 < total_nodes * _node_live_percentage_threshold_for_update
         // even if alive_nodes >= min_live_node_count_for_unfreeze
         set_node_live_percentage_threshold_for_update(0);
 

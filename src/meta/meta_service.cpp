@@ -62,6 +62,11 @@ DSN_DEFINE_int32(replication,
                  lb_interval_ms,
                  10000,
                  "every this period(ms) the meta server will do load balance");
+DSN_DEFINE_uint64(meta_server,
+                  node_live_percentage_threshold_for_update,
+                  65,
+                  "If live_node_count * 100 < total_node_count * "
+                  "node_live_percentage_threshold_for_update, then freeze the cluster.");
 
 DSN_DECLARE_int32(fd_beacon_interval_seconds);
 DSN_DECLARE_int32(fd_check_interval_seconds);
@@ -73,8 +78,7 @@ meta_service::meta_service()
 {
     _opts.initialize();
     _meta_opts.initialize();
-    _node_live_percentage_threshold_for_update =
-        _meta_opts.node_live_percentage_threshold_for_update;
+    _node_live_percentage_threshold_for_update = FLAGS_node_live_percentage_threshold_for_update;
     _state.reset(new server_state());
     _function_level.store(_meta_opts.meta_function_level_on_start);
     if (_meta_opts.recover_from_replica_server) {
@@ -233,7 +237,7 @@ void meta_service::register_ctrl_commands()
                 } else {
                     if (args[0] == "DEFAULT") {
                         _node_live_percentage_threshold_for_update =
-                            _meta_opts.node_live_percentage_threshold_for_update;
+                            FLAGS_node_live_percentage_threshold_for_update;
                     } else {
                         int32_t v = 0;
                         if (!dsn::buf2int32(args[0], v) || v < 0) {

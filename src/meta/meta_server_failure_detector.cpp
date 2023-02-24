@@ -42,6 +42,10 @@ DSN_DEFINE_int32(meta_server,
                  5,
                  "meta server will treat a rs unstable so as to reject it is beacons if "
                  "its successively restarting count exceeds this value.");
+DSN_DEFINE_uint64(meta_server,
+                  stable_rs_min_running_seconds,
+                  600,
+                  "The minimal running seconds for a stable replica server");
 
 namespace dsn {
 namespace replication {
@@ -216,8 +220,7 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
         if (beacon.start_time == w.last_start_time_ms) {
             LOG_DEBUG(
                 "{} isn't restarted, last_start_time({})", beacon.from_addr, w.last_start_time_ms);
-            if (dsn_now_ms() - w.last_start_time_ms >=
-                    _fd_opts->stable_rs_min_running_seconds * 1000 &&
+            if (dsn_now_ms() - w.last_start_time_ms >= FLAGS_stable_rs_min_running_seconds * 1000 &&
                 w.unstable_restart_count > 0) {
                 LOG_INFO("{} has stably run for a while, reset it's unstable count({}) to 0",
                          beacon.from_addr,
@@ -230,7 +233,7 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
                      w.last_start_time_ms,
                      beacon.start_time);
             if (beacon.start_time - w.last_start_time_ms <
-                _fd_opts->stable_rs_min_running_seconds * 1000) {
+                FLAGS_stable_rs_min_running_seconds * 1000) {
                 w.unstable_restart_count++;
                 LOG_WARNING("{} encounter an unstable restart, total_count({})",
                             beacon.from_addr,

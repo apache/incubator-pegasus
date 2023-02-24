@@ -31,6 +31,15 @@
 namespace pegasus {
 namespace test {
 
+DSN_DEFINE_uint64(pegasus.benchmark,
+                  benchmark_num,
+                  10000,
+                  "Number of key/values to place in database");
+DSN_DEFINE_uint64(pegasus.benchmark,
+                  benchmark_seed,
+                  1000,
+                  "Seed base for random number generators. When 0 it is deterministic");
+
 DSN_DECLARE_int32(hashkey_size);
 DSN_DECLARE_int32(pegasus_timeout_ms);
 DSN_DECLARE_int32(sortkey_size);
@@ -76,8 +85,11 @@ void benchmark::run_benchmark(int thread_count, operation_type op_type)
     // create thread args for each thread, and run them
     std::vector<std::shared_ptr<thread_arg>> args;
     for (int i = 0; i < thread_count; i++) {
-        args.push_back(
-            std::make_shared<thread_arg>(i + config::instance().seed, hist_stats, method, this));
+        args.push_back(std::make_shared<thread_arg>(
+            i + (FLAGS_benchmark_seed == 0 ? 1000 : FLAGS_benchmark_seed),
+            hist_stats,
+            method,
+            this));
         config::instance().env->StartThread(thread_body, args[i].get());
     }
 
@@ -110,7 +122,7 @@ void benchmark::write_random(thread_arg *thread)
     // do write operation num times
     uint64_t bytes = 0;
     int count = 0;
-    for (int i = 0; i < config::instance().num; i++) {
+    for (int i = 0; i < FLAGS_benchmark_num; i++) {
         // generate hash key and sort key
         std::string hashkey, sortkey, value;
         generate_kv_pair(hashkey, sortkey, value);
@@ -144,7 +156,7 @@ void benchmark::read_random(thread_arg *thread)
 {
     uint64_t bytes = 0;
     uint64_t found = 0;
-    for (int i = 0; i < config::instance().num; i++) {
+    for (int i = 0; i < FLAGS_benchmark_num; i++) {
         // generate hash key and sort key
         // generate value for random to keep in peace with write
         std::string hashkey, sortkey, value;
@@ -174,7 +186,7 @@ void benchmark::read_random(thread_arg *thread)
     }
 
     // count total read bytes and hit rate
-    std::string msg = fmt::format("({} of {} found)", found, config::instance().num);
+    std::string msg = fmt::format("({} of {} found)", found, FLAGS_benchmark_num);
     thread->stats.add_bytes(bytes);
     thread->stats.add_message(msg);
 }
@@ -182,7 +194,7 @@ void benchmark::read_random(thread_arg *thread)
 void benchmark::delete_random(thread_arg *thread)
 {
     // do delete operation num times
-    for (int i = 0; i < config::instance().num; i++) {
+    for (int i = 0; i < FLAGS_benchmark_num; i++) {
         // generate hash key and sort key
         // generate value for random to keep in peace with write
         std::string hashkey, sortkey, value;
@@ -237,10 +249,11 @@ void benchmark::print_header()
     fmt::print(stdout, "Hashkeys:       {} bytes each\n", FLAGS_hashkey_size);
     fmt::print(stdout, "Sortkeys:       {} bytes each\n", FLAGS_sortkey_size);
     fmt::print(stdout, "Values:         {} bytes each\n", FLAGS_value_size);
-    fmt::print(stdout, "Entries:        {}\n", config_.num);
-    fmt::print(stdout,
-               "FileSize:       {} MB (estimated)\n",
-               ((FLAGS_hashkey_size + FLAGS_sortkey_size + FLAGS_value_size) * config_.num) >> 20);
+    fmt::print(stdout, "Entries:        {}\n", FLAGS_benchmark_num);
+    fmt::print(
+        stdout,
+        "FileSize:       {} MB (estimated)\n",
+        ((FLAGS_hashkey_size + FLAGS_sortkey_size + FLAGS_value_size) * FLAGS_benchmark_num) >> 20);
 
     print_warnings();
     fmt::print(stdout, "------------------------------------------------\n");
