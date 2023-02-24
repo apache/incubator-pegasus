@@ -262,7 +262,8 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 void pegasus_server_impl::on_get(get_rpc rpc)
 {
     CHECK(_is_open, "");
-    _pfc_get_qps->increment();
+
+    METRIC_VAR_INCREMENT(get_requests);
     uint64_t start_time = dsn_now_ns();
 
     const auto &key = rpc.request();
@@ -342,7 +343,9 @@ void pegasus_server_impl::on_get(get_rpc rpc)
 void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 {
     CHECK(_is_open, "");
-    _pfc_multi_get_qps->increment();
+
+    METRIC_VAR_INCREMENT(multi_get_requests);
+
     uint64_t start_time = dsn_now_ns();
 
     const auto &request = rpc.request();
@@ -765,7 +768,9 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 {
     CHECK(_is_open, "");
-    _pfc_batch_get_qps->increment();
+
+    METRIC_VAR_INCREMENT(batch_get_requests);
+
     int64_t start_time = dsn_now_ns();
 
     auto &response = rpc.response();
@@ -883,7 +888,8 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 {
     CHECK(_is_open, "");
 
-    _pfc_scan_qps->increment();
+    METRIC_VAR_INCREMENT(scan_requests);
+
     uint64_t start_time = dsn_now_ns();
 
     const auto &hash_key = rpc.request();
@@ -1026,7 +1032,9 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
 void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 {
     CHECK(_is_open, "");
-    _pfc_scan_qps->increment();
+
+    METRIC_VAR_INCREMENT(scan_requests);
+
     uint64_t start_time = dsn_now_ns();
 
     const auto &request = rpc.request();
@@ -1285,7 +1293,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 void pegasus_server_impl::on_scan(scan_rpc rpc)
 {
     CHECK(_is_open, "");
-    _pfc_scan_qps->increment();
+
+    METRIC_VAR_INCREMENT(scan_requests);
+
     uint64_t start_time = dsn_now_ns();
     const auto &request = rpc.request();
     dsn::message_ex *req = rpc.dsn_request();

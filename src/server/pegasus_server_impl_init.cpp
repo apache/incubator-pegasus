@@ -31,6 +31,26 @@
 #include "pegasus_server_write.h"
 #include "hotkey_collector.h"
 
+METRIC_DEFINE_counter(replica,
+                      get_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of GET requests for each replica");
+
+METRIC_DEFINE_counter(replica,
+                      multi_get_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of MULTI_GET requests for each replica");
+
+METRIC_DEFINE_counter(replica,
+                      batch_get_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of BATCH_GET requests for each replica");
+
+METRIC_DEFINE_counter(replica,
+                      scan_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of SCAN requests for each replica");
+
 namespace pegasus {
 namespace server {
 
@@ -195,7 +215,11 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _last_durable_decree(0),
       _is_checkpointing(false),
       _manual_compact_svc(this),
-      _partition_version(0)
+      _partition_version(0),
+      METRIC_VAR_INIT_replica(get_requests),
+      METRIC_VAR_INIT_replica(multi_get_requests),
+      METRIC_VAR_INIT_replica(batch_get_requests),
+      METRIC_VAR_INIT_replica(scan_requests),
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -601,22 +625,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     char name[256];
 
     // register the perf counters
-    snprintf(name, 255, "get_qps@%s", str_gpid.c_str());
-    _pfc_get_qps.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of GET request");
-
-    snprintf(name, 255, "multi_get_qps@%s", str_gpid.c_str());
-    _pfc_multi_get_qps.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of MULTI_GET request");
-
-    snprintf(name, 255, "batch_get_qps@%s", str_gpid.c_str());
-    _pfc_batch_get_qps.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of BATCH_GET request");
-
-    snprintf(name, 255, "scan_qps@%s", str_gpid.c_str());
-    _pfc_scan_qps.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of SCAN request");
-
     snprintf(name, 255, "get_latency@%s", str_gpid.c_str());
     _pfc_get_latency.init_app_counter("app.pegasus",
                                       name,

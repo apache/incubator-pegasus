@@ -486,10 +486,10 @@ private:
     std::shared_ptr<throttling_controller> _read_size_throttling_controller;
 
     // perf counters
-    ::dsn::perf_counter_wrapper _pfc_get_qps;
-    ::dsn::perf_counter_wrapper _pfc_multi_get_qps;
-    ::dsn::perf_counter_wrapper _pfc_batch_get_qps;
-    ::dsn::perf_counter_wrapper _pfc_scan_qps;
+    METRIC_VAR_DECLARE_counter(get_requests);
+    METRIC_VAR_DECLARE_counter(multi_get_requests);
+    METRIC_VAR_DECLARE_counter(batch_get_requests);
+    METRIC_VAR_DECLARE_counter(scan_requests);
 
     ::dsn::perf_counter_wrapper _pfc_get_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_get_latency;
