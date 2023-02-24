@@ -56,7 +56,7 @@ DSN_DEFINE_double(core,
                   1.,
                   "the memory releasing rate of tcmalloc, default "
                   "is 1.0 in gperftools, value range is "
-                  "[0.0~10.0]");
+                  "[0.0, 10.0]");
 #endif
 
 namespace dsn {
