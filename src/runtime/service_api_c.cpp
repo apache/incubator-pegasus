@@ -50,6 +50,15 @@
 #include "utils/time_utils.h"
 #include "utils/process_utils.h"
 
+#ifdef DSN_ENABLE_GPERF
+DSN_DEFINE_double(core,
+                  tcmalloc_release_rate,
+                  1.,
+                  "the memory releasing rate of tcmalloc, default "
+                  "is 1.0 in gperftools, value range is "
+                  "[0.0, 10.0]");
+#endif
+
 namespace dsn {
 namespace security {
 DSN_DECLARE_bool(enable_auth);
@@ -414,13 +423,7 @@ bool run(const char *config_file,
     }
 
 #ifdef DSN_ENABLE_GPERF
-    double_t tcmalloc_release_rate =
-        (double_t)dsn_config_get_value_double("core",
-                                              "tcmalloc_release_rate",
-                                              1., // [0, 10]
-                                              "the memory releasing rate of tcmalloc, default is "
-                                              "1.0 in gperftools, value range is 0.0~10.0");
-    ::MallocExtension::instance()->SetMemoryReleaseRate(tcmalloc_release_rate);
+    ::MallocExtension::instance()->SetMemoryReleaseRate(FLAGS_tcmalloc_release_rate);
 #endif
 
     // init logging

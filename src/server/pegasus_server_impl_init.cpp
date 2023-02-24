@@ -272,6 +272,14 @@ DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_periodic_compaction_seconds,
                   0,
                   "periodic_compaction_seconds, 0 means no periodic compaction");
+DSN_DEFINE_double(pegasus.server,
+                  rocksdb_max_bytes_for_level_multiplier,
+                  10,
+                  "rocksdb options.rocksdb_max_bytes_for_level_multiplier");
+DSN_DEFINE_double(pegasus.server,
+                  rocksdb_bloom_filter_bits_per_key,
+                  10,
+                  "average bits allocated per key in bloom filter");
 
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
@@ -346,11 +354,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _data_cf_opts.target_file_size_base = FLAGS_rocksdb_target_file_size_base;
     _data_cf_opts.target_file_size_multiplier = FLAGS_rocksdb_target_file_size_multiplier;
     _data_cf_opts.max_bytes_for_level_base = FLAGS_rocksdb_max_bytes_for_level_base;
-    _data_cf_opts.max_bytes_for_level_multiplier =
-        dsn_config_get_value_double("pegasus.server",
-                                    "rocksdb_max_bytes_for_level_multiplier",
-                                    10,
-                                    "rocksdb options.rocksdb_max_bytes_for_level_multiplier");
+    _data_cf_opts.max_bytes_for_level_multiplier = FLAGS_rocksdb_max_bytes_for_level_multiplier;
 
     // we need set max_compaction_bytes definitely because set_usage_scenario() depends on it.
     _data_cf_opts.max_compaction_bytes = _data_cf_opts.target_file_size_base * 25;
@@ -529,24 +533,21 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "pegasus.server", "rocksdb_disable_bloom_filter", false, "Whether to disable bloom filter");
     if (!disable_bloom_filter) {
         // average bits allocated per key in bloom filter.
-        // bits_per_key    |           false positive rate
-        //                 | format_version < 5 | format_version = 5
-        //       6                5.70953              5.69888
-        //       8                2.45766              2.29709
-        //      10                1.13977              0.959254
-        //      12                0.662498             0.411593
-        //      16                0.353023             0.0873754
-        //      24                0.261552             0.0060971
-        //      50                0.225453             ~0.00003
+        // FLAGS_rocksdb_bloom_filter_bits_per_key    |           false positive rate
+        // -------------------------------------------+-------------------------------------------
+        //                                            | format_version < 5 | format_version = 5
+        //                                  6         |      5.70953       |      5.69888
+        //                                  8         |      2.45766       |      2.29709
+        //                                 10         |      1.13977       |      0.959254
+        //                                 12         |      0.662498      |      0.411593
+        //                                 16         |      0.353023      |      0.0873754
+        //                                 24         |      0.261552      |      0.0060971
+        //                                 50         |      0.225453      |      ~0.00003
         // Recommend using no more than three decimal digits after the decimal point, as in 6.667.
         // More details: https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter
-        double bits_per_key =
-            dsn_config_get_value_double("pegasus.server",
-                                        "rocksdb_bloom_filter_bits_per_key",
-                                        10,
-                                        "average bits allocated per key in bloom filter");
         tbl_opts.format_version = FLAGS_rocksdb_format_version;
-        tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(bits_per_key, false));
+        tbl_opts.filter_policy.reset(
+            rocksdb::NewBloomFilterPolicy(FLAGS_rocksdb_bloom_filter_bits_per_key, false));
 
         std::string filter_type =
             dsn_config_get_value_string("pegasus.server",
