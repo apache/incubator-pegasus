@@ -23,11 +23,8 @@
 
 namespace dsn {
 namespace replication {
-// TODO(yingchun): update?
 DSN_DEFINE_bool(meta_server, balancer_in_turn, false, "balance the apps one-by-one/concurrently");
-// TODO(yingchun): update?
 DSN_DEFINE_bool(meta_server, only_primary_balancer, false, "only try to make the primary balanced");
-// TODO(yingchun): update?
 DSN_DEFINE_bool(meta_server,
                 only_move_primary,
                 false,

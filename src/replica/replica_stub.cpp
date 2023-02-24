@@ -73,13 +73,12 @@ DSN_DEFINE_bool(replication,
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
                 false,
-                "whether to deny client read and write requests when starting the server, default "
-                "is false");
+                "whether to deny client read and write requests when starting the server");
 DSN_DEFINE_bool(replication,
                 verbose_client_log_on_start,
                 false,
                 "whether to print verbose error log when reply to client read and write requests "
-                "when starting the server, default is false");
+                "when starting the server");
 DSN_DEFINE_bool(replication,
                 mem_release_enabled,
                 true,
@@ -94,7 +93,7 @@ DSN_DEFINE_bool(replication,
                 delay_for_fd_timeout_on_start,
                 false,
                 "whether to delay for beacon grace period to make failure detector timeout when "
-                "starting the server, default is false");
+                "starting the server");
 DSN_DEFINE_bool(replication,
                 config_sync_disabled,
                 false,
@@ -103,8 +102,7 @@ DSN_DEFINE_bool(replication, fd_disabled, false, "whether to disable failure det
 DSN_DEFINE_bool(replication,
                 verbose_commit_log_on_start,
                 false,
-                "whether to print verbose log when commit mutation when starting the server, "
-                "default is false");
+                "whether to print verbose log when commit mutation when starting the server");
 DSN_DEFINE_uint32(replication,
                   max_concurrent_manual_emergency_checkpointing_count,
                   10,
