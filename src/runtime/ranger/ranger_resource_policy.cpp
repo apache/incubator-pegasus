@@ -66,14 +66,5 @@ bool acl_policies::allowed(const access_type &ac_type, const std::string &user_n
     return false;
 }
 
-void ranger_resource_policy::create_default_database_policy(ranger_resource_policy &acl)
-{
-    acl.name = "default database policy";
-    acl.database_names = {"*"};
-    policy_item item;
-    item.access_types = CREATE | DROP | LIST | METADATA | CONTROL;
-    acl.policies.allow_policies.emplace_back(item);
-}
-
 } // namespace ranger
 } // namespace dsn

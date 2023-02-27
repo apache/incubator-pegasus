@@ -75,12 +75,6 @@ public:
     ranger_resource_policy() = default;
     ~ranger_resource_policy() = default;
 
-    // Create the default policy to adapt legacy tables.
-    // In Ranger policy, database prefix is required to identify the database it belongs to, but for
-    // the tables which are created before Ranger policy is introduced to Pegasus, they don't have
-    // such a prefix. So we create a default database policy for them.
-    static void create_default_database_policy(ranger_resource_policy &acl);
-
 public:
     std::string name;
     std::unordered_set<std::string> database_names;
