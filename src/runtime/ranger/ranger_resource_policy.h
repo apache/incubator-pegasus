@@ -31,7 +31,7 @@ namespace dsn {
 namespace ranger {
 
 // ACL type defined in Range service for RPC matching policy
-enum class access_type : int8_t
+enum class access_type : uint8_t
 {
     KRead = 1,
     KWrite = 1 << 1,
