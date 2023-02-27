@@ -54,8 +54,11 @@ DSN_DEFINE_uint32(pegasus.collector,
                   storage_size_fetch_interval_seconds,
                   3600,
                   "storage size fetch interval seconds");
-// app for recording usage statistics, including read/write capacity unit and storage size.
-DSN_DEFINE_string(pegasus.collector, usage_stat_app, "", "app for recording usage statistics");
+DSN_DEFINE_string(pegasus.collector,
+                  usage_stat_app,
+                  "",
+                  "app for recording usage statistics, including read/write capacity unit and "
+                  "storage size");
 DSN_DEFINE_validator(usage_stat_app,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 

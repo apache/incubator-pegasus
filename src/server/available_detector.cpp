@@ -59,8 +59,6 @@ DSN_DEFINE_string(pegasus.collector,
                   available_detect_alert_email_address,
                   "",
                   "available detect alert email address, empty means not send email");
-DSN_DEFINE_validator(available_detect_alert_email_address,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 available_detector::available_detector()
     : _client(nullptr),
@@ -88,7 +86,7 @@ available_detector::available_detector()
     _result_writer = dsn::make_unique<result_writer>(_client);
     _ddl_client.reset(new replication_ddl_client(_meta_list));
     CHECK_NOTNULL(_ddl_client, "Initialize the _ddl_client failed");
-    if (strlen(FLAGS_available_detect_alert_email_address) > 0) {
+    if (!dsn::utils::is_empty(FLAGS_available_detect_alert_email_address)) {
         _send_alert_email_cmd = std::string("cd ") + FLAGS_available_detect_alert_script_dir +
                                 "; bash sendmail.sh alert " +
                                 FLAGS_available_detect_alert_email_address + " " + _cluster_name +

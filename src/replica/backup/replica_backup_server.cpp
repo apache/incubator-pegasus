@@ -49,7 +49,7 @@ void replica_backup_server::on_cold_backup(backup_rpc rpc)
     response.policy_name = request.policy.policy_name;
     response.backup_id = request.backup_id;
 
-    if (strlen(FLAGS_cold_backup_root) == 0) {
+    if (utils::is_empty(FLAGS_cold_backup_root)) {
         LOG_ERROR(
             "backup[{}.{}.{}]: FLAGS_cold_backup_root is empty, response ERR_OPERATION_DISABLED",
             request.pid,

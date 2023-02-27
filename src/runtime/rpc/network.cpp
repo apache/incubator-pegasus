@@ -41,8 +41,8 @@ DSN_DEFINE_uint32(network,
                   "max connection count to each server per ip, 0 means no limit");
 DSN_DEFINE_string(network,
                   unknown_message_header_format,
-                  NET_HDR_INVALID.to_string(), // TODO(yingchun): fixme
-                  "format for unknown message headers, default is NET_HDR_INVALID");
+                  NET_HDR_INVALID.to_string(),
+                  "format for unknown message headers");
 DSN_DEFINE_string(network,
                   explicit_host_address,
                   "",

@@ -45,7 +45,8 @@ DSN_DEFINE_string(pegasus.benchmark, pegasus_cluster_name, "onebox", "The Pegasu
 DSN_DEFINE_validator(pegasus_cluster_name,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 DSN_DEFINE_string(pegasus.benchmark, pegasus_app_name, "temp", "pegasus app name");
-
+DSN_DEFINE_validator(pegasus_app_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 DSN_DEFINE_string(
     pegasus.benchmark,
     benchmarks,
@@ -54,6 +55,8 @@ DSN_DEFINE_string(
     "\tfillrandom_pegasus       -- pegasus write N values in random key order\n"
     "\treadrandom_pegasus       -- pegasus read N times in random order\n"
     "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n");
+DSN_DEFINE_validator(benchmarks,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 DSN_DECLARE_int32(hashkey_size);
 DSN_DECLARE_int32(pegasus_timeout_ms);
