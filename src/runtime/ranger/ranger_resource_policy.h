@@ -31,15 +31,15 @@ namespace dsn {
 namespace ranger {
 
 // ACL type defined in Range service for RPC matching policy
-enum access_type
+enum access_type : int8_t
 {
-    READ = 1,
-    WRITE = 1 << 1,
-    CREATE = 1 << 2,
-    DROP = 1 << 3,
-    LIST = 1 << 4,
-    METADATA = 1 << 5,
-    CONTROL = 1 << 6,
+    KRead = 1,
+    KWrite = 1 << 1,
+    KCreate = 1 << 2,
+    KDrop = 1 << 3,
+    KList = 1 << 4,
+    KMetadata = 1 << 5,
+    KControl = 1 << 6,
 };
 
 // Ranger policy data structure
@@ -71,11 +71,6 @@ struct acl_policies
 // A policy data structure definition of ranger resources
 struct ranger_resource_policy
 {
-public:
-    ranger_resource_policy() = default;
-    ~ranger_resource_policy() = default;
-
-public:
     std::string name;
     std::unordered_set<std::string> database_names;
     std::unordered_set<std::string> table_names;

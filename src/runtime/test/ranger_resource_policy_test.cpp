@@ -24,22 +24,22 @@ namespace ranger {
 
 TEST(ranger_resource_policy_test, policy_item_match)
 {
-    policy_item item = {READ | WRITE | CREATE, {"user1", "user2"}};
+    policy_item item = {KRead | KWrite | KCreate, {"user1", "user2"}};
     struct test_case
     {
         access_type ac_type;
         std::string user_name;
         bool expected_result;
-    } tests[] = {{READ, "", false},
-                 {READ, "user", false},
-                 {READ, "user1", true},
-                 {WRITE, "user1", true},
-                 {CREATE, "user1", true},
-                 {DROP, "user1", false},
-                 {LIST, "user1", false},
-                 {METADATA, "user1", false},
-                 {CONTROL, "user1", false},
-                 {WRITE, "user2", true}};
+    } tests[] = {{KRead, "", false},
+                 {KRead, "user", false},
+                 {KRead, "user1", true},
+                 {KWrite, "user1", true},
+                 {KCreate, "user1", true},
+                 {KDrop, "user1", false},
+                 {KList, "user1", false},
+                 {KMetadata, "user1", false},
+                 {KControl, "user1", false},
+                 {KWrite, "user2", true}};
     for (const auto &test : tests) {
         auto actual_result = item.match(test.ac_type, test.user_name);
         EXPECT_EQ(test.expected_result, actual_result);
@@ -49,23 +49,24 @@ TEST(ranger_resource_policy_test, policy_item_match)
 TEST(ranger_resource_policy_test, acl_policies_allowed)
 {
     acl_policies policy;
-    policy.allow_policies = {{READ | WRITE | CREATE, {"user1", "user2", "user3", "user4"}}};
-    policy.allow_policies_exclude = {{WRITE | CREATE, {"user2"}}};
-    policy.deny_policies = {{READ | WRITE, {"user3", "user4"}}};
-    policy.deny_policies_exclude = {{READ, {"user4"}}};
+    policy.allow_policies = {{KRead | KWrite | KCreate, {"user1", "user2", "user3", "user4"}}};
+    policy.allow_policies_exclude = {{KWrite | KCreate, {"user2"}}};
+    policy.deny_policies = {{KRead | KWrite, {"user3", "user4"}}};
+    policy.deny_policies_exclude = {{KRead, {"user4"}}};
     struct test_case
     {
         access_type ac_type;
         std::string user_name;
         bool expected_result;
-    } tests[] = {{READ, "user", false},      {READ, "user1", true},      {WRITE, "user1", true},
-                 {CREATE, "user1", true},    {DROP, "user1", false},     {LIST, "user1", false},
-                 {METADATA, "user1", false}, {CONTROL, "user1", false},  {READ, "user2", true},
-                 {WRITE, "user2", false},    {CREATE, "user2", false},   {DROP, "user2", false},
-                 {LIST, "user2", false},     {METADATA, "user2", false}, {CONTROL, "user2", false},
-                 {READ, "user3", false},     {CREATE, "user3", true},    {LIST, "user3", false},
-                 {READ, "user4", true},      {WRITE, "user4", false},    {CREATE, "user4", true},
-                 {LIST, "user4", false}};
+    } tests[] = {
+        {KRead, "user", false},      {KRead, "user1", true},      {KWrite, "user1", true},
+        {KCreate, "user1", true},    {KDrop, "user1", false},     {KList, "user1", false},
+        {KMetadata, "user1", false}, {KControl, "user1", false},  {KRead, "user2", true},
+        {KWrite, "user2", false},    {KCreate, "user2", false},   {KDrop, "user2", false},
+        {KList, "user2", false},     {KMetadata, "user2", false}, {KControl, "user2", false},
+        {KRead, "user3", false},     {KCreate, "user3", true},    {KList, "user3", false},
+        {KRead, "user4", true},      {KWrite, "user4", false},    {KCreate, "user4", true},
+        {KList, "user4", false}};
     for (const auto &test : tests) {
         auto actual_result = policy.allowed(test.ac_type, test.user_name);
         EXPECT_EQ(test.expected_result, actual_result);
