@@ -291,9 +291,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
             }
             status = rocksdb::Status::NotFound();
         }
-    }
-
-    if (!status.ok()) {
+    } else {
         if (_verbose_log) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
@@ -656,7 +654,6 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         for (int i = 0; i < keys.size(); i++) {
             rocksdb::Status &status = statuses[i];
             std::string &value = values[i];
-            // print log
             if (!status.ok()) {
                 if (_verbose_log) {
                     LOG_ERROR_PREFIX("rocksdb get failed for multi_get from {}: hash_key = \"{}\", "
@@ -669,42 +666,38 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                     LOG_ERROR_PREFIX("rocksdb get failed for multi_get from {}: error = {}",
                                      rpc.remote_address(),
                                      status.ToString());
-                }
-            }
-            // check ttl
-            if (status.ok()) {
-                uint32_t expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
-                if (expire_ts > 0 && expire_ts <= epoch_now) {
-                    expire_count++;
-                    if (_verbose_log) {
-                        LOG_ERROR_PREFIX("rocksdb data expired for multi_get from {}",
-                                         rpc.remote_address());
-                    }
-                    status = rocksdb::Status::NotFound();
-                }
-            }
-            // extract value
-            if (status.ok()) {
-                // check if exceed limit
-                if (count >= max_kv_count || size >= max_kv_size) {
-                    exceed_limit = true;
+                    error_occurred = true;
+                    final_status = status;
                     break;
                 }
-                ::dsn::apps::key_value kv;
-                kv.key = request.sort_keys[i];
-                if (!request.no_value) {
-                    pegasus_extract_user_data(_pegasus_data_version, std::move(value), kv.value);
-                }
-                count++;
-                size += kv.key.length() + kv.value.length();
-                resp.kvs.emplace_back(std::move(kv));
+
+                continue;
             }
-            // if error occurred
-            if (!status.ok() && !status.IsNotFound()) {
-                error_occurred = true;
-                final_status = status;
+
+            // check ttl
+            if (check_if_record_expired(epoch_now, value)) {
+                expire_count++;
+                if (_verbose_log) {
+                    LOG_ERROR_PREFIX("rocksdb data expired for multi_get from {}",
+                                     rpc.remote_address());
+                }
+                status = rocksdb::Status::NotFound();
+                continue;
+            }
+
+            // check if exceed limit
+            if (count >= max_kv_count || size >= max_kv_size) {
+                exceed_limit = true;
                 break;
             }
+            ::dsn::apps::key_value kv;
+            kv.key = request.sort_keys[i];
+            if (!request.no_value) {
+                pegasus_extract_user_data(_pegasus_data_version, std::move(value), kv.value);
+            }
+            count++;
+            size += kv.key.length() + kv.value.length();
+            resp.kvs.emplace_back(std::move(kv));
         }
 
         if (error_occurred) {
@@ -804,6 +797,8 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     bool error_occurred = false;
     int64_t total_data_size = 0;
     uint32_t epoch_now = pegasus::utils::epoch_now();
+    uint64_t expire_count = 0;
+
     std::vector<std::string> values;
     std::vector<rocksdb::Status> statuses = _db->MultiGet(_data_cf_rd_opts, keys, &values);
     response.data.reserve(request.keys.size());
@@ -819,6 +814,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 
         if (dsn_likely(status.ok())) {
             if (check_if_record_expired(epoch_now, value)) {
+                ++expire_count;
                 if (_verbose_log) {
                     LOG_ERROR_PREFIX(
                         "rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
@@ -873,6 +869,10 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
             request.keys.size(),
             time_used / 1000);
         _pfc_recent_abnormal_count->increment();
+    }
+
+    if (expire_count > 0) {
+        _pfc_recent_expire_count->add(expire_count);
     }
 
     _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);

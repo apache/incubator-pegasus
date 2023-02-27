@@ -71,6 +71,16 @@ METRIC_DEFINE_percentile_int64(replica,
                                dsn::metric_unit::kNanoSeconds,
                                "The latency of SCAN requests for each replica");
 
+METRIC_DEFINE_counter(replica,
+                       expired_read_requests,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The number of SCAN requests for each replica");
+
+    _pfc_recent_expire_count.init_app_counter("app.pegasus",
+                                              name,
+                                              COUNTER_TYPE_VOLATILE_NUMBER,
+                                              "statistic the recent expired value read count");
+
 namespace pegasus {
 namespace server {
 
