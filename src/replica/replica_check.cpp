@@ -47,6 +47,7 @@
 
 namespace dsn {
 namespace replication {
+DSN_DEFINE_bool(replication, group_check_disabled, false, "whether group check is disabled");
 DSN_DEFINE_int32(replication,
                  group_check_interval_ms,
                  10000,
@@ -62,7 +63,7 @@ void replica::init_group_check()
 
     LOG_INFO_PREFIX("init group check");
 
-    if (partition_status::PS_PRIMARY != status() || _options->group_check_disabled)
+    if (partition_status::PS_PRIMARY != status() || FLAGS_group_check_disabled)
         return;
 
     CHECK(nullptr == _primary_states.group_check_task, "");

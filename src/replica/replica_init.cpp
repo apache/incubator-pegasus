@@ -38,7 +38,7 @@
 
 namespace dsn {
 namespace replication {
-
+DSN_DEFINE_bool(replication, checkpoint_disabled, false, "whether checkpoint is disabled");
 DSN_DEFINE_int32(replication,
                  checkpoint_interval_seconds,
                  100,
@@ -354,7 +354,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         }
 
         if (err == ERR_OK) {
-            if (_checkpoint_timer == nullptr && !_options->checkpoint_disabled) {
+            if (_checkpoint_timer == nullptr && !FLAGS_checkpoint_disabled) {
                 _checkpoint_timer =
                     tasking::enqueue_timer(LPC_PER_REPLICA_CHECKPOINT_TIMER,
                                            &_tracker,

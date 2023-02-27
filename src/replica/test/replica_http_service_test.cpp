@@ -27,7 +27,8 @@ using std::string;
 
 namespace dsn {
 namespace replication {
-
+DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_uint32(config_sync_interval_ms);
 
 class replica_http_service_test : public replica_test_base
@@ -36,8 +37,8 @@ public:
     replica_http_service_test()
     {
         // Disable unnecessary works before starting stub.
-        stub->_options.fd_disabled = true;
-        stub->_options.duplication_enabled = false;
+        FLAGS_fd_disabled = true;
+        FLAGS_duplication_enabled = false;
         stub->initialize_start();
 
         http_call_registry::instance().clear_paths();

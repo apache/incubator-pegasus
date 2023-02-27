@@ -591,7 +591,7 @@ void meta_http_service::query_duplication_handler(const http_request &req, http_
         return;
     }
     if (_service->_dup_svc == nullptr) {
-        resp.body = "duplication is not enabled [duplication_enabled=false]";
+        resp.body = "duplication is not enabled [FLAGS_duplication_enabled=false]";
         resp.status_code = http_status_code::not_found;
         return;
     }

@@ -29,9 +29,12 @@
 #include "aio/aio_task.h"
 #include "utils/filesystem.h"
 #include "utils/command_manager.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace tools {
+
+DSN_DEFINE_bool(task..default, is_trace, false, "whether to trace tasks by default");
 
 static void tracer_on_task_create(task *caller, task *callee)
 {
@@ -278,9 +281,6 @@ static std::string tracer_log_flow(const std::vector<std::string> &args)
 
 void tracer::install(service_spec &spec)
 {
-    auto trace = dsn_config_get_value_bool(
-        "task..default", "is_trace", false, "whether to trace tasks by default");
-
     for (int i = 0; i <= dsn::task_code::max(); i++) {
         if (i == TASK_CODE_INVALID)
             continue;
@@ -290,8 +290,10 @@ void tracer::install(service_spec &spec)
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
 
-        if (!dsn_config_get_value_bool(
-                section_name.c_str(), "is_trace", trace, "whether to trace this kind of task"))
+        if (!dsn_config_get_value_bool(section_name.c_str(),
+                                       "is_trace",
+                                       FLAGS_is_trace,
+                                       "whether to trace this kind of task"))
             continue;
 
         if (dsn_config_get_value_bool(section_name.c_str(),

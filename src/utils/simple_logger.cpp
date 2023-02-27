@@ -40,7 +40,6 @@ namespace dsn {
 namespace tools {
 
 DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "whether to flush immediately");
-
 DSN_DEFINE_bool(tools.simple_logger,
                 short_header,
                 true,
@@ -84,15 +83,6 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
 }
 
 screen_logger::screen_logger(bool short_header) { _short_header = short_header; }
-
-screen_logger::screen_logger(const char *log_dir)
-{
-    _short_header =
-        dsn_config_get_value_bool("tools.screen_logger",
-                                  "short_header",
-                                  true,
-                                  "whether to use short header (excluding file/function etc.)");
-}
 
 screen_logger::~screen_logger(void) {}
 

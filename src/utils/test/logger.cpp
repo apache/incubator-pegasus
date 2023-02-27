@@ -94,7 +94,7 @@ TEST(tools_common, simple_logger)
     dsn::logging_provider::instance()->deregister_commands();
 
     {
-        auto logger = dsn::make_unique<screen_logger>("./");
+        auto logger = dsn::make_unique<screen_logger>(true);
         log_print(logger.get(), "%s", "test_print");
         std::thread t([](screen_logger *lg) { log_print(lg, "%s", "test_print"); }, logger.get());
         t.join();

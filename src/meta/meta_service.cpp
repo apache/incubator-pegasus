@@ -49,7 +49,15 @@
 
 namespace dsn {
 namespace replication {
-
+DSN_DEFINE_bool(meta_server,
+                recover_from_replica_server,
+                false,
+                "whether to recover from replica server when no apps in remote storage");
+DSN_DEFINE_bool(meta_server, cold_backup_disabled, true, "whether to disable cold backup");
+DSN_DEFINE_bool(meta_server,
+                enable_white_list,
+                false,
+                "whether to enable white list of replica servers");
 DSN_DEFINE_uint64(meta_server,
                   min_live_node_count_for_unfreeze,
                   3,
@@ -68,6 +76,7 @@ DSN_DEFINE_uint64(meta_server,
                   "If live_node_count * 100 < total_node_count * "
                   "node_live_percentage_threshold_for_update, then freeze the cluster.");
 
+DSN_DECLARE_bool(duplication_enabled);
 DSN_DECLARE_int32(fd_beacon_interval_seconds);
 DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
@@ -81,7 +90,7 @@ meta_service::meta_service()
     _node_live_percentage_threshold_for_update = FLAGS_node_live_percentage_threshold_for_update;
     _state.reset(new server_state());
     _function_level.store(_meta_opts.meta_function_level_on_start);
-    if (_meta_opts.recover_from_replica_server) {
+    if (FLAGS_recover_from_replica_server) {
         LOG_INFO("enter recovery mode for [meta_server].recover_from_replica_server = true");
         _recovering = true;
         if (_meta_opts.meta_function_level_on_start > meta_function_level::fl_steady) {
@@ -290,7 +299,7 @@ void meta_service::start_service()
                            server_state::sStateHash,
                            std::chrono::milliseconds(FLAGS_lb_interval_ms));
 
-    if (!_meta_opts.cold_backup_disabled) {
+    if (!FLAGS_cold_backup_disabled) {
         LOG_INFO("start backup service");
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          nullptr,
@@ -319,7 +328,7 @@ error_code meta_service::start()
 
     // start failure detector, and try to acquire the leader lock
     _failure_detector.reset(new meta_server_failure_detector(this));
-    if (_meta_opts.enable_white_list)
+    if (FLAGS_enable_white_list)
         _failure_detector->set_allow_list(_meta_opts.replica_white_list);
     _failure_detector->register_ctrl_commands();
 
@@ -327,11 +336,11 @@ error_code meta_service::start()
                                    FLAGS_fd_beacon_interval_seconds,
                                    FLAGS_fd_lease_seconds,
                                    FLAGS_fd_grace_seconds,
-                                   _meta_opts.enable_white_list);
+                                   FLAGS_enable_white_list);
 
     dreturn_not_ok_logged(err, "start failure_detector failed, err = {}", err);
     LOG_INFO("meta service failure detector is successfully started {}",
-             _meta_opts.enable_white_list ? "with whitelist enabled" : "");
+             FLAGS_enable_white_list ? "with whitelist enabled" : "");
 
     // should register rpc handlers before acquiring leader lock, so that this meta service
     // can tell others who is the current leader
@@ -360,7 +369,7 @@ error_code meta_service::start()
 
     // initializing the backup_handler should after remote_storage be initialized,
     // because we should use _cluster_root
-    if (!_meta_opts.cold_backup_disabled) {
+    if (!FLAGS_cold_backup_disabled) {
         LOG_INFO("initialize backup handler");
         _backup_handler = std::make_shared<backup_service>(
             this,
@@ -375,7 +384,7 @@ error_code meta_service::start()
     // initialize the server_state
     _state->initialize(this, meta_options::concat_path_unix_style(_cluster_root, "apps"));
     while ((err = _state->initialize_data_structure()) != ERR_OK) {
-        if (err == ERR_OBJECT_NOT_FOUND && _meta_opts.recover_from_replica_server) {
+        if (err == ERR_OBJECT_NOT_FOUND && FLAGS_recover_from_replica_server) {
             LOG_INFO("can't find apps from remote storage, and "
                      "[meta_server].recover_from_replica_server = true, "
                      "administrator should recover this cluster manually later");
@@ -962,7 +971,7 @@ void meta_service::register_duplication_rpc_handlers()
 
 void meta_service::initialize_duplication_service()
 {
-    if (_opts.duplication_enabled) {
+    if (FLAGS_duplication_enabled) {
         _dup_svc = make_unique<meta_duplication_service>(_state.get(), this);
     }
 }

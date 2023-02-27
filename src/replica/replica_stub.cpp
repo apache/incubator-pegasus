@@ -70,7 +70,39 @@ DSN_DEFINE_bool(replication,
                 ignore_broken_disk,
                 true,
                 "true means ignore broken data disk when initialize");
-
+DSN_DEFINE_bool(replication,
+                deny_client_on_start,
+                false,
+                "whether to deny client read and write requests when starting the server");
+DSN_DEFINE_bool(replication,
+                verbose_client_log_on_start,
+                false,
+                "whether to print verbose error log when reply to client read and write requests "
+                "when starting the server");
+DSN_DEFINE_bool(replication,
+                mem_release_enabled,
+                true,
+                "whether to enable periodic memory release");
+DSN_DEFINE_bool(replication,
+                log_shared_force_flush,
+                false,
+                "when write shared log, whether to flush file after write done");
+DSN_DEFINE_bool(replication, gc_disabled, false, "whether to disable garbage collection");
+DSN_DEFINE_bool(replication, disk_stat_disabled, false, "whether to disable disk stat");
+DSN_DEFINE_bool(replication,
+                delay_for_fd_timeout_on_start,
+                false,
+                "whether to delay for beacon grace period to make failure detector timeout when "
+                "starting the server");
+DSN_DEFINE_bool(replication,
+                config_sync_disabled,
+                false,
+                "whether to disable replica configuration periodical sync with the meta server");
+DSN_DEFINE_bool(replication, fd_disabled, false, "whether to disable failure detection");
+DSN_DEFINE_bool(replication,
+                verbose_commit_log_on_start,
+                false,
+                "whether to print verbose log when commit mutation when starting the server");
 DSN_DEFINE_uint32(replication,
                   max_concurrent_manual_emergency_checkpointing_count,
                   10,
@@ -112,6 +144,7 @@ DSN_DEFINE_int32(
     "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
     "memory, replica server will release the exceeding memory back to operating system");
 
+DSN_DECLARE_bool(duplication_enabled);
 DSN_DECLARE_int32(fd_beacon_interval_seconds);
 DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
@@ -517,10 +550,10 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     }
     LOG_INFO("meta_servers = {}", oss.str());
 
-    _deny_client = _options.deny_client_on_start;
-    _verbose_client_log = _options.verbose_client_log_on_start;
-    _verbose_commit_log = _options.verbose_commit_log_on_start;
-    _release_tcmalloc_memory = _options.mem_release_enabled;
+    _deny_client = FLAGS_deny_client_on_start;
+    _verbose_client_log = FLAGS_verbose_client_log_on_start;
+    _verbose_commit_log = FLAGS_verbose_commit_log_on_start;
+    _release_tcmalloc_memory = FLAGS_mem_release_enabled;
     _mem_release_max_reserved_mem_percentage = FLAGS_mem_release_max_reserved_mem_percentage;
     _max_concurrent_bulk_load_downloading_count =
         _options.max_concurrent_bulk_load_downloading_count;
@@ -545,7 +578,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     _log = new mutation_log_shared(_options.slog_dir,
                                    FLAGS_log_shared_file_size_mb,
-                                   _options.log_shared_force_flush,
+                                   FLAGS_log_shared_force_flush,
                                    &_counter_shared_log_recent_write_size);
     LOG_INFO("slog_dir = {}", _options.slog_dir);
 
@@ -672,7 +705,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
               _options.slog_dir);
         _log = new mutation_log_shared(_options.slog_dir,
                                        FLAGS_log_shared_file_size_mb,
-                                       _options.log_shared_force_flush,
+                                       FLAGS_log_shared_force_flush,
                                        &_counter_shared_log_recent_write_size);
         CHECK_EQ_MSG(_log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); }),
                      ERR_OK,
@@ -719,7 +752,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     }
 
     // gc
-    if (false == _options.gc_disabled) {
+    if (!FLAGS_gc_disabled) {
         _gc_timer_task = tasking::enqueue_timer(
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
             &_tracker,
@@ -730,7 +763,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     }
 
     // disk stat
-    if (false == _options.disk_stat_disabled) {
+    if (!FLAGS_disk_stat_disabled) {
         _disk_stat_timer_task =
             ::dsn::tasking::enqueue_timer(LPC_DISK_STAT,
                                           &_tracker,
@@ -752,7 +785,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     dist::cmd::register_remote_command_rpc();
 
-    if (_options.delay_for_fd_timeout_on_start) {
+    if (FLAGS_delay_for_fd_timeout_on_start) {
         uint64_t now_time_ms = dsn_now_ms();
         uint64_t delay_time_ms =
             (FLAGS_fd_grace_seconds + 3) * 1000; // for more 3 seconds than grace seconds
@@ -811,7 +844,7 @@ void replica_stub::initialize_start()
     }
 
     // start timer for configuration sync
-    if (!_options.config_sync_disabled) {
+    if (!FLAGS_config_sync_disabled) {
         _config_sync_timer_task =
             tasking::enqueue_timer(LPC_QUERY_CONFIGURATION_ALL,
                                    &_tracker,
@@ -834,7 +867,7 @@ void replica_stub::initialize_start()
                                std::chrono::milliseconds(FLAGS_mem_release_check_interval_ms));
 #endif
 
-    if (_options.duplication_enabled) {
+    if (FLAGS_duplication_enabled) {
         _duplication_sync_timer = dsn::make_unique<duplication_sync_timer>(this);
         _duplication_sync_timer->start();
     }
@@ -843,7 +876,7 @@ void replica_stub::initialize_start()
 
     // init liveness monitor
     CHECK_EQ(NS_Disconnected, _state);
-    if (!_options.fd_disabled) {
+    if (!FLAGS_fd_disabled) {
         _failure_detector = std::make_shared<dsn::dist::slave_failure_detector_with_multimaster>(
             _options.meta_servers,
             [this]() { this->on_meta_server_disconnected(); },
@@ -1675,7 +1708,7 @@ void replica_stub::response_client(gpid id,
 
 void replica_stub::init_gc_for_test()
 {
-    CHECK(_options.gc_disabled, "");
+    CHECK(FLAGS_gc_disabled, "");
 
     _gc_timer_task = tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
                                       &_tracker,
