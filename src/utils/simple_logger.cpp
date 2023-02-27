@@ -84,8 +84,6 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
 
 screen_logger::screen_logger(bool short_header) { _short_header = short_header; }
 
-screen_logger::screen_logger(const char *log_dir) { _short_header = FLAGS_short_header; }
-
 screen_logger::~screen_logger(void) {}
 
 void screen_logger::dsn_logv(const char *file,

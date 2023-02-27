@@ -27,15 +27,12 @@
 #include <fstream>
 #include <sstream>
 #include "utils/filesystem.h"
-#include "utils/flags.h"
 
 #define VALUE_NOT_EXIST "<<not-exist>>"
 
 namespace dsn {
 namespace replication {
 namespace test {
-
-DSN_DECLARE_bool(test_file_learning);
 
 bool simple_kv_service_impl::s_simple_kv_open_fail = false;
 bool simple_kv_service_impl::s_simple_kv_close_fail = false;

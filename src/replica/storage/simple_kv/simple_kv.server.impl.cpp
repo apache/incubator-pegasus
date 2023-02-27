@@ -37,13 +37,10 @@
 #include <fstream>
 #include <sstream>
 #include "utils/filesystem.h"
-#include "utils/flags.h"
 
 namespace dsn {
 namespace replication {
 namespace application {
-
-DSN_DEFINE_bool(test, test_file_learning, true, "");
 
 simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r), _lock(true)
 {

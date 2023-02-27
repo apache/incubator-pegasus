@@ -752,7 +752,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     }
 
     // gc
-    if (false == FLAGS_gc_disabled) {
+    if (!FLAGS_gc_disabled) {
         _gc_timer_task = tasking::enqueue_timer(
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
             &_tracker,
