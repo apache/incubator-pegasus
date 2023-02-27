@@ -31,7 +31,7 @@ namespace dsn {
 namespace ranger {
 
 // ACL type defined in Range service for RPC matching policy
-enum access_type : int8_t
+enum class access_type : int8_t
 {
     KRead = 1,
     KWrite = 1 << 1,
@@ -39,13 +39,17 @@ enum access_type : int8_t
     KDrop = 1 << 3,
     KList = 1 << 4,
     KMetadata = 1 << 5,
-    KControl = 1 << 6,
+    KControl = 1 << 6
 };
+
+extern access_type operator|(access_type lhs, access_type rhs);
+
+extern access_type operator&(access_type lhs, access_type rhs);
 
 // Ranger policy data structure
 struct policy_item
 {
-    int8_t access_types;
+    access_type access_types;
     std::unordered_set<std::string> users;
 
     // Check if the 'acl_type' - 'user_name' pair is matched to the policy.
