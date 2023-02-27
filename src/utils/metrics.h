@@ -172,8 +172,7 @@
 #define METRIC_VAR_AUTO_LATENCY(name, ...)                                                         \
     dsn::auto_latency __##name##_auto_latency(_##name, ##__VA_ARGS__)
 
-#define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) \
-    __##name##_auto_latency.duration_ns()
+#define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
 
 namespace dsn {
 
@@ -1403,10 +1402,7 @@ public:
         }
     }
 
-    inline uint64_t duration_ns() const
-    {
-        return _chrono.duration_ns();
-    }
+    inline uint64_t duration_ns() const { return _chrono.duration_ns(); }
 
 private:
     percentile_ptr<int64_t> _percentile;
