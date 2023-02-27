@@ -51,6 +51,26 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of SCAN requests for each replica");
 
+METRIC_DEFINE_percentile_int64(replica,
+                               get_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of GET requests for each replica");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               multi_get_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of MULTI_GET requests for each replica");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               batch_get_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of BATCH_GET requests for each replica");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               scan_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of SCAN requests for each replica");
+
 namespace pegasus {
 namespace server {
 
@@ -220,6 +240,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(multi_get_requests),
       METRIC_VAR_INIT_replica(batch_get_requests),
       METRIC_VAR_INIT_replica(scan_requests),
+      METRIC_VAR_INIT_replica(get_latency_ns),
+      METRIC_VAR_INIT_replica(multi_get_latency_ns),
+      METRIC_VAR_INIT_replica(batch_get_latency_ns),
+      METRIC_VAR_INIT_replica(scan_latency_ns)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -625,30 +649,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     char name[256];
 
     // register the perf counters
-    snprintf(name, 255, "get_latency@%s", str_gpid.c_str());
-    _pfc_get_latency.init_app_counter("app.pegasus",
-                                      name,
-                                      COUNTER_TYPE_NUMBER_PERCENTILES,
-                                      "statistic the latency of GET request");
-
-    snprintf(name, 255, "multi_get_latency@%s", str_gpid.c_str());
-    _pfc_multi_get_latency.init_app_counter("app.pegasus",
-                                            name,
-                                            COUNTER_TYPE_NUMBER_PERCENTILES,
-                                            "statistic the latency of MULTI_GET request");
-
-    snprintf(name, 255, "batch_get_latency@%s", str_gpid.c_str());
-    _pfc_batch_get_latency.init_app_counter("app.pegasus",
-                                            name,
-                                            COUNTER_TYPE_NUMBER_PERCENTILES,
-                                            "statistic the latency of BATCH_GET request");
-
-    snprintf(name, 255, "scan_latency@%s", str_gpid.c_str());
-    _pfc_scan_latency.init_app_counter("app.pegasus",
-                                       name,
-                                       COUNTER_TYPE_NUMBER_PERCENTILES,
-                                       "statistic the latency of SCAN request");
-
     snprintf(name, 255, "recent.expire.count@%s", str_gpid.c_str());
     _pfc_recent_expire_count.init_app_counter("app.pegasus",
                                               name,

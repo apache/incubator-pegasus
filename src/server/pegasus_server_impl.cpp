@@ -261,22 +261,23 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
 
 void pegasus_server_impl::on_get(get_rpc rpc)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
 
     METRIC_VAR_INCREMENT(get_requests);
-    uint64_t start_time = dsn_now_ns();
-
-    const auto &key = rpc.request();
-    auto &resp = rpc.response();
-    resp.app_id = _gpid.get_app_id();
-    resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
 
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
         _counter_recent_read_throttling_reject_count->increment();
         return;
     }
+
+    METRIC_VAR_AUTO_LATENCY(get_latency_ns);
+
+    const auto &key = rpc.request();
+    auto &resp = rpc.response();
+    resp.app_id = _gpid.get_app_id();
+    resp.partition_index = _gpid.get_partition_index();
+    resp.server = _primary_address;
 
     rocksdb::Slice skey(key.data(), key.length());
     std::string value;
@@ -315,7 +316,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     usleep(10 * 1000);
 #endif
 
-    uint64_t time_used = dsn_now_ns() - start_time;
+    auto time_used = METRIC_VAR_AUTO_LATENCY_DURATION_NS(get_latency_ns);
     if (is_get_abnormal(time_used, value.size())) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
@@ -337,16 +338,21 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     }
 
     _cu_calculator->add_get_cu(rpc.dsn_request(), resp.error, key, resp.value);
-    _pfc_get_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
 
     METRIC_VAR_INCREMENT(multi_get_requests);
 
-    uint64_t start_time = dsn_now_ns();
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
+
+    METRIC_VAR_AUTO_LATENCY(multi_get_latency_ns);
 
     const auto &request = rpc.request();
     dsn::message_ex *req = rpc.dsn_request();
@@ -355,12 +361,6 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
-
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
         LOG_ERROR_PREFIX(
             "invalid argument for multi_get from {}: sort key filter type {} not supported",
@@ -368,7 +368,6 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
-        _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         return;
     }
 
@@ -455,8 +454,6 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             }
             resp.error = rocksdb::Status::kOk;
             _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
-            _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-
             return;
         }
 
@@ -725,7 +722,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     usleep(10 * 1000);
 #endif
 
-    uint64_t time_used = dsn_now_ns() - start_time;
+    auto time_used = METRIC_VAR_AUTO_LATENCY_DURATION_NS(multi_get_latency_ns);
     if (is_multi_get_abnormal(time_used, size, iteration_count)) {
         LOG_WARNING_PREFIX(
             "rocksdb abnormal multi_get from {}: hash_key = {}, "
@@ -762,21 +759,13 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     }
 
     _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
-    _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
 
     METRIC_VAR_INCREMENT(batch_get_requests);
-
-    int64_t start_time = dsn_now_ns();
-
-    auto &response = rpc.response();
-    response.app_id = _gpid.get_app_id();
-    response.partition_index = _gpid.get_partition_index();
-    response.server = _primary_address;
 
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
@@ -784,13 +773,19 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         return;
     }
 
+    METRIC_VAR_AUTO_LATENCY(batch_get_latency_ns);
+
+    auto &response = rpc.response();
+    response.app_id = _gpid.get_app_id();
+    response.partition_index = _gpid.get_partition_index();
+    response.server = _primary_address;
+
     const auto &request = rpc.request();
     if (request.keys.empty()) {
         response.error = rocksdb::Status::kInvalidArgument;
         LOG_ERROR_PREFIX("Invalid argument for batch_get from {}: 'keys' field in request is empty",
                          rpc.remote_address().to_string());
         _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
-        _pfc_batch_get_latency->set(dsn_now_ns() - start_time);
         return;
     }
 
@@ -868,7 +863,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         response.error = rocksdb::Status::kOk;
     }
 
-    int64_t time_used = dsn_now_ns() - start_time;
+    auto time_used = METRIC_VAR_AUTO_LATENCY_DURATION_NS(batch_get_latency_ns);
     if (is_batch_get_abnormal(time_used, total_data_size, request.keys.size())) {
         LOG_WARNING_PREFIX(
             "rocksdb abnormal batch_get from {}: total data size = {}, row count = {}, "
@@ -881,27 +876,27 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     }
 
     _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
-    _pfc_batch_get_latency->set(time_used);
 }
 
 void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
 
     METRIC_VAR_INCREMENT(scan_requests);
 
-    uint64_t start_time = dsn_now_ns();
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
+
+    METRIC_VAR_AUTO_LATENCY(scan_latency_ns);
 
     const auto &hash_key = rpc.request();
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
 
     // scan
     ::dsn::blob start_key, stop_key;
@@ -963,7 +958,6 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     }
 
     _cu_calculator->add_sortkey_count_cu(rpc.dsn_request(), resp.error, hash_key);
-    _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_ttl(ttl_rpc rpc)
@@ -1031,11 +1025,17 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
 
 void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
 
     METRIC_VAR_INCREMENT(scan_requests);
 
-    uint64_t start_time = dsn_now_ns();
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
+
+    METRIC_VAR_AUTO_LATENCY(scan_latency_ns);
 
     const auto &request = rpc.request();
     dsn::message_ex *req = rpc.dsn_request();
@@ -1044,12 +1044,6 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
-
     if (!is_filter_type_supported(request.hash_key_filter_type)) {
         LOG_ERROR_PREFIX(
             "invalid argument for get_scanner from {}: hash key filter type {} not supported",
@@ -1057,10 +1051,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-        _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
         return;
     }
+
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
         LOG_ERROR_PREFIX(
             "invalid argument for get_scanner from {}: sort key filter type {} not supported",
@@ -1068,8 +1061,6 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-        _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
         return;
     }
 
@@ -1125,8 +1116,6 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         }
         resp.error = rocksdb::Status::kOk;
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-        _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
         return;
     }
 
@@ -1287,28 +1276,28 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     }
 
     _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-    _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_scan(scan_rpc rpc)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
 
     METRIC_VAR_INCREMENT(scan_requests);
-
-    uint64_t start_time = dsn_now_ns();
-    const auto &request = rpc.request();
-    dsn::message_ex *req = rpc.dsn_request();
-    auto &resp = rpc.response();
-    resp.app_id = _gpid.get_app_id();
-    resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
 
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
         _counter_recent_read_throttling_reject_count->increment();
         return;
     }
+
+    METRIC_VAR_AUTO_LATENCY(scan_latency_ns);
+
+    const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
+    auto &resp = rpc.response();
+    resp.app_id = _gpid.get_app_id();
+    resp.partition_index = _gpid.get_partition_index();
+    resp.server = _primary_address;
 
     std::unique_ptr<pegasus_scan_context> context = _context_cache.fetch(request.context_id);
     if (context) {
@@ -1443,7 +1432,6 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     }
 
     _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-    _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache.fetch(args); }

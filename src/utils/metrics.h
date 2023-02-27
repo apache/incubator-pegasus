@@ -172,6 +172,9 @@
 #define METRIC_VAR_AUTO_LATENCY(name, ...)                                                         \
     dsn::auto_latency __##name##_auto_latency(_##name, ##__VA_ARGS__)
 
+#define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) \
+    __##name##_auto_latency.duration_ns()
+
 namespace dsn {
 
 class metric_prototype;
@@ -1398,6 +1401,11 @@ public:
         if (_callback) {
             _callback(latency);
         }
+    }
+
+    inline uint64_t duration_ns() const
+    {
+        return _chrono.duration_ns();
     }
 
 private:

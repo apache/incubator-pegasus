@@ -485,16 +485,15 @@ private:
 
     std::shared_ptr<throttling_controller> _read_size_throttling_controller;
 
-    // perf counters
     METRIC_VAR_DECLARE_counter(get_requests);
     METRIC_VAR_DECLARE_counter(multi_get_requests);
     METRIC_VAR_DECLARE_counter(batch_get_requests);
     METRIC_VAR_DECLARE_counter(scan_requests);
 
-    ::dsn::perf_counter_wrapper _pfc_get_latency;
-    ::dsn::perf_counter_wrapper _pfc_multi_get_latency;
-    ::dsn::perf_counter_wrapper _pfc_batch_get_latency;
-    ::dsn::perf_counter_wrapper _pfc_scan_latency;
+    METRIC_VAR_DECLARE_percentile_int64(get_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(multi_get_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(batch_get_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(scan_latency_ns);
 
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
