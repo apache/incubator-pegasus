@@ -50,13 +50,13 @@ private:
 
     replication::meta_service *_meta_svc;
 
-    // Save the rpc codes that match the global resources.
+    // The rpc codes that match the global resources.
     access_type_of_rpc_code _ac_type_of_global_rpcs;
 
-    // Save the rpc codes that match the database resources.
+    // The rpc codes that match the database resources.
     access_type_of_rpc_code _ac_type_of_database_rpcs;
 
-    // Record the Ranger policy version to determine whether to update.
+    // The Ranger policy version to determine whether to update.
     int _local_policy_version;
 };
 } // namespace ranger
