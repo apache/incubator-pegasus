@@ -72,14 +72,9 @@ METRIC_DEFINE_percentile_int64(replica,
                                "The latency of SCAN requests for each replica");
 
 METRIC_DEFINE_counter(replica,
-                       expired_read_requests,
-                               dsn::metric_unit::kNanoSeconds,
-                               "The number of SCAN requests for each replica");
-
-    _pfc_recent_expire_count.init_app_counter("app.pegasus",
-                                              name,
-                                              COUNTER_TYPE_VOLATILE_NUMBER,
-                                              "statistic the recent expired value read count");
+                      read_expired_values,
+                      dsn::metric_unit::kValues,
+                      "The number of expired values read for each replica");
 
 namespace pegasus {
 namespace server {
@@ -253,7 +248,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(get_latency_ns),
       METRIC_VAR_INIT_replica(multi_get_latency_ns),
       METRIC_VAR_INIT_replica(batch_get_latency_ns),
-      METRIC_VAR_INIT_replica(scan_latency_ns)
+      METRIC_VAR_INIT_replica(scan_latency_ns),
+      METRIC_VAR_INIT_replica(read_expired_values)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -659,12 +655,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     char name[256];
 
     // register the perf counters
-    snprintf(name, 255, "recent.expire.count@%s", str_gpid.c_str());
-    _pfc_recent_expire_count.init_app_counter("app.pegasus",
-                                              name,
-                                              COUNTER_TYPE_VOLATILE_NUMBER,
-                                              "statistic the recent expired value read count");
-
     snprintf(name, 255, "recent.filter.count@%s", str_gpid.c_str());
     _pfc_recent_filter_count.init_app_counter("app.pegasus",
                                               name,

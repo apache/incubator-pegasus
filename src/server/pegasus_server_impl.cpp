@@ -285,7 +285,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
 
     if (status.ok()) {
         if (check_if_record_expired(utils::epoch_now(), value)) {
-            _pfc_recent_expire_count->increment();
+            METRIC_VAR_INCREMENT(read_expired_values);
             if (_verbose_log) {
                 LOG_ERROR_PREFIX("rocksdb data expired for get from {}", rpc.remote_address());
             }
@@ -745,7 +745,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     }
 
     if (expire_count > 0) {
-        _pfc_recent_expire_count->add(expire_count);
+        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
     }
     if (filter_count > 0) {
         _pfc_recent_filter_count->add(filter_count);
@@ -872,7 +872,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     }
 
     if (expire_count > 0) {
-        _pfc_recent_expire_count->add(expire_count);
+        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
     }
 
     _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
@@ -931,7 +931,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
         it->Next();
     }
     if (expire_count > 0) {
-        _pfc_recent_expire_count->add(expire_count);
+        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
     }
 
     resp.error = it->status().code();
@@ -985,7 +985,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
     if (status.ok()) {
         expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
         if (check_if_ts_expired(now_ts, expire_ts)) {
-            _pfc_recent_expire_count->increment();
+            METRIC_VAR_INCREMENT(read_expired_values);
             if (_verbose_log) {
                 LOG_ERROR_PREFIX("rocksdb data expired for ttl from {}", rpc.remote_address());
             }
@@ -1269,7 +1269,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     }
 
     if (expire_count > 0) {
-        _pfc_recent_expire_count->add(expire_count);
+        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
     }
     if (filter_count > 0) {
         _pfc_recent_filter_count->add(filter_count);
@@ -1422,7 +1422,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         }
 
         if (expire_count > 0) {
-            _pfc_recent_expire_count->add(expire_count);
+            METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
         }
         if (filter_count > 0) {
             _pfc_recent_filter_count->add(filter_count);

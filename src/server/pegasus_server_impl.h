@@ -495,7 +495,7 @@ private:
     METRIC_VAR_DECLARE_percentile_int64(batch_get_latency_ns);
     METRIC_VAR_DECLARE_percentile_int64(scan_latency_ns);
 
-    METRIC_VAR_DECLARE_counter(_pfc_recent_expire_count);
+    METRIC_VAR_DECLARE_counter(read_expired_values);
     ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
 
