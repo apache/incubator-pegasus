@@ -26,7 +26,9 @@ enum operation_type
     kUnknown = 0,
     kRead,
     kWrite,
-    kDelete
+    kDelete,
+    kMultiGet,
+    kMultiSet
 };
 } // namespace test
 } // namespace pegasus

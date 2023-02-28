@@ -64,6 +64,8 @@ private:
     void write_random(thread_arg *thread);
     void read_random(thread_arg *thread);
     void delete_random(thread_arg *thread);
+    void multi_set_random(thread_arg *thread);
+    void multi_get_random(thread_arg *thread);
 
     /**  generate hash/sort key and value */
     void generate_kv_pair(std::string &hashkey, std::string &sortkey, std::string &value);
