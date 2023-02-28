@@ -24,6 +24,8 @@
 #include "pegasus_write_service_impl.h"
 #include "base/pegasus_value_schema.h"
 
+METRIC_DECLARE_counter(read_expired_values);
+
 namespace pegasus {
 namespace server {
 
@@ -33,7 +35,7 @@ rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
       _rd_opts(server->_data_cf_rd_opts),
       _meta_cf(server->_meta_cf),
       _pegasus_data_version(server->_pegasus_data_version),
-      METRIC_VAR_INIT_REF(read_expired_values, server),
+      METRIC_VAR_INIT_replica(read_expired_values),
       _default_ttl(0)
 {
     _write_batch = dsn::make_unique<rocksdb::WriteBatch>();

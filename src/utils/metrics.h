@@ -154,7 +154,6 @@
 
 // Initialize a metric variable in user class.
 #define METRIC_VAR_INIT(name, entity) _##name(METRIC_##name.instantiate(entity##_metric_entity()))
-#define METRIC_VAR_INIT_REF(name, obj) _##name(obj->_##name)
 #define METRIC_VAR_INIT_replica(name) METRIC_VAR_INIT(name, replica)
 
 // Perform increment-related operations on metrics including gauge and counter.
