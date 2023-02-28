@@ -20,7 +20,7 @@ set(MY_PROJ_NAME dsn.security)
 thrift_generate_cpp(
     SECURITY_THRIFT_SRCS
     SECURITY_THRIFT_HDRS
-        ../../idl/security.thrift
+        ${PROJECT_ROOT}/idl/security.thrift
 )
 
 set(MY_PROJ_SRC ${SECURITY_THRIFT_SRCS})

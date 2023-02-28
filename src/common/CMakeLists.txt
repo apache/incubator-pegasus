@@ -27,7 +27,7 @@ set(MY_PROJ_NAME dsn_replication_common)
 thrift_generate_cpp(
     METADATA_THRIFT_SRCS
     METADATA_THRIFT_HDRS
-        ../../idl/metadata.thrift
+        ${PROJECT_ROOT}/idl/metadata.thrift
 )
 
 thrift_generate_cpp(
@@ -45,37 +45,37 @@ thrift_generate_cpp(
 thrift_generate_cpp(
     DUPLICATION_THRIFT_SRCS
     DUPLICATION_THRIFT_HDRS
-        ../../idl/duplication.thrift
+        ${PROJECT_ROOT}/idl/duplication.thrift
 )
 
 thrift_generate_cpp(
     BACKUP_THRIFT_SRCS
     BACKUP_THRIFT_HDRS
-        ../../idl/backup.thrift
+        ${PROJECT_ROOT}/idl/backup.thrift
 )
 
 thrift_generate_cpp(
     META_ADMIN_THRIFT_SRCS
     META_ADMIN_THRIFT_HDRS
-        ../../idl/meta_admin.thrift
+        ${PROJECT_ROOT}/idl/meta_admin.thrift
 )
 
 thrift_generate_cpp(
     BULK_LOAD_THRIFT_SRCS
     BULK_LOAD_THRIFT_HDRS
-        ../../idl/bulk_load.thrift
+        ${PROJECT_ROOT}/idl/bulk_load.thrift
 )
 
 thrift_generate_cpp(
     PARTITION_SPLIT_THRIFT_SRCS
     PARTITION_SPLIT_THRIFT_HDRS
-        ../../idl/partition_split.thrift
+        ${PROJECT_ROOT}/idl/partition_split.thrift
 )
 
 thrift_generate_cpp(
     REPLICA_ADMIN_THRIFT_SRCS
     REPLICA_ADMIN_THRIFT_HDRS
-        ../../idl/replica_admin.thrift
+        ${PROJECT_ROOT}/idl/replica_admin.thrift
 )
 
 set(MY_PROJ_SRC
