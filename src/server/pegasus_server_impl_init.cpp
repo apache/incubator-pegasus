@@ -76,6 +76,11 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kValues,
                       "The number of expired values read for each replica");
 
+METRIC_DEFINE_counter(replica,
+                      read_filtered_values,
+                      dsn::metric_unit::kValues,
+                      "The number of filtered values read for each replica");
+
 namespace pegasus {
 namespace server {
 
@@ -249,7 +254,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(multi_get_latency_ns),
       METRIC_VAR_INIT_replica(batch_get_latency_ns),
       METRIC_VAR_INIT_replica(scan_latency_ns),
-      METRIC_VAR_INIT_replica(read_expired_values)
+      METRIC_VAR_INIT_replica(read_expired_values),
+      METRIC_VAR_INIT_replica(read_filtered_values)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -655,12 +661,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     char name[256];
 
     // register the perf counters
-    snprintf(name, 255, "recent.filter.count@%s", str_gpid.c_str());
-    _pfc_recent_filter_count.init_app_counter("app.pegasus",
-                                              name,
-                                              COUNTER_TYPE_VOLATILE_NUMBER,
-                                              "statistic the recent filtered value read count");
-
     snprintf(name, 255, "recent.abnormal.count@%s", str_gpid.c_str());
     _pfc_recent_abnormal_count.init_app_counter("app.pegasus",
                                                 name,

@@ -496,7 +496,7 @@ private:
     METRIC_VAR_DECLARE_percentile_int64(scan_latency_ns);
 
     METRIC_VAR_DECLARE_counter(read_expired_values);
-    ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
+    METRIC_VAR_DECLARE_counter(read_filtered_values);
     ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
 
     // rocksdb internal statistics

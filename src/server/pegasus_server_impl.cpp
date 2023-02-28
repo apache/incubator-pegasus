@@ -748,7 +748,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
     }
     if (filter_count > 0) {
-        _pfc_recent_filter_count->add(filter_count);
+        METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
     }
 
     _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
@@ -1272,7 +1272,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
     }
     if (filter_count > 0) {
-        _pfc_recent_filter_count->add(filter_count);
+        METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
     }
 
     _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
@@ -1425,7 +1425,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
         }
         if (filter_count > 0) {
-            _pfc_recent_filter_count->add(filter_count);
+            METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
         }
     } else {
         resp.error = rocksdb::Status::Code::kNotFound;
