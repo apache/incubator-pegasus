@@ -39,10 +39,7 @@ DSN_DEFINE_uint32(network,
                   conn_threshold_per_ip,
                   0,
                   "max connection count to each server per ip, 0 means no limit");
-DSN_DEFINE_string(network,
-                  unknown_message_header_format,
-                  "",
-                  "format for unknown message headers");
+DSN_DEFINE_string(network, unknown_message_header_format, "", "format for unknown message headers");
 DSN_DEFINE_string(network,
                   explicit_host_address,
                   "",
