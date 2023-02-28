@@ -54,7 +54,9 @@ RUN yum -y install centos-release-scl \
                    yum clean all; \
                    rm -rf /var/cache/yum;
 
-RUN pip3 install --no-cache-dir cmake
+ENV PATH="/opt/rh/devtoolset-7/root/bin/:${PATH}"
+
+RUN pip3 install --upgrade pip --no-cache-dir && pip3 install --no-cache-dir cmake -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 RUN wget --progress=dot:giga https://archive.apache.org/dist/maven/maven-3/3.8.3/binaries/apache-maven-3.8.3-bin.tar.gz -P /opt/maven \
     && cd /opt/maven \
@@ -68,7 +70,6 @@ RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/
     rm -rf thrift-0.11.0 0.11.0.tar.gz
 
 ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
-ENV PATH="/opt/rh/devtoolset-7/root/bin/:${PATH}"
 ENV PATH="/opt/maven/apache-maven-3.8.3/bin:${PATH}"
 
 WORKDIR /root/apache
