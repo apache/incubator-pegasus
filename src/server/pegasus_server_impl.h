@@ -497,7 +497,7 @@ private:
 
     METRIC_VAR_DECLARE_counter(read_expired_values);
     METRIC_VAR_DECLARE_counter(read_filtered_values);
-    ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
+    METRIC_VAR_DECLARE_counter(abnormal_read_requests);
 
     // rocksdb internal statistics
     // server level

@@ -327,7 +327,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
                            status.ToString(),
                            value.size(),
                            time_used);
-        _pfc_recent_abnormal_count->increment();
+        METRIC_VAR_INCREMENT(abnormal_read_requests);
     }
 
     resp.error = status.code();
@@ -741,7 +741,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             expire_count,
             filter_count,
             time_used);
-        _pfc_recent_abnormal_count->increment();
+        METRIC_VAR_INCREMENT(abnormal_read_requests);
     }
 
     if (expire_count > 0) {
@@ -868,7 +868,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
             total_data_size,
             request.keys.size(),
             time_used / 1000);
-        _pfc_recent_abnormal_count->increment();
+        METRIC_VAR_INCREMENT(abnormal_read_requests);
     }
 
     if (expire_count > 0) {
