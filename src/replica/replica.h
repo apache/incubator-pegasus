@@ -125,18 +125,6 @@ class replica : public serverlet<replica>, public ref_counter, public replica_ba
 public:
     ~replica(void);
 
-    //
-    //    routines for replica stub
-    //
-    static replica *load(replica_stub *stub, const char *dir);
-    // {parent_dir} is used in partition split for get_child_dir in replica_stub
-    static replica *newr(replica_stub *stub,
-                         gpid gpid,
-                         const app_info &app,
-                         bool restore_if_necessary,
-                         bool is_duplication_follower,
-                         const std::string &parent_dir = "");
-
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
     void reset_prepare_list_after_replay();
@@ -490,10 +478,6 @@ private:
     // store `info` into a file under `path` directory
     // path = "" means using the default directory (`_dir`/.app_info)
     error_code store_app_info(app_info &info, const std::string &path = "");
-
-    // clear replica if open failed
-    static replica *
-    clear_on_failure(replica_stub *stub, replica *rep, const std::string &path, const gpid &pid);
 
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_name(const std::string &app_name);
