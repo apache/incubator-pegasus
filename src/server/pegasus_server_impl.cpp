@@ -265,6 +265,11 @@ void pegasus_server_impl::on_get(get_rpc rpc)
 
     METRIC_VAR_INCREMENT(get_requests);
 
+    auto &resp = rpc.response();
+    resp.app_id = _gpid.get_app_id();
+    resp.partition_index = _gpid.get_partition_index();
+    resp.server = _primary_address;
+
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
         _counter_recent_read_throttling_reject_count->increment();
@@ -274,11 +279,6 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     METRIC_VAR_AUTO_LATENCY(get_latency_ns);
 
     const auto &key = rpc.request();
-    auto &resp = rpc.response();
-    resp.app_id = _gpid.get_app_id();
-    resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
-
     rocksdb::Slice skey(key.data(), key.length());
     std::string value;
     rocksdb::Status status = _db->Get(_data_cf_rd_opts, _data_cf, skey, &value);
@@ -287,7 +287,13 @@ void pegasus_server_impl::on_get(get_rpc rpc)
         if (check_if_record_expired(utils::epoch_now(), value)) {
             METRIC_VAR_INCREMENT(read_expired_values);
             if (_verbose_log) {
-                LOG_ERROR_PREFIX("rocksdb data expired for get from {}", rpc.remote_address());
+                ::dsn::blob hash_key, sort_key;
+                pegasus_restore_key(key, hash_key, sort_key);
+                LOG_ERROR_PREFIX(
+                    "rocksdb data expired for get from {}: hash_key = \"{}\", sort_key = \"{}\"",
+                    rpc.remote_address(),
+                    ::pegasus::utils::c_escape_string(hash_key),
+                    ::pegasus::utils::c_escape_string(sort_key));
             }
             status = rocksdb::Status::NotFound();
         }
@@ -344,6 +350,11 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 
     METRIC_VAR_INCREMENT(multi_get_requests);
 
+    auto &resp = rpc.response();
+    resp.app_id = _gpid.get_app_id();
+    resp.partition_index = _gpid.get_partition_index();
+    resp.server = _primary_address;
+
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
         _counter_recent_read_throttling_reject_count->increment();
@@ -354,11 +365,6 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 
     const auto &request = rpc.request();
     dsn::message_ex *req = rpc.dsn_request();
-    auto &resp = rpc.response();
-    resp.app_id = _gpid.get_app_id();
-    resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
-
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
         LOG_ERROR_PREFIX(
             "invalid argument for multi_get from {}: sort key filter type {} not supported",
@@ -666,20 +672,27 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                     LOG_ERROR_PREFIX("rocksdb get failed for multi_get from {}: error = {}",
                                      rpc.remote_address(),
                                      status.ToString());
-                    error_occurred = true;
-                    final_status = status;
-                    break;
                 }
 
-                continue;
+                if (status.IsNotFound()) {
+                    continue;
+                }
+
+                error_occurred = true;
+                final_status = status;
+                break;
             }
 
             // check ttl
             if (check_if_record_expired(epoch_now, value)) {
                 expire_count++;
                 if (_verbose_log) {
-                    LOG_ERROR_PREFIX("rocksdb data expired for multi_get from {}",
-                                     rpc.remote_address());
+                    LOG_ERROR_PREFIX(
+                        "rocksdb data expired for multi_get from {}: hash_key = \"{}\", "
+                        "sort_key = \"{}\"",
+                        rpc.remote_address(),
+                        ::pegasus::utils::c_escape_string(request.hash_key),
+                        ::pegasus::utils::c_escape_string(request.sort_keys[i]));
                 }
                 status = rocksdb::Status::NotFound();
                 continue;
@@ -760,6 +773,11 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 
     METRIC_VAR_INCREMENT(batch_get_requests);
 
+    auto &response = rpc.response();
+    response.app_id = _gpid.get_app_id();
+    response.partition_index = _gpid.get_partition_index();
+    response.server = _primary_address;
+
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
         _counter_recent_read_throttling_reject_count->increment();
@@ -767,11 +785,6 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     }
 
     METRIC_VAR_AUTO_LATENCY(batch_get_latency_ns);
-
-    auto &response = rpc.response();
-    response.app_id = _gpid.get_app_id();
-    response.partition_index = _gpid.get_partition_index();
-    response.server = _primary_address;
 
     const auto &request = rpc.request();
     if (request.keys.empty()) {
@@ -816,11 +829,11 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
             if (check_if_record_expired(epoch_now, value)) {
                 ++expire_count;
                 if (_verbose_log) {
-                    LOG_ERROR_PREFIX(
-                        "rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
-                        rpc.remote_address().to_string(),
-                        pegasus::utils::c_escape_string(hash_key),
-                        pegasus::utils::c_escape_string(sort_key));
+                    LOG_ERROR_PREFIX("rocksdb data expired for batch_get from {}: hash_key = "
+                                     "\"{}\", sort_key = \"{}\"",
+                                     rpc.remote_address(),
+                                     pegasus::utils::c_escape_string(hash_key),
+                                     pegasus::utils::c_escape_string(sort_key));
                 }
                 continue;
             }
@@ -884,6 +897,11 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 
     METRIC_VAR_INCREMENT(scan_requests);
 
+    auto &resp = rpc.response();
+    resp.app_id = _gpid.get_app_id();
+    resp.partition_index = _gpid.get_partition_index();
+    resp.server = _primary_address;
+
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
         _counter_recent_read_throttling_reject_count->increment();
@@ -892,14 +910,9 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 
     METRIC_VAR_AUTO_LATENCY(scan_latency_ns);
 
-    const auto &hash_key = rpc.request();
-    auto &resp = rpc.response();
-    resp.app_id = _gpid.get_app_id();
-    resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
-
     // scan
     ::dsn::blob start_key, stop_key;
+    const auto &hash_key = rpc.request();
     pegasus_generate_key(start_key, hash_key, ::dsn::blob());
     pegasus_generate_next_blob(stop_key, hash_key);
     rocksdb::Slice start(start_key.data(), start_key.length());
@@ -1029,6 +1042,11 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
     METRIC_VAR_INCREMENT(scan_requests);
 
+    auto &resp = rpc.response();
+    resp.app_id = _gpid.get_app_id();
+    resp.partition_index = _gpid.get_partition_index();
+    resp.server = _primary_address;
+
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
         _counter_recent_read_throttling_reject_count->increment();
@@ -1039,11 +1057,6 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
     const auto &request = rpc.request();
     dsn::message_ex *req = rpc.dsn_request();
-    auto &resp = rpc.response();
-    resp.app_id = _gpid.get_app_id();
-    resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
-
     if (!is_filter_type_supported(request.hash_key_filter_type)) {
         LOG_ERROR_PREFIX(
             "invalid argument for get_scanner from {}: hash key filter type {} not supported",
@@ -1284,6 +1297,11 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
 
     METRIC_VAR_INCREMENT(scan_requests);
 
+    auto &resp = rpc.response();
+    resp.app_id = _gpid.get_app_id();
+    resp.partition_index = _gpid.get_partition_index();
+    resp.server = _primary_address;
+
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
         _counter_recent_read_throttling_reject_count->increment();
@@ -1294,11 +1312,6 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
 
     const auto &request = rpc.request();
     dsn::message_ex *req = rpc.dsn_request();
-    auto &resp = rpc.response();
-    resp.app_id = _gpid.get_app_id();
-    resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
-
     std::unique_ptr<pegasus_scan_context> context = _context_cache.fetch(request.context_id);
     if (context) {
         rocksdb::Iterator *it = context->iterator.get();
