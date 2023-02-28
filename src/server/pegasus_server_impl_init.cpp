@@ -83,7 +83,7 @@ METRIC_DEFINE_counter(replica,
 
 METRIC_DEFINE_counter(replica,
                       abnormal_read_requests,
-                      dsn::metric_unit::kValues,
+                      dsn::metric_unit::kRequests,
                       "The number of abnormal read requests for each replica");
 
 namespace pegasus {
