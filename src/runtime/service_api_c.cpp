@@ -48,12 +48,17 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/time_utils.h"
+#include "utils/transient_memory.h"
 #include "utils/process_utils.h"
 
 DSN_DEFINE_bool(core,
                 pause_on_start,
                 false,
                 "whether to pause at startup time for easier debugging");
+DSN_DEFINE_uint64(core,
+                  tls_trans_memory_kb,
+                  1024, // 1 MB
+                  "thread local transient memory buffer size (KB), default is 1024");
 
 #ifdef DSN_ENABLE_GPERF
 DSN_DEFINE_double(core,
@@ -423,6 +428,9 @@ bool run(const char *config_file,
         printf("error in config file %s, exit ...\n", config_file);
         return false;
     }
+
+    // Init tool memory.
+    ::dsn::tls_trans_mem_init(FLAGS_tls_trans_memory_kb * 1024);
 
 #ifdef DSN_ENABLE_GPERF
     ::MallocExtension::instance()->SetMemoryReleaseRate(FLAGS_tcmalloc_release_rate);
