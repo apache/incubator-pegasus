@@ -54,31 +54,21 @@
 namespace dsn {
 namespace replication {
 
+// TODO(yingchun): remove it
 class fd_suboptions
 {
 public:
-    std::string distributed_lock_service_type;
     std::vector<std::string> distributed_lock_service_args;
-};
-
-class lb_suboptions
-{
-public:
-    std::string server_load_balancer_type;
 };
 
 class meta_options
 {
 public:
-    std::string cluster_root;
-    std::string meta_state_service_type;
     std::vector<std::string> meta_state_service_args;
 
     meta_function_level::type meta_function_level_on_start;
 
     fd_suboptions _fd_opts;
-    lb_suboptions _lb_opts;
-    std::string partition_guardian_type;
     std::vector<std::string> replica_white_list;
 
 public:

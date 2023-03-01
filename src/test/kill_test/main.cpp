@@ -32,8 +32,8 @@ int main(int argc, const char **argv)
                "worker_type(verifier|process_killer|partition_killer)\n");
         return -1;
     } else if (dsn::utils::equals(argv[2], "verifier")) {
-        verifier_initialize(argv[1]);
-        verifier_start();
+        pegasus::test::verifier_initialize(argv[1]);
+        pegasus::test::verifier_start();
     } else if (dsn::utils::equals(argv[2], "process_killer")) {
         pegasus::test::kill_testor *killtestor = new pegasus::test::process_kill_testor(argv[1]);
         killtestor->Run();

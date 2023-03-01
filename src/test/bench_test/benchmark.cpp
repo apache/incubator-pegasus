@@ -19,6 +19,7 @@
 
 #include "benchmark.h"
 
+#include <cstring>
 #include <sstream>
 
 #include "rand.h"
@@ -27,6 +28,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
+#include "utils/strings.h"
 
 namespace pegasus {
 namespace test {
@@ -39,6 +41,22 @@ DSN_DEFINE_uint64(pegasus.benchmark,
                   benchmark_seed,
                   1000,
                   "Seed base for random number generators. When 0 it is deterministic");
+DSN_DEFINE_string(pegasus.benchmark, pegasus_cluster_name, "onebox", "The Pegasus cluster name");
+DSN_DEFINE_validator(pegasus_cluster_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+DSN_DEFINE_string(pegasus.benchmark, pegasus_app_name, "temp", "pegasus app name");
+DSN_DEFINE_validator(pegasus_app_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+DSN_DEFINE_string(
+    pegasus.benchmark,
+    benchmarks,
+    "fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus",
+    "Comma-separated list of operations to run in the specified order. Available benchmarks:\n"
+    "\tfillrandom_pegasus       -- pegasus write N values in random key order\n"
+    "\treadrandom_pegasus       -- pegasus read N times in random order\n"
+    "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n");
+DSN_DEFINE_validator(benchmarks,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 DSN_DECLARE_int32(hashkey_size);
 DSN_DECLARE_int32(pegasus_timeout_ms);
@@ -48,8 +66,8 @@ DSN_DECLARE_int32(value_size);
 
 benchmark::benchmark()
 {
-    _client = pegasus_client_factory::get_client(config::instance().pegasus_cluster_name.c_str(),
-                                                 config::instance().pegasus_app_name.c_str());
+    _client =
+        pegasus_client_factory::get_client(FLAGS_pegasus_cluster_name, FLAGS_pegasus_app_name);
     CHECK_NOTNULL(_client, "");
 
     // init operation method map
@@ -64,7 +82,7 @@ void benchmark::run()
     // print summarize information
     print_header();
 
-    std::stringstream benchmark_stream(config::instance().benchmarks);
+    std::stringstream benchmark_stream(FLAGS_benchmarks);
     std::string name;
     while (std::getline(benchmark_stream, name, ',')) {
         // run the specified benchmark

@@ -54,6 +54,13 @@ DSN_DEFINE_uint32(pegasus.collector,
                   storage_size_fetch_interval_seconds,
                   3600,
                   "storage size fetch interval seconds");
+DSN_DEFINE_string(pegasus.collector,
+                  usage_stat_app,
+                  "",
+                  "app for recording usage statistics, including read/write capacity unit and "
+                  "storage size");
+DSN_DEFINE_validator(usage_stat_app,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 info_collector::info_collector()
 {
@@ -72,12 +79,9 @@ info_collector::info_collector()
     _shell_context->meta_list = meta_servers;
     _shell_context->ddl_client.reset(new replication_ddl_client(meta_servers));
 
-    _usage_stat_app = dsn_config_get_value_string(
-        "pegasus.collector", "usage_stat_app", "", "app for recording usage statistics");
-    CHECK(!_usage_stat_app.empty(), "");
     // initialize the _client.
     CHECK(pegasus_client_factory::initialize(nullptr), "Initialize the pegasus client failed");
-    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _usage_stat_app.c_str());
+    _client = pegasus_client_factory::get_client(_cluster_name.c_str(), FLAGS_usage_stat_app);
     CHECK_NOTNULL(_client, "Initialize the client failed");
     _result_writer = dsn::make_unique<result_writer>(_client);
 

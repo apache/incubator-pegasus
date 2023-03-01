@@ -38,6 +38,9 @@
 
 #include "test_utils.h"
 #include "utils/strings.h"
+#include "utils/flags.h"
+
+DSN_DEFINE_string(core, tool, "simulator", "");
 
 int g_test_count = 0;
 int g_test_ret = 0;
@@ -64,8 +67,7 @@ GTEST_API_ int main(int argc, char **argv)
         return g_test_ret;
     }
 
-    if (!dsn::utils::equals("simulator",
-                            dsn_config_get_value_string("core", "tool", "simulator", ""))) {
+    if (!dsn::utils::equals("simulator", FLAGS_tool)) {
         // run out-rDSN tests in other threads
         std::cout << "=========================================================== " << std::endl;
         std::cout << "================== run in non-rDSN threads ================ " << std::endl;

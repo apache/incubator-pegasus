@@ -229,8 +229,6 @@ private:
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
     std::map<std::string, app_stat_counters *> _app_stat_counters;
 
-    // app for recording usage statistics, including read/write capacity unit and storage size.
-    std::string _usage_stat_app;
     // client to access server.
     pegasus_client *_client;
     // for writing cu stat result

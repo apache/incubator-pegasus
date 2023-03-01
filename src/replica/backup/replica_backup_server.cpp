@@ -22,6 +22,7 @@
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_string(cold_backup_root);
 
 replica_backup_server::replica_backup_server(const replica_stub *rs) : _stub(rs)
 {
@@ -48,11 +49,12 @@ void replica_backup_server::on_cold_backup(backup_rpc rpc)
     response.policy_name = request.policy.policy_name;
     response.backup_id = request.backup_id;
 
-    if (_stub->options().cold_backup_root.empty()) {
-        LOG_ERROR("backup[{}.{}.{}]: cold_backup_root is empty, response ERR_OPERATION_DISABLED",
-                  request.pid,
-                  request.policy.policy_name,
-                  request.backup_id);
+    if (utils::is_empty(FLAGS_cold_backup_root)) {
+        LOG_ERROR(
+            "backup[{}.{}.{}]: FLAGS_cold_backup_root is empty, response ERR_OPERATION_DISABLED",
+            request.pid,
+            request.policy.policy_name,
+            request.backup_id);
         response.err = ERR_OPERATION_DISABLED;
         return;
     }

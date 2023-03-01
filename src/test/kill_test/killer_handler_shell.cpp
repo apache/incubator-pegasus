@@ -29,26 +29,21 @@
 #include "utils/config_api.h"
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/flags.h"
+#include "utils/strings.h"
 
 namespace pegasus {
 namespace test {
 
-killer_handler_shell::killer_handler_shell()
-{
-    const char *section = "killer.handler.shell";
-    _run_script_path = dsn_config_get_value_string(
-        section, "onebox_run_path", "~/pegasus/run.sh", "onebox run path");
-    CHECK(!_run_script_path.empty(), "");
-}
+DSN_DEFINE_string(killer.handler.shell, onebox_run_path, "~/pegasus/run.sh", "onebox run path");
+DSN_DEFINE_validator(onebox_run_path,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 bool killer_handler_shell::has_meta_dumped_core(int index)
 {
     char find_core[1024];
-    snprintf(find_core,
-             1024,
-             "ls %s/onebox/meta%d | grep core | wc -l",
-             _run_script_path.c_str(),
-             index);
+    snprintf(
+        find_core, 1024, "ls %s/onebox/meta%d | grep core | wc -l", FLAGS_onebox_run_path, index);
 
     std::stringstream output;
     int core_count;
@@ -64,7 +59,7 @@ bool killer_handler_shell::has_replica_dumped_core(int index)
     snprintf(find_core,
              1024,
              "ls %s/onebox/replica%d | grep core | wc -l",
-             _run_script_path.c_str(),
+             FLAGS_onebox_run_path,
              index);
 
     std::stringstream output;
@@ -176,7 +171,7 @@ std::string
 killer_handler_shell::generate_cmd(int index, const std::string &job, const std::string &action)
 {
     std::stringstream res;
-    res << "cd " << _run_script_path << "; "
+    res << "cd " << FLAGS_onebox_run_path << "; "
         << "bash run.sh";
     if (action == "stop")
         res << " stop_onebox_instance ";

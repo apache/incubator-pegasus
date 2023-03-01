@@ -48,11 +48,20 @@ DSN_DEFINE_int64(pressureclient,
                  sortkey_limit,
                  0,
                  "The sortkey range to generate, in format [0, ****key_limit].");
+DSN_DEFINE_string(pressureclient, cluster_name, "onebox", "cluster name");
+DSN_DEFINE_validator(cluster_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
+DSN_DEFINE_string(pressureclient, app_name, "temp", "app name");
+DSN_DEFINE_validator(app_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
+DSN_DEFINE_string(pressureclient, operation_name, "", "operation name");
+DSN_DEFINE_validator(operation_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 // for app
 static pegasus_client *pg_client = nullptr;
-static string cluster_name;
-static string app_name;
 static string op_name; // set/get/scan/del
 // fill string in prefix, until with size(len)
 std::string fill_string(const std::string &str, int len)
@@ -227,26 +236,18 @@ int main(int argc, const char **argv)
     }
     initialize();
     LOG_INFO("Initialize client and load config.ini succeed");
-    cluster_name =
-        dsn_config_get_value_string("pressureclient", "cluster_name", "onebox", "cluster name");
 
-    app_name = dsn_config_get_value_string("pressureclient", "app_name", "temp", "app name");
+    LOG_INFO("pressureclient {} qps = {}", FLAGS_operation_name, FLAGS_qps);
 
-    op_name = dsn_config_get_value_string("pressureclient", "operation_name", "", "operation name");
-
-    CHECK(!op_name.empty(), "must assign operation name");
-
-    LOG_INFO("pressureclient {} qps = {}", op_name, FLAGS_qps);
-
-    pg_client = pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
+    pg_client = pegasus_client_factory::get_client(FLAGS_cluster_name, FLAGS_app_name);
     CHECK_NOTNULL(pg_client, "initialize pg_client failed");
 
-    auto it = _all_funcs.find(op_name);
+    auto it = _all_funcs.find(FLAGS_operation_name);
     if (it != _all_funcs.end()) {
-        LOG_INFO("start pressureclient with {} qps({})", op_name, FLAGS_qps);
+        LOG_INFO("start pressureclient with {} qps({})", FLAGS_operation_name, FLAGS_qps);
         it->second(FLAGS_qps);
     } else {
-        CHECK(false, "Unknown operation name({})", op_name);
+        CHECK(false, "Unknown operation name({})", FLAGS_operation_name);
     }
     return 0;
 }

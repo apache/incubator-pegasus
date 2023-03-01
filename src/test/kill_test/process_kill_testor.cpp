@@ -22,6 +22,7 @@
 #include <thread>
 #include <iostream>
 #include <cstdio>
+#include <cstring>
 #include <unistd.h>
 #include <chrono>
 #include <thread>
@@ -74,6 +75,10 @@ DSN_DEFINE_uint32(pegasus.killtest,
                   30,
                   "sleep time before recover seconds");
 
+DSN_DEFINE_string(pegasus.killtest, killer_handler, "", "killer handler");
+DSN_DEFINE_validator(killer_handler,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
 DSN_DECLARE_uint32(kill_interval_seconds);
 
 process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(config_file)
@@ -81,13 +86,8 @@ process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(
     register_kill_handlers();
 
     kill_round = 0;
-
-    // initialize killer_handler
-    std::string killer_name =
-        dsn_config_get_value_string("pegasus.killtest", "killer_handler", "", "killer handler");
-    CHECK(!killer_name.empty(), "");
-    _killer_handler.reset(killer_handler::new_handler(killer_name.c_str()));
-    CHECK(_killer_handler, "invalid killer_name({})", killer_name);
+    _killer_handler.reset(killer_handler::new_handler(FLAGS_killer_handler));
+    CHECK(_killer_handler, "invalid FLAGS_killer_handler({})", FLAGS_killer_handler);
 
     _job_types = {META, REPLICA, ZOOKEEPER};
     _job_index_to_kill.resize(JOB_LENGTH);

@@ -58,6 +58,7 @@ DSN_DEFINE_int32(zookeeper,
                  timeout_ms,
                  30000,
                  "The timeout of accessing ZooKeeper, in milliseconds");
+DSN_DEFINE_string(zookeeper, hosts_list, "", "Zookeeper hosts list");
 
 zookeeper_session::zoo_atomic_packet::zoo_atomic_packet(unsigned int size)
 {
@@ -164,7 +165,7 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
             zoo_sasl_params_t sasl_params = {0};
             sasl_params.service = dsn::security::FLAGS_zookeeper_kerberos_service_name;
             sasl_params.mechlist = "GSSAPI";
-            _handle = zookeeper_init_sasl(zookeeper_session_mgr::instance().zoo_hosts(),
+            _handle = zookeeper_init_sasl(FLAGS_hosts_list,
                                           global_watcher,
                                           FLAGS_timeout_ms,
                                           nullptr,
@@ -173,12 +174,8 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
                                           NULL,
                                           &sasl_params);
         } else {
-            _handle = zookeeper_init(zookeeper_session_mgr::instance().zoo_hosts(),
-                                     global_watcher,
-                                     FLAGS_timeout_ms,
-                                     nullptr,
-                                     this,
-                                     0);
+            _handle = zookeeper_init(
+                FLAGS_hosts_list, global_watcher, FLAGS_timeout_ms, nullptr, this, 0);
         }
         CHECK_NOTNULL(_handle, "zookeeper session init failed");
     }

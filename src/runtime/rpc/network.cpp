@@ -39,6 +39,17 @@ DSN_DEFINE_uint32(network,
                   conn_threshold_per_ip,
                   0,
                   "max connection count to each server per ip, 0 means no limit");
+DSN_DEFINE_string(network, unknown_message_header_format, "", "format for unknown message headers");
+DSN_DEFINE_string(network,
+                  explicit_host_address,
+                  "",
+                  "explicit host name or ip (v4) assigned to this node (e.g., "
+                  "service ip for pods in kubernets)");
+DSN_DEFINE_string(network,
+                  primary_interface,
+                  "",
+                  "network interface name used to init primary ipv4 address, "
+                  "if empty, means using a site local address");
 
 /*static*/ join_point<void, rpc_session *>
     rpc_session::on_rpc_session_connected("rpc.session.connected");
@@ -511,13 +522,8 @@ network::network(rpc_engine *srv, network *inner_provider)
 {
     _message_buffer_block_size = 1024 * 64;
     _max_buffer_block_count_per_send = 64; // TODO: windows, how about the other platforms?
-    _unknown_msg_header_format = network_header_format::from_string(
-        dsn_config_get_value_string(
-            "network",
-            "unknown_message_header_format",
-            NET_HDR_INVALID.to_string(),
-            "format for unknown message headers, default is NET_HDR_INVALID"),
-        NET_HDR_INVALID);
+    _unknown_msg_header_format =
+        network_header_format::from_string(FLAGS_unknown_message_header_format, NET_HDR_INVALID);
 }
 
 void network::reset_parser_attr(network_header_format client_hdr_format,
@@ -548,28 +554,13 @@ message_parser *network::new_message_parser(network_header_format hdr_format)
 
 uint32_t network::get_local_ipv4()
 {
-    static const char *explicit_host =
-        dsn_config_get_value_string("network",
-                                    "explicit_host_address",
-                                    "",
-                                    "explicit host name or ip (v4) assigned to this "
-                                    "node (e.g., service ip for pods in kubernets)");
-
-    static const char *inteface =
-        dsn_config_get_value_string("network",
-                                    "primary_interface",
-                                    "",
-                                    "network interface name used to init primary ipv4 "
-                                    "address, if empty, means using a site local address");
-
     uint32_t ip = 0;
-
-    if (!utils::is_empty(explicit_host)) {
-        ip = rpc_address::ipv4_from_host(explicit_host);
+    if (!utils::is_empty(FLAGS_explicit_host_address)) {
+        ip = rpc_address::ipv4_from_host(FLAGS_explicit_host_address);
     }
 
     if (0 == ip) {
-        ip = rpc_address::ipv4_from_network_interface(inteface);
+        ip = rpc_address::ipv4_from_network_interface(FLAGS_primary_interface);
     }
 
     if (0 == ip) {

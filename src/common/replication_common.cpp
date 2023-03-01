@@ -88,6 +88,17 @@ DSN_DEFINE_bool(replication,
                 "whether to disable empty write, default is false");
 DSN_TAG_VARIABLE(empty_write_disabled, FT_MUTABLE);
 
+DSN_DEFINE_string(replication, slog_dir, "", "The shared log directory");
+DSN_DEFINE_string(replication, data_dirs, "", "replica directory list");
+DSN_DEFINE_string(replication,
+                  data_dirs_black_list_file,
+                  "/home/work/.pegasus_data_dirs_black_list",
+                  "replica directory black list file");
+DSN_DEFINE_string(replication,
+                  cold_backup_root,
+                  "",
+                  "The prefix of cold backup data path on remote storage");
+
 replication_options::~replication_options() {}
 
 void replication_options::initialize()
@@ -99,7 +110,7 @@ void replication_options::initialize()
     // slog_dir:
     // - if config[slog_dir] is empty: "app_dir/slog"
     // - else: "config[slog_dir]/app_name/slog"
-    slog_dir = dsn_config_get_value_string("replication", "slog_dir", "", "shared log directory");
+    slog_dir = FLAGS_slog_dir;
     if (slog_dir.empty()) {
         slog_dir = app_dir;
     } else {
@@ -108,23 +119,16 @@ void replication_options::initialize()
     slog_dir = utils::filesystem::path_combine(slog_dir, "slog");
 
     // get config_data_dirs and config_data_dir_tags from config
-    const std::string &dirs_str =
-        dsn_config_get_value_string("replication", "data_dirs", "", "replica directory list");
     std::vector<std::string> config_data_dirs;
     std::vector<std::string> config_data_dir_tags;
     std::string error_msg = "";
     bool flag = get_data_dir_and_tag(
-        dirs_str, app_dir, app_name, config_data_dirs, config_data_dir_tags, error_msg);
+        FLAGS_data_dirs, app_dir, app_name, config_data_dirs, config_data_dir_tags, error_msg);
     CHECK(flag, error_msg);
 
     // check if data_dir in black list, data_dirs doesn't contain dir in black list
-    std::string black_list_file =
-        dsn_config_get_value_string("replication",
-                                    "data_dirs_black_list_file",
-                                    "/home/work/.pegasus_data_dirs_black_list",
-                                    "replica directory black list file");
     std::vector<std::string> black_list_dirs;
-    get_data_dirs_in_black_list(black_list_file, black_list_dirs);
+    get_data_dirs_in_black_list(FLAGS_data_dirs_black_list_file, black_list_dirs);
     for (auto i = 0; i < config_data_dirs.size(); ++i) {
         if (check_if_in_black_list(black_list_dirs, config_data_dirs[i])) {
             continue;
@@ -134,9 +138,6 @@ void replication_options::initialize()
     }
 
     CHECK(!data_dirs.empty(), "no replica data dir found, maybe not set or excluded by black list");
-
-    cold_backup_root = dsn_config_get_value_string(
-        "replication", "cold_backup_root", "", "cold backup remote storage path prefix");
 
     max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
 

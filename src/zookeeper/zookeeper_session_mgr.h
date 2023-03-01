@@ -59,16 +59,10 @@ class zookeeper_session_mgr : public utils::singleton<zookeeper_session_mgr>
 {
 public:
     zookeeper_session *get_session(const service_app_info &info);
-    const char *zoo_hosts() const { return _zoo_hosts.c_str(); }
-    const char *zoo_logfile() const { return _zoo_logfile.c_str(); }
 
 private:
     zookeeper_session_mgr();
     ~zookeeper_session_mgr() = default;
-
-    utils::ex_lock_nr _store_lock;
-    std::string _zoo_hosts;
-    std::string _zoo_logfile;
 
     friend class utils::singleton<zookeeper_session_mgr>;
 };

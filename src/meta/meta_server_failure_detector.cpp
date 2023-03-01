@@ -46,6 +46,10 @@ DSN_DEFINE_uint64(meta_server,
                   stable_rs_min_running_seconds,
                   600,
                   "The minimal running seconds for a stable replica server");
+DSN_DEFINE_string(meta_server,
+                  distributed_lock_service_type,
+                  "distributed_lock_service_simple",
+                  "dist lock provider");
 
 namespace dsn {
 namespace replication {
@@ -59,7 +63,7 @@ meta_server_failure_detector::meta_server_failure_detector(meta_service *svc)
 {
     _fd_opts = &(svc->get_meta_options()._fd_opts);
     _lock_svc = dsn::utils::factory_store<dist::distributed_lock_service>::create(
-        _fd_opts->distributed_lock_service_type.c_str(), PROVIDER_TYPE_MAIN);
+        FLAGS_distributed_lock_service_type, PROVIDER_TYPE_MAIN);
     error_code err = _lock_svc->initialize(_fd_opts->distributed_lock_service_args);
     CHECK_EQ_MSG(err, ERR_OK, "init distributed_lock_service failed");
 }

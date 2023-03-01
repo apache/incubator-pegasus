@@ -40,6 +40,9 @@
 #include "meta/meta_bulk_load_service.h"
 
 namespace dsn {
+namespace dist {
+DSN_DECLARE_string(hosts_list);
+} // namespace dist
 namespace replication {
 
 struct list_nodes_helper
@@ -456,10 +459,7 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
     }
     tp.add_row_name_and_data("meta_servers", meta_servers_str);
     tp.add_row_name_and_data("primary_meta_server", dsn_primary_address().to_std_string());
-    std::string zk_hosts =
-        dsn_config_get_value_string("zookeeper", "hosts_list", "", "zookeeper_hosts");
-    zk_hosts.erase(std::remove_if(zk_hosts.begin(), zk_hosts.end(), ::isspace), zk_hosts.end());
-    tp.add_row_name_and_data("zookeeper_hosts", zk_hosts);
+    tp.add_row_name_and_data("zookeeper_hosts", dsn::dist::FLAGS_hosts_list);
     tp.add_row_name_and_data("zookeeper_root", _service->_cluster_root);
     tp.add_row_name_and_data(
         "meta_function_level",

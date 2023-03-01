@@ -28,6 +28,7 @@
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_string(cold_backup_root);
 
 class replica_test : public replica_test_base
 {
@@ -47,10 +48,10 @@ public:
         mock_app_info();
         _mock_replica = stub->generate_replica_ptr(_app_info, pid, partition_status::PS_PRIMARY, 1);
 
-        // set cold_backup_root manually.
-        // `cold_backup_root` is set by configuration "replication.cold_backup_root",
+        // set FLAGS_cold_backup_root manually.
+        // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
         // which is usually the cluster_name of production clusters.
-        _mock_replica->_options->cold_backup_root = "test_cluster";
+        FLAGS_cold_backup_root = "test_cluster";
     }
 
     int get_write_size_exceed_threshold_count()
@@ -134,8 +135,8 @@ public:
         ASSERT_EQ(ERR_OK, resp.err);
 
         // test checkpoint files have been uploaded successfully.
-        std::string backup_root = dsn::utils::filesystem::path_combine(
-            user_specified_path, _mock_replica->_options->cold_backup_root);
+        std::string backup_root =
+            dsn::utils::filesystem::path_combine(user_specified_path, FLAGS_cold_backup_root);
         std::string current_chkpt_file =
             cold_backup::get_current_chkpt_file(backup_root, req.app_name, req.pid, req.backup_id);
         ASSERT_TRUE(dsn::utils::filesystem::file_exists(current_chkpt_file));
@@ -150,7 +151,7 @@ public:
         req.app_id = _app_info.app_id;
         req.app_name = _app_info.app_name;
         req.backup_provider_name = _provider_name;
-        req.cluster_name = _mock_replica->_options->cold_backup_root;
+        req.cluster_name = FLAGS_cold_backup_root;
         req.time_stamp = _backup_id;
         if (!user_specified_path.empty()) {
             req.__set_restore_path(user_specified_path);

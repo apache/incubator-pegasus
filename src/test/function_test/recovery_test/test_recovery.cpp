@@ -45,7 +45,7 @@ using namespace pegasus;
 
 // TODO(yingchun): add a check for it, get config by curl
 // NOTE: THREAD_POOL_META_SERVER worker count should be greater than 1
-// This function test update 'distributed_lock_service_type' to
+// This function test update FLAGS_distributed_lock_service_type to
 // 'distributed_lock_service_simple', which executes in threadpool THREAD_POOL_META_SERVER
 // As a result, failure detection lock executes in this pool
 // if worker count = 1, it will lead to ERR_TIMEOUT when execute 'ddl_client_->do_recovery'

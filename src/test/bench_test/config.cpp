@@ -34,21 +34,6 @@ DSN_DEFINE_int32(pegasus.benchmark, hashkey_size, 16, "size of each hashkey");
 DSN_DEFINE_int32(pegasus.benchmark, sortkey_size, 16, "size of each sortkey");
 DSN_DEFINE_int32(pegasus.benchmark, value_size, 100, "Size of each value");
 
-config::config()
-{
-    pegasus_cluster_name = dsn_config_get_value_string(
-        "pegasus.benchmark", "pegasus_cluster_name", "onebox", "pegasus cluster name");
-    pegasus_app_name = dsn_config_get_value_string(
-        "pegasus.benchmark", "pegasus_app_name", "temp", "pegasus app name");
-    benchmarks = dsn_config_get_value_string(
-        "pegasus.benchmark",
-        "benchmarks",
-        "fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus",
-        "Comma-separated list of operations to run in the specified order. Available benchmarks:\n"
-        "\tfillrandom_pegasus       -- pegasus write N values in random key order\n"
-        "\treadrandom_pegasus       -- pegasus read N times in random order\n"
-        "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n");
-    env = rocksdb::Env::Default();
-}
+config::config() { env = rocksdb::Env::Default(); }
 } // namespace test
 } // namespace pegasus

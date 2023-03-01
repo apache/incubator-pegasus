@@ -58,8 +58,6 @@ protected:
 
 protected:
     shared_ptr<replication_ddl_client> ddl_client;
-    string app_name;
-    string pegasus_cluster_name;
     vector<dsn::rpc_address> meta_list;
 
     std::vector<partition_configuration> partitions;
