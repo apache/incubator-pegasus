@@ -176,6 +176,8 @@ public:
         return metas.substr(0, metas.length() - 1);
     }
 
+    std::string cluster_root() const { return _cluster_root; }
+
 private:
     void register_rpc_handlers();
     void register_ctrl_commands();
