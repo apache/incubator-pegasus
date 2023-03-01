@@ -203,11 +203,11 @@ void benchmark::multi_set_random(thread_arg *thread)
         std::map<std::string, std::string> kvs;
 
         // Generate sort key and value.
-        std::string hashkey, value;
+        std::string sortkey, value;
         for (int j = 0; j < FLAGS_multi_count; j++) {
-            hashkey = generate_string(FLAGS_sortkey_size);
+            sortkey = generate_string(FLAGS_sortkey_size);
             value = generate_string(FLAGS_value_size);
-            kvs.emplace(hashkey, value);
+            kvs.emplace(sortkey, value);
         }
 
         // Write to pegasus.
