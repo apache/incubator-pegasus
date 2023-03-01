@@ -23,15 +23,17 @@ namespace dsn {
 namespace ranger {
 
 namespace {
-// Register the matching between rpc_code and access contol type in resources.
-void register_rpc_access_type(access_type type,
+// Register access types of 'rpc_codes' as 'ac_type' to 'ac_type_of_rpc'.
+// TODO(wanghao): A better way is to define the ac_type when defining rpc, and traverse all RPCs to
+// register to avoid omission or duplication.
+void register_rpc_access_type(access_type ac_type,
                               const std::vector<std::string> &rpc_codes,
                               access_type_of_rpc_code &ac_type_of_rpc)
 {
     for (const auto &rpc_code : rpc_codes) {
         auto code = task_code::try_get(rpc_code, TASK_CODE_INVALID);
         CHECK_NE(code, TASK_CODE_INVALID);
-        ac_type_of_rpc.emplace(code, type);
+        ac_type_of_rpc.emplace(code, ac_type);
     }
 }
 } // anonymous namespace

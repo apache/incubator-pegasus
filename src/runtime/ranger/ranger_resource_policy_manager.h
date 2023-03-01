@@ -50,10 +50,10 @@ private:
 
     replication::meta_service *_meta_svc;
 
-    // The rpc codes that match the global resources.
+    // The access type of RPCs which access global level resources.
     access_type_of_rpc_code _ac_type_of_global_rpcs;
 
-    // The rpc codes that match the database resources.
+    // The access type of RPCs which access database level resources.
     access_type_of_rpc_code _ac_type_of_database_rpcs;
 
     // The Ranger policy version to determine whether to update.
