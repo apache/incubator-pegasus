@@ -199,9 +199,9 @@ void benchmark::multi_set_random(thread_arg *thread)
     for (int i = 0; i < FLAGS_benchmark_num / FLAGS_multi_count; i++) {
         // Generate hash key.
         std::string hashkey = generate_string(FLAGS_hashkey_size);
-        std::map<std::string, std::string> kvs;
 
         // Generate sort key and value.
+        std::map<std::string, std::string> kvs;
         std::string sortkey, value;
         for (int j = 0; j < FLAGS_multi_count; j++) {
             sortkey = generate_string(FLAGS_sortkey_size);
