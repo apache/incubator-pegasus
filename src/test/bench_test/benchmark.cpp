@@ -76,7 +76,7 @@ DSN_DEFINE_group_validator(multi_count, [](std::string &message) -> bool {
     if ((operation_type == "multisetrandom_pegasus" ||
          operation_type == "multigetrandom_pegasus") &&
         FLAGS_benchmark_num % FLAGS_multi_count != 0) {
-        message = fmt::format("num {} should be a multiple of multi_count({}).",
+        message = fmt::format("[pegasus.benchmark].benchmark_num {} should be a multiple of [pegasus.benchmark].multi_count({}).",
                               FLAGS_benchmark_num,
                               FLAGS_multi_count);
         return false;
