@@ -55,8 +55,8 @@ DSN_DEFINE_string(
     "\tfillrandom_pegasus       -- pegasus write N values in random key order\n"
     "\treadrandom_pegasus       -- pegasus read N times in random order\n"
     "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n"
-    "\tmultisetrandom_pegasus   --pegasus write N random values with multi_count hash keys list\n"
-    "\tmultigetrandom_pegasus   --pegasus read N random keys with multi_count hash list\n");
+    "\tmultisetrandom_pegasus   -- pegasus write N random values with multi_count hash keys list\n"
+    "\tmultigetrandom_pegasus   -- pegasus read N random keys with multi_count hash list\n");
 
 DSN_DEFINE_validator(benchmarks,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
