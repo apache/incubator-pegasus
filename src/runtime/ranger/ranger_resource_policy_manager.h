@@ -57,7 +57,7 @@ private:
     access_type_of_rpc_code _ac_type_of_database_rpcs;
 
     // The Ranger policy version to determine whether to update.
-    int _local_policy_version;
+    //    int _local_policy_version;
 };
 } // namespace ranger
 } // namespace dsn

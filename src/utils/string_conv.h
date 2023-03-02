@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <climits>
 #include <cmath>
+#include <limits>
 
 #include "string_view.h"
 

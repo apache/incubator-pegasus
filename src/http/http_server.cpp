@@ -28,6 +28,7 @@
 #include "runtime/tool_api.h"
 #include "uri_decoder.h"
 #include "utils/output_utils.h"
+#include "utils/strings.h"
 #include "utils/time_utils.h"
 
 namespace dsn {
@@ -200,7 +201,7 @@ void http_server::serve(message_ex *msg)
 
     // parse path
     std::vector<std::string> args;
-    boost::split(args, unresolved_path, boost::is_any_of("/"));
+    dsn::utils::split_args(unresolved_path.c_str(), args, '/');
     std::vector<std::string> real_args;
     for (std::string &arg : args) {
         if (!arg.empty()) {
@@ -221,7 +222,7 @@ void http_server::serve(message_ex *msg)
     // find if there are method args (<ip>:<port>/<service>/<method>?<arg>=<val>&<arg>=<val>)
     if (!unresolved_query.empty()) {
         std::vector<std::string> method_arg_val;
-        boost::split(method_arg_val, unresolved_query, boost::is_any_of("&"));
+        dsn::utils::split_args(unresolved_query.c_str(), method_arg_val, '&');
         for (const std::string &arg_val : method_arg_val) {
             size_t sep = arg_val.find_first_of('=');
             if (sep == std::string::npos) {

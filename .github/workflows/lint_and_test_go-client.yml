@@ -45,9 +45,7 @@ jobs:
       # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
       run: sudo apt-get install -y thrift-compiler
     - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
+      uses: actions/checkout@v3
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
