@@ -304,7 +304,7 @@ void benchmark::multi_get_random(thread_arg *thread)
             if (ret == ::pegasus::PERR_OK) {
                 found += kvs.size();
                 bytes += FLAGS_multi_count * hashkey.size();
-                for (auto &kv : kvs) {
+                for (const auto &kv : kvs) {
                     bytes = kv.first.size() + kv.second.size() + bytes;
                 }
                 break;
