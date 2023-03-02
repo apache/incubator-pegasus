@@ -54,15 +54,36 @@ DSN_DEFINE_string(
     "Comma-separated list of operations to run in the specified order. Available benchmarks:\n"
     "\tfillrandom_pegasus       -- pegasus write N values in random key order\n"
     "\treadrandom_pegasus       -- pegasus read N times in random order\n"
-    "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n");
+    "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n"
+    "\tmultisetrandom_pegasus   -- pegasus write N random values with multi_count hash keys list\n"
+    "\tmultigetrandom_pegasus   -- pegasus read N random keys with multi_count hash list\n");
+
 DSN_DEFINE_validator(benchmarks,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
-DSN_DECLARE_int32(hashkey_size);
-DSN_DECLARE_int32(pegasus_timeout_ms);
-DSN_DECLARE_int32(sortkey_size);
-DSN_DECLARE_int32(threads);
-DSN_DECLARE_int32(value_size);
+DSN_DEFINE_int32(pegasus.benchmark,
+                 pegasus_timeout_ms,
+                 1000,
+                 "pegasus read/write timeout in milliseconds");
+DSN_DEFINE_int32(pegasus.benchmark, threads, 1, "Number of concurrent threads to run");
+DSN_DEFINE_int32(pegasus.benchmark, hashkey_size, 16, "Size of each hashkey");
+DSN_DEFINE_int32(pegasus.benchmark, sortkey_size, 16, "Size of each sortkey");
+DSN_DEFINE_int32(pegasus.benchmark, value_size, 100, "Size of each value");
+DSN_DEFINE_int32(pegasus.benchmark, multi_count, 100, "Values count of the same hashkey");
+
+DSN_DEFINE_group_validator(multi_count, [](std::string &message) -> bool {
+    std::string operation_type = FLAGS_benchmarks;
+    if ((operation_type == "multisetrandom_pegasus" ||
+         operation_type == "multigetrandom_pegasus") &&
+        FLAGS_benchmark_num % FLAGS_multi_count != 0) {
+        message = fmt::format("[pegasus.benchmark].benchmark_num {} should be a multiple of "
+                              "[pegasus.benchmark].multi_count({}).",
+                              FLAGS_benchmark_num,
+                              FLAGS_multi_count);
+        return false;
+    }
+    return true;
+});
 
 benchmark::benchmark()
 {
@@ -74,6 +95,8 @@ benchmark::benchmark()
     _operation_method = {{kUnknown, nullptr},
                          {kRead, &benchmark::read_random},
                          {kWrite, &benchmark::write_random},
+                         {kMultiSet, &benchmark::multi_set_random},
+                         {kMultiGet, &benchmark::multi_get_random},
                          {kDelete, &benchmark::delete_random}};
 }
 
@@ -170,6 +193,49 @@ void benchmark::write_random(thread_arg *thread)
     thread->stats.add_bytes(bytes);
 }
 
+void benchmark::multi_set_random(thread_arg *thread)
+{
+    uint64_t bytes = 0;
+
+    for (int i = 0; i < FLAGS_benchmark_num / FLAGS_multi_count; i++) {
+        // Generate hash key.
+        std::string hashkey = generate_string(FLAGS_hashkey_size);
+
+        // Generate sort key and value.
+        std::map<std::string, std::string> kvs;
+        std::string sortkey, value;
+        for (int j = 0; j < FLAGS_multi_count; j++) {
+            sortkey = generate_string(FLAGS_sortkey_size);
+            value = generate_string(FLAGS_value_size);
+            kvs.emplace(sortkey, value);
+        }
+
+        // Write to Pegasus.
+        int try_count = 0;
+        while (true) {
+            try_count++;
+            int ret = _client->multi_set(hashkey, kvs, FLAGS_pegasus_timeout_ms);
+            if (ret == ::pegasus::PERR_OK) {
+                bytes += (FLAGS_value_size + FLAGS_hashkey_size + FLAGS_sortkey_size) *
+                         FLAGS_multi_count;
+                break;
+            }
+            if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
+                fmt::print(
+                    stderr, "multi_set returned an error: {}\n", _client->get_error_string(ret));
+                dsn_exit(1);
+            }
+            fmt::print(stderr, "multi_set timeout, retry({})\n", try_count);
+        }
+
+        // Count this operation.
+        thread->stats.finished_ops(1, kMultiSet);
+    }
+
+    // Count total write bytes.
+    thread->stats.add_bytes(bytes);
+}
+
 void benchmark::read_random(thread_arg *thread)
 {
     uint64_t bytes = 0;
@@ -204,6 +270,62 @@ void benchmark::read_random(thread_arg *thread)
     }
 
     // count total read bytes and hit rate
+    std::string msg = fmt::format("({} of {} found)", found, FLAGS_benchmark_num);
+    thread->stats.add_bytes(bytes);
+    thread->stats.add_message(msg);
+}
+
+void benchmark::multi_get_random(thread_arg *thread)
+{
+    uint64_t bytes = 0;
+    uint64_t found = 0;
+    int max_fetch_count = 100;
+    int max_fetch_size = 1000000;
+
+    for (int i = 0; i < FLAGS_benchmark_num / FLAGS_multi_count; i++) {
+        // Generate hash key.
+        std::string hashkey = generate_string(FLAGS_hashkey_size);
+
+        // Generate sort key.
+        // Generate value for random to keep in peace with write.
+        std::map<std::string, std::string> kvs;
+        std::set<std::string> sortkeys;
+        for (int j = 0; j < FLAGS_multi_count; j++) {
+            sortkeys.insert(generate_string(FLAGS_sortkey_size));
+            // Make output string be sorted like multi_set_random.
+            generate_string(FLAGS_value_size);
+        }
+
+        // Read from Pegasus.
+        int try_count = 0;
+        while (true) {
+            try_count++;
+            int ret = _client->multi_get(
+                hashkey, sortkeys, kvs, max_fetch_count, max_fetch_size, FLAGS_pegasus_timeout_ms);
+            if (ret == ::pegasus::PERR_OK) {
+                found += kvs.size();
+                bytes += FLAGS_multi_count * hashkey.size();
+                for (const auto &kv : kvs) {
+                    bytes = kv.first.size() + kv.second.size() + bytes;
+                }
+                break;
+            }
+            if (ret == ::pegasus::PERR_NOT_FOUND) {
+                break;
+            }
+            if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
+                fmt::print(
+                    stderr, "multi_get returned an error: {}\n", _client->get_error_string(ret));
+                dsn_exit(1);
+            }
+            fmt::print(stderr, "multi_get timeout, retry({})\n", try_count);
+        }
+
+        // Count this operation.
+        thread->stats.finished_ops(1, kMultiGet);
+    }
+
+    // Count total read bytes and hit rate.
     std::string msg = fmt::format("({} of {} found)", found, FLAGS_benchmark_num);
     thread->stats.add_bytes(bytes);
     thread->stats.add_message(msg);
@@ -253,6 +375,10 @@ operation_type benchmark::get_operation_type(const std::string &name)
         op_type = kRead;
     } else if (name == "deleterandom_pegasus") {
         op_type = kDelete;
+    } else if (name == "multisetrandom_pegasus") {
+        op_type = kMultiSet;
+    } else if (name == "multigetrandom_pegasus") {
+        op_type = kMultiGet;
     } else if (!name.empty()) { // No error message for empty name
         fmt::print(stderr, "unknown benchmark '{}'\n", name);
         dsn_exit(1);

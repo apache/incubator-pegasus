@@ -1399,6 +1399,8 @@ function usage_bench()
     echo "                             fillrandom_pegasus       --pegasus write N random values with random keys list"
     echo "                             readrandom_pegasus       --pegasus read N times with random keys list"
     echo "                             deleterandom_pegasus     --pegasus delete N entries with random keys list"
+    echo "                             multisetrandom_pegasus   --pegasus write N random values with multi_count hash keys list"
+    echo "                             multigetrandom_pegasus   --pegasus read N random keys with multi_count hash list"
     echo "                             Comma-separated list of operations is going to run in the specified order."
     echo "                             default is 'fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus'"
     echo "   --num <num>               number of key/value pairs, default is 10000"
@@ -1410,6 +1412,7 @@ function usage_bench()
     echo "   --value_size <num>        value size in bytes, default is 100"
     echo "   --timeout <num>           timeout in milliseconds, default is 1000"
     echo "   --seed <num>              seed base for random number generator, When 0 it is specified as 1000. default is 1000"
+    echo "   --multi_count <num>       values count of the same hashkey, used by multi_set/multi_get, default is 100"
 }
 
 function fill_bench_config() {
@@ -1423,6 +1426,7 @@ function fill_bench_config() {
     sed -i "s/@VALUE_SIZE@/$VALUE_SIZE/g" ./config-bench.ini
     sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
     sed -i "s/@SEED@/$SEED/g" ./config-bench.ini
+    sed -i "s/@MULTI_COUNT@/$MULTI_COUNT/g" ./config-bench.ini
 }
 
 function run_bench()
@@ -1437,6 +1441,7 @@ function run_bench()
     VALUE_SIZE=100
     TIMEOUT_MS=1000
     SEED=1000
+    MULTI_COUNT=100
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -1482,6 +1487,10 @@ function run_bench()
                 ;;
             --seed)
                 SEED="$2"
+                shift
+                ;;
+            --multi_count)
+                MULTI_COUNT="$2"
                 shift
                 ;;
             *)
