@@ -282,8 +282,7 @@ void benchmark::multi_get_random(thread_arg *thread)
 
     for (int i = 0; i < FLAGS_benchmark_num / FLAGS_multi_count; i++) {
         // Generate hash key.
-        std::string hashkey;
-        hashkey = generate_string(FLAGS_hashkey_size);
+        std::string hashkey = generate_string(FLAGS_hashkey_size);
 
         // Generate sort key.
         // Generate value for random to keep in peace with write.
