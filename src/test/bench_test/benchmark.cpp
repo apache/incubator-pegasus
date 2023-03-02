@@ -209,7 +209,7 @@ void benchmark::multi_set_random(thread_arg *thread)
             kvs.emplace(sortkey, value);
         }
 
-        // Write to pegasus.
+        // Write to Pegasus.
         int try_count = 0;
         while (true) {
             try_count++;
