@@ -295,7 +295,7 @@ void benchmark::multi_get_random(thread_arg *thread)
             generate_string(FLAGS_value_size);
         }
 
-        // Read from pegasus.
+        // Read from Pegasus.
         int try_count = 0;
         while (true) {
             try_count++;
