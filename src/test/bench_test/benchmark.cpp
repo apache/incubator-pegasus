@@ -76,7 +76,8 @@ DSN_DEFINE_group_validator(multi_count, [](std::string &message) -> bool {
     if ((operation_type == "multisetrandom_pegasus" ||
          operation_type == "multigetrandom_pegasus") &&
         FLAGS_benchmark_num % FLAGS_multi_count != 0) {
-        message = fmt::format("[pegasus.benchmark].benchmark_num {} should be a multiple of [pegasus.benchmark].multi_count({}).",
+        message = fmt::format("[pegasus.benchmark].benchmark_num {} should be a multiple of "
+                              "[pegasus.benchmark].multi_count({}).",
                               FLAGS_benchmark_num,
                               FLAGS_multi_count);
         return false;
@@ -220,7 +221,8 @@ void benchmark::multi_set_random(thread_arg *thread)
                 break;
             }
             if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
-                fmt::print(stderr, "multi_set returned an error: {}\n", _client->get_error_string(ret));
+                fmt::print(
+                    stderr, "multi_set returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
             }
             fmt::print(stderr, "multi_set timeout, retry({})\n", try_count);
@@ -312,7 +314,8 @@ void benchmark::multi_get_random(thread_arg *thread)
                 break;
             }
             if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
-                fmt::print(stderr, "multi_get returned an error: {}\n", _client->get_error_string(ret));
+                fmt::print(
+                    stderr, "multi_get returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
             }
             fmt::print(stderr, "multi_get timeout, retry({})\n", try_count);
