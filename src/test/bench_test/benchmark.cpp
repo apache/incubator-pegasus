@@ -66,8 +66,8 @@ DSN_DEFINE_int32(pegasus.benchmark,
                  1000,
                  "pegasus read/write timeout in milliseconds");
 DSN_DEFINE_int32(pegasus.benchmark, threads, 1, "Number of concurrent threads to run");
-DSN_DEFINE_int32(pegasus.benchmark, hashkey_size, 16, "size of each hashkey");
-DSN_DEFINE_int32(pegasus.benchmark, sortkey_size, 16, "size of each sortkey");
+DSN_DEFINE_int32(pegasus.benchmark, hashkey_size, 16, "Size of each hashkey");
+DSN_DEFINE_int32(pegasus.benchmark, sortkey_size, 16, "Size of each sortkey");
 DSN_DEFINE_int32(pegasus.benchmark, value_size, 100, "Size of each value");
 DSN_DEFINE_int32(pegasus.benchmark, multi_count, 100, "Values count of the same hashkey");
 
