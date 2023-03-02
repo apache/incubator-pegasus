@@ -220,7 +220,7 @@ void benchmark::multi_set_random(thread_arg *thread)
                 break;
             }
             if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
-                fmt::print(stderr, "Set returned an error: {}\n", _client->get_error_string(ret));
+                fmt::print(stderr, "multi_set returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
             }
             fmt::print(stderr, "Set timeout, retry({})\n", try_count);
