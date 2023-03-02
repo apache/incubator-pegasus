@@ -284,11 +284,11 @@ void benchmark::multi_get_random(thread_arg *thread)
         // Generate hash key.
         std::string hashkey;
         hashkey = generate_string(FLAGS_hashkey_size);
-        std::map<std::string, std::string> kvs;
-        std::set<std::string> sortkeys;
 
         // Generate sort key.
         // Generate value for random to keep in peace with write.
+        std::map<std::string, std::string> kvs;
+        std::set<std::string> sortkeys;
         for (int j = 0; j < FLAGS_multi_count; j++) {
             sortkeys.insert(generate_string(FLAGS_sortkey_size));
             // Make output string be sorted like multi_set_random.
