@@ -223,7 +223,7 @@ void benchmark::multi_set_random(thread_arg *thread)
                 fmt::print(stderr, "multi_set returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
             }
-            fmt::print(stderr, "Set timeout, retry({})\n", try_count);
+            fmt::print(stderr, "multi_set timeout, retry({})\n", try_count);
         }
 
         // Count this operation.
