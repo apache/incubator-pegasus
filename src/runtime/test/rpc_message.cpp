@@ -165,6 +165,8 @@ TEST(core, message_ex)
         request->write_commit(data_size);
 
         ASSERT_EQ(1u, request->buffers.size());
+        message_ex *receive = message_ex::create_receive_message(request->buffers[0]);
+        ASSERT_EQ(1u, request->buffers.size());
 
         ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST).to_string(), receive->header->rpc_name);
 
