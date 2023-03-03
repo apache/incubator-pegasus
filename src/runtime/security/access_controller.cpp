@@ -26,9 +26,10 @@
 namespace dsn {
 namespace security {
 DSN_DEFINE_bool(security, enable_acl, false, "whether enable access controller or not");
-
-DSN_DEFINE_bool(security, enable_ranger_acl, false, "whether enable access controller or not");
-
+DSN_DEFINE_bool(security,
+                enable_ranger_acl,
+                false,
+                "whether enable access controller integrate to Apache Ranger or not");
 DSN_DEFINE_string(security,
                   super_users,
                   "",
@@ -51,7 +52,6 @@ bool access_controller::pre_check(const std::string &user_name)
         return true;
     }
     return false;
-    return _super_users.find(user_name) != _super_users.end();
 }
 
 bool access_controller::is_enable_ranger_acl() { return FLAGS_enable_ranger_acl; }

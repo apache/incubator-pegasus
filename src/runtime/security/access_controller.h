@@ -49,13 +49,13 @@ public:
     // app_name - tables involved in ACL
     virtual bool allowed(message_ex *msg, const std::string &app_name) { return false; }
 
-    // (TODO:wanghao) : this method will be deleted in the next patch.
+    // TODO(wanghao): this method will be deleted in the next patch.
     // check if the message received is allowd to do something.
     // msg - the message received
     virtual bool allowed(message_ex *msg) = 0;
 
 protected:
-    // (TODO:wanghao) : this method will be deleted in the next patch.
+    // TODO(wanghao): this method will be deleted in the next patch.
     bool pre_check(const std::string &user_name);
 
     // Check if 'user_name' is the super user.
