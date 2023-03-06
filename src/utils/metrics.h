@@ -157,7 +157,13 @@
 #define METRIC_VAR_INIT_replica(name) METRIC_VAR_INIT(name, replica)
 
 // Perform increment-related operations on metrics including gauge and counter.
-#define METRIC_VAR_INCREMENT_BY(name, x) _##name->increment_by(x)
+#define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
+    do {                                                                                           \
+        if (x != 0) {                                                                              \
+            _##name->increment_by(x);                                                              \
+        }                                                                                          \
+    } while (0)
+
 #define METRIC_VAR_INCREMENT(name) _##name->increment()
 
 // Perform set() operations on metrics including gauge and percentile.

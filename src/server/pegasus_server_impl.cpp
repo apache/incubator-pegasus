@@ -259,6 +259,64 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
 }
 
+// Since LOG_ERROR_PREFIX depends on log_prefix(), this method could not be declared as static or
+// with anonymous namespace.
+void pegasus_server_impl::log_expired_data(const char *op,
+                                           const dsn::rpc_address &addr,
+                                           const dsn::blob &hash_key,
+                                           const dsn::blob &sort_key) const
+{
+    LOG_ERROR_PREFIX("rocksdb data expired for {} from {}: hash_key = \"{}\", sort_key = \"{}\"",
+                     op,
+                     addr,
+                     pegasus::utils::c_escape_string(hash_key),
+                     pegasus::utils::c_escape_string(sort_key));
+}
+
+void pegasus_server_impl::log_expired_data(const char *op,
+                                           const dsn::rpc_address &addr,
+                                           const dsn::blob &key) const
+{
+    dsn::blob hash_key, sort_key;
+    pegasus_restore_key(key, hash_key, sort_key);
+    log_expired_data(op, addr, hash_key, sort_key);
+}
+
+void pegasus_server_impl::log_expired_data_if_verbose(const char *op,
+                                                      const dsn::rpc_address &addr,
+                                                      const dsn::blob &hash_key,
+                                                      const dsn::blob &sort_key) const
+{
+    if (!_verbose_log) {
+        return;
+    }
+
+    log_expired_data(op, addr, hash_key, sort_key);
+}
+
+void pegasus_server_impl::log_expired_data_if_verbose(const char *op,
+                                                      const dsn::rpc_address &addr,
+                                                      const dsn::blob &key) const
+{
+    if (!_verbose_log) {
+        return;
+    }
+
+    log_expired_data(op, addr, key);
+}
+
+void pegasus_server_impl::log_expired_data_if_verbose(const char *op,
+                                                      const dsn::rpc_address &addr,
+                                                      const rocksdb::Slice &key) const
+{
+    if (!_verbose_log) {
+        return;
+    }
+
+    dsn::blob raw_key(key.data(), 0, key.size());
+    log_expired_data(op, addr, raw_key);
+}
+
 void pegasus_server_impl::on_get(get_rpc rpc)
 {
     CHECK_TRUE(_is_open);
@@ -286,15 +344,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     if (status.ok()) {
         if (check_if_record_expired(utils::epoch_now(), value)) {
             METRIC_VAR_INCREMENT(read_expired_values);
-            if (_verbose_log) {
-                ::dsn::blob hash_key, sort_key;
-                pegasus_restore_key(key, hash_key, sort_key);
-                LOG_ERROR_PREFIX(
-                    "rocksdb data expired for get from {}: hash_key = \"{}\", sort_key = \"{}\"",
-                    rpc.remote_address(),
-                    ::pegasus::utils::c_escape_string(hash_key),
-                    ::pegasus::utils::c_escape_string(sort_key));
-            }
+            log_expired_data_if_verbose(__FUNCTION__, rpc.remote_address(), key);
             status = rocksdb::Status::NotFound();
         }
     } else {
@@ -686,23 +736,18 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             // check ttl
             if (check_if_record_expired(epoch_now, value)) {
                 expire_count++;
-                if (_verbose_log) {
-                    LOG_ERROR_PREFIX(
-                        "rocksdb data expired for multi_get from {}: hash_key = \"{}\", "
-                        "sort_key = \"{}\"",
-                        rpc.remote_address(),
-                        ::pegasus::utils::c_escape_string(request.hash_key),
-                        ::pegasus::utils::c_escape_string(request.sort_keys[i]));
-                }
+                log_expired_data_if_verbose(
+                    __FUNCTION__, rpc.remote_address(), request.hash_key, request.sort_keys[i]);
                 status = rocksdb::Status::NotFound();
                 continue;
             }
 
             // check if exceed limit
-            if (count >= max_kv_count || size >= max_kv_size) {
+            if (dsn_unlikely(count >= max_kv_count || size >= max_kv_size)) {
                 exceed_limit = true;
                 break;
             }
+
             ::dsn::apps::key_value kv;
             kv.key = request.sort_keys[i];
             if (!request.no_value) {
@@ -757,12 +802,8 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         METRIC_VAR_INCREMENT(abnormal_read_requests);
     }
 
-    if (expire_count > 0) {
-        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
-    }
-    if (filter_count > 0) {
-        METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
-    }
+    METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
+    METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
 
     _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
 }
@@ -828,13 +869,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         if (dsn_likely(status.ok())) {
             if (check_if_record_expired(epoch_now, value)) {
                 ++expire_count;
-                if (_verbose_log) {
-                    LOG_ERROR_PREFIX("rocksdb data expired for batch_get from {}: hash_key = "
-                                     "\"{}\", sort_key = \"{}\"",
-                                     rpc.remote_address(),
-                                     pegasus::utils::c_escape_string(hash_key),
-                                     pegasus::utils::c_escape_string(sort_key));
-                }
+                log_expired_data_if_verbose(__FUNCTION__, rpc.remote_address(), hash_key, sort_key);
                 continue;
             }
 
@@ -884,9 +919,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         METRIC_VAR_INCREMENT(abnormal_read_requests);
     }
 
-    if (expire_count > 0) {
-        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
-    }
+    METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
 
     _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
 }
@@ -934,18 +967,14 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 
         if (check_if_record_expired(epoch_now, it->value())) {
             expire_count++;
-            if (_verbose_log) {
-                LOG_ERROR_PREFIX("rocksdb data expired for sortkey_count from {}",
-                                 rpc.remote_address());
-            }
+            log_expired_data_if_verbose(__FUNCTION__, rpc.remote_address(), it->key());
         } else {
             resp.count++;
         }
         it->Next();
     }
-    if (expire_count > 0) {
-        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
-    }
+
+    METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
 
     resp.error = it->status().code();
     if (!it->status().ok()) {
@@ -1281,12 +1310,8 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
     }
 
-    if (expire_count > 0) {
-        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
-    }
-    if (filter_count > 0) {
-        METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
-    }
+    METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
+    METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
 
     _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
 }
@@ -1434,12 +1459,9 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
         }
 
-        if (expire_count > 0) {
-            METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
-        }
-        if (filter_count > 0) {
-            METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
-        }
+        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
+        METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
+
     } else {
         resp.error = rocksdb::Status::Code::kNotFound;
     }

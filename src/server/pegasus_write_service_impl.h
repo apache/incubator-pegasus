@@ -32,8 +32,6 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-METRIC_DECLARE_counter(read_expired_values);
-
 namespace pegasus {
 namespace server {
 
@@ -90,8 +88,7 @@ public:
     explicit impl(pegasus_server_impl *server)
         : replica_base(server),
           _primary_address(server->_primary_address),
-          _pegasus_data_version(server->_pegasus_data_version),
-          METRIC_VAR_INIT_replica(read_expired_values)
+          _pegasus_data_version(server->_pegasus_data_version)
     {
         _rocksdb_wrapper = dsn::make_unique<rocksdb_wrapper>(server);
     }
@@ -690,8 +687,6 @@ private:
 
     const std::string _primary_address;
     const uint32_t _pegasus_data_version;
-
-    METRIC_VAR_DECLARE_counter(read_expired_values);
 
     std::unique_ptr<rocksdb_wrapper> _rocksdb_wrapper;
 

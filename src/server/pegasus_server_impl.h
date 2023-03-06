@@ -406,6 +406,22 @@ private:
 
     dsn::replication::manual_compaction_status::type query_compact_status() const override;
 
+    void log_expired_data(const char *op,
+                          const dsn::rpc_address &addr,
+                          const dsn::blob &hash_key,
+                          const dsn::blob &sort_key) const;
+    void log_expired_data(const char *op, const dsn::rpc_address &addr, const dsn::blob &key) const;
+    void log_expired_data_if_verbose(const char *op,
+                                     const dsn::rpc_address &addr,
+                                     const dsn::blob &hash_key,
+                                     const dsn::blob &sort_key) const;
+    void log_expired_data_if_verbose(const char *op,
+                                     const dsn::rpc_address &addr,
+                                     const dsn::blob &key) const;
+    void log_expired_data_if_verbose(const char *op,
+                                     const dsn::rpc_address &addr,
+                                     const rocksdb::Slice &key) const;
+
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
