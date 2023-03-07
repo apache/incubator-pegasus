@@ -1803,8 +1803,8 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         _pfc_rdb_block_cache_hit_count->set(0);
         _pfc_rdb_block_cache_total_count->set(0);
         _pfc_rdb_block_cache_mem_usage->set(0);
-        _pfc_rdb_index_and_filter_blocks_mem_usage->set(0);
-        _pfc_rdb_memtable_mem_usage->set(0);
+        METRIC_VAR_SET(rdb_index_and_filter_blocks_mem_usage_bytes, 0);
+        METRIC_VAR_SET(rdb_memtable_mem_usage_bytes, 0);
     }
 
     LOG_INFO_PREFIX("close app succeed, clear_state = {}", clear_state ? "true" : "false");
@@ -2402,27 +2402,27 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         LOG_DEBUG_PREFIX("_pfc_rdb_write_amplification: {}", write_amplification);
     }
 
-    // Update _pfc_rdb_index_and_filter_blocks_mem_usage
+    // Update rdb_index_and_filter_blocks_mem_usage_bytes
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateTableReadersMem, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
-        _pfc_rdb_index_and_filter_blocks_mem_usage->set(val);
-        LOG_DEBUG_PREFIX("_pfc_rdb_index_and_filter_blocks_mem_usage: {} bytes", val);
+        METRIC_VAR_SET(rdb_index_and_filter_blocks_mem_usage_bytes, val);
+        LOG_DEBUG_PREFIX("rdb_index_and_filter_blocks_mem_usage_bytes: {}", val);
     }
 
-    // Update _pfc_rdb_memtable_mem_usage
+    // Update rdb_memtable_mem_usage_bytes
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kCurSizeAllMemTables, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
-        _pfc_rdb_memtable_mem_usage->set(val);
-        LOG_DEBUG_PREFIX("_pfc_rdb_memtable_mem_usage: {} bytes", val);
+        METRIC_VAR_SET(rdb_memtable_mem_usage_bytes, val);
+        LOG_DEBUG_PREFIX("rdb_memtable_mem_usage_bytes: {}", val);
     }
 
-    // Update _pfc_rdb_estimate_num_keys
+    // Update rdb_estimated_keys
     // NOTE: for the same n kv pairs, kEstimateNumKeys will be counted n times, you need compaction
     // to remove duplicate
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateNumKeys, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
-        _pfc_rdb_estimate_num_keys->set(val);
-        LOG_DEBUG_PREFIX("_pfc_rdb_estimate_num_keys: {}", val);
+        METRIC_VAR_SET(rdb_estimated_keys, val);
+        LOG_DEBUG_PREFIX("rdb_estimated_keys: {}", val);
     }
 
     // the follow stats is related to `read`, so only primary need update it，ignore

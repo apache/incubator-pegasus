@@ -516,9 +516,9 @@ private:
     // Replica-level metrics for rocksdb.
     METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_files);
     METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_size_mb);
-    dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
-    dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
-    dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
+    METRIC_VAR_DECLARE_gauge_int64(rdb_index_and_filter_blocks_mem_usage_bytes);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_memtable_mem_usage_bytes);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_estimated_keys);
 
     dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
     dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;

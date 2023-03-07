@@ -96,6 +96,21 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kMegaBytes,
                           "The total size of rocksdb sst files in MB for each replica");
 
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_index_and_filter_blocks_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb index and filter blocks in bytes for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_memtable_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb memtables in bytes for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_estimated_keys,
+                          dsn::metric_unit::kKeys,
+                          "The estimated number of rocksdb keys for each replica");
+
 namespace pegasus {
 namespace server {
 
@@ -273,7 +288,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(read_filtered_values),
       METRIC_VAR_INIT_replica(abnormal_read_requests),
       METRIC_VAR_INIT_replica(rdb_total_sst_files),
-      METRIC_VAR_INIT_replica(rdb_total_sst_size_mb)
+      METRIC_VAR_INIT_replica(rdb_total_sst_size_mb),
+      METRIC_VAR_INIT_replica(rdb_index_and_filter_blocks_mem_usage_bytes),
+      METRIC_VAR_INIT_replica(rdb_memtable_mem_usage_bytes),
+      METRIC_VAR_INIT_replica(rdb_estimated_keys)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -736,24 +754,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             COUNTER_TYPE_NUMBER,
             "statistic the through bytes of rocksdb write rate limiter");
     });
-
-    snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid.c_str());
-    _pfc_rdb_index_and_filter_blocks_mem_usage.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistic the memory usage of rocksdb index and filter blocks");
-
-    snprintf(name, 255, "rdb.memtable.memory_usage@%s", str_gpid.c_str());
-    _pfc_rdb_memtable_mem_usage.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
-
-    snprintf(name, 255, "rdb.estimate_num_keys@%s", str_gpid.c_str());
-    _pfc_rdb_estimate_num_keys.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistics the estimated number of keys inside the rocksdb");
 
     snprintf(name, 255, "rdb.bf_seek_negatives@%s", str_gpid.c_str());
     _pfc_rdb_bf_seek_negatives.init_app_counter("app.pegasus",
