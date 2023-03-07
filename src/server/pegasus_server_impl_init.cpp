@@ -112,6 +112,8 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kKeys,
                           "The estimated number of rocksdb keys for each replica");
 
+// https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter
+//
 namespace pegasus {
 namespace server {
 
