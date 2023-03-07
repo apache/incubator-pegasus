@@ -96,10 +96,11 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kMegaBytes,
                           "The total size of rocksdb sst files in MB for each replica");
 
-METRIC_DEFINE_gauge_int64(replica,
-                          rdb_index_and_filter_blocks_mem_usage_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The memory usage of rocksdb index and filter blocks in bytes for each replica");
+METRIC_DEFINE_gauge_int64(
+    replica,
+    rdb_index_and_filter_blocks_mem_usage_bytes,
+    dsn::metric_unit::kBytes,
+    "The memory usage of rocksdb index and filter blocks in bytes for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_memtable_mem_usage_bytes,
