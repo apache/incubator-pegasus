@@ -40,6 +40,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
+METRIC_DECLARE_counter(read_expired_values);
+
 namespace pegasus {
 namespace server {
 
@@ -61,7 +63,7 @@ rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
       _rd_opts(server->_data_cf_rd_opts),
       _meta_cf(server->_meta_cf),
       _pegasus_data_version(server->_pegasus_data_version),
-      _pfc_recent_expire_count(server->_pfc_recent_expire_count),
+      METRIC_VAR_INIT_replica(read_expired_values),
       _default_ttl(0)
 {
     _write_batch = std::make_unique<rocksdb::WriteBatch>();
@@ -83,7 +85,7 @@ int rocksdb_wrapper::get(absl::string_view raw_key, /*out*/ db_get_context *ctx)
         ctx->expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, ctx->raw_value);
         if (check_if_ts_expired(utils::epoch_now(), ctx->expire_ts)) {
             ctx->expired = true;
-            _pfc_recent_expire_count->increment();
+            METRIC_VAR_INCREMENT(read_expired_values);
         }
         return rocksdb::Status::kOk;
     } else if (s.IsNotFound()) {
