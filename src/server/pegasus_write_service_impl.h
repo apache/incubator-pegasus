@@ -88,8 +88,7 @@ public:
     explicit impl(pegasus_server_impl *server)
         : replica_base(server),
           _primary_address(server->_primary_address),
-          _pegasus_data_version(server->_pegasus_data_version),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
+          _pegasus_data_version(server->_pegasus_data_version)
     {
         _rocksdb_wrapper = dsn::make_unique<rocksdb_wrapper>(server);
     }
@@ -688,8 +687,6 @@ private:
 
     const std::string _primary_address;
     const uint32_t _pegasus_data_version;
-
-    ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
 
     std::unique_ptr<rocksdb_wrapper> _rocksdb_wrapper;
 
