@@ -282,40 +282,20 @@ void pegasus_server_impl::log_expired_data(const char *op,
     log_expired_data(op, addr, hash_key, sort_key);
 }
 
-void pegasus_server_impl::log_expired_data_if_verbose(const char *op,
-                                                      const dsn::rpc_address &addr,
-                                                      const dsn::blob &hash_key,
-                                                      const dsn::blob &sort_key) const
+void pegasus_server_impl::log_expired_data(const char *op,
+                                           const dsn::rpc_address &addr,
+                                           const rocksdb::Slice &key) const
 {
-    if (!_verbose_log) {
-        return;
-    }
-
-    log_expired_data(op, addr, hash_key, sort_key);
-}
-
-void pegasus_server_impl::log_expired_data_if_verbose(const char *op,
-                                                      const dsn::rpc_address &addr,
-                                                      const dsn::blob &key) const
-{
-    if (!_verbose_log) {
-        return;
-    }
-
-    log_expired_data(op, addr, key);
-}
-
-void pegasus_server_impl::log_expired_data_if_verbose(const char *op,
-                                                      const dsn::rpc_address &addr,
-                                                      const rocksdb::Slice &key) const
-{
-    if (!_verbose_log) {
-        return;
-    }
-
     dsn::blob raw_key(key.data(), 0, key.size());
     log_expired_data(op, addr, raw_key);
 }
+
+#define LOG_EXPIRED_DATA_IF_VERBOSE(...)                                                           \
+    do {                                                                                           \
+        if (dsn_unlikely(_verbose_log)) {                                                          \
+            log_expired_data(__FUNCTION__, rpc.remote_address(), ##__VA_ARGS__);                   \
+        }                                                                                          \
+    } while (0)
 
 void pegasus_server_impl::on_get(get_rpc rpc)
 {
@@ -344,7 +324,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     if (status.ok()) {
         if (check_if_record_expired(utils::epoch_now(), value)) {
             METRIC_VAR_INCREMENT(read_expired_values);
-            log_expired_data_if_verbose(__FUNCTION__, rpc.remote_address(), key);
+            LOG_EXPIRED_DATA_IF_VERBOSE(key);
             status = rocksdb::Status::NotFound();
         }
     } else {
@@ -736,8 +716,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             // check ttl
             if (check_if_record_expired(epoch_now, value)) {
                 expire_count++;
-                log_expired_data_if_verbose(
-                    __FUNCTION__, rpc.remote_address(), request.hash_key, request.sort_keys[i]);
+                LOG_EXPIRED_DATA_IF_VERBOSE(request.hash_key, request.sort_keys[i]);
                 status = rocksdb::Status::NotFound();
                 continue;
             }
@@ -869,7 +848,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         if (dsn_likely(status.ok())) {
             if (check_if_record_expired(epoch_now, value)) {
                 ++expire_count;
-                log_expired_data_if_verbose(__FUNCTION__, rpc.remote_address(), hash_key, sort_key);
+                LOG_EXPIRED_DATA_IF_VERBOSE(hash_key, sort_key);
                 continue;
             }
 
@@ -967,7 +946,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 
         if (check_if_record_expired(epoch_now, it->value())) {
             expire_count++;
-            log_expired_data_if_verbose(__FUNCTION__, rpc.remote_address(), it->key());
+            LOG_EXPIRED_DATA_IF_VERBOSE(it->key());
         } else {
             resp.count++;
         }
