@@ -87,14 +87,14 @@ METRIC_DEFINE_counter(replica,
                       "The number of abnormal read requests for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
-                      rdb_total_sst_files,
-                      dsn::metric_unit::kFiles,
-                      "The total number of rocksdb sst files for each replica");
+                          rdb_total_sst_files,
+                          dsn::metric_unit::kFiles,
+                          "The total number of rocksdb sst files for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
-                      rdb_total_sst_size_mb,
-                      dsn::metric_unit::kMegaBytes,
-                      "The total size of rocksdb sst files in MB for each replica");
+                          rdb_total_sst_size_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The total size of rocksdb sst files in MB for each replica");
 
 namespace pegasus {
 namespace server {
