@@ -88,10 +88,12 @@ jobs:
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
         working-directory: thirdparty
+        # Build thirdparties and leave some necessary libraries and source
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
+          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
           ../scripts/download_hadoop.sh hadoop-bin
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
@@ -212,10 +214,12 @@ jobs:
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
         working-directory: thirdparty
+        # Build thirdparties and leave some necessary libraries and source
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
+          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
           ../scripts/download_hadoop.sh hadoop-bin
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
@@ -337,10 +341,12 @@ jobs:
 #      - name: Rebuild third-parties
 #        if: steps.changes.outputs.thirdparty == 'true'
 #        working-directory: thirdparty
+#        # Build thirdparties and leave some necessary libraries and source
 #        run: |
 #          mkdir build
 #          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
 #          cmake --build build/ -j $(nproc)
+#          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
 #          ../scripts/download_hadoop.sh hadoop-bin
 #          ../scripts/download_zk.sh zookeeper-bin
 #      - name: Compilation
@@ -455,10 +461,12 @@ jobs:
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
         working-directory: thirdparty
+        # Build thirdparties and leave some necessary libraries and source
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -DUSE_JEMALLOC=ON -B build/
           cmake --build build/ -j $(nproc)
+          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
           ../scripts/download_hadoop.sh hadoop-bin
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
