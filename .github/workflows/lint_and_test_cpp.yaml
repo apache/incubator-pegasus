@@ -191,12 +191,6 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
-      - name: Setup cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            /github/home/.ccache
-          key: asan_ccache
       - uses: dorny/paths-filter@v2
         id: changes
         with:
@@ -224,10 +218,7 @@ jobs:
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
         run: |
-          ccache -p
-          ccache -z
           ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc)
-          ccache -s
       - name: Tar files
         run: |
           mv thirdparty/hadoop-bin ./
