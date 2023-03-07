@@ -3121,8 +3121,6 @@ void MetricVarTest::test_set_percentile(size_t n, int64_t val)
     EXPECT_EQ(std::vector<int64_t>(n, val), METRIC_VAR_SAMPLES(test_replica_percentile_int64_ns));
 }
 
-#define METRIC_VAR_VALUE(name) _##name->value()
-
 #define TEST_METRIC_VAR_INCREMENT(name)                                                            \
     do {                                                                                           \
         ASSERT_EQ(0, METRIC_VAR_VALUE(name));                                                      \

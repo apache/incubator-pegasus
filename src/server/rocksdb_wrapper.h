@@ -81,7 +81,7 @@ private:
     rocksdb::ColumnFamilyHandle *_meta_cf;
 
     const uint32_t _pegasus_data_version;
-    dsn::perf_counter_wrapper &_pfc_recent_expire_count;
+    METRIC_VAR_DECLARE_counter(read_expired_values);
     volatile uint32_t _default_ttl;
 
     friend class rocksdb_wrapper_test;

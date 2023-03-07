@@ -157,7 +157,13 @@
 #define METRIC_VAR_INIT_replica(name) METRIC_VAR_INIT(name, replica)
 
 // Perform increment-related operations on metrics including gauge and counter.
-#define METRIC_VAR_INCREMENT_BY(name, x) _##name->increment_by(x)
+#define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
+    do {                                                                                           \
+        if (x != 0) {                                                                              \
+            _##name->increment_by(x);                                                              \
+        }                                                                                          \
+    } while (0)
+
 #define METRIC_VAR_INCREMENT(name) _##name->increment()
 
 // Perform set() operations on metrics including gauge and percentile.
@@ -168,9 +174,14 @@
 // such as percentile.
 #define METRIC_VAR_SET(name, ...) _##name->set(__VA_ARGS__)
 
+// Read the current measurement of the metric.
+#define METRIC_VAR_VALUE(name) _##name->value()
+
 // Convenient macro that is used to compute latency automatically, which is dedicated to percentile.
 #define METRIC_VAR_AUTO_LATENCY(name, ...)                                                         \
     dsn::auto_latency __##name##_auto_latency(_##name, ##__VA_ARGS__)
+
+#define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
 
 namespace dsn {
 
@@ -589,6 +600,7 @@ enum class metric_unit : size_t
     kMilliSeconds,
     kSeconds,
     kRequests,
+    kValues,
     kInvalidUnit,
 };
 
@@ -1399,6 +1411,8 @@ public:
             _callback(latency);
         }
     }
+
+    inline uint64_t duration_ns() const { return _chrono.duration_ns(); }
 
 private:
     percentile_ptr<int64_t> _percentile;
