@@ -512,9 +512,10 @@ private:
     // server level
     static ::dsn::perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
     static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
-    // replica level
-    dsn::perf_counter_wrapper _pfc_rdb_sst_count;
-    dsn::perf_counter_wrapper _pfc_rdb_sst_size;
+
+    // Replica-level metrics for rocksdb.
+    METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_files);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_size_mb);
     dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
     dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
     dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;

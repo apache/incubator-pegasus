@@ -599,8 +599,10 @@ enum class metric_unit : size_t
     kMicroSeconds,
     kMilliSeconds,
     kSeconds,
+    kMegaBytes,
     kRequests,
     kValues,
+    kFiles,
     kInvalidUnit,
 };
 

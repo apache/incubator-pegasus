@@ -86,6 +86,16 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of abnormal read requests for each replica");
 
+METRIC_DEFINE_gauge_int64(replica,
+                      rdb_total_sst_files,
+                      dsn::metric_unit::kFiles,
+                      "The total number of rocksdb sst files for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                      rdb_total_sst_size_mb,
+                      dsn::metric_unit::kMegaBytes,
+                      "The total size of rocksdb sst files in MB for each replica");
+
 namespace pegasus {
 namespace server {
 
@@ -261,7 +271,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(scan_latency_ns),
       METRIC_VAR_INIT_replica(read_expired_values),
       METRIC_VAR_INIT_replica(read_filtered_values),
-      METRIC_VAR_INIT_replica(abnormal_read_requests)
+      METRIC_VAR_INIT_replica(abnormal_read_requests),
+      METRIC_VAR_INIT_replica(rdb_total_sst_files),
+      METRIC_VAR_INIT_replica(rdb_total_sst_size_mb)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -667,14 +679,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     char name[256];
 
     // register the perf counters
-    snprintf(name, 255, "disk.storage.sst.count@%s", str_gpid.c_str());
-    _pfc_rdb_sst_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
-
-    snprintf(name, 255, "disk.storage.sst(MB)@%s", str_gpid.c_str());
-    _pfc_rdb_sst_size.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the size of sstable files");
-
     snprintf(name, 255, "rdb.block_cache.hit_count@%s", str_gpid.c_str());
     _pfc_rdb_block_cache_hit_count.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the hit count of rocksdb block cache");

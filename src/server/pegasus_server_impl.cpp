@@ -1798,8 +1798,8 @@ void pegasus_server_impl::cancel_background_work(bool wait)
             LOG_ERROR_PREFIX("rmdir {} failed when stop app", data_dir());
             return ::dsn::ERR_FILE_OPERATION_FAILED;
         }
-        _pfc_rdb_sst_count->set(0);
-        _pfc_rdb_sst_size->set(0);
+        METRIC_VAR_SET(rdb_total_sst_files, 0);
+        METRIC_VAR_SET(rdb_total_sst_size_mb, 0);
         _pfc_rdb_block_cache_hit_count->set(0);
         _pfc_rdb_block_cache_total_count->set(0);
         _pfc_rdb_block_cache_mem_usage->set(0);
@@ -2371,7 +2371,7 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     std::string str_val;
     uint64_t val = 0;
 
-    // Update _pfc_rdb_sst_count
+    // Update rdb_total_sst_files
     for (int i = 0; i < _data_cf_opts.num_levels; ++i) {
         int cur_level_count = 0;
         if (_db->GetProperty(rocksdb::DB::Properties::kNumFilesAtLevelPrefix + std::to_string(i),
@@ -2380,15 +2380,15 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
             val += cur_level_count;
         }
     }
-    _pfc_rdb_sst_count->set(val);
-    LOG_DEBUG_PREFIX("_pfc_rdb_sst_count: {}", val);
+    METRIC_VAR_SET(rdb_total_sst_files, val);
+    LOG_DEBUG_PREFIX("rdb_total_sst_files: {}", val);
 
-    // Update _pfc_rdb_sst_size
+    // Update rdb_total_sst_size_mb
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kTotalSstFilesSize, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         static uint64_t bytes_per_mb = 1U << 20U;
-        _pfc_rdb_sst_size->set(val / bytes_per_mb);
-        LOG_DEBUG_PREFIX("_pfc_rdb_sst_size: {} bytes", val);
+        METRIC_VAR_SET(rdb_total_sst_size_mb, val / bytes_per_mb);
+        LOG_DEBUG_PREFIX("rdb_total_sst_size_mb: {}", val);
     }
 
     // Update _pfc_rdb_write_amplification
