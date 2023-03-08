@@ -53,10 +53,7 @@ jobs:
     container:
       image: apache/pegasus:clang-format-3.9
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-          submodules: true
+      - uses: actions/checkout@v3
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
@@ -65,9 +62,9 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup cache
         uses: actions/cache@v3
         with:
@@ -85,14 +82,18 @@ jobs:
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+        run: |
+          unzip /root/thirdparties-bin.zip -d ./thirdparty
+          rm -f /root/thirdparties-bin.zip
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
         working-directory: thirdparty
+        # Build thirdparties and leave some necessary libraries and source
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
+          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
           ../scripts/download_hadoop.sh hadoop-bin
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
@@ -110,7 +111,7 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar -zcvhf release__builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
+          tar --exclude='*CMakeFiles*' -zcvhf release__builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -159,12 +160,14 @@ jobs:
     needs: build_Release
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+        run: |
+          unzip /root/thirdparties-bin.zip -d ./thirdparty
+          rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
@@ -187,7 +190,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup cache
         uses: actions/cache@v3
         with:
@@ -205,14 +208,18 @@ jobs:
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+        run: |
+          unzip /root/thirdparties-bin.zip -d ./thirdparty
+          rm -f /root/thirdparties-bin.zip
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
         working-directory: thirdparty
+        # Build thirdparties and leave some necessary libraries and source
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
+          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
           ../scripts/download_hadoop.sh hadoop-bin
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
@@ -226,7 +233,7 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_address_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
+          tar --exclude='*CMakeFiles*' -zcvhf release_address_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -280,9 +287,11 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+        run: |
+          unzip /root/thirdparties-bin.zip -d ./thirdparty
+          rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
@@ -308,7 +317,7 @@ jobs:
 #    container:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
 #    steps:
-#      - uses: actions/checkout@v2
+#      - uses: actions/checkout@v3
 #      - name: Setup cache
 #        uses: actions/cache@v3
 #        with:
@@ -326,14 +335,18 @@ jobs:
 #              - 'thirdparty/**'
 #      - name: Unpack prebuilt third-parties
 #        if: steps.changes.outputs.thirdparty == 'false'
-#        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+#        run: |
+#          unzip /root/thirdparties-bin.zip -d ./thirdparty
+#          rm -f /root/thirdparties-bin.zip
 #      - name: Rebuild third-parties
 #        if: steps.changes.outputs.thirdparty == 'true'
 #        working-directory: thirdparty
+#        # Build thirdparties and leave some necessary libraries and source
 #        run: |
 #          mkdir build
 #          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
 #          cmake --build build/ -j $(nproc)
+#          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
 #          ../scripts/download_hadoop.sh hadoop-bin
 #          ../scripts/download_zk.sh zookeeper-bin
 #      - name: Compilation
@@ -347,7 +360,7 @@ jobs:
 #          mv thirdparty/hadoop-bin ./
 #          mv thirdparty/zookeeper-bin ./
 #          rm -rf thirdparty
-#          tar -zcvhf release_undefined_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
+#          tar --exclude='*CMakeFiles*' -zcvhf release_undefined_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin
 #      - name: Upload Artifact
 #        uses: actions/upload-artifact@v3
 #        with:
@@ -397,9 +410,11 @@ jobs:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
 #      options: --cap-add=SYS_PTRACE
 #    steps:
-#      - uses: actions/checkout@v2
+#      - uses: actions/checkout@v3
 #      - name: Unpack prebuilt third-parties
-#        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+#        run: |
+#          unzip /root/thirdparties-bin.zip -d ./thirdparty
+#          rm -f /root/thirdparties-bin.zip
 #      - name: Download Artifact
 #        uses: actions/download-artifact@v3
 #        with:
@@ -420,9 +435,9 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup cache
         uses: actions/cache@v3
         with:
@@ -440,14 +455,18 @@ jobs:
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+        run: |
+          unzip /root/thirdparties-bin.zip -d ./thirdparty
+          rm -f /root/thirdparties-bin.zip
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
         working-directory: thirdparty
+        # Build thirdparties and leave some necessary libraries and source
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -DUSE_JEMALLOC=ON -B build/
           cmake --build build/ -j $(nproc)
+          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
           ../scripts/download_hadoop.sh hadoop-bin
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
@@ -465,7 +484,7 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_jemalloc_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
+          tar --exclude='*CMakeFiles*' -zcvhf release_jemalloc_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -482,12 +501,14 @@ jobs:
     needs: build_with_jemalloc
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+        run: |
+          unzip /root/thirdparties-bin.zip -d ./thirdparty
+          rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
@@ -518,7 +539,7 @@ jobs:
           brew install lz4
           brew install zstd
           brew install openssl@1.1
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup cache
         uses: actions/cache@v3
         with:

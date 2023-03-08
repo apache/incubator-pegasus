@@ -40,7 +40,7 @@ void register_rpc_access_type(access_type ac_type,
 
 ranger_resource_policy_manager::ranger_resource_policy_manager(
     dsn::replication::meta_service *meta_svc)
-    : _meta_svc(meta_svc), _local_policy_version(0)
+    : _meta_svc(meta_svc) //, _local_policy_version(0)
 {
     _ranger_policy_meta_root = dsn::replication::meta_options::concat_path_unix_style(
         _meta_svc->cluster_root(), "ranger_policy_meta_root");
