@@ -2366,7 +2366,7 @@ range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
     return range_iteration_state::kNormal;
 }
 
-#define GET_TICKER_COUNT_AND_SET_METRIC(ticker_name, metirc_name)                                  \
+#define GET_TICKER_COUNT_AND_SET_METRIC(ticker_name, metric_name)                                  \
     do {                                                                                           \
         auto value = _statistics->getTickerCount(rocksdb::ticker_name);                            \
         METRIC_VAR_SET(metric_name, value);                                                        \
