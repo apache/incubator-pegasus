@@ -520,11 +520,11 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(rdb_memtable_mem_usage_bytes);
     METRIC_VAR_DECLARE_gauge_int64(rdb_estimated_keys);
 
-    dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
-    dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;
-    dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
-    dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
-    dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_seek_negatives);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_seek_total);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_point_lookup_negatives);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_point_lookup_positives);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_point_lookup_true_positives);
     dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
     dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
     dsn::perf_counter_wrapper _pfc_rdb_write_amplification;

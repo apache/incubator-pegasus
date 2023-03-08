@@ -112,8 +112,44 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kKeys,
                           "The estimated number of rocksdb keys for each replica");
 
-// https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter
+// Following metrics are rocksdb statistics that are related to bloom filters.
 //
+// To measure prefix bloom filters, these metrics are updated after each ::Seek and ::SeekForPrev if prefix is enabled and check_filter is set:
+// * rdb_bf_seek_negatives: seek_negatives
+// * rdb_bf_seek_total: seek_negatives + seek_positives
+//
+// To measure full bloom filters, these metrics are updated after each point lookup. If whole_key_filtering is set, this is the result of checking the bloom of the whole key, otherwise this is the result of checking the bloom of the prefix:
+// * rdb_bf_point_lookup_negatives: [true] negatives
+// * rdb_bf_point_lookup_positives: positives
+// * rdb_bf_point_lookup_true_positives: true positives
+//
+// For details please see https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter#statistic.
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bf_seek_negatives,
+                          dsn::metric_unit::kSeeks,
+                          "The number of times the check for prefix bloom filter was useful in avoiding iterator creation (and thus likely IOPs), used by rocksdb for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bf_seek_total,
+                          dsn::metric_unit::kSeeks,
+                          "The number of times prefix bloom filter was checked before creating iterator on a file, used by rocksdb for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bf_point_lookup_negatives,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of times full bloom filter has avoided file reads (i.e., negatives), used by rocksdb for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bf_point_lookup_positives,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of times full bloom filter has not avoided the reads, used by rocksdb for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bf_point_lookup_true_positives,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of times full bloom filter has not avoided the reads and data actually exist, used by rocksdb for each replica");
+
 namespace pegasus {
 namespace server {
 
@@ -294,7 +330,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(rdb_total_sst_size_mb),
       METRIC_VAR_INIT_replica(rdb_index_and_filter_blocks_mem_usage_bytes),
       METRIC_VAR_INIT_replica(rdb_memtable_mem_usage_bytes),
-      METRIC_VAR_INIT_replica(rdb_estimated_keys)
+      METRIC_VAR_INIT_replica(rdb_estimated_keys),
+      METRIC_VAR_INIT_replica(rdb_bf_seek_negatives),
+      METRIC_VAR_INIT_replica(rdb_bf_seek_total),
+      METRIC_VAR_INIT_replica(rdb_bf_point_lookup_negatives),
+      METRIC_VAR_INIT_replica(rdb_bf_point_lookup_positives),
+      METRIC_VAR_INIT_replica(rdb_bf_point_lookup_true_positives)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -757,44 +798,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             COUNTER_TYPE_NUMBER,
             "statistic the through bytes of rocksdb write rate limiter");
     });
-
-    snprintf(name, 255, "rdb.bf_seek_negatives@%s", str_gpid.c_str());
-    _pfc_rdb_bf_seek_negatives.init_app_counter("app.pegasus",
-                                                name,
-                                                COUNTER_TYPE_NUMBER,
-                                                "statistics the number of times bloom filter was "
-                                                "checked before creating iterator on a file and "
-                                                "useful in avoiding iterator creation (and thus "
-                                                "likely IOPs)");
-
-    snprintf(name, 255, "rdb.bf_seek_total@%s", str_gpid.c_str());
-    _pfc_rdb_bf_seek_total.init_app_counter("app.pegasus",
-                                            name,
-                                            COUNTER_TYPE_NUMBER,
-                                            "statistics the number of times bloom filter was "
-                                            "checked before creating iterator on a file");
-
-    snprintf(name, 255, "rdb.bf_point_positive_true@%s", str_gpid.c_str());
-    _pfc_rdb_bf_point_positive_true.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistics the number of times bloom filter has avoided file reads, i.e., negatives");
-
-    snprintf(name, 255, "rdb.bf_point_positive_total@%s", str_gpid.c_str());
-    _pfc_rdb_bf_point_positive_total.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistics the number of times bloom FullFilter has not avoided the reads");
-
-    snprintf(name, 255, "rdb.bf_point_negatives@%s", str_gpid.c_str());
-    _pfc_rdb_bf_point_negatives.init_app_counter("app.pegasus",
-                                                 name,
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "statistics the number of times bloom FullFilter "
-                                                 "has not avoided the reads and data actually "
-                                                 "exist");
 
     auto counter_str = fmt::format("recent.read.throttling.reject.count@{}", str_gpid.c_str());
     _counter_recent_read_throttling_reject_count.init_app_counter(

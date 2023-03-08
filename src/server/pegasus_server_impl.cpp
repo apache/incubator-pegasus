@@ -2366,6 +2366,13 @@ range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
     return range_iteration_state::kNormal;
 }
 
+#define GET_TICKER_COUNT_AND_SET_METRIC(ticker_name, metirc_name) \
+    do { \
+    auto value = _statistics->getTickerCount(rocksdb::ticker_name); \
+    METRIC_VAR_SET(metric_name, value); \
+    LOG_DEBUG_PREFIX("" #metric_name ": {}", value);\
+    } while (0)
+
 void pegasus_server_impl::update_replica_rocksdb_statistics()
 {
     std::string str_val;
@@ -2444,31 +2451,20 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         }
     }
 
-    // Update _pfc_rdb_bf_seek_negatives
-    auto bf_seek_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_USEFUL);
-    _pfc_rdb_bf_seek_negatives->set(bf_seek_negatives);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_seek_negatives: {}", bf_seek_negatives);
+    // Update rdb_bf_seek_negatives
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_USEFUL, rdb_bf_seek_negatives);
 
-    // Update _pfc_rdb_bf_seek_total
-    auto bf_seek_total = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_CHECKED);
-    _pfc_rdb_bf_seek_total->set(bf_seek_total);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_seek_total: {}", bf_seek_total);
+    // Update rdb_bf_seek_total
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_CHECKED, rdb_bf_seek_total);
 
-    // Update _pfc_rdb_bf_point_positive_true
-    auto bf_point_positive_true =
-        _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_TRUE_POSITIVE);
-    _pfc_rdb_bf_point_positive_true->set(bf_point_positive_true);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_point_positive_true: {}", bf_point_positive_true);
+    // Update rdb_bf_point_lookup_negatives
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_USEFUL, rdb_bf_point_lookup_negatives);
 
-    // Update _pfc_rdb_bf_point_positive_total
-    auto bf_point_positive_total = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_POSITIVE);
-    _pfc_rdb_bf_point_positive_total->set(bf_point_positive_total);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_point_positive_total: {}", bf_point_positive_total);
+    // Update rdb_bf_point_lookup_positives
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_POSITIVE, rdb_bf_point_lookup_positives);
 
-    // Update _pfc_rdb_bf_point_negatives
-    auto bf_point_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_USEFUL);
-    _pfc_rdb_bf_point_negatives->set(bf_point_negatives);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_point_negatives: {}", bf_point_negatives);
+    // Update rdb_bf_point_lookup_true_positives
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_TRUE_POSITIVE, rdb_bf_point_lookup_true_positives);
 
     // Update _pfc_rdb_block_cache_hit_count and _pfc_rdb_block_cache_total_count
     auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
