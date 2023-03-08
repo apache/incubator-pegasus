@@ -265,6 +265,17 @@ private:
                       gpid id,
                       const std::shared_ptr<group_check_request> &req,
                       const std::shared_ptr<configuration_update_request> &req2);
+    // Create a new replica according to the parameters.
+    // 'parent_dir' is used in partition split for get_child_dir().
+    replica *new_replica(gpid gpid,
+                         const app_info &app,
+                         bool restore_if_necessary,
+                         bool is_duplication_follower,
+                         const std::string &parent_dir = "");
+    // Load an existing replica from 'dir'.
+    replica *load_replica(const char *dir);
+    // Clean up the memory state and on disk data if creating replica failed.
+    void clear_on_failure(replica *rep, const std::string &path, const gpid &pid);
     task_ptr begin_close_replica(replica_ptr r);
     void close_replica(replica_ptr r);
     void notify_replica_state_update(const replica_configuration &config, bool is_closing);
@@ -338,6 +349,7 @@ private:
     friend class replica_follower;
     friend class replica_follower_test;
     friend class replica_http_service_test;
+    FRIEND_TEST(replica_test, test_clear_on_failer);
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>

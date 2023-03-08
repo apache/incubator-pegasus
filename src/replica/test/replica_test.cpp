@@ -168,14 +168,6 @@ public:
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
 
-    replica *call_clear_on_failure(replica_stub *stub,
-                                   replica *rep,
-                                   const std::string &path,
-                                   const gpid &gpid)
-    {
-        return replica::clear_on_failure(stub, rep, path, gpid);
-    }
-
     bool has_gpid(gpid &gpid) const
     {
         for (const auto &node : stub->_fs_manager._dir_nodes) {
@@ -445,7 +437,7 @@ TEST_F(replica_test, test_clear_on_failer)
     ASSERT_TRUE(dsn::utils::filesystem::path_exists(path));
     ASSERT_TRUE(has_gpid(pid));
 
-    ASSERT_FALSE(call_clear_on_failure(stub.get(), rep, path, pid));
+    stub->clear_on_failure(rep, path, pid);
 
     ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
     ASSERT_FALSE(has_gpid(pid));
