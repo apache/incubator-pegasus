@@ -2366,11 +2366,11 @@ range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
     return range_iteration_state::kNormal;
 }
 
-#define GET_TICKER_COUNT_AND_SET_METRIC(ticker_name, metirc_name) \
-    do { \
-    auto value = _statistics->getTickerCount(rocksdb::ticker_name); \
-    METRIC_VAR_SET(metric_name, value); \
-    LOG_DEBUG_PREFIX("" #metric_name ": {}", value);\
+#define GET_TICKER_COUNT_AND_SET_METRIC(ticker_name, metirc_name)                                  \
+    do {                                                                                           \
+        auto value = _statistics->getTickerCount(rocksdb::ticker_name);                            \
+        METRIC_VAR_SET(metric_name, value);                                                        \
+        LOG_DEBUG_PREFIX("" #metric_name ": {}", value);                                           \
     } while (0)
 
 void pegasus_server_impl::update_replica_rocksdb_statistics()
@@ -2464,7 +2464,8 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_POSITIVE, rdb_bf_point_lookup_positives);
 
     // Update rdb_bf_point_lookup_true_positives
-    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_TRUE_POSITIVE, rdb_bf_point_lookup_true_positives);
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_TRUE_POSITIVE,
+                                    rdb_bf_point_lookup_true_positives);
 
     // Update _pfc_rdb_block_cache_hit_count and _pfc_rdb_block_cache_total_count
     auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);

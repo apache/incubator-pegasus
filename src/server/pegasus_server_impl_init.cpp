@@ -114,11 +114,14 @@ METRIC_DEFINE_gauge_int64(replica,
 
 // Following metrics are rocksdb statistics that are related to bloom filters.
 //
-// To measure prefix bloom filters, these metrics are updated after each ::Seek and ::SeekForPrev if prefix is enabled and check_filter is set:
+// To measure prefix bloom filters, these metrics are updated after each ::Seek and ::SeekForPrev if
+// prefix is enabled and check_filter is set:
 // * rdb_bf_seek_negatives: seek_negatives
 // * rdb_bf_seek_total: seek_negatives + seek_positives
 //
-// To measure full bloom filters, these metrics are updated after each point lookup. If whole_key_filtering is set, this is the result of checking the bloom of the whole key, otherwise this is the result of checking the bloom of the prefix:
+// To measure full bloom filters, these metrics are updated after each point lookup. If
+// whole_key_filtering is set, this is the result of checking the bloom of the whole key, otherwise
+// this is the result of checking the bloom of the prefix:
 // * rdb_bf_point_lookup_negatives: [true] negatives
 // * rdb_bf_point_lookup_positives: positives
 // * rdb_bf_point_lookup_true_positives: true positives
@@ -128,27 +131,33 @@ METRIC_DEFINE_gauge_int64(replica,
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_bf_seek_negatives,
                           dsn::metric_unit::kSeeks,
-                          "The number of times the check for prefix bloom filter was useful in avoiding iterator creation (and thus likely IOPs), used by rocksdb for each replica");
+                          "The number of times the check for prefix bloom filter was useful in "
+                          "avoiding iterator creation (and thus likely IOPs), used by rocksdb for "
+                          "each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_bf_seek_total,
                           dsn::metric_unit::kSeeks,
-                          "The number of times prefix bloom filter was checked before creating iterator on a file, used by rocksdb for each replica");
+                          "The number of times prefix bloom filter was checked before creating "
+                          "iterator on a file, used by rocksdb for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_bf_point_lookup_negatives,
                           dsn::metric_unit::kPointLookups,
-                          "The number of times full bloom filter has avoided file reads (i.e., negatives), used by rocksdb for each replica");
+                          "The number of times full bloom filter has avoided file reads (i.e., "
+                          "negatives), used by rocksdb for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_bf_point_lookup_positives,
                           dsn::metric_unit::kPointLookups,
-                          "The number of times full bloom filter has not avoided the reads, used by rocksdb for each replica");
+                          "The number of times full bloom filter has not avoided the reads, used "
+                          "by rocksdb for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_bf_point_lookup_true_positives,
                           dsn::metric_unit::kPointLookups,
-                          "The number of times full bloom filter has not avoided the reads and data actually exist, used by rocksdb for each replica");
+                          "The number of times full bloom filter has not avoided the reads and "
+                          "data actually exist, used by rocksdb for each replica");
 
 namespace pegasus {
 namespace server {
