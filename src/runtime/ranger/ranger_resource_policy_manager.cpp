@@ -22,6 +22,34 @@
 namespace dsn {
 namespace ranger {
 
+#define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
+    do {                                                                                           \
+        if (!obj.IsObject() || !obj.HasMember(member)) {                                           \
+            return dsn::ERR_RANGER_PARSE_ACL;                                                      \
+        }                                                                                          \
+    } while (0)
+
+#define CONTINUE_IF_MISSING_MEMBER(obj, member)                                                    \
+    do {                                                                                           \
+        if (!obj.IsObject() || !obj.HasMember(member)) {                                           \
+            continue;                                                                              \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_ERR_IF_NOT_ARRAY(obj)                                                               \
+    do {                                                                                           \
+        if (!obj.IsArray() || obj.Empty()) {                                                       \
+            return dsn::ERR_RANGER_PARSE_ACL;                                                      \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_VOID_IF_NOT_ARRAY(obj)                                                              \
+    do {                                                                                           \
+        if (!obj.IsArray() || obj.Empty()) {                                                       \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
+
 namespace {
 // Register access types of 'rpc_codes' as 'ac_type' to 'ac_type_of_rpc'.
 // TODO(wanghao): A better way is to define the ac_type when defining rpc, and traverse all RPCs to
@@ -36,6 +64,15 @@ void register_rpc_access_type(access_type ac_type,
         ac_type_of_rpc.emplace(code, ac_type);
     }
 }
+
+// Used to map access_type matched resources policies json string.
+std::map<std::string, access_type> access_type_maping({{"READ", access_type::KRead},
+                                                       {"WRITE", access_type::KWrite},
+                                                       {"CREATE", access_type::KCreate},
+                                                       {"DROP", access_type::KDrop},
+                                                       {"LIST", access_type::KList},
+                                                       {"METADATA", access_type::KMetadata},
+                                                       {"CONTROL", access_type::KControl}});
 } // anonymous namespace
 
 ranger_resource_policy_manager::ranger_resource_policy_manager(
@@ -96,6 +133,31 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_SET_MAX_REPLICA_COUNT",
                               "RPC_CM_RENAME_APP"},
                              _ac_type_of_database_rpcs);
+}
+
+void ranger_resource_policy_manager::parse_policies_from_json(const rapidjson::Value &data,
+                                                              std::vector<policy_item> &policies)
+{
+    CHECK(policies.empty(), "Ranger policy list should not be empty.");
+    RETURN_VOID_IF_NOT_ARRAY(data);
+    for (const auto &item : data.GetArray()) {
+        CONTINUE_IF_MISSING_MEMBER(item, "accesses");
+        policy_item pi;
+        for (const auto &access : item["accesses"].GetArray()) {
+            CONTINUE_IF_MISSING_MEMBER(access, "isAllowed");
+            CONTINUE_IF_MISSING_MEMBER(access, "type");
+            if (access["isAllowed"].GetBool()) {
+                std::string type = access["type"].GetString();
+                std::transform(type.begin(), type.end(), type.begin(), toupper);
+                pi.access_types |= access_type_maping[type];
+            }
+        }
+        CONTINUE_IF_MISSING_MEMBER(item, "users");
+        for (const auto &user : item["users"].GetArray()) {
+            pi.users.emplace(user.GetString());
+        }
+        policies.emplace_back(pi);
+    }
 }
 } // namespace ranger
 } // namespace dsn

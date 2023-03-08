@@ -32,8 +32,28 @@ namespace replication {
 class meta_service;
 }
 
+enum class resource_type
+{
+    KGlobal = 0,
+    Kdatabase,
+    KDatabaseTable,
+    KUnknown,
+};
+
+ENUM_BEGIN(resource_type, resource_type::KUnknown)
+ENUM_REG(resource_type::KGlobal)
+ENUM_REG(resource_type::Kdatabase)
+ENUM_REG(resource_type::KDatabaseTable)
+ENUM_END(resource_type)
+
+ENUM_TYPE_SERIALIZATION(resource_type, resource_type::KUnknown)
+
 namespace ranger {
 
+// Policies corresponding to a resource
+using resource_policies = std::vector<ranger_resource_policy>;
+// Policies corresponding to all resources
+using all_resource_policies = std::map<std::string, resource_policies>;
 // Range access type of rpc codes
 using access_type_of_rpc_code = std::unordered_map<int, ranger::access_type>;
 
@@ -43,6 +63,11 @@ public:
     ranger_resource_policy_manager(dsn::replication::meta_service *meta_svc);
 
     ~ranger_resource_policy_manager() = default;
+
+private:
+    // Parse Ranger ACL policies in JSON format 'data' into 'policies'.
+    static void parse_policies_from_json(const rapidjson::Value &data,
+                                         std::vector<policy_item> &policies);
 
 private:
     // The path where policies to be saved in remote storage.
@@ -58,6 +83,13 @@ private:
 
     // The Ranger policy version to determine whether to update.
     //    int _local_policy_version;
+
+    // All Ranger ACL policies.
+    all_resource_policies _all_resource_policies;
+
+    DEFINE_JSON_SERIALIZATION(_all_resource_policies);
+
+    FRIEND_TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test);
 };
 } // namespace ranger
 } // namespace dsn
