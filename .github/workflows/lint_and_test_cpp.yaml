@@ -188,9 +188,15 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            /github/home/.ccache
+          key: asan_ccache
       - uses: dorny/paths-filter@v2
         id: changes
         with:
@@ -218,7 +224,10 @@ jobs:
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
         run: |
+          ccache -p
+          ccache -z
           ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc)
+          ccache -s
       - name: Tar files
         run: |
           mv thirdparty/hadoop-bin ./
@@ -275,7 +284,7 @@ jobs:
     needs: build_ASAN
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v3
@@ -306,7 +315,7 @@ jobs:
 #    needs: cpp_clang_format_linter
 #    runs-on: ubuntu-latest
 #    container:
-#      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+#      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
 #    steps:
 #      - uses: actions/checkout@v3
 #      - name: Setup cache
@@ -398,7 +407,7 @@ jobs:
 #    needs: build_UBSAN
 #    runs-on: ubuntu-latest
 #    container:
-#      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+#      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
 #      options: --cap-add=SYS_PTRACE
 #    steps:
 #      - uses: actions/checkout@v3
