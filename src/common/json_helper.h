@@ -347,15 +347,10 @@ inline bool json_decode(const JsonObject &in, dsn::ranger::access_type &t)
 {
     dverify(in.IsUint64());
     int64_t ans = in.GetUint64();
-    int64_t act_min = static_cast<uint64_t>(dsn::ranger::access_type::KInvalid);
-    int64_t act_max = static_cast<uint64_t>(
-        dsn::ranger::access_type::KRead | dsn::ranger::access_type::KWrite |
-        dsn::ranger::access_type::KCreate | dsn::ranger::access_type::KDrop |
-        dsn::ranger::access_type::KList | dsn::ranger::access_type::KMetadata |
-        dsn::ranger::access_type::KControl);
+    int64_t act_min = static_cast<uint64_t>(dsn::ranger::access_type_min);
+    int64_t act_max = static_cast<uint64_t>(dsn::ranger::access_type_max);
     dverify(ans >= act_min && ans <= act_max);
-    using act = std::underlying_type<dsn::ranger::access_type>::type;
-    t = (dsn::ranger::access_type) static_cast<act>(ans);
+    t = static_cast<dsn::ranger::access_type>(ans);
     return true;
 }
 

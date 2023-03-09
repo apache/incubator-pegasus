@@ -34,7 +34,7 @@ namespace ranger {
 // Ranger policy data structure
 struct policy_item
 {
-    access_type access_types = access_type::KInvalid;
+    access_type access_types = access_type::kInvalid;
     std::unordered_set<std::string> users;
 
     DEFINE_JSON_SERIALIZATION(access_types, users);

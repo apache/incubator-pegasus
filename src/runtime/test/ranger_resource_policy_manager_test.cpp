@@ -72,11 +72,11 @@ TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
 
     EXPECT_EQ(2, fake_policies.size());
 
-    ASSERT_EQ(access_type::KCreate | access_type::KDrop | access_type::KList |
-                  access_type::KMetadata | access_type::KControl,
+    ASSERT_EQ(access_type::kCreate | access_type::kDrop | access_type::kList |
+                  access_type::kMetadata | access_type::kControl,
               fake_policies[0].access_types);
 
-    ASSERT_EQ(access_type::KRead | access_type::KWrite, fake_policies[1].access_types);
+    ASSERT_EQ(access_type::kRead | access_type::kWrite, fake_policies[1].access_types);
 
     struct test_case
     {
@@ -84,36 +84,36 @@ TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
         access_type ac_type;
         std::string user_name;
         bool expected_result;
-    } tests[] = {{fake_policies[0], access_type::KRead, "", false},
-                 {fake_policies[0], access_type::KRead, "user", false},
-                 {fake_policies[0], access_type::KRead, "user1", false},
-                 {fake_policies[0], access_type::KWrite, "user1", false},
-                 {fake_policies[0], access_type::KCreate, "user1", true},
-                 {fake_policies[0], access_type::KDrop, "user1", true},
-                 {fake_policies[0], access_type::KList, "user1", true},
-                 {fake_policies[0], access_type::KMetadata, "user1", true},
-                 {fake_policies[0], access_type::KControl, "user1", true},
-                 {fake_policies[0], access_type::KRead, "user2", false},
-                 {fake_policies[0], access_type::KWrite, "user2", false},
-                 {fake_policies[0], access_type::KCreate, "user2", true},
-                 {fake_policies[0], access_type::KDrop, "user2", true},
-                 {fake_policies[0], access_type::KList, "user2", true},
-                 {fake_policies[0], access_type::KMetadata, "user2", true},
-                 {fake_policies[0], access_type::KControl, "user2", true},
-                 {fake_policies[1], access_type::KRead, "user1", false},
-                 {fake_policies[1], access_type::KWrite, "user1", false},
-                 {fake_policies[1], access_type::KCreate, "user1", false},
-                 {fake_policies[1], access_type::KDrop, "user1", false},
-                 {fake_policies[1], access_type::KList, "user1", false},
-                 {fake_policies[1], access_type::KMetadata, "user1", false},
-                 {fake_policies[1], access_type::KControl, "user1", false},
-                 {fake_policies[1], access_type::KRead, "user2", true},
-                 {fake_policies[1], access_type::KWrite, "user2", true},
-                 {fake_policies[1], access_type::KCreate, "user2", false},
-                 {fake_policies[1], access_type::KDrop, "user2", false},
-                 {fake_policies[1], access_type::KList, "user2", false},
-                 {fake_policies[1], access_type::KMetadata, "user2", false},
-                 {fake_policies[1], access_type::KControl, "user2", false}};
+    } tests[] = {{fake_policies[0], access_type::kRead, "", false},
+                 {fake_policies[0], access_type::kRead, "user", false},
+                 {fake_policies[0], access_type::kRead, "user1", false},
+                 {fake_policies[0], access_type::kWrite, "user1", false},
+                 {fake_policies[0], access_type::kCreate, "user1", true},
+                 {fake_policies[0], access_type::kDrop, "user1", true},
+                 {fake_policies[0], access_type::kList, "user1", true},
+                 {fake_policies[0], access_type::kMetadata, "user1", true},
+                 {fake_policies[0], access_type::kControl, "user1", true},
+                 {fake_policies[0], access_type::kRead, "user2", false},
+                 {fake_policies[0], access_type::kWrite, "user2", false},
+                 {fake_policies[0], access_type::kCreate, "user2", true},
+                 {fake_policies[0], access_type::kDrop, "user2", true},
+                 {fake_policies[0], access_type::kList, "user2", true},
+                 {fake_policies[0], access_type::kMetadata, "user2", true},
+                 {fake_policies[0], access_type::kControl, "user2", true},
+                 {fake_policies[1], access_type::kRead, "user1", false},
+                 {fake_policies[1], access_type::kWrite, "user1", false},
+                 {fake_policies[1], access_type::kCreate, "user1", false},
+                 {fake_policies[1], access_type::kDrop, "user1", false},
+                 {fake_policies[1], access_type::kList, "user1", false},
+                 {fake_policies[1], access_type::kMetadata, "user1", false},
+                 {fake_policies[1], access_type::kControl, "user1", false},
+                 {fake_policies[1], access_type::kRead, "user2", true},
+                 {fake_policies[1], access_type::kWrite, "user2", true},
+                 {fake_policies[1], access_type::kCreate, "user2", false},
+                 {fake_policies[1], access_type::kDrop, "user2", false},
+                 {fake_policies[1], access_type::kList, "user2", false},
+                 {fake_policies[1], access_type::kMetadata, "user2", false},
+                 {fake_policies[1], access_type::kControl, "user2", false}};
     for (const auto &test : tests) {
         auto actual_result = test.item.match(test.ac_type, test.user_name);
         EXPECT_EQ(test.expected_result, actual_result);
@@ -123,11 +123,11 @@ TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
 TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test)
 {
     acl_policies fake_policy;
-    fake_policy.allow_policies = {{access_type::KRead | access_type::KWrite | access_type::KList,
+    fake_policy.allow_policies = {{access_type::kRead | access_type::kWrite | access_type::kList,
                                    {"user1", "user2", "user3", "user4"}}};
-    fake_policy.allow_policies_exclude = {{access_type::KWrite | access_type::KCreate, {"user2"}}};
-    fake_policy.deny_policies = {{access_type::KRead | access_type::KWrite, {"user3", "user4"}}};
-    fake_policy.deny_policies_exclude = {{access_type::KRead | access_type::KList, {"user4"}}};
+    fake_policy.allow_policies_exclude = {{access_type::kWrite | access_type::kCreate, {"user2"}}};
+    fake_policy.deny_policies = {{access_type::kRead | access_type::kWrite, {"user3", "user4"}}};
+    fake_policy.deny_policies_exclude = {{access_type::kRead | access_type::kList, {"user4"}}};
 
     ranger_resource_policy fake_ranger_resource_policy;
     fake_ranger_resource_policy.name = "pegasus_ranger_test";
@@ -135,7 +135,7 @@ TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test
     fake_ranger_resource_policy.table_names = {"database1_table", "database2_table"};
     fake_ranger_resource_policy.policies = fake_policy;
 
-    std::string resource_type_name = enum_to_string(resource_type::KDatabaseTable);
+    std::string resource_type_name = enum_to_string(resource_type::kDatabaseTable);
     all_resource_policies fake_all_resource_policies{
         {resource_type_name, {fake_ranger_resource_policy}}};
 
@@ -169,21 +169,21 @@ TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test
         access_type ac_type;
         std::string user_name;
         bool expected_result;
-    } tests[] = {{access_type::KRead, "user", false},      {access_type::KRead, "user1", true},
-                 {access_type::KWrite, "user1", true},     {access_type::KCreate, "user1", false},
-                 {access_type::KDrop, "user1", false},     {access_type::KList, "user1", true},
-                 {access_type::KMetadata, "user1", false}, {access_type::KControl, "user1", false},
-                 {access_type::KRead, "user2", true},      {access_type::KWrite, "user2", false},
-                 {access_type::KCreate, "user2", false},   {access_type::KDrop, "user2", false},
-                 {access_type::KList, "user2", true},      {access_type::KMetadata, "user2", false},
-                 {access_type::KControl, "user2", false},  {access_type::KRead, "user3", false},
-                 {access_type::KWrite, "user3", false},    {access_type::KCreate, "user3", false},
-                 {access_type::KDrop, "user3", false},     {access_type::KList, "user3", true},
-                 {access_type::KMetadata, "user3", false}, {access_type::KControl, "user3", false},
-                 {access_type::KRead, "user4", true},      {access_type::KWrite, "user4", false},
-                 {access_type::KCreate, "user4", false},   {access_type::KDrop, "user4", false},
-                 {access_type::KList, "user4", true},      {access_type::KMetadata, "user4", false},
-                 {access_type::KControl, "user4", false}};
+    } tests[] = {{access_type::kRead, "user", false},      {access_type::kRead, "user1", true},
+                 {access_type::kWrite, "user1", true},     {access_type::kCreate, "user1", false},
+                 {access_type::kDrop, "user1", false},     {access_type::kList, "user1", true},
+                 {access_type::kMetadata, "user1", false}, {access_type::kControl, "user1", false},
+                 {access_type::kRead, "user2", true},      {access_type::kWrite, "user2", false},
+                 {access_type::kCreate, "user2", false},   {access_type::kDrop, "user2", false},
+                 {access_type::kList, "user2", true},      {access_type::kMetadata, "user2", false},
+                 {access_type::kControl, "user2", false},  {access_type::kRead, "user3", false},
+                 {access_type::kWrite, "user3", false},    {access_type::kCreate, "user3", false},
+                 {access_type::kDrop, "user3", false},     {access_type::kList, "user3", true},
+                 {access_type::kMetadata, "user3", false}, {access_type::kControl, "user3", false},
+                 {access_type::kRead, "user4", true},      {access_type::kWrite, "user4", false},
+                 {access_type::kCreate, "user4", false},   {access_type::kDrop, "user4", false},
+                 {access_type::kList, "user4", true},      {access_type::kMetadata, "user4", false},
+                 {access_type::kControl, "user4", false}};
     for (const auto &test : tests) {
         auto actual_result = policy.policies.allowed(test.ac_type, test.user_name);
         EXPECT_EQ(test.expected_result, actual_result);

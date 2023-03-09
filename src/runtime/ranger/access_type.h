@@ -25,21 +25,28 @@ namespace ranger {
 // ACL type defined in Range service for RPC matching policy
 enum class access_type : uint8_t
 {
-    KInvalid = 0,
-    KRead = 1,
-    KWrite = 1 << 1,
-    KCreate = 1 << 2,
-    KDrop = 1 << 3,
-    KList = 1 << 4,
-    KMetadata = 1 << 5,
-    KControl = 1 << 6
+    kInvalid = 0,
+    kRead = 1,
+    kWrite = 1 << 1,
+    kCreate = 1 << 2,
+    kDrop = 1 << 3,
+    kList = 1 << 4,
+    kMetadata = 1 << 5,
+    kControl = 1 << 6
 };
+
+using act = std::underlying_type<access_type>::type;
 
 access_type operator|(access_type lhs, access_type rhs);
 
 access_type operator&(access_type lhs, access_type rhs);
 
 access_type &operator|=(access_type &lhs, access_type rhs);
+
+static access_type access_type_min = access_type::kInvalid;
+static access_type access_type_max =
+    access_type::kRead | access_type::kWrite | access_type::kCreate | access_type::kDrop |
+    access_type::kList | access_type::kMetadata | access_type::kControl;
 
 } // namespace ranger
 } // namespace dsn

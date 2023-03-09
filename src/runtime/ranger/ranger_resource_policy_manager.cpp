@@ -66,13 +66,13 @@ void register_rpc_access_type(access_type ac_type,
 }
 
 // Used to map access_type matched resources policies json string.
-std::map<std::string, access_type> access_type_maping({{"READ", access_type::KRead},
-                                                       {"WRITE", access_type::KWrite},
-                                                       {"CREATE", access_type::KCreate},
-                                                       {"DROP", access_type::KDrop},
-                                                       {"LIST", access_type::KList},
-                                                       {"METADATA", access_type::KMetadata},
-                                                       {"CONTROL", access_type::KControl}});
+std::map<std::string, access_type> access_type_maping({{"READ", access_type::kRead},
+                                                       {"WRITE", access_type::kWrite},
+                                                       {"CREATE", access_type::kCreate},
+                                                       {"DROP", access_type::kDrop},
+                                                       {"LIST", access_type::kList},
+                                                       {"METADATA", access_type::kMetadata},
+                                                       {"CONTROL", access_type::kControl}});
 } // anonymous namespace
 
 ranger_resource_policy_manager::ranger_resource_policy_manager(
@@ -84,11 +84,11 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
 
     // GLOBAL - KMetadata
     register_rpc_access_type(
-        access_type::KMetadata,
+        access_type::kMetadata,
         {"RPC_CM_LIST_NODES", "RPC_CM_CLUSTER_INFO", "RPC_CM_LIST_APPS", "RPC_QUERY_DISK_INFO"},
         _ac_type_of_global_rpcs);
     // GLOBAL - KControl
-    register_rpc_access_type(access_type::KControl,
+    register_rpc_access_type(access_type::kControl,
                              {"RPC_HTTP_SERVICE",
                               "RPC_CM_CONTROL_META",
                               "RPC_CM_START_RECOVERY",
@@ -98,15 +98,15 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CLI_CLI_CALL_ACK"},
                              _ac_type_of_global_rpcs);
     // DATABASE - KList
-    register_rpc_access_type(access_type::KList, {"RPC_CM_LIST_APPS"}, _ac_type_of_database_rpcs);
+    register_rpc_access_type(access_type::kList, {"RPC_CM_LIST_APPS"}, _ac_type_of_database_rpcs);
     // DATABASE - KCreate
     register_rpc_access_type(
-        access_type::KCreate, {"RPC_CM_CREATE_APP"}, _ac_type_of_database_rpcs);
+        access_type::kCreate, {"RPC_CM_CREATE_APP"}, _ac_type_of_database_rpcs);
     // DATABASE - KDrop
     register_rpc_access_type(
-        access_type::KDrop, {"RPC_CM_DROP_APP", "RPC_CM_RECALL_APP"}, _ac_type_of_database_rpcs);
+        access_type::kDrop, {"RPC_CM_DROP_APP", "RPC_CM_RECALL_APP"}, _ac_type_of_database_rpcs);
     // DATABASE - KMetadata
-    register_rpc_access_type(access_type::KMetadata,
+    register_rpc_access_type(access_type::kMetadata,
                              {"RPC_CM_QUERY_BACKUP_STATUS",
                               "RPC_CM_QUERY_RESTORE_STATUS",
                               "RPC_CM_QUERY_DUPLICATION",
@@ -116,7 +116,7 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_GET_MAX_REPLICA_COUNT"},
                              _ac_type_of_database_rpcs);
     // DATABASE - KControl
-    register_rpc_access_type(access_type::KControl,
+    register_rpc_access_type(access_type::kControl,
                              {"RPC_CM_START_BACKUP_APP",
                               "RPC_CM_START_RESTORE",
                               "RPC_CM_PROPOSE_BALANCER",

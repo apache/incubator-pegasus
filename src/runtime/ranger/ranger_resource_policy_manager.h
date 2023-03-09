@@ -34,19 +34,19 @@ class meta_service;
 
 enum class resource_type
 {
-    KGlobal = 0,
-    Kdatabase,
-    KDatabaseTable,
-    KUnknown,
+    kGlobal = 0,
+    kdatabase,
+    kDatabaseTable,
+    kUnknown,
 };
 
-ENUM_BEGIN(resource_type, resource_type::KUnknown)
-ENUM_REG(resource_type::KGlobal)
-ENUM_REG(resource_type::Kdatabase)
-ENUM_REG(resource_type::KDatabaseTable)
+ENUM_BEGIN(resource_type, resource_type::kUnknown)
+ENUM_REG(resource_type::kGlobal)
+ENUM_REG(resource_type::kdatabase)
+ENUM_REG(resource_type::kDatabaseTable)
 ENUM_END(resource_type)
 
-ENUM_TYPE_SERIALIZATION(resource_type, resource_type::KUnknown)
+ENUM_TYPE_SERIALIZATION(resource_type, resource_type::kUnknown)
 
 namespace ranger {
 
@@ -65,7 +65,7 @@ public:
     ~ranger_resource_policy_manager() = default;
 
 private:
-    // Parse Ranger ACL policies in JSON format 'data' into 'policies'.
+    // Parse Ranger ACL policies from 'data' in JSON format into 'policies'.
     static void parse_policies_from_json(const rapidjson::Value &data,
                                          std::vector<policy_item> &policies);
 

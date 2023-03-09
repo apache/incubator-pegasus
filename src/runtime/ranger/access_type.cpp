@@ -24,13 +24,11 @@ namespace ranger {
 
 access_type operator|(access_type lhs, access_type rhs)
 {
-    using act = std::underlying_type<access_type>::type;
     return access_type(static_cast<act>(lhs) | static_cast<act>(rhs));
 }
 
 access_type operator&(access_type lhs, access_type rhs)
 {
-    using act = std::underlying_type<access_type>::type;
     return access_type(static_cast<act>(lhs) & static_cast<act>(rhs));
 }
 
