@@ -1800,11 +1800,11 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         }
         METRIC_VAR_SET(rdb_total_sst_files, 0);
         METRIC_VAR_SET(rdb_total_sst_size_mb, 0);
-        _pfc_rdb_block_cache_hit_count->set(0);
-        _pfc_rdb_block_cache_total_count->set(0);
-        _pfc_rdb_block_cache_mem_usage->set(0);
         METRIC_VAR_SET(rdb_index_and_filter_blocks_mem_usage_bytes, 0);
         METRIC_VAR_SET(rdb_memtable_mem_usage_bytes, 0);
+        METRIC_VAR_SET(rdb_block_cache_hit_count, 0);
+        METRIC_VAR_SET(rdb_block_cache_total_count, 0);
+        _pfc_rdb_block_cache_mem_usage->set(0);
     }
 
     LOG_INFO_PREFIX("close app succeed, clear_state = {}", clear_state ? "true" : "false");
@@ -2451,31 +2451,32 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         }
     }
 
-    // Update rdb_bf_seek_negatives
-    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_USEFUL, rdb_bf_seek_negatives);
+    // Update rdb_bloom_filter_seek_negatives
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_USEFUL, rdb_bloom_filter_seek_negatives);
 
-    // Update rdb_bf_seek_total
-    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_CHECKED, rdb_bf_seek_total);
+    // Update rdb_bloom_filter_seek_total
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_CHECKED, rdb_bloom_filter_seek_total);
 
-    // Update rdb_bf_point_lookup_negatives
-    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_USEFUL, rdb_bf_point_lookup_negatives);
+    // Update rdb_bloom_filter_point_lookup_negatives
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_USEFUL, rdb_bloom_filter_point_lookup_negatives);
 
-    // Update rdb_bf_point_lookup_positives
-    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_POSITIVE, rdb_bf_point_lookup_positives);
+    // Update rdb_bloom_filter_point_lookup_positives
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_POSITIVE,
+                                    rdb_bloom_filter_point_lookup_positives);
 
-    // Update rdb_bf_point_lookup_true_positives
+    // Update rdb_bloom_filter_point_lookup_true_positives
     GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_TRUE_POSITIVE,
-                                    rdb_bf_point_lookup_true_positives);
+                                    rdb_bloom_filter_point_lookup_true_positives);
 
-    // Update _pfc_rdb_block_cache_hit_count and _pfc_rdb_block_cache_total_count
+    // Update rdb_block_cache_hit_count and rdb_block_cache_total_count
     auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
-    _pfc_rdb_block_cache_hit_count->set(block_cache_hit);
-    LOG_DEBUG_PREFIX("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
+    METRIC_VAR_SET(rdb_block_cache_hit_count, block_cache_hit);
+    LOG_DEBUG_PREFIX("rdb_block_cache_hit_count: {}", block_cache_hit);
 
     auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
     auto block_cache_total = block_cache_hit + block_cache_miss;
-    _pfc_rdb_block_cache_total_count->set(block_cache_total);
-    LOG_DEBUG_PREFIX("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
+    METRIC_VAR_SET(rdb_block_cache_total_count, block_cache_total);
+    LOG_DEBUG_PREFIX("rdb_block_cache_total_count: {}", block_cache_total);
 
     // update block memtable/l0/l1/l2andup hit rate under block cache up level
     auto memtable_hit_count = _statistics->getTickerCount(rocksdb::MEMTABLE_HIT);

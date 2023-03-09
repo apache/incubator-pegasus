@@ -516,17 +516,19 @@ private:
     // Replica-level metrics for rocksdb.
     METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_files);
     METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_size_mb);
-    METRIC_VAR_DECLARE_gauge_int64(rdb_index_and_filter_blocks_mem_usage_bytes);
-    METRIC_VAR_DECLARE_gauge_int64(rdb_memtable_mem_usage_bytes);
     METRIC_VAR_DECLARE_gauge_int64(rdb_estimated_keys);
 
-    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_seek_negatives);
-    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_seek_total);
-    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_point_lookup_negatives);
-    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_point_lookup_positives);
-    METRIC_VAR_DECLARE_gauge_int64(rdb_bf_point_lookup_true_positives);
-    dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
-    dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
+    METRIC_VAR_DECLARE_gauge_int64(rdb_index_and_filter_blocks_mem_usage_bytes);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_memtable_mem_usage_bytes);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_block_cache_hit_count);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_block_cache_total_count);
+
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_seek_negatives);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_seek_total);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_point_lookup_negatives);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_point_lookup_positives);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_point_lookup_true_positives);
+
     dsn::perf_counter_wrapper _pfc_rdb_write_amplification;
     dsn::perf_counter_wrapper _pfc_rdb_read_amplification;
     dsn::perf_counter_wrapper _pfc_rdb_memtable_hit_count;

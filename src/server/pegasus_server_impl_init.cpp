@@ -96,6 +96,11 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kMegaBytes,
                           "The total size of rocksdb sst files in MB for each replica");
 
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_estimated_keys,
+                          dsn::metric_unit::kKeys,
+                          "The estimated number of rocksdb keys for each replica");
+
 METRIC_DEFINE_gauge_int64(
     replica,
     rdb_index_and_filter_blocks_mem_usage_bytes,
@@ -108,53 +113,58 @@ METRIC_DEFINE_gauge_int64(replica,
                           "The memory usage of rocksdb memtables in bytes for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
-                          rdb_estimated_keys,
-                          dsn::metric_unit::kKeys,
-                          "The estimated number of rocksdb keys for each replica");
+                          rdb_block_cache_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The hit number of lookups on rocksdb block cache for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_block_cache_total_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The total number of lookups on rocksdb block cache for each replica");
 
 // Following metrics are rocksdb statistics that are related to bloom filters.
 //
 // To measure prefix bloom filters, these metrics are updated after each ::Seek and ::SeekForPrev if
 // prefix is enabled and check_filter is set:
-// * rdb_bf_seek_negatives: seek_negatives
-// * rdb_bf_seek_total: seek_negatives + seek_positives
+// * rdb_bloom_filter_seek_negatives: seek_negatives
+// * rdb_bloom_filter_seek_total: seek_negatives + seek_positives
 //
 // To measure full bloom filters, these metrics are updated after each point lookup. If
 // whole_key_filtering is set, this is the result of checking the bloom of the whole key, otherwise
 // this is the result of checking the bloom of the prefix:
-// * rdb_bf_point_lookup_negatives: [true] negatives
-// * rdb_bf_point_lookup_positives: positives
-// * rdb_bf_point_lookup_true_positives: true positives
+// * rdb_bloom_filter_point_lookup_negatives: [true] negatives
+// * rdb_bloom_filter_point_lookup_positives: positives
+// * rdb_bloom_filter_point_lookup_true_positives: true positives
 //
 // For details please see https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter#statistic.
 
 METRIC_DEFINE_gauge_int64(replica,
-                          rdb_bf_seek_negatives,
+                          rdb_bloom_filter_seek_negatives,
                           dsn::metric_unit::kSeeks,
                           "The number of times the check for prefix bloom filter was useful in "
                           "avoiding iterator creation (and thus likely IOPs), used by rocksdb for "
                           "each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
-                          rdb_bf_seek_total,
+                          rdb_bloom_filter_seek_total,
                           dsn::metric_unit::kSeeks,
                           "The number of times prefix bloom filter was checked before creating "
                           "iterator on a file, used by rocksdb for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
-                          rdb_bf_point_lookup_negatives,
+                          rdb_bloom_filter_point_lookup_negatives,
                           dsn::metric_unit::kPointLookups,
                           "The number of times full bloom filter has avoided file reads (i.e., "
                           "negatives), used by rocksdb for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
-                          rdb_bf_point_lookup_positives,
+                          rdb_bloom_filter_point_lookup_positives,
                           dsn::metric_unit::kPointLookups,
                           "The number of times full bloom filter has not avoided the reads, used "
                           "by rocksdb for each replica");
 
 METRIC_DEFINE_gauge_int64(replica,
-                          rdb_bf_point_lookup_true_positives,
+                          rdb_bloom_filter_point_lookup_true_positives,
                           dsn::metric_unit::kPointLookups,
                           "The number of times full bloom filter has not avoided the reads and "
                           "data actually exist, used by rocksdb for each replica");
@@ -337,14 +347,16 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(abnormal_read_requests),
       METRIC_VAR_INIT_replica(rdb_total_sst_files),
       METRIC_VAR_INIT_replica(rdb_total_sst_size_mb),
+      METRIC_VAR_INIT_replica(rdb_estimated_keys),
       METRIC_VAR_INIT_replica(rdb_index_and_filter_blocks_mem_usage_bytes),
       METRIC_VAR_INIT_replica(rdb_memtable_mem_usage_bytes),
-      METRIC_VAR_INIT_replica(rdb_estimated_keys),
-      METRIC_VAR_INIT_replica(rdb_bf_seek_negatives),
-      METRIC_VAR_INIT_replica(rdb_bf_seek_total),
-      METRIC_VAR_INIT_replica(rdb_bf_point_lookup_negatives),
-      METRIC_VAR_INIT_replica(rdb_bf_point_lookup_positives),
-      METRIC_VAR_INIT_replica(rdb_bf_point_lookup_true_positives)
+      METRIC_VAR_INIT_replica(rdb_block_cache_hit_count),
+      METRIC_VAR_INIT_replica(rdb_block_cache_total_count),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_seek_negatives),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_seek_total),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_negatives),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_positives),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_true_positives)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
@@ -750,17 +762,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     char name[256];
 
     // register the perf counters
-    snprintf(name, 255, "rdb.block_cache.hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_block_cache_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the hit count of rocksdb block cache");
-
-    snprintf(name, 255, "rdb.block_cache.total_count@%s", str_gpid.c_str());
-    _pfc_rdb_block_cache_total_count.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistic the total count of rocksdb block cache");
-
     snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
     _pfc_rdb_write_amplification.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the write amplification of rocksdb");
