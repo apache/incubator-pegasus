@@ -42,6 +42,12 @@ TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
 	        }, {
 		        "type": "list",
 		        "isAllowed": true
+	        }, {
+		        "type": "fake",
+		        "isAllowed": true
+	        }, {
+		        "type": "read",
+		        "isAllowed": false
 	        }],
 	        "users": ["user1", "user2"],
 	        "groups": [],
@@ -120,8 +126,10 @@ TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
     }
 }
 
+// Check whether 'all_resource_policies' can correctly decode and encode
 TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test)
 {
+    // 1. Create a fake resource policies data in 'fake_all_resource_policies'
     acl_policies fake_policy;
     fake_policy.allow_policies = {{access_type::kRead | access_type::kWrite | access_type::kList,
                                    {"user1", "user2", "user3", "user4"}}};
@@ -138,15 +146,18 @@ TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test
     std::string resource_type_name = enum_to_string(resource_type::kDatabaseTable);
     all_resource_policies fake_all_resource_policies{
         {resource_type_name, {fake_ranger_resource_policy}}};
-
+    // 2.Encode 'fake_all_resource_policies' into a string 'value'
     dsn::blob value =
         json::json_forwarder<all_resource_policies>::encode(fake_all_resource_policies);
     std::string fake_all_resource_policies_str = value.to_string();
     all_resource_policies fake_all_resource_policies_serialized;
+    // 3. Decode the string 'value' into 'fake_all_resource_policies_serialized'
     dsn::json::json_forwarder<all_resource_policies>::decode(
         dsn::blob::create_from_bytes(std::move(fake_all_resource_policies_str)),
         fake_all_resource_policies_serialized);
 
+    // 4. Verify the correctness of serialization by checking the data content of
+    // 'fake_all_resource_policies' and 'fake_all_resource_policies_serialized'
     EXPECT_EQ(1, fake_all_resource_policies.count(resource_type_name));
     EXPECT_EQ(1, fake_all_resource_policies_serialized.count(resource_type_name));
     ranger_resource_policy policy = fake_all_resource_policies[resource_type_name][0];

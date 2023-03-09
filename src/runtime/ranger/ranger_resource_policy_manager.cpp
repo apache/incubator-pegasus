@@ -66,13 +66,13 @@ void register_rpc_access_type(access_type ac_type,
 }
 
 // Used to map access_type matched resources policies json string.
-std::map<std::string, access_type> access_type_maping({{"READ", access_type::kRead},
-                                                       {"WRITE", access_type::kWrite},
-                                                       {"CREATE", access_type::kCreate},
-                                                       {"DROP", access_type::kDrop},
-                                                       {"LIST", access_type::kList},
-                                                       {"METADATA", access_type::kMetadata},
-                                                       {"CONTROL", access_type::kControl}});
+const std::map<std::string, access_type> kAccessTypeMaping({{"READ", access_type::kRead},
+                                                            {"WRITE", access_type::kWrite},
+                                                            {"CREATE", access_type::kCreate},
+                                                            {"DROP", access_type::kDrop},
+                                                            {"LIST", access_type::kList},
+                                                            {"METADATA", access_type::kMetadata},
+                                                            {"CONTROL", access_type::kControl}});
 } // anonymous namespace
 
 ranger_resource_policy_manager::ranger_resource_policy_manager(
@@ -149,7 +149,11 @@ void ranger_resource_policy_manager::parse_policies_from_json(const rapidjson::V
             if (access["isAllowed"].GetBool()) {
                 std::string type = access["type"].GetString();
                 std::transform(type.begin(), type.end(), type.begin(), toupper);
-                pi.access_types |= access_type_maping[type];
+                const auto &at = kAccessTypeMaping.find(type);
+                // ignore invalid access_type
+                if (kAccessTypeMaping.end() != at) {
+                    pi.access_types |= at->second;
+                }
             }
         }
         CONTINUE_IF_MISSING_MEMBER(item, "users");

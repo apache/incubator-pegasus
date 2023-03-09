@@ -35,14 +35,14 @@ class meta_service;
 enum class resource_type
 {
     kGlobal = 0,
-    kdatabase,
+    kDatabase,
     kDatabaseTable,
     kUnknown,
 };
 
 ENUM_BEGIN(resource_type, resource_type::kUnknown)
 ENUM_REG(resource_type::kGlobal)
-ENUM_REG(resource_type::kdatabase)
+ENUM_REG(resource_type::kDatabase)
 ENUM_REG(resource_type::kDatabaseTable)
 ENUM_END(resource_type)
 
