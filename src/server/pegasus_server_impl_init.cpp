@@ -86,6 +86,11 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of abnormal read requests for each replica");
 
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected read requests by throttling for each replica");
+
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_total_sst_files,
                           dsn::metric_unit::kFiles,
@@ -121,6 +126,41 @@ METRIC_DEFINE_gauge_int64(replica,
                           rdb_block_cache_total_count,
                           dsn::metric_unit::kPointLookups,
                           "The total number of lookups on rocksdb block cache for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_memtable_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The hit number of lookups on rocksdb memtable for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_memtable_total_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The total number of lookups on rocksdb memtable for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_l0_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of lookups served by rocksdb L0 for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_l1_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of lookups served by rocksdb L1 for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_l2_and_up_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of lookups served by rocksdb L2 and up for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_write_amplification,
+                          dsn::metric_unit::kAmplification,
+                          "The write amplification of rocksdb for each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_read_amplification,
+                          dsn::metric_unit::kAmplification,
+                          "The read amplification of rocksdb for each replica");
 
 // Following metrics are rocksdb statistics that are related to bloom filters.
 //
@@ -345,6 +385,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(read_expired_values),
       METRIC_VAR_INIT_replica(read_filtered_values),
       METRIC_VAR_INIT_replica(abnormal_read_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_read_requests),
       METRIC_VAR_INIT_replica(rdb_total_sst_files),
       METRIC_VAR_INIT_replica(rdb_total_sst_size_mb),
       METRIC_VAR_INIT_replica(rdb_estimated_keys),
@@ -352,6 +393,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(rdb_memtable_mem_usage_bytes),
       METRIC_VAR_INIT_replica(rdb_block_cache_hit_count),
       METRIC_VAR_INIT_replica(rdb_block_cache_total_count),
+      METRIC_VAR_INIT_replica(rdb_memtable_hit_count),
+      METRIC_VAR_INIT_replica(rdb_memtable_total_count),
+      METRIC_VAR_INIT_replica(rdb_l0_hit_count),
+      METRIC_VAR_INIT_replica(rdb_l1_hit_count),
+      METRIC_VAR_INIT_replica(rdb_l2_and_up_hit_count),
+      METRIC_VAR_INIT_replica(rdb_write_amplification),
+      METRIC_VAR_INIT_replica(rdb_read_amplification),
       METRIC_VAR_INIT_replica(rdb_bloom_filter_seek_negatives),
       METRIC_VAR_INIT_replica(rdb_bloom_filter_seek_total),
       METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_negatives),
@@ -761,35 +809,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     std::string str_gpid = _gpid.to_string();
     char name[256];
 
-    // register the perf counters
-    snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
-    _pfc_rdb_write_amplification.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the write amplification of rocksdb");
-
-    snprintf(name, 255, "rdb.read_amplification@%s", str_gpid.c_str());
-    _pfc_rdb_read_amplification.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read amplification of rocksdb");
-
-    snprintf(name, 255, "rdb.read_memtable_hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_memtable_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read memtable hit count");
-
-    snprintf(name, 255, "rdb.read_memtable_total_count@%s", str_gpid.c_str());
-    _pfc_rdb_memtable_total_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read memtable total count");
-
-    snprintf(name, 255, "rdb.read_l0_hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_l0_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l0 hit count");
-
-    snprintf(name, 255, "rdb.read_l1_hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_l1_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l1 hit count");
-
-    snprintf(name, 255, "rdb.read_l2andup_hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_l2andup_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l2andup hit count");
-
     // These counters are singletons on this server shared by all replicas, so we initialize
     // them only once.
     static std::once_flag flag;
@@ -808,10 +827,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             COUNTER_TYPE_NUMBER,
             "statistic the through bytes of rocksdb write rate limiter");
     });
-
-    auto counter_str = fmt::format("recent.read.throttling.reject.count@{}", str_gpid.c_str());
-    _counter_recent_read_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 }
+
 } // namespace server
 } // namespace pegasus

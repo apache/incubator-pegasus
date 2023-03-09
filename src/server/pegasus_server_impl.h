@@ -507,6 +507,7 @@ private:
     METRIC_VAR_DECLARE_counter(read_expired_values);
     METRIC_VAR_DECLARE_counter(read_filtered_values);
     METRIC_VAR_DECLARE_counter(abnormal_read_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_read_requests);
 
     // rocksdb internal statistics
     // server level
@@ -522,22 +523,20 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(rdb_memtable_mem_usage_bytes);
     METRIC_VAR_DECLARE_gauge_int64(rdb_block_cache_hit_count);
     METRIC_VAR_DECLARE_gauge_int64(rdb_block_cache_total_count);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_memtable_hit_count);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_memtable_total_count);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_l0_hit_count);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_l1_hit_count);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_l2_and_up_hit_count);
+
+    METRIC_VAR_DECLARE_gauge_int64(rdb_write_amplification);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_read_amplification);
 
     METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_seek_negatives);
     METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_seek_total);
     METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_point_lookup_negatives);
     METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_point_lookup_positives);
     METRIC_VAR_DECLARE_gauge_int64(rdb_bloom_filter_point_lookup_true_positives);
-
-    dsn::perf_counter_wrapper _pfc_rdb_write_amplification;
-    dsn::perf_counter_wrapper _pfc_rdb_read_amplification;
-    dsn::perf_counter_wrapper _pfc_rdb_memtable_hit_count;
-    dsn::perf_counter_wrapper _pfc_rdb_memtable_total_count;
-    dsn::perf_counter_wrapper _pfc_rdb_l0_hit_count;
-    dsn::perf_counter_wrapper _pfc_rdb_l1_hit_count;
-    dsn::perf_counter_wrapper _pfc_rdb_l2andup_hit_count;
-
-    dsn::perf_counter_wrapper _counter_recent_read_throttling_reject_count;
 };
 
 } // namespace server
