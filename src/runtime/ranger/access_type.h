@@ -43,8 +43,8 @@ access_type operator&(access_type lhs, access_type rhs);
 
 access_type &operator|=(access_type &lhs, access_type rhs);
 
-const access_type kAccessTypeMin = access_type::kInvalid;
-const access_type kAccessTypeMax = access_type::kRead | access_type::kWrite | access_type::kCreate |
+const access_type kAccessTypeNone = access_type::kInvalid;
+const access_type kAccessTypeAll = access_type::kRead | access_type::kWrite | access_type::kCreate |
                                    access_type::kDrop | access_type::kList |
                                    access_type::kMetadata | access_type::kControl;
 
