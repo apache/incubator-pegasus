@@ -346,9 +346,9 @@ inline void json_encode(Writer &out, dsn::ranger::access_type t)
 inline bool json_decode(const JsonObject &in, dsn::ranger::access_type &t)
 {
     dverify(in.IsUint64());
-    int64_t ans = in.GetUint64();
-    int64_t act_min = static_cast<uint64_t>(dsn::ranger::access_type_min);
-    int64_t act_max = static_cast<uint64_t>(dsn::ranger::access_type_max);
+    auto ans = in.GetUint64();
+    auto act_min = static_cast<uint64_t>(dsn::ranger::access_type_min);
+    auto act_max = static_cast<uint64_t>(dsn::ranger::access_type_max);
     dverify(ans >= act_min && ans <= act_max);
     t = static_cast<dsn::ranger::access_type>(ans);
     return true;
