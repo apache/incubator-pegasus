@@ -525,7 +525,7 @@ void replica::update_ac_allowed_users(const std::map<std::string, std::string> &
         allowed_users = iter->second;
     }
 
-    _access_controller->update(allowed_users);
+    _access_controller->update_allowed_users(allowed_users);
 }
 
 void replica::update_allow_ingest_behind(const std::map<std::string, std::string> &envs)
