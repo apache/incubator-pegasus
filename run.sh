@@ -1729,7 +1729,7 @@ function run_migrate_node()
     echo
     cd ${ROOT}
     echo "------------------------------"
-    if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+    if [ "$CLUSTER" != "" ]; then
         ./scripts/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
     else
         ./scripts/migrate_node.sh $CONFIG $NODE "$APP" $TYPE -f
