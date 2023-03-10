@@ -20,11 +20,12 @@ set -e
 
 PID=$$
 
-if [ $# -ne 4 ]
+if [ $# -ne 4 -a $# -ne 5 ]
 then
   echo "This tool is for migrating primary replicas out of specified node."
-  echo "USAGE: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
-  echo "  app-name = * means migrate all apps"
+  echo "USAGE1: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
+  echo "USAGE2: $0 <shell-config-path> <migrate-node> <app-name> <run|test> -f"
+  echo "app-name = * means migrate all apps"
   exit 1
 fi
 
@@ -32,7 +33,13 @@ pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
 
-cluster=$1
+CONFIG_SPECIFIED=0
+if [ $# -eq 4 ]; then
+  cluster=$1
+else
+  CONFIG_SPECIFIED=1
+  config=$1
+fi
 node=$2
 app_name=$3
 type=$4
@@ -40,7 +47,8 @@ type=$4
 if [ "$type" != "run" -a "$type" != "test" ]
 then
   echo "ERROR: invalid type: $type"
-  echo "USAGE: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
+  echo "USAGE1: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
+  echo "USAGE2: $0 <shell-config-path> <migrate-node> <app-name> <run|test> -f"
   exit 1
 fi
 
@@ -48,9 +56,13 @@ echo "UID=$UID"
 echo "PID=$PID"
 echo
 
-echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_meta_level
-
-echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.ls
+if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+  echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_meta_level
+  echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.ls
+else
+  echo "set_meta_level steady" | ./run.sh shell --config $config &>/tmp/$UID.$PID.pegasus.set_meta_level
+  echo ls | ./run.sh shell --config $config &>/tmp/$UID.$PID.pegasus.ls
+fi
 
 while read app_line
 do
@@ -64,7 +76,11 @@ do
       continue
     fi
 
-    echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.app.$app
+    if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+      echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.app.$app
+    else
+      echo "app $app -d" | ./run.sh shell --config $config &>/tmp/$UID.$PID.pegasus.app.$app
+    fi
 
     while read line
     do
@@ -79,7 +95,11 @@ do
 
     if [ "$type" = "run" ]
     then
-      cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
+      if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+        cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
+      else
+        cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --config $config 2>/dev/null
+      fi
       echo
       echo
     else
