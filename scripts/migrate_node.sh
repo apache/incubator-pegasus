@@ -20,12 +20,18 @@ set -e
 
 PID=$$
 
-if [ $# -ne 4 -a $# -ne 5 ]
-then
+function usage()
+{
   echo "This tool is for migrating primary replicas out of specified node."
+  echo
   echo "USAGE1: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
   echo "USAGE2: $0 <shell-config-path> <migrate-node> <app-name> <run|test> -f"
   echo "app-name = * means migrate all apps"
+}
+
+if [ $# -ne 4 -a $# -ne 5 ]
+then
+  usage
   exit 1
 fi
 
@@ -36,9 +42,13 @@ cd $shell_dir
 CONFIG_SPECIFIED=0
 if [ $# -eq 4 ]; then
   cluster=$1
-else
+elif [ "$5" == "-f" ]; then
   CONFIG_SPECIFIED=1
   config=$1
+else
+  usage
+  echo "ERROR: invalid option: $5"
+  exit 1
 fi
 node=$2
 app_name=$3
@@ -46,9 +56,8 @@ type=$4
 
 if [ "$type" != "run" -a "$type" != "test" ]
 then
+  usage
   echo "ERROR: invalid type: $type"
-  echo "USAGE1: $0 <cluster-meta-list> <migrate-node> <app-name> <run|test>"
-  echo "USAGE2: $0 <shell-config-path> <migrate-node> <app-name> <run|test> -f"
   exit 1
 fi
 
