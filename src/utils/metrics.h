@@ -162,8 +162,9 @@ class error_code;
     METRIC_VAR_DECLARE(name, dsn::percentile_ptr<int64_t>)
 
 // Initialize a metric variable in user class.
-#define METRIC_VAR_INIT(name, entity) _##name(METRIC_##name.instantiate(entity##_metric_entity()))
-#define METRIC_VAR_INIT_replica(name) METRIC_VAR_INIT(name, replica)
+#define METRIC_VAR_INIT(name, entity, ...)                                                         \
+    _##name(METRIC_##name.instantiate(entity##_metric_entity(), ##__VA_ARGS__))
+#define METRIC_VAR_INIT_replica(name, ...) METRIC_VAR_INIT(name, replica, ##__VA_ARGS__)
 
 // Perform increment-related operations on metrics including gauge and counter.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
@@ -609,8 +610,15 @@ enum class metric_unit : size_t
     kMicroSeconds,
     kMilliSeconds,
     kSeconds,
+    kBytes,
+    kMegaBytes,
     kRequests,
+    kSeeks,
+    kPointLookups,
     kValues,
+    kKeys,
+    kFiles,
+    kAmplification,
     kInvalidUnit,
 };
 
