@@ -1826,7 +1826,7 @@ function run_downgrade_node()
     echo
     cd ${ROOT}
     echo "------------------------------"
-    if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+    if [ "$CLUSTER" != "" ]; then
         ./scripts/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
     else
         ./scripts/downgrade_node.sh $CONFIG $NODE "$APP" $TYPE -f
