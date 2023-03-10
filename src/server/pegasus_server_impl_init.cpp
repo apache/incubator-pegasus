@@ -34,133 +34,132 @@
 METRIC_DEFINE_counter(replica,
                       get_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of GET requests for each replica");
+                      "The number of GET requests");
 
 METRIC_DEFINE_counter(replica,
                       multi_get_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of MULTI_GET requests for each replica");
+                      "The number of MULTI_GET requests");
 
 METRIC_DEFINE_counter(replica,
                       batch_get_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of BATCH_GET requests for each replica");
+                      "The number of BATCH_GET requests");
 
 METRIC_DEFINE_counter(replica,
                       scan_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of SCAN requests for each replica");
+                      "The number of SCAN requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                get_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of GET requests for each replica");
+                               "The latency of GET requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                multi_get_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of MULTI_GET requests for each replica");
+                               "The latency of MULTI_GET requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                batch_get_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of BATCH_GET requests for each replica");
+                               "The latency of BATCH_GET requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                scan_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of SCAN requests for each replica");
+                               "The latency of SCAN requests");
 
 METRIC_DEFINE_counter(replica,
                       read_expired_values,
                       dsn::metric_unit::kValues,
-                      "The number of expired values read for each replica");
+                      "The number of expired values read");
 
 METRIC_DEFINE_counter(replica,
                       read_filtered_values,
                       dsn::metric_unit::kValues,
-                      "The number of filtered values read for each replica");
+                      "The number of filtered values read");
 
 METRIC_DEFINE_counter(replica,
                       abnormal_read_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of abnormal read requests for each replica");
+                      "The number of abnormal read requests");
 
 METRIC_DEFINE_counter(replica,
                       throttling_rejected_read_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of rejected read requests by throttling for each replica");
+                      "The number of rejected read requests by throttling");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_total_sst_files,
                           dsn::metric_unit::kFiles,
-                          "The total number of rocksdb sst files for each replica");
+                          "The total number of rocksdb sst files");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_total_sst_size_mb,
                           dsn::metric_unit::kMegaBytes,
-                          "The total size of rocksdb sst files in MB for each replica");
+                          "The total size of rocksdb sst files in MB");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_estimated_keys,
                           dsn::metric_unit::kKeys,
-                          "The estimated number of rocksdb keys for each replica");
+                          "The estimated number of rocksdb keys");
 
-METRIC_DEFINE_gauge_int64(
-    replica,
-    rdb_index_and_filter_blocks_mem_usage_bytes,
-    dsn::metric_unit::kBytes,
-    "The memory usage of rocksdb index and filter blocks in bytes for each replica");
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_index_and_filter_blocks_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb index and filter blocks in bytes");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_memtable_mem_usage_bytes,
                           dsn::metric_unit::kBytes,
-                          "The memory usage of rocksdb memtables in bytes for each replica");
+                          "The memory usage of rocksdb memtables in bytes");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_block_cache_hit_count,
                           dsn::metric_unit::kPointLookups,
-                          "The hit number of lookups on rocksdb block cache for each replica");
+                          "The hit number of lookups on rocksdb block cache");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_block_cache_total_count,
                           dsn::metric_unit::kPointLookups,
-                          "The total number of lookups on rocksdb block cache for each replica");
+                          "The total number of lookups on rocksdb block cache");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_memtable_hit_count,
                           dsn::metric_unit::kPointLookups,
-                          "The hit number of lookups on rocksdb memtable for each replica");
+                          "The hit number of lookups on rocksdb memtable");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_memtable_total_count,
                           dsn::metric_unit::kPointLookups,
-                          "The total number of lookups on rocksdb memtable for each replica");
+                          "The total number of lookups on rocksdb memtable");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_l0_hit_count,
                           dsn::metric_unit::kPointLookups,
-                          "The number of lookups served by rocksdb L0 for each replica");
+                          "The number of lookups served by rocksdb L0");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_l1_hit_count,
                           dsn::metric_unit::kPointLookups,
-                          "The number of lookups served by rocksdb L1 for each replica");
+                          "The number of lookups served by rocksdb L1");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_l2_and_up_hit_count,
                           dsn::metric_unit::kPointLookups,
-                          "The number of lookups served by rocksdb L2 and up for each replica");
+                          "The number of lookups served by rocksdb L2 and up");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_write_amplification,
                           dsn::metric_unit::kAmplification,
-                          "The write amplification of rocksdb for each replica");
+                          "The write amplification of rocksdb");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_read_amplification,
                           dsn::metric_unit::kAmplification,
-                          "The read amplification of rocksdb for each replica");
+                          "The read amplification of rocksdb");
 
 // Following metrics are rocksdb statistics that are related to bloom filters.
 //
@@ -189,25 +188,25 @@ METRIC_DEFINE_gauge_int64(replica,
                           rdb_bloom_filter_seek_total,
                           dsn::metric_unit::kSeeks,
                           "The number of times prefix bloom filter was checked before creating "
-                          "iterator on a file, used by rocksdb for each replica");
+                          "iterator on a file, used by rocksdb");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_bloom_filter_point_lookup_negatives,
                           dsn::metric_unit::kPointLookups,
                           "The number of times full bloom filter has avoided file reads (i.e., "
-                          "negatives), used by rocksdb for each replica");
+                          "negatives), used by rocksdb");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_bloom_filter_point_lookup_positives,
                           dsn::metric_unit::kPointLookups,
                           "The number of times full bloom filter has not avoided the reads, used "
-                          "by rocksdb for each replica");
+                          "by rocksdb");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_bloom_filter_point_lookup_true_positives,
                           dsn::metric_unit::kPointLookups,
                           "The number of times full bloom filter has not avoided the reads and "
-                          "data actually exist, used by rocksdb for each replica");
+                          "data actually exist, used by rocksdb");
 
 namespace pegasus {
 namespace server {

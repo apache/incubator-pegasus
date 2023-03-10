@@ -299,7 +299,7 @@ void pegasus_server_impl::log_expired_data(const char *op,
 
 #define CHECK_READ_THROTTLING()                                                                    \
     do {                                                                                           \
-        if (!_read_size_throttling_controller->available()) {                                      \
+        if (dsn_unlikely(!_read_size_throttling_controller->available())) {                        \
             rpc.error() = dsn::ERR_BUSY;                                                           \
             METRIC_VAR_INCREMENT(throttling_rejected_read_requests);                               \
             return;                                                                                \
@@ -2349,9 +2349,7 @@ range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
 
 #define GET_TICKER_COUNT_AND_SET_METRIC(ticker_name, metric_name)                                  \
     do {                                                                                           \
-        auto value = _statistics->getTickerCount(rocksdb::ticker_name);                            \
-        METRIC_VAR_SET(metric_name, value);                                                        \
-        LOG_DEBUG_PREFIX("" #metric_name ": {}", value);                                           \
+        METRIC_VAR_SET(metric_name, _statistics->getTickerCount(rocksdb::ticker_name));            \
     } while (0)
 
 void pegasus_server_impl::update_replica_rocksdb_statistics()
@@ -2359,7 +2357,6 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     std::string str_val;
     uint64_t val = 0;
 
-    // Update rdb_total_sst_files
     for (int i = 0; i < _data_cf_opts.num_levels; ++i) {
         int cur_level_count = 0;
         if (_db->GetProperty(rocksdb::DB::Properties::kNumFilesAtLevelPrefix + std::to_string(i),
@@ -2369,17 +2366,13 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         }
     }
     METRIC_VAR_SET(rdb_total_sst_files, val);
-    LOG_DEBUG_PREFIX("rdb_total_sst_files: {}", val);
 
-    // Update rdb_total_sst_size_mb
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kTotalSstFilesSize, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         static uint64_t bytes_per_mb = 1U << 20U;
         METRIC_VAR_SET(rdb_total_sst_size_mb, val / bytes_per_mb);
-        LOG_DEBUG_PREFIX("rdb_total_sst_size_mb: {}", val);
     }
 
-    // Update rdb_write_amplification
     std::map<std::string, std::string> props;
     if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {
         auto write_amplification_iter = props.find("compaction.Sum.WriteAmp");
@@ -2387,30 +2380,23 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
                                        ? 1
                                        : std::stod(write_amplification_iter->second);
         METRIC_VAR_SET(rdb_write_amplification, write_amplification);
-        LOG_DEBUG_PREFIX("rdb_write_amplification: {}", write_amplification);
     }
 
-    // Update rdb_index_and_filter_blocks_mem_usage_bytes
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateTableReadersMem, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         METRIC_VAR_SET(rdb_index_and_filter_blocks_mem_usage_bytes, val);
-        LOG_DEBUG_PREFIX("rdb_index_and_filter_blocks_mem_usage_bytes: {}", val);
     }
 
-    // Update rdb_memtable_mem_usage_bytes
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kCurSizeAllMemTables, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         METRIC_VAR_SET(rdb_memtable_mem_usage_bytes, val);
-        LOG_DEBUG_PREFIX("rdb_memtable_mem_usage_bytes: {}", val);
     }
 
-    // Update rdb_estimated_keys
     // NOTE: for the same n kv pairs, kEstimateNumKeys will be counted n times, you need compaction
     // to remove duplicate
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateNumKeys, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         METRIC_VAR_SET(rdb_estimated_keys, val);
-        LOG_DEBUG_PREFIX("rdb_estimated_keys: {}", val);
     }
 
     // the follow stats is related to `read`, so only primary need update it，ignore
@@ -2419,7 +2405,6 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         return;
     }
 
-    // Update rdb_read_amplification
     if (FLAGS_read_amp_bytes_per_bit > 0) {
         auto estimate_useful_bytes =
             _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
@@ -2428,54 +2413,39 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
                 _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
                 estimate_useful_bytes;
             METRIC_VAR_SET(rdb_read_amplification, read_amplification);
-            LOG_DEBUG_PREFIX("rdb_read_amplification: {}", read_amplification);
         }
     }
 
-    // Update rdb_bloom_filter_seek_negatives
     GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_USEFUL, rdb_bloom_filter_seek_negatives);
 
-    // Update rdb_bloom_filter_seek_total
     GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_CHECKED, rdb_bloom_filter_seek_total);
 
-    // Update rdb_bloom_filter_point_lookup_negatives
     GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_USEFUL, rdb_bloom_filter_point_lookup_negatives);
 
-    // Update rdb_bloom_filter_point_lookup_positives
     GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_POSITIVE,
                                     rdb_bloom_filter_point_lookup_positives);
 
-    // Update rdb_bloom_filter_point_lookup_true_positives
     GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_TRUE_POSITIVE,
                                     rdb_bloom_filter_point_lookup_true_positives);
 
-    // Update rdb_block_cache_hit_count and rdb_block_cache_total_count
     auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
     METRIC_VAR_SET(rdb_block_cache_hit_count, block_cache_hit);
-    LOG_DEBUG_PREFIX("rdb_block_cache_hit_count: {}", block_cache_hit);
 
     auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
     auto block_cache_total = block_cache_hit + block_cache_miss;
     METRIC_VAR_SET(rdb_block_cache_total_count, block_cache_total);
-    LOG_DEBUG_PREFIX("rdb_block_cache_total_count: {}", block_cache_total);
 
-    // Update rdb_memtable_hit_count and rdb_memtable_total_count
     auto memtable_hit_count = _statistics->getTickerCount(rocksdb::MEMTABLE_HIT);
     METRIC_VAR_SET(rdb_memtable_hit_count, memtable_hit_count);
-    LOG_DEBUG_PREFIX("rdb_memtable_hit_count: {}", memtable_hit_count);
 
     auto memtable_miss_count = _statistics->getTickerCount(rocksdb::MEMTABLE_MISS);
     auto memtable_total = memtable_hit_count + memtable_miss_count;
     METRIC_VAR_SET(rdb_memtable_total_count, memtable_total);
-    LOG_DEBUG_PREFIX("rdb_memtable_total_count: {}", memtable_total);
 
-    // Update rdb_l0_hit_count
     GET_TICKER_COUNT_AND_SET_METRIC(GET_HIT_L0, rdb_l0_hit_count);
 
-    // Update rdb_l1_hit_count
     GET_TICKER_COUNT_AND_SET_METRIC(GET_HIT_L1, rdb_l1_hit_count);
 
-    // Update rdb_l2_and_up_hit_count
     GET_TICKER_COUNT_AND_SET_METRIC(GET_HIT_L2_AND_UP, rdb_l2_and_up_hit_count);
 }
 
