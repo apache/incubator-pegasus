@@ -22,6 +22,34 @@
 namespace dsn {
 namespace ranger {
 
+#define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
+    do {                                                                                           \
+        if (!obj.IsObject() || !obj.HasMember(member)) {                                           \
+            return dsn::ERR_RANGER_PARSE_ACL;                                                      \
+        }                                                                                          \
+    } while (0)
+
+#define CONTINUE_IF_MISSING_MEMBER(obj, member)                                                    \
+    do {                                                                                           \
+        if (!obj.IsObject() || !obj.HasMember(member)) {                                           \
+            continue;                                                                              \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_ERR_IF_NOT_ARRAY(obj)                                                               \
+    do {                                                                                           \
+        if (!obj.IsArray() || obj.Empty()) {                                                       \
+            return dsn::ERR_RANGER_PARSE_ACL;                                                      \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_VOID_IF_NOT_ARRAY(obj)                                                              \
+    do {                                                                                           \
+        if (!obj.IsArray() || obj.Empty()) {                                                       \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
+
 namespace {
 // Register access types of 'rpc_codes' as 'ac_type' to 'ac_type_of_rpc'.
 // TODO(wanghao): A better way is to define the ac_type when defining rpc, and traverse all RPCs to
@@ -36,6 +64,15 @@ void register_rpc_access_type(access_type ac_type,
         ac_type_of_rpc.emplace(code, ac_type);
     }
 }
+
+// Used to map access_type matched resources policies json string.
+const std::map<std::string, access_type> kAccessTypeMaping({{"READ", access_type::kRead},
+                                                            {"WRITE", access_type::kWrite},
+                                                            {"CREATE", access_type::kCreate},
+                                                            {"DROP", access_type::kDrop},
+                                                            {"LIST", access_type::kList},
+                                                            {"METADATA", access_type::kMetadata},
+                                                            {"CONTROL", access_type::kControl}});
 } // anonymous namespace
 
 ranger_resource_policy_manager::ranger_resource_policy_manager(
@@ -47,11 +84,11 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
 
     // GLOBAL - KMetadata
     register_rpc_access_type(
-        access_type::KMetadata,
+        access_type::kMetadata,
         {"RPC_CM_LIST_NODES", "RPC_CM_CLUSTER_INFO", "RPC_CM_LIST_APPS", "RPC_QUERY_DISK_INFO"},
         _ac_type_of_global_rpcs);
     // GLOBAL - KControl
-    register_rpc_access_type(access_type::KControl,
+    register_rpc_access_type(access_type::kControl,
                              {"RPC_HTTP_SERVICE",
                               "RPC_CM_CONTROL_META",
                               "RPC_CM_START_RECOVERY",
@@ -61,15 +98,15 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CLI_CLI_CALL_ACK"},
                              _ac_type_of_global_rpcs);
     // DATABASE - KList
-    register_rpc_access_type(access_type::KList, {"RPC_CM_LIST_APPS"}, _ac_type_of_database_rpcs);
+    register_rpc_access_type(access_type::kList, {"RPC_CM_LIST_APPS"}, _ac_type_of_database_rpcs);
     // DATABASE - KCreate
     register_rpc_access_type(
-        access_type::KCreate, {"RPC_CM_CREATE_APP"}, _ac_type_of_database_rpcs);
+        access_type::kCreate, {"RPC_CM_CREATE_APP"}, _ac_type_of_database_rpcs);
     // DATABASE - KDrop
     register_rpc_access_type(
-        access_type::KDrop, {"RPC_CM_DROP_APP", "RPC_CM_RECALL_APP"}, _ac_type_of_database_rpcs);
+        access_type::kDrop, {"RPC_CM_DROP_APP", "RPC_CM_RECALL_APP"}, _ac_type_of_database_rpcs);
     // DATABASE - KMetadata
-    register_rpc_access_type(access_type::KMetadata,
+    register_rpc_access_type(access_type::kMetadata,
                              {"RPC_CM_QUERY_BACKUP_STATUS",
                               "RPC_CM_QUERY_RESTORE_STATUS",
                               "RPC_CM_QUERY_DUPLICATION",
@@ -79,7 +116,7 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_GET_MAX_REPLICA_COUNT"},
                              _ac_type_of_database_rpcs);
     // DATABASE - KControl
-    register_rpc_access_type(access_type::KControl,
+    register_rpc_access_type(access_type::kControl,
                              {"RPC_CM_START_BACKUP_APP",
                               "RPC_CM_START_RESTORE",
                               "RPC_CM_PROPOSE_BALANCER",
@@ -96,6 +133,35 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_SET_MAX_REPLICA_COUNT",
                               "RPC_CM_RENAME_APP"},
                              _ac_type_of_database_rpcs);
+}
+
+void ranger_resource_policy_manager::parse_policies_from_json(const rapidjson::Value &data,
+                                                              std::vector<policy_item> &policies)
+{
+    CHECK(policies.empty(), "Ranger policy list should not be empty.");
+    RETURN_VOID_IF_NOT_ARRAY(data);
+    for (const auto &item : data.GetArray()) {
+        CONTINUE_IF_MISSING_MEMBER(item, "accesses");
+        policy_item pi;
+        for (const auto &access : item["accesses"].GetArray()) {
+            CONTINUE_IF_MISSING_MEMBER(access, "isAllowed");
+            CONTINUE_IF_MISSING_MEMBER(access, "type");
+            if (access["isAllowed"].GetBool()) {
+                std::string type = access["type"].GetString();
+                std::transform(type.begin(), type.end(), type.begin(), toupper);
+                const auto &at = kAccessTypeMaping.find(type);
+                // ignore invalid access_type
+                if (kAccessTypeMaping.end() != at) {
+                    pi.access_types |= at->second;
+                }
+            }
+        }
+        CONTINUE_IF_MISSING_MEMBER(item, "users");
+        for (const auto &user : item["users"].GetArray()) {
+            pi.users.emplace(user.GetString());
+        }
+        policies.emplace_back(pi);
+    }
 }
 } // namespace ranger
 } // namespace dsn

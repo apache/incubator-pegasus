@@ -24,23 +24,23 @@ namespace ranger {
 
 TEST(ranger_resource_policy_test, policy_item_match)
 {
-    policy_item item = {access_type::KRead | access_type::KWrite | access_type::KCreate,
+    policy_item item = {access_type::kRead | access_type::kWrite | access_type::kCreate,
                         {"user1", "user2"}};
     struct test_case
     {
         access_type ac_type;
         std::string user_name;
         bool expected_result;
-    } tests[] = {{access_type::KRead, "", false},
-                 {access_type::KRead, "user", false},
-                 {access_type::KRead, "user1", true},
-                 {access_type::KWrite, "user1", true},
-                 {access_type::KCreate, "user1", true},
-                 {access_type::KDrop, "user1", false},
-                 {access_type::KList, "user1", false},
-                 {access_type::KMetadata, "user1", false},
-                 {access_type::KControl, "user1", false},
-                 {access_type::KWrite, "user2", true}};
+    } tests[] = {{access_type::kRead, "", false},
+                 {access_type::kRead, "user", false},
+                 {access_type::kRead, "user1", true},
+                 {access_type::kWrite, "user1", true},
+                 {access_type::kCreate, "user1", true},
+                 {access_type::kDrop, "user1", false},
+                 {access_type::kList, "user1", false},
+                 {access_type::kMetadata, "user1", false},
+                 {access_type::kControl, "user1", false},
+                 {access_type::kWrite, "user2", true}};
     for (const auto &test : tests) {
         auto actual_result = item.match(test.ac_type, test.user_name);
         EXPECT_EQ(test.expected_result, actual_result);
@@ -50,27 +50,27 @@ TEST(ranger_resource_policy_test, policy_item_match)
 TEST(ranger_resource_policy_test, acl_policies_allowed)
 {
     acl_policies policy;
-    policy.allow_policies = {{access_type::KRead | access_type::KWrite | access_type::KCreate,
+    policy.allow_policies = {{access_type::kRead | access_type::kWrite | access_type::kCreate,
                               {"user1", "user2", "user3", "user4"}}};
-    policy.allow_policies_exclude = {{access_type::KWrite | access_type::KCreate, {"user2"}}};
-    policy.deny_policies = {{access_type::KRead | access_type::KWrite, {"user3", "user4"}}};
-    policy.deny_policies_exclude = {{access_type::KRead, {"user4"}}};
+    policy.allow_policies_exclude = {{access_type::kWrite | access_type::kCreate, {"user2"}}};
+    policy.deny_policies = {{access_type::kRead | access_type::kWrite, {"user3", "user4"}}};
+    policy.deny_policies_exclude = {{access_type::kRead, {"user4"}}};
     struct test_case
     {
         access_type ac_type;
         std::string user_name;
         bool expected_result;
-    } tests[] = {{access_type::KRead, "user", false},      {access_type::KRead, "user1", true},
-                 {access_type::KWrite, "user1", true},     {access_type::KCreate, "user1", true},
-                 {access_type::KDrop, "user1", false},     {access_type::KList, "user1", false},
-                 {access_type::KMetadata, "user1", false}, {access_type::KControl, "user1", false},
-                 {access_type::KRead, "user2", true},      {access_type::KWrite, "user2", false},
-                 {access_type::KCreate, "user2", false},   {access_type::KDrop, "user2", false},
-                 {access_type::KList, "user2", false},     {access_type::KMetadata, "user2", false},
-                 {access_type::KControl, "user2", false},  {access_type::KRead, "user3", false},
-                 {access_type::KCreate, "user3", true},    {access_type::KList, "user3", false},
-                 {access_type::KRead, "user4", true},      {access_type::KWrite, "user4", false},
-                 {access_type::KCreate, "user4", true},    {access_type::KList, "user4", false}};
+    } tests[] = {{access_type::kRead, "user", false},      {access_type::kRead, "user1", true},
+                 {access_type::kWrite, "user1", true},     {access_type::kCreate, "user1", true},
+                 {access_type::kDrop, "user1", false},     {access_type::kList, "user1", false},
+                 {access_type::kMetadata, "user1", false}, {access_type::kControl, "user1", false},
+                 {access_type::kRead, "user2", true},      {access_type::kWrite, "user2", false},
+                 {access_type::kCreate, "user2", false},   {access_type::kDrop, "user2", false},
+                 {access_type::kList, "user2", false},     {access_type::kMetadata, "user2", false},
+                 {access_type::kControl, "user2", false},  {access_type::kRead, "user3", false},
+                 {access_type::kCreate, "user3", true},    {access_type::kList, "user3", false},
+                 {access_type::kRead, "user4", true},      {access_type::kWrite, "user4", false},
+                 {access_type::kCreate, "user4", true},    {access_type::kList, "user4", false}};
     for (const auto &test : tests) {
         auto actual_result = policy.allowed(test.ac_type, test.user_name);
         EXPECT_EQ(test.expected_result, actual_result);

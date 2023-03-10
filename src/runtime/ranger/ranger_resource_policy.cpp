@@ -20,18 +20,6 @@
 namespace dsn {
 namespace ranger {
 
-/*extern*/ access_type operator|(access_type lhs, access_type rhs)
-{
-    using act = std::underlying_type<access_type>::type;
-    return access_type(static_cast<act>(lhs) | static_cast<act>(rhs));
-}
-
-/*extern*/ access_type operator&(access_type lhs, access_type rhs)
-{
-    using act = std::underlying_type<access_type>::type;
-    return access_type(static_cast<act>(lhs) & static_cast<act>(rhs));
-}
-
 bool policy_item::match(const access_type &ac_type, const std::string &user_name) const
 {
     return static_cast<bool>(access_types & ac_type) && users.count(user_name) != 0;
