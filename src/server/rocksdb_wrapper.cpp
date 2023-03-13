@@ -35,11 +35,18 @@
 #include "server/pegasus_write_service.h"
 #include "utils/blob.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
 namespace pegasus {
 namespace server {
+
+DSN_DEFINE_bool(pegasus.server,
+                inject_write_error_for_test,
+                false,
+                "Whether to inject a write error. Only for test.");
+DSN_TAG_VARIABLE(inject_write_error_for_test, FT_MUTABLE);
 
 rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
     : replica_base(server),
@@ -153,6 +160,10 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
 int rocksdb_wrapper::write(int64_t decree)
 {
     CHECK_GT(_write_batch->Count(), 0);
+
+    if (dsn_unlikely(FLAGS_inject_write_error_for_test)) {
+        return rocksdb::Status::kIOError;
+    }
 
     FAIL_POINT_INJECT_F("db_write", [](dsn::string_view) -> int { return FAIL_DB_WRITE; });
 

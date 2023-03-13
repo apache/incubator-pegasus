@@ -428,7 +428,10 @@ void replica::do_possible_commit_on_primary(mutation_ptr &mu)
     CHECK_EQ(partition_status::PS_PRIMARY, status());
 
     if (mu->is_ready_for_commit()) {
-        _prepare_list->commit(mu->data.header.decree, COMMIT_ALL_READY);
+        auto err = _prepare_list->commit(mu->data.header.decree, COMMIT_ALL_READY);
+        if (err != ERR_OK) {
+            handle_local_failure(err);
+        }
     }
 }
 
@@ -542,7 +545,10 @@ void replica::on_prepare(dsn::message_ex *request)
     }
 
     error_code err = _prepare_list->prepare(mu, status(), pop_all_committed_mutations);
-    CHECK_EQ_MSG(err, ERR_OK, "prepare mutation failed");
+    if (err != ERR_OK) {
+        LOG_ERROR_PREFIX("prepare mutation failed, error = {}", err);
+        return;
+    }
 
     if (partition_status::PS_POTENTIAL_SECONDARY == status() ||
         partition_status::PS_SECONDARY == status()) {
@@ -609,7 +615,11 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
             // always ack
             ack_prepare_message(err, mu);
             // all mutations with lower decree must be ready
-            _prepare_list->commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
+            err =
+                _prepare_list->commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
+            if (err != ERR_OK) {
+                handle_local_failure(err);
+            }
             break;
         case partition_status::PS_PARTITION_SPLIT:
             if (err != ERR_OK) {

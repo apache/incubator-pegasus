@@ -431,28 +431,39 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
                        _replica->_app->last_committed_decree(),
                        FLAGS_max_mutation_count_in_prepare_list,
                        [this](mutation_ptr &mu) {
-                           if (mu->data.header.decree ==
+                           if (mu->data.header.decree !=
                                _replica->_app->last_committed_decree() + 1) {
-                               _replica->_app->apply_mutation(mu);
+                               return ERR_OK;
                            }
+
+                           ERR_LOG_PREFIX_AND_RETURN_NOT_OK(
+                               _replica->_app->apply_mutation(mu),
+                               "child_apply_private_logs encountered an unhandled error");
+
+                           return ERR_OK;
                        });
 
     // replay private log
-    ec = mutation_log::replay(plog_files,
-                              [&plist](int log_length, mutation_ptr &mu) {
-                                  decree d = mu->data.header.decree;
-                                  if (d <= plist.last_committed_decree()) {
-                                      return false;
-                                  }
-                                  mutation_ptr origin_mu = plist.get_mutation_by_decree(d);
-                                  if (origin_mu != nullptr &&
-                                      origin_mu->data.header.ballot >= mu->data.header.ballot) {
-                                      return false;
-                                  }
-                                  plist.prepare(mu, partition_status::PS_SECONDARY);
-                                  return true;
-                              },
-                              offset);
+    ec = mutation_log::replay(
+        plog_files,
+        [this, &plist](int log_length, mutation_ptr &mu) {
+            decree d = mu->data.header.decree;
+            if (d <= plist.last_committed_decree()) {
+                return false;
+            }
+            mutation_ptr origin_mu = plist.get_mutation_by_decree(d);
+            if (origin_mu != nullptr && origin_mu->data.header.ballot >= mu->data.header.ballot) {
+                return false;
+            }
+            auto e = plist.prepare(mu, partition_status::PS_SECONDARY);
+            if (e != ERR_OK) {
+                LOG_ERROR_PREFIX("got an error({}) in prepare stage of prepare_list", e);
+                return false;
+            }
+
+            return true;
+        },
+        offset);
     if (ec != ERR_OK) {
         LOG_ERROR_PREFIX(
             "replay private_log files failed, file count={}, app last_committed_decree={}",
@@ -484,12 +495,22 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
         if (!mu->is_logged()) {
             mu->set_logged();
         }
-        plist.prepare(mu, partition_status::PS_SECONDARY);
+        ec = plist.prepare(mu, partition_status::PS_SECONDARY);
+        if (ec != ERR_OK) {
+            LOG_ERROR_PREFIX("got an error({}) in prepare stage of prepare_list", ec);
+            return ec;
+        }
+
         ++count;
     }
     _replica->_split_states.splitting_copy_mutation_count += count;
     _stub->_counter_replicas_splitting_recent_copy_mutation_count->add(count);
-    plist.commit(last_committed_decree, COMMIT_TO_DECREE_HARD);
+    ec = plist.commit(last_committed_decree, COMMIT_TO_DECREE_HARD);
+    if (ec != ERR_OK) {
+        LOG_ERROR_PREFIX("got an error({}) in commit stage of prepare_list", ec);
+        return ec;
+    }
+
     LOG_INFO_PREFIX(
         "apply in-memory mutations succeed, mutation count={}, app last_committed_decree={}",
         count,
@@ -1299,7 +1320,12 @@ void replica_split_manager::on_copy_mutation(mutation_ptr &mu) // on child parti
     }
 
     mu->data.header.pid = get_gpid();
-    _replica->_prepare_list->prepare(mu, partition_status::PS_SECONDARY);
+    auto err = _replica->_prepare_list->prepare(mu, partition_status::PS_SECONDARY);
+    if (err != ERR_OK) {
+        child_handle_split_error("on_copy_mutation failed because prepare stage failed");
+        return;
+    }
+
     if (!mu->is_sync_to_child()) { // child copy mutation asynchronously
         if (!mu->is_logged()) {
             mu->set_logged();

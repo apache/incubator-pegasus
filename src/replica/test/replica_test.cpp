@@ -40,6 +40,7 @@
 #include "metadata_types.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
+#include "replica/disk_cleaner.h"
 #include "replica/replica.h"
 #include "replica/replica_http_service.h"
 #include "replica/replica_stub.h"
@@ -59,9 +60,11 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_string(cold_backup_root);
 
 class replica_test : public replica_test_base
@@ -462,18 +465,57 @@ TEST_F(replica_test, test_query_last_checkpoint_info)
     ASSERT_EQ(resp.base_local_dir, "./data/checkpoint.100");
 }
 
-TEST_F(replica_test, test_clear_on_failer)
+TEST_F(replica_test, test_clear_on_failure)
 {
+    // Disable failure detector to avoid connecting with meta server which is not started.
+    FLAGS_fd_disabled = true;
+
     replica *rep =
         stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
-    auto path = stub->get_replica_dir(_app_info.app_type.c_str(), pid);
+    auto path = rep->dir();
     dsn::utils::filesystem::create_directory(path);
-    ASSERT_TRUE(dsn::utils::filesystem::path_exists(path));
     ASSERT_TRUE(has_gpid(pid));
 
     stub->clear_on_failure(rep, path, pid);
 
     ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
+    ASSERT_FALSE(has_gpid(pid));
+}
+
+TEST_F(replica_test, test_auto_trash)
+{
+    // Disable failure detector to avoid connecting with meta server which is not started.
+    FLAGS_fd_disabled = true;
+
+    replica *rep =
+        stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
+    auto path = rep->dir();
+    dsn::utils::filesystem::create_directory(path);
+    ASSERT_TRUE(has_gpid(pid));
+
+    rep->handle_local_failure(ERR_UNRECOVERABLE_DATA_ERROR);
+    stub->wait_closing_replicas_finished();
+
+    ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
+    dir_node *dn = stub->get_fs_manager()->get_dir_node(path);
+    ASSERT_NE(dn, nullptr);
+    std::vector<std::string> subs;
+    ASSERT_TRUE(dsn::utils::filesystem::get_subdirectories(dn->full_dir, subs, false));
+    bool found = false;
+    const int ts_length = 16;
+    size_t err_pos = path.size() + ts_length + 1; // Add 1 for dot in path.
+    for (const auto &sub : subs) {
+        if (sub.size() <= path.size()) {
+            continue;
+        }
+        uint64_t ts = 0;
+        if (sub.find(path) == 0 && sub.find(kFolderSuffixErr) == err_pos &&
+            dsn::buf2uint64(sub.substr(path.size() + 1, ts_length), ts)) {
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
     ASSERT_FALSE(has_gpid(pid));
 }
 

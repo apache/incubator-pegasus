@@ -42,6 +42,7 @@
 // which is binded to this replication partition
 //
 
+#include <gtest/gtest_prod.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <atomic>
@@ -70,6 +71,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/ports.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
@@ -78,6 +80,7 @@ namespace dsn {
 class gpid;
 class perf_counter;
 class rpc_address;
+
 namespace dist {
 namespace block_service {
 class block_filesystem;
@@ -299,7 +302,7 @@ private:
     void init_state();
     void response_client_read(dsn::message_ex *request, error_code error);
     void response_client_write(dsn::message_ex *request, error_code error);
-    void execute_mutation(mutation_ptr &mu);
+    error_code execute_mutation(mutation_ptr &mu) WARN_UNUSED_RESULT;
     mutation_ptr new_mutation(decree decree);
 
     // initialization
@@ -520,6 +523,8 @@ private:
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_name(const std::string &app_name);
 
+    bool is_data_corrupted() const { return _data_corrupted; }
+
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
@@ -540,6 +545,7 @@ private:
     friend class replica_disk_migrate_test;
     friend class open_replica_test;
     friend class replica_follower;
+    FRIEND_TEST(replica_test, test_auto_trash);
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -661,6 +667,8 @@ private:
     disk_status::type _disk_status{disk_status::NORMAL};
 
     bool _allow_ingest_behind{false};
+    // Indicate where the storage engine data is corrupted and unrecoverable.
+    bool _data_corrupted{false};
 };
 typedef dsn::ref_ptr<replica> replica_ptr;
 } // namespace replication

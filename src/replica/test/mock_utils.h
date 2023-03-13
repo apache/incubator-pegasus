@@ -46,7 +46,7 @@ public:
     explicit mock_replication_app_base(replica *replica) : replication_app_base(replica) {}
 
     error_code start(int, char **) override { return ERR_NOT_IMPLEMENTED; }
-    error_code stop(bool) override { return ERR_NOT_IMPLEMENTED; }
+    error_code stop(bool) override { return ERR_OK; }
     error_code sync_checkpoint() override { return ERR_OK; }
     error_code async_checkpoint(bool) override
     {
@@ -172,7 +172,10 @@ public:
     void set_last_committed_decree(decree d) { _prepare_list->reset(d); }
     prepare_list *get_plist() const { return _prepare_list.get(); }
     void prepare_list_truncate(decree d) { _prepare_list->truncate(d); }
-    void prepare_list_commit_hard(decree d) { _prepare_list->commit(d, COMMIT_TO_DECREE_HARD); }
+    void prepare_list_commit_hard(decree d)
+    {
+        CHECK_EQ(ERR_OK, _prepare_list->commit(d, COMMIT_TO_DECREE_HARD));
+    }
     decree get_app_last_committed_decree() { return _app->last_committed_decree(); }
     void set_app_last_committed_decree(decree d) { _app->_last_committed_decree = d; }
     void set_primary_partition_configuration(partition_configuration &pconfig)
@@ -313,10 +316,11 @@ public:
         config.pid = pid;
         config.status = status;
 
-        auto data_dirs = std::vector<std::string>{"./"};
-        auto data_dirs_tag = std::vector<std::string>{"tag"};
-        initialize_fs_manager(data_dirs, data_dirs_tag);
-        auto *rep = new mock_replica(this, pid, info, "./", need_restore, is_duplication_follower);
+        // TODO(yingchun): should refactor to move to cstor or initializer.
+        initialize_fs_manager({"./"}, {"tag"});
+        std::string dir = get_replica_dir("test", pid);
+        auto *rep =
+            new mock_replica(this, pid, info, dir.c_str(), need_restore, is_duplication_follower);
         rep->set_replica_config(config);
         return rep;
     }

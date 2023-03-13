@@ -347,7 +347,8 @@ void replica::set_inactive_state_transient(bool t)
 void replica::reset_prepare_list_after_replay()
 {
     // commit prepare list if possible
-    _prepare_list->commit(_app->last_committed_decree(), COMMIT_TO_DECREE_SOFT);
+    // TODO(yingchun): handle this error
+    CHECK_EQ(ERR_OK, _prepare_list->commit(_app->last_committed_decree(), COMMIT_TO_DECREE_SOFT));
 
     // align the prepare list and the app
     _prepare_list->truncate(_app->last_committed_decree());

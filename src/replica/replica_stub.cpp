@@ -826,8 +826,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     }
 }
 
-void replica_stub::initialize_fs_manager(std::vector<std::string> &data_dirs,
-                                         std::vector<std::string> &data_dir_tags)
+void replica_stub::initialize_fs_manager(const std::vector<std::string> &data_dirs,
+                                         const std::vector<std::string> &data_dir_tags)
 {
     std::string cdir;
     std::string err_msg;
@@ -835,7 +835,7 @@ void replica_stub::initialize_fs_manager(std::vector<std::string> &data_dirs,
     std::vector<std::string> available_dirs;
     std::vector<std::string> available_dir_tags;
     for (auto i = 0; i < data_dir_tags.size(); ++i) {
-        std::string &dir = data_dirs[i];
+        const auto &dir = data_dirs[i];
         if (dsn_unlikely(!utils::filesystem::create_directory(dir, cdir, err_msg) ||
                          !utils::filesystem::check_dir_rw(dir, err_msg))) {
             if (FLAGS_ignore_broken_disk) {
@@ -1345,7 +1345,7 @@ void replica_stub::on_add_learner(const group_check_request &request)
         return;
     }
 
-    LOG_INFO("{}@{}: received add learner, primary = {}, ballot ={}, status = {}, "
+    LOG_INFO("{}@{}: received add learner, primary = {}, ballot = {}, status = {}, "
              "last_committed_decree = {}",
              request.config.pid,
              _primary_address_str,
@@ -1629,6 +1629,10 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
 void replica_stub::remove_replica_on_meta_server(const app_info &info,
                                                  const partition_configuration &config)
 {
+    if (FLAGS_fd_disabled) {
+        return;
+    }
+
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
@@ -2379,6 +2383,12 @@ void replica_stub::close_replica(replica_ptr r)
         _counter_replicas_closing_count->decrement();
     }
 
+    if (r->is_data_corrupted()) {
+        _fs_manager.remove_replica(id);
+        move_to_err_path(r->dir(), "trash replica");
+        _counter_replicas_recent_replica_move_error_count->increment();
+    }
+
     LOG_INFO("{}: finish to close replica", name);
 }
 
@@ -2818,24 +2828,10 @@ void replica_stub::close()
         _mem_release_timer_task = nullptr;
     }
 
+    wait_closing_replicas_finished();
+
     {
         zauto_write_lock l(_replicas_lock);
-        while (!_closing_replicas.empty()) {
-            task_ptr task = std::get<0>(_closing_replicas.begin()->second);
-            gpid tmp_gpid = _closing_replicas.begin()->first;
-            _replicas_lock.unlock_write();
-
-            task->wait();
-
-            _replicas_lock.lock_write();
-            // task will automatically remove this replica from _closing_replicas
-            if (!_closing_replicas.empty()) {
-                CHECK_NE_MSG(tmp_gpid,
-                             _closing_replicas.begin()->first,
-                             "this replica '{}' should has been removed",
-                             tmp_gpid.to_string());
-            }
-        }
 
         while (!_opening_replicas.empty()) {
             task_ptr task = _opening_replicas.begin()->second;
@@ -3198,6 +3194,28 @@ void replica_stub::update_config(const std::string &name)
     // The new value has been validated and FLAGS_* has been updated, it's safety to use it
     // directly.
     UPDATE_CONFIG(_config_sync_timer_task->update_interval, config_sync_interval_ms, name);
+}
+
+void replica_stub::wait_closing_replicas_finished()
+{
+    zauto_write_lock l(_replicas_lock);
+    while (!_closing_replicas.empty()) {
+        auto task = std::get<0>(_closing_replicas.begin()->second);
+        auto first_gpid = _closing_replicas.begin()->first;
+
+        // TODO(yingchun): improve the code
+        _replicas_lock.unlock_write();
+        task->wait();
+        _replicas_lock.lock_write();
+
+        // task will automatically remove this replica from '_closing_replicas'
+        if (!_closing_replicas.empty()) {
+            CHECK_NE_MSG(first_gpid,
+                         _closing_replicas.begin()->first,
+                         "this replica '{}' should has been removed",
+                         first_gpid);
+        }
+    }
 }
 
 } // namespace replication

@@ -206,7 +206,11 @@ void replica::on_group_check(const group_check_request &request,
         break;
     case partition_status::PS_SECONDARY:
         if (request.last_committed_decree > last_committed_decree()) {
-            _prepare_list->commit(request.last_committed_decree, COMMIT_TO_DECREE_HARD);
+            auto err = _prepare_list->commit(request.last_committed_decree, COMMIT_TO_DECREE_HARD);
+            if (err != ERR_OK) {
+                handle_local_failure(err);
+                break;
+            }
         }
         // the group check may trigger start/finish/cancel/pause a split on the secondary.
         _split_mgr->trigger_secondary_parent_split(request, response);
@@ -226,10 +230,12 @@ void replica::on_group_check(const group_check_request &request,
     response.err = ERR_OK;
     if (status() == partition_status::PS_ERROR) {
         response.err = ERR_INVALID_STATE;
+        response.last_committed_decree_in_app = 0;
         LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
+    } else {
+        // '_app' is invalid if replica has been closed by other thread.
+        response.last_committed_decree_in_app = _app->last_committed_decree();
     }
-
-    response.last_committed_decree_in_app = _app->last_committed_decree();
     response.last_committed_decree_in_prepare_list = last_committed_decree();
     response.learner_status_ = _potential_secondary_states.learning_status;
     response.learner_signature = _potential_secondary_states.learning_version;

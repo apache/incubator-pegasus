@@ -131,8 +131,8 @@ public:
     //
     void initialize(const replication_options &opts, bool clear = false);
     void initialize(bool clear = false);
-    void initialize_fs_manager(std::vector<std::string> &data_dirs,
-                               std::vector<std::string> &data_dir_tags);
+    void initialize_fs_manager(const std::vector<std::string> &data_dirs,
+                               const std::vector<std::string> &data_dir_tags);
     void set_options(const replication_options &opts) { _options = opts; }
     void open_service();
     void close();
@@ -264,6 +264,8 @@ public:
 
     void update_config(const std::string &name);
 
+    fs_manager *get_fs_manager() { return &_fs_manager; }
+
 private:
     enum replica_node_state
     {
@@ -356,6 +358,9 @@ private:
     void register_jemalloc_ctrl_command();
 #endif
 
+    // Wait all replicas in closing state to be finished.
+    void wait_closing_replicas_finished();
+
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::replica;
@@ -381,7 +386,8 @@ private:
     friend class replica_follower;
     friend class replica_follower_test;
     friend class replica_http_service_test;
-    FRIEND_TEST(replica_test, test_clear_on_failer);
+    FRIEND_TEST(replica_test, test_clear_on_failure);
+    FRIEND_TEST(replica_test, test_auto_trash);
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>

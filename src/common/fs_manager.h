@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <functional>
+#include <gtest/gtest_prod.h>
 #include <map>
 #include <memory>
 #include <set>
@@ -115,7 +116,7 @@ private:
         _status_updated_dir_nodes.clear();
     }
 
-    dir_node *get_dir_node(const std::string &subdir);
+    dir_node *get_dir_node(const std::string &subdir) const;
 
     // when visit the tag/storage of the _dir_nodes map, there's no need to protect by the lock.
     // but when visit the holding_replicas, you must take care.
@@ -147,6 +148,7 @@ private:
     friend class replica_disk_migrator;
     friend class replica_disk_test_base;
     friend class open_replica_test;
+    FRIEND_TEST(replica_test, test_auto_trash);
 };
 } // replication
 } // dsn

@@ -135,6 +135,12 @@ public:
     error_code close(bool clear_state);
 
     error_code apply_checkpoint(chkpt_apply_mode mode, const learn_state &state);
+
+    // Return code:
+    //   - ERR_OK: everything is OK.
+    //   - ERR_UNRECOVERABLE_DATA_ERROR: encountered some unrecoverable data errors, e.g. kIOError,
+    //   kCorruption from storage engine.
+    //   - ERR_LOCAL_APP_FAILURE: other type of errors.
     error_code apply_mutation(const mutation *mu);
 
     // methods need to implement on storage engine side

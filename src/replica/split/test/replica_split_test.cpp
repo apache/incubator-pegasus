@@ -147,7 +147,7 @@ public:
 
     void mock_prepare_list(mock_replica_ptr rep, bool add_to_plog)
     {
-        _mock_plist = new prepare_list(rep, 1, MAX_COUNT, [](mutation_ptr mu) {});
+        _mock_plist = new prepare_list(rep, 1, MAX_COUNT, [](mutation_ptr mu) { return ERR_OK; });
         for (int i = 1; i < MAX_COUNT + 1; ++i) {
             mutation_ptr mu = new mutation();
             mu->data.header.decree = i;

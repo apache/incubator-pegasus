@@ -445,7 +445,15 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
         //      because the external sst files may not exist, in this case, we won't consider it as
         //      an error.
         if (!has_ingestion_request) {
-            return ERR_LOCAL_APP_FAILURE;
+            switch (storage_error) {
+            // TODO(yingchun): Now we consider kIOError and kCorruption as UNRECOVERABLE_DATA_ERROR,
+            //  maybe we should add more storage engine errors as unrecoverable.
+            case rocksdb::Status::kIOError:
+            case rocksdb::Status::kCorruption:
+                return ERR_UNRECOVERABLE_DATA_ERROR;
+            default:
+                return ERR_LOCAL_APP_FAILURE;
+            }
         }
     }
 
