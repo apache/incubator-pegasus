@@ -98,8 +98,8 @@ private:
     uint32_t _log_read_cu_size;
     uint32_t _log_write_cu_size;
 
-    ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
-    ::dsn::perf_counter_wrapper _pfc_recent_write_cu;
+    METRIC_VAR_DECLARE_counter(read_capacity_units);
+    METRIC_VAR_DECLARE_counter(write_capacity_units);
 
     ::dsn::perf_counter_wrapper _pfc_get_bytes;
     ::dsn::perf_counter_wrapper _pfc_multi_get_bytes;

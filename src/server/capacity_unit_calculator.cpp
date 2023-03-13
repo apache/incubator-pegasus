@@ -26,6 +26,16 @@
 #include "utils/fmt_logging.h"
 #include "utils/flags.h"
 
+METRIC_DEFINE_counter(replica,
+                      read_capacity_units,
+                      dsn::metric_unit::kCapacityUnits,
+                      "The number of capacity units for read requests");
+
+METRIC_DEFINE_counter(replica,
+                      write_capacity_units,
+                      dsn::metric_unit::kCapacityUnits,
+                      "The number of capacity units for write requests");
+
 namespace pegasus {
 namespace server {
 
@@ -49,6 +59,8 @@ capacity_unit_calculator::capacity_unit_calculator(
     std::shared_ptr<hotkey_collector> write_hotkey_collector,
     std::shared_ptr<throttling_controller> read_size_throttling_controller)
     : replica_base(r),
+      METRIC_VAR_INIT_replica(read_capacity_units),
+      METRIC_VAR_INIT_replica(write_capacity_units),
       _read_hotkey_collector(read_hotkey_collector),
       _write_hotkey_collector(write_hotkey_collector),
       _read_size_throttling_controller(read_size_throttling_controller)
@@ -62,16 +74,6 @@ capacity_unit_calculator::capacity_unit_calculator(
 
     std::string str_gpid = r->get_gpid().to_string();
     char name[256];
-    snprintf(name, 255, "recent.read.cu@%s", str_gpid.c_str());
-    _pfc_recent_read_cu.init_app_counter("app.pegasus",
-                                         name,
-                                         COUNTER_TYPE_VOLATILE_NUMBER,
-                                         "statistic the recent read capacity units");
-    snprintf(name, 255, "recent.write.cu@%s", str_gpid.c_str());
-    _pfc_recent_write_cu.init_app_counter("app.pegasus",
-                                          name,
-                                          COUNTER_TYPE_VOLATILE_NUMBER,
-                                          "statistic the recent write capacity units");
 
     snprintf(name, 255, "get_bytes@%s", str_gpid.c_str());
     _pfc_get_bytes.init_app_counter(
@@ -116,7 +118,7 @@ int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
         read_data_size > 0
             ? (read_data_size + FLAGS_perf_counter_read_capacity_unit_size - 1) >> _log_read_cu_size
             : 1;
-    _pfc_recent_read_cu->add(read_cu);
+    METRIC_VAR_INCREMENT_BY(read_capacity_units, read_cu);
     _read_size_throttling_controller->consume_token(read_data_size);
     return read_cu;
 }
@@ -127,7 +129,7 @@ int64_t capacity_unit_calculator::add_write_cu(int64_t write_data_size)
                            ? (write_data_size + FLAGS_perf_counter_write_capacity_unit_size - 1) >>
                                  _log_write_cu_size
                            : 1;
-    _pfc_recent_write_cu->add(write_cu);
+    METRIC_VAR_INCREMENT_BY(write_capacity_units, write_cu);
     return write_cu;
 }
 
