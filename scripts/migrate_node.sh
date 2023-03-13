@@ -39,11 +39,9 @@ pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
 
-CONFIG_SPECIFIED=0
 if [ $# -eq 4 ]; then
   cluster=$1
 elif [ "$5" == "-f" ]; then
-  CONFIG_SPECIFIED=1
   config=$1
 else
   usage
@@ -65,7 +63,7 @@ echo "UID=$UID"
 echo "PID=$PID"
 echo
 
-if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+if [ "$cluster" != "" ]; then
   echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_meta_level
   echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.ls
 else
@@ -85,7 +83,7 @@ do
       continue
     fi
 
-    if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+    if [ "$cluster" != "" ]; then
       echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.app.$app
     else
       echo "app $app -d" | ./run.sh shell --config $config &>/tmp/$UID.$PID.pegasus.app.$app
@@ -104,7 +102,7 @@ do
 
     if [ "$type" = "run" ]
     then
-      if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+      if [ "$cluster" != "" ]; then
         cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
       else
         cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --config $config 2>/dev/null
