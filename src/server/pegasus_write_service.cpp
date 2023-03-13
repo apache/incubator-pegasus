@@ -30,83 +30,82 @@
 METRIC_DEFINE_counter(replica,
                       put_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of PUT requests for each replica");
+                      "The number of PUT requests");
 
 METRIC_DEFINE_counter(replica,
                       multi_put_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of MULTI_PUT requests for each replica");
+                      "The number of MULTI_PUT requests");
 
 METRIC_DEFINE_counter(replica,
                       remove_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of REMOVE requests for each replica");
+                      "The number of REMOVE requests");
 
 METRIC_DEFINE_counter(replica,
                       multi_remove_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of MULTI_REMOVE requests for each replica");
+                      "The number of MULTI_REMOVE requests");
 
 METRIC_DEFINE_counter(replica,
                       incr_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of INCR requests for each replica");
+                      "The number of INCR requests");
 
 METRIC_DEFINE_counter(replica,
                       check_and_set_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of CHECK_AND_SET requests for each replica");
+                      "The number of CHECK_AND_SET requests");
 
 METRIC_DEFINE_counter(replica,
                       check_and_mutate_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of CHECK_AND_MUTATE requests for each replica");
+                      "The number of CHECK_AND_MUTATE requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                put_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of PUT requests for each replica");
+                               "The latency of PUT requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                multi_put_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of MULTI_PUT requests for each replica");
+                               "The latency of MULTI_PUT requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                remove_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of REMOVE requests for each replica");
+                               "The latency of REMOVE requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                multi_remove_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of MULTI_REMOVE requests for each replica");
+                               "The latency of MULTI_REMOVE requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                incr_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of INCR requests for each replica");
+                               "The latency of INCR requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                check_and_set_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of CHECK_AND_SET requests for each replica");
+                               "The latency of CHECK_AND_SET requests");
 
 METRIC_DEFINE_percentile_int64(replica,
                                check_and_mutate_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The latency of CHECK_AND_MUTATE requests for each replica");
+                               "The latency of CHECK_AND_MUTATE requests");
 
 METRIC_DEFINE_counter(replica,
                       dup_requests,
                       dsn::metric_unit::kRequests,
-                      "The number of DUPLICATE requests for each replica");
+                      "The number of DUPLICATE requests");
 
-METRIC_DEFINE_percentile_int64(
-    replica,
-    dup_time_lag_ms,
-    dsn::metric_unit::kMilliSeconds,
-    "the time lag (in ms) between master and slave in the duplication for each replica");
+METRIC_DEFINE_percentile_int64(replica,
+                               dup_time_lag_ms,
+                               dsn::metric_unit::kMilliSeconds,
+                               "the time lag (in ms) between master and slave in the duplication");
 
 METRIC_DEFINE_counter(
     replica,

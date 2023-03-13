@@ -101,15 +101,17 @@ private:
     METRIC_VAR_DECLARE_counter(read_capacity_units);
     METRIC_VAR_DECLARE_counter(write_capacity_units);
 
-    ::dsn::perf_counter_wrapper _pfc_get_bytes;
-    ::dsn::perf_counter_wrapper _pfc_multi_get_bytes;
-    ::dsn::perf_counter_wrapper _pfc_batch_get_bytes;
-    ::dsn::perf_counter_wrapper _pfc_scan_bytes;
-    ::dsn::perf_counter_wrapper _pfc_put_bytes;
-    ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
-    ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
-    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
-    ::dsn::perf_counter_wrapper _pfc_backup_request_bytes;
+    METRIC_VAR_DECLARE_counter(get_bytes);
+    METRIC_VAR_DECLARE_counter(multi_get_bytes);
+    METRIC_VAR_DECLARE_counter(batch_get_bytes);
+    METRIC_VAR_DECLARE_counter(scan_bytes);
+
+    METRIC_VAR_DECLARE_counter(put_bytes);
+    METRIC_VAR_DECLARE_counter(multi_put_bytes);
+    METRIC_VAR_DECLARE_counter(check_and_set_bytes);
+    METRIC_VAR_DECLARE_counter(check_and_mutate_bytes);
+
+    METRIC_VAR_DECLARE_counter(backup_request_bytes);
 
     /*
         hotkey capturing weight rules:
