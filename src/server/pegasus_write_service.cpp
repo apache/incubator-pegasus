@@ -151,12 +151,6 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       _put_batch_size(0),
       _remove_batch_size(0)
 {
-    _dup_lagging_write_threshold_ms = dsn_config_get_value_int64(
-        "pegasus.server",
-        "dup_lagging_write_threshold_ms",
-        10 * 1000,
-        "If the duration that a write flows from master to slave is larger than this threshold, "
-        "the write is defined a lagging write.");
 }
 
 pegasus_write_service::~pegasus_write_service() {}
@@ -347,7 +341,7 @@ int pegasus_write_service::duplicate(int64_t decree,
         METRIC_VAR_INCREMENT(dup_requests);
         METRIC_VAR_AUTO_LATENCY(
             dup_time_lag_ms, request.timestamp * 1000, [this](uint64_t latency) {
-                if (latency > _dup_lagging_write_threshold_ms) {
+                if (latency > FLAGS_dup_lagging_write_threshold_ms) {
                     METRIC_VAR_INCREMENT(dup_lagging_writes);
                 }
             });
