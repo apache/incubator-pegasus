@@ -54,6 +54,10 @@ void replica::handle_local_failure(error_code error)
 {
     LOG_INFO_PREFIX("handle local failure error {}, status = {}", error, enum_to_string(status()));
 
+    if (error == ERR_RDB_CORRUPTION) {
+        _data_corrupted = true;
+    }
+
     if (status() == partition_status::PS_PRIMARY) {
         _stub->remove_replica_on_meta_server(_app_info, _primary_states.membership);
     }

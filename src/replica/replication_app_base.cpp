@@ -448,7 +448,14 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
         //      because the external sst files may not exist, in this case, we won't consider it as
         //      an error.
         if (!has_ingestion_request) {
-            return ERR_LOCAL_APP_FAILURE;
+            switch (storage_error) {
+            // TODO(yingchun): Now only kCorruption is dealt, consider to deal with more storage
+            //  engine errors.
+            case rocksdb::Status::kCorruption:
+                return ERR_RDB_CORRUPTION;
+            default:
+                return ERR_LOCAL_APP_FAILURE;
+            }
         }
     }
 

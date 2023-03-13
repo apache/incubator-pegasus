@@ -1236,6 +1236,10 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
         err,
         is_local_error ? "local_error" : "remote error");
 
+    if (is_local_error && err == ERR_RDB_CORRUPTION) {
+        _data_corrupted = true;
+    }
+
     _stub->_counter_replicas_learning_recent_learn_fail_count->increment();
 
     update_local_configuration_with_no_ballot_change(
@@ -1495,7 +1499,11 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                            }
 
                            // TODO: assign the returned error_code to err and check it
-                           _app->apply_mutation(mu);
+                           auto ec = _app->apply_mutation(mu);
+                           if (ec != ERR_OK) {
+                               handle_local_failure(ec);
+                               return;
+                           }
 
                            // appends logs-in-cache into plog to ensure them can be duplicated.
                            // if current case is step back, it means the logs has been reserved
