@@ -27,19 +27,16 @@
 #include "gtest/gtest_prod.h"
 #include "ranger_resource_policy.h"
 #include "rapidjson/document.h"
-#include "runtime/api_task.h"
 #include "runtime/ranger/access_type.h"
+#include "runtime/task/task_tracker.h"
 #include "utils/enum_helper.h"
 #include "utils/error_code.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 
 namespace replication {
 class meta_service;
-class server_state;
-}
-namespace dist {
-class meta_state_service;
 }
 
 enum class resource_type

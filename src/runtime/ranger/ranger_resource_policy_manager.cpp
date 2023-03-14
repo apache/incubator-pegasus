@@ -17,6 +17,9 @@
 
 #include <ctype.h>
 #include <algorithm>
+#include <chrono>
+#include <iosfwd>
+#include <memory>
 #include <unordered_set>
 #include <utility>
 
@@ -27,18 +30,31 @@
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
 #include <rapidjson/document.h>
+
 #pragma GCC diagnostic pop
 
-#include "common/replication.codes.h"
 #include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "dsn.layer2_types.h"
+#include "fmt/core.h"
 #include "meta/meta_options.h"
 #include "meta/meta_service.h"
-#include "meta/server_state.h"
 #include "meta/meta_state_service.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
 #include "ranger_resource_policy_manager.h"
+#include "rapidjson/allocators.h"
 #include "runtime/ranger/ranger_resource_policy.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
+#include "utils/blob.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/smart_pointers.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace ranger {
