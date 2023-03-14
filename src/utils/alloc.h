@@ -17,17 +17,21 @@
 
 #pragma once
 
+#ifdef CACHELINE_SIZE
+
 #include <stddef.h>
 #include <algorithm>
 #include <functional>
 #include <memory>
 #include <new>
 
+#ifndef NDEBUG
+#include "utils/fmt_logging.h"
+#endif
+
 #include "utils/ports.h"
 
 namespace dsn {
-
-#ifdef CACHELINE_SIZE
 
 extern void *cacheline_aligned_alloc(size_t size);
 
@@ -79,6 +83,6 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len, const T &val)
     return array;
 }
 
-#endif
-
 } // namespace dsn
+
+#endif
