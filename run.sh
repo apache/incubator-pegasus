@@ -1650,6 +1650,7 @@ function usage_migrate_node()
     echo "Options for subcommand 'migrate_node':"
     echo "   -h|--help            print the help info"
     echo "   -c|--cluster <str>   cluster meta lists"
+    echo "   -f|--config <str>    shell config path"
     echo "   -n|--node <str>      the node to migrate primary replicas out, should be ip:port"
     echo "   -a|--app <str>       the app to migrate primary replicas out, if not set, means migrate all apps"
     echo "   -t|--type <str>      type: test or run, default is test"
@@ -1658,6 +1659,7 @@ function usage_migrate_node()
 function run_migrate_node()
 {
     CLUSTER=""
+    CONFIG=""
     NODE=""
     APP="*"
     TYPE="test"
@@ -1670,6 +1672,10 @@ function run_migrate_node()
                 ;;
             -c|--cluster)
                 CLUSTER="$2"
+                shift
+                ;;
+            -f|--config)
+                CONFIG="$2"
                 shift
                 ;;
             -n|--node)
@@ -1694,7 +1700,7 @@ function run_migrate_node()
         shift
     done
 
-    if [ "$CLUSTER" == "" ]; then
+    if [ "$CLUSTER" == "" -a "$CONFIG" == "" ]; then
         echo "ERROR: no cluster specified"
         echo
         usage_migrate_node
@@ -1715,14 +1721,22 @@ function run_migrate_node()
         exit 1
     fi
 
-    echo "CLUSTER=$CLUSTER"
+    if [ "$CLUSTER" != "" ]; then
+        echo "CLUSTER=$CLUSTER"
+    else
+        echo "CONFIG=$CONFIG"
+    fi
     echo "NODE=$NODE"
     echo "APP=$APP"
     echo "TYPE=$TYPE"
     echo
     cd ${ROOT}
     echo "------------------------------"
-    ./scripts/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
+    if [ "$CLUSTER" != "" ]; then
+        ./scripts/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
+    else
+        ./scripts/migrate_node.sh $CONFIG $NODE "$APP" $TYPE -f
+    fi
     echo "------------------------------"
     echo
     if [ "$TYPE" == "test" ]; then
