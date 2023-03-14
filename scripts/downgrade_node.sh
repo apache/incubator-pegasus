@@ -20,11 +20,18 @@ set -e
 
 PID=$$
 
-if [ $# -ne 4 ]
-then
+function usage()
+{
   echo "This tool is for downgrading replicas of specified node."
-  echo "USAGE: $0 <cluster-meta-list> <node> <app-name> <run|test>"
-  echo "  app-name = * means migrate all apps"
+  echo
+  echo "USAGE1: $0 <cluster-meta-list> <node> <app-name> <run|test>"
+  echo "USAGE2: $0 <shell-config-path> <node> <app-name> <run|test> -f"
+  echo "app-name = * means downgrade all apps"
+}
+
+if [ $# -ne 4 -a $# -ne 5 ]
+then
+  usage
   exit 1
 fi
 
@@ -32,15 +39,23 @@ pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
 
-cluster=$1
+if [ $# -eq 4 ]; then
+  cluster=$1
+elif [ "$5" == "-f" ]; then
+  config=$1
+else
+  usage
+  echo "ERROR: invalid option: $5"
+  exit 1
+fi
 node=$2
 app_name=$3
 type=$4
 
 if [ "$type" != "run" -a "$type" != "test" ]
 then
+  usage
   echo "ERROR: invalid type: $type"
-  echo "USAGE: $0 <cluster-meta-list> <node> <app-name> <run|test>"
   exit 1
 fi
 
@@ -48,9 +63,13 @@ echo "UID=$UID"
 echo "PID=$PID"
 echo
 
-echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_meta_level
-
-echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.ls
+if [ [ "$cluster" != "" ]; then
+  echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_meta_level
+  echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.ls
+else
+  echo "set_meta_level steady" | ./run.sh shell --config $config &>/tmp/$UID.$PID.pegasus.set_meta_level
+  echo ls | ./run.sh shell --config $config &>/tmp/$UID.$PID.pegasus.ls
+fi
 
 while read app_line
 do
@@ -64,8 +83,11 @@ do
       continue
     fi
 
-    echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.app.$app
-
+    if [ "$cluster" != "" ]; then
+      echo "app $app -d" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.app.$app
+    else
+      echo "app $app -d" | ./run.sh shell --config $config &>/tmp/$UID.$PID.pegasus.app.$app
+    fi
     while read line
     do
       sec=`echo $line | awk '{print $5}' | grep -o '\[.*\]' | grep -o '[0-9.:,]*'`
@@ -95,7 +117,11 @@ do
     if [ "$type" = "run" ]
     then
       cat /tmp/$UID.$PID.pegasus.cmd.$app
-      cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
+      if [ "$cluster" != "" ]; then
+        cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --cluster $cluster 2>/dev/null
+      else
+        cat /tmp/$UID.$PID.pegasus.cmd.$app | ./run.sh shell --config $config 2>/dev/null
+      fi
       echo
       echo
     else

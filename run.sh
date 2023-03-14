@@ -1636,7 +1636,10 @@ function run_shell()
     ./pegasus_shell ${CONFIG} $CLUSTER_NAME
     # because pegasus shell will catch 'Ctrl-C' signal, so the following commands will be executed
     # even user inputs 'Ctrl-C', so that the temporary config file will be cleared when exit shell.
-    rm -f ${CONFIG}
+    # however, if it is the specified config file, do not delete it.
+    if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+        rm -f ${CONFIG}
+    fi
 }
 
 #####################
@@ -1741,6 +1744,7 @@ function usage_downgrade_node()
     echo "Options for subcommand 'downgrade_node':"
     echo "   -h|--help            print the help info"
     echo "   -c|--cluster <str>   cluster meta lists"
+    echo "   -f|--config <str>    config file path" 
     echo "   -n|--node <str>      the node to downgrade replicas, should be ip:port"
     echo "   -a|--app <str>       the app to downgrade replicas, if not set, means downgrade all apps"
     echo "   -t|--type <str>      type: test or run, default is test"
@@ -1749,6 +1753,7 @@ function usage_downgrade_node()
 function run_downgrade_node()
 {
     CLUSTER=""
+    CONFIG=""
     NODE=""
     APP="*"
     TYPE="test"
@@ -1761,6 +1766,10 @@ function run_downgrade_node()
                 ;;
             -c|--cluster)
                 CLUSTER="$2"
+                shift
+                ;;
+            -f|--config)
+                CONFIG="$2"
                 shift
                 ;;
             -n|--node)
@@ -1785,7 +1794,7 @@ function run_downgrade_node()
         shift
     done
 
-    if [ "$CLUSTER" == "" ]; then
+    if [ "$CLUSTER" == "" -a "$CONFIG" == "" ]; then
         echo "ERROR: no cluster specified"
         echo
         usage_downgrade_node
@@ -1806,14 +1815,22 @@ function run_downgrade_node()
         exit 1
     fi
 
-    echo "CLUSTER=$CLUSTER"
+    if [ "$CLUSTER" != "" ]; then
+        echo "CLUSTER=$CLUSTER"
+    else
+        echo "CONFIG=$CONFIG"
+    fi
     echo "NODE=$NODE"
     echo "APP=$APP"
     echo "TYPE=$TYPE"
     echo
     cd ${ROOT}
     echo "------------------------------"
-    ./scripts/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
+    if [ "$CLUSTER" != "" ]; then
+        ./scripts/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
+    else
+        ./scripts/downgrade_node.sh $CONFIG $NODE "$APP" $TYPE -f
+    fi
     echo "------------------------------"
     echo
     if [ "$TYPE" == "test" ]; then
