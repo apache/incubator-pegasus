@@ -19,40 +19,31 @@
 
 #pragma once
 
-#include "runtime/task/task_tracker.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
-#include "common/replication_other_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
-
+// IWYU pragma: no_include <bits/std_abs.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
-#include <evhttp.h>
-#include <event2/event.h>
-#include <event2/http.h>
-#include <event2/bufferevent.h>
+#include <map>
+#include <memory>
+#include <string>
 
-#include "../shell/commands.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "shell/command_helper.h"
+#include "utils/synchronize.h"
+
+struct shell_context;
 
 namespace pegasus {
+class pegasus_client;
+
 namespace server {
 
-class result_writer;
 class hotspot_partition_calculator;
+class result_writer;
 
 class info_collector
 {

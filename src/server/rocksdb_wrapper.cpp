@@ -19,10 +19,24 @@
 
 #include "rocksdb_wrapper.h"
 
-#include "utils/fail_point.h"
 #include <rocksdb/db.h>
-#include "pegasus_write_service_impl.h"
+#include <rocksdb/slice.h>
+#include <rocksdb/status.h>
+
 #include "base/pegasus_value_schema.h"
+#include "pegasus_key_schema.h"
+#include "pegasus_utils.h"
+#include "pegasus_write_service_impl.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "server/logging_utils.h"
+#include "server/meta_store.h"
+#include "server/pegasus_server_impl.h"
+#include "server/pegasus_write_service.h"
+#include "utils/blob.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace pegasus {
 namespace server {
@@ -36,10 +50,10 @@ rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
       _pfc_recent_expire_count(server->_pfc_recent_expire_count),
       _default_ttl(0)
 {
-    _write_batch = dsn::make_unique<rocksdb::WriteBatch>();
-    _value_generator = dsn::make_unique<pegasus_value_generator>();
+    _write_batch = std::make_unique<rocksdb::WriteBatch>();
+    _value_generator = std::make_unique<pegasus_value_generator>();
 
-    _wt_opts = dsn::make_unique<rocksdb::WriteOptions>();
+    _wt_opts = std::make_unique<rocksdb::WriteOptions>();
     // disable write ahead logging as replication handles logging instead now
     _wt_opts->disableWAL = true;
 }

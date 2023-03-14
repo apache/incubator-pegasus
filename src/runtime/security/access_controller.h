@@ -21,10 +21,11 @@
 #include <string>
 #include <unordered_set>
 
-#include "runtime/ranger/ranger_resource_policy.h"
+#include "runtime/ranger/access_type.h"
 
 namespace dsn {
 class message_ex;
+
 namespace security {
 
 class access_controller

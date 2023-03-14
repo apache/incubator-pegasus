@@ -19,14 +19,25 @@
 
 #include "pegasus_manual_compact_service.h"
 
-#include "utils/fmt_logging.h"
-#include "common/replication.codes.h"
-#include "runtime/task/async_calls.h"
-#include "utils/string_conv.h"
-#include "utils/time_utils.h"
+#include <limits.h>
+#include <rocksdb/options.h>
+#include <list>
+#include <ostream>
+#include <set>
+#include <utility>
 
 #include "base/pegasus_const.h"
+#include "common/replication.codes.h"
 #include "pegasus_server_impl.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
+#include "utils/time_utils.h"
 
 namespace pegasus {
 namespace server {

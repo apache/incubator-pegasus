@@ -17,29 +17,23 @@
  * under the License.
  */
 
-#include <vector>
-#include <bitset>
-#include <thread>
-#include <iostream>
-#include <cstdio>
-#include <cstring>
+#include <fmt/core.h>
 #include <unistd.h>
-#include <chrono>
-#include <thread>
-#include <atomic>
+#include <algorithm>
+#include <iostream>
 #include <memory>
-#include <sys/time.h>
+#include <string>
+#include <vector>
 
-#include "utils/fmt_logging.h"
-#include "client/replication_ddl_client.h"
-
-#include <pegasus/client.h>
-
-#include "killer_registry.h"
 #include "killer_handler.h"
-#include "killer_handler_shell.h"
+#include "killer_registry.h"
 #include "process_kill_testor.h"
+#include "test/kill_test/job.h"
+#include "test/kill_test/kill_testor.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/strings.h"
 
 namespace pegasus {
 namespace test {

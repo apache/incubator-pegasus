@@ -17,19 +17,21 @@
 
 #pragma once
 
-#include "replica_duplicator.h"
+#include <stdint.h>
+#include <map>
+#include <utility>
+#include <vector>
 
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
 #include "common//duplication_common.h"
-
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "duplication_types.h"
+#include "metadata_types.h"
 #include "replica/replica.h"
-#include "replica/mutation_log.h"
+#include "replica/replica_base.h"
+#include "replica_duplicator.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {

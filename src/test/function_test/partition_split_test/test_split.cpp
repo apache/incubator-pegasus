@@ -15,14 +15,30 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "include/pegasus/client.h"
-#include <boost/lexical_cast.hpp>
+#include <stdint.h>
+#include <stdlib.h>
+#include <chrono>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
+#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-
-#include "base/pegasus_const.h"
+#include "common/gpid.h"
+#include "include/pegasus/client.h"
+#include "metadata_types.h"
+#include "partition_split_types.h"
+#include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 
 using namespace dsn;
 using namespace dsn::replication;

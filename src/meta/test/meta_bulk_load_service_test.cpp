@@ -15,16 +15,48 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fmt_logging.h"
-#include "common/replica_envs.h"
-#include "utils/fail_point.h"
+#include <string.h>
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
-#include "meta_test_base.h"
-#include "meta_service_test_app.h"
+#include "bulk_load_types.h"
+#include "common/bulk_load_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
+#include "meta/meta_options.h"
 #include "meta/meta_server_failure_detector.h"
+#include "meta/meta_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
+#include "meta_service_test_app.h"
+#include "meta_test_base.h"
+#include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -37,7 +69,7 @@ public:
 
     start_bulk_load_response start_bulk_load(const std::string &app_name)
     {
-        auto request = dsn::make_unique<start_bulk_load_request>();
+        auto request = std::make_unique<start_bulk_load_request>();
         request->app_name = app_name;
         request->cluster_name = CLUSTER;
         request->file_provider_type = PROVIDER;
@@ -80,7 +112,7 @@ public:
     {
         bulk_svc()._app_bulk_load_info[app_id].status = app_status;
 
-        auto request = dsn::make_unique<control_bulk_load_request>();
+        auto request = std::make_unique<control_bulk_load_request>();
         request->app_name = APP_NAME;
         request->type = type;
 
@@ -92,7 +124,7 @@ public:
 
     error_code query_bulk_load(const std::string &app_name)
     {
-        auto request = dsn::make_unique<query_bulk_load_request>();
+        auto request = std::make_unique<query_bulk_load_request>();
         request->app_name = app_name;
 
         query_bulk_load_rpc rpc(std::move(request), RPC_CM_QUERY_BULK_LOAD_STATUS);
@@ -106,7 +138,7 @@ public:
     {
         bulk_svc()._app_bulk_load_info[app_id].status = app_status;
 
-        auto request = dsn::make_unique<clear_bulk_load_state_request>();
+        auto request = std::make_unique<clear_bulk_load_state_request>();
         request->app_name = app_name;
 
         clear_bulk_load_rpc rpc(std::move(request), RPC_CM_CLEAR_BULK_LOAD);
@@ -313,7 +345,7 @@ public:
         _ms.reset(meta_svc);
 
         // initialize bulk load service
-        _ms->_bulk_load_svc = make_unique<bulk_load_service>(
+        _ms->_bulk_load_svc = std::make_unique<bulk_load_service>(
             _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
         mock_bulk_load_on_remote_storage(
             app_id_set, app_bulk_load_info_map, partition_bulk_load_info_map);

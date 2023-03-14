@@ -25,14 +25,20 @@
  */
 
 #include "server_load_balancer.h"
-#include "utils/extensible_object.h"
-#include "utils/string_conv.h"
-#include "utils/command_manager.h"
-#include <boost/lexical_cast.hpp>
-#include "utils/time_utils.h"
+
+#include <memory>
+
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
+#include "meta_admin_types.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
+class meta_service;
+
 newly_partitions::newly_partitions() : newly_partitions(nullptr) {}
 
 newly_partitions::newly_partitions(node_state *ns)

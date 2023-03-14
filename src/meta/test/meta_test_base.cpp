@@ -17,15 +17,39 @@
 
 #include "meta_test_base.h"
 
-#include "utils/fmt_logging.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <map>
+#include <ostream>
+#include <thread>
+#include <unordered_map>
+#include <utility>
 
-#include "meta/server_load_balancer.h"
-#include "meta/meta_server_failure_detector.h"
-#include "meta/meta_split_service.h"
+#include "common/replication.codes.h"
 #include "meta/meta_bulk_load_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_options.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_server_failure_detector.h"
+#include "meta/meta_service.h"
+#include "meta/meta_split_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta/partition_guardian.h"
+#include "meta/server_load_balancer.h"
+#include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
-
 #include "meta_service_test_app.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/error_code.h"
+#include "utils/factory_store.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
@@ -38,7 +62,7 @@ meta_test_base::~meta_test_base() {}
 
 void meta_test_base::SetUp()
 {
-    _ms = make_unique<fake_receiver_meta_service>();
+    _ms = std::make_unique<fake_receiver_meta_service>();
     _ms->_failure_detector.reset(new meta_server_failure_detector(_ms.get()));
     _ms->_balancer.reset(utils::factory_store<server_load_balancer>::create(
         FLAGS_server_load_balancer_type, PROVIDER_TYPE_MAIN, _ms.get()));
@@ -47,9 +71,9 @@ void meta_test_base::SetUp()
     ASSERT_EQ(_ms->remote_storage_initialize(), ERR_OK);
     _ms->initialize_duplication_service();
     ASSERT_TRUE(_ms->_dup_svc);
-    _ms->_split_svc = make_unique<meta_split_service>(_ms.get());
+    _ms->_split_svc = std::make_unique<meta_split_service>(_ms.get());
     ASSERT_TRUE(_ms->_split_svc);
-    _ms->_bulk_load_svc = make_unique<bulk_load_service>(
+    _ms->_bulk_load_svc = std::make_unique<bulk_load_service>(
         _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
     ASSERT_TRUE(_ms->_bulk_load_svc);
     _ms->_bulk_load_svc->initialize_bulk_load_service();
@@ -209,7 +233,7 @@ meta_test_base::update_app_envs(const std::string &app_name,
                                 const std::vector<std::string> &env_keys,
                                 const std::vector<std::string> &env_vals)
 {
-    auto req = make_unique<configuration_update_app_env_request>();
+    auto req = std::make_unique<configuration_update_app_env_request>();
     req->__set_app_name(std::move(app_name));
     req->__set_op(std::move(app_env_operation::type::APP_ENV_OP_SET));
     req->__set_keys(env_keys);

@@ -15,9 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <iostream>
+#include <string>
+
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
-#include <fmt/format.h>
 
 namespace dsn {
 namespace utils {

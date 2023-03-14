@@ -24,11 +24,26 @@
  * THE SOFTWARE.
  */
 
-#include "utils/fmt_logging.h"
-#include "utils/utils.h"
-#include "utils/rand.h"
-#include "runtime/task/async_calls.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
 #include "partition_resolver_simple.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/rand.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {

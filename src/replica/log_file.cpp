@@ -27,14 +27,31 @@
 #include "log_file.h"
 
 #include <fcntl.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <utility>
+#include <vector>
 
-#include "utils/filesystem.h"
-#include "utils/crc.h"
-#include "utils/fmt_logging.h"
-
+#include "aio/file_io.h"
 #include "log_file_stream.h"
+#include "replica/log_block.h"
+#include "replica/mutation.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
+#include "utils/crc.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/latency_tracer.h"
+#include "utils/ports.h"
+#include "utils/strings.h"
 
 namespace dsn {
+class disk_file;
+class task_tracker;
+
 namespace replication {
 
 log_file::~log_file() { close(); }

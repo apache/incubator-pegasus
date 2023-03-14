@@ -17,14 +17,35 @@
  * under the License.
  */
 
-#include "pegasus_server_test_base.h"
-#include "server/capacity_unit_calculator.h"
+#include <algorithm>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <memory>
+#include <rocksdb/status.h>
+#include <stdint.h>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "replica/replica_base.h"
-#include "utils/token_bucket_throttling_controller.h"
+#include "common/replication.codes.h"
 #include "pegasus_key_schema.h"
+#include "pegasus_server_test_base.h"
+#include "replica_admin_types.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/rpc_message.h"
+#include "server/capacity_unit_calculator.h"
 #include "server/hotkey_collector.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/flags.h"
+#include "utils/token_bucket_throttling_controller.h"
+
+namespace dsn {
+namespace replication {
+struct replica_base;
+} // namespace replication
+} // namespace dsn
 
 namespace pegasus {
 namespace server {
@@ -87,7 +108,7 @@ public:
 
     capacity_unit_calculator_test() : pegasus_server_test_base()
     {
-        _cal = dsn::make_unique<mock_capacity_unit_calculator>(_server.get());
+        _cal = std::make_unique<mock_capacity_unit_calculator>(_server.get());
         pegasus_generate_key(key, dsn::blob::create_from_bytes("h"), dsn::blob());
         hash_key = dsn::blob::create_from_bytes("key");
     }

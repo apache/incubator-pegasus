@@ -19,15 +19,25 @@
 
 #include "benchmark.h"
 
-#include <cstring>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <pegasus/error.h>
+#include <rocksdb/env.h>
+#include <rocksdb/statistics.h>
+#include <stdio.h>
+#include <map>
+#include <set>
 #include <sstream>
+#include <utility>
+#include <vector>
 
+#include "pegasus/client.h"
 #include "rand.h"
 #include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+#include "test/bench_test/config.h"
+#include "test/bench_test/statistics.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 #include "utils/strings.h"
 
 namespace pegasus {

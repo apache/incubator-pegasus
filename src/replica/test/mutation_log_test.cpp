@@ -25,10 +25,33 @@
  */
 
 #include "replica/mutation_log.h"
-#include "replica_test_base.h"
 
-#include "utils/filesystem.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unordered_map>
+
+#include "aio/aio_task.h"
+#include "backup_types.h"
+#include "common/replication.codes.h"
+#include "consensus_types.h"
+#include "replica/log_block.h"
+#include "replica/log_file.h"
+#include "replica/mutation.h"
+#include "replica/test/mock_utils.h"
+#include "replica_test_base.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+
+namespace dsn {
+class message_ex;
+} // namespace dsn
 
 using namespace ::dsn;
 using namespace ::dsn::replication;

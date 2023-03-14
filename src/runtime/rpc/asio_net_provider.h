@@ -26,10 +26,25 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
-#include <boost/asio.hpp>
+#include <stddef.h>
+#include <memory>
+#include <thread>
+#include <vector>
+
+#include "boost/asio/io_service.hpp"
+#include "boost/asio/ip/tcp.hpp"
+#include "boost/asio/ip/udp.hpp"
+#include "runtime/rpc/message_parser.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_spec.h"
+#include "utils/error_code.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
+class rpc_engine;
+
 namespace tools {
 
 /// asio_network_provider is a wrapper of Asio library for rDSN to accept a connection and create
@@ -116,7 +131,7 @@ private:
     message_parser **_parsers;
     // ]
 
-    static const size_t max_udp_packet_size = 1000;
+    static const size_t max_udp_packet_size;
 };
 
 } // namespace tools

@@ -33,12 +33,15 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 #include "zookeeper_session_mgr.h"
-#include "zookeeper_session.h"
 
 #include <stdio.h>
 #include <zookeeper/zookeeper.h>
-#include <stdexcept>
+#include <functional>
+
+#include "runtime/service_app.h"
 #include "utils/flags.h"
+#include "utils/singleton_store.h"
+#include "zookeeper_session.h"
 
 namespace dsn {
 namespace dist {

@@ -17,17 +17,21 @@
  * under the License.
  */
 
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "include/pegasus/client.h"
-#include "include/pegasus/error.h"
+#include <stdint.h>
+#include <chrono>
+#include <map>
+#include <set>
+#include <string>
+#include <thread>
+
+#include "pegasus/client.h"
+#include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
 
-using namespace ::dsn;
-using namespace pegasus;
+namespace pegasus {
 
 class range_read_test : public test_util
 {
@@ -191,3 +195,4 @@ TEST_F(range_read_test, scan_test)
         ASSERT_NO_FATAL_FAILURE(cleanup(test.total_count));
     }
 }
+} // namespace pegasus

@@ -17,29 +17,26 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <functional>
+#include <map>
 #include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
+#include "common/replication_other_types.h"
+#include "metadata_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
 #include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/zlocks.h"
 #include "utils/flags.h"
-
-#include "replication_common.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class gpid;
+
 namespace replication {
+class replication_options;
 
 DSN_DECLARE_int32(disk_min_available_space_ratio);
 

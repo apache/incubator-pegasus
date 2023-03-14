@@ -15,10 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common//duplication_common.h"
-#include "utils/fmt_logging.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
 
+#include "common//duplication_common.h"
+#include "common/gpid.h"
+#include "replica/duplication/replica_duplicator.h"
 #include "replica_duplicator_manager.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -67,7 +73,7 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
     replica_duplicator_u_ptr &dup = _duplications[dupid];
     if (dup == nullptr) {
         if (!is_duplication_status_invalid(next_status)) {
-            dup = make_unique<replica_duplicator>(ent, _replica);
+            dup = std::make_unique<replica_duplicator>(ent, _replica);
         } else {
             LOG_ERROR_PREFIX("illegal duplication status: {}",
                              duplication_status_to_string(next_status));

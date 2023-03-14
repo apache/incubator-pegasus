@@ -91,6 +91,7 @@ function usage_build()
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
     echo "   --test                whether to build test binaries"
+    echo "   --iwyu                specify the binary path of 'include-what-you-use' when build with IWYU"
 }
 
 function exit_if_fail() {
@@ -119,6 +120,7 @@ function run_build()
     ROCKSDB_PORTABLE=OFF
     USE_JEMALLOC=OFF
     BUILD_TEST=OFF
+    IWYU=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -182,6 +184,10 @@ function run_build()
                 ;;
             --test)
                 BUILD_TEST=ON
+                ;;
+            --iwyu)
+                IWYU="$2"
+                shift
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -264,6 +270,9 @@ function run_build()
 
         echo "Running cmake Pegasus..."
         pushd $BUILD_DIR
+        if [ ! -z "${IWYU}" ]; then
+            CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=${IWYU}"
+        fi
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
         cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
         exit_if_fail $?
@@ -287,7 +296,11 @@ function run_build()
 
     echo "[$(date)] Building Pegasus ..."
     pushd $BUILD_DIR
-    make install $MAKE_OPTIONS
+    if [ ! -z "${IWYU}" ]; then
+        make $MAKE_OPTIONS 2> iwyu.out
+    else
+        make install $MAKE_OPTIONS
+    fi
     exit_if_fail $?
 
     echo "Build finish time: `date`"

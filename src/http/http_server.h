@@ -19,10 +19,17 @@
 
 #pragma once
 
+#include <functional>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 
@@ -38,6 +45,7 @@ enum http_method
 };
 
 class message_ex;
+
 struct http_request
 {
     static error_with<http_request> parse(dsn::message_ex *m);

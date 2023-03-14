@@ -19,6 +19,8 @@
 
 #include "job.h"
 
+#include <utility>
+
 namespace pegasus {
 namespace test {
 

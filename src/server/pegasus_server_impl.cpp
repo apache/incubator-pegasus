@@ -19,30 +19,74 @@
 
 #include "pegasus_server_impl.h"
 
-#include <algorithm>
-
-#include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <rocksdb/cache.h>
 #include <rocksdb/convenience.h>
+#include <rocksdb/db.h>
+#include <rocksdb/env.h>
+#include <rocksdb/iterator.h>
+#include <rocksdb/rate_limiter.h>
+#include <rocksdb/statistics.h>
+#include <rocksdb/status.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/utilities/options_util.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h> // IWYU pragma: keep
+#include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <list>
+#include <mutex>
+#include <ostream>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
 #include "capacity_unit_calculator.h"
-#include "common/duplication_common.h"
 #include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
 #include "hotkey_collector.h"
 #include "meta_store.h"
+#include "pegasus_const.h"
+#include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
+#include "perf_counter/perf_counter.h"
+#include "replica_admin_types.h"
+#include "rrdb/rrdb.code.definition.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "server/key_ttl_compaction_filter.h"
+#include "server/pegasus_manual_compact_service.h"
+#include "server/pegasus_read_service.h"
+#include "server/pegasus_scan_context.h"
+#include "server/range_read_limiter.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
+#include "utils/threadpool_code.h"
 #include "utils/token_bucket_throttling_controller.h"
 #include "utils/utils.h"
+
+namespace rocksdb {
+class WriteBufferManager;
+} // namespace rocksdb
 
 using namespace dsn::literals::chrono_literals;
 
@@ -474,7 +518,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         bool complete = false;
 
         std::unique_ptr<range_read_limiter> limiter =
-            dsn::make_unique<range_read_limiter>(max_iteration_count,
+            std::make_unique<range_read_limiter>(max_iteration_count,
                                                  max_iteration_size,
                                                  _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
 
@@ -925,7 +969,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     uint64_t expire_count = 0;
 
     std::unique_ptr<range_read_limiter> limiter =
-        dsn::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
+        std::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
                                              0,
                                              _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
     while (limiter->time_check() && it->Valid()) {
@@ -1154,7 +1198,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     bool only_return_count = request.__isset.only_return_count ? request.only_return_count : false;
 
     std::unique_ptr<range_read_limiter> limiter =
-        dsn::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
+        std::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
                                              0,
                                              _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
 
@@ -1336,7 +1380,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             batch_count = context->batch_size;
         }
 
-        std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
+        std::unique_ptr<range_read_limiter> limiter = std::make_unique<range_read_limiter>(
             batch_count, 0, _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
 
         while (count < batch_count && limiter->valid() && it->Valid()) {
@@ -1641,7 +1685,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     _meta_cf = handles_opened[1];
 
     // Create _meta_store which provide Pegasus meta data read and write.
-    _meta_store = dsn::make_unique<meta_store>(this, _db, _meta_cf);
+    _meta_store = std::make_unique<meta_store>(this, _db, _meta_cf);
 
     if (db_exist) {
         _last_committed_decree = _meta_store->get_last_flushed_decree();
@@ -1722,9 +1766,9 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     });
 
     // initialize cu calculator and write service after server being initialized.
-    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
+    _cu_calculator = std::make_unique<capacity_unit_calculator>(
         this, _read_hotkey_collector, _write_hotkey_collector, _read_size_throttling_controller);
-    _server_write = dsn::make_unique<pegasus_server_write>(this);
+    _server_write = std::make_unique<pegasus_server_write>(this);
 
     dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
                                 &_tracker,

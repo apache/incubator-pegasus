@@ -15,10 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/replica_envs.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stdint.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "meta_service_test_app.h"
+#include "common/manual_compact.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
 #include "meta_test_base.h"
+#include "metadata_types.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {
@@ -60,7 +77,7 @@ public:
             auto app = find_app(app_name);
             app->envs[replica_envs::MANUAL_COMPACT_DISABLED] = disable_manual;
         }
-        auto request = dsn::make_unique<start_app_manual_compact_request>();
+        auto request = std::make_unique<start_app_manual_compact_request>();
         request->app_name = app_name;
         if (target_level != -1) {
             request->__set_target_level(target_level);
@@ -126,7 +143,7 @@ public:
                 }
             }
         }
-        auto request = dsn::make_unique<query_app_manual_compact_request>();
+        auto request = std::make_unique<query_app_manual_compact_request>();
         request->app_name = APP_NAME;
 
         query_manual_compact_rpc rpc(std::move(request), RPC_CM_QUERY_MANUAL_COMPACT_STATUS);

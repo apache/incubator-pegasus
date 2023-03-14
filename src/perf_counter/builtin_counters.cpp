@@ -17,9 +17,12 @@
 
 #include "builtin_counters.h"
 
-#include "utils/api_utilities.h"
+#include <stdint.h>
+
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "utils/fmt_logging.h"
-#include "utils/utils.h"
+#include "utils/process_utils.h"
 
 namespace dsn {
 

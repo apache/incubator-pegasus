@@ -34,11 +34,22 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "meta/meta_data.h"
+#include "meta_admin_types.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "server_load_balancer.h"
 
 namespace dsn {
+class command_deregister;
+class rpc_address;
+
 namespace replication {
 class load_balance_policy;
+class meta_service;
 
 class greedy_load_balancer : public server_load_balancer
 {

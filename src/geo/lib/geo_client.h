@@ -19,13 +19,22 @@
 
 #pragma once
 
-#include <sstream>
-#include <s2/s2latlng_rect.h>
-#include <s2/s2cell_union.h>
-#include <s2/util/units/length-units.h>
-#include "runtime/task/task_tracker.h"
 #include <pegasus/client.h>
+#include <s2/third_party/absl/base/port.h>
+#include <functional>
+#include <list>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+
 #include "latlng_codec.h"
+#include "runtime/task/task_tracker.h"
+
+class S2Cap;
+class S2CellId;
+class S2CellUnion;
+class S2LatLng;
 
 namespace dsn {
 class error_s;
@@ -35,6 +44,7 @@ namespace pegasus {
 namespace geo {
 
 struct SearchResult;
+
 using geo_search_callback_t =
     std::function<void(int error_code, std::list<SearchResult> &&results)>;
 using distance_callback_t = std::function<void(int error_code, double distance)>;

@@ -18,7 +18,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cstddef>
 #include <limits>
 
 namespace dsn {

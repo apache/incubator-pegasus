@@ -34,22 +34,36 @@
  */
 
 #include "case.h"
-#include "simple_kv.server.impl.h"
-#include "checker.h"
 
-#include <fmt/printf.h>
-
-#include "runtime/task/task.h"
-#include "runtime/rpc/rpc_message.h"
-#include "replica/replica_stub.h"
-#include "runtime/service_engine.h"
-#include "meta/server_load_balancer.h"
-
-#include <iostream>
-#include <string>
-#include <cstdio>
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/cstdint.hpp>
+#include <boost/iterator/iterator_facade.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/printf.h>
+#include <inttypes.h>
+#include <algorithm>
+#include <cstdio>
+#include <iostream>
+#include <set>
+#include <string>
+#include <utility>
+
+#include "aio/aio_task.h"
+#include "checker.h"
+#include "replica/replica_stub.h"
+#include "replica/storage/simple_kv/test/common.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "simple_kv.server.impl.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace replication {

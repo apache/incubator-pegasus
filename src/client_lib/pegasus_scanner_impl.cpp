@@ -17,8 +17,34 @@
  * under the License.
  */
 
-#include "pegasus_client_impl.h"
+#include <stdint.h>
+#include <chrono>
+#include <functional>
+#include <list>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "base/pegasus_const.h"
+#include "common/gpid.h"
+#include "pegasus/client.h"
+#include "pegasus/error.h"
+#include "pegasus_client_impl.h"
+#include "pegasus_key_schema.h"
+#include "rrdb/rrdb.client.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/synchronize.h"
+#include "utils/zlocks.h"
+
+namespace dsn {
+class message_ex;
+} // namespace dsn
 
 using namespace ::dsn;
 using namespace pegasus;

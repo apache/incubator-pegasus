@@ -33,26 +33,43 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <sstream>
 #include <boost/lexical_cast.hpp>
-#include "utils/factory_store.h"
-#include "runtime/tool_api.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <atomic>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <unordered_map>
+#include <utility>
 
-#include "checker.h"
 #include "case.h"
-
+#include "checker.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_server_failure_detector.h"
+#include "meta/meta_service.h"
+#include "meta/meta_service_app.h"
+#include "meta/partition_guardian.h"
+#include "meta/server_load_balancer.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "replica/mutation_log.h"
-#include "meta/meta_service.h"
-#include "meta/meta_server_failure_detector.h"
-#include "meta/server_state.h"
-#include "meta/server_load_balancer.h"
-
-#include "runtime/service_engine.h"
+#include "replica/replication_service_app.h"
+#include "replica/storage/simple_kv/test/common.h"
 #include "runtime/rpc/rpc_engine.h"
+#include "runtime/service_app.h"
+#include "runtime/service_engine.h"
+#include "runtime/tool_api.h"
+#include "utils/autoref_ptr.h"
+#include "utils/factory_store.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
+class gpid;
+
 namespace replication {
 DSN_DECLARE_string(partition_guardian_type);
 

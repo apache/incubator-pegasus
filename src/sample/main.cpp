@@ -19,8 +19,10 @@
 
 #include <assert.h>
 #include <cstdio>
+#include <string>
 
 #include "pegasus/client.h"
+#include "pegasus/error.h"
 
 using namespace pegasus;
 

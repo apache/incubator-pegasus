@@ -18,14 +18,13 @@
 #include "clock.h"
 
 #include "time_utils.h"
-#include "smart_pointers.h"
 
 uint64_t dsn_now_ns() { return dsn::utils::clock::instance()->now_ns(); }
 
 namespace dsn {
 namespace utils {
 
-std::unique_ptr<clock> clock::_clock = make_unique<clock>();
+std::unique_ptr<clock> clock::_clock = std::make_unique<clock>();
 
 const clock *clock::instance() { return _clock.get(); }
 

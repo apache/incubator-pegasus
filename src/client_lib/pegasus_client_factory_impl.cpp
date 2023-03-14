@@ -19,7 +19,18 @@
 
 #include "pegasus_client_factory_impl.h"
 
+#include <stdio.h>
+#include <utility>
+
+#include "client_lib/pegasus_client_impl.h"
+#include "runtime/app_model.h"
+#include "runtime/tool_api.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
+
 namespace pegasus {
+class pegasus_client;
+
 namespace client {
 
 std::unordered_map<std::string, pegasus_client_factory_impl::app_to_client_map>

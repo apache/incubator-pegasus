@@ -19,20 +19,27 @@
 
 #include "info_collector.h"
 
-#include <cstdlib>
-#include <iomanip>
-#include <vector>
+#include <fmt/core.h>
+#include <stdio.h>
+#include <algorithm>
 #include <chrono>
-#include "runtime/rpc/group_address.h"
+#include <utility>
+#include <vector>
+
+#include "client/replication_ddl_client.h"
 #include "common/common.h"
-#include "utils/fmt_logging.h"
-
-#include "base/pegasus_const.h"
-#include "result_writer.h"
+#include "common/replication_other_types.h"
 #include "hotspot_partition_calculator.h"
-
-using namespace ::dsn;
-using namespace ::dsn::replication;
+#include "pegasus/client.h"
+#include "result_writer.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "shell/command_executor.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
+#include "utils/threadpool_code.h"
 
 namespace pegasus {
 namespace server {
@@ -83,7 +90,7 @@ info_collector::info_collector()
     CHECK(pegasus_client_factory::initialize(nullptr), "Initialize the pegasus client failed");
     _client = pegasus_client_factory::get_client(_cluster_name.c_str(), FLAGS_usage_stat_app);
     CHECK_NOTNULL(_client, "Initialize the client failed");
-    _result_writer = dsn::make_unique<result_writer>(_client);
+    _result_writer = std::make_unique<result_writer>(_client);
 
     // _capacity_unit_retry_wait_seconds is in range of [1, 10]
     _capacity_unit_retry_wait_seconds =

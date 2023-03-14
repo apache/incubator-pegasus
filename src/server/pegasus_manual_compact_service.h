@@ -19,17 +19,18 @@
 
 #pragma once
 
-#include <rocksdb/db.h>
-#include "utils/string_view.h"
+#include <stdint.h>
+#include <atomic>
+#include <map>
+#include <string>
+
+#include "metadata_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica_base.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
+
+namespace rocksdb {
+struct CompactRangeOptions;
+} // namespace rocksdb
 
 namespace pegasus {
 namespace server {

@@ -17,13 +17,12 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <algorithm>
 #include <functional>
 #include <memory>
 #include <new>
 
-#include "utils/api_utilities.h"
-#include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
 namespace dsn {

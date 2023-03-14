@@ -26,8 +26,11 @@
 
 #include "task_tracker.h"
 
-#include "task.h"
+#include <string>
+
 #include "runtime/tool_api.h"
+#include "task.h"
+#include "utils/ports.h"
 
 namespace dsn {
 

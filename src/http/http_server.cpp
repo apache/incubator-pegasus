@@ -17,19 +17,29 @@
 
 #include "http_server.h"
 
-#include <boost/algorithm/string.hpp>
 #include <fmt/ostream.h>
+#include <stdint.h>
+#include <string.h>
+#include <memory>
+#include <ostream>
+#include <vector>
 
 #include "builtin_http_calls.h"
+#include "fmt/core.h"
 #include "http_call_registry.h"
 #include "http_message_parser.h"
 #include "http_server_impl.h"
-#include "pprof_http_service.h"
+#include "nodejs/http_parser.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "runtime/serverlet.h"
 #include "runtime/tool_api.h"
 #include "uri_decoder.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
 #include "utils/strings.h"
-#include "utils/time_utils.h"
 
 namespace dsn {
 
@@ -70,7 +80,7 @@ error_s update_config(const http_request &req)
 
 /*extern*/ http_call &register_http_call(std::string full_path)
 {
-    auto call_ptr = dsn::make_unique<http_call>();
+    auto call_ptr = std::make_unique<http_call>();
     call_ptr->path = std::move(full_path);
     http_call &call = *call_ptr;
     http_call_registry::instance().add(std::move(call_ptr));
@@ -88,7 +98,7 @@ void http_service::register_handler(std::string sub_path, http_callback cb, std:
     if (!FLAGS_enable_http_server) {
         return;
     }
-    auto call = make_unique<http_call>();
+    auto call = std::make_unique<http_call>();
     call->path = this->path();
     if (!call->path.empty()) {
         call->path += '/';

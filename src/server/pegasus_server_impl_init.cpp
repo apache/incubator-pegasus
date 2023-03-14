@@ -17,19 +17,50 @@
  * under the License.
  */
 
-#include "pegasus_server_impl.h"
-
-#include <unordered_map>
-#include "utils/flags.h"
+#include <fmt/core.h>
+#include <rocksdb/cache.h>
 #include <rocksdb/filter_policy.h>
+#include <rocksdb/options.h>
+#include <rocksdb/rate_limiter.h>
+#include <rocksdb/statistics.h>
+#include <rocksdb/table.h>
+#include <rocksdb/write_buffer_manager.h>
+#include <stdio.h>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "hashkey_transform.h"
+#include "hotkey_collector.h"
+#include "pegasus_event_listener.h"
+#include "pegasus_server_impl.h"
+#include "pegasus_value_schema.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica_admin_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "server/capacity_unit_calculator.h" // IWYU pragma: keep
+#include "server/key_ttl_compaction_filter.h"
+#include "server/meta_store.h" // IWYU pragma: keep
+#include "server/pegasus_read_service.h"
+#include "server/pegasus_server_write.h" // IWYU pragma: keep
+#include "server/range_read_limiter.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 
-#include "capacity_unit_calculator.h"
-#include "hashkey_transform.h"
-#include "meta_store.h"
-#include "pegasus_event_listener.h"
-#include "pegasus_server_write.h"
-#include "hotkey_collector.h"
+namespace dsn {
+namespace replication {
+class replica;
+} // namespace replication
+} // namespace dsn
 
 namespace pegasus {
 namespace server {

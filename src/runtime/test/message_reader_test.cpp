@@ -15,9 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <string.h>
+#include <string>
 
 #include "runtime/rpc/message_parser.h"
+#include "utils/blob.h"
 
 namespace dsn {
 

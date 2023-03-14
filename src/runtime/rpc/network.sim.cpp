@@ -33,18 +33,27 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <boost/asio.hpp>
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/singleton_store.h"
-#include "utils/rand.h"
-#include "runtime/node_scoper.h"
+#include <string.h>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "boost/asio/ip/impl/host_name.ipp"
 #include "network.sim.h"
+#include "runtime/node_scoper.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/rand.h"
+#include "utils/singleton_store.h"
+#include "utils/utils.h"
 
 namespace dsn {
+class rpc_engine;
+
 namespace tools {
 
 DSN_DEFINE_uint32(tools.simulator, min_message_delay_microseconds, 1, "min message delay (us)");

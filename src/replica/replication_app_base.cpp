@@ -24,28 +24,50 @@
  * THE SOFTWARE.
  */
 
-#include "replica.h"
-#include "mutation.h"
+#include <alloca.h>
+#include <fcntl.h>
+#include <algorithm>
+#include <fstream>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "aio/aio_task.h"
+#include "aio/file_io.h"
 #include "common/bulk_load_common.h"
 #include "common/duplication_common.h"
-#include "utils/latency_tracer.h"
-#include "utils/fmt_logging.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
+#include "mutation.h"
+#include "replica.h"
 #include "replica/replication_app_base.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 #include "utils/defer.h"
 #include "utils/factory_store.h"
-#include "utils/filesystem.h"
-#include "utils/crc.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include <fstream>
-#include <sstream>
-#include <memory>
 #include "utils/fail_point.h"
-#include "common/replica_envs.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/latency_tracer.h"
+#include "utils/ports.h"
+#include "utils/string_view.h"
+#include "utils/threadpool_code.h"
+#include "utils/utils.h"
 
 namespace dsn {
+class disk_file;
+
 namespace replication {
 
 const std::string replica_init_info::kInitInfo = ".init-info";
@@ -305,7 +327,7 @@ error_code replication_app_base::open()
     const std::map<std::string, std::string> &extra_envs = _replica->get_replica_extra_envs();
     argc += (2 * extra_envs.size());
 
-    std::unique_ptr<char *[]> argvs = make_unique<char *[]>(argc);
+    std::unique_ptr<char *[]> argvs = std::make_unique<char *[]>(argc);
     char **argv = argvs.get();
     CHECK_NOTNULL(argv, "");
     int idx = 0;

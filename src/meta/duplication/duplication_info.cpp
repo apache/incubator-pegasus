@@ -16,9 +16,10 @@
 // under the License.
 
 #include "duplication_info.h"
-#include "meta/meta_data.h"
 
-#include <rapidjson/prettywriter.h>
+#include "common/duplication_common.h"
+#include "meta/meta_data.h"
+#include "runtime/api_layer1.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {

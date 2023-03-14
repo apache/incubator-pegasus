@@ -15,16 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "replica/replica_stub.h"
-#include "replica/replica.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+#include <utility>
 
+#include "common/duplication_common.h"
+#include "common/replication.codes.h"
 #include "duplication_sync_timer.h"
+#include "metadata_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/replica.h"
+#include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
-
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/command_manager.h"
-#include "utils/output_utils.h"
-#include "utils/string_conv.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {
@@ -48,7 +61,7 @@ void duplication_sync_timer::run()
         }
     }
 
-    auto req = make_unique<duplication_sync_request>();
+    auto req = std::make_unique<duplication_sync_request>();
     req->node = _stub->primary_address();
 
     // collects confirm points from all primaries on this server

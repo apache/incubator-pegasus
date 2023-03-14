@@ -16,8 +16,13 @@
 // under the License.
 
 #include "utils/rand.h"
+
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <thread>
+#include <vector>
 
 namespace dsn {
 

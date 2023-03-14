@@ -26,12 +26,27 @@
 
 #include "misc.h"
 
+#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <stdio.h>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <string>
+#include <thread>
+#include <unordered_map>
 
-#include <boost/lexical_cast.hpp>
-
-#include "common/replication_common.h"
+#include "common/fs_manager.h"
+#include "common/gpid.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "duplication_types.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 

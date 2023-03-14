@@ -34,12 +34,18 @@
  */
 
 #include "common.h"
-#include "checker.h"
 
-#include "utils/utils.h"
-
-#include <sstream>
+#include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <stddef.h>
+#include <sstream>
+
+#include "checker.h"
+#include "common/replication_enums.h"
+#include "dsn.layer2_types.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace replication {

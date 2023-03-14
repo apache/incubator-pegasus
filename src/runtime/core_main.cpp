@@ -24,13 +24,13 @@
  * THE SOFTWARE.
  */
 
-#include "runtime/simulator.h"
-#include "runtime/nativerun.h"
-#include "runtime/tracer.h"
-#include "runtime/profiler.h"
 #include "runtime/fault_injector.h"
-
+#include "runtime/nativerun.h"
+#include "runtime/profiler.h"
 #include "runtime/providers.common.h"
+#include "runtime/simulator.h"
+#include "runtime/tool_api.h"
+#include "runtime/tracer.h"
 
 void dsn_core_init()
 {

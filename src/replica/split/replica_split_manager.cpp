@@ -16,13 +16,40 @@
 // under the License.
 
 #include "replica_split_manager.h"
-#include "common/partition_split_common.h"
 
-#include "utils/fmt_logging.h"
+#include <chrono>
+#include <functional>
+#include <utility>
+
+#include "common/partition_split_common.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
+#include "failure_detector/failure_detector_multimaster.h"
+#include "partition_split_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/mutation_log.h"
+#include "replica/prepare_list.h"
+#include "replica/replica_context.h"
+#include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "utils/autoref_ptr.h"
+#include "utils/chrono_literals.h"
 #include "utils/defer.h"
-#include "utils/filesystem.h"
 #include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
@@ -541,7 +568,7 @@ void replica_split_manager::child_notify_catch_up() // on child partition
 {
     FAIL_POINT_INJECT_F("replica_child_notify_catch_up", [](dsn::string_view) {});
 
-    std::unique_ptr<notify_catch_up_request> request = make_unique<notify_catch_up_request>();
+    std::unique_ptr<notify_catch_up_request> request = std::make_unique<notify_catch_up_request>();
     request->parent_gpid = _replica->_split_states.parent_gpid;
     request->child_gpid = get_gpid();
     request->child_ballot = get_ballot();
@@ -726,7 +753,7 @@ void replica_split_manager::parent_send_update_partition_count_request(
 
     CHECK_EQ_PREFIX(status(), partition_status::PS_PRIMARY);
 
-    auto request = make_unique<update_child_group_partition_count_request>();
+    auto request = std::make_unique<update_child_group_partition_count_request>();
     request->new_partition_count = new_partition_count;
     request->target_address = address;
     request->child_pid = _child_gpid;
@@ -938,7 +965,7 @@ void replica_split_manager::parent_send_register_request(
         request.child_config.ballot);
 
     rpc_address meta_address(_stub->_failure_detector->get_servers());
-    std::unique_ptr<register_child_request> req = make_unique<register_child_request>(request);
+    std::unique_ptr<register_child_request> req = std::make_unique<register_child_request>(request);
     register_child_rpc rpc(std::move(req),
                            RPC_CM_REGISTER_CHILD_REPLICA,
                            /*never timeout*/ 0_ms,
@@ -1433,7 +1460,7 @@ void replica_split_manager::parent_send_notify_stop_request(
 {
     FAIL_POINT_INJECT_F("replica_parent_send_notify_stop_request", [](dsn::string_view) {});
     rpc_address meta_address(_stub->_failure_detector->get_servers());
-    std::unique_ptr<notify_stop_split_request> req = make_unique<notify_stop_split_request>();
+    std::unique_ptr<notify_stop_split_request> req = std::make_unique<notify_stop_split_request>();
     req->app_name = _replica->_app_info.app_name;
     req->parent_gpid = get_gpid();
     req->meta_split_status = meta_split_status;
@@ -1458,7 +1485,7 @@ void replica_split_manager::parent_send_notify_stop_request(
 // ThreadPool: THREAD_POOL_REPLICATION
 void replica_split_manager::query_child_state() // on primary parent
 {
-    auto request = make_unique<query_child_state_request>();
+    auto request = std::make_unique<query_child_state_request>();
     request->app_name = _replica->_app_info.app_name;
     request->pid = get_gpid();
     request->partition_count = _replica->_app_info.partition_count;

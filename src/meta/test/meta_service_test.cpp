@@ -15,11 +15,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "meta_test_base.h"
-#include "meta/meta_service.h"
+#include <fmt/ostream.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <iosfwd>
+#include <memory>
+#include <vector>
 
-#include "utils/fail_point.h"
+#include "common/replication.codes.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_service.h"
+#include "meta_admin_types.h"
+#include "meta_test_base.h"
+#include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

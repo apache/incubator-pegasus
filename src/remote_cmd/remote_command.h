@@ -17,10 +17,17 @@
 
 #pragma once
 
-#include "utils/errors.h"
+#include <chrono>
+#include <functional>
+#include <string>
+#include <vector>
+
 #include "runtime/task/task.h"
 
 namespace dsn {
+class error_code;
+class rpc_address;
+
 namespace dist {
 namespace cmd {
 

@@ -42,38 +42,76 @@
 // which is binded to this replication partition
 //
 
-#include "utils/uniq_timestamp_us.h"
-#include "utils/thread_access_checker.h"
-#include "runtime/serverlet.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <atomic>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "perf_counter/perf_counter_wrapper.h"
-#include "replica/replica_base.h"
-
-#include "common/replication_common.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "prepare_list.h"
+#include "replica/backup/cold_backup_context.h"
+#include "replica/replica_base.h"
 #include "replica_context.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/serverlet.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
+#include "utils/uniq_timestamp_us.h"
 
 namespace dsn {
+class gpid;
+class perf_counter;
+class rpc_address;
+namespace dist {
+namespace block_service {
+class block_filesystem;
+} // namespace block_service
+} // namespace dist
+
 namespace security {
 class access_controller;
 } // namespace security
 namespace replication {
 
-class replication_app_base;
-class replica_stub;
-class replica_duplicator_manager;
+class backup_request;
+class backup_response;
+class configuration_restore_request;
+class detect_hotkey_request;
+class detect_hotkey_response;
+class group_check_request;
+class group_check_response;
+class learn_notify_response;
+class learn_request;
+class learn_response;
+class learn_state;
+class replica;
 class replica_backup_manager;
 class replica_bulk_loader;
-class replica_split_manager;
 class replica_disk_migrator;
+class replica_duplicator_manager;
 class replica_follower;
+class replica_split_manager;
+class replica_stub;
+class replication_app_base;
+class replication_options;
 
-class cold_backup_context;
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
-struct cold_backup_metadata;
 
 namespace test {
 class test_checker;

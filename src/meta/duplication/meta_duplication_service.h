@@ -17,11 +17,28 @@
 
 #pragma once
 
-#include "meta/server_state.h"
+#include <stdint.h>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "common/duplication_common.h"
+#include "meta/duplication/duplication_info.h"
 #include "meta/meta_data.h"
+#include "meta/server_state.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
+class rpc_address;
+class zrwlock_nr;
+
 namespace replication {
+class duplication_confirm_entry;
+class duplication_query_request;
+class duplication_query_response;
+class meta_service;
 
 /// On meta storage, duplication info are stored in the following layout:
 ///

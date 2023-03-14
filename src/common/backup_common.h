@@ -17,13 +17,17 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <string>
-#include "common/gpid.h"
-#include "backup_types.h"
+
 #include "runtime/rpc/rpc_holder.h"
 
 namespace dsn {
+class gpid;
+
 namespace replication {
+class backup_request;
+class backup_response;
 
 class cold_backup_constant
 {

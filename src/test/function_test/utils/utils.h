@@ -19,10 +19,13 @@
 
 #pragma once
 
+#include <sstream>
+
 #include "utils/api_utilities.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 #include "utils/strings.h"
+#include "utils/process_utils.h"
 
 #define RETRY_OPERATION(CLIENT_FUNCTION, RESULT)                                                   \
     do {                                                                                           \

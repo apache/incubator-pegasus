@@ -33,17 +33,44 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
-#include "replica_stub.h"
+#include <fmt/core.h>
+#include <stdint.h>
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
 #include "duplication/replica_duplicator_manager.h"
-#include "split/replica_split_manager.h"
-#include "utils/fail_point.h"
-#include "utils/filesystem.h"
-#include "utils/chrono_literals.h"
+#include "metadata_types.h"
+#include "mutation_log.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica.h"
+#include "replica/prepare_list.h"
+#include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
+#include "replica_stub.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "split/replica_split_manager.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {

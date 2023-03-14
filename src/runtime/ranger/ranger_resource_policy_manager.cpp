@@ -15,9 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/replication.codes.h"
+#include <ctype.h>
+#include <algorithm>
+#include <unordered_set>
+#include <utility>
+
 #include "meta/meta_options.h"
+#include "meta/meta_service.h"
 #include "ranger_resource_policy_manager.h"
+#include "runtime/ranger/ranger_resource_policy.h"
+#include "runtime/task/task_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace ranger {

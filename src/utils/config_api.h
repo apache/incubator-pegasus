@@ -25,9 +25,10 @@
  */
 #pragma once
 
+#include <cstdint>
+#include <iosfwd>
 #include <string>
 #include <vector>
-#include <cstdint>
 
 /// load a ini configuration file, and replace specific strings in file with arguments.
 ///

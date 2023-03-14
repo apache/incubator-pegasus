@@ -26,8 +26,13 @@
 
 #include "task_code.h"
 
-#include "utils/customizable_id.h"
+#include <memory>
+#include <vector>
+#include <sstream> // IWYU pragma: keep
+
 #include "task_spec.h"
+#include "utils/command_manager.h"
+#include "utils/customizable_id.h"
 
 namespace dsn {
 

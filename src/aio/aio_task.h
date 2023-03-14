@@ -26,11 +26,21 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+#include <functional>
+#include <memory>
 #include <vector>
 
+#include "runtime/api_task.h"
 #include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 
 namespace dsn {
+class error_code;
+class service_node;
 
 namespace utils {
 class latency_tracer;
@@ -51,6 +61,7 @@ typedef struct
 
 class disk_engine;
 class disk_file;
+
 class aio_context : public ref_counter
 {
 public:

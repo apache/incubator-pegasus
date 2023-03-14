@@ -24,9 +24,29 @@
 * THE SOFTWARE.
 */
 #include "simple_kv.server.impl.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
 #include <fstream>
-#include <sstream>
+#include <utility>
+#include <vector>
+
+#include "consensus_types.h"
+#include "runtime/serverlet.h"
+#include "simple_kv_types.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+
+namespace dsn {
+class blob;
+
+namespace replication {
+class replica;
+} // namespace replication
+} // namespace dsn
 
 #define VALUE_NOT_EXIST "<<not-exist>>"
 

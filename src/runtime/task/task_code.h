@@ -26,12 +26,21 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <ostream>
+#include <string>
 
-#include "utils/ports.h"
 #include "utils/enum_helper.h"
+#include "utils/ports.h"
 #include "utils/threadpool_code.h"
-#include <thrift/protocol/TProtocol.h>
+
+namespace apache {
+namespace thrift {
+namespace protocol {
+class TProtocol;
+} // namespace protocol
+} // namespace thrift
+} // namespace apache
 
 typedef enum dsn_task_type_t {
     TASK_TYPE_RPC_REQUEST,  ///< task handling rpc request

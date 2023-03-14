@@ -15,16 +15,50 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/replica_envs.h"
-#include "utils/defer.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/filesystem.h"
-#include "runtime/rpc/network.sim.h"
+#include <stdint.h>
+#include <unistd.h>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "backup_types.h"
 #include "common/backup_common.h"
-#include "replica_test_base.h"
+#include "common/fs_manager.h"
+#include "common/gpid.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
+#include "http/http_server.h"
+#include "metadata_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica.h"
 #include "replica/replica_http_service.h"
+#include "replica/replica_stub.h"
+#include "replica/replication_app_base.h"
+#include "replica/test/mock_utils.h"
+#include "replica_test_base.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

@@ -24,17 +24,34 @@
  * THE SOFTWARE.
  */
 
-#include "replica.h"
+#include <inttypes.h>
+#include <chrono>
+#include <map>
+#include <memory>
+#include <string>
+
+#include "backup/replica_backup_manager.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
+#include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "replica_stub.h"
-#include "backup/replica_backup_manager.h"
-#include "duplication/replica_follower.h"
-#include "utils/factory_store.h"
-#include "utils/filesystem.h"
+#include "replica.h"
+#include "replica/prepare_list.h"
 #include "replica/replication_app_base.h"
+#include "replica_stub.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/fail_point.h"
+#include "utils/uniq_timestamp_us.h"
 
 namespace dsn {
 namespace replication {

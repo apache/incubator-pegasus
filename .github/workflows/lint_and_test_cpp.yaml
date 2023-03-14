@@ -57,6 +57,50 @@ jobs:
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
+  iwyu:
+    name: IWYU
+    needs: cpp_clang_format_linter
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
+              - 'thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: thirdparty
+        # Build thirdparties and leave some necessary libraries and source
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
+          cmake --build build/ -j $(nproc)
+          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
+          ../scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_zk.sh zookeeper-bin
+      - name: Build IWYU binary
+        run: |
+          mkdir iwyu && cd iwyu && git clone https://github.com/include-what-you-use/include-what-you-use.git
+          cd include-what-you-use && git checkout clang_14
+          cd .. && mkdir build && cd build && cmake -G "Unix Makefiles" -DCMAKE_PREFIX_PATH=/usr/lib/llvm-14 ../include-what-you-use
+          make -j $(nproc)
+      - name: Check IWYU
+        run: |
+          PWD=`pwd`
+          ./run.sh build --test --compiler clang-14,clang++-14 -j $(nproc) -t release --iwyu ${PWD}/iwyu/build/bin/include-what-you-use --skip_thirdparty
+          python3 iwyu/include-what-you-use/fix_includes.py --blank_lines --reorder --nocomments --nosafe_headers --separate_project_includes="<tld>" --ignore_re="release__builder|rrdb_types|layer2_types|metrics_test.cpp" --dry_run < src/builder/iwyu.out
+          python3 iwyu/include-what-you-use/fix_includes.py --blank_lines --reorder --nocomments --nosafe_headers --separate_project_includes="<tld>" --ignore_re="release__builder|rrdb_types|layer2_types|metrics_test.cpp" --dry_run < src/builder/iwyu.out | egrep "IWYU edited 0 files on your behalf"
+
   build_Release:
     name: Build Release
     needs: cpp_clang_format_linter

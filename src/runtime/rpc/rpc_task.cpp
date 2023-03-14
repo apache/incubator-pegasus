@@ -24,8 +24,23 @@
  * THE SOFTWARE.
  */
 
-#include "runtime/task/task_engine.h"
+#include <functional>
+#include <list>
+#include <utility>
+
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/service_engine.h"
 #include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 

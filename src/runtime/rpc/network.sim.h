@@ -26,12 +26,22 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
+#include <stdint.h>
+
+#include "runtime/rpc/message_parser.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_spec.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class rpc_engine;
+
 namespace tools {
 
 class sim_network_provider;
+
 class sim_client_session : public rpc_session
 {
 public:

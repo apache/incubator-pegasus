@@ -24,10 +24,20 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <memory>
+#include <vector>
 
 #include "meta/dump_file.h"
+#include "utils/blob.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 TEST(dump_file, read_write)
 {

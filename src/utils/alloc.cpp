@@ -19,6 +19,7 @@
 
 #include <cstdlib>
 
+#include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 
 namespace dsn {

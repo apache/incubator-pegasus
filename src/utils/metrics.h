@@ -17,12 +17,18 @@
 
 #pragma once
 
+#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/detail/impl/epoll_reactor.hpp>
+#include <boost/asio/detail/impl/timer_queue_ptime.ipp>
+#include <rapidjson/ostreamwrapper.h>
+#include <stddef.h>
 #include <algorithm>
 #include <atomic>
 #include <bitset>
+#include <cstdint>
 #include <functional>
 #include <memory>
-#include <mutex>
+#include <new>
 #include <set>
 #include <sstream>
 #include <string>
@@ -32,11 +38,8 @@
 #include <utility>
 #include <vector>
 
-#include <boost/asio/deadline_timer.hpp>
-
 #include "common/json_helper.h"
 #include "http/http_server.h"
-#include "utils/api_utilities.h"
 #include "utils/alloc.h"
 #include "utils/autoref_ptr.h"
 #include "utils/casts.h"
@@ -47,8 +50,13 @@
 #include "utils/ports.h"
 #include "utils/singleton.h"
 #include "utils/string_view.h"
-#include "utils/strings.h"
 #include "utils/synchronize.h"
+
+namespace boost {
+namespace system {
+class error_code;
+} // namespace system
+} // namespace boost
 
 // A metric library (for details pls see https://github.com/apache/incubator-pegasus/issues/922)
 // inspired by Kudu metrics (https://github.com/apache/kudu/blob/master/src/kudu/util/metrics.h).
@@ -134,12 +142,12 @@
     extern dsn::floating_percentile_prototype<double> METRIC_##name
 
 namespace dsn {
+class metric;                  // IWYU pragma: keep
+class metric_entity_prototype; // IWYU pragma: keep
+class metric_prototype;        // IWYU pragma: keep
+struct metric_filters;         // IWYU pragma: keep
 
-class metric_prototype;
-class metric;
 using metric_ptr = ref_ptr<metric>;
-struct metric_filters;
-class metric_entity_prototype;
 
 using metric_json_writer = dsn::json::PrettyJsonWriter;
 
@@ -352,7 +360,8 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_entity_prototype);
 };
 
-class metric_registry;
+class metric_registry; // IWYU pragma: keep
+
 class metrics_http_service : public http_server_base
 {
 public:

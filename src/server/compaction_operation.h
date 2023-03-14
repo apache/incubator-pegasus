@@ -19,9 +19,19 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
+#include <stdint.h>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
+
+#include "common/json_helper.h"
 #include "compaction_filter_rule.h"
+#include "utils/blob.h"
+#include "utils/enum_helper.h"
+#include "utils/factory_store.h"
+#include "utils/string_view.h"
 
 namespace pegasus {
 namespace server {

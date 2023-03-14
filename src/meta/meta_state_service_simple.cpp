@@ -27,14 +27,24 @@
 #include "meta_state_service_simple.h"
 
 #include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <set>
 #include <stack>
 #include <utility>
 
+#include "aio/file_io.h"
+#include "runtime/service_app.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_reader.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace dist {

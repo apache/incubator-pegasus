@@ -26,10 +26,12 @@
 
 #pragma once
 
-#include "common/replication_common.h"
-#include "mutation.h"
-#include <vector>
 #include <atomic>
+#include <vector>
+
+#include "common/replication_other_types.h"
+#include "mutation.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {

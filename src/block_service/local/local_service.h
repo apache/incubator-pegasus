@@ -17,11 +17,18 @@
 
 #pragma once
 
-#include <fstream>
+#include <stdint.h>
+#include <string>
+#include <vector>
 
 #include "block_service/block_service.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class task_tracker;
+
 namespace dist {
 namespace block_service {
 

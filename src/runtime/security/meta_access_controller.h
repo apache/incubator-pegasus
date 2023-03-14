@@ -17,12 +17,14 @@
 
 #pragma once
 
-#include "access_controller.h"
-
+#include <string>
 #include <unordered_set>
+
+#include "access_controller.h"
 
 namespace dsn {
 class message_ex;
+
 namespace security {
 
 class meta_access_controller : public access_controller

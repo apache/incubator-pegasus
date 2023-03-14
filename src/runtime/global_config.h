@@ -39,10 +39,18 @@
 
 #pragma once
 
-#include "runtime/task/task_spec.h"
-#include "utils/threadpool_spec.h"
-#include <string>
+#include <algorithm>
+#include <list>
 #include <map>
+#include <string>
+#include <vector>
+
+#include "runtime/task/task_spec.h"
+#include "utils/config_api.h"
+#include "utils/config_helper.h"
+#include "utils/customizable_id.h"
+#include "utils/threadpool_code.h"
+#include "utils/threadpool_spec.h"
 
 namespace dsn {
 

@@ -36,14 +36,16 @@
 #define RAW_MESSAGE_PARSER_H
 
 #include "runtime/rpc/message_parser.h"
-#include "runtime/rpc/rpc_message.h"
-#include "utils/ports.h"
+#include "runtime/task/task_spec.h"
+#include "utils/customizable_id.h"
 
 namespace dsn {
+class message_ex;
 
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_RAW)
 
 class rpc_session;
+
 class raw_message_parser : public message_parser
 {
 private:

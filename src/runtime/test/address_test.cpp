@@ -24,7 +24,13 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <netinet/in.h>
+#include <stdint.h>
+#include <string>
+#include <vector>
 
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_address.h"

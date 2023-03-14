@@ -24,27 +24,16 @@
  * THE SOFTWARE.
  */
 
-#include <iostream>
-
-#ifndef _WIN32
-#include <sys/types.h>
-#include <signal.h>
-#endif
-
 #include <gtest/gtest.h>
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
+#include <chrono>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
+
 #include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
+#include "utils/error_code.h"
 
 int g_test_count = 0;
 int g_test_ret = 0;

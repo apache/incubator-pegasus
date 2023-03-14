@@ -24,20 +24,45 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fmt_logging.h"
+#include <unistd.h>
+#include <algorithm>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <ostream>
+#include <queue>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "common/common.h"
-#include "utils/time_utils.h"
-
-#include "meta/server_load_balancer.h"
-#include "meta/meta_server_failure_detector.h"
-#include "meta/meta_http_service.h"
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "duplication_types.h"
+#include "http/http_server.h"
+#include "meta/duplication/duplication_info.h"
 #include "meta/duplication/meta_duplication_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_http_service.h"
+#include "meta/meta_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
-
-#include "meta_service_test_app.h"
 #include "meta_test_base.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 #include "utils/fail_point.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace replication {
@@ -51,7 +76,7 @@ public:
                                         const std::string &remote_cluster = "slave-cluster",
                                         bool freezed = false)
     {
-        auto req = make_unique<duplication_add_request>();
+        auto req = std::make_unique<duplication_add_request>();
         req->app_name = app_name;
         req->remote_cluster_name = remote_cluster;
 
@@ -63,7 +88,7 @@ public:
 
     duplication_query_response query_dup_info(const std::string &app_name)
     {
-        auto req = make_unique<duplication_query_request>();
+        auto req = std::make_unique<duplication_query_request>();
         req->app_name = app_name;
 
         duplication_query_rpc rpc(std::move(req), RPC_CM_QUERY_DUPLICATION);
@@ -75,7 +100,7 @@ public:
     duplication_modify_response
     change_dup_status(const std::string &app_name, dupid_t dupid, duplication_status::type status)
     {
-        auto req = make_unique<duplication_modify_request>();
+        auto req = std::make_unique<duplication_modify_request>();
         req->dupid = dupid;
         req->app_name = app_name;
         req->__set_status(status);
@@ -90,7 +115,7 @@ public:
     duplication_modify_response
     update_fail_mode(const std::string &app_name, dupid_t dupid, duplication_fail_mode::type fmode)
     {
-        auto req = make_unique<duplication_modify_request>();
+        auto req = std::make_unique<duplication_modify_request>();
         req->dupid = dupid;
         req->app_name = app_name;
         req->__set_fail_mode(fmode);
@@ -106,7 +131,7 @@ public:
     duplication_sync(const rpc_address &node,
                      std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list)
     {
-        auto req = make_unique<duplication_sync_request>();
+        auto req = std::make_unique<duplication_sync_request>();
         req->node = node;
         req->confirm_list = confirm_list;
 
@@ -196,7 +221,7 @@ public:
 
             // update progress
             auto dup = app->duplications[resp.dupid];
-            duplication_sync_rpc rpc(make_unique<duplication_sync_request>(),
+            duplication_sync_rpc rpc(std::make_unique<duplication_sync_request>(),
                                      RPC_CM_DUPLICATION_SYNC);
             duplication_confirm_entry entry;
             entry.confirmed_decree = 1000;

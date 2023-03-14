@@ -17,17 +17,19 @@
 
 #include "duplication_common.h"
 
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
+#include <nlohmann/json.hpp>
+#include <cstdint>
+#include <utility>
+#include <vector>
+
 #include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
+#include "nlohmann/detail/json_ref.hpp"
+#include "nlohmann/json_fwd.hpp"
+#include "utils/config_api.h"
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/singleton.h"
 #include "utils/time_utils.h"
-#include <nlohmann/json.hpp>
 
 namespace dsn {
 namespace replication {

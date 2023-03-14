@@ -24,26 +24,46 @@
  * THE SOFTWARE.
  */
 
-#include "meta/meta_server_failure_detector.h"
-#include "meta/meta_options.h"
-#include "replica/replica_stub.h"
-
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "runtime/api_task.h"
+#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "failure_detector/failure_detector.h"
+#include "failure_detector/failure_detector_multimaster.h"
+#include "fd_types.h"
+#include "meta/meta_options.h"
+#include "meta/meta_server_failure_detector.h"
+#include "replica/replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include <vector>
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/enum_helper.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
+#include "utils/zlocks.h"
 
 DSN_DECLARE_int32(max_succssive_unstable_restart);
 

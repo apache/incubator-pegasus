@@ -17,11 +17,16 @@
 
 #pragma once
 
-#include "negotiation.h"
+#include <set>
+#include <string>
 
-#include "utils/errors.h"
+#include "negotiation.h"
+#include "runtime/rpc/rpc_message.h"
 
 namespace dsn {
+class blob;
+class error_s;
+
 namespace security {
 extern const std::set<std::string> supported_mechanisms;
 

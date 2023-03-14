@@ -24,21 +24,34 @@
  * THE SOFTWARE.
  */
 
-#include <iostream>
-#include <queue>
-#include "utils/command_manager.h"
-#include "utils/math.h"
-#include "utils/utils.h"
-#include "utils/fmt_logging.h"
-#include "utils/fail_point.h"
-#include "greedy_load_balancer.h"
-#include "meta_data.h"
-#include "meta_admin_types.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <string.h>
+#include <cstdint>
+#include <map>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+
 #include "app_balance_policy.h"
 #include "cluster_balance_policy.h"
+#include "greedy_load_balancer.h"
+#include "meta/load_balance_policy.h"
+#include "meta/server_load_balancer.h"
+#include "meta_admin_types.h"
+#include "meta_data.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/command_manager.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/math.h"
 
 namespace dsn {
+class gpid;
+
 namespace replication {
+class meta_service;
+
 DSN_DEFINE_bool(meta_server, balance_cluster, false, "whether to enable cluster balancer");
 DSN_TAG_VARIABLE(balance_cluster, FT_MUTABLE);
 
@@ -46,8 +59,8 @@ DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
 greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : server_load_balancer(_svc)
 {
-    _app_balance_policy = dsn::make_unique<app_balance_policy>(_svc);
-    _cluster_balance_policy = dsn::make_unique<cluster_balance_policy>(_svc);
+    _app_balance_policy = std::make_unique<app_balance_policy>(_svc);
+    _cluster_balance_policy = std::make_unique<cluster_balance_policy>(_svc);
 
     ::memset(t_operation_counters, 0, sizeof(t_operation_counters));
 

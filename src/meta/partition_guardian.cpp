@@ -17,8 +17,23 @@
 
 #include "meta/partition_guardian.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <algorithm>
+#include <ostream>
+#include <unordered_map>
+
+#include "common/replication_common.h"
+#include "common/replication_other_types.h"
+#include "meta/meta_data.h"
+#include "meta/meta_service.h"
 #include "meta/server_load_balancer.h"
+#include "perf_counter/perf_counter.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
+#include "utils/strings.h"
 #include "utils/time_utils.h"
 
 namespace dsn {

@@ -17,18 +17,31 @@
 
 #include "utils/metrics.h"
 
-#include <chrono>
-#include <thread>
-#include <tuple>
-#include <vector>
-
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <rapidjson/document.h>
+#include <rapidjson/error/error.h>
+#include <chrono>
+#include <cstdint>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <thread>
+#include <vector>
 
 #include "http/http_message_parser.h"
 #include "percentile_utils.h"
+#include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/rpc_message.h"
-#include "utils/blob.h"
+#include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/rand.h"
+#include "utils/strings.h"
+#include "utils/test/nth_element_utils.h"
 
 namespace dsn {
 

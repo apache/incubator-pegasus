@@ -26,33 +26,37 @@
 
 #pragma once
 
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
-
-#include <cctype>
-#include <string>
+#include <stdint.h>
 #include <map>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
-#include "runtime/task/task_tracker.h"
+#include "bulk_load_types.h"
+#include "dsn.layer2_types.h"
+#include "duplication_types.h"
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "replica_admin_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/errors.h"
 
 namespace dsn {
+class gpid;
+
 namespace replication {
+class query_backup_status_response;
+class start_backup_app_response;
 
 class replication_ddl_client
 {

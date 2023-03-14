@@ -17,9 +17,14 @@
 
 #pragma once
 
+#include <string>
+
 #include "sasl_wrapper.h"
+#include "utils/errors.h"
 
 namespace dsn {
+class blob;
+
 namespace security {
 
 // sasl_client_wrapper is a simple wrapper over cyrus-sasl's sasl_client_xxx API.

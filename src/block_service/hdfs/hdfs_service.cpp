@@ -15,24 +15,33 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <errno.h>
+#include <fcntl.h>
 #include <algorithm>
 #include <fstream>
+#include <type_traits>
+#include <utility>
 
-#include "utils/fmt_logging.h"
+#include "block_service/directio_writable_file.h"
+#include "hdfs/hdfs.h"
+#include "hdfs_service.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "utils/TokenBucket.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
-#include "utils/TokenBucket.h"
-#include "utils/utils.h"
+#include "utils/strings.h"
 
-#include "hdfs_service.h"
-#include "block_service/directio_writable_file.h"
+struct hdfsBuilder;
 
 namespace dsn {
+class task_tracker;
+
 namespace dist {
 namespace block_service {
 

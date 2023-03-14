@@ -15,14 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fmt_logging.h"
-#include "utils/fail_point.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include "meta_test_base.h"
-#include "meta_service_test_app.h"
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
 #include "meta/meta_bulk_load_ingestion_context.h"
 #include "meta/meta_data.h"
+#include "meta_test_base.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {
@@ -161,7 +170,7 @@ public:
     ///          p3(tag1) s3(tag1) s3(tag2)
     void SetUp()
     {
-        _context = make_unique<ingestion_context>();
+        _context = std::make_unique<ingestion_context>();
         add_node_context({NODE1, NODE2, NODE3, NODE4});
         mock_app();
         FLAGS_bulk_load_node_min_disk_count = MIN_DISK_COUNT;

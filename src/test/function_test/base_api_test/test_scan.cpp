@@ -17,24 +17,37 @@
  * under the License.
  */
 
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <map>
-#include <iostream>
-
-#include "client/replication_ddl_client.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include <unistd.h>
-#include "include/pegasus/client.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <string.h>
+#include <time.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
 #include "base/pegasus_const.h"
 #include "base/pegasus_utils.h"
-#include "test/function_test/utils/utils.h"
+#include "client/replication_ddl_client.h"
+#include "include/pegasus/client.h"
+#include "meta_admin_types.h"
+#include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
+#include "test/function_test/utils/utils.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
+#include "utils/synchronize.h"
 
 using namespace ::pegasus;
 

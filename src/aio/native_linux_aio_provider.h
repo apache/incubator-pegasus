@@ -26,9 +26,14 @@
 
 #pragma once
 
+#include <stdint.h>
+
+#include "aio/aio_task.h"
 #include "aio_provider.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class disk_engine;
 
 class native_linux_aio_provider : public aio_provider
 {

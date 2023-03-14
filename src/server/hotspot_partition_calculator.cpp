@@ -17,13 +17,25 @@
 
 #include "hotspot_partition_calculator.h"
 
-#include <math.h>
-#include "utils/fmt_logging.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <algorithm>
+#include <cmath>
+
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
-#include "utils/flags.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/rpc/rpc_address.h"
+#include "server/hotspot_partition_stat.h"
+#include "shell/command_executor.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
-#include "common//duplication_common.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+
+struct row_data;
 
 namespace pegasus {
 namespace server {

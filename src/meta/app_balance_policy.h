@@ -17,10 +17,22 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
 #include "load_balance_policy.h"
+#include "meta/meta_data.h"
+#include "utils/command_manager.h"
 
 namespace dsn {
+class gpid;
+class rpc_address;
+
 namespace replication {
+class meta_service;
+
 class app_balance_policy : public load_balance_policy
 {
 public:

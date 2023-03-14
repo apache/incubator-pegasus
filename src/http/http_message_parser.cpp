@@ -26,15 +26,17 @@
 
 #include "http_message_parser.h"
 
-#include <iomanip>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <string.h>
+#include <utility>
+#include <vector>
 
 #include "http_server.h"
-#include "runtime/api_layer1.h"
+#include "nodejs/http_parser.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
+#include "utils/blob.h"
 #include "utils/crc.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 #include "utils/strings.h"
 
 namespace dsn {

@@ -17,10 +17,12 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
 #include <unordered_map>
 
-#include "utils/synchronize.h"
 #include "utils/TokenBucket.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace utils {

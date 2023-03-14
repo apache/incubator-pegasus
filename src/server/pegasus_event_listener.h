@@ -19,10 +19,14 @@
 
 #pragma once
 
-#include <rocksdb/db.h>
 #include <rocksdb/listener.h>
+
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica_base.h"
+
+namespace rocksdb {
+class DB;
+} // namespace rocksdb
 
 namespace pegasus {
 namespace server {

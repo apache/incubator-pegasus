@@ -38,6 +38,8 @@
 #include "runtime/tool_api.h"
 
 namespace dsn {
+struct service_spec;
+
 namespace tools {
 
 class nativerun : public tool_app

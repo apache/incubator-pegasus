@@ -26,14 +26,24 @@
 
 #pragma once
 
-#include <fcntl.h>
+#include <stdint.h>
+#include <list>
+#include <utility>
 
 #include "aio/aio_task.h"
+#include "runtime/api_task.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/join_point.h"
 
 namespace dsn {
 
 // forward declaration
 class disk_file;
+class task_tracker;
 
 namespace file {
 

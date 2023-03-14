@@ -17,6 +17,10 @@
 
 #include "throttling_controller.h"
 
+#include <algorithm>
+#include <memory>
+#include <vector>
+
 #include "runtime/api_layer1.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"

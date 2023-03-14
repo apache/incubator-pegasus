@@ -30,6 +30,7 @@ endif()
 include_directories(${PEGASUS_PROJECT_DIR})
 include_directories(${PEGASUS_PROJECT_DIR}/common/serialization_helper)
 include_directories(${PEGASUS_PROJECT_DIR}/include)
+include_directories(${PEGASUS_PROJECT_DIR}/builder/output/include)
 
 add_subdirectory(aio)
 add_subdirectory(base)

@@ -35,9 +35,11 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
+#include "runtime/env_provider.h"
 
 namespace dsn {
+class task_worker;
+
 namespace tools {
 
 class sim_env_provider : public env_provider

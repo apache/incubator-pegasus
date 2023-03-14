@@ -15,17 +15,41 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/fmt_logging.h"
-#include "http/http_server.h"
-#include "utils/filesystem.h"
-#include "utils/output_utils.h"
-#include "utils/time_utils.h"
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
+#include <algorithm>
+#include <iterator>
+#include <type_traits>
+#include <utility>
 
+#include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"
 #include "common/backup_common.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "dsn.layer2_types.h"
+#include "meta/backup_engine.h"
+#include "meta/meta_data.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_state_service.h"
 #include "meta_backup_service.h"
 #include "meta_service.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
 #include "server_state.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace replication {

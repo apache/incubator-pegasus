@@ -24,28 +24,49 @@
  * THE SOFTWARE.
  */
 
-#include <sys/stat.h>
-
+// IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
-#include <fmt/format.h>
-
-#include "utils/factory_store.h"
-#include "utils/extensible_object.h"
-#include "utils/string_conv.h"
-#include "meta/meta_state_service.h"
-#include "common/common.h"
-#include "remote_cmd/remote_command.h"
-#include "utils/command_manager.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/ostream.h>
 #include <algorithm> // for std::remove_if
-#include <cctype>    // for ::isspace
-#include "utils/fmt_logging.h"
+#include <chrono>
+#include <functional>
+#include <ostream>
+#include <unordered_map>
+#include <utility>
 
-#include "meta_service.h"
-#include "server_state.h"
-#include "server_load_balancer.h"
+#include "backup_types.h"
+#include "bulk_load_types.h"
+#include "common/common.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "duplication_types.h"
 #include "meta/duplication/meta_duplication_service.h"
-#include "meta_split_service.h"
+#include "meta/meta_backup_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_options.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_server_failure_detector.h"
+#include "meta/meta_state_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta/partition_guardian.h"
 #include "meta_bulk_load_service.h"
+#include "meta_service.h"
+#include "meta_split_service.h"
+#include "partition_split_types.h"
+#include "perf_counter/perf_counter.h"
+#include "remote_cmd/remote_command.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/async_calls.h"
+#include "server_load_balancer.h"
+#include "server_state.h"
+#include "utils/autoref_ptr.h"
+#include "utils/command_manager.h"
+#include "utils/factory_store.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace dist {
@@ -399,7 +420,7 @@ error_code meta_service::start()
             [](backup_service *bs) { return std::make_shared<policy_context>(bs); });
     }
 
-    _bulk_load_svc = make_unique<bulk_load_service>(
+    _bulk_load_svc = std::make_unique<bulk_load_service>(
         this, meta_options::concat_path_unix_style(_cluster_root, "bulk_load"));
 
     // initialize the server_state
@@ -419,7 +440,7 @@ error_code meta_service::start()
     initialize_duplication_service();
     recover_duplication_from_meta_state();
 
-    _split_svc = dsn::make_unique<meta_split_service>(this);
+    _split_svc = std::make_unique<meta_split_service>(this);
 
     _state->register_cli_commands();
 
@@ -990,7 +1011,7 @@ void meta_service::register_duplication_rpc_handlers()
 void meta_service::initialize_duplication_service()
 {
     if (FLAGS_duplication_enabled) {
-        _dup_svc = make_unique<meta_duplication_service>(_state.get(), this);
+        _dup_svc = std::make_unique<meta_duplication_service>(_state.get(), this);
     }
 }
 

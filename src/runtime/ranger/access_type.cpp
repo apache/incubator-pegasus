@@ -15,8 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <type_traits>
-
 #include "access_type.h"
 
 namespace dsn {

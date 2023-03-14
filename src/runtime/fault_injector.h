@@ -82,6 +82,8 @@ fault_injection_enabled = false
 </PRE>
 */
 namespace dsn {
+struct service_spec;
+
 namespace tools {
 
 class fault_injector : public toollet

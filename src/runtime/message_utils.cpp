@@ -26,6 +26,10 @@
 
 #include "runtime/message_utils.h"
 
+#include <string.h>
+
+#include "runtime/rpc/rpc_message.h"
+
 namespace dsn {
 
 /*extern*/ dsn::message_ex *from_blob_to_received_msg(dsn::task_code rpc_code,

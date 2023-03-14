@@ -26,11 +26,12 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <functional>
-#include <map>
-#include <queue>
-#include <sstream>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "perf_counter.h"
 #include "utils/singleton.h"

@@ -33,13 +33,10 @@
  */
 
 #include <zookeeper/zookeeper.h>
-#include "utils/error_code.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
 
+#include "utils/error_code.h"
 #include "zookeeper_error.h"
+
 namespace dsn {
 namespace dist {
 

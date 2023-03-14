@@ -91,7 +91,7 @@ public:
           _pegasus_data_version(server->_pegasus_data_version),
           _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
-        _rocksdb_wrapper = dsn::make_unique<rocksdb_wrapper>(server);
+        _rocksdb_wrapper = std::make_unique<rocksdb_wrapper>(server);
     }
 
     int empty_put(int64_t decree)

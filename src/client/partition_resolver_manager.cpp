@@ -25,10 +25,14 @@
  */
 
 #include <algorithm>
-#include "runtime/rpc/group_address.h"
+
 #include "client/partition_resolver.h"
 #include "partition_resolver_manager.h"
 #include "partition_resolver_simple.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/autoref_ptr.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

@@ -24,24 +24,23 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     meta state service implemented with zookeeper
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
-#include "runtime/task/async_calls.h"
-#include "common/replication.codes.h"
-
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
+#include <string.h>
+#include <zookeeper/proto.h>
+#include <zookeeper/zookeeper.h>
+#include <zookeeper/zookeeper.jute.h>
+#include <algorithm>
+#include <atomic>
+#include <functional>
+#include <utility>
 
 #include "meta_state_service_zookeeper.h"
+#include "runtime/service_app.h"
 #include "utils/flags.h"
-#include "zookeeper/zookeeper_session_mgr.h"
-#include "zookeeper/zookeeper_session.h"
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
 #include "zookeeper/zookeeper_error.h"
+#include "zookeeper/zookeeper_session.h"
+#include "zookeeper/zookeeper_session_mgr.h"
 
 namespace dsn {
 namespace dist {

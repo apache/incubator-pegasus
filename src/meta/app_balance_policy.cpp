@@ -15,13 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/command_manager.h"
-#include "utils/fmt_logging.h"
+#include <algorithm>
+#include <functional>
+#include <iterator>
+#include <map>
+#include <set>
+#include <string>
+
 #include "app_balance_policy.h"
-#include "meta_service.h"
+#include "common/gpid.h"
+#include "meta/load_balance_policy.h"
+#include "metadata_types.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
+class rpc_address;
+
 namespace replication {
 DSN_DEFINE_bool(meta_server, balancer_in_turn, false, "balance the apps one-by-one/concurrently");
 DSN_DEFINE_bool(meta_server, only_primary_balancer, false, "only try to make the primary balanced");
@@ -118,7 +128,7 @@ bool app_balance_policy::copy_secondary(const std::shared_ptr<app_state> &app, b
     const app_mapper &apps = *_global_view->apps;
     int replicas_low = app->partition_count / _alive_nodes;
 
-    std::unique_ptr<copy_replica_operation> operation = dsn::make_unique<copy_secondary_operation>(
+    std::unique_ptr<copy_replica_operation> operation = std::make_unique<copy_secondary_operation>(
         app, apps, nodes, address_vec, address_id, replicas_low);
     return operation->start(_migration_result);
 }

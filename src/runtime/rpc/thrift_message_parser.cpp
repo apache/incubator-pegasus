@@ -26,18 +26,27 @@
 
 #include "thrift_message_parser.h"
 
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include <string.h>
+#include <algorithm>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "boost/smart_ptr/shared_ptr.hpp"
+#include "common/gpid.h"
 #include "common/serialization_helper/thrift_helper.h"
-#include "runtime/api_layer1.h"
-#include "runtime/api_task.h"
-#include "runtime/app_model.h"
-#include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_message.h"
-#include "utils/api_utilities.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "thrift/protocol/TBinaryProtocol.h"
+#include "thrift/protocol/TBinaryProtocol.tcc"
+#include "thrift/protocol/TProtocol.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 #include "utils/crc.h"
 #include "utils/endians.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
 
 namespace dsn {

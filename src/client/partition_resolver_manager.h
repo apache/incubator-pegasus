@@ -26,14 +26,17 @@
 
 #pragma once
 
-#include <vector>
 #include <map>
+#include <string>
+#include <vector>
+
+#include "client/partition_resolver.h"
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
-#include "runtime/rpc/rpc_address.h"
-#include "client/partition_resolver.h"
 
 namespace dsn {
+class rpc_address;
+
 namespace replication {
 
 class partition_resolver_manager : public dsn::utils::singleton<partition_resolver_manager>

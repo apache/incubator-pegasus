@@ -33,14 +33,15 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-// apps
-#include "simple_kv.app.example.h"
-#include "simple_kv.server.impl.h"
-
+#include "http/http_server.h"
 // framework specific tools
 #include "meta/meta_service_app.h"
 #include "replica/replication_service_app.h"
-#include "http/http_server.h"
+#include "runtime/app_model.h"
+#include "runtime/service_app.h"
+// apps
+#include "simple_kv.app.example.h"
+#include "simple_kv.server.impl.h"
 
 static void dsn_app_registration_simple_kv()
 {

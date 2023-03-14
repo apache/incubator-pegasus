@@ -34,11 +34,19 @@
  */
 
 #include "dsn_message_parser.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+
+#include <stddef.h>
+#include <stdint.h>
+#include <memory>
+#include <vector>
+
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/blob.h"
 #include "utils/crc.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace dsn {
 void dsn_message_parser::reset() { _header_checked = false; }

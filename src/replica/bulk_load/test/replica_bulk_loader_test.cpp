@@ -16,13 +16,27 @@
 // under the License.
 
 #include "replica/bulk_load/replica_bulk_loader.h"
-#include "replica/test/replica_test_base.h"
 
-#include <fstream>
-
-#include "utils/zlocks.h"
-#include "utils/fail_point.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <fstream> // IWYU pragma: keep
+#include <memory>
+#include <vector>
+
+#include "common/bulk_load_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "dsn.layer2_types.h"
+#include "replica/test/mock_utils.h"
+#include "replica/test/replica_test_base.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/blob.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -33,7 +47,7 @@ public:
     replica_bulk_loader_test()
     {
         _replica = create_mock_replica(stub.get());
-        _bulk_loader = make_unique<replica_bulk_loader>(_replica.get());
+        _bulk_loader = std::make_unique<replica_bulk_loader>(_replica.get());
         fail::setup();
     }
 

@@ -17,33 +17,32 @@
  * under the License.
  */
 
-#include <atomic>
-
-#include "utils/filesystem.h"
-#include "client/replication_ddl_client.h"
-#include "include/pegasus/client.h"
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/TokenBucket.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/fmt_logging.h"
-#include <fstream>
+#include <stdint.h>
+#include <unistd.h>
+#include <algorithm>
+#include <atomic>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "base/pegasus_const.h"
-#include "test/function_test/utils/global_env.h"
-#include "test/function_test/utils/utils.h"
+#include "client/partition_resolver.h"
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
+#include "include/pegasus/client.h"
+#include "pegasus/error.h"
+#include "runtime/api_layer1.h"
 #include "test/function_test/utils/test_util.h"
+#include "test/function_test/utils/utils.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/rand.h"
 
 using namespace dsn;
 using namespace dsn::replication;

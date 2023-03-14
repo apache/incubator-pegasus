@@ -35,11 +35,24 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
+#include <cstdint>
+#include <functional>
+#include <list>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "runtime/simulator.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_worker.h"
+#include "utils/extensible_object.h"
+#include "utils/singleton.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
+class task_queue;
+
 namespace tools {
 
 struct event_entry
@@ -81,7 +94,6 @@ struct sim_worker_state
     static void deletor(void *p) { delete (sim_worker_state *)p; }
 };
 
-class checker;
 class scheduler : public utils::singleton<scheduler>
 {
 public:

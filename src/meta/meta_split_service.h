@@ -15,11 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "meta_service.h"
+#include <memory>
+#include <string>
+
+#include "common/partition_split_common.h"
+#include "partition_split_types.h"
+#include "runtime/task/task.h"
 #include "server_state.h"
 
 namespace dsn {
+class error_code;
+class zrwlock_nr;
+
 namespace replication {
+class app_state;
+class meta_service;
 
 class meta_split_service
 {

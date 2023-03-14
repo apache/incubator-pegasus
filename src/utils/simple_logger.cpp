@@ -26,11 +26,22 @@
 
 #include "utils/simple_logger.h"
 
-#include <fmt/format.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <stdint.h>
+#include <algorithm>
+#include <functional>
+#include <memory>
 #include <sstream>
+#include <vector>
 
+#include "runtime/api_layer1.h"
+#include "runtime/task/task_spec.h"
+#include "utils/command_manager.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 

@@ -17,7 +17,14 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "utils/errors.h"
+
+namespace dsn {
+class blob;
+} // namespace dsn
 
 typedef struct sasl_conn sasl_conn_t;
 

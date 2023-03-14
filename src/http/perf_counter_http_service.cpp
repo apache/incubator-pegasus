@@ -15,8 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/output_utils.h"
+#include <iosfwd>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
 #include "builtin_http_calls.h"
+#include "http/http_server.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counters.h"
+#include "utils/autoref_ptr.h"
+#include "utils/output_utils.h"
 
 namespace dsn {
 

@@ -19,17 +19,26 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <memory>
+#include <string>
 #include <unordered_map>
 
-#include "config.h"
-#include "pegasus/client.h"
 #include "statistics.h"
+#include "test/bench_test/utils.h"
+
+namespace rocksdb {
+class Statistics;
+} // namespace rocksdb
 
 namespace pegasus {
+class pegasus_client;
+
 namespace test {
 
 class benchmark;
 struct thread_arg;
+
 typedef void (benchmark::*bench_method)(thread_arg *);
 
 struct thread_arg

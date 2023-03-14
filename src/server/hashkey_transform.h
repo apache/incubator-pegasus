@@ -19,12 +19,12 @@
 
 #pragma once
 
-#include <rocksdb/slice_transform.h>
 #include <rocksdb/slice.h>
+#include <rocksdb/slice_transform.h>
+#include <stdint.h>
 
-#include "utils/api_utilities.h"
-#include "utils/blob.h"
 #include "utils/endians.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace server {

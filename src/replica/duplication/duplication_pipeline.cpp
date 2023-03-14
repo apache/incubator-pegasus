@@ -17,13 +17,24 @@
 
 #include "duplication_pipeline.h"
 
-#include "replica/replication_app_base.h"
+#include <stddef.h>
+#include <functional>
+#include <utility>
+
+#include "dsn.layer2_types.h"
+#include "load_from_private_log.h"
+#include "perf_counter/perf_counter.h"
+#include "replica/duplication/replica_duplicator.h"
+#include "replica/mutation_log.h"
+#include "replica/replica.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "utils/autoref_ptr.h"
+#include "utils/errors.h"
 #include "utils/fmt_logging.h"
 
-#include "replica/replica_stub.h"
-#include "load_from_private_log.h"
-
 namespace dsn {
+class string_view;
+
 namespace replication {
 
 //                     //

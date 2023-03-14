@@ -17,14 +17,32 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <atomic>
+#include <map>
+#include <ostream>
+#include <string>
+
+#include "bulk_load_types.h"
+#include "common/replication_other_types.h"
+#include "metadata_types.h"
+#include "replica/replica.h"
+#include "replica/replica_base.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/task.h"
+#include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-#include "replica/replica.h"
-#include "replica/replica_context.h"
-#include "replica/replica_stub.h"
-
 namespace dsn {
+class task_tracker;
+namespace dist {
+namespace block_service {
+class block_filesystem;
+} // namespace block_service
+} // namespace dist
+
 namespace replication {
+class replica_stub;
 
 class replica_bulk_loader : replica_base
 {

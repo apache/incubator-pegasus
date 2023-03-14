@@ -24,17 +24,20 @@
  * THE SOFTWARE.
  */
 
-#include "utils/smart_pointers.h"
-#include "runtime/task/async_calls.h"
-#include "nfs/nfs_node.h"
+#include <algorithm>
+#include <utility>
 
+#include "aio/file_io.h"
+#include "nfs/nfs_node.h"
 #include "nfs_node_simple.h"
+#include "utils/autoref_ptr.h"
 
 namespace dsn {
+class task_tracker;
 
 std::unique_ptr<nfs_node> nfs_node::create()
 {
-    return dsn::make_unique<dsn::service::nfs_node_simple>();
+    return std::make_unique<dsn::service::nfs_node_simple>();
 }
 
 aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,

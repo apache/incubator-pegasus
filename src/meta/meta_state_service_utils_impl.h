@@ -21,6 +21,8 @@
 #include "utils/fmt_logging.h"
 
 #include "meta_state_service_utils.h"
+#include "meta/meta_state_service.h"
+#include "common/replication.codes.h"
 
 namespace dsn {
 namespace replication {

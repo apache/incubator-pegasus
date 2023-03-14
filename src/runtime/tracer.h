@@ -26,7 +26,10 @@
 
 #pragma once
 
+#include <memory>
+
 #include "runtime/tool_api.h"
+#include "utils/command_manager.h"
 
 /*!
 @defgroup tracer Tracer
@@ -91,8 +94,7 @@ is_trace = false
 </PRE>
 */
 namespace dsn {
-
-class command_deregister;
+struct service_spec;
 
 namespace tools {
 

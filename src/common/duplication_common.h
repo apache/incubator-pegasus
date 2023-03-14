@@ -19,15 +19,14 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <map>
+#include <set>
+#include <string>
+
+#include "duplication_types.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "utils/errors.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
 #include "utils/flags.h"
 
 namespace dsn {

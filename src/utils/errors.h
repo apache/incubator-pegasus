@@ -160,7 +160,7 @@ private:
         if (!rhs._info) {
             _info.reset();
         } else if (!_info) {
-            _info = make_unique<error_info>(rhs._info->code, rhs._info->msg);
+            _info = std::make_unique<error_info>(rhs._info->code, rhs._info->msg);
         } else {
             _info->code = rhs._info->code;
             _info->msg = rhs._info->msg;

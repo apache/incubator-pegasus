@@ -15,18 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
-#include "utils/fail_point.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "replica/duplication/replica_follower.h"
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
 #include "duplication_test_base.h"
-
-namespace dsn {
-namespace apps {
-
-} // namespace apps
-} // namespace dsn
+#include "metadata_types.h"
+#include "nfs/nfs_node.h"
+#include "replica/duplication/replica_follower.h"
+#include "replica/test/mock_utils.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {

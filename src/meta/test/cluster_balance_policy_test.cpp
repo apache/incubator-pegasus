@@ -15,10 +15,32 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <cstdint>
+#include <iterator>
+#include <list>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
+#include "meta/cluster_balance_policy.h"
+#include "meta/load_balance_policy.h"
+#include "meta/meta_data.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/defer.h"
 #include "utils/fail_point.h"
-#include "meta/cluster_balance_policy.h"
 
 namespace dsn {
 namespace replication {

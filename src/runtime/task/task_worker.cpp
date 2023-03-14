@@ -28,12 +28,26 @@
 #include <sys/prctl.h>
 #endif // defined(__linux__)
 
-#include <sstream>
+#include <errno.h>
+#include <pthread.h>
+#include <sched.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <algorithm>
+#include <chrono>
+#include <functional>
+#include <list>
+
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/task_worker.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/safe_strerror_posix.h"
-#include "utils/smart_pointers.h"
-
-#include "task_engine.h"
 
 namespace dsn {
 
@@ -75,7 +89,7 @@ void task_worker::start()
 
     _is_running = true;
 
-    _thread = make_unique<std::thread>(std::bind(&task_worker::run_internal, this));
+    _thread = std::make_unique<std::thread>(std::bind(&task_worker::run_internal, this));
 
     _started.wait();
 }

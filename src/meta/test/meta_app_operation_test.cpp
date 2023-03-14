@@ -15,21 +15,45 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fmt_logging.h"
-#include "common/replica_envs.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/defer.h"
+#include <stdint.h>
+#include <functional>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_service.h"
+#include "meta/meta_state_service.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
-#include "meta/meta_split_service.h"
 #include "misc/misc.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
+class blob;
+
 namespace replication {
 
 DSN_DECLARE_int32(max_allowed_replica_count);
@@ -112,7 +136,7 @@ public:
 
     configuration_get_max_replica_count_response get_max_replica_count(const std::string &app_name)
     {
-        auto req = dsn::make_unique<configuration_get_max_replica_count_request>();
+        auto req = std::make_unique<configuration_get_max_replica_count_request>();
         req->__set_app_name(app_name);
 
         configuration_get_max_replica_count_rpc rpc(std::move(req), RPC_CM_GET_MAX_REPLICA_COUNT);
@@ -160,7 +184,7 @@ public:
     configuration_set_max_replica_count_response set_max_replica_count(const std::string &app_name,
                                                                        int32_t max_replica_count)
     {
-        auto req = dsn::make_unique<configuration_set_max_replica_count_request>();
+        auto req = std::make_unique<configuration_set_max_replica_count_request>();
         req->__set_app_name(app_name);
         req->__set_max_replica_count(max_replica_count);
 
@@ -174,7 +198,7 @@ public:
     configuration_rename_app_response rename_app(const std::string &old_app_name,
                                                  const std::string &new_app_name)
     {
-        auto req = dsn::make_unique<configuration_rename_app_request>();
+        auto req = std::make_unique<configuration_rename_app_request>();
         req->__set_old_app_name(old_app_name);
         req->__set_new_app_name(new_app_name);
 

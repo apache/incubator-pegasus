@@ -15,17 +15,34 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <algorithm>
+#include <cstdint>
 #include <fstream>
 #include <memory>
-
-#include <gtest/gtest.h>
+#include <string>
+#include <vector>
 
 #include "block_service/block_service.h"
 #include "block_service/hdfs/hdfs_service.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/enum_helper.h"
+#include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
-#include "utils/rand.h"
 #include "utils/strings.h"
+#include "utils/threadpool_code.h"
 
 using namespace dsn;
 using namespace dsn::dist::block_service;

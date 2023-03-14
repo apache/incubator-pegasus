@@ -115,6 +115,7 @@ public:
         }
     };
 
+    // TODO(yingchun): duplicate with cas_check_type in idl/rrdb.thrift
     enum cas_check_type
     {
         CT_NO_CHECK = 0,

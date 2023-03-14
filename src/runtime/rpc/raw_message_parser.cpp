@@ -32,12 +32,21 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #include "raw_message_parser.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "runtime/task/task_spec.h"
+
+#include <string.h>
+#include <atomic>
+#include <vector>
+
+#include "common/gpid.h"
 #include "network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/blob.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 

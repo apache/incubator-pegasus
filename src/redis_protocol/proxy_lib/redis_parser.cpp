@@ -19,18 +19,35 @@
 
 #include "redis_parser.h"
 
-#include <rocksdb/status.h>
-
+#include <ctype.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
 #include <pegasus/error.h>
 #include <pegasus_key_schema.h>
 #include <pegasus_utils.h>
+#include <rocksdb/status.h>
 #include <rrdb/rrdb.client.h>
+#include <string.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
 
 #include "base/pegasus_const.h"
 #include "common/replication_other_types.h"
+#include "pegasus/client.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/api_utilities.h"
+#include "utils/binary_writer.h"
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 namespace pegasus {
 namespace proxy {
@@ -84,7 +101,7 @@ redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), op->get_cluster());
         r = new ::dsn::apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
         if (!dsn::utils::is_empty(op->get_geo_app())) {
-            _geo_client = dsn::make_unique<geo::geo_client>(
+            _geo_client = std::make_unique<geo::geo_client>(
                 "config.ini", op->get_cluster(), op->get_app(), op->get_geo_app());
         }
     } else {

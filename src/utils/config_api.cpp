@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <fstream>
 #include "utils/config_api.h"
 #include "utils/configuration.h"
 

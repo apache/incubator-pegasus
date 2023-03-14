@@ -26,10 +26,19 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <ostream>
+#include <string>
 
-#include "customizable_id.h"
-#include <thrift/protocol/TProtocol.h>
+#include "utils/ports.h"
+
+namespace apache {
+namespace thrift {
+namespace protocol {
+class TProtocol;
+} // namespace protocol
+} // namespace thrift
+} // namespace apache
 
 namespace dsn {
 

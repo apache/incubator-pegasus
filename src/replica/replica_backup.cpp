@@ -15,22 +15,57 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <boost/cstdint.hpp>
+// IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <ios>
+#include <map>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "utils/filesystem.h"
-#include "utils/time_utils.h"
-#include "utils/fmt_logging.h"
-#include "replica/replication_app_base.h"
-#include "utils/flags.h"
-
-#include "block_service/block_service_manager.h"
-#include "backup/replica_backup_manager.h"
 #include "backup/cold_backup_context.h"
-
+#include "backup/replica_backup_manager.h"
+#include "backup_types.h"
+#include "block_service/block_service_manager.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "metadata_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
+#include "replica/replica_context.h"
+#include "replica/replication_app_base.h"
 #include "replica_stub.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
+#include "utils/thread_access_checker.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
+namespace dist {
+namespace block_service {
+class block_filesystem;
+} // namespace block_service
+} // namespace dist
+
 namespace replication {
 
 DSN_DEFINE_uint64(replication,

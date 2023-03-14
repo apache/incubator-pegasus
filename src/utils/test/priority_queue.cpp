@@ -34,8 +34,17 @@
  */
 
 #include "utils/priority_queue.h"
+
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <chrono>
+#include <memory>
 #include <thread>
+#include <vector>
+
+#include "utils/utils.h"
 
 using namespace ::dsn::utils;
 

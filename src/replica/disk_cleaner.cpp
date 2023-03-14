@@ -17,12 +17,18 @@
  * under the License.
  */
 
-#include "utils/flags.h"
-#include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
-#include "runtime/api_layer1.h"
-#include <fmt/format.h>
 #include "disk_cleaner.h"
+
+#include <fmt/core.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <algorithm>
+
+#include "runtime/api_layer1.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

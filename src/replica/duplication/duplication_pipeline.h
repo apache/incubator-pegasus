@@ -17,14 +17,21 @@
 
 #pragma once
 
-#include "replica/replica_base.h"
-#include "replica/replica.h"
-#include "replica_duplicator.h"
+#include <memory>
+
+#include "common/replication_other_types.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
+#include "replica/replica_base.h"
 #include "runtime/pipeline.h"
+#include "utils/chrono_literals.h"
 
 namespace dsn {
 namespace replication {
+class load_from_private_log;
+class replica;
+class replica_duplicator;
+class replica_stub;
 
 using namespace literals::chrono_literals;
 

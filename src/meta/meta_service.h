@@ -35,37 +35,61 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <atomic>
+#include <map>
 #include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
-#include "runtime/serverlet.h"
-#include "meta/meta_state_service.h"
-#include "perf_counter/perf_counter_wrapper.h"
-
-#include "common/replication_common.h"
-#include "common/bulk_load_common.h"
-#include "common/partition_split_common.h"
-#include "common/manual_compact.h"
-#include "meta_rpc_types.h"
-#include "meta_options.h"
-#include "meta_backup_service.h"
-#include "meta_state_service_utils.h"
 #include "block_service/block_service_manager.h"
-#include "partition_guardian.h"
+#include "common/bulk_load_common.h"
+#include "common/duplication_common.h"
+#include "common/manual_compact.h"
+#include "common/partition_split_common.h"
+#include "common/replication_common.h"
+#include "meta_admin_types.h"
+#include "meta_options.h"
+#include "meta_rpc_types.h"
 #include "meta_server_failure_detector.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
 #include "runtime/security/access_controller.h"
+#include "runtime/serverlet.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/enum_helper.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
-namespace security {
-class access_controller;
-} // namespace security
+class command_deregister;
+namespace dist {
+class meta_state_service;
+} // namespace dist
+
 namespace replication {
 
-class server_state;
-class meta_server_failure_detector;
-class server_load_balancer;
+class backup_service;
+class bulk_load_service;
 class meta_duplication_service;
 class meta_split_service;
-class bulk_load_service;
+class partition_guardian;
+class server_load_balancer;
+class server_state;
+namespace mss {
+struct meta_storage;
+} // namespace mss
+
 namespace test {
 class test_checker;
 }

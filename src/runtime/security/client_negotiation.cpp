@@ -16,14 +16,25 @@
 // under the License.
 
 #include "client_negotiation.h"
-#include "negotiation_utils.h"
-#include "negotiation_manager.h"
 
 #include <boost/algorithm/string/join.hpp>
+#include <memory>
+#include <set>
+#include <utility>
+#include <vector>
+
+#include "fmt/core.h"
+#include "negotiation_manager.h"
+#include "negotiation_utils.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/security/negotiation.h"
+#include "runtime/security/sasl_wrapper.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/fmt_logging.h"
-#include "runtime/task/async_calls.h"
-#include "utils/smart_pointers.h"
-#include "utils/flags.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace security {
@@ -182,7 +193,7 @@ void client_negotiation::select_mechanism(const std::string &mechanism)
 
 void client_negotiation::send(negotiation_status::type status, const blob &msg)
 {
-    auto req = dsn::make_unique<negotiation_request>();
+    auto req = std::make_unique<negotiation_request>();
     req->status = status;
     req->msg = msg;
 

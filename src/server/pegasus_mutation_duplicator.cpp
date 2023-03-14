@@ -18,21 +18,48 @@
  */
 
 #include "pegasus_mutation_duplicator.h"
-#include "pegasus_server_impl.h"
-#include "base/pegasus_rpc_types.h"
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <pegasus/error.h>
+#include <sys/types.h>
+#include <chrono>
+#include <cstdint>
+#include <functional>
+#include <iosfwd>
+#include <memory>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+#include "client_lib/pegasus_client_impl.h"
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "duplication_internal_types.h"
+#include "pegasus/client.h"
+#include "pegasus_key_schema.h"
+#include "perf_counter/perf_counter.h"
+#include "rrdb/rrdb.code.definition.h"
+#include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
+#include "runtime/rpc/rpc_message.h"
+#include "server/pegasus_write_service.h"
+#include "utils/blob.h"
 #include "utils/chrono_literals.h"
-#include <rrdb/rrdb.client.h>
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
+#include "utils/rand.h"
 
 namespace dsn {
 namespace replication {
+struct replica_base;
 
 /// static definition of mutation_duplicator::creator.
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
     replica_base *, string_view, string_view)>
     mutation_duplicator::creator = [](replica_base *r, string_view remote, string_view app) {
-        return make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
+        return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
     };
 
 } // namespace replication
@@ -181,7 +208,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
 {
     _total_shipped_size = 0;
 
-    auto batch_request = dsn::make_unique<dsn::apps::duplicate_request>();
+    auto batch_request = std::make_unique<dsn::apps::duplicate_request>();
     uint batch_count = 0;
     uint batch_bytes = 0;
     for (auto mut : muts) {
@@ -189,7 +216,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         batch_count++;
         dsn::task_code rpc_code = std::get<1>(mut);
         dsn::blob raw_message = std::get<2>(mut);
-        auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
+        auto dreq = std::make_unique<dsn::apps::duplicate_request>();
 
         if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
             // ignore if it is a DUPLICATE
@@ -217,7 +244,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
                               100_s, // TODO(wutao1): configurable timeout.
                               hash);
             _inflights[hash].push_back(std::move(rpc));
-            batch_request = dsn::make_unique<dsn::apps::duplicate_request>();
+            batch_request = std::make_unique<dsn::apps::duplicate_request>();
             batch_bytes = 0;
         }
     }

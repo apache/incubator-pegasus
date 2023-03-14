@@ -19,15 +19,21 @@
 
 #pragma once
 
-#include "replica/replica_base.h"
 #include <gtest/gtest_prod.h>
+#include <rocksdb/options.h>
+#include <rocksdb/write_batch.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "pegasus_value_schema.h"
+#include "replica/replica_base.h"
+#include "utils/string_view.h"
 
 namespace rocksdb {
-class DB;
-class ReadOptions;
-class WriteBatch;
 class ColumnFamilyHandle;
-class WriteOptions;
+class DB;
 } // namespace rocksdb
 
 namespace dsn {
@@ -35,12 +41,11 @@ class perf_counter_wrapper;
 } // namespace dsn
 
 namespace pegasus {
-class pegasus_value_generator;
 
 namespace server {
+class pegasus_server_impl;
 struct db_get_context;
 struct db_write_context;
-class pegasus_server_impl;
 
 class rocksdb_wrapper : public dsn::replication::replica_base
 {

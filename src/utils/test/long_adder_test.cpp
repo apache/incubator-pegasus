@@ -15,13 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <algorithm>
 #include <chrono>
 #include <functional>
+#include <ratio>
 #include <thread>
 #include <vector>
-
-#include <fmt/ostream.h>
-#include <gtest/gtest.h>
 
 #include "runtime/api_layer1.h"
 #include "utils/long_adder.h"

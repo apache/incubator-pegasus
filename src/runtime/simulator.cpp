@@ -34,13 +34,22 @@
  */
 
 #include "runtime/simulator.h"
-#include "scheduler.h"
-#include "service_engine.h"
+
+#include <map>
 
 #include "env.sim.h"
+#include "runtime/global_config.h"
 #include "runtime/task/task_engine.sim.h"
+#include "runtime/task/task_spec.h"
+#include "scheduler.h"
+#include "service_engine.h"
 #include "sim_clock.h"
+#include "utils/clock.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/threadpool_spec.h"
+#include "utils/zlock_provider.h"
 
 namespace dsn {
 namespace tools {

@@ -33,28 +33,17 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
-#include "utils/singleton_store.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include <string>
+#include "utils/singleton.h"
 
 #pragma once
 
 namespace dsn {
+struct service_app_info;
+
 namespace dist {
 
 class zookeeper_session;
+
 class zookeeper_session_mgr : public utils::singleton<zookeeper_session_mgr>
 {
 public:

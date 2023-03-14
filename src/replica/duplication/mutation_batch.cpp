@@ -15,11 +15,30 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/fmt_logging.h"
-#include "runtime/message_utils.h"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <functional>
+#include <iosfwd>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
-#include "replica_duplicator.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "consensus_types.h"
+#include "metadata_types.h"
 #include "mutation_batch.h"
+#include "perf_counter/perf_counter.h"
+#include "replica_duplicator.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/smart_pointers.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {

@@ -20,19 +20,21 @@
 #include "global_env.h"
 
 #include <arpa/inet.h>
-#include <unistd.h>
-#include <libgen.h>
-
-#include <iostream>
-#include <memory>
-
 #include <gtest/gtest.h>
+#include <libgen.h>
+#include <netinet/in.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <iostream>
+#include <sstream> // IWYU pragma: keep
 
-#include "utils/fmt_logging.h"
-#include "utils/utils.h"
+// IWYU pragma: no_include "gtest/gtest-message.h"
+// IWYU pragma: no_include "gtest/gtest-test-part.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/api_layer1.h"
 #include "test/function_test/utils/utils.h"
+#include "utils/fmt_logging.h"
 
 global_env::global_env()
 {

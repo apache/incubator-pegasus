@@ -26,15 +26,16 @@
 
 #pragma once
 
-#include "aio/aio_task.h"
+#include <stdint.h>
+
+#include "utils/error_code.h"
 #include "utils/factory_store.h"
 
 namespace dsn {
 
+class aio_context;
+class aio_task;
 class disk_engine;
-class service_node;
-class task_worker_pool;
-class task_queue;
 
 #define DSN_INVALID_FILE_HANDLE -1
 struct linux_fd_t

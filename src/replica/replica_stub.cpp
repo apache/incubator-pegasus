@@ -33,36 +33,66 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "replica.h"
-#include "replica_stub.h"
-#include "mutation_log.h"
-#include "mutation.h"
-#include "bulk_load/replica_bulk_loader.h"
-#include "duplication/duplication_sync_timer.h"
-#include "backup/replica_backup_server.h"
-#include "split/replica_split_manager.h"
-#include "replica_disk_migrator.h"
-#include "disk_cleaner.h"
-
 #include <boost/algorithm/string/replace.hpp>
-#include "common/json_helper.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <deque>
+#include <mutex>
+#include <ostream>
+#include <set>
+#include <vector>
+
+#include "backup/replica_backup_server.h"
+#include "bulk_load/replica_bulk_loader.h"
+#include "common/backup_common.h"
+#include "common/duplication_common.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "disk_cleaner.h"
+#include "duplication/duplication_sync_timer.h"
+#include "meta_admin_types.h"
+#include "mutation.h"
+#include "mutation_log.h"
+#include "nfs/nfs_node.h"
+#include "perf_counter/perf_counter.h"
+#include "replica.h"
+#include "replica/duplication/replica_follower.h"
+#include "replica/log_file.h"
+#include "replica/replica_context.h"
+#include "replica/replica_stub.h"
+#include "replica/replication_app_base.h"
+#include "replica_disk_migrator.h"
+#include "replica_stub.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "split/replica_split_manager.h"
+#include "utils/command_manager.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/process_utils.h"
 #include "utils/rand.h"
 #include "utils/string_conv.h"
-#include "utils/command_manager.h"
-#include "replica/replication_app_base.h"
-#include "utils/enum_helper.h"
-#include <vector>
-#include <deque>
-#include "utils/fmt_logging.h"
-#include "replica/duplication/replica_follower.h"
+#include "utils/string_view.h"
+#include "utils/strings.h"
+#include "utils/synchronize.h"
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
 #elif defined(DSN_USE_JEMALLOC)
 #include "utils/je_ctl.h"
 #endif
-#include "utils/fail_point.h"
 #include "remote_cmd/remote_command.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {
@@ -859,11 +889,11 @@ void replica_stub::initialize_start()
 #endif
 
     if (FLAGS_duplication_enabled) {
-        _duplication_sync_timer = dsn::make_unique<duplication_sync_timer>(this);
+        _duplication_sync_timer = std::make_unique<duplication_sync_timer>(this);
         _duplication_sync_timer->start();
     }
 
-    _backup_server = dsn::make_unique<replica_backup_server>(this);
+    _backup_server = std::make_unique<replica_backup_server>(this);
 
     // init liveness monitor
     CHECK_EQ(NS_Disconnected, _state);

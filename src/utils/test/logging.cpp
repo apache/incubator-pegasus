@@ -35,8 +35,10 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
-#include "utils/fmt_logging.h"
+#include <string>
+
 #include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
 
 TEST(core, logging)
 {

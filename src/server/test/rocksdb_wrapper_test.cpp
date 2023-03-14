@@ -17,9 +17,26 @@
  * under the License.
  */
 
-#include "server/pegasus_server_write.h"
-#include "server/pegasus_write_service_impl.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <utility>
+
+#include "dsn.layer2_types.h"
+#include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
+#include "pegasus_utils.h"
+#include "pegasus_value_schema.h"
+#include "replica/replica_test_utils.h"
+#include "server/pegasus_server_write.h"
+#include "server/pegasus_write_service.h"
+#include "server/pegasus_write_service_impl.h"
+#include "server/rocksdb_wrapper.h"
+#include "utils/blob.h"
+#include "utils/string_view.h"
 
 namespace pegasus {
 namespace server {
@@ -34,7 +51,7 @@ public:
     void SetUp() override
     {
         start();
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get());
+        _server_write = std::make_unique<pegasus_server_write>(_server.get());
         _rocksdb_wrapper = _server_write->_write_svc->_impl->_rocksdb_wrapper.get();
 
         pegasus::pegasus_generate_key(
@@ -64,7 +81,7 @@ public:
         app_info.duplicating = true;
         _replica = dsn::replication::create_test_replica(
             _replica_stub, _gpid, app_info, "./", false, false);
-        _server = dsn::make_unique<mock_pegasus_server_impl>(_replica);
+        _server = std::make_unique<mock_pegasus_server_impl>(_replica);
 
         SetUp();
     }

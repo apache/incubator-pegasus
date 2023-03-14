@@ -50,18 +50,26 @@ Component providers define the interface for the local components (e.g., network
 
 #pragma once
 
-// providers
-#include "utils/factory_store.h"
-#include "runtime/task/task_queue.h"
-#include "runtime/task/task_worker.h"
-#include "runtime/rpc/network.h"
+#include <stddef.h>
+#include <string>
+#include <vector>
+
 #include "runtime/env_provider.h"
 #include "runtime/rpc/message_parser.h"
-#include "utils/logging_provider.h"
+#include "runtime/rpc/network.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
 #include "runtime/task/timer_service.h"
-#include "utils/sys_exit_hook.h"
+// providers
+#include "utils/factory_store.h"
+#include "utils/join_point.h"
+#include "utils/logging_provider.h" // IWYU pragma: keep
 
 namespace dsn {
+class service_node;
+struct service_spec;
+
 namespace tools {
 
 /*!

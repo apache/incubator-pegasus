@@ -15,9 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "replica/duplication/mutation_batch.h"
-#include "replica/duplication/duplication_pipeline.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <algorithm>
+#include <functional>
+#include <map>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "common/replication.codes.h"
 #include "duplication_test_base.h"
+#include "replica/duplication/duplication_pipeline.h"
+#include "replica/duplication/mutation_batch.h"
+#include "replica/duplication/mutation_duplicator.h"
+#include "replica/duplication/replica_duplicator.h"
+#include "replica/test/mock_utils.h"
+#include "runtime/pipeline.h"
+#include "utils/chrono_literals.h"
 
 namespace dsn {
 namespace replication {
@@ -82,7 +98,7 @@ public:
 
     ship_mutation *mock_ship_mutation()
     {
-        duplicator->_ship = make_unique<ship_mutation>(duplicator.get());
+        duplicator->_ship = std::make_unique<ship_mutation>(duplicator.get());
         return duplicator->_ship.get();
     }
 

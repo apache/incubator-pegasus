@@ -17,20 +17,32 @@
 
 #include "block_service/fds/fds_service.h"
 
-#include <array>
+#include <errno.h>
 #include <fcntl.h>
-#include <fstream>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <algorithm>
+#include <fstream> // IWYU pragma: keep
+#include <iostream>
 #include <memory>
 
-#include <gtest/gtest.h>
-
 #include "block_service/block_service.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/enum_helper.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
 #include "utils/rand.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
+#include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
 using namespace dsn;

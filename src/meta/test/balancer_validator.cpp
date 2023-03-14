@@ -24,37 +24,31 @@
  * THE SOFTWARE.
  */
 
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+#include <algorithm>
+#include <cstdint>
 #include <fstream>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <gtest/gtest.h>
-
-#include "common/gpid.h"
-#include "backup_types.h"
-#include "bulk_load_types.h"
+#include "common/replication_other_types.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
-#include "consensus_types.h"
-#include "duplication_types.h"
-#include "meta_admin_types.h"
-#include "meta_service_test_app.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
+#include "meta/meta_service.h"
+#include "meta/partition_guardian.h"
 #include "meta/server_load_balancer.h"
 #include "meta/test/misc/misc.h"
-#include "partition_split_types.h"
-#include "replica_admin_types.h"
-#include "runtime/api_layer1.h"
-#include "runtime/api_task.h"
-#include "runtime/app_model.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/task/task_code.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/fmt_logging.h"
+#include "meta_admin_types.h"
+#include "meta_service_test_app.h"
+#include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
-#include "utils/threadpool_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

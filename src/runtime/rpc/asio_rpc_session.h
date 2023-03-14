@@ -26,14 +26,19 @@
 
 #pragma once
 
-#include "runtime/rpc/rpc_message.h"
-#include "utils/priority_queue.h"
+#include <stdint.h>
+#include <memory>
+
+#include "boost/asio/ip/tcp.hpp"
 #include "runtime/rpc/message_parser.h"
-#include <boost/asio.hpp>
-#include "asio_net_provider.h"
+#include "runtime/rpc/network.h"
 
 namespace dsn {
+class message_ex;
+class rpc_address;
+
 namespace tools {
+class asio_network_provider;
 
 // A TCP session implementation based on Boost.Asio.
 // Thread-safe

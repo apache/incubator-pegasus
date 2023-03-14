@@ -25,6 +25,8 @@
  */
 #include "utils/error_code.h"
 
+#include "utils/customizable_id.h"
+
 namespace dsn {
 /*static*/
 int error_code::max()

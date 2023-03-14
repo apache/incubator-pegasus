@@ -26,10 +26,27 @@
 
 #include "runtime/tracer.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <mutex>
+#include <string>
+#include <vector>
+
 #include "aio/aio_task.h"
-#include "utils/filesystem.h"
+#include "fmt/format.h"
+#include "runtime/global_config.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
 #include "utils/command_manager.h"
+#include "utils/config_api.h"
+#include "utils/enum_helper.h"
+#include "utils/filesystem.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
 
 namespace dsn {
 namespace tools {

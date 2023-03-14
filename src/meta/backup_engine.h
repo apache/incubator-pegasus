@@ -17,11 +17,27 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
+#include <stdint.h>
+#include <map>
+#include <string>
+
+#include "backup_types.h"
 #include "common/json_helper.h"
-#include "block_service/block_service.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/error_code.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
+class blob;
+class gpid;
+class rpc_address;
+namespace dist {
+namespace block_service {
+class block_filesystem;
+} // namespace block_service
+} // namespace dist
+
 namespace replication {
 
 enum backup_status
@@ -46,7 +62,6 @@ struct app_backup_info
     DEFINE_JSON_SERIALIZATION(backup_id, start_time_ms, end_time_ms, app_id, app_name)
 };
 
-class app_state;
 class backup_service;
 
 class backup_engine

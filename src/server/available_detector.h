@@ -19,11 +19,28 @@
 
 #pragma once
 
-#include <pegasus/client.h>
-#include "client/replication_ddl_client.h"
+#include <stdint.h>
+#include <atomic>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "dsn.layer2_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/synchronize.h"
+
+namespace dsn {
+namespace replication {
+class replication_ddl_client;
+} // namespace replication
+} // namespace dsn
 
 namespace pegasus {
+class pegasus_client;
+
 namespace server {
 
 using ::dsn::replication::replication_ddl_client;

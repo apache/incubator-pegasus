@@ -19,30 +19,49 @@
 
 #include "pegasus_counter_reporter.h"
 
-#include <chrono>
+#include <alloca.h>
+#include <boost/asio.hpp> // IWYU pragma: keep
+#include <boost/asio/basic_deadline_timer.hpp>
+#include <boost/asio/detail/impl/epoll_reactor.hpp>
+#include <boost/asio/detail/impl/timer_queue_ptime.ipp>
+#include <boost/date_time/posix_time/posix_time_duration.hpp>
+#include <boost/system/error_code.hpp>
+#include <event2/buffer.h>
+#include <event2/event.h>
+#include <fmt/core.h>
+#include <prometheus/detail/gauge_builder.h>
+#include <prometheus/exposer.h>
+#include <prometheus/family.h>
+#include <prometheus/gauge.h>
+#include <prometheus/registry.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <algorithm>
+#include <functional>
 #include <iomanip>
 #include <ios>
 #include <iostream>
+#include <list>
 #include <map>
 #include <memory>
-#include <regex>
+#include <new>
 #include <string>
-#include <unistd.h>
-
-#include <event2/buffer.h>
-#include <event2/event.h>
-#include <event2/http.h>
-#include <event2/keyvalq_struct.h>
+#include <type_traits>
+#include <utility>
 
 #include "base/pegasus_utils.h"
 #include "common/common.h"
 #include "pegasus_io_service.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counters.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/service_app.h"
+#include "utils/api_utilities.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
-
-using namespace ::dsn;
 
 DSN_DEFINE_uint64(pegasus.server,
                   perf_counter_update_interval_seconds,
@@ -106,7 +125,7 @@ void pegasus_counter_reporter::prometheus_initialize()
 {
     _registry = std::make_shared<prometheus::Registry>();
     _exposer =
-        dsn::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", FLAGS_prometheus_port));
+        std::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", FLAGS_prometheus_port));
     _exposer->RegisterCollectable(_registry);
 
     LOG_INFO("prometheus exposer [0.0.0.0:{}] started", FLAGS_prometheus_port);
@@ -129,7 +148,7 @@ void pegasus_counter_reporter::start()
     if (_report_timer != nullptr)
         return;
 
-    rpc_address addr(dsn_primary_address());
+    dsn::rpc_address addr(dsn_primary_address());
     char buf[1000];
     pegasus::utils::addr2host(addr, buf, 1000);
     _local_host = buf;
@@ -192,13 +211,13 @@ void pegasus_counter_reporter::update()
     uint64_t now = dsn_now_ms();
     int64_t timestamp = now / 1000;
 
-    perf_counters::instance().take_snapshot();
+    dsn::perf_counters::instance().take_snapshot();
 
     if (FLAGS_perf_counter_enable_logging) {
         std::stringstream oss;
         oss << "logging perf counter(name, type, value):" << std::endl;
         oss << std::fixed << std::setprecision(2);
-        perf_counters::instance().iterate_snapshot(
+        dsn::perf_counters::instance().iterate_snapshot(
             [&oss](const dsn::perf_counters::counter_snapshot &cs) {
                 oss << "[" << cs.name << ", " << dsn_counter_type_to_string(cs.type) << ", "
                     << cs.value << "]" << std::endl;
@@ -213,7 +232,7 @@ void pegasus_counter_reporter::update()
         bool first_append = true;
         _falcon_metric.timestamp = timestamp;
 
-        perf_counters::instance().iterate_snapshot(
+        dsn::perf_counters::instance().iterate_snapshot(
             [&oss, &first_append, this](const dsn::perf_counters::counter_snapshot &cs) {
                 _falcon_metric.metric = cs.name;
                 _falcon_metric.value = cs.value;
@@ -230,7 +249,7 @@ void pegasus_counter_reporter::update()
 
     if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
         const std::string hostname = get_hostname();
-        perf_counters::instance().iterate_snapshot([&hostname, this](
+        dsn::perf_counters::instance().iterate_snapshot([&hostname, this](
             const dsn::perf_counters::counter_snapshot &cs) {
             std::string metrics_name = cs.name;
 

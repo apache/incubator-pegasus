@@ -17,10 +17,27 @@
 
 #pragma once
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <gtest/gtest_prod.h>
+#include <algorithm>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
 #include "load_balance_policy.h"
+#include "meta/meta_data.h"
+#include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
 
 namespace dsn {
 namespace replication {
+class meta_service;
+
 uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t app_id);
 uint32_t get_skew(const std::map<rpc_address, uint32_t> &count_map);
 void get_min_max_set(const std::map<rpc_address, uint32_t> &node_count_map,
@@ -36,11 +53,12 @@ public:
     void balance(bool checker, const meta_view *global_view, migration_list *list) override;
 
 private:
-    struct cluster_migration_info;
-    struct app_migration_info;
-    struct node_migration_info;
-    struct move_info;
     struct app_disk_info;
+    struct app_migration_info;
+    struct cluster_migration_info;
+    struct move_info;
+    struct node_migration_info;
+
     bool cluster_replica_balance(const meta_view *global_view,
                                  const balance_type type,
                                  /*out*/ migration_list &list);

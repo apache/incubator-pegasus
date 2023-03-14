@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "utils/errors.h"
 
 namespace dsn {

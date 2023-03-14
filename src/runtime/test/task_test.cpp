@@ -16,12 +16,20 @@
 // under the License.
 
 #include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
 
+#include <fcntl.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+
+#include "aio/aio_task.h"
 #include "aio/file_io.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
+class disk_file;
 
 DEFINE_TASK_CODE_AIO(LPC_TASK_TEST, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
 

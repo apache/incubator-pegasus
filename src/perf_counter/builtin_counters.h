@@ -16,6 +16,7 @@
 // under the License.
 
 #include "perf_counter_wrapper.h"
+#include "utils/singleton.h"
 
 namespace dsn {
 class builtin_counters : public dsn::utils::singleton<builtin_counters>

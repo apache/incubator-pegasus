@@ -15,10 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <gtest/gtest-message.h>
+#include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <rapidjson/document.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
+#include "common/json_helper.h"
+#include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
 #include "runtime/ranger/ranger_resource_policy_manager.h"
+#include "utils/blob.h"
 
 namespace dsn {
 namespace ranger {

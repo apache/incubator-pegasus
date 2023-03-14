@@ -36,10 +36,10 @@
 #pragma once
 
 #include "runtime/rpc/message_parser.h"
-#include "runtime/rpc/rpc_message.h"
-#include "utils/ports.h"
 
 namespace dsn {
+class message_ex;
+
 class dsn_message_parser : public message_parser
 {
 public:

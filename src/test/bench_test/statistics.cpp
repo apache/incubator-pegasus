@@ -17,11 +17,16 @@
  * under the License.
  */
 
+#include <fmt/core.h>
+#include <rocksdb/env.h>
+#include <rocksdb/statistics.h>
+#include <stdio.h>
+#include <algorithm>
 #include <unordered_map>
-#include "utils/fmt_logging.h"
 
-#include "statistics.h"
 #include "config.h"
+#include "statistics.h"
+#include "test/bench_test/utils.h"
 
 namespace pegasus {
 namespace test {

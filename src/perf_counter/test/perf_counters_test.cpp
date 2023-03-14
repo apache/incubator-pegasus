@@ -34,11 +34,20 @@
  */
 
 #include "perf_counter/perf_counters.h"
-#include "perf_counter/perf_counter_wrapper.h"
-#include "perf_counter/perf_counter_utils.h"
-#include <gtest/gtest.h>
 
-using namespace ::dsn;
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stdio.h>
+#include <map>
+
+#include "common/json_helper.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_utils.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "utils/blob.h"
+
+namespace dsn {
 
 TEST(perf_counters_test, counter_create_remove)
 {
@@ -347,3 +356,4 @@ TEST(perf_counters_test, get_by_fullname)
         }
     }
 }
+} // namespace dsn

@@ -15,22 +15,44 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fstream>
+#include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
+#include <stdint.h>
+#include <atomic>
+#include <fstream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "utils/error_code.h"
-#include "utils/factory_store.h"
-#include "utils/filesystem.h"
-#include "utils/utils.h"
-
-#include "replica/replication_app_base.h"
-#include "utils/fmt_logging.h"
-
-#include "replica.h"
-#include "mutation_log.h"
-#include "replica_stub.h"
-#include "block_service/block_service_manager.h"
 #include "backup/cold_backup_context.h"
+#include "backup_types.h"
+#include "block_service/block_service.h"
+#include "block_service/block_service_manager.h"
+#include "common/backup_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "failure_detector/failure_detector_multimaster.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
+#include "replica.h"
+#include "replica_stub.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
 
 using namespace dsn::dist::block_service;
 

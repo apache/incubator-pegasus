@@ -17,11 +17,23 @@
 
 #include "cluster_balance_policy.h"
 
-#include "utils/fmt_logging.h"
+#include <limits.h>
+#include <stdlib.h>
+#include <cstdint>
+#include <functional>
+#include <iterator>
+#include <unordered_map>
+
+#include "dsn.layer2_types.h"
+#include "meta/load_balance_policy.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace replication {
+class meta_service;
+
 DSN_DEFINE_uint32(meta_server,
                   balance_op_count_per_round,
                   10,

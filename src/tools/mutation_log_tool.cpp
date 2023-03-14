@@ -25,8 +25,20 @@
  */
 
 #include "mutation_log_tool.h"
-#include "utils/time_utils.h"
+
+#include <alloca.h>
+#include <vector>
+
+#include "common/gpid.h"
+#include "consensus_types.h"
+#include "replica/mutation.h"
 #include "replica/mutation_log.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace replication {

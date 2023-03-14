@@ -15,12 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "kinit_context.h"
-#include "sasl_init.h"
-#include "negotiation_manager.h"
+#include <stdlib.h>
 
-#include "utils/fmt_logging.h"
+#include "kinit_context.h"
+#include "negotiation_manager.h"
+#include "sasl_init.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace security {

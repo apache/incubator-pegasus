@@ -17,6 +17,8 @@
 
 #include "ranger_resource_policy.h"
 
+#include "runtime/ranger/access_type.h"
+
 namespace dsn {
 namespace ranger {
 

@@ -15,12 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
+#include "http/http_server.h"
 #include "replica/replica_http_service.h"
+#include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
+#include "utils/flags.h"
 
 using std::map;
 using std::string;
@@ -42,7 +53,7 @@ public:
         stub->initialize_start();
 
         http_call_registry::instance().clear_paths();
-        _http_svc = dsn::make_unique<replica_http_service>(stub.get());
+        _http_svc = std::make_unique<replica_http_service>(stub.get());
     }
 
     void test_update_config(const map<string, string> &configs, const string &expect_resp)

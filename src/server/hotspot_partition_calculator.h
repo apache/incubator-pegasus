@@ -17,11 +17,21 @@
 
 #pragma once
 
-#include <gtest/gtest_prod.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
+#include <array>
+#include <list>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "perf_counter/perf_counter.h"
-#include "utils/flags.h"
 #include "hotspot_partition_stat.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica_admin_types.h"
+#include "runtime/rpc/rpc_holder.h"
+
+struct row_data;
+struct shell_context;
 
 namespace pegasus {
 namespace server {

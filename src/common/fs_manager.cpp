@@ -33,11 +33,21 @@
  */
 
 #include "fs_manager.h"
-#include "utils/utils.h"
-#include "utils/filesystem.h"
-#include <thread>
-#include "utils/fmt_logging.h"
+
+#include <stdio.h>
+#include <algorithm>
+#include <cmath>
+#include <utility>
+
+#include "common/gpid.h"
+#include "common/replication_enums.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {

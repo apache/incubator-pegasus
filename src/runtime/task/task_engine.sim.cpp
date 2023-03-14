@@ -33,11 +33,21 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "utils/rand.h"
-#include "task_engine.sim.h"
+#include <cstdint>
+#include <utility>
+
 #include "runtime/scheduler.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_queue.h"
+#include "task_engine.sim.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/rand.h"
+#include "utils/utils.h"
 
 namespace dsn {
+class task_worker_pool;
+
 namespace tools {
 
 void sim_timer_service::add_timer(task *task) { scheduler::instance().add_task(task, nullptr); }

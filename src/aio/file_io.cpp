@@ -24,10 +24,17 @@
  * THE SOFTWARE.
  */
 
-#include "disk_engine.h"
 #include "aio/file_io.h"
 
+// IWYU pragma: no_include <algorithm>
+#include <vector>
+
+#include "aio/aio_provider.h"
+#include "disk_engine.h"
+
 namespace dsn {
+class task_tracker;
+
 namespace file {
 
 /*extern*/ disk_file *open(const char *file_name, int flag, int pmode)

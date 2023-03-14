@@ -17,7 +17,6 @@
 
 #include <gtest/gtest.h>
 
-#include "utils/api_utilities.h"
 #include "utils/flags.h"
 #include "utils/logging_provider.h"
 

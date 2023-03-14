@@ -17,12 +17,42 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <atomic>
+#include <memory>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
+#include "metadata_types.h"
+#include "replica/mutation.h"
 #include "replica/replica.h"
-#include "replica/replica_context.h"
-#include "replica/replica_stub.h"
+#include "replica/replica_base.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace dsn {
+class partition_configuration;
+class rpc_address;
+class task_tracker;
+
 namespace replication {
+class group_check_request;
+class group_check_response;
+class learn_state;
+class notify_cacth_up_response;
+class notify_catch_up_request;
+class prepare_list;
+class query_child_state_request;
+class query_child_state_response;
+class register_child_request;
+class register_child_response;
+class replica_stub;
+class update_child_group_partition_count_request;
+class update_child_group_partition_count_response;
 
 class replica_split_manager : replica_base
 {

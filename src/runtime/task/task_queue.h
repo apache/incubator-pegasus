@@ -26,14 +26,18 @@
 
 #pragma once
 
-#include "task.h"
+#include <stdint.h>
+#include <atomic>
+#include <string>
 
+#include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
 
 namespace dsn {
 
-class task_worker;
+class task;
 class task_worker_pool;
+struct threadpool_spec;
 
 /*!
 @addtogroup tool-api-providers

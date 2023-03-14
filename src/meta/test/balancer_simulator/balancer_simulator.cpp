@@ -25,13 +25,24 @@
  */
 
 #include <algorithm>
+#include <map>
+#include <memory>
+#include <queue>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include <gtest/gtest.h>
-
+#include "backup_types.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta/server_load_balancer.h"
 #include "meta/test/misc/misc.h"
+#include "meta_admin_types.h"
+#include "runtime/app_model.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
 
 using namespace dsn::replication;

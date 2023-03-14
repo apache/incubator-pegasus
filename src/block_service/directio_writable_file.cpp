@@ -17,14 +17,14 @@
 
 #include "block_service/directio_writable_file.h"
 
-#include <algorithm>
-#include <cstring>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h> // posix_memalign
-#include <string>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h> // getpagesize
+#include <algorithm>
+#include <cstring>
+#include <string>
 
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

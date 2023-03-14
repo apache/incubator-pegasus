@@ -17,28 +17,27 @@
  * under the License.
  */
 
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <climits>
-#include <map>
-#include <memory>
-
-#include <fmt/ostream.h>
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-#include "utils/rand.h"
-
 #include "include/pegasus/client.h"
-
-#include "base/pegasus_const.h"
+#include "pegasus/error.h"
+#include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/test_util.h"
+#include "utils/error_code.h"
+#include "utils/rand.h"
 
 using namespace dsn::replication;
 using namespace pegasus;

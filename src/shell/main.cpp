@@ -17,16 +17,34 @@
  * under the License.
  */
 
-#include <algorithm>
-#include <setjmp.h>
-#include <signal.h>
-
+#include <ctype.h>
 #include <pegasus/version.h>
+#include <s2/third_party/absl/base/port.h>
+#include <signal.h>
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "args.h"
 #include "base/pegasus_const.h"
+#include "client/replication_ddl_client.h"
 #include "command_executor.h"
 #include "commands.h"
+#include "common/replication_other_types.h"
+#include "pegasus/client.h"
+#include "runtime/app_model.h"
+#include "shell/linenoise/linenoise.h"
+#include "shell/sds/sds.h"
+#include "utils/config_api.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
 std::map<std::string, command_executor *> s_commands_map;
@@ -650,7 +668,7 @@ static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
         pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
         cluster_name.c_str());
     s_global_context.ddl_client =
-        dsn::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
+        std::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
 
     // get real cluster name from zk
     std::string name;

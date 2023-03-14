@@ -14,15 +14,21 @@
 
 #include "utils/smart_pointers.h"
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 using namespace dsn;
 
 TEST(MakeUniqueTest, Basic)
 {
-    std::unique_ptr<std::string> p = make_unique<std::string>();
+    std::unique_ptr<std::string> p = std::make_unique<std::string>();
     EXPECT_EQ("", *p);
-    p = make_unique<std::string>("hi");
+    p = std::make_unique<std::string>("hi");
     EXPECT_EQ("hi", *p);
 }
 
@@ -45,19 +51,19 @@ TEST(MakeUniqueTest, MoveOnlyTypeAndValue)
 {
     using ExpectedType = std::unique_ptr<MoveOnly>;
     {
-        auto p = make_unique<MoveOnly>();
+        auto p = std::make_unique<MoveOnly>();
         static_assert(std::is_same<decltype(p), ExpectedType>::value, "unexpected return type");
         EXPECT_TRUE(!p->ip1);
         EXPECT_TRUE(!p->ip2);
     }
     {
-        auto p = make_unique<MoveOnly>(1);
+        auto p = std::make_unique<MoveOnly>(1);
         static_assert(std::is_same<decltype(p), ExpectedType>::value, "unexpected return type");
         EXPECT_TRUE(p->ip1 && *p->ip1 == 1);
         EXPECT_TRUE(!p->ip2);
     }
     {
-        auto p = make_unique<MoveOnly>(1, 2);
+        auto p = std::make_unique<MoveOnly>(1, 2);
         static_assert(std::is_same<decltype(p), ExpectedType>::value, "unexpected return type");
         EXPECT_TRUE(p->ip1 && *p->ip1 == 1);
         EXPECT_TRUE(p->ip2 && *p->ip2 == 2);
@@ -66,7 +72,7 @@ TEST(MakeUniqueTest, MoveOnlyTypeAndValue)
 
 TEST(MakeUniqueTest, AcceptMoveOnly)
 {
-    auto p = make_unique<AcceptMoveOnly>(MoveOnly());
+    auto p = std::make_unique<AcceptMoveOnly>(MoveOnly());
     p = std::unique_ptr<AcceptMoveOnly>(new AcceptMoveOnly(MoveOnly()));
 }
 
@@ -91,7 +97,7 @@ TEST(Make_UniqueTest, Array)
     // are order-agnostic.
     ArrayWatch::allocs().clear();
 
-    auto p = make_unique<ArrayWatch[]>(5);
+    auto p = std::make_unique<ArrayWatch[]>(5);
     static_assert(std::is_same<decltype(p), std::unique_ptr<ArrayWatch[]>>::value,
                   "unexpected return type");
 
@@ -102,8 +108,8 @@ TEST(Make_UniqueTest, Array)
 
 TEST(Make_UniqueTest, NotAmbiguousWithStdMakeUnique)
 {
-    // Ensure that make_unique is not ambiguous with std::make_unique.
-    // In C++14 mode, the below call to make_unique has both types as candidates.
+    // Ensure that std::make_unique is not ambiguous with std::make_unique.
+    // In C++14 mode, the below call to std::make_unique has both types as candidates.
     struct TakesStdType
     {
         explicit TakesStdType(const std::vector<int> &vec) {}

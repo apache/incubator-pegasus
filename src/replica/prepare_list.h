@@ -26,9 +26,14 @@
 
 #pragma once
 
-#include "mutation_cache.h"
+#include <functional>
 
+#include "common/replication_other_types.h"
+#include "metadata_types.h"
+#include "mutation_cache.h"
+#include "replica/mutation.h"
 #include "replica/replica_base.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {

@@ -19,6 +19,13 @@
 
 #pragma once
 
+#include <string>
+
+#include "replica/replica_base.h"
+#include "replica/replica_stub.h"
+#include "replica_admin_types.h"
+#include "runtime/task/task.h"
+
 namespace dsn {
 namespace replication {
 class replica;

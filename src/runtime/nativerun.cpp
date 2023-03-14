@@ -34,7 +34,15 @@
  */
 
 #include "runtime/nativerun.h"
+
+#include <map>
+#include <string>
+#include <vector>
+
+#include "runtime/global_config.h"
+#include "runtime/task/task_spec.h"
 #include "utils/flags.h"
+#include "utils/threadpool_spec.h"
 
 namespace dsn {
 namespace tools {

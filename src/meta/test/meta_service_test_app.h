@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <gtest/gtest.h>
+
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
@@ -48,11 +50,9 @@
 #include "consensus_types.h"
 #include "replica_admin_types.h"
 #include "meta/meta_service_app.h"
-
 #include "meta/server_state.h"
 #include "meta/meta_service.h"
-
-#include <gtest/gtest.h>
+#include "common/replication.codes.h"
 
 namespace dsn {
 namespace replication {
