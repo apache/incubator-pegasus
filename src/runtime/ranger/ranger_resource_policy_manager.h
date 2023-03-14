@@ -36,6 +36,7 @@ namespace dsn {
 
 namespace replication {
 class meta_service;
+class server_state;
 }
 namespace dist {
 class meta_state_service;

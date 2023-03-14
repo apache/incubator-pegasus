@@ -33,6 +33,7 @@
 #include "common/replica_envs.h"
 #include "meta/meta_options.h"
 #include "meta/meta_service.h"
+#include "meta/server_state.h"
 #include "meta/meta_state_service.h"
 #include "ranger_resource_policy_manager.h"
 #include "runtime/ranger/ranger_resource_policy.h"
