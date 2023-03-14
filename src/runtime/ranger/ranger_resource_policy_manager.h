@@ -25,7 +25,6 @@
 
 #include "common/json_helper.h"
 #include "gtest/gtest_prod.h"
-#include "meta/server_state.h"
 #include "ranger_resource_policy.h"
 #include "rapidjson/document.h"
 #include "runtime/api_task.h"
@@ -37,7 +36,9 @@ namespace dsn {
 
 namespace replication {
 class meta_service;
-class server_state;
+}
+namespace dist {
+class meta_state_service;
 }
 
 enum class resource_type
