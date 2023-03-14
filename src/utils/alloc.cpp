@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#ifdef CACHELINE_SIZE
+
 #include "utils/alloc.h"
 
 #include <cstdlib>
@@ -23,8 +25,6 @@
 #include "utils/safe_strerror_posix.h"
 
 namespace dsn {
-
-#ifdef CACHELINE_SIZE
 
 /* extern */ void *cacheline_aligned_alloc(size_t size)
 {
@@ -50,6 +50,6 @@ namespace dsn {
 
 /* extern */ void cacheline_aligned_free(void *mem_block) { free(mem_block); }
 
-#endif
-
 } // namespace dsn
+
+#endif
