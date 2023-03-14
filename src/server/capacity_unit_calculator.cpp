@@ -35,6 +35,61 @@
 #include "utils/fmt_logging.h"
 #include "utils/token_bucket_throttling_controller.h"
 
+METRIC_DEFINE_counter(replica,
+                      read_capacity_units,
+                      dsn::metric_unit::kCapacityUnits,
+                      "The number of capacity units for read requests");
+
+METRIC_DEFINE_counter(replica,
+                      write_capacity_units,
+                      dsn::metric_unit::kCapacityUnits,
+                      "The number of capacity units for write requests");
+
+METRIC_DEFINE_counter(replica,
+                      get_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for GET requests");
+
+METRIC_DEFINE_counter(replica,
+                      multi_get_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for MULTI_GET requests");
+
+METRIC_DEFINE_counter(replica,
+                      batch_get_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for BATCH_GET requests");
+
+METRIC_DEFINE_counter(replica,
+                      scan_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for SCAN requests");
+
+METRIC_DEFINE_counter(replica,
+                      put_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for PUT requests");
+
+METRIC_DEFINE_counter(replica,
+                      multi_put_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for MULTI_PUT requests");
+
+METRIC_DEFINE_counter(replica,
+                      check_and_set_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for CHECK_AND_SET requests");
+
+METRIC_DEFINE_counter(replica,
+                      check_and_mutate_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for CHECK_AND_MUTATE requests");
+
+METRIC_DEFINE_counter(replica,
+                      backup_request_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The number of bytes for backup requests");
+
 namespace pegasus {
 namespace server {
 
@@ -58,6 +113,17 @@ capacity_unit_calculator::capacity_unit_calculator(
     std::shared_ptr<hotkey_collector> write_hotkey_collector,
     std::shared_ptr<throttling_controller> read_size_throttling_controller)
     : replica_base(r),
+      METRIC_VAR_INIT_replica(read_capacity_units),
+      METRIC_VAR_INIT_replica(write_capacity_units),
+      METRIC_VAR_INIT_replica(get_bytes),
+      METRIC_VAR_INIT_replica(multi_get_bytes),
+      METRIC_VAR_INIT_replica(batch_get_bytes),
+      METRIC_VAR_INIT_replica(scan_bytes),
+      METRIC_VAR_INIT_replica(put_bytes),
+      METRIC_VAR_INIT_replica(multi_put_bytes),
+      METRIC_VAR_INIT_replica(check_and_set_bytes),
+      METRIC_VAR_INIT_replica(check_and_mutate_bytes),
+      METRIC_VAR_INIT_replica(backup_request_bytes),
       _read_hotkey_collector(read_hotkey_collector),
       _write_hotkey_collector(write_hotkey_collector),
       _read_size_throttling_controller(read_size_throttling_controller)
@@ -68,55 +134,6 @@ capacity_unit_calculator::capacity_unit_calculator(
 
     _log_read_cu_size = log(FLAGS_perf_counter_read_capacity_unit_size) / log(2);
     _log_write_cu_size = log(FLAGS_perf_counter_write_capacity_unit_size) / log(2);
-
-    std::string str_gpid = r->get_gpid().to_string();
-    char name[256];
-    snprintf(name, 255, "recent.read.cu@%s", str_gpid.c_str());
-    _pfc_recent_read_cu.init_app_counter("app.pegasus",
-                                         name,
-                                         COUNTER_TYPE_VOLATILE_NUMBER,
-                                         "statistic the recent read capacity units");
-    snprintf(name, 255, "recent.write.cu@%s", str_gpid.c_str());
-    _pfc_recent_write_cu.init_app_counter("app.pegasus",
-                                          name,
-                                          COUNTER_TYPE_VOLATILE_NUMBER,
-                                          "statistic the recent write capacity units");
-
-    snprintf(name, 255, "get_bytes@%s", str_gpid.c_str());
-    _pfc_get_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the get bytes");
-
-    snprintf(name, 255, "multi_get_bytes@%s", str_gpid.c_str());
-    _pfc_multi_get_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the multi get bytes");
-
-    snprintf(name, 255, "batch_get_bytes@%s", str_gpid.c_str());
-    _pfc_batch_get_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the batch get bytes");
-
-    snprintf(name, 255, "scan_bytes@%s", str_gpid.c_str());
-    _pfc_scan_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the scan bytes");
-
-    snprintf(name, 255, "put_bytes@%s", str_gpid.c_str());
-    _pfc_put_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the put bytes");
-
-    snprintf(name, 255, "multi_put_bytes@%s", str_gpid.c_str());
-    _pfc_multi_put_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the multi put bytes");
-
-    snprintf(name, 255, "check_and_set_bytes@%s", str_gpid.c_str());
-    _pfc_check_and_set_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the check and set bytes");
-
-    snprintf(name, 255, "check_and_mutate_bytes@%s", str_gpid.c_str());
-    _pfc_check_and_mutate_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the check and mutate bytes");
-
-    snprintf(name, 255, "backup_request_bytes@%s", str_gpid.c_str());
-    _pfc_backup_request_bytes.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the backup request bytes");
 }
 
 int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
@@ -125,7 +142,7 @@ int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
         read_data_size > 0
             ? (read_data_size + FLAGS_perf_counter_read_capacity_unit_size - 1) >> _log_read_cu_size
             : 1;
-    _pfc_recent_read_cu->add(read_cu);
+    METRIC_VAR_INCREMENT_BY(read_capacity_units, read_cu);
     _read_size_throttling_controller->consume_token(read_data_size);
     return read_cu;
 }
@@ -136,7 +153,7 @@ int64_t capacity_unit_calculator::add_write_cu(int64_t write_data_size)
                            ? (write_data_size + FLAGS_perf_counter_write_capacity_unit_size - 1) >>
                                  _log_write_cu_size
                            : 1;
-    _pfc_recent_write_cu->add(write_cu);
+    METRIC_VAR_INCREMENT_BY(write_capacity_units, write_cu);
     return write_cu;
 }
 
@@ -146,7 +163,7 @@ void capacity_unit_calculator::add_get_cu(dsn::message_ex *req,
                                           const dsn::blob &value)
 {
     auto total_size = key.size() + value.size();
-    _pfc_get_bytes->add(total_size);
+    METRIC_VAR_INCREMENT_BY(get_bytes, total_size);
     add_backup_request_bytes(req, total_size);
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
@@ -173,7 +190,7 @@ void capacity_unit_calculator::add_multi_get_cu(dsn::message_ex *req,
         data_size += hash_key.size() + kv.key.size() + kv.value.size();
     }
     auto total_size = hash_key.size() + multi_get_bytes;
-    _pfc_multi_get_bytes->add(total_size);
+    METRIC_VAR_INCREMENT_BY(multi_get_bytes, total_size);
     add_backup_request_bytes(req, total_size);
 
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
@@ -201,7 +218,7 @@ void capacity_unit_calculator::add_batch_get_cu(dsn::message_ex *req,
         _read_hotkey_collector->capture_hash_key(data.hash_key, 1);
     }
 
-    _pfc_batch_get_bytes->add(data_size);
+    METRIC_VAR_INCREMENT_BY(batch_get_bytes, data_size);
     add_backup_request_bytes(req, data_size);
 
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
@@ -237,7 +254,7 @@ void capacity_unit_calculator::add_scan_cu(dsn::message_ex *req,
         data_size += kv.key.size() + kv.value.size();
     }
     add_read_cu(data_size);
-    _pfc_scan_bytes->add(data_size);
+    METRIC_VAR_INCREMENT_BY(scan_bytes, data_size);
     add_backup_request_bytes(req, data_size);
 }
 
@@ -269,7 +286,7 @@ void capacity_unit_calculator::add_put_cu(int32_t status,
                                           const dsn::blob &key,
                                           const dsn::blob &value)
 {
-    _pfc_put_bytes->add(key.size() + value.size());
+    METRIC_VAR_INCREMENT_BY(put_bytes, key.size() + value.size());
     if (status != rocksdb::Status::kOk) {
         return;
     }
@@ -296,7 +313,7 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
         multi_put_bytes += kv.key.size() + kv.value.size();
         data_size += hash_key.size() + kv.key.size() + kv.value.size();
     }
-    _pfc_multi_put_bytes->add(hash_key.size() + multi_put_bytes);
+    METRIC_VAR_INCREMENT_BY(multi_put_bytes, hash_key.size() + multi_put_bytes);
     uint64_t key_count = kvs.size();
     _write_hotkey_collector->capture_hash_key(hash_key, key_count);
 
@@ -343,8 +360,9 @@ void capacity_unit_calculator::add_check_and_set_cu(int32_t status,
                                                     const dsn::blob &value)
 {
 
-    _pfc_check_and_set_bytes->add(hash_key.size() + check_sort_key.size() + set_sort_key.size() +
-                                  value.size());
+    METRIC_VAR_INCREMENT_BY(check_and_set_bytes,
+                            hash_key.size() + check_sort_key.size() + set_sort_key.size() +
+                                value.size());
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument &&
         status != rocksdb::Status::kTryAgain) {
         return;
@@ -370,8 +388,8 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
         check_and_mutate_bytes += m.sort_key.size() + m.value.size();
         data_size += hash_key.size() + m.sort_key.size() + m.value.size();
     }
-    _pfc_check_and_mutate_bytes->add(hash_key.size() + check_sort_key.size() +
-                                     check_and_mutate_bytes);
+    METRIC_VAR_INCREMENT_BY(check_and_mutate_bytes,
+                            hash_key.size() + check_sort_key.size() + check_and_mutate_bytes);
 
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument &&
         status != rocksdb::Status::kTryAgain) {
@@ -389,7 +407,7 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
 void capacity_unit_calculator::add_backup_request_bytes(dsn::message_ex *req, int64_t bytes)
 {
     if (req->is_backup_request()) {
-        _pfc_backup_request_bytes->add(bytes);
+        METRIC_VAR_INCREMENT_BY(backup_request_bytes, bytes);
     }
 }
 
