@@ -168,8 +168,9 @@ class error_code;
 // Perform increment-related operations on metrics including gauge and counter.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
     do {                                                                                           \
-        if (x != 0) {                                                                              \
-            _##name->increment_by(x);                                                              \
+        const auto v = (x);                                                                        \
+        if (v != 0) {                                                                              \
+            _##name->increment_by(v);                                                              \
         }                                                                                          \
     } while (0)
 
@@ -611,6 +612,7 @@ enum class metric_unit : size_t
     kSeconds,
     kBytes,
     kMegaBytes,
+    kCapacityUnits,
     kRequests,
     kSeeks,
     kPointLookups,
