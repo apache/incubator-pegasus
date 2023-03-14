@@ -25,15 +25,19 @@
 
 #include "common/json_helper.h"
 #include "gtest/gtest_prod.h"
+#include "meta/server_state.h"
 #include "ranger_resource_policy.h"
 #include "rapidjson/document.h"
+#include "runtime/api_task.h"
 #include "runtime/ranger/access_type.h"
 #include "utils/enum_helper.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 
 namespace replication {
 class meta_service;
+class server_state;
 }
 
 enum class resource_type
@@ -73,11 +77,47 @@ private:
     static void parse_policies_from_json(const rapidjson::Value &data,
                                          std::vector<policy_item> &policies);
 
+    // Update policies from Ranger service.
+    dsn::error_code update_policies_from_ranger_service();
+
+    // Pull policies in JSON format from Ranger service.
+    dsn::error_code pull_policies_from_ranger_service(std::string *ranger_policies) const;
+
+    // Load policies from JSON formated string.
+    dsn::error_code load_policies_from_json(const std::string &data);
+
+    // Create the path to save policies in remote storage, and update using resources policies.
+    void start_to_dump_and_sync_policies();
+
+    // Sync policies in use from Ranger service.
+    void dump_and_sync_policies();
+
+    // Dump policies to remote storage.
+    void dump_policies_to_remote_storage();
+
+    // Update the cached global/database resources policies.
+    void update_cached_policies();
+
+    // Sync policies to app_envs(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES).
+    dsn::error_code sync_policies_to_app_envs();
+
 private:
+    dsn::task_tracker _tracker;
+
     // The path where policies to be saved in remote storage.
     std::string _ranger_policy_meta_root;
 
     replication::meta_service *_meta_svc;
+
+    // The cache of the global resources policies, it's a subset of '_all_resource_policies'.
+    utils::rw_lock_nr _global_policies_lock; // [
+    resource_policies _global_policies_cache;
+    // ]
+
+    // The cache of the database resources policies, it's a subset of '_all_resource_policies'.
+    utils::rw_lock_nr _database_policies_lock; // [
+    resource_policies _database_policies_cache;
+    // ]
 
     // The access type of RPCs which access global level resources.
     access_type_of_rpc_code _ac_type_of_global_rpcs;
@@ -86,7 +126,7 @@ private:
     access_type_of_rpc_code _ac_type_of_database_rpcs;
 
     // The Ranger policy version to determine whether to update.
-    //    int _local_policy_version;
+    int _local_policy_version;
 
     // All Ranger ACL policies.
     all_resource_policies _all_resource_policies;
@@ -95,5 +135,11 @@ private:
 
     FRIEND_TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test);
 };
+
+// Try to get the database name of 'app_name'.
+// When using Ranger for ACL, the constraint table naming rule is
+// "{database_name}.{table_name}", use "." to split database name and table name.
+// Return an empty string if 'app_name' is not a valid Ranger rule table name.
+std::string get_database_name_from_app_name(const std::string &app_name);
 } // namespace ranger
 } // namespace dsn
