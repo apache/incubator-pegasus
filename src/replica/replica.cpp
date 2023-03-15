@@ -86,7 +86,10 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of delayed read requests by throttling");
 
-METRIC_DECLARE_counter(throttling_rejected_read_requests);
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected read requests by throttling");
 
 namespace dsn {
 namespace replication {

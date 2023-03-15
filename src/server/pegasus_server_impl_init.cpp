@@ -117,10 +117,7 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of abnormal read requests");
 
-METRIC_DEFINE_counter(replica,
-                      throttling_rejected_read_requests,
-                      dsn::metric_unit::kRequests,
-                      "The number of rejected read requests by throttling");
+METRIC_DECLARE_counter(throttling_rejected_read_requests);
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_total_sst_files,
