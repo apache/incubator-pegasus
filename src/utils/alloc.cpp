@@ -15,9 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifdef CACHELINE_SIZE
-
 #include "utils/alloc.h"
+
+// The check for the definition of CACHELINE_SIZE has to be put after including "utils/alloc.h",
+// where CACHELINE_SIZE is defined in "utils/ports.h".
+#ifdef CACHELINE_SIZE
 
 #include <cstdlib>
 
@@ -52,4 +54,4 @@ namespace dsn {
 
 } // namespace dsn
 
-#endif
+#endif // CACHELINE_SIZE
