@@ -140,5 +140,9 @@ private:
 // "{database_name}.{table_name}", use "." to split database name and table name.
 // Return an empty string if 'app_name' is not a valid Ranger rule table name.
 std::string get_database_name_from_app_name(const std::string &app_name);
+
+// Try to get the table_name of 'app_name'.
+// Return 'app_name' if 'app_name' is not a valid Ranger rule table name.
+std::string get_table_name_from_app_name(const std::string &app_name);
 } // namespace ranger
 } // namespace dsn
