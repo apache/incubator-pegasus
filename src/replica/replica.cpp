@@ -159,6 +159,8 @@ replica::replica(replica_stub *stub,
     _disk_migrator = std::make_unique<replica_disk_migrator>(this);
     _replica_follower = std::make_unique<replica_follower>(this);
 
+    std::string counter_str;
+
     counter_str =
         fmt::format("recent.backup.request.throttling.delay.count@{}", _app_info.app_name);
     _counter_recent_backup_request_throttling_delay_count.init_app_counter(
