@@ -17,17 +17,23 @@
 
 #pragma once
 
+#include "utils/ports.h"
+
+// The check for the definition of CACHELINE_SIZE has to be put after including "utils/ports.h",
+// where CACHELINE_SIZE is defined.
+#ifdef CACHELINE_SIZE
+
 #include <stddef.h>
 #include <algorithm>
 #include <functional>
 #include <memory>
 #include <new>
 
-#include "utils/ports.h"
+#ifndef NDEBUG
+#include "utils/fmt_logging.h"
+#endif
 
 namespace dsn {
-
-#ifdef CACHELINE_SIZE
 
 extern void *cacheline_aligned_alloc(size_t size);
 
@@ -79,6 +85,6 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len, const T &val)
     return array;
 }
 
-#endif
-
 } // namespace dsn
+
+#endif // CACHELINE_SIZE
