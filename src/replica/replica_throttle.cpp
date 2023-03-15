@@ -51,7 +51,7 @@ namespace replication {
                     [ this, req = message_ptr(request) ]() { on_client_##op_type(req, true); },    \
                     get_gpid().thread_hash(),                                                      \
                     std::chrono::milliseconds(delay_ms));                                          \
-                _counter_recent_##op_type##_throttling_delay_count->increment();                   \
+                METRIC_VAR_INCREMENT(throttling_delayed_##op_type##_requests);                     \
             } else { /** type == throttling_controller::REJECT **/                                 \
                 if (delay_ms > 0) {                                                                \
                     tasking::enqueue(LPC_##op_type##_THROTTLING_DELAY,                             \
@@ -64,7 +64,7 @@ namespace replication {
                 } else {                                                                           \
                     response_client_##op_type(request, ERR_BUSY);                                  \
                 }                                                                                  \
-                _counter_recent_##op_type##_throttling_reject_count->increment();                  \
+                METRIC_VAR_INCREMENT(throttling_rejected_##op_type##_requests);                    \
             }                                                                                      \
             return true;                                                                           \
         }                                                                                          \

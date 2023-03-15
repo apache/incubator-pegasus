@@ -66,6 +66,28 @@
 #include "utils/rand.h"
 #include "utils/string_view.h"
 
+METRIC_DEFINE_gauge_int64(replica,
+                          private_log_size_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The size of private log in MB");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed write requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected write requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed read requests by throttling");
+
+METRIC_DECLARE_counter(throttling_rejected_read_requests);
+
 namespace dsn {
 namespace replication {
 
@@ -118,7 +140,12 @@ replica::replica(replica_stub *stub,
       // todo(jiashuo1): app.duplicating need rename
       _is_duplication_master(app.duplicating),
       _is_duplication_follower(is_duplication_follower),
-      _backup_mgr(new replica_backup_manager(this))
+      _backup_mgr(new replica_backup_manager(this)),
+      METRIC_VAR_INIT_replica(private_log_size_mb),
+      METRIC_VAR_INIT_replica(throttling_delayed_write_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_write_requests),
+      METRIC_VAR_INIT_replica(throttling_delayed_read_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_read_requests)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
@@ -131,26 +158,6 @@ replica::replica(replica_stub *stub,
     _split_mgr = std::make_unique<replica_split_manager>(this);
     _disk_migrator = std::make_unique<replica_disk_migrator>(this);
     _replica_follower = std::make_unique<replica_follower>(this);
-
-    std::string counter_str = fmt::format("private.log.size(MB)@{}", gpid);
-    _counter_private_log_size.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.throttling.delay.count@{}", gpid);
-    _counter_recent_write_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.throttling.reject.count@{}", gpid);
-    _counter_recent_write_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.throttling.delay.count@{}", gpid);
-    _counter_recent_read_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.throttling.reject.count@{}", gpid);
-    _counter_recent_read_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 
     counter_str =
         fmt::format("recent.backup.request.throttling.delay.count@{}", _app_info.app_name);
@@ -514,8 +521,6 @@ void replica::close()
     } else if (_disk_migrator->status() == disk_migration_status::CLOSED) {
         _disk_migrator.reset();
     }
-
-    _counter_private_log_size.clear();
 
     // duplication_impl may have ongoing tasks.
     // release it before release replica.

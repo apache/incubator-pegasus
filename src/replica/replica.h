@@ -639,10 +639,10 @@ private:
 
     // perf counters
     METRIC_VAR_DECLARE_gauge_int64(private_log_size_mb);
-    perf_counter_wrapper _counter_recent_write_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_write_throttling_reject_count;
-    perf_counter_wrapper _counter_recent_read_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_read_throttling_reject_count;
+    METRIC_VAR_DECLARE_counter(throttling_delayed_write_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(throttling_delayed_read_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_read_requests);
     perf_counter_wrapper _counter_recent_backup_request_throttling_delay_count;
     perf_counter_wrapper _counter_recent_backup_request_throttling_reject_count;
     perf_counter_wrapper _counter_recent_write_splitting_reject_count;
