@@ -20,7 +20,7 @@
 // IWYU pragma: no_include <bits/std_abs.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <stdlib.h>
-#include <cmath>
+#include <cmath> // IWYU pragma: keep
 #include <iomanip>
 // IWYU pragma: no_include <new>
 #include <sstream> // IWYU pragma: keep
