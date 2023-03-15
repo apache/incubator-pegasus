@@ -467,8 +467,11 @@ void ranger_resource_policy_manager::dump_and_sync_policies()
     update_cached_policies();
     LOG_DEBUG("Update using resources policies succeed.");
 
-    ERR_LOG_AND_RETURN_NOT_OK(sync_policies_to_app_envs(), "Sync policies to app envs failed.");
-    LOG_DEBUG("Sync policies to app envs succeeded.");
+    if (dsn::ERR_OK == sync_policies_to_app_envs()) {
+        LOG_ERROR("Sync policies to app envs failed.");
+    } else {
+        LOG_DEBUG("Sync policies to app envs succeeded.");
+    }
 }
 
 void ranger_resource_policy_manager::dump_policies_to_remote_storage()
@@ -489,7 +492,7 @@ void ranger_resource_policy_manager::dump_policies_to_remote_storage()
                                       kLoadRangerPolicyRetryDelayMs);
                 return;
             }
-            ERR_LOG_AND_RETURN_NOT_OK(e, "Dump Ranger policies to remote storage failed.");
+            LOG_ERROR("Dump Ranger policies to remote storage failed.");
         });
 }
 
