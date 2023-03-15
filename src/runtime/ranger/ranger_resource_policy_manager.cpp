@@ -586,7 +586,11 @@ std::string get_database_name_from_app_name(const std::string &app_name)
 
 std::string get_table_name_from_app_name(const std::string &app_name)
 {
-    return app_name.substr(get_database_name_from_app_name(app_name).size());
+    std::string database_name = get_database_name_from_app_name(app_name);
+    if (database_name.empty()) {
+        return app_name;
+    }
+    return app_name.substr(database_name.size() + 1);
 }
 } // namespace ranger
 } // namespace dsn

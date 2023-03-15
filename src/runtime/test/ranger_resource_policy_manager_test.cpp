@@ -243,10 +243,10 @@ TEST(ranger_resource_policy_manager_test, get_table_name_from_app_name_test)
         std::string app_name;
         std::string expected_result;
     } tests[] = {{"", ""},
-                 {".", ""},
-                 {"...", ".."},
+                 {".", "."},
+                 {"...", "..."},
                  {"database_name.", ""},
-                 {".table_name", "table_name"},
+                 {".table_name", ".table_name"},
                  {"app_name", "app_name"},
                  {"database_name.table_name", "table_name"},
                  {"a.b.c", "b.c"}};
