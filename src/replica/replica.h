@@ -118,18 +118,20 @@ class test_checker;
 }
 
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
-    if (_validate_partition_hash) {                                                                \
-        if (_split_mgr->should_reject_request()) {                                                 \
-            response_client_##op_type(request, ERR_SPLITTING);                                     \
-            _counter_recent_##op_type##_splitting_reject_count->increment();                       \
-            return;                                                                                \
+    do {                                                                                           \
+        if (_validate_partition_hash) {                                                            \
+            if (_split_mgr->should_reject_request()) {                                             \
+                response_client_##op_type(request, ERR_SPLITTING);                                 \
+                METRIC_VAR_INCREMENT(splitting_rejected_##op_type##_requests);                     \
+                return;                                                                            \
+            }                                                                                      \
+            if (!_split_mgr->check_partition_hash(                                                 \
+                    ((dsn::message_ex *)request)->header->client.partition_hash, #op_type)) {      \
+                response_client_##op_type(request, ERR_PARENT_PARTITION_MISUSED);                  \
+                return;                                                                            \
+            }                                                                                      \
         }                                                                                          \
-        if (!_split_mgr->check_partition_hash(                                                     \
-                ((dsn::message_ex *)request)->header->client.partition_hash, #op_type)) {          \
-            response_client_##op_type(request, ERR_PARENT_PARTITION_MISUSED);                      \
-            return;                                                                                \
-        }                                                                                          \
-    }
+    } while (0)
 
 DSN_DECLARE_bool(reject_write_when_disk_insufficient);
 
@@ -643,10 +645,10 @@ private:
     METRIC_VAR_DECLARE_counter(throttling_rejected_write_requests);
     METRIC_VAR_DECLARE_counter(throttling_delayed_read_requests);
     METRIC_VAR_DECLARE_counter(throttling_rejected_read_requests);
-    perf_counter_wrapper _counter_recent_backup_request_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_backup_request_throttling_reject_count;
-    perf_counter_wrapper _counter_recent_write_splitting_reject_count;
-    perf_counter_wrapper _counter_recent_read_splitting_reject_count;
+    METRIC_VAR_DECLARE_counter(throttling_delayed_backup_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_backup_requests);
+    METRIC_VAR_DECLARE_counter(splitting_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(splitting_rejected_read_requests);
     perf_counter_wrapper _counter_recent_write_bulk_load_ingestion_reject_count;
     std::vector<perf_counter *> _counters_table_level_latency;
     perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;

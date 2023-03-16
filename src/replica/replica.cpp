@@ -91,6 +91,26 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of rejected read requests by throttling");
 
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_backup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed backup requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_backup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected backup requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_rejected_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected write requests by splitting");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_rejected_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected read requests by splitting");
+
 namespace dsn {
 namespace replication {
 
@@ -148,7 +168,11 @@ replica::replica(replica_stub *stub,
       METRIC_VAR_INIT_replica(throttling_delayed_write_requests),
       METRIC_VAR_INIT_replica(throttling_rejected_write_requests),
       METRIC_VAR_INIT_replica(throttling_delayed_read_requests),
-      METRIC_VAR_INIT_replica(throttling_rejected_read_requests)
+      METRIC_VAR_INIT_replica(throttling_rejected_read_requests),
+      METRIC_VAR_INIT_replica(throttling_delayed_backup_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_backup_requests),
+      METRIC_VAR_INIT_replica(splitting_rejected_write_requests),
+      METRIC_VAR_INIT_replica(splitting_rejected_read_requests)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
@@ -164,26 +188,8 @@ replica::replica(replica_stub *stub,
 
     std::string counter_str;
 
-    counter_str =
-        fmt::format("recent.backup.request.throttling.delay.count@{}", _app_info.app_name);
-    _counter_recent_backup_request_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str =
-        fmt::format("recent.backup.request.throttling.reject.count@{}", _app_info.app_name);
-    _counter_recent_backup_request_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
     counter_str = fmt::format("dup.disabled_non_idempotent_write_count@{}", _app_info.app_name);
     _counter_dup_disabled_non_idempotent_write_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.splitting.reject.count@{}", gpid);
-    _counter_recent_read_splitting_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.splitting.reject.count@{}", gpid);
-    _counter_recent_write_splitting_reject_count.init_app_counter(
         "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 
     counter_str = fmt::format("recent.write.bulk.load.ingestion.reject.count@{}", gpid);
@@ -273,7 +279,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    CHECK_REQUEST_IF_SPLITTING(read)
+    CHECK_REQUEST_IF_SPLITTING(read);
 
     if (status() == partition_status::PS_INACTIVE ||
         status() == partition_status::PS_POTENTIAL_SECONDARY) {

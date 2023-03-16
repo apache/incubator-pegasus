@@ -95,9 +95,9 @@ bool replica::throttle_backup_request(message_ex *request)
                              [ this, req = message_ptr(request) ]() { on_client_read(req, true); },
                              get_gpid().thread_hash(),
                              std::chrono::milliseconds(delay_ms));
-            _counter_recent_backup_request_throttling_delay_count->increment();
+            METRIC_VAR_INCREMENT(throttling_delayed_backup_requests);
         } else { /** type == throttling_controller::REJECT **/
-            _counter_recent_backup_request_throttling_reject_count->increment();
+            METRIC_VAR_INCREMENT(throttling_rejected_backup_requests);
         }
         return true;
     }
