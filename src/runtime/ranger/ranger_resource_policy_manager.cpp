@@ -461,7 +461,7 @@ void ranger_resource_policy_manager::dump_and_sync_policies()
     update_cached_policies();
     LOG_DEBUG("Update using resources policies succeed.");
 
-    if (dsn::ERR_OK == sync_policies_to_app_envs()) {
+    if (dsn::ERR_OK != sync_policies_to_app_envs()) {
         LOG_ERROR("Sync policies to app envs failed.");
     }
 }
