@@ -226,7 +226,7 @@ dsn::error_code ranger_resource_policy_manager::update_policies_from_ranger_serv
     auto err_code = load_policies_from_json(ranger_policies);
     if (err_code == dsn::ERR_RANGER_POLICIES_NO_NEED_UPDATE) {
         LOG_DEBUG("Skip to update local policies.");
-        // for the newly created table, its app envs must be empty. This needs to be executed
+        // For the newly created table, its app envs must be empty. This needs to be executed
         // periodically to update the table's app envs, regardless of whether the Ranger policy is
         // updated or not.
         ERR_LOG_AND_RETURN_NOT_OK(sync_policies_to_app_envs(), "Sync policies to app envs failed.");
