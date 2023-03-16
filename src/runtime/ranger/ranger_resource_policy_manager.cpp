@@ -129,7 +129,7 @@ const std::chrono::milliseconds kLoadRangerPolicyRetryDelayMs(10000);
 
 ranger_resource_policy_manager::ranger_resource_policy_manager(
     dsn::replication::meta_service *meta_svc)
-    : _meta_svc(meta_svc), _local_policy_version(0)
+    : _meta_svc(meta_svc), _local_policy_version(-1)
 {
     _ranger_policy_meta_root = dsn::replication::meta_options::concat_path_unix_style(
         _meta_svc->cluster_root(), "ranger_policy_meta_root");
@@ -229,12 +229,8 @@ dsn::error_code ranger_resource_policy_manager::update_policies_from_ranger_serv
         // for the newly created table, its app envs must be empty. This needs to be executed
         // periodically to update the table's app envs, regardless of whether the Ranger policy is
         // updated or not.
-        err_code = sync_policies_to_app_envs();
-        if (err_code == dsn::ERR_OK) {
-            LOG_DEBUG("Sync policies to app envs succeeded.");
-            return dsn::ERR_OK;
-        }
-        ERR_LOG_AND_RETURN_NOT_OK(err_code, "Sync policies to app envs failed.");
+        ERR_LOG_AND_RETURN_NOT_OK(sync_policies_to_app_envs(), "Sync policies to app envs failed.");
+        return dsn::ERR_OK;
     }
     ERR_LOG_AND_RETURN_NOT_OK(err_code, "Parse Ranger policies failed.");
 
@@ -343,9 +339,7 @@ dsn::error_code ranger_resource_policy_manager::load_policies_from_json(const st
         return dsn::ERR_RANGER_POLICIES_NO_NEED_UPDATE;
     }
 
-    if (_local_policy_version == 0) {
-        _local_policy_version = remote_policy_version;
-    }
+    _local_policy_version = remote_policy_version;
 
     // Update policies.
     _all_resource_policies.clear();
@@ -469,8 +463,6 @@ void ranger_resource_policy_manager::dump_and_sync_policies()
 
     if (dsn::ERR_OK == sync_policies_to_app_envs()) {
         LOG_ERROR("Sync policies to app envs failed.");
-    } else {
-        LOG_DEBUG("Sync policies to app envs succeeded.");
     }
 }
 
@@ -483,16 +475,14 @@ void ranger_resource_policy_manager::dump_policies_to_remote_storage()
                 LOG_DEBUG("Dump Ranger policies to remote storage succeed.");
                 return;
             }
-            if (e == dsn::ERR_TIMEOUT) {
-                LOG_ERROR("Dump Ranger policies to remote storage timeout, retry later.");
-                dsn::tasking::enqueue(LPC_USE_RANGER_ACCESS_CONTROL,
-                                      &_tracker,
-                                      [this]() { dump_policies_to_remote_storage(); },
-                                      0,
-                                      kLoadRangerPolicyRetryDelayMs);
-                return;
-            }
-            LOG_ERROR("Dump Ranger policies to remote storage failed.");
+            // The return error code is not 'ERR_TIMEOUT', use assert here.
+            CHECK_EQ(e, dsn::ERR_TIMEOUT);
+            LOG_ERROR("Dump Ranger policies to remote storage timeout, retry later.");
+            dsn::tasking::enqueue(LPC_USE_RANGER_ACCESS_CONTROL,
+                                  &_tracker,
+                                  [this]() { dump_policies_to_remote_storage(); },
+                                  0,
+                                  kLoadRangerPolicyRetryDelayMs);
         });
 }
 
@@ -527,13 +517,11 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
     ERR_LOG_AND_RETURN_NOT_OK(list_resp.err, "list_apps failed.");
     for (const auto &app : list_resp.infos) {
         std::string database_name = get_database_name_from_app_name(app.app_name);
-        std::string table_name;
+        // Use "*" for table name of invalid Ranger rules to match datdabase resources.
         if (database_name.empty()) {
             database_name = "*";
-            table_name = app.app_name;
-        } else {
-            table_name = app.app_name.substr(database_name.size());
         }
+        std::string table_name = get_table_name_from_app_name(app.app_name);
 
         auto req = dsn::make_unique<dsn::replication::configuration_update_app_env_request>();
         req->__set_app_name(app.app_name);
@@ -571,6 +559,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
         }
     }
 
+    LOG_DEBUG("Sync policies to app envs succeeded.");
     return dsn::ERR_OK;
 }
 
@@ -587,10 +576,7 @@ std::string get_database_name_from_app_name(const std::string &app_name)
 std::string get_table_name_from_app_name(const std::string &app_name)
 {
     std::string database_name = get_database_name_from_app_name(app_name);
-    if (database_name.empty()) {
-        return app_name;
-    }
-    return app_name.substr(database_name.size() + 1);
+    return database_name.empty() ? app_name : app_name.substr(database_name.size() + 1);
 }
 } // namespace ranger
 } // namespace dsn
