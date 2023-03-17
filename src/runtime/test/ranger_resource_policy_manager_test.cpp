@@ -215,5 +215,46 @@ TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test
         EXPECT_EQ(test.expected_result, actual_result);
     }
 }
+
+TEST(ranger_resource_policy_manager_test, get_database_name_from_app_name_test)
+{
+    struct test_case
+    {
+        std::string app_name;
+        std::string expected_result;
+    } tests[] = {{"", ""},
+                 {".", ""},
+                 {"...", ""},
+                 {"database_name.", "database_name"},
+                 {".table_name", ""},
+                 {"app_name", ""},
+                 {"database_name.table_name", "database_name"},
+                 {"a.b.c", "a"}};
+    for (const auto &test : tests) {
+        auto actual_result = get_database_name_from_app_name(test.app_name);
+        EXPECT_EQ(test.expected_result, actual_result);
+    }
+}
+
+TEST(ranger_resource_policy_manager_test, get_table_name_from_app_name_test)
+{
+    struct test_case
+    {
+        std::string app_name;
+        std::string expected_result;
+    } tests[] = {{"", ""},
+                 {".", "."},
+                 {"...", "..."},
+                 {"database_name.", ""},
+                 {".table_name", ".table_name"},
+                 {"app_name", "app_name"},
+                 {"database_name.table_name", "table_name"},
+                 {"a.b.c", "b.c"}};
+    for (const auto &test : tests) {
+        auto actual_result = get_table_name_from_app_name(test.app_name);
+        EXPECT_EQ(test.expected_result, actual_result);
+    }
+}
+
 } // namespace ranger
 } // namespace dsn

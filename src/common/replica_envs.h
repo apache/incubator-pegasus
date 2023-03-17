@@ -56,6 +56,7 @@ public:
     static const std::string MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION;
     static const std::string BUSINESS_INFO;
     static const std::string REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS;
+    static const std::string REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES;
     static const std::string READ_QPS_THROTTLING;
     static const std::string READ_SIZE_THROTTLING;
     static const std::string BACKUP_REQUEST_QPS_THROTTLING;
