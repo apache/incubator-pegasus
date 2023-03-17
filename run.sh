@@ -21,10 +21,11 @@ set -e
 LOCAL_HOSTNAME=`hostname -f`
 PID=$$
 ROOT=`pwd`
-export BUILD_DIR=$ROOT/src/builder
+export BUILD_ROOT_DIR=${ROOT}/build
+export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
-export LD_LIBRARY_PATH=$BUILD_DIR/output/lib:$THIRDPARTY_ROOT/output/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 
 function usage()
 {
@@ -253,17 +254,25 @@ function run_build()
     fi
 
     echo "INFO: start build Pegasus..."
-    BUILD_DIR="${ROOT}/src/${BUILD_TYPE}_${SANITIZER}_builder"
+    BUILD_DIR="${BUILD_ROOT_DIR}/${BUILD_TYPE}_${SANITIZER}"
+    BUILD_DIR=${BUILD_DIR%_*}
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
+        rm ${ROOT}/src/base/rrdb_types.cpp
+        rm ${ROOT}/src/include/rrdb/rrdb_types.h
+        rm ${ROOT}/src/common/serialization_helper/dsn.layer2_types.h
+        rm ${ROOT}/src/runtime/dsn.layer2_types.cpp
+        rm ${ROOT}/src/include/pegasus/git_commit.h
     fi
 
     pushd ${ROOT}
-    echo "Gen thrift"
-    # TODO(yingchun): should be optimized
-    python3 $ROOT/scripts/compile_thrift.py
-    sh ${ROOT}/scripts/recompile_thrift.sh
+    if [ ! -f "${ROOT}/src/common/serialization_helper/dsn.layer2_types.h" ]; then
+        echo "Gen thrift"
+        # TODO(yingchun): should be optimized
+        python3 $ROOT/scripts/compile_thrift.py
+        sh ${ROOT}/scripts/recompile_thrift.sh
+    fi
 
     if [ ! -d "$BUILD_DIR" ]; then
         mkdir -p $BUILD_DIR
@@ -274,25 +283,27 @@ function run_build()
             CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=${IWYU}"
         fi
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
-        cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
+        cmake ${ROOT} -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
         exit_if_fail $?
     fi
 
-    echo "Gen git_commit.h ..."
-    pushd "$ROOT/src"
-    PEGASUS_GIT_COMMIT="non-git-repo"
-    if git rev-parse HEAD; then # this is a git repo
-        PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
-    fi
-    echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
     GIT_COMMIT_FILE=$ROOT/src/include/pegasus/git_commit.h
-    echo "Generating $GIT_COMMIT_FILE..."
-    echo "#pragma once" >$GIT_COMMIT_FILE
-    echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+    if [ ! -f "${GIT_COMMIT_FILE}" ]; then
+        echo "Gen git_commit.h ..."
+        pushd "$ROOT/src"
+        PEGASUS_GIT_COMMIT="non-git-repo"
+        if git rev-parse HEAD; then # this is a git repo
+            PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
+        fi
+        echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
+        echo "Generating $GIT_COMMIT_FILE..."
+        echo "#pragma once" >$GIT_COMMIT_FILE
+        echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+    fi
 
     # rebuild link
-    rm -f ${ROOT}/src/builder
-    ln -s ${BUILD_DIR} ${ROOT}/src/builder
+    rm -f ${BUILD_LATEST_DIR}
+    ln -s ${BUILD_DIR} ${BUILD_LATEST_DIR}
 
     echo "[$(date)] Building Pegasus ..."
     pushd $BUILD_DIR
@@ -393,7 +404,6 @@ function run_test()
         mkdir -p $REPORT_DIR
     fi
 
-    BUILD_DIR=$ROOT/src/builder
     if [ "$test_modules" == "" ]; then
         test_modules=$(IFS=,; echo "${all_tests[*]}")
     fi
@@ -441,12 +451,12 @@ function run_test()
                 exit 1
             fi
             # TODO(yingchun): remove it?
-            sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  $ROOT/src/builder/src/server/test/config.ini
+            sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  ${BUILD_LATEST_DIR}/src/server/test/config.ini
         else
             run_stop_zk
             run_start_zk
         fi
-        pushd $ROOT/src/builder/bin/$module
+        pushd ${BUILD_LATEST_DIR}/bin/$module
         REPORT_DIR=$REPORT_DIR TEST_BIN=$module ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
@@ -472,8 +482,8 @@ function run_test()
         mkdir -p "$ROOT/gcov_report"
 
         echo "Running gcovr to produce HTML code coverage report."
-        $BUILD_DIR
-        gcovr --html --html-details -r $ROOT --object-directory=$BUILD_DIR \
+        $BUILD_LATEST_DIR
+        gcovr --html --html-details -r $ROOT --object-directory=$BUILD_LATEST_DIR \
               -o $GCOV_DIR/index.html
         if [ $? -ne 0 ]; then
             exit 1
@@ -644,7 +654,7 @@ function usage_start_onebox()
     echo "   -w|--wait_healthy"
     echo "                     wait cluster to become healthy, default not wait"
     echo "   -s|--server_path <str>"
-    echo "                     server binary path, default is ${BUILD_DIR}/output/bin/pegasus_server"
+    echo "                     server binary path, default is ${BUILD_LATEST_DIR}/output/bin/pegasus_server"
     echo "   --config_path"
     echo "                     specify the config template path, default is ./src/server/config.min.ini in non-production env"
     echo "                                                                  ./src/server/config.ini in production env"
@@ -662,7 +672,7 @@ function run_start_onebox()
     APP_NAME=temp
     PARTITION_COUNT=8
     WAIT_HEALTHY=false
-    SERVER_PATH=${BUILD_DIR}/output/bin/pegasus_server
+    SERVER_PATH=${BUILD_LATEST_DIR}/output/bin/pegasus_server
     CONFIG_FILE=""
     USE_PRODUCT_CONFIG=false
     OPTS=""
@@ -1280,7 +1290,7 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
 
     # start verifier
     mkdir -p onebox/verifier && cd onebox/verifier
-    ln -s -f ${BUILD_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
+    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
     echo "$PWD/pegasus_kill_test config.ini verifier &>/dev/null &"
     $PWD/pegasus_kill_test config.ini verifier &>/dev/null &
@@ -1291,7 +1301,7 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
 
     #start killer
     mkdir -p onebox/killer && cd onebox/killer
-    ln -s -f ${BUILD_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
+    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
     echo "$PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &"
     $PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &
@@ -1516,9 +1526,9 @@ function run_bench()
         shift
     done
     cd ${ROOT}
-    cp ${BUILD_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
+    cp ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
     fill_bench_config
-    ln -s -f ${BUILD_DIR}/output/bin/pegasus_bench/pegasus_bench
+    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/pegasus_bench
     ./pegasus_bench ./config-bench.ini
     rm -f ./config-bench.ini
 }
@@ -1645,7 +1655,7 @@ function run_shell()
     fi
 
     cd ${ROOT}
-    ln -s -f ${BUILD_DIR}/output/bin/pegasus_shell/pegasus_shell
+    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell
     ./pegasus_shell ${CONFIG} $CLUSTER_NAME
     # because pegasus shell will catch 'Ctrl-C' signal, so the following commands will be executed
     # even user inputs 'Ctrl-C', so that the temporary config file will be cleared when exit shell.

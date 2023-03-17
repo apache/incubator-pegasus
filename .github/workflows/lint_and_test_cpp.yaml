@@ -98,8 +98,8 @@ jobs:
         run: |
           PWD=`pwd`
           ./run.sh build --test --compiler clang-14,clang++-14 -j $(nproc) -t release --iwyu ${PWD}/iwyu/build/bin/include-what-you-use --skip_thirdparty
-          python3 iwyu/include-what-you-use/fix_includes.py --blank_lines --reorder --nocomments --nosafe_headers --separate_project_includes="<tld>" --ignore_re="release__builder|rrdb_types|layer2_types|metrics_test.cpp" --dry_run < src/builder/iwyu.out
-          python3 iwyu/include-what-you-use/fix_includes.py --blank_lines --reorder --nocomments --nosafe_headers --separate_project_includes="<tld>" --ignore_re="release__builder|rrdb_types|layer2_types|metrics_test.cpp" --dry_run < src/builder/iwyu.out | egrep "IWYU edited 0 files on your behalf"
+          python3 iwyu/include-what-you-use/fix_includes.py --blank_lines --reorder --nocomments --nosafe_headers --separate_project_includes="<tld>" --ignore_re="thrift-gen|rrdb_types|layer2_types|metrics_test.cpp" --dry_run < build/latest/iwyu.out
+          python3 iwyu/include-what-you-use/fix_includes.py --blank_lines --reorder --nocomments --nosafe_headers --separate_project_includes="<tld>" --ignore_re="thrift-gen|rrdb_types|layer2_types|metrics_test.cpp" --dry_run < build/latest/iwyu.out | egrep "IWYU edited 0 files on your behalf"
 
   build_Release:
     name: Build Release
@@ -155,7 +155,7 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar --exclude='*CMakeFiles*' -zcvhf release__builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin
+          tar --exclude='*CMakeFiles*' -zcvhf release__builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -277,7 +277,7 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar --exclude='*CMakeFiles*' -zcvhf release_address_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin
+          tar --exclude='*CMakeFiles*' -zcvhf release_address_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -404,7 +404,7 @@ jobs:
 #          mv thirdparty/hadoop-bin ./
 #          mv thirdparty/zookeeper-bin ./
 #          rm -rf thirdparty
-#          tar --exclude='*CMakeFiles*' -zcvhf release_undefined_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin
+#          tar --exclude='*CMakeFiles*' -zcvhf release_undefined_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
 #      - name: Upload Artifact
 #        uses: actions/upload-artifact@v3
 #        with:
@@ -528,7 +528,7 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar --exclude='*CMakeFiles*' -zcvhf release_jemalloc_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin
+          tar --exclude='*CMakeFiles*' -zcvhf release_jemalloc_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:

@@ -39,19 +39,19 @@ then
     exit 1
 fi
 
-if [ ! -f ${BUILD_DIR}/output/bin/pegasus_server/pegasus_server ]
+if [ ! -f ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server ]
 then
-    echo "ERROR: ${BUILD_DIR}/output/bin/pegasus_server/pegasus_server not found"
+    echo "ERROR: ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server not found"
     exit 1
 fi
 
-if [ ! -f src/builder/CMakeCache.txt ]
+if [ ! -f ${BUILD_LATEST_DIR}/CMakeCache.txt ]
 then
-    echo "ERROR: src/builder/CMakeCache.txt not found"
+    echo "ERROR: ${BUILD_LATEST_DIR}/CMakeCache.txt not found"
     exit 1
 fi
 
-if egrep -i "CMAKE_BUILD_TYPE:STRING\=debug" src/builder/CMakeCache.txt;
+if egrep -i "CMAKE_BUILD_TYPE:STRING\=debug" ${BUILD_LATEST_DIR}/CMakeCache.txt;
 then
     build_type=debug
 else
@@ -106,9 +106,9 @@ while [[ $# > 0 ]]; do
 done
 
 mkdir -p ${pack}/lib
-copy_file ${BUILD_DIR}/output/lib/libpegasus_client_static.a ${pack}/lib
+copy_file ${BUILD_LATEST_DIR}/output/lib/libpegasus_client_static.a ${pack}/lib
 # TODO(yingchun): make sure shared lib works well too
-# copy_file ${BUILD_DIR}/output/lib/libpegasus_client_shared.so ${pack}/lib
+# copy_file ${BUILD_LATEST_DIR}/output/lib/libpegasus_client_shared.so ${pack}/lib
 copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/lib
 ln -sf `ls ${pack}/lib | grep libboost_system` ${pack}/lib/libboost_system.so
 ln -sf `ls ${pack}/lib | grep libboost_filesystem` ${pack}/lib/libboost_filesystem.so
