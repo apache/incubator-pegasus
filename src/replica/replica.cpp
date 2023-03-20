@@ -47,6 +47,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "perf_counter/perf_counters.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"

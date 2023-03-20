@@ -57,7 +57,6 @@
 #include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "prepare_list.h"
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
