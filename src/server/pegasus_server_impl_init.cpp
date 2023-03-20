@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include <fmt/core.h>
 #include <rocksdb/cache.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/options.h>
@@ -29,6 +28,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -53,6 +53,8 @@
 #include "server/range_read_limiter.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 

@@ -70,6 +70,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
@@ -78,6 +79,7 @@ namespace dsn {
 class gpid;
 class perf_counter;
 class rpc_address;
+
 namespace dist {
 namespace block_service {
 class block_filesystem;
@@ -522,6 +524,9 @@ private:
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_name(const std::string &app_name);
 
+    // Currently only used for unit test to get the count of backup requests.
+    int64_t get_backup_request_count() const;
+
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
@@ -645,14 +650,14 @@ private:
     METRIC_VAR_DECLARE_counter(throttling_rejected_write_requests);
     METRIC_VAR_DECLARE_counter(throttling_delayed_read_requests);
     METRIC_VAR_DECLARE_counter(throttling_rejected_read_requests);
+    METRIC_VAR_DECLARE_counter(backup_requests);
     METRIC_VAR_DECLARE_counter(throttling_delayed_backup_requests);
     METRIC_VAR_DECLARE_counter(throttling_rejected_backup_requests);
     METRIC_VAR_DECLARE_counter(splitting_rejected_write_requests);
     METRIC_VAR_DECLARE_counter(splitting_rejected_read_requests);
-    perf_counter_wrapper _counter_recent_write_bulk_load_ingestion_reject_count;
+    METRIC_VAR_DECLARE_counter(bulk_load_ingestion_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(dup_rejected_non_idempotent_write_requests);
     std::vector<perf_counter *> _counters_table_level_latency;
-    perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;
-    perf_counter_wrapper _counter_backup_request_qps;
 
     dsn::task_tracker _tracker;
     // the thread access checker

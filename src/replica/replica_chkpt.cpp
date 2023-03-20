@@ -70,6 +70,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
 namespace dsn {

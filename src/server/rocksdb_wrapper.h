@@ -29,16 +29,13 @@
 
 #include "pegasus_value_schema.h"
 #include "replica/replica_base.h"
+#include "utils/metrics.h"
 #include "utils/string_view.h"
 
 namespace rocksdb {
 class ColumnFamilyHandle;
 class DB;
 } // namespace rocksdb
-
-namespace dsn {
-class perf_counter_wrapper;
-} // namespace dsn
 
 namespace pegasus {
 
