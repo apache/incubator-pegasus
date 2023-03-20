@@ -184,10 +184,13 @@ replica::replica(replica_stub *stub,
       METRIC_VAR_INIT_replica(throttling_rejected_write_requests),
       METRIC_VAR_INIT_replica(throttling_delayed_read_requests),
       METRIC_VAR_INIT_replica(throttling_rejected_read_requests),
+      METRIC_VAR_INIT_replica(backup_requests),
       METRIC_VAR_INIT_replica(throttling_delayed_backup_requests),
       METRIC_VAR_INIT_replica(throttling_rejected_backup_requests),
       METRIC_VAR_INIT_replica(splitting_rejected_write_requests),
-      METRIC_VAR_INIT_replica(splitting_rejected_read_requests)
+      METRIC_VAR_INIT_replica(splitting_rejected_read_requests),
+      METRIC_VAR_INIT_replica(bulk_load_ingestion_rejected_write_requests),
+      METRIC_VAR_INIT_replica(dup_rejected_non_idempotent_write_requests)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
