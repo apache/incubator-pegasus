@@ -120,17 +120,18 @@ class test_checker;
 
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
     do {                                                                                           \
-        if (_validate_partition_hash) {                                                            \
-            if (_split_mgr->should_reject_request()) {                                             \
-                response_client_##op_type(request, ERR_SPLITTING);                                 \
-                METRIC_VAR_INCREMENT(splitting_rejected_##op_type##_requests);                     \
-                return;                                                                            \
-            }                                                                                      \
-            if (!_split_mgr->check_partition_hash(                                                 \
-                    ((dsn::message_ex *)request)->header->client.partition_hash, #op_type)) {      \
-                response_client_##op_type(request, ERR_PARENT_PARTITION_MISUSED);                  \
-                return;                                                                            \
-            }                                                                                      \
+        if (!_validate_partition_hash) {                                                           \
+            break;                                                                                 \
+        }                                                                                          \
+        if (_split_mgr->should_reject_request()) {                                                 \
+            response_client_##op_type(request, ERR_SPLITTING);                                     \
+            METRIC_VAR_INCREMENT(splitting_rejected_##op_type##_requests);                         \
+            return;                                                                                \
+        }                                                                                          \
+        if (!_split_mgr->check_partition_hash(                                                     \
+                ((dsn::message_ex *)request)->header->client.partition_hash, #op_type)) {          \
+            response_client_##op_type(request, ERR_PARENT_PARTITION_MISUSED);                      \
+            return;                                                                                \
         }                                                                                          \
     } while (0)
 
