@@ -63,6 +63,7 @@ github:
       required_linear_history: true
   collaborators:
     - GehaFearless
+    - shalk
     - WHBANG
 
 notifications:
