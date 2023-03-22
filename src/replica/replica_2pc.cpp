@@ -72,6 +72,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
+#include "utils/metrics.h"
 #include "utils/ports.h"
 #include "utils/thread_access_checker.h"
 #include "utils/uniq_timestamp_us.h"
@@ -164,12 +165,12 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     if (is_duplication_master() && !spec->rpc_request_is_write_idempotent) {
         // Ignore non-idempotent write, because duplication provides no guarantee of atomicity to
         // make this write produce the same result on multiple clusters.
-        _counter_dup_disabled_non_idempotent_write_count->increment();
+        METRIC_VAR_INCREMENT(dup_rejected_non_idempotent_write_requests);
         response_client_write(request, ERR_OPERATION_DISABLED);
         return;
     }
 
-    CHECK_REQUEST_IF_SPLITTING(write)
+    CHECK_REQUEST_IF_SPLITTING(write);
 
     if (partition_status::PS_PRIMARY != status()) {
         response_client_write(request, ERR_INVALID_STATE);
@@ -185,7 +186,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     if (_is_bulk_load_ingestion) {
         if (request->rpc_code() != dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
             // reject write requests during ingestion
-            _counter_recent_write_bulk_load_ingestion_reject_count->increment();
+            METRIC_VAR_INCREMENT(bulk_load_ingestion_rejected_write_requests);
             response_client_write(request, ERR_OPERATION_DISABLED);
         } else {
             response_client_write(request, ERR_NO_NEED_OPERATE);
