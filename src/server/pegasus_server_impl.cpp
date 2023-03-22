@@ -59,6 +59,7 @@
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "replica_admin_types.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
