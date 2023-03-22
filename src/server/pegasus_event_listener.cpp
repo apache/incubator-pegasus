@@ -34,85 +34,78 @@ namespace rocksdb {
 class DB;
 } // namespace rocksdb
 
+METRIC_DEFINE_counter(replica,
+                          rdb_flush_completed_count,
+                          dsn::metric_unit::kFlushes,
+                          "The number of completed rocksdb flushes");
+
+METRIC_DEFINE_counter(replica,
+                          rdb_flush_output_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The size of rocksdb flush output in bytes");
+
+METRIC_DEFINE_counter(replica,
+                          rdb_compaction_completed_count,
+                          dsn::metric_unit::kCompactions,
+                          "The number of completed rocksdb compactions");
+
+METRIC_DEFINE_counter(replica,
+                          rdb_compaction_input_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The size of rocksdb compaction input in bytes");
+
+METRIC_DEFINE_counter(replica,
+                          rdb_compaction_output_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The size of rocksdb compaction output in bytes");
+
+METRIC_DEFINE_counter(replica,
+                          rdb_changed_delayed_writes,
+                          dsn::metric_unit::kWrites,
+                          "The number of rocksdb delayed writes changed from another write stall condition");
+
+METRIC_DEFINE_counter(replica,
+                          rdb_changed_stopped_writes,
+                          dsn::metric_unit::kWrites,
+                          "The number of rocksdb stopped writes changed from another write stall condition");
+
 namespace pegasus {
 namespace server {
 
-pegasus_event_listener::pegasus_event_listener(replica_base *r) : replica_base(r)
+pegasus_event_listener::pegasus_event_listener(replica_base *r) : replica_base(r),
+      METRIC_VAR_INIT_replica(rdb_flush_completed_count),
+      METRIC_VAR_INIT_replica(rdb_flush_output_bytes),
+      METRIC_VAR_INIT_replica(rdb_compaction_completed_count),
+      METRIC_VAR_INIT_replica(rdb_compaction_input_bytes),
+      METRIC_VAR_INIT_replica(rdb_compaction_output_bytes),
+      METRIC_VAR_INIT_replica(rdb_changed_delayed_writes),
+      METRIC_VAR_INIT_replica(rdb_changed_stopped_writes)
 {
-    _pfc_recent_flush_completed_count.init_app_counter("app.pegasus",
-                                                       "recent.flush.completed.count",
-                                                       COUNTER_TYPE_VOLATILE_NUMBER,
-                                                       "rocksdb recent flush completed count");
-    _pfc_recent_flush_output_bytes.init_app_counter("app.pegasus",
-                                                    "recent.flush.output.bytes",
-                                                    COUNTER_TYPE_VOLATILE_NUMBER,
-                                                    "rocksdb recent flush output bytes");
-    _pfc_recent_compaction_completed_count.init_app_counter(
-        "app.pegasus",
-        "recent.compaction.completed.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "rocksdb recent compaction completed count");
-    _pfc_recent_compaction_input_bytes.init_app_counter("app.pegasus",
-                                                        "recent.compaction.input.bytes",
-                                                        COUNTER_TYPE_VOLATILE_NUMBER,
-                                                        "rocksdb recent compaction input bytes");
-    _pfc_recent_compaction_output_bytes.init_app_counter("app.pegasus",
-                                                         "recent.compaction.output.bytes",
-                                                         COUNTER_TYPE_VOLATILE_NUMBER,
-                                                         "rocksdb recent compaction output bytes");
-    _pfc_recent_write_change_delayed_count.init_app_counter(
-        "app.pegasus",
-        "recent.write.change.delayed.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "rocksdb recent write change delayed count");
-    _pfc_recent_write_change_stopped_count.init_app_counter(
-        "app.pegasus",
-        "recent.write.change.stopped.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "rocksdb recent write change stopped count");
-
-    // replica-level perfcounter
-    std::string counter_str = fmt::format("recent_rdb_compaction_input_bytes@{}", r->get_gpid());
-    _pfc_recent_rdb_compaction_input_bytes.init_app_counter(
-        "app.pegasus",
-        counter_str.c_str(),
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "rocksdb recent compaction input bytes");
-
-    counter_str = fmt::format("recent_rdb_compaction_output_bytes@{}", r->get_gpid());
-    _pfc_recent_rdb_compaction_output_bytes.init_app_counter(
-        "app.pegasus",
-        counter_str.c_str(),
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "rocksdb recent compaction output bytes");
 }
 
 void pegasus_event_listener::OnFlushCompleted(rocksdb::DB *db,
-                                              const rocksdb::FlushJobInfo &flush_job_info)
+                                              const rocksdb::FlushJobInfo &info)
 {
-    _pfc_recent_flush_completed_count->increment();
-    _pfc_recent_flush_output_bytes->add(flush_job_info.table_properties.data_size);
+    METRIC_VAR_INCREMENT(rdb_flush_completed_count);
+    METRIC_VAR_INCREMENT_BY(rdb_flush_output_bytes, info.table_properties.data_size);
 }
 
 void pegasus_event_listener::OnCompactionCompleted(rocksdb::DB *db,
-                                                   const rocksdb::CompactionJobInfo &ci)
+                                                   const rocksdb::CompactionJobInfo &info)
 {
-    _pfc_recent_compaction_completed_count->increment();
-    _pfc_recent_compaction_input_bytes->add(ci.stats.total_input_bytes);
-    _pfc_recent_compaction_output_bytes->add(ci.stats.total_output_bytes);
-
-    _pfc_recent_rdb_compaction_input_bytes->add(ci.stats.total_input_bytes);
-    _pfc_recent_rdb_compaction_output_bytes->add(ci.stats.total_output_bytes);
+    METRIC_VAR_INCREMENT(rdb_compaction_completed_count);
+    METRIC_VAR_INCREMENT_BY(rdb_compaction_input_bytes, info.stats.total_input_bytes);
+    METRIC_VAR_INCREMENT_BY(rdb_compaction_output_bytes, info.stats.total_output_bytes);
 }
 
 void pegasus_event_listener::OnStallConditionsChanged(const rocksdb::WriteStallInfo &info)
 {
     if (info.condition.cur == rocksdb::WriteStallCondition::kDelayed) {
         LOG_ERROR_PREFIX("rocksdb write delayed");
-        _pfc_recent_write_change_delayed_count->increment();
+        METRIC_VAR_INCREMENT(rdb_changed_delayed_writes);
     } else if (info.condition.cur == rocksdb::WriteStallCondition::kStopped) {
         LOG_ERROR_PREFIX("rocksdb write stopped");
-        _pfc_recent_write_change_stopped_count->increment();
+        METRIC_VAR_INCREMENT(rdb_changed_stopped_writes);
     }
 }
 
