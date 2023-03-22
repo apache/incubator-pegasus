@@ -42,13 +42,13 @@
 #include "pegasus_scan_context.h"
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "range_read_limiter.h"
 #include "replica/replication_app_base.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/metrics.h"
 #include "utils/rand.h"
 #include "utils/synchronize.h"
 
@@ -69,6 +69,9 @@ class WriteBufferManager;
 namespace dsn {
 class blob;
 class message_ex;
+class perf_counter_wrapper;
+class rpc_address;
+
 namespace replication {
 class detect_hotkey_request;
 class detect_hotkey_response;
