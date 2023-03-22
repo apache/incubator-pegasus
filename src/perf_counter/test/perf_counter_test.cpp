@@ -38,6 +38,7 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <stdlib.h>
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <memory>
