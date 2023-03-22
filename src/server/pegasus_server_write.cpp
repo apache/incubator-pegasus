@@ -37,10 +37,12 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "server/pegasus_write_service.h"
+#include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
+#include "utils/string_view.h"
 
 METRIC_DEFINE_counter(replica,
                       corrupt_writes,

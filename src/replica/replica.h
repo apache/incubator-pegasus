@@ -42,7 +42,6 @@
 #include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "prepare_list.h"
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
@@ -56,6 +55,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
@@ -113,10 +113,13 @@ class test_checker;
 }
 
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
-    if (_validate_partition_hash) {                                                                \
+    do {                                                                                           \
+        if (!_validate_partition_hash) {                                                           \
+            break;                                                                                 \
+        }                                                                                          \
         if (_split_mgr->should_reject_request()) {                                                 \
             response_client_##op_type(request, ERR_SPLITTING);                                     \
-            _counter_recent_##op_type##_splitting_reject_count->increment();                       \
+            METRIC_VAR_INCREMENT(splitting_rejected_##op_type##_requests);                         \
             return;                                                                                \
         }                                                                                          \
         if (!_split_mgr->check_partition_hash(                                                     \
@@ -124,7 +127,7 @@ class test_checker;
             response_client_##op_type(request, ERR_PARENT_PARTITION_MISUSED);                      \
             return;                                                                                \
         }                                                                                          \
-    }
+    } while (0)
 
 DSN_DECLARE_bool(reject_write_when_disk_insufficient);
 
@@ -521,6 +524,9 @@ private:
     // use Apache Ranger for replica access control
     bool access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const;
 
+    // Currently only used for unit test to get the count of backup requests.
+    int64_t get_backup_request_count() const;
+
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
@@ -642,19 +648,19 @@ private:
     std::unique_ptr<replica_follower> _replica_follower;
 
     // perf counters
-    perf_counter_wrapper _counter_private_log_size;
-    perf_counter_wrapper _counter_recent_write_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_write_throttling_reject_count;
-    perf_counter_wrapper _counter_recent_read_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_read_throttling_reject_count;
-    perf_counter_wrapper _counter_recent_backup_request_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_backup_request_throttling_reject_count;
-    perf_counter_wrapper _counter_recent_write_splitting_reject_count;
-    perf_counter_wrapper _counter_recent_read_splitting_reject_count;
-    perf_counter_wrapper _counter_recent_write_bulk_load_ingestion_reject_count;
+    METRIC_VAR_DECLARE_gauge_int64(private_log_size_mb);
+    METRIC_VAR_DECLARE_counter(throttling_delayed_write_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(throttling_delayed_read_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_read_requests);
+    METRIC_VAR_DECLARE_counter(backup_requests);
+    METRIC_VAR_DECLARE_counter(throttling_delayed_backup_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_backup_requests);
+    METRIC_VAR_DECLARE_counter(splitting_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(splitting_rejected_read_requests);
+    METRIC_VAR_DECLARE_counter(bulk_load_ingestion_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(dup_rejected_non_idempotent_write_requests);
     std::vector<perf_counter *> _counters_table_level_latency;
-    perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;
-    perf_counter_wrapper _counter_backup_request_qps;
 
     dsn::task_tracker _tracker;
     // the thread access checker
