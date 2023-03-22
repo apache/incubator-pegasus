@@ -101,10 +101,7 @@ public:
         return stub->_counter_recent_write_size_exceed_threshold_count->get_value();
     }
 
-    int get_table_level_backup_request_qps()
-    {
-        return _mock_replica->_counter_backup_request_qps->get_integer_value();
-    }
+    int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
 
     bool get_validate_partition_hash() const { return _mock_replica->_validate_partition_hash; }
 
@@ -290,7 +287,7 @@ TEST_P(replica_test, write_size_limited)
     ASSERT_EQ(get_write_size_exceed_threshold_count(), count);
 }
 
-TEST_P(replica_test, backup_request_qps)
+TEST_P(replica_test, backup_request_count)
 {
     // create backup request
     struct dsn::message_header header;
@@ -302,11 +299,7 @@ TEST_P(replica_test, backup_request_qps)
     backup_request->io_session = sim_net->create_client_session(rpc_address());
 
     _mock_replica->on_client_read(backup_request);
-
-    // We have to sleep >= 0.1s, or the value this perf-counter will be 0, according to the
-    // implementation of perf-counter which type is COUNTER_TYPE_RATE.
-    usleep(1e5);
-    ASSERT_GT(get_table_level_backup_request_qps(), 0);
+    ASSERT_EQ(get_backup_request_count(), 1);
 }
 
 TEST_P(replica_test, query_data_version_test)

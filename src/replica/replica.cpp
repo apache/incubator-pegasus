@@ -44,6 +44,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "perf_counter/perf_counters.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
@@ -61,6 +62,66 @@
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 #include "utils/rand.h"
+
+METRIC_DEFINE_gauge_int64(replica,
+                          private_log_size_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The size of private log in MB");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed write requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected write requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed read requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected read requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      backup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of backup requests");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_backup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed backup requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_backup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected backup requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_rejected_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected write requests by splitting");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_rejected_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected read requests by splitting");
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_ingestion_rejected_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected write requests by bulk load ingestion");
+
+METRIC_DEFINE_counter(replica,
+                      dup_rejected_non_idempotent_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected non-idempotent write requests by duplication");
 
 namespace dsn {
 namespace replication {
@@ -114,7 +175,19 @@ replica::replica(replica_stub *stub,
       // todo(jiashuo1): app.duplicating need rename
       _is_duplication_master(app.duplicating),
       _is_duplication_follower(is_duplication_follower),
-      _backup_mgr(new replica_backup_manager(this))
+      _backup_mgr(new replica_backup_manager(this)),
+      METRIC_VAR_INIT_replica(private_log_size_mb),
+      METRIC_VAR_INIT_replica(throttling_delayed_write_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_write_requests),
+      METRIC_VAR_INIT_replica(throttling_delayed_read_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_read_requests),
+      METRIC_VAR_INIT_replica(backup_requests),
+      METRIC_VAR_INIT_replica(throttling_delayed_backup_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_backup_requests),
+      METRIC_VAR_INIT_replica(splitting_rejected_write_requests),
+      METRIC_VAR_INIT_replica(splitting_rejected_read_requests),
+      METRIC_VAR_INIT_replica(bulk_load_ingestion_rejected_write_requests),
+      METRIC_VAR_INIT_replica(dup_rejected_non_idempotent_write_requests)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
@@ -130,58 +203,8 @@ replica::replica(replica_stub *stub,
     _disk_migrator = std::make_unique<replica_disk_migrator>(this);
     _replica_follower = std::make_unique<replica_follower>(this);
 
-    std::string counter_str = fmt::format("private.log.size(MB)@{}", gpid);
-    _counter_private_log_size.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.throttling.delay.count@{}", gpid);
-    _counter_recent_write_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.throttling.reject.count@{}", gpid);
-    _counter_recent_write_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.throttling.delay.count@{}", gpid);
-    _counter_recent_read_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.throttling.reject.count@{}", gpid);
-    _counter_recent_read_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str =
-        fmt::format("recent.backup.request.throttling.delay.count@{}", _app_info.app_name);
-    _counter_recent_backup_request_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str =
-        fmt::format("recent.backup.request.throttling.reject.count@{}", _app_info.app_name);
-    _counter_recent_backup_request_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("dup.disabled_non_idempotent_write_count@{}", _app_info.app_name);
-    _counter_dup_disabled_non_idempotent_write_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.splitting.reject.count@{}", gpid);
-    _counter_recent_read_splitting_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.splitting.reject.count@{}", gpid);
-    _counter_recent_write_splitting_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.bulk.load.ingestion.reject.count@{}", gpid);
-    _counter_recent_write_bulk_load_ingestion_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
     // init table level latency perf counters
     init_table_level_latency_counters();
-
-    counter_str = fmt::format("backup_request_qps@{}", _app_info.app_name);
-    _counter_backup_request_qps.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_RATE, counter_str.c_str());
 
     if (need_restore) {
         // add an extra env for restore
@@ -258,7 +281,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    CHECK_REQUEST_IF_SPLITTING(read)
+    CHECK_REQUEST_IF_SPLITTING(read);
 
     if (status() == partition_status::PS_INACTIVE ||
         status() == partition_status::PS_POTENTIAL_SECONDARY) {
@@ -290,7 +313,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
         if (!ignore_throttling && throttle_backup_request(request)) {
             return;
         }
-        _counter_backup_request_qps->increment();
+        METRIC_VAR_INCREMENT(backup_requests);
     }
 
     uint64_t start_time_ns = dsn_now_ns();
@@ -524,8 +547,6 @@ void replica::close()
         _disk_migrator.reset();
     }
 
-    _counter_private_log_size.clear();
-
     // duplication_impl may have ongoing tasks.
     // release it before release replica.
     _duplication_mgr.reset();
@@ -603,6 +624,8 @@ bool replica::access_controller_allowed(message_ex *msg, const ranger::access_ty
 {
     return !_access_controller->is_enable_ranger_acl() || _access_controller->allowed(msg, ac_type);
 }
+
+int64_t replica::get_backup_request_count() const { return METRIC_VAR_VALUE(backup_requests); }
 
 } // namespace replication
 } // namespace dsn

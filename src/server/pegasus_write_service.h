@@ -21,15 +21,16 @@
 
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 #include "common//duplication_common.h"
 #include "common/common.h"
 #include "replica/replica_base.h"
 #include "utils/errors.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 class blob;
+
 namespace apps {
 class check_and_mutate_request;
 class check_and_mutate_response;

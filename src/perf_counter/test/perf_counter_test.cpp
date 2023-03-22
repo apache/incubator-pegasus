@@ -26,6 +26,7 @@
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdlib.h>
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <memory>

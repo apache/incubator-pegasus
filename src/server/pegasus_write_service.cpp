@@ -19,20 +19,23 @@
 
 #include <fmt/core.h>
 #include <rocksdb/status.h>
+#include <stddef.h>
 #include <algorithm>
 #include <string>
+#include <functional>
+#include <iosfwd>
+#include <set>
+#include <vector>
 
 #include "base/pegasus_rpc_types.h"
 #include "bulk_load_types.h"
 #include "capacity_unit_calculator.h"
 #include "common/duplication_common.h"
-#include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "duplication_internal_types.h"
 #include "pegasus_value_schema.h"
 #include "pegasus_write_service.h"
 #include "pegasus_write_service_impl.h"
-#include "perf_counter/perf_counter.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
@@ -40,10 +43,11 @@
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "server/pegasus_server_impl.h"
-#include "utils/defer.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 class blob;
