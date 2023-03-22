@@ -30,6 +30,7 @@
 #include "replica/replica_base.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/task/task_code.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 class blob;
