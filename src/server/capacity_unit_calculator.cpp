@@ -20,19 +20,18 @@
 #include "capacity_unit_calculator.h"
 
 #include <rocksdb/status.h>
-#include <stdio.h>
 #include <sys/param.h>
 #include <cmath>
-#include <string>
+#include <cstdint>
 
-#include "common/gpid.h"
 #include "hotkey_collector.h"
-#include "perf_counter/perf_counter.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/rpc/rpc_message.h"
+#include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 #include "utils/token_bucket_throttling_controller.h"
 
 METRIC_DEFINE_counter(replica,
