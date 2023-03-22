@@ -23,12 +23,13 @@
 #include <memory>
 #include <vector>
 
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica_base.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 class blob;
 class message_ex;
+
 namespace apps {
 class full_data;
 class key_value;
