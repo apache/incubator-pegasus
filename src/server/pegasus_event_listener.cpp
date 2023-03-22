@@ -35,44 +35,47 @@ class DB;
 } // namespace rocksdb
 
 METRIC_DEFINE_counter(replica,
-                          rdb_flush_completed_count,
-                          dsn::metric_unit::kFlushes,
-                          "The number of completed rocksdb flushes");
+                      rdb_flush_completed_count,
+                      dsn::metric_unit::kFlushes,
+                      "The number of completed rocksdb flushes");
 
 METRIC_DEFINE_counter(replica,
-                          rdb_flush_output_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The size of rocksdb flush output in bytes");
+                      rdb_flush_output_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of rocksdb flush output in bytes");
 
 METRIC_DEFINE_counter(replica,
-                          rdb_compaction_completed_count,
-                          dsn::metric_unit::kCompactions,
-                          "The number of completed rocksdb compactions");
+                      rdb_compaction_completed_count,
+                      dsn::metric_unit::kCompactions,
+                      "The number of completed rocksdb compactions");
 
 METRIC_DEFINE_counter(replica,
-                          rdb_compaction_input_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The size of rocksdb compaction input in bytes");
+                      rdb_compaction_input_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of rocksdb compaction input in bytes");
 
 METRIC_DEFINE_counter(replica,
-                          rdb_compaction_output_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The size of rocksdb compaction output in bytes");
+                      rdb_compaction_output_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of rocksdb compaction output in bytes");
 
-METRIC_DEFINE_counter(replica,
-                          rdb_changed_delayed_writes,
-                          dsn::metric_unit::kWrites,
-                          "The number of rocksdb delayed writes changed from another write stall condition");
+METRIC_DEFINE_counter(
+    replica,
+    rdb_changed_delayed_writes,
+    dsn::metric_unit::kWrites,
+    "The number of rocksdb delayed writes changed from another write stall condition");
 
-METRIC_DEFINE_counter(replica,
-                          rdb_changed_stopped_writes,
-                          dsn::metric_unit::kWrites,
-                          "The number of rocksdb stopped writes changed from another write stall condition");
+METRIC_DEFINE_counter(
+    replica,
+    rdb_changed_stopped_writes,
+    dsn::metric_unit::kWrites,
+    "The number of rocksdb stopped writes changed from another write stall condition");
 
 namespace pegasus {
 namespace server {
 
-pegasus_event_listener::pegasus_event_listener(replica_base *r) : replica_base(r),
+pegasus_event_listener::pegasus_event_listener(replica_base *r)
+    : replica_base(r),
       METRIC_VAR_INIT_replica(rdb_flush_completed_count),
       METRIC_VAR_INIT_replica(rdb_flush_output_bytes),
       METRIC_VAR_INIT_replica(rdb_compaction_completed_count),
@@ -83,8 +86,7 @@ pegasus_event_listener::pegasus_event_listener(replica_base *r) : replica_base(r
 {
 }
 
-void pegasus_event_listener::OnFlushCompleted(rocksdb::DB *db,
-                                              const rocksdb::FlushJobInfo &info)
+void pegasus_event_listener::OnFlushCompleted(rocksdb::DB *db, const rocksdb::FlushJobInfo &info)
 {
     METRIC_VAR_INCREMENT(rdb_flush_completed_count);
     METRIC_VAR_INCREMENT_BY(rdb_flush_output_bytes, info.table_properties.data_size);
