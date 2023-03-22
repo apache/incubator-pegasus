@@ -540,27 +540,28 @@ void meta_service::register_rpc_handlers()
                                          &meta_service::on_set_max_replica_count);
 }
 
-int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address)
+meta_leader_state meta_service::check_leader(dsn::message_ex *req,
+                                             dsn::rpc_address *forward_address)
 {
     dsn::rpc_address leader;
     if (!_failure_detector->get_leader(&leader)) {
         if (!req->header->context.u.is_forward_supported) {
             if (forward_address != nullptr)
                 *forward_address = leader;
-            return -1;
+            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
         }
 
         LOG_DEBUG("leader address: {}", leader);
         if (!leader.is_invalid()) {
             dsn_rpc_forward(req, leader);
-            return 0;
+            return meta_leader_state::kNotLeaderAndCanForwardRpc;
         } else {
             if (forward_address != nullptr)
                 forward_address->set_invalid();
-            return -1;
+            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
         }
     }
-    return 1;
+    return meta_leader_state::kIsLeader;
 }
 
 // table operations
@@ -813,13 +814,13 @@ void meta_service::on_start_recovery(configuration_recovery_rpc rpc)
 {
     configuration_recovery_response &response = rpc.response();
     LOG_INFO("got start recovery request, start to do recovery");
-    int result = check_leader(rpc, nullptr);
+    auto result = check_leader(rpc, nullptr);
     // request has been forwarded to others
-    if (result == 0) {
+    if (result == meta_leader_state::kNotLeaderAndCanForwardRpc) {
         return;
     }
 
-    if (result == -1) {
+    if (result == meta_leader_state::kNotLeaderAndCannotForwardRpc) {
         response.err = ERR_FORWARD_TO_OTHERS;
     } else {
         zauto_write_lock l(_meta_lock);
