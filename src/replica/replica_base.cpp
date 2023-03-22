@@ -18,6 +18,8 @@
 #include "replica_base.h"
 
 #include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <iosfwd>
 
 METRIC_DEFINE_entity(replica);
 
