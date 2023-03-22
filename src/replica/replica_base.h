@@ -26,7 +26,10 @@
 
 #pragma once
 
+#include <string>
+
 #include "common/gpid.h"
+#include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 #include "utils/string_view.h"
 
