@@ -21,8 +21,8 @@
 
 #include <rocksdb/listener.h>
 
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica_base.h"
+#include "utils/metrics.h"
 
 namespace rocksdb {
 class DB;
