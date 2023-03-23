@@ -621,6 +621,9 @@ enum class metric_unit : size_t
     kKeys,
     kFiles,
     kAmplification,
+    kFlushes,
+    kCompactions,
+    kWrites,
     kInvalidUnit,
 };
 
