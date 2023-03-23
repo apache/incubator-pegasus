@@ -1234,6 +1234,8 @@ public class PegasusTable implements PegasusTableInterface {
         Throwable cause = fu.cause();
         partitionToPException.set(
             i, new PException("Get value of keys[" + i + "] failed: " + cause.getMessage(), cause));
+        Map<Pair<String, String>, byte[]> emptyMap = new HashMap<>();
+        resultMapList.add(emptyMap);
       }
     }
 
