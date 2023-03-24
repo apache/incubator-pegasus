@@ -71,6 +71,12 @@ public:
 
     ~ranger_resource_policy_manager() = default;
 
+    // When using Ranger for ACL, periodically pull policies from Ranger service.
+    void start();
+
+    // Return true if the 'user_name' is allowed to access 'app_name' via 'rpc_code'.
+    bool allowed(const int rpc_code, const std::string &user_name, const std::string &app_name);
+
 private:
     // Parse Ranger ACL policies from 'data' in JSON format into 'policies'.
     static void parse_policies_from_json(const rapidjson::Value &data,
@@ -78,9 +84,6 @@ private:
 
     // Update policies from Ranger service.
     dsn::error_code update_policies_from_ranger_service();
-
-    // Pull policies in JSON format from Ranger service.
-    dsn::error_code pull_policies_from_ranger_service(std::string *ranger_policies) const;
 
     // Load policies from JSON formated string.
     dsn::error_code load_policies_from_json(const std::string &data);

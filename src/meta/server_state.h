@@ -173,7 +173,8 @@ public:
     void recall_app(dsn::message_ex *msg);
     void rename_app(configuration_rename_app_rpc rpc);
     void list_apps(const configuration_list_apps_request &request,
-                   configuration_list_apps_response &response);
+                   configuration_list_apps_response &response,
+                   dsn::message_ex *msg = nullptr) const;
     void restore_app(dsn::message_ex *msg);
 
     // app env operations

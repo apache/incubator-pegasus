@@ -71,6 +71,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
+#include "runtime/security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"
@@ -1438,14 +1439,17 @@ void server_state::recall_app(dsn::message_ex *msg)
 }
 
 void server_state::list_apps(const configuration_list_apps_request &request,
-                             configuration_list_apps_response &response)
+                             configuration_list_apps_response &response,
+                             dsn::message_ex *msg) const
 {
     LOG_DEBUG("list app request, status({})", request.status);
     zauto_read_lock l(_lock);
-    for (auto &kv : _all_apps) {
+    for (const auto &kv : _all_apps) {
         app_state &app = *(kv.second);
         if (request.status == app_status::AS_INVALID || request.status == app.status) {
-            response.infos.push_back(app);
+            if (nullptr == msg || _meta_svc->get_access_controller()->allowed(msg, app.app_name)) {
+                response.infos.push_back(app);
+            }
         }
     }
     response.err = dsn::ERR_OK;

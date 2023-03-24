@@ -26,6 +26,10 @@
 namespace dsn {
 class message_ex;
 
+namespace ranger {
+class ranger_resource_policy_manager;
+}
+
 namespace security {
 
 class access_controller
@@ -66,7 +70,8 @@ protected:
     std::unordered_set<std::string> _super_users;
 };
 
-std::unique_ptr<access_controller> create_meta_access_controller();
+std::shared_ptr<access_controller> create_meta_access_controller(
+    const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager);
 
 std::unique_ptr<access_controller>
 create_replica_access_controller(const std::string &replica_name);

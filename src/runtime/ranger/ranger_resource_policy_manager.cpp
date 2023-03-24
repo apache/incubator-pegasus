@@ -46,6 +46,7 @@
 #include "ranger_resource_policy_manager.h"
 #include "rapidjson/allocators.h"
 #include "runtime/ranger/ranger_resource_policy.h"
+#include "runtime/ranger/ranger_resource_policy_manager.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -123,6 +124,20 @@ const std::map<std::string, access_type> kAccessTypeMaping({{"READ", access_type
                                                             {"LIST", access_type::kList},
                                                             {"METADATA", access_type::kMetadata},
                                                             {"CONTROL", access_type::kControl}});
+
+// Pull policies in JSON format from Ranger service.
+dsn::error_code pull_policies_from_ranger_service(std::string *ranger_policies)
+{
+    std::string cmd =
+        fmt::format("curl {}/{}", FLAGS_ranger_service_url, FLAGS_ranger_service_name);
+    std::stringstream resp;
+    if (dsn::utils::pipe_execute(cmd.c_str(), resp) != 0) {
+        return dsn::ERR_SYNC_RANGER_POLICIES_FAILED;
+    }
+
+    *ranger_policies = resp.str();
+    return dsn::ERR_OK;
+}
 } // anonymous namespace
 
 const std::chrono::milliseconds kLoadRangerPolicyRetryDelayMs(10000);
@@ -187,6 +202,70 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                              _ac_type_of_database_rpcs);
 }
 
+void ranger_resource_policy_manager::start()
+{
+    tasking::enqueue_timer(LPC_USE_RANGER_ACCESS_CONTROL,
+                           &_tracker,
+                           [this]() { this->update_policies_from_ranger_service(); },
+                           std::chrono::seconds(FLAGS_update_ranger_policy_interval_sec),
+                           0,
+                           std::chrono::milliseconds(1));
+}
+
+bool ranger_resource_policy_manager::allowed(const int rpc_code,
+                                             const std::string &user_name,
+                                             const std::string &database_name)
+{
+    do {
+        const auto &ac_type = _ac_type_of_global_rpcs.find(rpc_code);
+        // It's not a GLOBAL rpc code.
+        if (ac_type == _ac_type_of_global_rpcs.end()) {
+            break;
+        }
+
+        // Check if it is allowed by any GLOBAL policy.
+        utils::auto_read_lock l(_global_policies_lock);
+        for (const auto &policy : _global_policies_cache) {
+            if (policy.policies.allowed(ac_type->second, user_name)) {
+                return true;
+            }
+        }
+
+        // It's not allowed to access except list_app.
+        // list_app rpc code is in both GLOBAL and DATABASE policies, check the DATABASE policies
+        // later.
+        if (rpc_code != RPC_CM_LIST_APPS.code()) {
+            return false;
+        }
+    } while (false);
+
+    do {
+        const auto &ac_type = _ac_type_of_database_rpcs.find(rpc_code);
+        // It's not a DATABASE rpc code.
+        if (ac_type == _ac_type_of_database_rpcs.end()) {
+            break;
+        }
+
+        // Check if it is allowed by any DATABASE policy.
+        utils::auto_read_lock l(_database_policies_lock);
+        for (const auto &policy : _database_policies_cache) {
+            if (!policy.policies.allowed(ac_type->second, user_name)) {
+                continue;
+            }
+            // Legacy tables may don't contain database section.
+            if (database_name.empty() && policy.database_names.count("*") != 0) {
+                return true;
+            }
+            if (policy.database_names.count(database_name) != 0) {
+                return true;
+            }
+        }
+    } while (false);
+
+    // The check that does not match any policy returns false.
+    return false;
+}
+
 void ranger_resource_policy_manager::parse_policies_from_json(const rapidjson::Value &data,
                                                               std::vector<policy_item> &policies)
 {
@@ -236,20 +315,6 @@ dsn::error_code ranger_resource_policy_manager::update_policies_from_ranger_serv
 
     start_to_dump_and_sync_policies();
 
-    return dsn::ERR_OK;
-}
-
-dsn::error_code ranger_resource_policy_manager::pull_policies_from_ranger_service(
-    std::string *ranger_policies) const
-{
-    std::string cmd =
-        fmt::format("curl {}/{}", FLAGS_ranger_service_url, FLAGS_ranger_service_name);
-    std::stringstream resp;
-    if (dsn::utils::pipe_execute(cmd.c_str(), resp) != 0) {
-        return dsn::ERR_SYNC_RANGER_POLICIES_FAILED;
-    }
-
-    *ranger_policies = resp.str();
     return dsn::ERR_OK;
 }
 
