@@ -19,14 +19,11 @@
 
 #include "pegasus_mutation_duplicator.h"
 
-#include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
 #include <chrono>
 #include <cstdint>
 #include <functional>
-#include <iosfwd>
 #include <memory>
 #include <tuple>
 #include <utility>
@@ -34,16 +31,15 @@
 
 #include "client_lib/pegasus_client_impl.h"
 #include "common/duplication_common.h"
-#include "common/gpid.h"
 #include "duplication_internal_types.h"
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
-#include "perf_counter/perf_counter.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_message.h"
 #include "server/pegasus_write_service.h"
+#include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
