@@ -25,7 +25,6 @@
 #include <map>
 #include <string>
 
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "rrdb/rrdb.client.h"
 #include "runtime/pipeline.h"
@@ -33,6 +32,7 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/chrono_literals.h"
 #include "absl/strings/string_view.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -89,8 +89,8 @@ private:
 
     size_t _total_shipped_size{0};
 
-    dsn::perf_counter_wrapper _shipped_ops;
-    dsn::perf_counter_wrapper _failed_shipping_ops;
+    METRIC_VAR_DECLARE_counter(successful_mutation_dup_requests);
+    METRIC_VAR_DECLARE_counter(failed_mutation_dup_requests);
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and
