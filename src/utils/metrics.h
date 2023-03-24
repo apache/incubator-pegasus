@@ -289,8 +289,6 @@ private:
 
 using metric_entity_ptr = ref_ptr<metric_entity>;
 
-metric_entity_ptr server_metric_entity();
-
 // This struct includes a set of filters for both entities and metrics requested by client.
 struct metric_filters
 {
@@ -1448,3 +1446,9 @@ private:
 };
 
 } // namespace dsn
+
+// Since server_metric_entity() will be called in macros such as METRIC_VAR_INIT_server(), its
+// declaration should be put outside any namespace (for example dsn). server_metric_entity()
+// will not be qualified with any namespace. Once it was qualified with some namespace, its name
+// would not be resolved in any other namespace.
+dsn::metric_entity_ptr server_metric_entity();
