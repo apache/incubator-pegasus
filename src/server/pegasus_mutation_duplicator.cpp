@@ -109,9 +109,10 @@ using namespace dsn::literals::chrono_literals;
 pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::replica_base *r,
                                                          dsn::string_view remote_cluster,
                                                          dsn::string_view app)
-    : mutation_duplicator(r), _remote_cluster(remote_cluster),
-    METRIC_VAR_INIT_replica(successful_mutation_dup_requests),
-    METRIC_VAR_INIT_replica(failed_mutation_dup_requests)
+    : mutation_duplicator(r),
+      _remote_cluster(remote_cluster),
+      METRIC_VAR_INIT_replica(successful_mutation_dup_requests),
+      METRIC_VAR_INIT_replica(failed_mutation_dup_requests)
 {
     // initialize pegasus-client when this class is first time used.
     static __attribute__((unused)) bool _dummy = pegasus_client_factory::initialize(nullptr);
