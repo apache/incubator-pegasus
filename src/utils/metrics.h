@@ -164,6 +164,7 @@ class error_code;
 #define METRIC_VAR_INIT(name, entity, ...)                                                         \
     _##name(METRIC_##name.instantiate(entity##_metric_entity(), ##__VA_ARGS__))
 #define METRIC_VAR_INIT_replica(name, ...) METRIC_VAR_INIT(name, replica, ##__VA_ARGS__)
+#define METRIC_VAR_INIT_server(name, ...) METRIC_VAR_INIT(name, server, ##__VA_ARGS__)
 
 // Perform increment-related operations on metrics including gauge and counter.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
@@ -287,6 +288,8 @@ private:
 };
 
 using metric_entity_ptr = ref_ptr<metric_entity>;
+
+metric_entity_ptr server_metric_entity();
 
 // This struct includes a set of filters for both entities and metrics requested by client.
 struct metric_filters

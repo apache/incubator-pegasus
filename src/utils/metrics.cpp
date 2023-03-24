@@ -30,6 +30,8 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
+METRIC_DEFINE_entity(server);
+
 namespace dsn {
 
 DSN_DEFINE_uint64(metrics,
@@ -195,6 +197,12 @@ bool metric_entity::is_stale() const
     // This entity is considered stale once there is only one reference for it kept in the
     // registry.
     return get_count() == 1;
+}
+
+metric_entity_ptr server_metric_entity()
+{
+    static auto entity = METRIC_ENTITY_server.instantiate("server");
+    return entity;
 }
 
 void metric_filters::extract_entity_metrics(const metric_entity::metric_map &candidates,
