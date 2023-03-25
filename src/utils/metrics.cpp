@@ -32,6 +32,14 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
+METRIC_DEFINE_entity(server);
+
+dsn::metric_entity_ptr server_metric_entity()
+{
+    static auto entity = METRIC_ENTITY_server.instantiate("server");
+    return entity;
+}
+
 namespace dsn {
 
 DSN_DEFINE_uint64(metrics,
