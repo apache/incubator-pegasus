@@ -115,7 +115,7 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
 
         db_get_context get_ctx;
         int err = get(raw_key, &get_ctx);
-        if (dsn_unlikely(err != 0)) {
+        if (dsn_unlikely(err != rocksdb::Status::kOk)) {
             return err;
         }
         // if record exists and is not expired.

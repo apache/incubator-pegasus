@@ -42,12 +42,8 @@ public:
     pegasus_read_service(dsn::replication::replica *r) : dsn::replication::replication_app_base(r)
     {
     }
-    virtual ~pegasus_read_service() {}
-    virtual int on_request(dsn::message_ex *request) override
-    {
-        handle_request(request);
-        return 0;
-    }
+
+    int on_request(dsn::message_ex *request) override { return handle_request(request); }
 
 protected:
     // all service handlers to be implemented further
