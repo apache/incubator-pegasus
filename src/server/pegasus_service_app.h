@@ -24,6 +24,7 @@
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include "reporter/pegasus_counter_reporter.h"
+#include "utils/metrics.h"
 
 namespace pegasus {
 namespace server {
@@ -47,6 +48,7 @@ public:
 
         if (ret == ::dsn::ERR_OK) {
             pegasus_counter_reporter::instance().start();
+            dsn::builtin_metrics::instance().start();
             _updater_started = true;
         }
         return ret;
@@ -57,6 +59,7 @@ public:
         ::dsn::error_code ret = ::dsn::replication::replication_service_app::stop();
         if (_updater_started) {
             pegasus_counter_reporter::instance().stop();
+            dsn::builtin_metrics::instance().stop();
         }
         return ret;
     }
@@ -83,6 +86,7 @@ public:
 
         if (ret == ::dsn::ERR_OK) {
             pegasus_counter_reporter::instance().start();
+            dsn::builtin_metrics::instance().start();
             _updater_started = true;
         }
         return ret;
@@ -93,6 +97,7 @@ public:
         ::dsn::error_code ret = ::dsn::service::meta_service_app::stop();
         if (_updater_started) {
             pegasus_counter_reporter::instance().stop();
+            dsn::builtin_metrics::instance().stop();
         }
         return ret;
     }
