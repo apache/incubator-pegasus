@@ -139,7 +139,7 @@ public:
     // Return code:
     //   - ERR_OK: everything is OK.
     //   - ERR_UNRECOVERABLE_DATA_ERROR: encountered some unrecoverable data errors, e.g. kIOError,
-    //   kCorruption from storage engine.
+    //     kCorruption from storage engine.
     //   - ERR_LOCAL_APP_FAILURE: other type of errors.
     error_code apply_mutation(const mutation *mu) WARN_UNUSED_RESULT;
 

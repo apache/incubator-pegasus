@@ -46,7 +46,7 @@ public:
     explicit mock_replication_app_base(replica *replica) : replication_app_base(replica) {}
 
     error_code start(int, char **) override { return ERR_NOT_IMPLEMENTED; }
-    error_code stop(bool) override { return ERR_OK; }
+    error_code stop(bool) override { return ERR_NOT_IMPLEMENTED; }
     error_code sync_checkpoint() override { return ERR_OK; }
     error_code async_checkpoint(bool) override
     {
