@@ -24,7 +24,7 @@
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include "reporter/pegasus_counter_reporter.h"
-#include "utils/metrics.h"
+#include "utils/builtin_metrics.h"
 
 namespace pegasus {
 namespace server {

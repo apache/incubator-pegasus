@@ -39,10 +39,8 @@ DSN_DEFINE_uint64(metrics,
                   "The interval (milliseconds) at which builtin metrics are updated.");
 
 builtin_metrics::builtin_metrics()
-      : METRIC_VAR_INIT_server(virtual_mem_usage_mb),
-      METRIC_VAR_INIT_server(resident_mem_usage_mb)
+    : METRIC_VAR_INIT_server(virtual_mem_usage_mb), METRIC_VAR_INIT_server(resident_mem_usage_mb)
 {
-
 }
 
 void builtin_metrics::on_close() {}
