@@ -36,6 +36,8 @@
 namespace dsn {
 namespace ranger {
 
+DSN_DECLARE_string(cluster_root);
+
 TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
 {
     std::string data = R"(
@@ -252,6 +254,61 @@ TEST(ranger_resource_policy_manager_test, get_table_name_from_app_name_test)
                  {"a.b.c", "b.c"}};
     for (const auto &test : tests) {
         auto actual_result = get_table_name_from_app_name(test.app_name);
+        EXPECT_EQ(test.expected_result, actual_result);
+    }
+}
+
+class ranger_resource_policy_manager_function_test : public testing::Test
+{
+public:
+    ranger_resource_policy_manager_function_test()
+    {
+        meta_service *_meta_svc = new fake_receiver_meta_service();
+        FLAGS_cluster_root = "/ranger_resource_policy_manager_test";
+        _meta_svc->remote_storage_initialize();
+        _manager = new ranger_resource_policy_manager(_meta_svc);
+
+        acl_policies fake_database_policy;
+        fake_database_policy.allow_policies = {
+            {access_type::kRead | access_type::kWrite | access_type::kList,
+             {"user1", "user2", "user3", "user4"}}};
+        fake_database_policy.allow_policies_exclude = {
+            {access_type::kWrite | access_type::kCreate, {"user2"}}};
+        fake_database_policy.deny_policies = {
+            {access_type::kRead | access_type::kWrite, {"user3", "user4"}}};
+        fake_database_policy.deny_policies_exclude = {
+            {access_type::kRead | access_type::kList, {"user4"}}};
+
+        ranger_resource_policy fake_ranger_resource_policy;
+        fake_ranger_resource_policy.name = "pegasus_ranger_test";
+        fake_ranger_resource_policy.database_names = {"database1", "database2"};
+        fake_ranger_resource_policy.table_names = {"database1_table", "database2_table"};
+        fake_ranger_resource_policy.policies = fake_database_policy;
+
+        _manager->_database_policies_cache = fake_ranger_resource_policy;
+    }
+
+    bool allowed(const int rpc_code, const std::string &user_name, const std::string &database_name)
+    {
+        return _manager->allowed(rpc_code, user_name, database_name);
+    }
+
+private:
+    std::shared_ptr<ranger_resource_policy_manager> _manager;
+}
+
+TEST_F(ranger_resource_policy_manager_function_test, allowed)
+{
+    struct test_case
+    {
+        std::string rpc_code;
+        std::string user_name;
+        std::string database_name;
+        std::string expected_result;
+    } tests[] = {{"RPC_CM_LIST_APPS", "user1", "database1", true}};
+    for (const auto &test : tests) {
+        auto code = task_code::try_get(rpc_code, TASK_CODE_INVALID);
+        auto actual_result = allowed(test.rpc_code, test.user_name, test.database_name);
         EXPECT_EQ(test.expected_result, actual_result);
     }
 }
