@@ -55,7 +55,7 @@ enum commit_type
 class prepare_list : public mutation_cache, private replica_base
 {
 public:
-    typedef std::function<error_code(mutation_ptr &)> mutation_committer;
+    typedef std::function<void(mutation_ptr &)> mutation_committer;
 
 public:
     prepare_list(replica_base *r, decree init_decree, int max_count, mutation_committer committer);
@@ -77,7 +77,7 @@ public:
                        partition_status::type status,
                        bool pop_all_committed_mutations = false,
                        bool secondary_commit = true) WARN_UNUSED_RESULT;
-    virtual error_code commit(decree decree, commit_type ct) WARN_UNUSED_RESULT; // ordered commit
+    virtual void commit(decree decree, commit_type ct); // ordered commit
 
     virtual ~prepare_list() = default;
 

@@ -422,10 +422,7 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
                          local_committed_decree);
 
         // we shouldn't commit mutations hard coz these mutations may preparing on another learner
-        // TODO(yingchun): handle this error
-        CHECK_EQ(
-            ERR_OK,
-            _prepare_list->commit(request.last_committed_decree_in_app, COMMIT_TO_DECREE_SOFT));
+        _prepare_list->commit(request.last_committed_decree_in_app, COMMIT_TO_DECREE_SOFT);
         local_committed_decree = last_committed_decree();
 
         if (request.last_committed_decree_in_app > local_committed_decree) {
@@ -849,9 +846,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
         // further states are synced using 2pc, and we must commit now as those later 2pc messages
         // thinks they should
-        // TODO(yingchun): handle this error
-        CHECK_EQ(ERR_OK,
-                 _prepare_list->commit(resp.prepare_start_decree - 1, COMMIT_TO_DECREE_HARD));
+        _prepare_list->commit(resp.prepare_start_decree - 1, COMMIT_TO_DECREE_HARD);
         CHECK_EQ(_prepare_list->last_committed_decree(), _app->last_committed_decree());
         CHECK(resp.state.files.empty(), "");
 
@@ -1615,11 +1610,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                             _config.primary.to_string(),
                             state.to_decree_included,
                             last_committed_decree());
-            err = plist.commit(state.to_decree_included, COMMIT_TO_DECREE_SOFT);
-            if (err != ERR_OK) {
-                LOG_ERROR_PREFIX("got an error({}) in commit stage of prepare_list", err);
-                return err;
-            }
+            plist.commit(state.to_decree_included, COMMIT_TO_DECREE_SOFT);
         }
 
         LOG_INFO_PREFIX(" apply_learned_state_from_private_log[{}]: learnee ={}, "

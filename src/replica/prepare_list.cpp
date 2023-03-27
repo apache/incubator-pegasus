@@ -97,9 +97,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
     case partition_status::PS_POTENTIAL_SECONDARY:
         // all mutations with lower decree must be ready
         if (secondary_commit) {
-            ERR_LOG_PREFIX_AND_RETURN_NOT_OK(
-                commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD),
-                "commit error");
+            commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
         // pop committed mutations if buffer is full or pop_all_committed_mutations = true
         while ((d - min_decree() >= capacity() || pop_all_committed_mutations) &&
@@ -117,7 +115,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
     //        if (err == ERR_CAPACITY_EXCEEDED)
     //        {
     //            CHECK_GE(mu->data.header.last_committed_decree, min_decree());
-    //            ERR_LOG_PREFIX_AND_RETURN_NOT_OK(commit (min_decree(), true), "commit error");
+    //            commit (min_decree(), true);
     //            pop_min();
     //        }
     //        else
@@ -131,9 +129,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
             reset(mu->data.header.last_committed_decree);
         } else if (mu->data.header.last_committed_decree > _last_committed_decree) {
             // all mutations with lower decree must be ready
-            ERR_LOG_PREFIX_AND_RETURN_NOT_OK(
-                commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD),
-                "commit error");
+            commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
         // pop committed mutations if buffer is full
         while (d - min_decree() >= capacity() && last_committed_decree() > min_decree()) {
@@ -152,11 +148,10 @@ error_code prepare_list::prepare(mutation_ptr &mu,
 //
 // ordered commit
 //
-error_code prepare_list::commit(decree d, commit_type ct)
+void prepare_list::commit(decree d, commit_type ct)
 {
-    if (d <= last_committed_decree()) {
-        return ERR_OK;
-    }
+    if (d <= last_committed_decree())
+        return;
 
     ballot last_bt = 0;
     switch (ct) {
@@ -170,11 +165,10 @@ error_code prepare_list::commit(decree d, commit_type ct)
 
             _last_committed_decree++;
             last_bt = mu->data.header.ballot;
-            ERR_LOG_PREFIX_AND_RETURN_NOT_OK(_committer(mu),
-                                             "commit error in COMMIT_TO_DECREE_HARD");
+            _committer(mu);
         }
 
-        return ERR_OK;
+        return;
     }
     case COMMIT_TO_DECREE_SOFT: {
         for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++) {
@@ -182,18 +176,16 @@ error_code prepare_list::commit(decree d, commit_type ct)
             if (mu != nullptr && mu->is_ready_for_commit() && mu->data.header.ballot >= last_bt) {
                 _last_committed_decree++;
                 last_bt = mu->data.header.ballot;
-                ERR_LOG_PREFIX_AND_RETURN_NOT_OK(_committer(mu),
-                                                 "commit error in COMMIT_TO_DECREE_SOFT");
+                _committer(mu);
             } else
                 break;
         }
 
-        return ERR_OK;
+        return;
     }
     case COMMIT_ALL_READY: {
-        if (d != last_committed_decree() + 1) {
-            return ERR_OK;
-        }
+        if (d != last_committed_decree() + 1)
+            return;
 
         int count = 0;
         mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
@@ -201,18 +193,16 @@ error_code prepare_list::commit(decree d, commit_type ct)
         while (mu != nullptr && mu->is_ready_for_commit() && mu->data.header.ballot >= last_bt) {
             _last_committed_decree++;
             last_bt = mu->data.header.ballot;
-            ERR_LOG_PREFIX_AND_RETURN_NOT_OK(_committer(mu), "commit error in COMMIT_ALL_READY");
+            _committer(mu);
             count++;
             mu = mutation_cache::get_mutation_by_decree(_last_committed_decree + 1);
         }
 
-        return ERR_OK;
+        return;
     }
     default:
         CHECK(false, "invalid commit type {}", ct);
     }
-
-    return ERR_OK;
 }
 } // namespace replication
 } // namespace dsn

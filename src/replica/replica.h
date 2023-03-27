@@ -71,7 +71,6 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
-#include "utils/ports.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
@@ -302,7 +301,7 @@ private:
     void init_state();
     void response_client_read(dsn::message_ex *request, error_code error);
     void response_client_write(dsn::message_ex *request, error_code error);
-    error_code execute_mutation(mutation_ptr &mu) WARN_UNUSED_RESULT;
+    void execute_mutation(mutation_ptr &mu);
     mutation_ptr new_mutation(decree decree);
 
     // initialization

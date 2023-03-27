@@ -266,13 +266,6 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
         ERR_LOG_AND_RETURN_NOT_TRUE(_err == ERR_OK, _err, __VA_ARGS__);                            \
     } while (0)
 
-// Similar to above, but use LOG_ERROR_PREFIX.
-#define ERR_LOG_PREFIX_AND_RETURN_NOT_OK(s, ...)                                                   \
-    do {                                                                                           \
-        error_code _err = (s);                                                                     \
-        ERR_LOG_PREFIX_AND_RETURN_NOT_TRUE(_err == ERR_OK, _err, __VA_ARGS__);                     \
-    } while (0)
-
 #ifndef NDEBUG
 #define DCHECK CHECK
 #define DCHECK_NOTNULL CHECK_NOTNULL

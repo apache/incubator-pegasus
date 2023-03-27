@@ -56,11 +56,10 @@ mutation_buffer::mutation_buffer(replica_base *r,
         "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 }
 
-error_code mutation_buffer::commit(decree d, commit_type ct)
+void mutation_buffer::commit(decree d, commit_type ct)
 {
-    if (d <= last_committed_decree()) {
-        return ERR_OK;
-    }
+    if (d <= last_committed_decree())
+        return;
 
     CHECK_EQ_PREFIX(ct, COMMIT_TO_DECREE_HARD);
 
@@ -93,7 +92,7 @@ error_code mutation_buffer::commit(decree d, commit_type ct)
             // if next_commit_mutation loss, let last_commit_decree catch up  with min_decree, and
             // the next loop will commit from min_decree
             _last_committed_decree = min_decree() - 1;
-            return ERR_OK;
+            return;
         }
 
         CHECK_GE_PREFIX(next_committed_mutation->data.header.ballot, last_bt);
@@ -101,8 +100,6 @@ error_code mutation_buffer::commit(decree d, commit_type ct)
         last_bt = next_committed_mutation->data.header.ballot;
         _committer(next_committed_mutation);
     }
-
-    return ERR_OK;
 }
 
 error_s mutation_batch::add(mutation_ptr mu)

@@ -80,9 +80,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
             CHECK_EQ(count, 1);
             return iter->second(requests[0]);
         }
-        // TODO(yingchun): what happen if handler not found?
     } catch (TTransportException &ex) {
-        // TODO(yingchun): when does this exception throw?
         _pfc_recent_corrupt_write_count->increment();
         LOG_ERROR_PREFIX("pegasus not batch write handler failed, from = {}, exception = {}",
                          requests[0]->header->from_address.to_string(),

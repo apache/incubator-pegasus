@@ -34,8 +34,6 @@
 #include "replica/prepare_list.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
-#include "utils/error_code.h"
-#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -53,7 +51,7 @@ public:
 
     void commit_buffer(const mutation_batch &batcher, const decree current_decree)
     {
-        CHECK_EQ(ERR_OK, batcher._mutation_buffer->commit(current_decree, COMMIT_TO_DECREE_HARD));
+        batcher._mutation_buffer->commit(current_decree, COMMIT_TO_DECREE_HARD);
     }
 };
 

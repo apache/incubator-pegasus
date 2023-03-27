@@ -436,9 +436,7 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
                                return ERR_OK;
                            }
 
-                           ERR_LOG_PREFIX_AND_RETURN_NOT_OK(
-                               _replica->_app->apply_mutation(mu),
-                               "child_apply_private_logs encountered an unhandled error");
+                           _replica->_app->apply_mutation(mu);
 
                            return ERR_OK;
                        });
@@ -505,11 +503,7 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
     }
     _replica->_split_states.splitting_copy_mutation_count += count;
     _stub->_counter_replicas_splitting_recent_copy_mutation_count->add(count);
-    ec = plist.commit(last_committed_decree, COMMIT_TO_DECREE_HARD);
-    if (ec != ERR_OK) {
-        LOG_ERROR_PREFIX("got an error({}) in commit stage of prepare_list", ec);
-        return ec;
-    }
+    plist.commit(last_committed_decree, COMMIT_TO_DECREE_HARD);
 
     LOG_INFO_PREFIX(
         "apply in-memory mutations succeed, mutation count={}, app last_committed_decree={}",

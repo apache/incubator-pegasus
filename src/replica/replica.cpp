@@ -326,7 +326,7 @@ void replica::check_state_completeness()
     CHECK_GE(last_committed_decree(), last_durable_decree());
 }
 
-error_code replica::execute_mutation(mutation_ptr &mu)
+void replica::execute_mutation(mutation_ptr &mu)
 {
     LOG_DEBUG_PREFIX(
         "execute mutation {}: request_count = {}", mu->name(), mu->client_requests.size());
@@ -402,7 +402,7 @@ error_code replica::execute_mutation(mutation_ptr &mu)
 
     if (err != ERR_OK) {
         handle_local_failure(err);
-        return err;
+        return;
     }
 
     if (status() == partition_status::PS_PRIMARY) {
@@ -426,8 +426,6 @@ error_code replica::execute_mutation(mutation_ptr &mu)
             }
         }
     }
-
-    return err;
 }
 
 mutation_ptr replica::new_mutation(decree decree)

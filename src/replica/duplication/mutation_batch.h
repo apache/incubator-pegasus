@@ -27,9 +27,7 @@
 #include "replica/mutation.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_base.h"
-#include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/ports.h"
 
 namespace dsn {
 namespace replication {
@@ -44,7 +42,7 @@ public:
                     int max_count,
                     mutation_committer committer);
 
-    error_code commit(decree d, commit_type ct) override WARN_UNUSED_RESULT;
+    void commit(decree d, commit_type ct) override;
 
 private:
     perf_counter_wrapper _counter_dulication_mutation_loss_count;
