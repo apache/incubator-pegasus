@@ -433,12 +433,8 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
                        [this](mutation_ptr &mu) {
                            if (mu->data.header.decree !=
                                _replica->_app->last_committed_decree() + 1) {
-                               return ERR_OK;
+                               _replica->_app->apply_mutation(mu);
                            }
-
-                           _replica->_app->apply_mutation(mu);
-
-                           return ERR_OK;
                        });
 
     // replay private log
@@ -504,7 +500,6 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
     _replica->_split_states.splitting_copy_mutation_count += count;
     _stub->_counter_replicas_splitting_recent_copy_mutation_count->add(count);
     plist.commit(last_committed_decree, COMMIT_TO_DECREE_HARD);
-
     LOG_INFO_PREFIX(
         "apply in-memory mutations succeed, mutation count={}, app last_committed_decree={}",
         count,
