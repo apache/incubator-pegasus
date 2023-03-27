@@ -17,7 +17,10 @@
 
 #pragma once
 
+#include <memory>
+
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/singleton.h"
 
 namespace dsn {
