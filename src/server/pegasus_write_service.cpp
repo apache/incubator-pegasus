@@ -386,7 +386,7 @@ int pegasus_write_service::duplicate(int64_t decree,
         remove_rpc remove;
         if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT ||
             request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
-            int err = 0;
+            int err = rocksdb::Status::kOk;
             if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
                 put = put_rpc(write);
                 err = _impl->batch_put(ctx, put.request(), put.response());
@@ -422,7 +422,7 @@ int pegasus_write_service::ingest_files(int64_t decree,
     resp.err = dsn::ERR_OK;
     // write empty put to flush decree
     resp.rocksdb_error = empty_put(decree);
-    if (resp.rocksdb_error != 0) {
+    if (resp.rocksdb_error != rocksdb::Status::kOk) {
         resp.err = dsn::ERR_TRY_AGAIN;
         return resp.rocksdb_error;
     }

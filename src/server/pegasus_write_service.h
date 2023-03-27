@@ -176,20 +176,20 @@ public:
     void batch_prepare(int64_t decree);
 
     // Add PUT record in batch write.
-    // \returns 0 if success, non-0 if failure.
+    // \returns rocksdb::Status::Code.
     // NOTE that `resp` should not be moved or freed while the batch is not committed.
     int batch_put(const db_write_context &ctx,
                   const dsn::apps::update_request &update,
                   dsn::apps::update_response &resp);
 
     // Add REMOVE record in batch write.
-    // \returns 0 if success, non-0 if failure.
+    // \returns rocksdb::Status::Code.
     // NOTE that `resp` should not be moved or freed while the batch is not committed.
     int batch_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp);
 
     // Commit batch write.
-    // \returns 0 if success, non-0 if failure.
-    // NOTE that if the batch contains no updates, 0 is returned.
+    // \returns rocksdb::Status::Code.
+    // NOTE that if the batch contains no updates, rocksdb::Status::kOk is returned.
     int batch_commit(int64_t decree);
 
     // Abort batch write.

@@ -299,6 +299,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
 
     uint64_t start_time_ns = dsn_now_ns();
     CHECK(_app, "");
+    // TODO(yingchun): check the return value.
     _app->on_request(request);
 
     // If the corresponding perf counter exist, count the duration of this operation.
