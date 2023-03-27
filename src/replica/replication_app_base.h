@@ -141,7 +141,7 @@ public:
     //   - ERR_UNRECOVERABLE_DATA_ERROR: encountered some unrecoverable data errors, e.g. kIOError,
     //   kCorruption from storage engine.
     //   - ERR_LOCAL_APP_FAILURE: other type of errors.
-    error_code apply_mutation(const mutation *mu);
+    error_code apply_mutation(const mutation *mu) WARN_UNUSED_RESULT;
 
     // methods need to implement on storage engine side
     virtual error_code start(int argc, char **argv) = 0;

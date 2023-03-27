@@ -155,7 +155,6 @@ mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r)
         make_unique<mutation_buffer>(&base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
             // committer
             add_mutation_if_valid(mu, _start_decree);
-            return ERR_OK;
         });
 
     // start duplication from confirmed_decree
@@ -168,7 +167,6 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
         // ignore
         return;
     }
-
     for (mutation_update &update : mu->data.updates) {
         // ignore WRITE_EMPTY
         if (update.code == RPC_REPLICATION_WRITE_EMPTY) {
