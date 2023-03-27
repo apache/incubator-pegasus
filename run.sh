@@ -259,11 +259,11 @@ function run_build()
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
-        rm ${ROOT}/src/base/rrdb_types.cpp
-        rm ${ROOT}/src/include/rrdb/rrdb_types.h
-        rm ${ROOT}/src/common/serialization_helper/dsn.layer2_types.h
-        rm ${ROOT}/src/runtime/dsn.layer2_types.cpp
-        rm ${ROOT}/src/include/pegasus/git_commit.h
+        rm -f ${ROOT}/src/base/rrdb_types.cpp
+        rm -f ${ROOT}/src/include/rrdb/rrdb_types.h
+        rm -f ${ROOT}/src/common/serialization_helper/dsn.layer2_types.h
+        rm -f ${ROOT}/src/runtime/dsn.layer2_types.cpp
+        rm -f ${ROOT}/src/include/pegasus/git_commit.h
     fi
 
     pushd ${ROOT}
