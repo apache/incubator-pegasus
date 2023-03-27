@@ -32,10 +32,13 @@ public:
     void stop();
 
 private:
+    void on_close();
     void update();
 
     METRIC_VAR_DECLARE_gauge_int64(virtual_mem_usage_mb);
     METRIC_VAR_DECLARE_gauge_int64(resident_mem_usage_mb);
+
+    std::unique_ptr<metric_timer> _timer;
 
     DISALLOW_COPY_AND_ASSIGN(builtin_metrics);
 };

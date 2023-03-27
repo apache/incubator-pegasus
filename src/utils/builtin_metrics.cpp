@@ -70,14 +70,14 @@ void builtin_metrics::stop()
     _timer.reset();
 }
 
-void builtin_counters::update()
+void builtin_metrics::update()
 {
     double vm_usage;
     double resident_set;
     utils::process_mem_usage(vm_usage, resident_set);
 
     auto virt_mb = static_cast<uint64_t>(vm_usage) >> 10;
-    auto res_mb = static_cast<(uint64_t>(resident_set) >> 10;
+    auto res_mb = static_cast<uint64_t>(resident_set) >> 10;
     METRIC_VAR_SET(virtual_mem_usage_mb, virt_mb);
     METRIC_VAR_SET(resident_mem_usage_mb, res_mb);
     LOG_INFO("virt = {} MB, res = {} MB", virt_mb, res_mb);
