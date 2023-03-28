@@ -38,7 +38,6 @@
             <Package name="org.apache.pegasus.tools"/>
             <Package name="org.apache.pegasus.client.request"/>
             <Package name="org.apache.pegasus.example"/>
-
         </Or>
     </Match>
 
