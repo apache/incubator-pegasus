@@ -136,6 +136,8 @@ private:
     DEFINE_JSON_SERIALIZATION(_all_resource_policies);
 
     FRIEND_TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test);
+
+    friend class ranger_resource_policy_manager_function_test;
 };
 
 // Try to get the database name of 'app_name'.

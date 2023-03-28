@@ -146,15 +146,12 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
     dsn::replication::meta_service *meta_svc)
     : _meta_svc(meta_svc), _local_policy_version(-1)
 {
-    _ranger_policy_meta_root = dsn::replication::meta_options::concat_path_unix_style(
-        _meta_svc->cluster_root(), "ranger_policy_meta_root");
-
-    // GLOBAL - KMetadata
+    // GLOBAL - kMetadata
     register_rpc_access_type(
         access_type::kMetadata,
         {"RPC_CM_LIST_NODES", "RPC_CM_CLUSTER_INFO", "RPC_CM_LIST_APPS", "RPC_QUERY_DISK_INFO"},
         _ac_type_of_global_rpcs);
-    // GLOBAL - KControl
+    // GLOBAL - kControl
     register_rpc_access_type(access_type::kControl,
                              {"RPC_HTTP_SERVICE",
                               "RPC_CM_CONTROL_META",
@@ -164,15 +161,15 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_DETECT_HOTKEY",
                               "RPC_CLI_CLI_CALL_ACK"},
                              _ac_type_of_global_rpcs);
-    // DATABASE - KList
+    // DATABASE - kList
     register_rpc_access_type(access_type::kList, {"RPC_CM_LIST_APPS"}, _ac_type_of_database_rpcs);
-    // DATABASE - KCreate
+    // DATABASE - kCreate
     register_rpc_access_type(
         access_type::kCreate, {"RPC_CM_CREATE_APP"}, _ac_type_of_database_rpcs);
-    // DATABASE - KDrop
+    // DATABASE - kDrop
     register_rpc_access_type(
         access_type::kDrop, {"RPC_CM_DROP_APP", "RPC_CM_RECALL_APP"}, _ac_type_of_database_rpcs);
-    // DATABASE - KMetadata
+    // DATABASE - kMetadata
     register_rpc_access_type(access_type::kMetadata,
                              {"RPC_CM_QUERY_BACKUP_STATUS",
                               "RPC_CM_QUERY_RESTORE_STATUS",
@@ -182,7 +179,7 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_QUERY_MANUAL_COMPACT_STATUS",
                               "RPC_CM_GET_MAX_REPLICA_COUNT"},
                              _ac_type_of_database_rpcs);
-    // DATABASE - KControl
+    // DATABASE - kControl
     register_rpc_access_type(access_type::kControl,
                              {"RPC_CM_START_BACKUP_APP",
                               "RPC_CM_START_RESTORE",
@@ -204,6 +201,9 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
 
 void ranger_resource_policy_manager::start()
 {
+    CHECK(_meta_svc != nullptr, "Pointer meta_svc cannot be null");
+    _ranger_policy_meta_root = dsn::replication::meta_options::concat_path_unix_style(
+        _meta_svc->cluster_root(), "ranger_policy_meta_root");
     tasking::enqueue_timer(LPC_USE_RANGER_ACCESS_CONTROL,
                            &_tracker,
                            [this]() { this->update_policies_from_ranger_service(); },

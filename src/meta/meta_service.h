@@ -475,27 +475,37 @@ bool meta_service::check_status_and_authz_with_reply(message_ex *req,
     }
     if (result == meta_leader_state::kNotLeaderAndCannotForwardRpc || !_started) {
         if (result == meta_leader_state::kNotLeaderAndCannotForwardRpc) {
+            response_struct.err = ERR_FORWARD_TO_OTHERS;
         } else if (_recovering) {
             response_struct.err = ERR_UNDER_RECOVERY;
-            LOG_DEBUG("not authorized {} to operate on app({}) for user({})",
-                      req->rpc_code(),
-                      app_name,
-                      req->io_session->get_client_username());
-            reply(req, response_struct);
-            return false;
+        } else {
+            response_struct.err = ERR_UNDER_RECOVERY;
         }
-        return true;
+        LOG_INFO("reject request with {}", response_struct.err);
+        reply(req, response_struct);
+        return false;
     }
+    if (!_access_controller->allowed(req, app_name)) {
+        response_struct.err = ERR_ACL_DENY;
+        LOG_INFO("not authorized {} to operate on app({}) for user({})",
+                 req->rpc_code(),
+                 app_name,
+                 req->io_session->get_client_username());
+        reply(req, response_struct);
+        return false;
+    }
+    return true;
+}
 
-    template <typename TReqType, typename TRespType>
-    bool meta_service::check_status_and_authz_with_reply(message_ex * msg)
-    {
-        TReqType req;
-        TRespType resp;
-        dsn::message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
-        dsn::unmarshall(copied_msg, req);
-        return check_status_and_authz_with_reply(msg, resp, req.app_name);
-    }
+template <typename TReqType, typename TRespType>
+bool meta_service::check_status_and_authz_with_reply(message_ex *msg)
+{
+    TReqType req;
+    TRespType resp;
+    dsn::message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
+    dsn::unmarshall(copied_msg, req);
+    return check_status_and_authz_with_reply(msg, resp, req.app_name);
+}
 
 } // namespace replication
 } // namespace dsn
