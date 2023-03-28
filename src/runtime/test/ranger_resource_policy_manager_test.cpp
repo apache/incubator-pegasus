@@ -31,6 +31,7 @@
 #include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
 #include "runtime/ranger/ranger_resource_policy_manager.h"
+#include "runtime/task/task_code.h"
 #include "utils/blob.h"
 
 namespace dsn {
