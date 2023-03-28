@@ -21,11 +21,10 @@
 
 #include "utils/metrics.h"
 #include "utils/ports.h"
-#include "utils/singleton.h"
 
 namespace dsn {
 
-class builtin_metrics : public utils::singleton<builtin_metrics>
+class builtin_metrics
 {
 public:
     builtin_metrics();

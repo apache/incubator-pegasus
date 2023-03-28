@@ -48,7 +48,7 @@ public:
 
         if (ret == ::dsn::ERR_OK) {
             pegasus_counter_reporter::instance().start();
-            dsn::builtin_metrics::instance().start();
+            _builtin_metrics.start();
             _updater_started = true;
         }
         return ret;
@@ -59,12 +59,13 @@ public:
         ::dsn::error_code ret = ::dsn::replication::replication_service_app::stop();
         if (_updater_started) {
             pegasus_counter_reporter::instance().stop();
-            dsn::builtin_metrics::instance().stop();
+            _builtin_metrics.stop();
         }
         return ret;
     }
 
 private:
+    dsn::builtin_metrics _builtin_metrics;
     bool _updater_started;
 };
 
@@ -86,7 +87,7 @@ public:
 
         if (ret == ::dsn::ERR_OK) {
             pegasus_counter_reporter::instance().start();
-            dsn::builtin_metrics::instance().start();
+            _builtin_metrics.start();
             _updater_started = true;
         }
         return ret;
@@ -97,12 +98,13 @@ public:
         ::dsn::error_code ret = ::dsn::service::meta_service_app::stop();
         if (_updater_started) {
             pegasus_counter_reporter::instance().stop();
-            dsn::builtin_metrics::instance().stop();
+            _builtin_metrics.stop();
         }
         return ret;
     }
 
 private:
+    dsn::builtin_metrics _builtin_metrics;
     bool _updater_started;
 };
 
