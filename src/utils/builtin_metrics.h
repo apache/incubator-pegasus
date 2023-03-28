@@ -29,7 +29,7 @@ class builtin_metrics : public utils::singleton<builtin_metrics>
 {
 public:
     builtin_metrics();
-    ~builtin_metrics() = default;
+    ~builtin_metrics();
 
     void start();
     void stop();

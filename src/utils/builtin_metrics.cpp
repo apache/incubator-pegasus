@@ -48,6 +48,8 @@ builtin_metrics::builtin_metrics()
 {
 }
 
+builtin_metrics::~builtin_metrics() { stop(); }
+
 void builtin_metrics::on_close() {}
 
 void builtin_metrics::start()
