@@ -479,18 +479,18 @@ bool meta_service::check_status_and_authz_with_reply(message_ex *req,
         } else if (_recovering) {
             response_struct.err = ERR_UNDER_RECOVERY;
         } else {
-            response_struct.err = ERR_UNDER_RECOVERY;
+            response_struct.err = ERR_SERVICE_NOT_ACTIVE;
         }
-        LOG_INFO("reject request with {}", response_struct.err);
+        LOG_DEBUG("reject request with {}", response_struct.err);
         reply(req, response_struct);
         return false;
     }
     if (!_access_controller->allowed(req, app_name)) {
         response_struct.err = ERR_ACL_DENY;
-        LOG_INFO("not authorized {} to operate on app({}) for user({})",
-                 req->rpc_code(),
-                 app_name,
-                 req->io_session->get_client_username());
+        LOG_DEBUG("not authorized {} to operate on app({}) for user({})",
+                  req->rpc_code(),
+                  app_name,
+                  req->io_session->get_client_username());
         reply(req, response_struct);
         return false;
     }
