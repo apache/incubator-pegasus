@@ -354,7 +354,9 @@ function run_test()
       dsn_meta_state_tests
       dsn.meta.test
       dsn_nfs_test
-      dsn_perf_counter_test
+      # TODO(wangdan): Since builtin_counters (memused.virt and memused.res) for perf-counters
+      # have been removed and dsn_perf_counter_test depends on them, disable it.
+      # dsn_perf_counter_test
       dsn_replica_backup_test
       dsn_replica_bulk_load_test
       dsn_replica_dup_test
