@@ -311,9 +311,9 @@ private:
     zlock _local_writes_lock;
     std::deque<copy_request_ex_ptr> _local_writes;
 
-    METRIC_VAR_DECLARE_counte(nfs_client_copy_bytes);
-    METRIC_VAR_DECLARE_counte(nfs_client_failed_copy_requests);
-    METRIC_VAR_DECLARE_counte(nfs_client_write_bytes);
+    METRIC_VAR_DECLARE_counter(nfs_client_copy_bytes);
+    METRIC_VAR_DECLARE_counter(nfs_client_failed_copy_requests);
+    METRIC_VAR_DECLARE_counter(nfs_client_write_bytes);
     METRIC_VAR_DECLARE_counter(nfs_client_failed_writes);
 
     std::unique_ptr<command_deregister> _nfs_max_copy_rate_megabytes_cmd;
