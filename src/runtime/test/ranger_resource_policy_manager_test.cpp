@@ -144,18 +144,15 @@ TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
 TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test)
 {
     // 1. Create a fake resource policies data in 'fake_all_resource_policies'
-    acl_policies fake_policy;
-    fake_policy.allow_policies = {{access_type::kRead | access_type::kWrite | access_type::kList,
-                                   {"user1", "user2", "user3", "user4"}}};
-    fake_policy.allow_policies_exclude = {{access_type::kWrite | access_type::kCreate, {"user2"}}};
-    fake_policy.deny_policies = {{access_type::kRead | access_type::kWrite, {"user3", "user4"}}};
-    fake_policy.deny_policies_exclude = {{access_type::kRead | access_type::kList, {"user4"}}};
-
-    ranger_resource_policy fake_ranger_resource_policy;
-    fake_ranger_resource_policy.name = "pegasus_ranger_test";
-    fake_ranger_resource_policy.database_names = {"database1", "database2"};
-    fake_ranger_resource_policy.table_names = {"database1_table", "database2_table"};
-    fake_ranger_resource_policy.policies = fake_policy;
+    ranger_resource_policy fake_ranger_resource_policy(
+        {"pegasus_ranger_test",
+         {"database1", "database2"},
+         {"database1_table", "database2_table"},
+         {{{access_type::kRead | access_type::kWrite | access_type::kList,
+            {"user1", "user2", "user3", "user4"}}},
+          {{access_type::kWrite | access_type::kCreate, {"user2"}}},
+          {{access_type::kRead | access_type::kWrite, {"user3", "user4"}}},
+          {{access_type::kRead | access_type::kList, {"user4"}}}}});
 
     std::string resource_type_name = enum_to_string(resource_type::kDatabaseTable);
     all_resource_policies fake_all_resource_policies{
@@ -263,43 +260,51 @@ class ranger_resource_policy_manager_function_test : public ranger_resource_poli
 public:
     ranger_resource_policy_manager_function_test() : ranger_resource_policy_manager(nullptr)
     {
-        acl_policies fake_policy_1;
-        fake_policy_1.allow_policies = {
-            {access_type::kList | access_type::kMetadata, {"user1", "user2"}}};
-        fake_policy_1.allow_policies_exclude = {{access_type::kMetadata, {"user2"}}};
-        ranger_resource_policy fake_ranger_resource_policy_1;
-        fake_ranger_resource_policy_1.database_names = {"database1"};
-        fake_ranger_resource_policy_1.policies = fake_policy_1;
-        acl_policies fake_policy_2;
-        fake_policy_2.allow_policies = {
-            {access_type::kCreate | access_type::kDrop | access_type::kControl,
-             {"user3", "user4"}}};
-        fake_policy_2.allow_policies_exclude = {{access_type::kControl, {"user4"}}};
-        ranger_resource_policy fake_ranger_resource_policy_2;
-        fake_ranger_resource_policy_2.database_names = {"database2"};
-        fake_ranger_resource_policy_2.policies = fake_policy_2;
-        acl_policies fake_policy_3;
-        fake_policy_3.allow_policies = {{access_type::kCreate, {"user5", "user6"}}};
-        fake_policy_3.allow_policies_exclude = {{access_type::kCreate, {"user6"}}};
-        ranger_resource_policy fake_ranger_resource_policy_3;
-        fake_ranger_resource_policy_3.database_names = {"*"};
-        fake_ranger_resource_policy_3.policies = fake_policy_3;
+        ranger_resource_policy fake_ranger_resource_policy_1(
+            {"",
+             {"database1"},
+             {},
+             {{{access_type::kList | access_type::kMetadata, {"user1", "user2"}}},
+              {{access_type::kMetadata, {"user2"}}},
+              {},
+              {}}});
+        ranger_resource_policy fake_ranger_resource_policy_2(
+            {"",
+             {"database2"},
+             {},
+             {{{access_type::kCreate | access_type::kDrop | access_type::kControl,
+                {"user3", "user4"}}},
+              {{access_type::kControl, {"user4"}}},
+              {},
+              {}}});
+        ranger_resource_policy fake_ranger_resource_policy_3(
+            {"",
+             {"*"},
+             {},
+             {{{access_type::kCreate, {"user5", "user6"}}},
+              {{access_type::kCreate, {"user6"}}},
+              {},
+              {}}});
         _database_policies_cache = {fake_ranger_resource_policy_1,
                                     fake_ranger_resource_policy_2,
                                     fake_ranger_resource_policy_3};
 
-        acl_policies fake_policy_4;
-        fake_policy_4.allow_policies = {{access_type::kMetadata, {"user7", "user8"}}};
-        fake_policy_4.allow_policies_exclude = {{access_type::kMetadata, {"user8"}}};
-        ranger_resource_policy fake_ranger_resource_policy_4;
-        fake_ranger_resource_policy_4.database_names = {"database3"};
-        fake_ranger_resource_policy_4.policies = fake_policy_4;
-        acl_policies fake_policy_5;
-        fake_policy_5.allow_policies = {{access_type::kControl, {"user9", "user10"}}};
-        fake_policy_5.allow_policies_exclude = {{access_type::kControl, {"user10"}}};
-        ranger_resource_policy fake_ranger_resource_policy_5;
-        fake_ranger_resource_policy_5.database_names = {"database4"};
-        fake_ranger_resource_policy_5.policies = fake_policy_5;
+        ranger_resource_policy fake_ranger_resource_policy_4(
+            {"",
+             {"database3"},
+             {},
+             {{{access_type::kMetadata, {"user7", "user8"}}},
+              {{access_type::kMetadata, {"user8"}}},
+              {},
+              {}}});
+        ranger_resource_policy fake_ranger_resource_policy_5(
+            {"",
+             {"database4"},
+             {},
+             {{{access_type::kControl, {"user9", "user10"}}},
+              {{access_type::kControl, {"user10"}}},
+              {},
+              {}}});
         _global_policies_cache = {fake_ranger_resource_policy_4, fake_ranger_resource_policy_5};
     }
 };
@@ -344,7 +349,11 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
     for (const auto &test : tests) {
         auto code = task_code::try_get(test.rpc_code, TASK_CODE_INVALID);
         auto actual_result = allowed(code, test.user_name, test.database_name);
-        EXPECT_EQ(test.expected_result, actual_result);
+        EXPECT_EQ(test.expected_result, actual_result)
+            << fmt::format("ac_type: {}, user_name: {}, database_name: {}",
+                           test.rpc_code,
+                           test.user_name,
+                           test.database_name);
     }
 }
 
