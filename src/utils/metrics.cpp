@@ -45,7 +45,7 @@ namespace dsn {
 DSN_DEFINE_uint64(metrics,
                   entity_retirement_delay_ms,
                   10 * 60 * 1000,
-                  "The retention internal (milliseconds) for an entity after it becomes stale.");
+                  "The retention interval (milliseconds) for an entity after it becomes stale.");
 
 metric_entity::metric_entity(const metric_entity_prototype *prototype,
                              const std::string &id,
