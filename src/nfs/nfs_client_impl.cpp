@@ -51,10 +51,11 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of failed nfs copy requests (requested by client)");
 
-METRIC_DEFINE_counter(replica,
-                      nfs_client_write_bytes,
-                      dsn::metric_unit::kBytes,
-                      "The accumulated data size in bytes that are written to local file in client");
+METRIC_DEFINE_counter(
+    replica,
+    nfs_client_write_bytes,
+    dsn::metric_unit::kBytes,
+    "The accumulated data size in bytes that are written to local file in client");
 
 METRIC_DEFINE_counter(replica,
                       nfs_client_failed_writes,
@@ -118,10 +119,10 @@ nfs_client_impl::nfs_client_impl()
       _buffered_local_write_count(0),
       _copy_requests_low(FLAGS_max_file_copy_request_count_per_file),
       _high_priority_remaining_time(FLAGS_high_priority_speed_rate),
-    METRIC_VAR_INIT_server(nfs_client_copy_bytes),
-    METRIC_VAR_INIT_server(nfs_client_failed_copy_requests),
-    METRIC_VAR_INIT_server(nfs_client_write_bytes),
-    METRIC_VAR_INIT_server(nfs_client_failed_writes)
+      METRIC_VAR_INIT_server(nfs_client_copy_bytes),
+      METRIC_VAR_INIT_server(nfs_client_failed_copy_requests),
+      METRIC_VAR_INIT_server(nfs_client_write_bytes),
+      METRIC_VAR_INIT_server(nfs_client_failed_writes)
 {
     _copy_token_buckets = std::make_unique<utils::token_buckets>();
 

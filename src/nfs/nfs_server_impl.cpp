@@ -45,15 +45,17 @@
 #include "utils/string_conv.h"
 #include "utils/utils.h"
 
-METRIC_DEFINE_counter(replica,
-                      nfs_server_copy_bytes,
-                      dsn::metric_unit::kBytes,
-                      "The accumulated data size in bytes that are read from local file in server during nfs copy");
+METRIC_DEFINE_counter(
+    replica,
+    nfs_server_copy_bytes,
+    dsn::metric_unit::kBytes,
+    "The accumulated data size in bytes that are read from local file in server during nfs copy");
 
-METRIC_DEFINE_counter(replica,
-                      nfs_server_failed_copy_requests,
-                      dsn::metric_unit::kRequests,
-                      "The number of nfs copy requests (received by server) that fail to read local file in server");
+METRIC_DEFINE_counter(
+    replica,
+    nfs_server_failed_copy_requests,
+    dsn::metric_unit::kRequests,
+    "The number of nfs copy requests (received by server) that fail to read local file in server");
 
 namespace dsn {
 class disk_file;
@@ -70,9 +72,10 @@ DSN_TAG_VARIABLE(max_send_rate_megabytes_per_disk, FT_MUTABLE);
 DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
 DSN_DECLARE_int32(file_close_expire_time_ms);
 
-nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs"),
-    METRIC_VAR_INIT_server(nfs_server_copy_bytes),
-    METRIC_VAR_INIT_server(nfs_server_failed_copy_requests)
+nfs_service_impl::nfs_service_impl()
+    : ::dsn::serverlet<nfs_service_impl>("nfs"),
+      METRIC_VAR_INIT_server(nfs_server_copy_bytes),
+      METRIC_VAR_INIT_server(nfs_server_failed_copy_requests)
 {
     _file_close_timer = ::dsn::tasking::enqueue_timer(
         LPC_NFS_FILE_CLOSE_TIMER,
