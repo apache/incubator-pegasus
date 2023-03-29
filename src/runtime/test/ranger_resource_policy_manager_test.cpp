@@ -257,13 +257,12 @@ TEST(ranger_resource_policy_manager_test, get_table_name_from_app_name_test)
     }
 }
 
-class ranger_resource_policy_manager_function_test : public testing::Test
+class ranger_resource_policy_manager_function_test : public ranger_resource_policy_manager,
+                                                     public testing::Test
 {
 public:
-    ranger_resource_policy_manager_function_test()
+    ranger_resource_policy_manager_function_test() : ranger_resource_policy_manager(nullptr)
     {
-        _manager = new ranger_resource_policy_manager(nullptr);
-
         acl_policies fake_policy_1;
         fake_policy_1.allow_policies = {
             {access_type::kList | access_type::kMetadata, {"user1", "user2"}}};
@@ -285,9 +284,9 @@ public:
         ranger_resource_policy fake_ranger_resource_policy_3;
         fake_ranger_resource_policy_3.database_names = {"*"};
         fake_ranger_resource_policy_3.policies = fake_policy_3;
-        _manager->_database_policies_cache = {fake_ranger_resource_policy_1,
-                                              fake_ranger_resource_policy_2,
-                                              fake_ranger_resource_policy_3};
+        _database_policies_cache = {fake_ranger_resource_policy_1,
+                                    fake_ranger_resource_policy_2,
+                                    fake_ranger_resource_policy_3};
 
         acl_policies fake_policy_4;
         fake_policy_4.allow_policies = {{access_type::kMetadata, {"user7", "user8"}}};
@@ -301,17 +300,8 @@ public:
         ranger_resource_policy fake_ranger_resource_policy_5;
         fake_ranger_resource_policy_5.database_names = {"database4"};
         fake_ranger_resource_policy_5.policies = fake_policy_5;
-        _manager->_global_policies_cache = {fake_ranger_resource_policy_4,
-                                            fake_ranger_resource_policy_5};
+        _global_policies_cache = {fake_ranger_resource_policy_4, fake_ranger_resource_policy_5};
     }
-
-    bool allowed(const int rpc_code, const std::string &user_name, const std::string &database_name)
-    {
-        return _manager->allowed(rpc_code, user_name, database_name);
-    }
-
-private:
-    ranger_resource_policy_manager *_manager;
 };
 
 TEST_F(ranger_resource_policy_manager_function_test, allowed)

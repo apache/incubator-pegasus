@@ -103,6 +103,13 @@ private:
     // Sync policies to app_envs(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES).
     dsn::error_code sync_policies_to_app_envs();
 
+protected:
+    // The cache of the global resources policies, it's a subset of '_all_resource_policies'.
+    resource_policies _global_policies_cache;
+
+    // The cache of the database resources policies, it's a subset of '_all_resource_policies'.
+    resource_policies _database_policies_cache;
+
 private:
     dsn::task_tracker _tracker;
 
@@ -110,16 +117,8 @@ private:
     std::string _ranger_policy_meta_root;
 
     replication::meta_service *_meta_svc;
-
-    // The cache of the global resources policies, it's a subset of '_all_resource_policies'.
-    utils::rw_lock_nr _global_policies_lock; // [
-    resource_policies _global_policies_cache;
-    // ]
-
-    // The cache of the database resources policies, it's a subset of '_all_resource_policies'.
-    utils::rw_lock_nr _database_policies_lock; // [
-    resource_policies _database_policies_cache;
-    // ]
+    utils::rw_lock_nr _global_policies_lock;
+    utils::rw_lock_nr _database_policies_lock;
 
     // The access type of RPCs which access global level resources.
     access_type_of_rpc_code _ac_type_of_global_rpcs;
@@ -136,8 +135,6 @@ private:
     DEFINE_JSON_SERIALIZATION(_all_resource_policies);
 
     FRIEND_TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test);
-
-    friend class ranger_resource_policy_manager_function_test;
 };
 
 // Try to get the database name of 'app_name'.

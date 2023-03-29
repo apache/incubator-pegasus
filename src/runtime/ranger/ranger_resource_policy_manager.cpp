@@ -201,7 +201,7 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
 
 void ranger_resource_policy_manager::start()
 {
-    CHECK(_meta_svc != nullptr, "Pointer meta_svc cannot be null");
+    CHECK_NOTNULL(_meta_svc, "");
     _ranger_policy_meta_root = dsn::replication::meta_options::concat_path_unix_style(
         _meta_svc->cluster_root(), "ranger_policy_meta_root");
     tasking::enqueue_timer(LPC_USE_RANGER_ACCESS_CONTROL,
