@@ -35,7 +35,6 @@
 #include <vector>
 
 #include "nfs/nfs_code_definition.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "utils/TokenBucket.h"
@@ -45,6 +44,16 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 #include "utils/utils.h"
+
+METRIC_DEFINE_counter(replica,
+                      nfs_server_copy_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The accumulated data size in bytes that are read from local file in server during nfs copy");
+
+METRIC_DEFINE_counter(replica,
+                      nfs_server_failed_copy_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of nfs copy requests (received by server) that fail to read local file in server");
 
 namespace dsn {
 class disk_file;
@@ -61,23 +70,15 @@ DSN_TAG_VARIABLE(max_send_rate_megabytes_per_disk, FT_MUTABLE);
 DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
 DSN_DECLARE_int32(file_close_expire_time_ms);
 
-nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs")
+nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs"),
+    METRIC_VAR_INIT_server(nfs_server_copy_bytes),
+    METRIC_VAR_INIT_server(nfs_server_failed_copy_requests)
 {
     _file_close_timer = ::dsn::tasking::enqueue_timer(
         LPC_NFS_FILE_CLOSE_TIMER,
         &_tracker,
         [this] { close_file(); },
         std::chrono::milliseconds(FLAGS_file_close_timer_interval_ms_on_server));
-
-    _recent_copy_data_size.init_app_counter("eon.nfs_server",
-                                            "recent_copy_data_size",
-                                            COUNTER_TYPE_VOLATILE_NUMBER,
-                                            "nfs server copy data size in the recent period");
-    _recent_copy_fail_count.init_app_counter(
-        "eon.nfs_server",
-        "recent_copy_fail_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "nfs server copy fail count count in the recent period");
 
     _send_token_buckets = std::make_unique<dsn::utils::token_buckets>();
     register_cli_commands();
@@ -161,9 +162,9 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
 
     if (err != ERR_OK) {
         LOG_ERROR("[nfs_service] read file {} failed, err = {}", cp.file_path, err);
-        _recent_copy_fail_count->increment();
+        METRIC_VAR_INCREMENT(nfs_server_failed_copy_requests);
     } else {
-        _recent_copy_data_size->add(sz);
+        METRIC_VAR_INCREMENT_BY(nfs_server_copy_bytes, sz);
     }
 
     ::dsn::service::copy_response resp;
