@@ -33,8 +33,7 @@ class pegasus_replication_service_app : public ::dsn::replication::replication_s
 {
 public:
     pegasus_replication_service_app(const dsn::service_app_info *info)
-        : ::dsn::replication::replication_service_app::replication_service_app(info),
-          _updater_started(false)
+        : ::dsn::replication::replication_service_app::replication_service_app(info)
     {
     }
 
@@ -44,36 +43,39 @@ public:
         std::vector<std::string> args_new(args);
         args_new.emplace_back(PEGASUS_VERSION);
         args_new.emplace_back(PEGASUS_GIT_COMMIT);
-        ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(args_new);
 
-        if (ret == ::dsn::ERR_OK) {
-            pegasus_counter_reporter::instance().start();
-            _builtin_metrics.start();
-            _updater_started = true;
-        }
-        return ret;
+        // Actually the root caller, start_app() in service_control_task::exec() will also do
+        // CHECK for ERR_OK. Do CHECK here to guarantee that all following services (such as
+        // built-in metrics) are started.
+        CHECK_EQ(::dsn::replication::replication_service_app::start(args_new), ::dsn::ERR_OK);
+
+        // TODO(wangdan): remove after all metrics have been migrated.
+        pegasus_counter_reporter::instance().start();
+
+        _builtin_metrics.start();
+        return ::dsn::ERR_OK;
     }
 
     virtual ::dsn::error_code stop(bool cleanup = false) override
     {
         ::dsn::error_code ret = ::dsn::replication::replication_service_app::stop();
-        if (_updater_started) {
-            pegasus_counter_reporter::instance().stop();
-            _builtin_metrics.stop();
-        }
+
+        // TODO(wangdan): remove after all metrics have been migrated.
+        pegasus_counter_reporter::instance().stop();
+
+        _builtin_metrics.stop();
         return ret;
     }
 
 private:
     dsn::builtin_metrics _builtin_metrics;
-    bool _updater_started;
 };
 
 class pegasus_meta_service_app : public ::dsn::service::meta_service_app
 {
 public:
     pegasus_meta_service_app(const dsn::service_app_info *info)
-        : ::dsn::service::meta_service_app::meta_service_app(info), _updater_started(false)
+        : ::dsn::service::meta_service_app::meta_service_app(info)
     {
     }
 
@@ -83,29 +85,32 @@ public:
         std::vector<std::string> args_new(args);
         args_new.emplace_back(PEGASUS_VERSION);
         args_new.emplace_back(PEGASUS_GIT_COMMIT);
-        ::dsn::error_code ret = ::dsn::service::meta_service_app::start(args_new);
 
-        if (ret == ::dsn::ERR_OK) {
-            pegasus_counter_reporter::instance().start();
-            _builtin_metrics.start();
-            _updater_started = true;
-        }
-        return ret;
+        // Actually the root caller, start_app() in service_control_task::exec() will also do
+        // CHECK for ERR_OK. Do CHECK here to guarantee that all following services (such as
+        // built-in metrics) are started.
+        CHECK_EQ(::dsn::service::meta_service_app::start(args_new), ::dsn::ERR_OK);
+
+        // TODO(wangdan): remove after all metrics have been migrated.
+        pegasus_counter_reporter::instance().start();
+
+        _builtin_metrics.start();
+        return ::dsn::ERR_OK;
     }
 
     virtual ::dsn::error_code stop(bool cleanup = false) override
     {
         ::dsn::error_code ret = ::dsn::service::meta_service_app::stop();
-        if (_updater_started) {
-            pegasus_counter_reporter::instance().stop();
-            _builtin_metrics.stop();
-        }
+
+        // TODO(wangdan): remove after all metrics have been migrated.
+        pegasus_counter_reporter::instance().stop();
+
+        _builtin_metrics.stop();
         return ret;
     }
 
 private:
     dsn::builtin_metrics _builtin_metrics;
-    bool _updater_started;
 };
 
 } // namespace server
