@@ -15,19 +15,34 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "perf_counter_wrapper.h"
-#include "utils/singleton.h"
+#pragma once
+
+#include <memory>
+
+#include "utils/metrics.h"
+#include "utils/ports.h"
 
 namespace dsn {
-class builtin_counters : public dsn::utils::singleton<builtin_counters>
+
+class builtin_metrics
 {
 public:
-    builtin_counters();
-    ~builtin_counters();
-    void update_counters();
+    builtin_metrics();
+    ~builtin_metrics();
+
+    void start();
+    void stop();
 
 private:
-    dsn::perf_counter_wrapper _memused_virt;
-    dsn::perf_counter_wrapper _memused_res;
+    void on_close();
+    void update();
+
+    METRIC_VAR_DECLARE_gauge_int64(virtual_mem_usage_mb);
+    METRIC_VAR_DECLARE_gauge_int64(resident_mem_usage_mb);
+
+    std::unique_ptr<metric_timer> _timer;
+
+    DISALLOW_COPY_AND_ASSIGN(builtin_metrics);
 };
-}
+
+} // namespace dsn

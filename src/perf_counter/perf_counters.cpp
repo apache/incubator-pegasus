@@ -32,7 +32,6 @@
 #include <sstream>
 #include <utility>
 
-#include "builtin_counters.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_atomic.h"
 #include "perf_counter/perf_counter_utils.h"
@@ -367,8 +366,6 @@ std::string perf_counters::list_snapshot_by_literal(
 
 void perf_counters::take_snapshot()
 {
-    builtin_counters::instance().update_counters();
-
     std::vector<perf_counter_ptr> all_counters;
     get_all_counters(&all_counters);
 
