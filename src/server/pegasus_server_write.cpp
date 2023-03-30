@@ -19,7 +19,6 @@
 
 #include <fmt/core.h>
 #include <rocksdb/status.h>
-#include <stdio.h>
 #include <thrift/transport/TTransportException.h>
 #include <algorithm>
 #include <utility>

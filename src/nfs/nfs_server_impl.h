@@ -35,7 +35,6 @@
 #include "aio/file_io.h"
 #include "nfs_code_definition.h"
 #include "nfs_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
@@ -43,6 +42,7 @@
 #include "utils/command_manager.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/token_buckets.h"
 #include "utils/zlocks.h"
 
@@ -131,8 +131,8 @@ private:
     std::unique_ptr<dsn::utils::token_buckets>
         _send_token_buckets; // rate limiter of send to remote
 
-    perf_counter_wrapper _recent_copy_data_size;
-    perf_counter_wrapper _recent_copy_fail_count;
+    METRIC_VAR_DECLARE_counter(nfs_server_copy_bytes);
+    METRIC_VAR_DECLARE_counter(nfs_server_failed_copy_requests);
 
     std::unique_ptr<command_deregister> _nfs_max_send_rate_megabytes_cmd;
 
