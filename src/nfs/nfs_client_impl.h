@@ -41,7 +41,6 @@
 #include "aio/file_io.h"
 #include "nfs_code_definition.h"
 #include "nfs_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
@@ -50,6 +49,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -311,10 +311,10 @@ private:
     zlock _local_writes_lock;
     std::deque<copy_request_ex_ptr> _local_writes;
 
-    perf_counter_wrapper _recent_copy_data_size;
-    perf_counter_wrapper _recent_copy_fail_count;
-    perf_counter_wrapper _recent_write_data_size;
-    perf_counter_wrapper _recent_write_fail_count;
+    METRIC_VAR_DECLARE_counter(nfs_client_copy_bytes);
+    METRIC_VAR_DECLARE_counter(nfs_client_failed_copy_requests);
+    METRIC_VAR_DECLARE_counter(nfs_client_write_bytes);
+    METRIC_VAR_DECLARE_counter(nfs_client_failed_writes);
 
     std::unique_ptr<command_deregister> _nfs_max_copy_rate_megabytes_cmd;
 
