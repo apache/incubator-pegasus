@@ -39,25 +39,26 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 #include "utils/token_buckets.h"
 
-METRIC_DEFINE_counter(replica,
+METRIC_DEFINE_counter(server,
                       nfs_client_copy_bytes,
                       dsn::metric_unit::kBytes,
                       "The accumulated data size in bytes requested by client during nfs copy");
 
-METRIC_DEFINE_counter(replica,
+METRIC_DEFINE_counter(server,
                       nfs_client_failed_copy_requests,
                       dsn::metric_unit::kRequests,
                       "The number of failed nfs copy requests (requested by client)");
 
 METRIC_DEFINE_counter(
-    replica,
+    server,
     nfs_client_write_bytes,
     dsn::metric_unit::kBytes,
     "The accumulated data size in bytes that are written to local file in client");
 
-METRIC_DEFINE_counter(replica,
+METRIC_DEFINE_counter(server,
                       nfs_client_failed_writes,
                       dsn::metric_unit::kWrites,
                       "The number of failed writes to local file in client");

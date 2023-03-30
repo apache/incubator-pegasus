@@ -38,21 +38,23 @@
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "utils/TokenBucket.h"
+#include "utils/autoref_ptr.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 #include "utils/utils.h"
 
 METRIC_DEFINE_counter(
-    replica,
+    server,
     nfs_server_copy_bytes,
     dsn::metric_unit::kBytes,
     "The accumulated data size in bytes that are read from local file in server during nfs copy");
 
 METRIC_DEFINE_counter(
-    replica,
+    server,
     nfs_server_failed_copy_requests,
     dsn::metric_unit::kRequests,
     "The number of nfs copy requests (received by server) that fail to read local file in server");
