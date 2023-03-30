@@ -32,7 +32,6 @@
 
 #include "nfs/nfs_code_definition.h"
 #include "nfs/nfs_node.h"
-#include "perf_counter/perf_counter.h"
 #include "utils/blob.h"
 #include "utils/command_manager.h"
 #include "utils/filesystem.h"
@@ -40,7 +39,29 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 #include "utils/token_buckets.h"
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_copy_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The accumulated data size in bytes requested by client during nfs copy");
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_failed_copy_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed nfs copy requests (requested by client)");
+
+METRIC_DEFINE_counter(
+    server,
+    nfs_client_write_bytes,
+    dsn::metric_unit::kBytes,
+    "The accumulated data size in bytes that are written to local file in client");
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_failed_writes,
+                      dsn::metric_unit::kWrites,
+                      "The number of failed writes to local file in client");
 
 namespace dsn {
 namespace service {
@@ -98,27 +119,12 @@ nfs_client_impl::nfs_client_impl()
       _concurrent_local_write_count(0),
       _buffered_local_write_count(0),
       _copy_requests_low(FLAGS_max_file_copy_request_count_per_file),
-      _high_priority_remaining_time(FLAGS_high_priority_speed_rate)
+      _high_priority_remaining_time(FLAGS_high_priority_speed_rate),
+      METRIC_VAR_INIT_server(nfs_client_copy_bytes),
+      METRIC_VAR_INIT_server(nfs_client_failed_copy_requests),
+      METRIC_VAR_INIT_server(nfs_client_write_bytes),
+      METRIC_VAR_INIT_server(nfs_client_failed_writes)
 {
-    _recent_copy_data_size.init_app_counter("eon.nfs_client",
-                                            "recent_copy_data_size",
-                                            COUNTER_TYPE_VOLATILE_NUMBER,
-                                            "nfs client copy data size in the recent period");
-    _recent_copy_fail_count.init_app_counter(
-        "eon.nfs_client",
-        "recent_copy_fail_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "nfs client copy fail count count in the recent period");
-    _recent_write_data_size.init_app_counter("eon.nfs_client",
-                                             "recent_write_data_size",
-                                             COUNTER_TYPE_VOLATILE_NUMBER,
-                                             "nfs client write data size in the recent period");
-    _recent_write_fail_count.init_app_counter(
-        "eon.nfs_client",
-        "recent_write_fail_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "nfs client write fail count count in the recent period");
-
     _copy_token_buckets = std::make_unique<utils::token_buckets>();
 
     register_cli_commands();
@@ -339,7 +345,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
     }
 
     if (err != ::dsn::ERR_OK) {
-        _recent_copy_fail_count->increment();
+        METRIC_VAR_INCREMENT(nfs_client_failed_copy_requests);
 
         if (!fc->user_req->is_finished) {
             if (reqc->retry_count > 0) {
@@ -375,7 +381,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
     }
 
     else {
-        _recent_copy_data_size->add(resp.size);
+        METRIC_VAR_INCREMENT_BY(nfs_client_copy_bytes, resp.size);
 
         reqc->response = resp;
         reqc->is_ready_for_write = true;
@@ -506,7 +512,7 @@ void nfs_client_impl::end_write(error_code err, size_t sz, const copy_request_ex
 
     bool completed = false;
     if (err != ERR_OK) {
-        _recent_write_fail_count->increment();
+        METRIC_VAR_INCREMENT(nfs_client_failed_writes);
 
         LOG_ERROR("[nfs_service] local write failed, dir = {}, file = {}, err = {}",
                   fc->user_req->file_size_req.dst_dir,
@@ -514,7 +520,7 @@ void nfs_client_impl::end_write(error_code err, size_t sz, const copy_request_ex
                   err);
         completed = true;
     } else {
-        _recent_write_data_size->add(sz);
+        METRIC_VAR_INCREMENT_BY(nfs_client_write_bytes, sz);
 
         file_wrapper_ptr temp_holder;
         zauto_lock l(fc->user_req->user_req_lock);
