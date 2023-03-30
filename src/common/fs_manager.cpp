@@ -49,6 +49,18 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_view.h"
 
+METRIC_DEFINE_entity(disk);
+
+METRIC_DEFINE_gauge_int64(disk,
+                          total_disk_capacity_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The total disk capacity in MB");
+
+METRIC_DEFINE_gauge_int64(disk,
+                          avail_disk_capacity_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The available disk capacity in MB");
+
 namespace dsn {
 namespace replication {
 
@@ -134,6 +146,37 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
     return (old_status != new_status);
 }
 
+namespace {
+
+metric_entity_ptr instantiate_disk_metric_entity(const std::string &tag, const std::string &data_dir)
+{
+    auto entity_id = fmt::format("disk_{}", tag);
+
+    return METRIC_ENTITY_disk.instantiate(
+        entity_id,
+        {{"tag", tag},
+         {"data_dir", data_dir}});
+}
+
+} // anonymous namespace
+
+disk_capacity::disk_capacity(const std::string &tag, const std::string &data_dir)
+    : _disk_metric_entity(instantiate_disk_metric_entity(tag, data_dir)),
+    METRIC_VAR_INIT_disk(total_disk_capacity_mb),
+    METRIC_VAR_INIT_disk(avail_disk_capacity_mb)
+{
+
+}
+
+const metric_entity_ptr &disk_capacity::disk_metric_entity() const
+{
+    CHECK_NOTNULL(_disk_metric_entity,
+                  "disk metric entity should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate "
+                  "metric");
+    return _disk_metric_entity;
+}
+
 fs_manager::fs_manager(bool for_test)
 {
     if (!for_test) {
@@ -187,6 +230,7 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
         utils::filesystem::get_normalized_path(data_dirs[i], norm_path);
         dir_node *n = new dir_node(tags[i], norm_path);
         _dir_nodes.emplace_back(n);
+        _disk_capacities.emplace_back(n->tag, n->full_dir);
         LOG_INFO("{}: mark data dir({}) as tag({})", dsn_primary_address(), norm_path, tags[i]);
     }
     _available_data_dirs = data_dirs;

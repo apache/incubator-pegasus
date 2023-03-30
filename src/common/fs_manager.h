@@ -30,6 +30,7 @@
 #include "perf_counter/perf_counter_wrapper.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -73,6 +74,21 @@ public:
     bool has(const dsn::gpid &pid) const;
     unsigned remove(const dsn::gpid &pid);
     bool update_disk_stat(const bool update_disk_status);
+};
+
+class disk_capacity
+{
+public:
+    disk_capacity(const std::string &tag, const std::string &data_dir);
+
+    const metric_entity_ptr &disk_metric_entity() const;
+
+private:
+    const metric_entity_ptr _disk_metric_entity;
+    METRIC_VAR_DECLARE_gauge_int64(total_disk_capacity_mb);
+    METRIC_VAR_DECLARE_gauge_int64(avail_disk_capacity_mb);
+
+    DISALLOW_COPY_AND_ASSIGN(disk_capacity);
 };
 
 class fs_manager
@@ -134,6 +150,8 @@ private:
     // disk status will be updated periodically, this vector record nodes whose disk_status changed
     // in this round
     std::vector<std::shared_ptr<dir_node>> _status_updated_dir_nodes;
+
+    std::vector<std::unique_ptr<disk_capacity>> _disk_capacities;
 
     perf_counter_wrapper _counter_total_capacity_mb;
     perf_counter_wrapper _counter_total_available_mb;
