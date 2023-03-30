@@ -115,7 +115,7 @@ private:
         _status_updated_dir_nodes.clear();
     }
 
-    dir_node *get_dir_node(const std::string &subdir);
+    dir_node *get_dir_node(const std::string &subdir) const;
 
     // when visit the tag/storage of the _dir_nodes map, there's no need to protect by the lock.
     // but when visit the holding_replicas, you must take care.

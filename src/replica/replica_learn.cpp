@@ -1435,7 +1435,7 @@ void replica::on_add_learner(const group_check_request &request)
 error_code replica::apply_learned_state_from_private_log(learn_state &state)
 {
     bool duplicating = is_duplication_master();
-    // if no dunplicate, learn_start_decree=last_commit decree, step_back means whether
+    // if no duplicate, learn_start_decree=last_commit decree, step_back means whether
     // `learn_start_decree`should be stepped back to include all the
     // unconfirmed when duplicating in this round of learn. default is false
     bool step_back = false;
@@ -1490,17 +1490,19 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                        _app->last_committed_decree(),
                        FLAGS_max_mutation_count_in_prepare_list,
                        [this, duplicating, step_back](mutation_ptr &mu) {
-                           if (mu->data.header.decree == _app->last_committed_decree() + 1) {
-                               // TODO: assign the returned error_code to err and check it
-                               _app->apply_mutation(mu);
+                           if (mu->data.header.decree != _app->last_committed_decree() + 1) {
+                               return;
+                           }
 
-                               // appends logs-in-cache into plog to ensure them can be duplicated.
-                               // if current case is step back, it means the logs has been reserved
-                               // through `reset_form` above
-                               if (duplicating && !step_back) {
-                                   _private_log->append(
-                                       mu, LPC_WRITE_REPLICATION_LOG_COMMON, &_tracker, nullptr);
-                               }
+                           // TODO: assign the returned error_code to err and check it
+                           _app->apply_mutation(mu);
+
+                           // appends logs-in-cache into plog to ensure them can be duplicated.
+                           // if current case is step back, it means the logs has been reserved
+                           // through `reset_form` above
+                           if (duplicating && !step_back) {
+                               _private_log->append(
+                                   mu, LPC_WRITE_REPLICATION_LOG_COMMON, &_tracker, nullptr);
                            }
                        });
 

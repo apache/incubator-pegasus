@@ -160,8 +160,9 @@ fs_manager::fs_manager(bool for_test)
     }
 }
 
-dir_node *fs_manager::get_dir_node(const std::string &subdir)
+dir_node *fs_manager::get_dir_node(const std::string &subdir) const
 {
+    zauto_read_lock l(_lock);
     std::string norm_subdir;
     utils::filesystem::get_normalized_path(subdir, norm_subdir);
     for (auto &n : _dir_nodes) {
