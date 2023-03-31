@@ -431,10 +431,12 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
                        _replica->_app->last_committed_decree(),
                        FLAGS_max_mutation_count_in_prepare_list,
                        [this](mutation_ptr &mu) {
-                           if (mu->data.header.decree ==
+                           if (mu->data.header.decree !=
                                _replica->_app->last_committed_decree() + 1) {
-                               _replica->_app->apply_mutation(mu);
+                               return;
                            }
+
+                           _replica->_app->apply_mutation(mu);
                        });
 
     // replay private log

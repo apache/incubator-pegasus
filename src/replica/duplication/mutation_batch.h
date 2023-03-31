@@ -42,7 +42,7 @@ public:
                     int max_count,
                     mutation_committer committer);
 
-    void commit(decree d, commit_type ct);
+    void commit(decree d, commit_type ct) override;
 
 private:
     perf_counter_wrapper _counter_dulication_mutation_loss_count;

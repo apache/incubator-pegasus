@@ -313,10 +313,11 @@ public:
         config.pid = pid;
         config.status = status;
 
-        auto data_dirs = std::vector<std::string>{"./"};
-        auto data_dirs_tag = std::vector<std::string>{"tag"};
-        initialize_fs_manager(data_dirs, data_dirs_tag);
-        auto *rep = new mock_replica(this, pid, info, "./", need_restore, is_duplication_follower);
+        // TODO(yingchun): should refactor to move to cstor or initializer.
+        initialize_fs_manager({"./"}, {"tag"});
+        std::string dir = get_replica_dir("test", pid);
+        auto *rep =
+            new mock_replica(this, pid, info, dir.c_str(), need_restore, is_duplication_follower);
         rep->set_replica_config(config);
         return rep;
     }
