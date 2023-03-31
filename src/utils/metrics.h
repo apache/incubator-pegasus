@@ -615,6 +615,7 @@ enum class metric_unit : size_t
     kBytes,
     kMegaBytes,
     kCapacityUnits,
+    kPercent,
     kRequests,
     kSeeks,
     kPointLookups,
