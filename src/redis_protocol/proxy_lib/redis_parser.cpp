@@ -807,14 +807,16 @@ void redis_parser::geo_radius(message_entry &entry)
     // longitude latitude
     double lng_degrees = 0.0;
     const std::string &str_lng_degrees = redis_request.sub_requests[2].data.to_string();
-    if (!dsn::buf2double(str_lng_degrees, lng_degrees)) {
-        LOG_WARNING("longitude parameter '{}' is error, use {}", str_lng_degrees, lng_degrees);
-    }
+    LOG_WARNING_IF(!dsn::buf2double(str_lng_degrees, lng_degrees),
+                   "longitude parameter '{}' is error, use {}",
+                   str_lng_degrees,
+                   lng_degrees);
     double lat_degrees = 0.0;
     const std::string &str_lat_degrees = redis_request.sub_requests[3].data.to_string();
-    if (!dsn::buf2double(str_lat_degrees, lat_degrees)) {
-        LOG_WARNING("latitude parameter '{}' is error, use {}", str_lat_degrees, lat_degrees);
-    }
+    LOG_WARNING_IF(!dsn::buf2double(str_lat_degrees, lat_degrees),
+                   "latitude parameter '{}' is error, use {}",
+                   str_lat_degrees,
+                   lat_degrees);
 
     // radius m|km|ft|mi [WITHCOORD] [WITHDIST] [COUNT count] [ASC|DESC]
     double radius_m = 100.0;
@@ -1049,9 +1051,10 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
             WITHHASH = true;
         } else if (dsn::utils::iequals(opt, "COUNT") && base_index + 1 < opts.size()) {
             const std::string &str_count = opts[base_index + 1].data.to_string();
-            if (!dsn::buf2int32(str_count, count)) {
-                LOG_ERROR("'COUNT {}' option is error, use {}", str_count, count);
-            }
+            LOG_ERROR_IF(!dsn::buf2int32(str_count, count),
+                         "'COUNT {}' option is error, use {}",
+                         str_count,
+                         count);
         } else if (dsn::utils::iequals(opt, "ASC")) {
             sort_type = geo::geo_client::SortType::asc;
         } else if (dsn::utils::iequals(opt, "DESC")) {

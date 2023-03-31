@@ -31,6 +31,7 @@
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/smart_pointers.h"
 #include "utils/string_view.h"
 
@@ -48,7 +49,7 @@ namespace dsn {
 //
 //   error_s err = open_file("");
 //   if (!err.is_ok()) {
-//       std::cerr << s.description() << std::endl;
+//       std::cerr << err.description() << std::endl;
 //       // print: "ERR_INVALID_PARAMETERS: file name should not be empty"
 //   }
 //
@@ -223,6 +224,13 @@ private:
 #define RETURN_NOT_OK(s)                                                                           \
     do {                                                                                           \
         const ::dsn::error_s &_s = (s);                                                            \
-        if (!_s.is_ok())                                                                           \
+        if (dsn_unlikely(!_s.is_ok())) {                                                           \
             return _s;                                                                             \
+        }                                                                                          \
+    } while (false);
+
+#define CHECK_OK(s, ...)                                                                           \
+    do {                                                                                           \
+        const ::dsn::error_s &_s = (s);                                                            \
+        CHECK(_s.is_ok(), fmt::format(__VA_ARGS__));                                               \
     } while (false);

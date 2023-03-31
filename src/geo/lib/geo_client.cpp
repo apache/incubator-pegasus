@@ -111,10 +111,7 @@ geo_client::geo_client(const char *config_file,
     CHECK_NOTNULL(_geo_data_client, "init pegasus _geo_data_client failed");
 
     dsn::error_s s = _codec.set_latlng_indices(FLAGS_latitude_index, FLAGS_longitude_index);
-    CHECK(s.is_ok(),
-          "set_latlng_indices({}, {}) failed",
-          FLAGS_latitude_index,
-          FLAGS_longitude_index);
+    CHECK_OK(s, "set_latlng_indices({}, {}) failed", FLAGS_latitude_index, FLAGS_longitude_index);
 }
 
 dsn::error_s geo_client::set_max_level(int level)
