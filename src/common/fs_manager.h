@@ -49,10 +49,15 @@ public:
 
     const metric_entity_ptr &disk_metric_entity() const;
 
+    METRIC_DEFINE_SET_METHOD(total_disk_capacity_mb, int64_t)
+    METRIC_DEFINE_SET_METHOD(avail_disk_capacity_mb, int64_t)
+    METRIC_DEFINE_SET_METHOD(avail_disk_capacity_percentage, int64_t)
+
 private:
     const metric_entity_ptr _disk_metric_entity;
     METRIC_VAR_DECLARE_gauge_int64(total_disk_capacity_mb);
     METRIC_VAR_DECLARE_gauge_int64(avail_disk_capacity_mb);
+    METRIC_VAR_DECLARE_gauge_int64(avail_disk_capacity_percentage);
 
     DISALLOW_COPY_AND_ASSIGN(disk_capacity_metrics);
 };
@@ -71,7 +76,7 @@ public:
     std::map<app_id, std::set<gpid>> holding_secondary_replicas;
 
 private:
-    std::unique_ptr<disk_capacity_metrics> disk_capacity;
+    disk_capacity_metrics disk_capacity;
 
 public:
     dir_node(const std::string &tag_,
@@ -86,7 +91,7 @@ public:
           disk_available_mb(disk_available_mb_),
           disk_available_ratio(disk_available_ratio_),
           status(status_),
-          disk_capacity(std::make_unique(tag_, dir_))
+          disk_capacity(tag_, dir_)
     {
     }
     unsigned replicas_count(app_id id) const;
@@ -128,6 +133,7 @@ public:
 private:
     dir_node *get_dir_node(const std::string &subdir);
 
+    // TODO(wangdan): _dir_nodes should be protected by lock since
     // when visit the tag/storage of the _dir_nodes map, there's no need to protect by the lock.
     // but when visit the holding_replicas, you must take care.
     mutable zrwlock_nr _lock;

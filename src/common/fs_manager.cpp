@@ -80,25 +80,22 @@ DSN_TAG_VARIABLE(disk_min_available_space_ratio, FT_MUTABLE);
 
 namespace {
 
-metric_entity_ptr instantiate_disk_metric_entity(const std::string &tag, const std::string &data_dir)
+metric_entity_ptr instantiate_disk_metric_entity(const std::string &tag,
+                                                 const std::string &data_dir)
 {
     auto entity_id = fmt::format("disk_{}", tag);
 
-    return METRIC_ENTITY_disk.instantiate(
-        entity_id,
-        {{"tag", tag},
-         {"data_dir", data_dir}});
+    return METRIC_ENTITY_disk.instantiate(entity_id, {{"tag", tag}, {"data_dir", data_dir}});
 }
 
 } // anonymous namespace
 
 disk_capacity_metrics::disk_capacity_metrics(const std::string &tag, const std::string &data_dir)
     : _disk_metric_entity(instantiate_disk_metric_entity(tag, data_dir)),
-    METRIC_VAR_INIT_disk(total_disk_capacity_mb),
-    METRIC_VAR_INIT_disk(avail_disk_capacity_mb),
-    METRIC_VAR_INIT_disk(avail_disk_capacity_percentage)
+      METRIC_VAR_INIT_disk(total_disk_capacity_mb),
+      METRIC_VAR_INIT_disk(avail_disk_capacity_mb),
+      METRIC_VAR_INIT_disk(avail_disk_capacity_percentage)
 {
-
 }
 
 const metric_entity_ptr &disk_capacity_metrics::disk_metric_entity() const
@@ -157,9 +154,9 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
     disk_available_ratio = static_cast<int>(
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
-    METRIC_VAR_SET(total_disk_capacity_mb, disk_capacity_mb);
-    METRIC_VAR_SET(avail_disk_capacity_mb, disk_available_mb);
-    METRIC_VAR_SET(avail_disk_capacity_percentage, disk_available_ratio);
+    METRIC_CALL_SET_METHOD(disk_capacity, total_disk_capacity_mb, disk_capacity_mb);
+    METRIC_CALL_SET_METHOD(disk_capacity, avail_disk_capacity_mb, disk_available_mb);
+    METRIC_CALL_SET_METHOD(disk_capacity, avail_disk_capacity_percentage, disk_available_ratio);
 
     if (!update_disk_status) {
         LOG_INFO("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "

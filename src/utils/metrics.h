@@ -195,6 +195,11 @@ class error_code;
 
 #define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
 
+#define METRIC_DEFINE_SET_METHOD(name, value_type)                                                 \
+    void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
+
+#define METRIC_CALL_SET_METHOD(obj, name, value) obj.set_##name(value)
+
 namespace dsn {
 class metric;                  // IWYU pragma: keep
 class metric_entity_prototype; // IWYU pragma: keep
