@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -31,6 +32,7 @@
 #include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
 #include "runtime/ranger/ranger_resource_policy_manager.h"
+#include "runtime/task/task_code.h"
 #include "utils/blob.h"
 
 namespace dsn {
@@ -143,18 +145,15 @@ TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
 TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test)
 {
     // 1. Create a fake resource policies data in 'fake_all_resource_policies'
-    acl_policies fake_policy;
-    fake_policy.allow_policies = {{access_type::kRead | access_type::kWrite | access_type::kList,
-                                   {"user1", "user2", "user3", "user4"}}};
-    fake_policy.allow_policies_exclude = {{access_type::kWrite | access_type::kCreate, {"user2"}}};
-    fake_policy.deny_policies = {{access_type::kRead | access_type::kWrite, {"user3", "user4"}}};
-    fake_policy.deny_policies_exclude = {{access_type::kRead | access_type::kList, {"user4"}}};
-
-    ranger_resource_policy fake_ranger_resource_policy;
-    fake_ranger_resource_policy.name = "pegasus_ranger_test";
-    fake_ranger_resource_policy.database_names = {"database1", "database2"};
-    fake_ranger_resource_policy.table_names = {"database1_table", "database2_table"};
-    fake_ranger_resource_policy.policies = fake_policy;
+    ranger_resource_policy fake_ranger_resource_policy(
+        {"pegasus_ranger_test",
+         {"database1", "database2"},
+         {"database1_table", "database2_table"},
+         {{{access_type::kRead | access_type::kWrite | access_type::kList,
+            {"user1", "user2", "user3", "user4"}}},
+          {{access_type::kWrite | access_type::kCreate, {"user2"}}},
+          {{access_type::kRead | access_type::kWrite, {"user3", "user4"}}},
+          {{access_type::kRead | access_type::kList, {"user4"}}}}});
 
     std::string resource_type_name = enum_to_string(resource_type::kDatabaseTable);
     all_resource_policies fake_all_resource_policies{
@@ -253,6 +252,109 @@ TEST(ranger_resource_policy_manager_test, get_table_name_from_app_name_test)
     for (const auto &test : tests) {
         auto actual_result = get_table_name_from_app_name(test.app_name);
         EXPECT_EQ(test.expected_result, actual_result);
+    }
+}
+
+class ranger_resource_policy_manager_function_test : public ranger_resource_policy_manager,
+                                                     public testing::Test
+{
+public:
+    ranger_resource_policy_manager_function_test() : ranger_resource_policy_manager(nullptr)
+    {
+        ranger_resource_policy fake_ranger_resource_policy_1(
+            {"",
+             {"database1"},
+             {},
+             {{{access_type::kList | access_type::kMetadata, {"user1", "user2"}}},
+              {{access_type::kMetadata, {"user2"}}},
+              {},
+              {}}});
+        ranger_resource_policy fake_ranger_resource_policy_2(
+            {"",
+             {"database2"},
+             {},
+             {{{access_type::kCreate | access_type::kDrop | access_type::kControl,
+                {"user3", "user4"}}},
+              {{access_type::kControl, {"user4"}}},
+              {},
+              {}}});
+        ranger_resource_policy fake_ranger_resource_policy_3(
+            {"",
+             {"*"},
+             {},
+             {{{access_type::kCreate, {"user5", "user6"}}},
+              {{access_type::kCreate, {"user6"}}},
+              {},
+              {}}});
+        _database_policies_cache = {fake_ranger_resource_policy_1,
+                                    fake_ranger_resource_policy_2,
+                                    fake_ranger_resource_policy_3};
+
+        ranger_resource_policy fake_ranger_resource_policy_4(
+            {"",
+             {"database3"},
+             {},
+             {{{access_type::kMetadata, {"user7", "user8"}}},
+              {{access_type::kMetadata, {"user8"}}},
+              {},
+              {}}});
+        ranger_resource_policy fake_ranger_resource_policy_5(
+            {"",
+             {"database4"},
+             {},
+             {{{access_type::kControl, {"user9", "user10"}}},
+              {{access_type::kControl, {"user10"}}},
+              {},
+              {}}});
+        _global_policies_cache = {fake_ranger_resource_policy_4, fake_ranger_resource_policy_5};
+    }
+};
+
+TEST_F(ranger_resource_policy_manager_function_test, allowed)
+{
+    struct test_case
+    {
+        std::string rpc_code;
+        std::string user_name;
+        std::string database_name;
+        bool expected_result;
+    } tests[] = {{"TASK_CODE_INVALID", "user1", "database1", false},
+                 {"RPC_CM_CREATE_APP", "user1", "database1", false},
+                 {"RPC_CM_CREATE_APP", "user2", "database1", false},
+                 {"RPC_CM_LIST_APPS", "user1", "database1", true},
+                 {"RPC_CM_LIST_APPS", "user2", "database1", true},
+                 {"RPC_CM_GET_MAX_REPLICA_COUNT", "user1", "database1", true},
+                 {"RPC_CM_GET_MAX_REPLICA_COUNT", "user2", "database1", false},
+                 {"TASK_CODE_INVALID", "user3", "database2", false},
+                 {"RPC_CM_CREATE_APP", "user3", "database2", true},
+                 {"RPC_CM_CREATE_APP", "user4", "database2", true},
+                 {"RPC_CM_START_BACKUP_APP", "user3", "database2", true},
+                 {"RPC_CM_START_BACKUP_APP", "user4", "database2", false},
+                 {"TASK_CODE_INVALID", "user5", "", false},
+                 {"RPC_CM_CREATE_APP", "user5", "", true},
+                 {"RPC_CM_CREATE_APP", "user5", "database2", false},
+                 {"RPC_CM_CREATE_APP", "user6", "", false},
+                 {"RPC_CM_CREATE_APP", "user6", "database2", false},
+                 {"TASK_CODE_INVALID", "user7", "database3", false},
+                 {"RPC_CM_LIST_NODES", "user7", "database3", true},
+                 {"RPC_CM_LIST_NODES", "user8", "database3", false},
+                 {"RPC_CM_LIST_APPS", "user7", "database3", true},
+                 {"RPC_CM_LIST_APPS", "user8", "database3", false},
+                 {"TASK_CODE_INVALID", "user9", "database4", false},
+                 {"RPC_CM_LIST_NODES", "user9", "database4", false},
+                 {"RPC_CM_LIST_NODES", "user10", "database4", false},
+                 {"RPC_CM_LIST_APPS", "user9", "database4", false},
+                 {"RPC_CM_LIST_APPS", "user10", "database4", false},
+                 {"RPC_CM_CONTROL_META", "user9", "database4", true},
+                 {"RPC_CM_CONTROL_META", "user10", "database4", false}};
+    for (const auto &test : tests) {
+        auto code = task_code::try_get(test.rpc_code, TASK_CODE_INVALID);
+        auto actual_result = allowed(code, test.user_name, test.database_name);
+        EXPECT_EQ(test.expected_result, actual_result)
+            << fmt::format("ac_type: {}, user_name: {}, database_name: {}",
+                           test.rpc_code,
+                           test.user_name,
+                           test.database_name);
     }
 }
 

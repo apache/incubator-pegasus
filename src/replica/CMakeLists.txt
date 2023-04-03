@@ -69,6 +69,7 @@ set(MY_PROJ_LIBS
     dsn_http
     dsn_runtime
     dsn_aio
+    dsn_meta_server
     galaxy-fds-sdk-cpp
     PocoNet
     PocoFoundation

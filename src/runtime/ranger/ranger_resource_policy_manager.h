@@ -71,6 +71,12 @@ public:
 
     ~ranger_resource_policy_manager() = default;
 
+    // When using Ranger for ACL, periodically pull policies from Ranger service.
+    void start();
+
+    // Return true if the 'user_name' is allowed to access 'app_name' via 'rpc_code'.
+    bool allowed(const int rpc_code, const std::string &user_name, const std::string &app_name);
+
 private:
     // Parse Ranger ACL policies from 'data' in JSON format into 'policies'.
     static void parse_policies_from_json(const rapidjson::Value &data,
@@ -78,9 +84,6 @@ private:
 
     // Update policies from Ranger service.
     dsn::error_code update_policies_from_ranger_service();
-
-    // Pull policies in JSON format from Ranger service.
-    dsn::error_code pull_policies_from_ranger_service(std::string *ranger_policies) const;
 
     // Load policies from JSON formated string.
     dsn::error_code load_policies_from_json(const std::string &data);
@@ -100,6 +103,13 @@ private:
     // Sync policies to app_envs(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES).
     dsn::error_code sync_policies_to_app_envs();
 
+protected:
+    // The cache of the global resources policies, it's a subset of '_all_resource_policies'.
+    resource_policies _global_policies_cache;
+
+    // The cache of the database resources policies, it's a subset of '_all_resource_policies'.
+    resource_policies _database_policies_cache;
+
 private:
     dsn::task_tracker _tracker;
 
@@ -107,16 +117,8 @@ private:
     std::string _ranger_policy_meta_root;
 
     replication::meta_service *_meta_svc;
-
-    // The cache of the global resources policies, it's a subset of '_all_resource_policies'.
-    utils::rw_lock_nr _global_policies_lock; // [
-    resource_policies _global_policies_cache;
-    // ]
-
-    // The cache of the database resources policies, it's a subset of '_all_resource_policies'.
-    utils::rw_lock_nr _database_policies_lock; // [
-    resource_policies _database_policies_cache;
-    // ]
+    utils::rw_lock_nr _global_policies_lock;
+    utils::rw_lock_nr _database_policies_lock;
 
     // The access type of RPCs which access global level resources.
     access_type_of_rpc_code _ac_type_of_global_rpcs;
