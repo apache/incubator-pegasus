@@ -40,6 +40,20 @@
 #define LOG_ERROR(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
 #define LOG_FATAL(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
 
+#define LOG_WARNING_IF(x, ...)                                                                     \
+    do {                                                                                           \
+        if (dsn_unlikely(x)) {                                                                     \
+            LOG_WARNING(__VA_ARGS__);                                                              \
+        }                                                                                          \
+    } while (false)
+
+#define LOG_ERROR_IF(x, ...)                                                                       \
+    do {                                                                                           \
+        if (dsn_unlikely(x)) {                                                                     \
+            LOG_ERROR(__VA_ARGS__);                                                                \
+        }                                                                                          \
+    } while (false)
+
 #define CHECK_EXPRESSION(expression, evaluation, ...)                                              \
     do {                                                                                           \
         if (dsn_unlikely(!(evaluation))) {                                                         \
