@@ -41,7 +41,7 @@
 
 #include "common/gpid.h"
 #include "common/replication_enums.h"
-#include "perf_counter/perf_counter.h"
+#include "fmt/core.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/fail_point.h"
