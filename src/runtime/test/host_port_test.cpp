@@ -38,33 +38,14 @@ TEST(host_port_test, host_port_to_string)
         host_port hp;
         ASSERT_EQ(std::string("invalid address"), hp.to_string());
     }
-
-    {
-        const char *name = "test_group";
-        host_port hp;
-        hp.assign_group(name);
-        ASSERT_EQ(std::string("address group test_group"), hp.to_string());
-    }
 }
 
 TEST(host_port_test, host_port_build)
 {
-    {
-        host_port hp = host_port("localhost", 8080);
-        ASSERT_EQ(HOST_TYPE_IPV4, hp.type());
-        ASSERT_EQ(8080, hp.port());
-        ASSERT_EQ("localhost", hp.host());
-    }
-
-    {
-        const char *name = "test_group";
-        host_port hp;
-        hp.assign_group(name);
-
-        ASSERT_EQ(HOST_TYPE_GROUP, hp.type());
-        ASSERT_STREQ(name, hp.group_host_port()->name());
-        ASSERT_EQ(1, hp.group_host_port()->get_count());
-    }
+    host_port hp = host_port("localhost", 8080);
+    ASSERT_EQ(HOST_TYPE_IPV4, hp.type());
+    ASSERT_EQ(8080, hp.port());
+    ASSERT_EQ("localhost", hp.host());
 }
 
 TEST(host_port_test, operators)
@@ -82,15 +63,9 @@ TEST(host_port_test, operators)
         ASSERT_NE(hp, new_hp);
     }
 
-    host_port hp_grp;
-    ASSERT_EQ(hp_grp, hp_grp);
-    ASSERT_NE(hp, hp_grp);
-
-    hp_grp.assign_group("test_group");
-
-    {
-        host_port new_hp_grp(hp_grp);
-        ASSERT_EQ(hp_grp, new_hp_grp);
-    }
+    host_port hp2;
+    ASSERT_NE(hp, hp2);
+    ASSERT_FALSE(hp.is_invalid());
+    ASSERT_TRUE(hp2.is_invalid());
 }
-}
+} // namespace dsn

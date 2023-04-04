@@ -22,17 +22,12 @@
 #include <string>
 #include <vector>
 
-#include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_address.h"
-#include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
-#include "utils/synchronize.h"
 
 namespace dsn {
-
-class rpc_group_host_port;
 
 class host_port
 {
@@ -51,11 +46,9 @@ public:
     dsn_host_type_t type() const { return _type; }
     const std::string &host() const { return _host; }
     uint16_t port() const { return _port; }
-    rpc_group_host_port *group_host_port() const { return _group_host_port; }
 
     bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
 
-    void assign_group(const char *name);
     std::string to_string() const;
 
     friend std::ostream &operator<<(std::ostream &os, const host_port &hp)
@@ -67,7 +60,6 @@ private:
     std::string _host = "";
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;
-    rpc_group_host_port *_group_host_port = nullptr;
 };
 
 inline bool operator<(const host_port &hp1, const host_port &hp2)
@@ -78,8 +70,6 @@ inline bool operator<(const host_port &hp1, const host_port &hp2)
     switch (hp1.type()) {
     case HOST_TYPE_IPV4:
         return hp1.host() < hp2.host() || (hp1.host() == hp2.host() && hp1.port() < hp2.port());
-    case HOST_TYPE_GROUP:
-        return hp1.group_host_port() < hp2.group_host_port();
     default:
         return true;
     }
@@ -98,8 +88,6 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
     switch (hp1.type()) {
     case HOST_TYPE_IPV4:
         return hp1.host() == hp2.host() && hp1.port() == hp2.port();
-    case HOST_TYPE_GROUP:
-        return hp1.group_host_port() == hp2.group_host_port();
     default:
         return true;
     }
@@ -107,29 +95,6 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
 
 inline bool operator!=(const host_port &hp1, const host_port &hp2) { return !(hp1 == hp2); }
 
-class rpc_group_host_port : public ref_counter
-{
-public:
-    rpc_group_host_port(const char *name);
-    rpc_group_host_port &operator=(const rpc_group_host_port &other);
-    const char *name() const { return _name.c_str(); }
-
-private:
-    std::string _name;
-};
-
-// ------------------ inline implementation --------------------
-
-inline rpc_group_host_port::rpc_group_host_port(const char *name) : _name(name) {}
-
-inline rpc_group_host_port &rpc_group_host_port::operator=(const rpc_group_host_port &other)
-{
-    if (this == &other) {
-        return *this;
-    }
-    _name = other._name;
-    return *this;
-}
 } // namespace dsn
 
 namespace std {
@@ -141,8 +106,6 @@ struct hash<::dsn::host_port>
         switch (hp.type()) {
         case HOST_TYPE_IPV4:
             return std::hash<std::string>()(hp.host()) ^ hp.port();
-        case HOST_TYPE_GROUP:
-            return std::hash<void *>()(hp.group_host_port());
         default:
             return 0;
         }
