@@ -39,14 +39,18 @@ host_port::host_port(rpc_address addr)
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
         std::string hostname;
-        CHECK(!utils::hostname_from_ip(addr.ipv4_str(), &hostname),
+        CHECK(utils::hostname_from_ip(addr.ipv4_str(), &hostname),
               "invalid address {}",
               addr.ipv4_str());
-        *this = host_port(std::move(hostname), addr.port());
+        _host = std::move(hostname);
+        _port = addr.port();
     } break;
+    case HOST_TYPE_GROUP:
+        CHECK(false, "type HOST_TYPE_GROUP not support!");
     default:
         break;
     }
+    _type = addr.type();
 }
 
 void host_port::reset()
@@ -56,6 +60,8 @@ void host_port::reset()
         _host.clear();
         _port = 0;
         break;
+    case HOST_TYPE_GROUP:
+        CHECK(false, "type HOST_TYPE_GROUP not support!");
     default:
         break;
     }
@@ -64,18 +70,22 @@ void host_port::reset()
 
 host_port &host_port::operator=(const host_port &other)
 {
-    if (this != &other) {
-        reset();
-        _type = other.type();
-        switch (type()) {
-        case HOST_TYPE_IPV4:
-            _host = other.host();
-            _port = other.port();
-            break;
-        default:
-            break;
-        }
+    if (this == &other) {
+        return *this;
     }
+
+    reset();
+    switch (other.type()) {
+    case HOST_TYPE_IPV4:
+        _host = other.host();
+        _port = other.port();
+        break;
+    case HOST_TYPE_GROUP:
+        CHECK(false, "type HOST_TYPE_GROUP not support!");
+    default:
+        break;
+    }
+    _type = other.type();
     return *this;
 }
 
@@ -84,6 +94,8 @@ std::string host_port::to_string() const
     switch (type()) {
     case HOST_TYPE_IPV4:
         return fmt::format("{}:{}", _host, _port);
+    case HOST_TYPE_GROUP:
+        CHECK(false, "type HOST_TYPE_GROUP not support!");
     default:
         return "invalid address";
     }

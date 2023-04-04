@@ -57,19 +57,24 @@ public:
     }
 
 private:
-    std::string _host = "";
+    std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;
 };
 
 inline bool operator<(const host_port &hp1, const host_port &hp2)
 {
-    if (hp1.type() != hp2.type())
+    if (hp1.type() != hp2.type()) {
         return hp1.type() < hp2.type();
+    }
 
     switch (hp1.type()) {
-    case HOST_TYPE_IPV4:
-        return hp1.host() < hp2.host() || (hp1.host() == hp2.host() && hp1.port() < hp2.port());
+    case HOST_TYPE_IPV4: {
+        int ret = hp1.host().compare(hp2.host());
+        return ret < 0 || (ret == 0 && hp1.port() < hp2.port());
+    }
+    case HOST_TYPE_GROUP:
+        CHECK(false, "type HOST_TYPE_GROUP not support!");
     default:
         return true;
     }
@@ -88,6 +93,8 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
     switch (hp1.type()) {
     case HOST_TYPE_IPV4:
         return hp1.host() == hp2.host() && hp1.port() == hp2.port();
+    case HOST_TYPE_GROUP:
+        CHECK(false, "type HOST_TYPE_GROUP not support!");
     default:
         return true;
     }
@@ -106,6 +113,8 @@ struct hash<::dsn::host_port>
         switch (hp.type()) {
         case HOST_TYPE_IPV4:
             return std::hash<std::string>()(hp.host()) ^ hp.port();
+        case HOST_TYPE_GROUP:
+            CHECK(false, "type HOST_TYPE_GROUP not support!");
         default:
             return 0;
         }
