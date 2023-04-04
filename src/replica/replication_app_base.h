@@ -39,6 +39,7 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 
 namespace dsn {
 class app_info;
@@ -69,7 +70,7 @@ public:
 
 public:
     replica_init_info() { memset((void *)this, 0, sizeof(*this)); }
-    error_code load(const std::string &dir);
+    error_code load(const std::string &dir) WARN_UNUSED_RESULT;
     error_code store(const std::string &dir);
     std::string to_string();
 
