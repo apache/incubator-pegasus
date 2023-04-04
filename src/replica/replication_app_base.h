@@ -39,6 +39,7 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 
 namespace dsn {
 class app_info;
