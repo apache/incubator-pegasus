@@ -134,9 +134,10 @@ public:
 private:
     dir_node *get_dir_node(const std::string &subdir);
 
-    // TODO(wangdan): _dir_nodes should be protected by lock since
-    // when visit the tag/storage of the _dir_nodes map, there's no need to protect by the lock.
-    // but when visit the holding_replicas, you must take care.
+    // TODO(wangdan): _dir_nodes should be protected by lock since add_new_disk are supported:
+    // it might be updated arbitrarily at any time.
+    //
+    // Especially when visiting the holding_replicas, you must take care.
     mutable zrwlock_nr _lock;
 
     int64_t _total_capacity_mb = 0;
