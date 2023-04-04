@@ -26,14 +26,12 @@
 #include <time.h>
 #include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
 #include <ostream>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
@@ -43,10 +41,9 @@
 #include "shell/command_helper.h"
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"
+#include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/test_macros.h"
-#include "test_util/test_util.h"
 
 using namespace ::pegasus;
 using std::map;

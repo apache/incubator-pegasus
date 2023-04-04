@@ -37,10 +37,9 @@
 #include "partition_split_types.h"
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
+#include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/test_macros.h"
-#include "test_util/test_util.h"
 
 using namespace dsn;
 using namespace dsn::replication;

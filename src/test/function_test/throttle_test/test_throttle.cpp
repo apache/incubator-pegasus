@@ -40,8 +40,10 @@
 #include "runtime/api_layer1.h"
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"
+#include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
 using namespace dsn;
@@ -302,7 +304,7 @@ public:
         int try_times = 0;
         ASSERT_IN_TIME(
             [&] {
-                LOG_INFO_F("Start to try the {}th time", ++try_times);
+                LOG_INFO("Start to try the {}th time", ++try_times);
                 ASSERT_EQ(0, ref_count.load());
                 ASSERT_TRUE(last_error == PERR_OK || last_error == PERR_APP_BUSY) << last_error;
             },

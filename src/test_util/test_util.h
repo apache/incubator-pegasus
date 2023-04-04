@@ -21,7 +21,7 @@
 
 #include <functional>
 
-#include <gtest/gtest.h>
+#include "utils/test_macros.h"
 
 namespace pegasus {
 
