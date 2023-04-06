@@ -19,6 +19,7 @@
 
 #pragma once
 
+// IWYU pragma: no_include <experimental/string_view>
 #include <stdint.h>
 #include <cstddef>
 #include <iosfwd>
