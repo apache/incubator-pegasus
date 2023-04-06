@@ -89,7 +89,33 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-using namespace dsn;
+// The number of partitions in each status, see `health_status` and `partition_health_status()`
+// for details.
+
+METRIC_DEFINE_gauge_int64(server,
+                          dead_partitions,
+                          dsn::metric_unit::kPartitions,
+                          "The number of dead partitions among all tables, which means primary = 0 && secondary = 0");
+
+METRIC_DEFINE_gauge_int64(server,
+                          unreadable_partitions,
+                          dsn::metric_unit::kPartitions,
+                          "The number of unreadable partitions among all tables, which means primary = 0 && secondary > 0");
+
+METRIC_DEFINE_gauge_int64(server,
+                          unwritable_partitions,
+                          dsn::metric_unit::kPartitions,
+                          "The number of unwritable partitions among all tables, which means primary = 1 && primary + secondary < mutation_2pc_min_replica_count");
+
+METRIC_DEFINE_gauge_int64(server,
+                          writable_ill_partitions,
+                          dsn::metric_unit::kPartitions,
+                          "The number of writable ill partitions among all tables, which means primary = 1 && primary + secondary >= mutation_2pc_min_replica_count && primary + secondary < max_replica_count");
+
+METRIC_DEFINE_gauge_int64(server,
+                          healthy_partitions,
+                          dsn::metric_unit::kPartitions,
+                          "The number of healthy partitions among all tables, which means primary = 1 && primary + secondary >= max_replica_count");
 
 namespace dsn {
 namespace replication {
@@ -143,7 +169,12 @@ static const char *unlock_state = "unlock";
 server_state::server_state()
     : _meta_svc(nullptr),
       _add_secondary_enable_flow_control(false),
-      _add_secondary_max_count_for_one_node(0)
+      _add_secondary_max_count_for_one_node(0),
+      METRIC_VAR_INIT_server(dead_partitions),
+      METRIC_VAR_INIT_server(unreadable_partitions),
+      METRIC_VAR_INIT_server(unwritable_partitions),
+      METRIC_VAR_INIT_server(writable_ill_partitions),
+      METRIC_VAR_INIT_server(healthy_partitions)
 {
 }
 
@@ -215,26 +246,6 @@ void server_state::initialize(meta_service *meta_svc, const std::string &apps_ro
     _add_secondary_enable_flow_control = FLAGS_add_secondary_enable_flow_control;
     _add_secondary_max_count_for_one_node = FLAGS_add_secondary_max_count_for_one_node;
 
-    _dead_partition_count.init_app_counter("eon.server_state",
-                                           "dead_partition_count",
-                                           COUNTER_TYPE_NUMBER,
-                                           "current dead partition count");
-    _unreadable_partition_count.init_app_counter("eon.server_state",
-                                                 "unreadable_partition_count",
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "current unreadable partition count");
-    _unwritable_partition_count.init_app_counter("eon.server_state",
-                                                 "unwritable_partition_count",
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "current unwritable partition count");
-    _writable_ill_partition_count.init_app_counter("eon.server_state",
-                                                   "writable_ill_partition_count",
-                                                   COUNTER_TYPE_NUMBER,
-                                                   "current writable ill partition count");
-    _healthy_partition_count.init_app_counter("eon.server_state",
-                                              "healthy_partition_count",
-                                              COUNTER_TYPE_NUMBER,
-                                              "current healthy partition count");
     _recent_update_config_count.init_app_counter("eon.server_state",
                                                  "recent_update_config_count",
                                                  COUNTER_TYPE_VOLATILE_NUMBER,
@@ -2460,11 +2471,11 @@ void server_state::update_partition_perf_counter()
         return true;
     };
     for_each_available_app(_all_apps, func);
-    _dead_partition_count->set(counters[HS_DEAD]);
-    _unreadable_partition_count->set(counters[HS_UNREADABLE]);
-    _unwritable_partition_count->set(counters[HS_UNWRITABLE]);
-    _writable_ill_partition_count->set(counters[HS_WRITABLE_ILL]);
-    _healthy_partition_count->set(counters[HS_HEALTHY]);
+    METRIC_VAR_SET(dead_partitions, counters[HS_DEAD]);
+    METRIC_VAR_SET(unreadable_partitions, counters[HS_UNREADABLE]);
+    METRIC_VAR_SET(unwritable_partitions, counters[HS_UNWRITABLE]);
+    METRIC_VAR_SET(writable_ill_partitions, counters[HS_WRITABLE_ILL]);
+    METRIC_VAR_SET(healthy_partitions, counters[HS_HEALTHY]);
 }
 
 bool server_state::check_all_partitions()

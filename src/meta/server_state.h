@@ -56,6 +56,7 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -437,11 +438,11 @@ private:
     int32_t _add_secondary_max_count_for_one_node;
     std::vector<std::unique_ptr<command_deregister>> _cmds;
 
-    perf_counter_wrapper _dead_partition_count;
-    perf_counter_wrapper _unreadable_partition_count;
-    perf_counter_wrapper _unwritable_partition_count;
-    perf_counter_wrapper _writable_ill_partition_count;
-    perf_counter_wrapper _healthy_partition_count;
+    METRIC_VAR_DECLARE_gauge_int64(dead_partitions);
+    METRIC_VAR_DECLARE_gauge_int64(unreadable_partitions);
+    METRIC_VAR_DECLARE_gauge_int64(unwritable_partitions);
+    METRIC_VAR_DECLARE_gauge_int64(writable_ill_partitions);
+    METRIC_VAR_DECLARE_gauge_int64(healthy_partitions);
     perf_counter_wrapper _recent_update_config_count;
     perf_counter_wrapper _recent_partition_change_unwritable_count;
     perf_counter_wrapper _recent_partition_change_writable_count;
