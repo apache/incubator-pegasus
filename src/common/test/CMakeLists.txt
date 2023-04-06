@@ -27,6 +27,7 @@ set(MY_PROJ_NAME dsn_replication_common_test)
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+        dsn_http
         dsn_replication_common
         dsn_runtime
         gtest
