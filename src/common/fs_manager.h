@@ -28,10 +28,12 @@
 
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/string_view.h"
+#include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -40,6 +42,25 @@ class gpid;
 namespace replication {
 
 DSN_DECLARE_int32(disk_min_available_space_ratio);
+
+class disk_capacity_metrics
+{
+public:
+    disk_capacity_metrics(const std::string &tag, const std::string &data_dir);
+    ~disk_capacity_metrics() = default;
+
+    const metric_entity_ptr &disk_metric_entity() const;
+
+    METRIC_DEFINE_SET_METHOD(total_disk_capacity_mb, int64_t)
+    METRIC_DEFINE_SET_METHOD(avail_disk_capacity_mb, int64_t)
+
+private:
+    const metric_entity_ptr _disk_metric_entity;
+    METRIC_VAR_DECLARE_gauge_int64(total_disk_capacity_mb);
+    METRIC_VAR_DECLARE_gauge_int64(avail_disk_capacity_mb);
+
+    DISALLOW_COPY_AND_ASSIGN(disk_capacity_metrics);
+};
 
 struct dir_node
 {
@@ -54,6 +75,9 @@ public:
     std::map<app_id, std::set<gpid>> holding_primary_replicas;
     std::map<app_id, std::set<gpid>> holding_secondary_replicas;
 
+private:
+    disk_capacity_metrics disk_capacity;
+
 public:
     dir_node(const std::string &tag_,
              const std::string &dir_,
@@ -66,7 +90,8 @@ public:
           disk_capacity_mb(disk_capacity_mb_),
           disk_available_mb(disk_available_mb_),
           disk_available_ratio(disk_available_ratio_),
-          status(status_)
+          status(status_),
+          disk_capacity(tag_, dir_)
     {
     }
     // All functions are not thread-safe. However, they are only used in fs_manager
@@ -84,7 +109,8 @@ public:
 class fs_manager
 {
 public:
-    fs_manager();
+    fs_manager() = default;
+    ~fs_manager() = default;
 
     // Should be called before open/load any replicas.
     // NOTE: 'data_dirs' and 'data_dir_tags' must have the same size and in the same order.
@@ -122,27 +148,16 @@ public:
     bool is_dir_node_available(const std::string &data_dir, const std::string &tag) const;
 
 private:
-    void reset_disk_stat()
-    {
-        _total_capacity_mb = 0;
-        _total_available_mb = 0;
-        _total_available_ratio = 0;
-        _min_available_ratio = 100;
-        _max_available_ratio = 0;
-        _status_updated_dir_nodes.clear();
-    }
-
     dir_node *get_dir_node(const std::string &subdir) const;
 
-    // when visit the tag/storage of the _dir_nodes map, there's no need to protect by the lock.
-    // but when visit the holding_replicas, you must take care.
+    // TODO(wangdan): _dir_nodes should be protected by lock since add_new_disk are supported:
+    // it might be updated arbitrarily at any time.
+    //
+    // Especially when visiting the holding_replicas, you must take care.
     mutable zrwlock_nr _lock;
 
     int64_t _total_capacity_mb = 0;
     int64_t _total_available_mb = 0;
-    int _total_available_ratio = 0;
-    int _min_available_ratio = 100;
-    int _max_available_ratio = 0;
 
     std::vector<std::shared_ptr<dir_node>> _dir_nodes;
 
@@ -150,12 +165,6 @@ private:
     // disk status will be updated periodically, this vector record nodes whose disk_status changed
     // in this round
     std::vector<std::shared_ptr<dir_node>> _status_updated_dir_nodes;
-
-    perf_counter_wrapper _counter_total_capacity_mb;
-    perf_counter_wrapper _counter_total_available_mb;
-    perf_counter_wrapper _counter_total_available_ratio;
-    perf_counter_wrapper _counter_min_available_ratio;
-    perf_counter_wrapper _counter_max_available_ratio;
 
     friend class replica_test;
     friend class replica_stub;
