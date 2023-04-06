@@ -25,6 +25,8 @@
             <Package name="org.apache.pegasus.apps"/>
             <Package name="org.apache.pegasus.base"/>
             <Package name="org.apache.pegasus.replication"/>
+            <!-- TODO(shalk): should remove generated code base and operator from repo -->
+            <Package name="org.apache.pegasus.operator"/>
 
             <!--
              TODO(wutao1): The following packages should be removed from
