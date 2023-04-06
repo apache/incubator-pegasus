@@ -52,13 +52,11 @@ public:
 
     METRIC_DEFINE_SET_METHOD(total_disk_capacity_mb, int64_t)
     METRIC_DEFINE_SET_METHOD(avail_disk_capacity_mb, int64_t)
-    METRIC_DEFINE_SET_METHOD(avail_disk_capacity_percentage, int64_t)
 
 private:
     const metric_entity_ptr _disk_metric_entity;
     METRIC_VAR_DECLARE_gauge_int64(total_disk_capacity_mb);
     METRIC_VAR_DECLARE_gauge_int64(avail_disk_capacity_mb);
-    METRIC_VAR_DECLARE_gauge_int64(avail_disk_capacity_percentage);
 
     DISALLOW_COPY_AND_ASSIGN(disk_capacity_metrics);
 };

@@ -54,17 +54,12 @@ METRIC_DEFINE_entity(disk);
 METRIC_DEFINE_gauge_int64(disk,
                           total_disk_capacity_mb,
                           dsn::metric_unit::kMegaBytes,
-                          "The total disk capacity in MB");
+                          "The total disk capacity");
 
 METRIC_DEFINE_gauge_int64(disk,
                           avail_disk_capacity_mb,
                           dsn::metric_unit::kMegaBytes,
-                          "The available disk capacity in MB");
-
-METRIC_DEFINE_gauge_int64(disk,
-                          avail_disk_capacity_percentage,
-                          dsn::metric_unit::kPercent,
-                          "The percentage of available disk capacity");
+                          "The available disk capacity");
 
 namespace dsn {
 namespace replication {
@@ -93,8 +88,7 @@ metric_entity_ptr instantiate_disk_metric_entity(const std::string &tag,
 disk_capacity_metrics::disk_capacity_metrics(const std::string &tag, const std::string &data_dir)
     : _disk_metric_entity(instantiate_disk_metric_entity(tag, data_dir)),
       METRIC_VAR_INIT_disk(total_disk_capacity_mb),
-      METRIC_VAR_INIT_disk(avail_disk_capacity_mb),
-      METRIC_VAR_INIT_disk(avail_disk_capacity_percentage)
+      METRIC_VAR_INIT_disk(avail_disk_capacity_mb)
 {
 }
 
@@ -156,7 +150,6 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
 
     METRIC_CALL_SET_METHOD(disk_capacity, total_disk_capacity_mb, disk_capacity_mb);
     METRIC_CALL_SET_METHOD(disk_capacity, avail_disk_capacity_mb, disk_available_mb);
-    METRIC_CALL_SET_METHOD(disk_capacity, avail_disk_capacity_percentage, disk_available_ratio);
 
     if (!update_disk_status) {
         LOG_INFO("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
