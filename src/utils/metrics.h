@@ -165,6 +165,7 @@ class error_code;
     _##name(METRIC_##name.instantiate(entity##_metric_entity(), ##__VA_ARGS__))
 #define METRIC_VAR_INIT_replica(name, ...) METRIC_VAR_INIT(name, replica, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_server(name, ...) METRIC_VAR_INIT(name, server, ##__VA_ARGS__)
+#define METRIC_VAR_INIT_disk(name, ...) METRIC_VAR_INIT(name, disk, ##__VA_ARGS__)
 
 // Perform increment-related operations on metrics including gauge and counter.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
@@ -193,6 +194,11 @@ class error_code;
     dsn::auto_latency __##name##_auto_latency(_##name, ##__VA_ARGS__)
 
 #define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
+
+#define METRIC_DEFINE_SET_METHOD(name, value_type)                                                 \
+    void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
+
+#define METRIC_CALL_SET_METHOD(obj, name, value) obj.set_##name(value)
 
 namespace dsn {
 class metric;                  // IWYU pragma: keep
@@ -614,6 +620,7 @@ enum class metric_unit : size_t
     kBytes,
     kMegaBytes,
     kCapacityUnits,
+    kPercent,
     kRequests,
     kSeeks,
     kPointLookups,
