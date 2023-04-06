@@ -92,30 +92,36 @@
 // The number of partitions in each status, see `health_status` and `partition_health_status()`
 // for details.
 
-METRIC_DEFINE_gauge_int64(server,
-                          dead_partitions,
-                          dsn::metric_unit::kPartitions,
-                          "The number of dead partitions among all tables, which means primary = 0 && secondary = 0");
+METRIC_DEFINE_gauge_int64(
+    server,
+    dead_partitions,
+    dsn::metric_unit::kPartitions,
+    "The number of dead partitions among all tables, which means primary = 0 && secondary = 0");
 
 METRIC_DEFINE_gauge_int64(server,
                           unreadable_partitions,
                           dsn::metric_unit::kPartitions,
-                          "The number of unreadable partitions among all tables, which means primary = 0 && secondary > 0");
+                          "The number of unreadable partitions among all tables, which means "
+                          "primary = 0 && secondary > 0");
 
 METRIC_DEFINE_gauge_int64(server,
                           unwritable_partitions,
                           dsn::metric_unit::kPartitions,
-                          "The number of unwritable partitions among all tables, which means primary = 1 && primary + secondary < mutation_2pc_min_replica_count");
+                          "The number of unwritable partitions among all tables, which means "
+                          "primary = 1 && primary + secondary < mutation_2pc_min_replica_count");
 
 METRIC_DEFINE_gauge_int64(server,
                           writable_ill_partitions,
                           dsn::metric_unit::kPartitions,
-                          "The number of writable ill partitions among all tables, which means primary = 1 && primary + secondary >= mutation_2pc_min_replica_count && primary + secondary < max_replica_count");
+                          "The number of writable ill partitions among all tables, which means "
+                          "primary = 1 && primary + secondary >= mutation_2pc_min_replica_count && "
+                          "primary + secondary < max_replica_count");
 
 METRIC_DEFINE_gauge_int64(server,
                           healthy_partitions,
                           dsn::metric_unit::kPartitions,
-                          "The number of healthy partitions among all tables, which means primary = 1 && primary + secondary >= max_replica_count");
+                          "The number of healthy partitions among all tables, which means primary "
+                          "= 1 && primary + secondary >= max_replica_count");
 
 namespace dsn {
 namespace replication {
