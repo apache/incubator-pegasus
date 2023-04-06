@@ -203,7 +203,7 @@ void generate_node_fs_manager(const app_mapper &apps,
     for (const auto &kv : nodes) {
         const node_state &ns = kv.second;
         if (nfm.find(ns.addr()) == nfm.end()) {
-            nfm.emplace(ns.addr(), std::make_shared<fs_manager>(true));
+            nfm.emplace(ns.addr(), std::make_shared<fs_manager>());
         }
         fs_manager &manager = *(nfm.find(ns.addr())->second);
         manager.initialize(data_dirs, tags, true);
