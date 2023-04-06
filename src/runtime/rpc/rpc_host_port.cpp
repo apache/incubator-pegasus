@@ -17,11 +17,11 @@
  * under the License.
  */
 
+#include "fmt/core.h"
 #include "runtime/rpc/rpc_host_port.h"
-#include "utils/safe_strerror_posix.h"
 #include "utils/utils.h"
 
-#include <unordered_set>
+#include <utility>
 
 namespace dsn {
 

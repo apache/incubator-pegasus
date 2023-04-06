@@ -19,13 +19,13 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <cstddef>
+#include <iosfwd>
 #include <string>
-#include <vector>
 
 #include "runtime/rpc/rpc_address.h"
-#include "utils/errors.h"
 #include "utils/fmt_logging.h"
-#include "utils/rand.h"
 
 namespace dsn {
 
