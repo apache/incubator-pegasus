@@ -123,6 +123,21 @@ METRIC_DEFINE_gauge_int64(server,
                           "The number of healthy partitions among all tables, which means primary "
                           "= 1 && primary + secondary >= max_replica_count");
 
+METRIC_DEFINE_counter(server,
+                      partition_config_updates,
+                      dsn::metric_unit::kUpdates,
+                      "The number of times the configuration has been updated");
+
+METRIC_DEFINE_counter(server,
+                      changed_unwritable_partition_updates,
+                      dsn::metric_unit::kUpdates,
+                      "The number of times the status of partition has been changed to unwritable");
+
+METRIC_DEFINE_counter(server,
+                      changed_writable_partition_updates,
+                      dsn::metric_unit::kUpdates,
+                      "The number of times the status of partition has been changed to writable");
+
 namespace dsn {
 namespace replication {
 DSN_DEFINE_bool(meta_server,
@@ -180,7 +195,10 @@ server_state::server_state()
       METRIC_VAR_INIT_server(unreadable_partitions),
       METRIC_VAR_INIT_server(unwritable_partitions),
       METRIC_VAR_INIT_server(writable_ill_partitions),
-      METRIC_VAR_INIT_server(healthy_partitions)
+      METRIC_VAR_INIT_server(healthy_partitions),
+      METRIC_VAR_INIT_server(partition_config_updates),
+      METRIC_VAR_INIT_server(changed_unwritable_partition_updates),
+      METRIC_VAR_INIT_server(changed_writable_partition_updates)
 {
 }
 
@@ -251,21 +269,6 @@ void server_state::initialize(meta_service *meta_svc, const std::string &apps_ro
     _apps_root = apps_root;
     _add_secondary_enable_flow_control = FLAGS_add_secondary_enable_flow_control;
     _add_secondary_max_count_for_one_node = FLAGS_add_secondary_max_count_for_one_node;
-
-    _recent_update_config_count.init_app_counter("eon.server_state",
-                                                 "recent_update_config_count",
-                                                 COUNTER_TYPE_VOLATILE_NUMBER,
-                                                 "update configuration count in the recent period");
-    _recent_partition_change_unwritable_count.init_app_counter(
-        "eon.server_state",
-        "recent_partition_change_unwritable_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "partition change to unwritable count in the recent period");
-    _recent_partition_change_writable_count.init_app_counter(
-        "eon.server_state",
-        "recent_partition_change_writable_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "partition change to writable count in the recent period");
 }
 
 bool server_state::spin_wait_staging(int timeout_seconds)
@@ -1666,12 +1669,12 @@ void server_state::update_configuration_locally(
         _config_change_subscriber(_all_apps);
     }
 
-    _recent_update_config_count->increment();
+    METRIC_VAR_INCREMENT(partition_config_updates);
     if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
-        _recent_partition_change_unwritable_count->increment();
+        METRIC_VAR_INCREMENT(changed_unwritable_partition_updates);
     }
     if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
-        _recent_partition_change_writable_count->increment();
+        METRIC_VAR_INCREMENT(changed_writable_partition_updates);
     }
 }
 
@@ -2463,7 +2466,7 @@ bool server_state::can_run_balancer()
     return true;
 }
 
-void server_state::update_partition_perf_counter()
+void server_state::update_partition_metrics()
 {
     int counters[HS_MAX_VALUE];
     ::memset(counters, 0, sizeof(counters));
@@ -2492,7 +2495,7 @@ bool server_state::check_all_partitions()
 
     zauto_write_lock l(_lock);
 
-    update_partition_perf_counter();
+    update_partition_metrics();
 
     // first the cure stage
     if (level <= meta_function_level::fl_freezed) {

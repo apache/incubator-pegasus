@@ -231,7 +231,7 @@ private:
     bool can_run_balancer();
 
     // user should lock it first
-    void update_partition_perf_counter();
+    void update_partition_metrics();
 
     error_code dump_app_states(const char *local_path,
                                const std::function<app_state *()> &iterator);
@@ -443,9 +443,9 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(unwritable_partitions);
     METRIC_VAR_DECLARE_gauge_int64(writable_ill_partitions);
     METRIC_VAR_DECLARE_gauge_int64(healthy_partitions);
-    perf_counter_wrapper _recent_update_config_count;
-    perf_counter_wrapper _recent_partition_change_unwritable_count;
-    perf_counter_wrapper _recent_partition_change_writable_count;
+    METRIC_VAR_DECLARE_counter(partition_config_updates);
+    METRIC_VAR_DECLARE_counter(changed_unwritable_partition_updates);
+    METRIC_VAR_DECLARE_counter(changed_writable_partition_updates);
 };
 
 } // namespace replication
