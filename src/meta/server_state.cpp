@@ -1436,7 +1436,7 @@ void server_state::send_proposal(rpc_address target, const configuration_update_
              proposal.node);
     dsn::message_ex *msg =
         dsn::message_ex::create_request(RPC_CONFIG_PROPOSAL, 0, proposal.config.pid.thread_hash());
-    ::marshall(msg, proposal);
+    dsn::marshall(msg, proposal);
     _meta_svc->send_message(target, msg);
 }
 

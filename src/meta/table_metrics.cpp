@@ -113,7 +113,7 @@ void table_metric_entities::create_entity(int32_t table_id)
         return;
     }
 
-    _entities[id] = std::make_unique<table_metrics>(table_id);
+    _entities[table_id] = std::make_unique<table_metrics>(table_id);
 }
 
 void table_metric_entities::remove_entity(int32_t table_id)
