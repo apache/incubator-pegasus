@@ -198,7 +198,12 @@ class error_code;
 #define METRIC_DEFINE_SET_METHOD(name, value_type)                                                 \
     void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
 
-#define METRIC_CALL_SET_METHOD(obj, name, value) obj.set_##name(value)
+#define METRIC_CALL_SET_METHOD(obj, name, value) (obj).set_##name(value)
+
+#define METRIC_DEFINE_INCREMENT_METHOD(name)                                                       \
+    void increment_##name() { METRIC_VAR_INCREMENT(name); }
+
+#define METRIC_CALL_INCREMENT_METHOD(obj, name) (obj).increment_##name()
 
 namespace dsn {
 class metric;                  // IWYU pragma: keep

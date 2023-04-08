@@ -89,55 +89,6 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-// The number of partitions in each status, see `health_status` and `partition_health_status()`
-// for details.
-
-METRIC_DEFINE_gauge_int64(
-    server,
-    dead_partitions,
-    dsn::metric_unit::kPartitions,
-    "The number of dead partitions among all tables, which means primary = 0 && secondary = 0");
-
-METRIC_DEFINE_gauge_int64(server,
-                          unreadable_partitions,
-                          dsn::metric_unit::kPartitions,
-                          "The number of unreadable partitions among all tables, which means "
-                          "primary = 0 && secondary > 0");
-
-METRIC_DEFINE_gauge_int64(server,
-                          unwritable_partitions,
-                          dsn::metric_unit::kPartitions,
-                          "The number of unwritable partitions among all tables, which means "
-                          "primary = 1 && primary + secondary < mutation_2pc_min_replica_count");
-
-METRIC_DEFINE_gauge_int64(server,
-                          writable_ill_partitions,
-                          dsn::metric_unit::kPartitions,
-                          "The number of writable ill partitions among all tables, which means "
-                          "primary = 1 && primary + secondary >= mutation_2pc_min_replica_count && "
-                          "primary + secondary < max_replica_count");
-
-METRIC_DEFINE_gauge_int64(server,
-                          healthy_partitions,
-                          dsn::metric_unit::kPartitions,
-                          "The number of healthy partitions among all tables, which means primary "
-                          "= 1 && primary + secondary >= max_replica_count");
-
-METRIC_DEFINE_counter(server,
-                      partition_config_updates,
-                      dsn::metric_unit::kUpdates,
-                      "The number of times the configuration has been updated");
-
-METRIC_DEFINE_counter(server,
-                      changed_unwritable_partition_updates,
-                      dsn::metric_unit::kUpdates,
-                      "The number of times the status of partition has been changed to unwritable");
-
-METRIC_DEFINE_counter(server,
-                      changed_writable_partition_updates,
-                      dsn::metric_unit::kUpdates,
-                      "The number of times the status of partition has been changed to writable");
-
 namespace dsn {
 namespace replication {
 DSN_DEFINE_bool(meta_server,
@@ -190,15 +141,7 @@ static const char *unlock_state = "unlock";
 server_state::server_state()
     : _meta_svc(nullptr),
       _add_secondary_enable_flow_control(false),
-      _add_secondary_max_count_for_one_node(0),
-      METRIC_VAR_INIT_server(dead_partitions),
-      METRIC_VAR_INIT_server(unreadable_partitions),
-      METRIC_VAR_INIT_server(unwritable_partitions),
-      METRIC_VAR_INIT_server(writable_ill_partitions),
-      METRIC_VAR_INIT_server(healthy_partitions),
-      METRIC_VAR_INIT_server(partition_config_updates),
-      METRIC_VAR_INIT_server(changed_unwritable_partition_updates),
-      METRIC_VAR_INIT_server(changed_writable_partition_updates)
+      _add_secondary_max_count_for_one_node(0)
 {
 }
 
@@ -549,12 +492,14 @@ error_code server_state::initialize_default_apps()
 error_code server_state::sync_apps_to_remote_storage()
 {
     _exist_apps.clear();
+    _table_metric_entities.clear_entities();
     for (auto &kv_pair : _all_apps) {
         if (kv_pair.second->status == app_status::AS_CREATING) {
             CHECK(_exist_apps.find(kv_pair.second->app_name) == _exist_apps.end(),
                   "invalid app name, name = {}",
                   kv_pair.second->app_name);
             _exist_apps.emplace(kv_pair.second->app_name, kv_pair.second);
+            _table_metric_entities.create_entity(kv_pair.first);
         }
     }
 
@@ -604,6 +549,7 @@ error_code server_state::sync_apps_to_remote_storage()
 
     if (err != ERR_OK) {
         _exist_apps.clear();
+        _table_metric_entities.clear_entities();
         return err;
     }
     for (auto &kv : _all_apps) {
@@ -719,6 +665,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                         if (app->status == app_status::AS_AVAILABLE) {
                             app->status = app_status::AS_CREATING;
                             _exist_apps.emplace(app->app_name, app);
+                            _table_metric_entities.create_entity(app->app_id);
                         } else if (app->status == app_status::AS_DROPPED) {
                             app->status = app_status::AS_DROPPING;
                         } else {
@@ -746,6 +693,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
 
     _all_apps.clear();
     _exist_apps.clear();
+    _table_metric_entities.clear_entities();
 
     std::string transaction_state;
     storage
@@ -1217,6 +1165,7 @@ void server_state::create_app(dsn::message_ex *msg)
 
             _all_apps.emplace(app->app_id, app);
             _exist_apps.emplace(request.app_name, app);
+            _table_metric_entities.create_entity(app->app_id);
         }
     }
 
@@ -1234,6 +1183,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state> &app)
         if (ERR_OK == ec) {
             zauto_write_lock l(_lock);
             _exist_apps.erase(app->app_name);
+            _table_metric_entities.remove_entity(app->app_id);
             for (int i = 0; i < app->partition_count; ++i) {
                 drop_partition(app, i);
             }
@@ -1445,6 +1395,7 @@ void server_state::recall_app(dsn::message_ex *msg)
                     target_app->helpers->pending_response = msg;
 
                     _exist_apps.emplace(target_app->app_name, target_app);
+                    _table_metric_entities.create_entity(target_app->app_id);
                 }
             }
         }
@@ -1669,12 +1620,15 @@ void server_state::update_configuration_locally(
         _config_change_subscriber(_all_apps);
     }
 
-    METRIC_VAR_INCREMENT(partition_config_updates);
+    METRIC_CALL_TABLE_INCREMENT_METHOD(
+        _table_metric_entities, partition_config_updates, app->app_id);
     if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
-        METRIC_VAR_INCREMENT(changed_unwritable_partition_updates);
+        METRIC_CALL_TABLE_INCREMENT_METHOD(
+            _table_metric_entities, unwritable_partition_updates, app->app_id);
     }
     if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
-        METRIC_VAR_INCREMENT(changed_writable_partition_updates);
+        METRIC_CALL_TABLE_INCREMENT_METHOD(
+            _table_metric_entities, writable_partition_updates, app->app_id);
     }
 }
 
@@ -2470,6 +2424,7 @@ void server_state::update_partition_metrics()
 {
     int counters[HS_MAX_VALUE];
     ::memset(counters, 0, sizeof(counters));
+
     auto func = [&](const std::shared_ptr<app_state> &app) {
         int min_2pc_count =
             _meta_svc->get_options().app_mutation_2pc_min_replica_count(app->max_replica_count);
@@ -2477,14 +2432,24 @@ void server_state::update_partition_metrics()
             health_status st = partition_health_status(app->partitions[i], min_2pc_count);
             counters[st]++;
         }
+
+        METRIC_CALL_TABLE_SET_METHOD(
+            _table_metric_entities, dead_partitions, app->app_id, counters[HS_DEAD]);
+        METRIC_CALL_TABLE_SET_METHOD(
+            _table_metric_entities, unreadable_partitions, app->app_id, counters[HS_UNREADABLE]);
+        METRIC_CALL_TABLE_SET_METHOD(
+            _table_metric_entities, unwritable_partitions, app->app_id, counters[HS_UNWRITABLE]);
+        METRIC_CALL_TABLE_SET_METHOD(_table_metric_entities,
+                                     writable_ill_partitions,
+                                     app->app_id,
+                                     counters[HS_WRITABLE_ILL]);
+        METRIC_CALL_TABLE_SET_METHOD(
+            _table_metric_entities, healthy_partitions, app->app_id, counters[HS_HEALTHY]);
+
         return true;
     };
+
     for_each_available_app(_all_apps, func);
-    METRIC_VAR_SET(dead_partitions, counters[HS_DEAD]);
-    METRIC_VAR_SET(unreadable_partitions, counters[HS_UNREADABLE]);
-    METRIC_VAR_SET(unwritable_partitions, counters[HS_UNWRITABLE]);
-    METRIC_VAR_SET(writable_ill_partitions, counters[HS_WRITABLE_ILL]);
-    METRIC_VAR_SET(healthy_partitions, counters[HS_HEALTHY]);
 }
 
 bool server_state::check_all_partitions()

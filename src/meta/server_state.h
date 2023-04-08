@@ -52,6 +52,7 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
+#include "table_metrics.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
@@ -438,14 +439,7 @@ private:
     int32_t _add_secondary_max_count_for_one_node;
     std::vector<std::unique_ptr<command_deregister>> _cmds;
 
-    METRIC_VAR_DECLARE_gauge_int64(dead_partitions);
-    METRIC_VAR_DECLARE_gauge_int64(unreadable_partitions);
-    METRIC_VAR_DECLARE_gauge_int64(unwritable_partitions);
-    METRIC_VAR_DECLARE_gauge_int64(writable_ill_partitions);
-    METRIC_VAR_DECLARE_gauge_int64(healthy_partitions);
-    METRIC_VAR_DECLARE_counter(partition_config_updates);
-    METRIC_VAR_DECLARE_counter(changed_unwritable_partition_updates);
-    METRIC_VAR_DECLARE_counter(changed_writable_partition_updates);
+    table_metric_entities _table_metric_entities;
 };
 
 } // namespace replication

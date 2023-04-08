@@ -147,6 +147,7 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
 
             _all_apps.emplace(app->app_id, app);
             _exist_apps.emplace(info.app_name, app);
+            _table_metric_entities.create_entity(app->app_id);
         }
     }
     // TODO: using one single env to replace
