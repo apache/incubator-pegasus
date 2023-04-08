@@ -1621,14 +1621,14 @@ void server_state::update_configuration_locally(
     }
 
     METRIC_CALL_TABLE_INCREMENT_METHOD(
-        _table_metric_entities, partition_config_updates, app->app_id);
+        _table_metric_entities, partition_config_updates, app.app_id);
     if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
         METRIC_CALL_TABLE_INCREMENT_METHOD(
-            _table_metric_entities, unwritable_partition_updates, app->app_id);
+            _table_metric_entities, unwritable_partition_updates, app.app_id);
     }
     if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
         METRIC_CALL_TABLE_INCREMENT_METHOD(
-            _table_metric_entities, writable_partition_updates, app->app_id);
+            _table_metric_entities, writable_partition_updates, app.app_id);
     }
 }
 
