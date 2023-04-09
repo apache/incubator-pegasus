@@ -23,47 +23,47 @@ METRIC_DEFINE_entity(table);
 // for details.
 
 METRIC_DEFINE_gauge_int64(
-    server,
+    table,
     dead_partitions,
     dsn::metric_unit::kPartitions,
     "The number of dead partitions among all tables, which means primary = 0 && secondary = 0");
 
-METRIC_DEFINE_gauge_int64(server,
+METRIC_DEFINE_gauge_int64(table,
                           unreadable_partitions,
                           dsn::metric_unit::kPartitions,
                           "The number of unreadable partitions among all tables, which means "
                           "primary = 0 && secondary > 0");
 
-METRIC_DEFINE_gauge_int64(server,
+METRIC_DEFINE_gauge_int64(table,
                           unwritable_partitions,
                           dsn::metric_unit::kPartitions,
                           "The number of unwritable partitions among all tables, which means "
                           "primary = 1 && primary + secondary < mutation_2pc_min_replica_count");
 
-METRIC_DEFINE_gauge_int64(server,
+METRIC_DEFINE_gauge_int64(table,
                           writable_ill_partitions,
                           dsn::metric_unit::kPartitions,
                           "The number of writable ill partitions among all tables, which means "
                           "primary = 1 && primary + secondary >= mutation_2pc_min_replica_count && "
                           "primary + secondary < max_replica_count");
 
-METRIC_DEFINE_gauge_int64(server,
+METRIC_DEFINE_gauge_int64(table,
                           healthy_partitions,
                           dsn::metric_unit::kPartitions,
                           "The number of healthy partitions among all tables, which means primary "
                           "= 1 && primary + secondary >= max_replica_count");
 
-METRIC_DEFINE_counter(server,
+METRIC_DEFINE_counter(table,
                       partition_config_updates,
                       dsn::metric_unit::kUpdates,
                       "The number of times the configuration has been updated");
 
-METRIC_DEFINE_counter(server,
+METRIC_DEFINE_counter(table,
                       unwritable_partition_updates,
                       dsn::metric_unit::kUpdates,
                       "The number of times the status of partition has been changed to unwritable");
 
-METRIC_DEFINE_counter(server,
+METRIC_DEFINE_counter(table,
                       writable_partition_updates,
                       dsn::metric_unit::kUpdates,
                       "The number of times the status of partition has been changed to writable");
