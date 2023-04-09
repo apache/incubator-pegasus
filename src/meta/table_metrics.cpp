@@ -82,8 +82,7 @@ metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
 } // anonymous namespace
 
 table_metrics::table_metrics(int32_t table_id)
-    : _table_id(table_id),
-      _table_metric_entity(instantiate_table_metric_entity(table_id)),
+    : _table_metric_entity(instantiate_table_metric_entity(table_id)),
       METRIC_VAR_INIT_table(dead_partitions),
       METRIC_VAR_INIT_table(unreadable_partitions),
       METRIC_VAR_INIT_table(unwritable_partitions),

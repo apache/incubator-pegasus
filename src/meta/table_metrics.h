@@ -39,8 +39,6 @@ public:
     METRIC_DEFINE_INCREMENT_METHOD(writable_partition_updates)
 
 private:
-    const int32_t _table_id;
-
     const metric_entity_ptr _table_metric_entity;
     METRIC_VAR_DECLARE_gauge_int64(dead_partitions);
     METRIC_VAR_DECLARE_gauge_int64(unreadable_partitions);
