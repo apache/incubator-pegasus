@@ -52,12 +52,10 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
-#include "table_metrics.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
+#include "table_metrics.h"
 #include "utils/error_code.h"
-#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {

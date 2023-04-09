@@ -52,6 +52,7 @@
 #include "meta/meta_service.h"
 #include "meta/partition_guardian.h"
 #include "meta/server_state.h"
+#include "meta/table_metrics.h"
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"

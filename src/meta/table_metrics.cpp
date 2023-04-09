@@ -17,6 +17,12 @@
 
 #include "table_metrics.h"
 
+#include <fmt/core.h>
+#include <string>
+
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+
 METRIC_DEFINE_entity(table);
 
 // The number of partitions in each status, see `health_status` and `partition_health_status()`

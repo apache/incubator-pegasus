@@ -17,9 +17,18 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <memory>
+#include <unordered_map>
+#include <utility>
+
+#include "utils/autoref_ptr.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
+class table_metric_entities;
 
 class table_metrics
 {

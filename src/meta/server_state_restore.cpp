@@ -37,6 +37,7 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_service.h"
 #include "runtime/rpc/rpc_address.h"
