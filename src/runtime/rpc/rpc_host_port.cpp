@@ -30,19 +30,16 @@ const host_port host_port::s_invalid_host_port;
 host_port::host_port(std::string host, uint16_t port)
     : _host(std::move(host)), _port(port), _type(HOST_TYPE_IPV4)
 {
-    uint32_t ip = rpc_address::ipv4_from_host(_host.c_str());
-    CHECK_NE_MSG(ip, 0, "invalid hostname: {}", _host);
+    CHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
 }
 
 host_port::host_port(rpc_address addr)
 {
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
-        std::string hostname;
-        CHECK(utils::hostname_from_ip(addr.ipv4_str(), &hostname),
+        CHECK(utils::hostname_from_ip(addr.ip(), &_host),
               "invalid address {}",
               addr.ipv4_str());
-        _host = std::move(hostname);
         _port = addr.port();
     } break;
     case HOST_TYPE_GROUP:

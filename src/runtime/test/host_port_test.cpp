@@ -46,6 +46,19 @@ TEST(host_port_test, host_port_build)
     ASSERT_EQ(HOST_TYPE_IPV4, hp.type());
     ASSERT_EQ(8080, hp.port());
     ASSERT_EQ("localhost", hp.host());
+
+    {
+        rpc_address addr = rpc_address("localhost", 8080);
+        host_port hp1(addr);
+        ASSERT_EQ(hp, hp1);
+    }
+
+    {
+        rpc_address addr;
+        host_port hp2(addr);
+        host_port hp3;
+        ASSERT_EQ(hp3, hp2);
+    }
 }
 
 TEST(host_port_test, operators)
