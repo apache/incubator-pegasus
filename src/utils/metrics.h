@@ -167,6 +167,7 @@ class error_code;
 #define METRIC_VAR_INIT_replica(name, ...) METRIC_VAR_INIT(name, replica, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_server(name, ...) METRIC_VAR_INIT(name, server, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_disk(name, ...) METRIC_VAR_INIT(name, disk, ##__VA_ARGS__)
+#define METRIC_VAR_INIT_table(name, ...) METRIC_VAR_INIT(name, table, ##__VA_ARGS__)
 
 // Perform increment-related operations on metrics including gauge and counter.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
@@ -199,7 +200,12 @@ class error_code;
 #define METRIC_DEFINE_SET_METHOD(name, value_type)                                                 \
     void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
 
-#define METRIC_CALL_SET_METHOD(obj, name, value) obj.set_##name(value)
+#define METRIC_CALL_SET_METHOD(obj, name, value) (obj).set_##name(value)
+
+#define METRIC_DEFINE_INCREMENT_METHOD(name)                                                       \
+    void increment_##name() { METRIC_VAR_INCREMENT(name); }
+
+#define METRIC_CALL_INCREMENT_METHOD(obj, name) (obj).increment_##name()
 
 namespace dsn {
 class metric;                  // IWYU pragma: keep
@@ -622,6 +628,7 @@ enum class metric_unit : size_t
     kMegaBytes,
     kCapacityUnits,
     kPercent,
+    kPartitions,
     kRequests,
     kSeeks,
     kPointLookups,
@@ -632,6 +639,7 @@ enum class metric_unit : size_t
     kFlushes,
     kCompactions,
     kWrites,
+    kChanges,
     kInvalidUnit,
 };
 
