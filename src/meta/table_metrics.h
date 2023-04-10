@@ -30,12 +30,14 @@
 namespace dsn {
 class table_metric_entities;
 
+// Maintain a table-level metric entity of meta, and all metrics attached to it.
 class table_metrics
 {
 public:
     table_metrics(int32_t table_id);
     ~table_metrics() = default;
 
+    inline int32_t table_id() const { return _table_id; }
     const metric_entity_ptr &table_metric_entity() const;
 
     METRIC_DEFINE_SET_METHOD(dead_partitions, int64_t)
@@ -48,6 +50,8 @@ public:
     METRIC_DEFINE_INCREMENT_METHOD(writable_partition_updates)
 
 private:
+    const int32_t _table_id;
+
     const metric_entity_ptr _table_metric_entity;
     METRIC_VAR_DECLARE_gauge_int64(dead_partitions);
     METRIC_VAR_DECLARE_gauge_int64(unreadable_partitions);
@@ -89,6 +93,11 @@ private:
 
 #define METRIC_CALL_TABLE_INCREMENT_METHOD(obj, name, table_id) (obj).increment_##name(table_id)
 
+// Manage the lifetime of all table-level metric entities of meta.
+//
+// To instantiate a new table-level entity, just call create_entity(). Once the entity instance
+// is not needed, just call remove_entity() (after `entity_retirement_delay_ms` milliseconds it
+// would be retired).
 class table_metric_entities
 {
 public:
@@ -111,10 +120,14 @@ public:
     METRIC_DEFINE_TABLE_INCREMENT_METHOD(writable_partition_updates)
 
 private:
+    friend bool operator==(const table_metric_entities &, const table_metric_entities &);
+
     mutable utils::rw_lock_nr _lock;
     entity_map _entities;
 
     DISALLOW_COPY_AND_ASSIGN(table_metric_entities);
 };
+
+bool operator==(const table_metric_entities &lhs, const table_metric_entities &rhs);
 
 } // namespace dsn

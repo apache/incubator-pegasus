@@ -88,7 +88,8 @@ metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
 } // anonymous namespace
 
 table_metrics::table_metrics(int32_t table_id)
-    : _table_metric_entity(instantiate_table_metric_entity(table_id)),
+    : _table_id(table_id),
+      _table_metric_entity(instantiate_table_metric_entity(table_id)),
       METRIC_VAR_INIT_table(dead_partitions),
       METRIC_VAR_INIT_table(unreadable_partitions),
       METRIC_VAR_INIT_table(unwritable_partitions),
@@ -137,6 +138,33 @@ void table_metric_entities::clear_entities()
 {
     utils::auto_write_lock l(_lock);
     _entities.clear();
+}
+
+bool operator==(const table_metric_entities &lhs, const table_metric_entities &rhs)
+{
+    utils::auto_read_lock l1(lhs._lock);
+    utils::auto_read_lock l2(rhs._lock);
+
+    if (lhs._entities.size() != rhs._entities.size()) {
+        return false;
+    }
+
+    for (const auto &lhs_entity : lhs._entities) {
+        auto rhs_entity = rhs._entities.find(lhs_entity.first);
+        if (rhs_entity == rhs._entities.end()) {
+            return false;
+        }
+
+        if (lhs_entity.second->table_metric_entity().get() !=
+            rhs_entity->second->table_metric_entity().get()) {
+            CHECK_NE(lhs_entity.second->table_id(), rhs_entity->second->table_id());
+            return false;
+        }
+
+        CHECK_EQ(lhs_entity.second->table_id(), rhs_entity->second->table_id());
+    }
+
+    return true;
 }
 
 } // namespace dsn
