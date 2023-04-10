@@ -21,6 +21,7 @@
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/utils.h"
 
+#include <arpa/inet.h>
 #include <utility>
 
 namespace dsn {
@@ -37,7 +38,7 @@ host_port::host_port(rpc_address addr)
 {
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
-        CHECK(utils::hostname_from_ip(addr.ip(), &_host),
+        CHECK(utils::hostname_from_ip(htonl(addr.ip()), &_host),
               "invalid address {}",
               addr.ipv4_str());
         _port = addr.port();

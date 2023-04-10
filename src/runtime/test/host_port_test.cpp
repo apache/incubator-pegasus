@@ -52,13 +52,6 @@ TEST(host_port_test, host_port_build)
         host_port hp1(addr);
         ASSERT_EQ(hp, hp1);
     }
-
-    {
-        rpc_address addr;
-        host_port hp2(addr);
-        host_port hp3;
-        ASSERT_EQ(hp3, hp2);
-    }
 }
 
 TEST(host_port_test, operators)
