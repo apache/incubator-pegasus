@@ -246,6 +246,7 @@ void meta_service_test_app::state_sync_test()
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());
         }
+        ASSERT_EQ(ss1->_table_metric_entities, ss2->_table_metric_entities);
 
         // then we dump the content to local file with binary format
         std::cerr << "test dump to local file from zookeeper's storage" << std::endl;
@@ -266,6 +267,7 @@ void meta_service_test_app::state_sync_test()
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());
         }
+        ASSERT_EQ(ss1->_table_metric_entities, ss2->_table_metric_entities);
         ss2->initialize_node_state();
 
         // then let's test the query configuration calls
