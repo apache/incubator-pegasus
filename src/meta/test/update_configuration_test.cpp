@@ -52,6 +52,7 @@
 #include "meta/meta_service.h"
 #include "meta/partition_guardian.h"
 #include "meta/server_state.h"
+#include "meta/table_metrics.h"
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
@@ -495,6 +496,7 @@ void meta_service_test_app::cannot_run_balancer_test()
     std::shared_ptr<app_state> the_app = app_state::create(info);
     svc->_state->_all_apps.emplace(info.app_id, the_app);
     svc->_state->_exist_apps.emplace(info.app_name, the_app);
+    svc->_state->_table_metric_entities.create_entity(info.app_id);
 
     dsn::partition_configuration &pc = the_app->partitions[0];
     pc.primary = nodes[0];

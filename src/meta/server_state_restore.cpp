@@ -37,6 +37,7 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_service.h"
 #include "runtime/rpc/rpc_address.h"
@@ -147,6 +148,7 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
 
             _all_apps.emplace(app->app_id, app);
             _exist_apps.emplace(info.app_name, app);
+            _table_metric_entities.create_entity(app->app_id);
         }
     }
     // TODO: using one single env to replace
