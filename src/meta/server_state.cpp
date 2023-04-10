@@ -2422,8 +2422,7 @@ bool server_state::can_run_balancer()
 void server_state::update_partition_metrics()
 {
     auto func = [&](const std::shared_ptr<app_state> &app) {
-        int counters[HS_MAX_VALUE];
-        ::memset(counters, 0, sizeof(counters));
+        int counters[HS_MAX_VALUE] = {0};
 
         int min_2pc_count =
             _meta_svc->get_options().app_mutation_2pc_min_replica_count(app->max_replica_count);

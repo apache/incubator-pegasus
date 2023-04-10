@@ -32,32 +32,32 @@ METRIC_DEFINE_gauge_int64(
     table,
     dead_partitions,
     dsn::metric_unit::kPartitions,
-    "The number of dead partitions among all tables, which means primary = 0 && secondary = 0");
+    "The number of dead partitions, which means primary = 0 && secondary = 0");
 
 METRIC_DEFINE_gauge_int64(table,
                           unreadable_partitions,
                           dsn::metric_unit::kPartitions,
-                          "The number of unreadable partitions among all tables, which means "
-                          "primary = 0 && secondary > 0");
+                          "The number of unreadable partitions, which means primary = 0 && "
+                          "secondary > 0");
 
 METRIC_DEFINE_gauge_int64(table,
                           unwritable_partitions,
                           dsn::metric_unit::kPartitions,
-                          "The number of unwritable partitions among all tables, which means "
-                          "primary = 1 && primary + secondary < mutation_2pc_min_replica_count");
+                          "The number of unwritable partitions, which means primary = 1 && "
+                          "primary + secondary < mutation_2pc_min_replica_count");
 
 METRIC_DEFINE_gauge_int64(table,
                           writable_ill_partitions,
                           dsn::metric_unit::kPartitions,
-                          "The number of writable ill partitions among all tables, which means "
-                          "primary = 1 && primary + secondary >= mutation_2pc_min_replica_count && "
+                          "The number of writable ill partitions, which means primary = 1 && "
+                          "primary + secondary >= mutation_2pc_min_replica_count && "
                           "primary + secondary < max_replica_count");
 
 METRIC_DEFINE_gauge_int64(table,
                           healthy_partitions,
                           dsn::metric_unit::kPartitions,
-                          "The number of healthy partitions among all tables, which means primary "
-                          "= 1 && primary + secondary >= max_replica_count");
+                          "The number of healthy partitions, which means primary = 1 && "
+                          "primary + secondary >= max_replica_count");
 
 METRIC_DEFINE_counter(table,
                       partition_configuration_changes,
@@ -110,6 +110,23 @@ const metric_entity_ptr &table_metrics::table_metric_entity() const
     return _table_metric_entity;
 }
 
+bool operator==(const table_metrics &lhs, const table_metrics &rhs)
+{
+    if (&lhs == &rhs) {
+        return true;
+    }
+
+    if (lhs.table_metric_entity().get() != rhs.table_metric_entity().get()) {
+        CHECK_NE(lhs.table_id(), rhs.table_id());
+        return false;
+    }
+
+    CHECK_EQ(lhs.table_id(), rhs.table_id());
+    return true;
+}
+
+bool operator!=(const table_metrics &lhs, const table_metrics &rhs) { return !(lhs == rhs); }
+
 void table_metric_entities::create_entity(int32_t table_id)
 {
     utils::auto_write_lock l(_lock);
@@ -142,6 +159,10 @@ void table_metric_entities::clear_entities()
 
 bool operator==(const table_metric_entities &lhs, const table_metric_entities &rhs)
 {
+    if (&lhs == &rhs) {
+        return true;
+    }
+
     utils::auto_read_lock l1(lhs._lock);
     utils::auto_read_lock l2(rhs._lock);
 
@@ -155,13 +176,9 @@ bool operator==(const table_metric_entities &lhs, const table_metric_entities &r
             return false;
         }
 
-        if (lhs_entity.second->table_metric_entity().get() !=
-            rhs_entity->second->table_metric_entity().get()) {
-            CHECK_NE(lhs_entity.second->table_id(), rhs_entity->second->table_id());
+        if (*(lhs_entity.second) != *(rhs_entity->second)) {
             return false;
         }
-
-        CHECK_EQ(lhs_entity.second->table_id(), rhs_entity->second->table_id());
     }
 
     return true;

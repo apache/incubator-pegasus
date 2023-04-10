@@ -65,6 +65,9 @@ private:
     DISALLOW_COPY_AND_ASSIGN(table_metrics);
 };
 
+bool operator==(const table_metrics &lhs, const table_metrics &rhs);
+bool operator!=(const table_metrics &lhs, const table_metrics &rhs);
+
 #define METRIC_DEFINE_TABLE_SET_METHOD(name, value_type)                                           \
     void set_##name(int32_t table_id, value_type value)                                            \
     {                                                                                              \
