@@ -60,18 +60,18 @@ METRIC_DEFINE_gauge_int64(table,
                           "= 1 && primary + secondary >= max_replica_count");
 
 METRIC_DEFINE_counter(table,
-                      partition_config_updates,
-                      dsn::metric_unit::kUpdates,
-                      "The number of times the configuration has been updated");
+                      partition_configuration_changes,
+                      dsn::metric_unit::kChanges,
+                      "The number of times the configuration has been changed");
 
 METRIC_DEFINE_counter(table,
-                      unwritable_partition_updates,
-                      dsn::metric_unit::kUpdates,
+                      unwritable_partition_changes,
+                      dsn::metric_unit::kChanges,
                       "The number of times the status of partition has been changed to unwritable");
 
 METRIC_DEFINE_counter(table,
-                      writable_partition_updates,
-                      dsn::metric_unit::kUpdates,
+                      writable_partition_changes,
+                      dsn::metric_unit::kChanges,
                       "The number of times the status of partition has been changed to writable");
 
 namespace dsn {
@@ -95,9 +95,9 @@ table_metrics::table_metrics(int32_t table_id)
       METRIC_VAR_INIT_table(unwritable_partitions),
       METRIC_VAR_INIT_table(writable_ill_partitions),
       METRIC_VAR_INIT_table(healthy_partitions),
-      METRIC_VAR_INIT_table(partition_config_updates),
-      METRIC_VAR_INIT_table(unwritable_partition_updates),
-      METRIC_VAR_INIT_table(writable_partition_updates)
+      METRIC_VAR_INIT_table(partition_configuration_changes),
+      METRIC_VAR_INIT_table(unwritable_partition_changes),
+      METRIC_VAR_INIT_table(writable_partition_changes)
 {
 }
 

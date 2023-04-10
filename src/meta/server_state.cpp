@@ -1620,14 +1620,14 @@ void server_state::update_configuration_locally(
     }
 
     METRIC_CALL_TABLE_INCREMENT_METHOD(
-        _table_metric_entities, partition_config_updates, app.app_id);
+        _table_metric_entities, partition_configuration_changes, app.app_id);
     if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
         METRIC_CALL_TABLE_INCREMENT_METHOD(
-            _table_metric_entities, unwritable_partition_updates, app.app_id);
+            _table_metric_entities, unwritable_partition_changes, app.app_id);
     }
     if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
         METRIC_CALL_TABLE_INCREMENT_METHOD(
-            _table_metric_entities, writable_partition_updates, app.app_id);
+            _table_metric_entities, writable_partition_changes, app.app_id);
     }
 }
 
@@ -2421,10 +2421,10 @@ bool server_state::can_run_balancer()
 
 void server_state::update_partition_metrics()
 {
-    int counters[HS_MAX_VALUE];
-    ::memset(counters, 0, sizeof(counters));
-
     auto func = [&](const std::shared_ptr<app_state> &app) {
+        int counters[HS_MAX_VALUE];
+        ::memset(counters, 0, sizeof(counters));
+
         int min_2pc_count =
             _meta_svc->get_options().app_mutation_2pc_min_replica_count(app->max_replica_count);
         for (unsigned int i = 0; i != app->partition_count; ++i) {

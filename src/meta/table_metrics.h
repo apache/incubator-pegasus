@@ -45,9 +45,9 @@ public:
     METRIC_DEFINE_SET_METHOD(unwritable_partitions, int64_t)
     METRIC_DEFINE_SET_METHOD(writable_ill_partitions, int64_t)
     METRIC_DEFINE_SET_METHOD(healthy_partitions, int64_t)
-    METRIC_DEFINE_INCREMENT_METHOD(partition_config_updates)
-    METRIC_DEFINE_INCREMENT_METHOD(unwritable_partition_updates)
-    METRIC_DEFINE_INCREMENT_METHOD(writable_partition_updates)
+    METRIC_DEFINE_INCREMENT_METHOD(partition_configuration_changes)
+    METRIC_DEFINE_INCREMENT_METHOD(unwritable_partition_changes)
+    METRIC_DEFINE_INCREMENT_METHOD(writable_partition_changes)
 
 private:
     const int32_t _table_id;
@@ -58,9 +58,9 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(unwritable_partitions);
     METRIC_VAR_DECLARE_gauge_int64(writable_ill_partitions);
     METRIC_VAR_DECLARE_gauge_int64(healthy_partitions);
-    METRIC_VAR_DECLARE_counter(partition_config_updates);
-    METRIC_VAR_DECLARE_counter(unwritable_partition_updates);
-    METRIC_VAR_DECLARE_counter(writable_partition_updates);
+    METRIC_VAR_DECLARE_counter(partition_configuration_changes);
+    METRIC_VAR_DECLARE_counter(unwritable_partition_changes);
+    METRIC_VAR_DECLARE_counter(writable_partition_changes);
 
     DISALLOW_COPY_AND_ASSIGN(table_metrics);
 };
@@ -115,9 +115,9 @@ public:
     METRIC_DEFINE_TABLE_SET_METHOD(unwritable_partitions, int64_t)
     METRIC_DEFINE_TABLE_SET_METHOD(writable_ill_partitions, int64_t)
     METRIC_DEFINE_TABLE_SET_METHOD(healthy_partitions, int64_t)
-    METRIC_DEFINE_TABLE_INCREMENT_METHOD(partition_config_updates)
-    METRIC_DEFINE_TABLE_INCREMENT_METHOD(unwritable_partition_updates)
-    METRIC_DEFINE_TABLE_INCREMENT_METHOD(writable_partition_updates)
+    METRIC_DEFINE_TABLE_INCREMENT_METHOD(partition_configuration_changes)
+    METRIC_DEFINE_TABLE_INCREMENT_METHOD(unwritable_partition_changes)
+    METRIC_DEFINE_TABLE_INCREMENT_METHOD(writable_partition_changes)
 
 private:
     friend bool operator==(const table_metric_entities &, const table_metric_entities &);
