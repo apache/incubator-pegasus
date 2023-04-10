@@ -63,24 +63,6 @@ private:
     dsn_host_type_t _type = HOST_TYPE_INVALID;
 };
 
-inline bool operator<(const host_port &hp1, const host_port &hp2)
-{
-    if (hp1.type() != hp2.type()) {
-        return hp1.type() < hp2.type();
-    }
-
-    switch (hp1.type()) {
-    case HOST_TYPE_IPV4: {
-        int ret = hp1.host().compare(hp2.host());
-        return ret < 0 || (ret == 0 && hp1.port() < hp2.port());
-    }
-    case HOST_TYPE_GROUP:
-        CHECK(false, "type HOST_TYPE_GROUP not support!");
-    default:
-        return true;
-    }
-}
-
 inline bool operator==(const host_port &hp1, const host_port &hp2)
 {
     if (&hp1 == &hp2) {
