@@ -17,12 +17,12 @@
  * under the License.
  */
 
+#include <netinet/in.h>
+#include <utility>
+
 #include "fmt/core.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/utils.h"
-
-#include <arpa/inet.h>
-#include <utility>
 
 namespace dsn {
 
