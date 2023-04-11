@@ -113,6 +113,7 @@ public:
     void remove_entity(int32_t table_id);
     void clear_entities();
 
+    void set_health_stats(int32_t table_id, int64_t dead_partitions, int64_t unreadable_partitions, int64_t unwritable_partitions, int64_t writable_ill_partitions, int64_t healthy_partitions);                                            
     METRIC_DEFINE_TABLE_SET_METHOD(dead_partitions, int64_t)
     METRIC_DEFINE_TABLE_SET_METHOD(unreadable_partitions, int64_t)
     METRIC_DEFINE_TABLE_SET_METHOD(unwritable_partitions, int64_t)
@@ -132,5 +133,7 @@ private:
 };
 
 bool operator==(const table_metric_entities &lhs, const table_metric_entities &rhs);
+
+#define METRIC_SET_TABLE_HEALTH_STATS(obj, table_id, ...) (obj).set_health_stats(table_id, ##__VA_ARGS__)
 
 } // namespace dsn

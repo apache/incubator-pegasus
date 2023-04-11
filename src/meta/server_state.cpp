@@ -2431,18 +2431,9 @@ void server_state::update_partition_metrics()
             counters[st]++;
         }
 
-        METRIC_CALL_TABLE_SET_METHOD(
-            _table_metric_entities, dead_partitions, app->app_id, counters[HS_DEAD]);
-        METRIC_CALL_TABLE_SET_METHOD(
-            _table_metric_entities, unreadable_partitions, app->app_id, counters[HS_UNREADABLE]);
-        METRIC_CALL_TABLE_SET_METHOD(
-            _table_metric_entities, unwritable_partitions, app->app_id, counters[HS_UNWRITABLE]);
-        METRIC_CALL_TABLE_SET_METHOD(_table_metric_entities,
-                                     writable_ill_partitions,
-                                     app->app_id,
-                                     counters[HS_WRITABLE_ILL]);
-        METRIC_CALL_TABLE_SET_METHOD(
-            _table_metric_entities, healthy_partitions, app->app_id, counters[HS_HEALTHY]);
+        METRIC_SET_TABLE_HEALTH_STATS(
+            _table_metric_entities, app->app_id, counters[HS_DEAD], counters[HS_UNREADABLE], counters[HS_UNWRITABLE]
+, counters[HS_WRITABLE_ILL], counters[HS_HEALTHY]);
 
         return true;
     };
