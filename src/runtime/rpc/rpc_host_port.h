@@ -95,7 +95,7 @@ struct hash<::dsn::host_port>
     {
         switch (hp.type()) {
         case HOST_TYPE_IPV4:
-            return std::hash<std::string>()(hp.host()) ^ hp.port();
+            return std::hash<std::string>()(hp.host()) ^ std::hash<uint16_t>()(hp.port());
         case HOST_TYPE_GROUP:
             CHECK(false, "type HOST_TYPE_GROUP not support!");
         default:
