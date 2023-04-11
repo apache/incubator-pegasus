@@ -20,8 +20,46 @@
 #include <fmt/core.h>
 #include <string>
 
+#include "meta/meta_data.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_view.h"
+
+METRIC_DEFINE_entity(partition);
+
+METRIC_DEFINE_counter(partition,
+                      partition_configuration_changes,
+                      dsn::metric_unit::kChanges,
+                      "The number of times the configuration has been changed");
+
+METRIC_DEFINE_counter(partition,
+                      unwritable_partition_changes,
+                      dsn::metric_unit::kChanges,
+                      "The number of times the status of partition has been changed to unwritable");
+
+METRIC_DEFINE_counter(partition,
+                      writable_partition_changes,
+                      dsn::metric_unit::kChanges,
+                      "The number of times the status of partition has been changed to writable");
+
+METRIC_DEFINE_gauge_int64(partition,
+    greedy_recent_balance_operations,
+    dsn::metric_unit::kOperations,
+    "The number of balance operations of greedy balancer that are recently needed to be executed");
+
+METRIC_DEFINE_counter(partition,
+                      greedy_move_primary_operations,
+                      dsn::metric_unit::kOperations,
+                      "The number of operations that move primaries");
+
+METRIC_DEFINE_counter(partition,
+                      greedy_copy_primary_operations,
+                      dsn::metric_unit::kOperations,
+                      "The number of operations that copy primaries");
+
+METRIC_DEFINE_counter(partition,
+                      greedy_copy_secondary_operations,
+                      dsn::metric_unit::kOperations,
+                      "The number of operations that copy secondaries");
 
 METRIC_DEFINE_entity(table);
 
@@ -78,6 +116,15 @@ namespace dsn {
 
 namespace {
 
+metric_entity_ptr instantiate_partition_metric_entity(int32_t table_id, int32_t partition_id)
+{
+    auto entity_id = fmt::format("partition_{}", gpid(table_id, partition_id));
+
+    return METRIC_ENTITY_partition.instantiate(entity_id,
+        {{"table_id", std::to_string(table_id)},
+            {"partition_id", std::to_string(partition_id)}});
+}
+
 metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
 {
     auto entity_id = fmt::format("table_{}", table_id);
@@ -87,7 +134,25 @@ metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
 
 } // anonymous namespace
 
-table_metrics::table_metrics(int32_t table_id)
+partition_metrics::partition_metrics(int32_t table_id, int32_t partition_id)
+    : 
+      _partition_metric_entity(instantiate_partition_metric_entity(table_id, partition_id)),
+      METRIC_VAR_INIT_partition(partition_configuration_changes),
+      METRIC_VAR_INIT_partition(unwritable_partition_changes),
+      METRIC_VAR_INIT_partition(writable_partition_changes)
+{
+}
+
+const metric_entity_ptr &partition_metrics::partition_metric_entity() const
+{
+    CHECK_NOTNULL(_partition_metric_entity,
+                  "partition metric entity should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate "
+                  "metric");
+    return _partition_metric_entity;
+}
+
+table_metrics::table_metrics(int32_t table_id, int32_t partition_count)
     : _table_id(table_id),
       _table_metric_entity(instantiate_table_metric_entity(table_id)),
       METRIC_VAR_INIT_table(dead_partitions),
@@ -99,6 +164,10 @@ table_metrics::table_metrics(int32_t table_id)
       METRIC_VAR_INIT_table(unwritable_partition_changes),
       METRIC_VAR_INIT_table(writable_partition_changes)
 {
+    _partition_metrics.reserve(partition_count);
+    for (int32_t i = 0; i < partition_count; ++i) {
+        _partition_metrics.push_back(std::make_unique<partition_metrics>(table_id, i));
+    }
 }
 
 const metric_entity_ptr &table_metrics::table_metric_entity() const
@@ -108,6 +177,24 @@ const metric_entity_ptr &table_metrics::table_metric_entity() const
                   "uninitialized entity cannot be used to instantiate "
                   "metric");
     return _table_metric_entity;
+}
+
+void table_metrics::resize_partitions(int32_t partition_count)
+{
+    utils::auto_write_lock l(_partition_lock);
+
+    if (_partition_metrics.size() == partition_count) {
+        return;
+    }
+
+    if (_partition_metrics.size() > partition_count) {
+        _partition_metrics.resize(partition_count);
+        return;
+    }
+
+    for (int32_t i = _partition_metrics.size(); i < partition_count; ++i) {
+        _partition_metrics.push_back(std::make_unique<partition_metrics>(_table_id, i));
+    }
 }
 
 bool operator==(const table_metrics &lhs, const table_metrics &rhs)
@@ -127,7 +214,7 @@ bool operator==(const table_metrics &lhs, const table_metrics &rhs)
 
 bool operator!=(const table_metrics &lhs, const table_metrics &rhs) { return !(lhs == rhs); }
 
-void table_metric_entities::create_entity(int32_t table_id)
+void table_metric_entities::create_entity(int32_t table_id, int32_t partition_count)
 {
     utils::auto_write_lock l(_lock);
 
@@ -136,7 +223,19 @@ void table_metric_entities::create_entity(int32_t table_id)
         return;
     }
 
-    _entities[table_id] = std::make_unique<table_metrics>(table_id);
+    _entities[table_id] = std::make_unique<table_metrics>(table_id, partition_count);
+}
+
+void table_metric_entities::resize_partitions(int32_t table_id, int32_t partition_count)
+{
+    utils::auto_write_lock l(_lock);
+
+    auto iter = _entities.find(table_id);
+    if (dsn_unlikely(iter == _entities.end())) {
+        return;
+    }
+
+    iter->second->resize_partitions(partition_count);
 }
 
 void table_metric_entities::remove_entity(int32_t table_id)

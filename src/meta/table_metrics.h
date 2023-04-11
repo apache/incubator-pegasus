@@ -30,15 +30,40 @@
 namespace dsn {
 class table_metric_entities;
 
+// Maintain a partition-level metric entity of meta, and all metrics attached to it.
+class partition_metrics
+{
+public:
+    partition_metrics(int32_t table_id, int32_t partition_id);
+    ~partition_metrics() = default;
+
+    const metric_entity_ptr &partition_metric_entity() const;
+
+    METRIC_DEFINE_INCREMENT_METHOD(partition_configuration_changes)
+    METRIC_DEFINE_INCREMENT_METHOD(unwritable_partition_changes)
+    METRIC_DEFINE_INCREMENT_METHOD(writable_partition_changes)
+    METRIC_DEFINE_SET_METHOD(greedy_recent_balance_operations, int64_t)
+
+private:
+    const metric_entity_ptr _partition_metric_entity;
+    METRIC_VAR_DECLARE_counter(partition_configuration_changes);
+    METRIC_VAR_DECLARE_counter(unwritable_partition_changes);
+    METRIC_VAR_DECLARE_counter(writable_partition_changes);
+
+    DISALLOW_COPY_AND_ASSIGN(partition_metrics);
+};
+
 // Maintain a table-level metric entity of meta, and all metrics attached to it.
 class table_metrics
 {
 public:
-    table_metrics(int32_t table_id);
+    table_metrics(int32_t table_id, int32_t partition_count);
     ~table_metrics() = default;
 
     inline int32_t table_id() const { return _table_id; }
     const metric_entity_ptr &table_metric_entity() const;
+
+    void resize_partitions(int32_t partition_count);
 
     METRIC_DEFINE_SET_METHOD(dead_partitions, int64_t)
     METRIC_DEFINE_SET_METHOD(unreadable_partitions, int64_t)
@@ -61,6 +86,9 @@ private:
     METRIC_VAR_DECLARE_counter(partition_configuration_changes);
     METRIC_VAR_DECLARE_counter(unwritable_partition_changes);
     METRIC_VAR_DECLARE_counter(writable_partition_changes);
+
+    mutable utils::rw_lock_nr _partition_lock;
+    std::vector<std::unique_ptr<partition_metrics>> _partition_metrics;
 
     DISALLOW_COPY_AND_ASSIGN(table_metrics);
 };
@@ -109,7 +137,8 @@ public:
     table_metric_entities() = default;
     ~table_metric_entities() = default;
 
-    void create_entity(int32_t table_id);
+    void create_entity(int32_t table_id, int32_t partition_count);
+    void resize_partitions(int32_t table_id, int32_t partition_count);
     void remove_entity(int32_t table_id);
     void clear_entities();
 
@@ -119,11 +148,7 @@ public:
                           int64_t unwritable_partitions,
                           int64_t writable_ill_partitions,
                           int64_t healthy_partitions);
-    METRIC_DEFINE_TABLE_SET_METHOD(dead_partitions, int64_t)
-    METRIC_DEFINE_TABLE_SET_METHOD(unreadable_partitions, int64_t)
-    METRIC_DEFINE_TABLE_SET_METHOD(unwritable_partitions, int64_t)
-    METRIC_DEFINE_TABLE_SET_METHOD(writable_ill_partitions, int64_t)
-    METRIC_DEFINE_TABLE_SET_METHOD(healthy_partitions, int64_t)
+
     METRIC_DEFINE_TABLE_INCREMENT_METHOD(partition_configuration_changes)
     METRIC_DEFINE_TABLE_INCREMENT_METHOD(unwritable_partition_changes)
     METRIC_DEFINE_TABLE_INCREMENT_METHOD(writable_partition_changes)

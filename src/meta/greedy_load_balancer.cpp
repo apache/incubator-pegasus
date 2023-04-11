@@ -228,8 +228,7 @@ bool greedy_load_balancer::check(meta_view view, migration_list &list)
 void greedy_load_balancer::report(const dsn::replication::migration_list &list,
                                   bool balance_checker)
 {
-    int counters[MAX_COUNT];
-    ::memset(counters, 0, sizeof(counters));
+    int counters[MAX_COUNT] = {0};
 
     counters[ALL_COUNT] = list.size();
     for (const auto &action : list) {

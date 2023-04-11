@@ -196,15 +196,20 @@ class error_code;
 
 #define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
 
-#define METRIC_DEFINE_SET_METHOD(name, value_type)                                                 \
-    void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
+#define METRIC_DEFINE_INCREMENT_BY_METHOD(name)                                                       \
+    void increment_by_##name() { METRIC_VAR_INCREMENT(name); }
 
-#define METRIC_CALL_SET_METHOD(obj, name, value) (obj).set_##name(value)
+#define METRIC_CALL_INCREMENT_BY_METHOD(obj, name) (obj).increment_by_##name()
 
 #define METRIC_DEFINE_INCREMENT_METHOD(name)                                                       \
     void increment_##name() { METRIC_VAR_INCREMENT(name); }
 
 #define METRIC_CALL_INCREMENT_METHOD(obj, name) (obj).increment_##name()
+
+#define METRIC_DEFINE_SET_METHOD(name, value_type)                                                 \
+    void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
+
+#define METRIC_CALL_SET_METHOD(obj, name, value) (obj).set_##name(value)
 
 namespace dsn {
 class metric;                  // IWYU pragma: keep
@@ -639,6 +644,7 @@ enum class metric_unit : size_t
     kCompactions,
     kWrites,
     kChanges,
+    kOperations,
     kInvalidUnit,
 };
 
