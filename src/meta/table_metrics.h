@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "common/gpid.h"
 #include "utils/autoref_ptr.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
@@ -52,6 +53,17 @@ private:
 
     DISALLOW_COPY_AND_ASSIGN(partition_metrics);
 };
+
+#define METRIC_DEFINE_PARTITION_INCREMENT_METHOD_FOR_TABLE(name)                                                 \
+    void increment_partition_##name(int32_t partition_id)                                                        \
+    {                                                                                              \
+        utils::auto_read_lock l(_partition_lock);                                                            \
+                                                                                                   \
+        CHECK_LT(partition_id, _partition_metrics.size());                                \
+        METRIC_CALL_INCREMENT_METHOD(*(_partition_metrics[partition_id]), name);                                       \
+    }
+
+#define METRIC_CALL_PARTITION_INCREMENT_METHOD_FOR_TABLE(obj, name, partition_id) (obj).increment_partition_##name(partition_id)
 
 // Maintain a table-level metric entity of meta, and all metrics attached to it.
 class table_metrics
@@ -110,19 +122,20 @@ bool operator!=(const table_metrics &lhs, const table_metrics &rhs);
 
 #define METRIC_CALL_TABLE_SET_METHOD(obj, name, table_id, value) (obj).set_##name(table_id, value)
 
-#define METRIC_DEFINE_TABLE_INCREMENT_METHOD(name)                                                 \
-    void increment_##name(int32_t table_id)                                                        \
+#define METRIC_DEFINE_PARTITION_INCREMENT_METHOD(name)                                                 \
+    void increment_partition_##name(const gpid &id)                                                        \
     {                                                                                              \
         utils::auto_read_lock l(_lock);                                                            \
                                                                                                    \
-        entity_map::const_iterator iter = _entities.find(table_id);                                \
+        auto iter = _entities.find(id.get_app_id());                                \
         if (dsn_unlikely(iter == _entities.end())) {                                               \
             return;                                                                                \
         }                                                                                          \
-        METRIC_CALL_INCREMENT_METHOD(*(iter->second), name);                                       \
+        \
+        METRIC_CALL_PARTITION_INCREMENT_METHOD_FOR_TABLE(*(iter->second), name, id.get_partition_index());                                       \
     }
 
-#define METRIC_CALL_TABLE_INCREMENT_METHOD(obj, name, table_id) (obj).increment_##name(table_id)
+#define METRIC_CALL_PARTITION_INCREMENT_METHOD(obj, name, id) (obj).increment_partition_##name(id)
 
 // Manage the lifetime of all table-level metric entities of meta.
 //
