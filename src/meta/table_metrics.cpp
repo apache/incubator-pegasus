@@ -41,7 +41,8 @@ METRIC_DEFINE_counter(partition,
                       dsn::metric_unit::kChanges,
                       "The number of times the status of partition has been changed to writable");
 
-METRIC_DEFINE_gauge_int64(partition,
+METRIC_DEFINE_gauge_int64(
+    partition,
     greedy_recent_balance_operations,
     dsn::metric_unit::kOperations,
     "The number of balance operations of greedy balancer that are recently needed to be executed");
@@ -120,9 +121,9 @@ metric_entity_ptr instantiate_partition_metric_entity(int32_t table_id, int32_t 
 {
     auto entity_id = fmt::format("partition_{}", gpid(table_id, partition_id));
 
-    return METRIC_ENTITY_partition.instantiate(entity_id,
-        {{"table_id", std::to_string(table_id)},
-            {"partition_id", std::to_string(partition_id)}});
+    return METRIC_ENTITY_partition.instantiate(
+        entity_id,
+        {{"table_id", std::to_string(table_id)}, {"partition_id", std::to_string(partition_id)}});
 }
 
 metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
@@ -135,8 +136,7 @@ metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
 } // anonymous namespace
 
 partition_metrics::partition_metrics(int32_t table_id, int32_t partition_id)
-    : 
-      _partition_metric_entity(instantiate_partition_metric_entity(table_id, partition_id)),
+    : _partition_metric_entity(instantiate_partition_metric_entity(table_id, partition_id)),
       METRIC_VAR_INIT_partition(partition_configuration_changes),
       METRIC_VAR_INIT_partition(unwritable_partition_changes),
       METRIC_VAR_INIT_partition(writable_partition_changes)

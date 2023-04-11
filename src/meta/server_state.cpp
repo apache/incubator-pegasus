@@ -1394,7 +1394,8 @@ void server_state::recall_app(dsn::message_ex *msg)
                     target_app->helpers->pending_response = msg;
 
                     _exist_apps.emplace(target_app->app_name, target_app);
-                    _table_metric_entities.create_entity(target_app->app_id, target_app->partition_count);
+                    _table_metric_entities.create_entity(target_app->app_id,
+                                                         target_app->partition_count);
                 }
             }
         }

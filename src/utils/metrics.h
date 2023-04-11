@@ -196,7 +196,7 @@ class error_code;
 
 #define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
 
-#define METRIC_DEFINE_INCREMENT_BY_METHOD(name)                                                       \
+#define METRIC_DEFINE_INCREMENT_BY_METHOD(name)                                                    \
     void increment_by_##name() { METRIC_VAR_INCREMENT(name); }
 
 #define METRIC_CALL_INCREMENT_BY_METHOD(obj, name) (obj).increment_by_##name()
