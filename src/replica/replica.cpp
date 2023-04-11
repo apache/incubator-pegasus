@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <functional>
 #include <iosfwd>
+#include <rocksdb/status.h>
 #include <set>
 
 #include "backup/replica_backup_manager.h"
@@ -299,8 +300,16 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
 
     uint64_t start_time_ns = dsn_now_ns();
     CHECK(_app, "");
-    // TODO(yingchun): check the return value.
-    _app->on_request(request);
+    auto storage_error = _app->on_request(request);
+    switch (storage_error) {
+    // TODO(yingchun): Now only kCorruption is dealt, consider to deal with more storage
+    //  engine errors.
+    case rocksdb::Status::kCorruption:
+        handle_local_failure(ERR_RDB_CORRUPTION);
+        return;
+    default:
+        LOG_ERROR_PREFIX("client read encountered an unhandled error: {}", storage_error);
+    }
 
     // If the corresponding perf counter exist, count the duration of this operation.
     // rpc code of request is already checked in message_ex::rpc_code, so it will always be legal

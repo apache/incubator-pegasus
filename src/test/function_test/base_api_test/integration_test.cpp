@@ -139,3 +139,60 @@ TEST_F(integration_test, write_corrupt_db)
 
     ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 60);
 }
+
+TEST_F(integration_test, read_corrupt_db)
+{
+    // Make best effort to rebalance the cluster,
+    ASSERT_NO_FATAL_FAILURE(
+        run_cmd_from_project_root("echo 'set_meta_level lively' | ./run.sh shell"));
+    // Make sure RS-1 has some primaries of table 'temp'.
+    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 120);
+
+    // Inject a read error kCorruption to RS-1.
+    ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root(
+        "curl 'localhost:34801/updateConfig?inject_read_error_for_test=2'"));
+
+    std::string skey = "skey";
+    std::string value = "value";
+    for (int i = 0; i < 1000; i++) {
+        std::string hkey = fmt::format("hkey.read_corrupt_db.{}", i);
+        ASSERT_EQ(PERR_OK, client_->set(hkey, skey, value));
+    }
+
+    int ok_count = 0;
+    int corruption_count = 0;
+    for (int i = 0; i < 1000; i++) {
+        std::string hkey = fmt::format("hkey.read_corrupt_db.{}", i);
+        std::string got_value;
+        int ret = PERR_OK;
+        do {
+            ret = client_->get(hkey, skey, got_value);
+            if (ret == PERR_OK) {
+                ASSERT_EQ(value, got_value);
+                ok_count++;
+                break;
+            } else if (ret == PERR_CORRUPTION) {
+                // Suppose there must some primaries on RS-1.
+                corruption_count++;
+                break;
+            } else if (ret == PERR_TIMEOUT) {
+                // If RS-1 crashed before (encounter a read kCorruption error from storage engine),
+                // a new read operation on the primary replica it ever held will cause timeout.
+                // Force to fetch the latest route table.
+                client_ =
+                    pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
+                ASSERT_TRUE(client_ != nullptr);
+            } else {
+                ASSERT_TRUE(false) << ret;
+            }
+        } while (true);
+    }
+
+    EXPECT_GT(ok_count, 0);
+    EXPECT_GT(corruption_count, 0);
+    std::cout << "ok_count: " << ok_count << ", corruption_count: " << corruption_count
+              << std::endl;
+
+    // All replica servers in this cluster are healthy.
+    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 60);
+}
