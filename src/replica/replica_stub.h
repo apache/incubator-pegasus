@@ -387,6 +387,7 @@ private:
     friend class replica_follower_test;
     friend class replica_http_service_test;
     FRIEND_TEST(replica_test, test_clear_on_failure);
+    FRIEND_TEST(replica_test, test_auto_trash);
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
