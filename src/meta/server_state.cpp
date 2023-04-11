@@ -2431,9 +2431,13 @@ void server_state::update_partition_metrics()
             counters[st]++;
         }
 
-        METRIC_SET_TABLE_HEALTH_STATS(
-            _table_metric_entities, app->app_id, counters[HS_DEAD], counters[HS_UNREADABLE], counters[HS_UNWRITABLE]
-, counters[HS_WRITABLE_ILL], counters[HS_HEALTHY]);
+        METRIC_SET_TABLE_HEALTH_STATS(_table_metric_entities,
+                                      app->app_id,
+                                      counters[HS_DEAD],
+                                      counters[HS_UNREADABLE],
+                                      counters[HS_UNWRITABLE],
+                                      counters[HS_WRITABLE_ILL],
+                                      counters[HS_HEALTHY]);
 
         return true;
     };

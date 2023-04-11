@@ -157,17 +157,21 @@ void table_metric_entities::clear_entities()
     _entities.clear();
 }
 
-void table_metric_entities::set_health_stats(int32_t table_id, int64_t dead_partitions, int64_t unreadable_partitions, int64_t unwritable_partitions, int64_t writable_ill_partitions, int64_t healthy_partitions)                                            
-{                                                                                              
-    utils::auto_read_lock l(_lock);                                                            
-                                                                                               
-    auto iter = _entities.find(table_id);                                
-    if (dsn_unlikely(iter == _entities.end())) {                                               
-        return;                                                                                
-    }                                                                                          
+void table_metric_entities::set_health_stats(int32_t table_id,
+                                             int64_t dead_partitions,
+                                             int64_t unreadable_partitions,
+                                             int64_t unwritable_partitions,
+                                             int64_t writable_ill_partitions,
+                                             int64_t healthy_partitions)
+{
+    utils::auto_read_lock l(_lock);
 
-#define METRIC_SET_HEALTH_STAT(name) \
-    METRIC_CALL_SET_METHOD(*(iter->second), name, name)
+    auto iter = _entities.find(table_id);
+    if (dsn_unlikely(iter == _entities.end())) {
+        return;
+    }
+
+#define METRIC_SET_HEALTH_STAT(name) METRIC_CALL_SET_METHOD(*(iter->second), name, name)
 
     METRIC_SET_HEALTH_STAT(dead_partitions);
     METRIC_SET_HEALTH_STAT(unreadable_partitions);
