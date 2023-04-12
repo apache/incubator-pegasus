@@ -45,22 +45,22 @@ METRIC_DEFINE_gauge_int64(
     partition,
     greedy_recent_balance_operations,
     dsn::metric_unit::kOperations,
-    "The number of balance operations of greedy balancer that are recently needed to be executed");
+    "The number of balance operations by greedy balancer that are recently needed to be executed");
 
 METRIC_DEFINE_counter(partition,
                       greedy_move_primary_operations,
                       dsn::metric_unit::kOperations,
-                      "The number of operations that move primaries");
+                      "The number of balance operations by greedy balancer that move primaries");
 
 METRIC_DEFINE_counter(partition,
                       greedy_copy_primary_operations,
                       dsn::metric_unit::kOperations,
-                      "The number of operations that copy primaries");
+                      "The number of balance operations by greedy balancer that copy primaries");
 
 METRIC_DEFINE_counter(partition,
                       greedy_copy_secondary_operations,
                       dsn::metric_unit::kOperations,
-                      "The number of operations that copy secondaries");
+                      "The number of balance operations by greedy balancer that copy secondaries");
 
 METRIC_DEFINE_entity(table);
 
@@ -139,7 +139,11 @@ partition_metrics::partition_metrics(int32_t table_id, int32_t partition_id)
     : _table_id(table_id),_partition_id(partition_id),_partition_metric_entity(instantiate_partition_metric_entity(table_id, partition_id)),
       METRIC_VAR_INIT_partition(partition_configuration_changes),
       METRIC_VAR_INIT_partition(unwritable_partition_changes),
-      METRIC_VAR_INIT_partition(writable_partition_changes)
+      METRIC_VAR_INIT_partition(writable_partition_changes),
+    METRIC_VAR_INIT_partition(greedy_recent_balance_operations),
+    METRIC_VAR_INIT_partition(greedy_move_primary_operations),
+    METRIC_VAR_INIT_partition(greedy_copy_primary_operations),
+    METRIC_VAR_INIT_partition(greedy_copy_secondary_operations)
 {
 }
 
@@ -177,10 +181,7 @@ table_metrics::table_metrics(int32_t table_id, int32_t partition_count)
       METRIC_VAR_INIT_table(unreadable_partitions),
       METRIC_VAR_INIT_table(unwritable_partitions),
       METRIC_VAR_INIT_table(writable_ill_partitions),
-      METRIC_VAR_INIT_table(healthy_partitions),
-      METRIC_VAR_INIT_table(partition_configuration_changes),
-      METRIC_VAR_INIT_table(unwritable_partition_changes),
-      METRIC_VAR_INIT_table(writable_partition_changes)
+      METRIC_VAR_INIT_table(healthy_partitions)
 {
     _partition_metrics.reserve(partition_count);
     for (int32_t i = 0; i < partition_count; ++i) {
@@ -284,11 +285,11 @@ void table_metric_entities::clear_entities()
 }
 
 void table_metric_entities::set_health_stats(int32_t table_id,
-                                             int64_t dead_partitions,
-                                             int64_t unreadable_partitions,
-                                             int64_t unwritable_partitions,
-                                             int64_t writable_ill_partitions,
-                                             int64_t healthy_partitions)
+                                             int dead_partitions,
+                                             int unreadable_partitions,
+                                             int unwritable_partitions,
+                                             int writable_ill_partitions,
+                                             int healthy_partitions)
 {
     utils::auto_read_lock l(_lock);
 
@@ -306,6 +307,29 @@ void table_metric_entities::set_health_stats(int32_t table_id,
     METRIC_SET_HEALTH_STAT(healthy_partitions);
 
 #undef METRIC_SET_HEALTH_STAT
+}
+
+void table_metric_entities::set_greedy_balance_stats(const greedy_balance_stats &balance_stats)
+{
+    utils::auto_read_lock l(_lock);
+
+    const auto &stats = balance_stats.stats();
+    for (const auto &partition : stats) {
+        auto iter = _entities.find(partition.first.get_app_id());
+        if (dsn_unlikely(iter == _entities.end())) {
+            continue;
+        }
+
+        METRIC_SET(*(iter->second), balance_operations, partition.first.get_partition_index(), partition.second.balance_operations);                         
+
+#define METRIC_INCREMENT_BY_BALANCE_STAT(name) METRIC_INCREMENT_BY(*(iter->second), name, id.get_partition_index(), partition.second.name) 
+
+        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_move_primary_operations);                         
+        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_primary_operations);                         
+        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_secondary_operations);                         
+
+#undef METRIC_INCREMENT_BY_BALANCE_STAT
+    }
 }
 
 bool operator==(const table_metric_entities &lhs, const table_metric_entities &rhs)

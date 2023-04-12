@@ -86,12 +86,6 @@ private:
 
     std::unique_ptr<command_deregister> _get_balance_operation_count;
 
-    // perf counters
-    perf_counter_wrapper _balance_operation_count;
-    perf_counter_wrapper _recent_balance_move_primary_count;
-    perf_counter_wrapper _recent_balance_copy_primary_count;
-    perf_counter_wrapper _recent_balance_copy_secondary_count;
-
 private:
     void greedy_balancer(bool balance_checker);
     bool all_replica_infos_collected(const node_state &ns);
