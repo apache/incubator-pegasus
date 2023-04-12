@@ -17,10 +17,13 @@
 
 #include "table_metrics.h"
 
+#include <ext/alloc_traits.h>
 #include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <stddef.h>
+#include <iosfwd>
 #include <string>
 
-#include "meta/meta_data.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_view.h"
 

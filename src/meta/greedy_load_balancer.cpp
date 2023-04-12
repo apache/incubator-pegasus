@@ -42,18 +42,17 @@
 #include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_data.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/command_manager.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/math.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 class gpid;
 
 namespace replication {
-class meta_service;
 
 DSN_DEFINE_bool(meta_server, balance_cluster, false, "whether to enable cluster balancer");
 DSN_TAG_VARIABLE(balance_cluster, FT_MUTABLE);

@@ -55,6 +55,7 @@
 #include "meta/meta_split_service.h"
 #include "meta/meta_state_service_utils.h"
 #include "meta/server_state.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"

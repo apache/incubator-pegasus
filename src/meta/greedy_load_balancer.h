@@ -40,7 +40,6 @@
 
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "server_load_balancer.h"
 
 namespace dsn {

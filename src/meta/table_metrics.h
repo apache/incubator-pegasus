@@ -21,15 +21,16 @@
 #include <memory>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "common/gpid.h"
 #include "utils/autoref_ptr.h"
+#include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
-class table_metric_entities;
 
 // Maintain a partition-level metric entity of meta, and all metrics attached to it.
 class partition_metrics

@@ -85,6 +85,7 @@
 #include "utils/config_api.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
