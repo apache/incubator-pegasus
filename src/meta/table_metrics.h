@@ -72,13 +72,13 @@ public:
     METRIC_DEFINE_SET_METHOD(writable_ill_partitions, int64_t)
     METRIC_DEFINE_SET_METHOD(healthy_partitions, int64_t)
 
-#define __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(name)                                                 \
-    void increment_##name(int32_t partition_id)                                                        \
+#define __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(name)                                           \
+    void increment_##name(int32_t partition_id)                                                    \
     {                                                                                              \
-        utils::auto_read_lock l(_partition_lock);                                                            \
+        utils::auto_read_lock l(_partition_lock);                                                  \
                                                                                                    \
-        CHECK_LT(partition_id, _partition_metrics.size());                                \
-        METRIC_CALL_INCREMENT_METHOD(*(_partition_metrics[partition_id]), name);                                       \
+        CHECK_LT(partition_id, _partition_metrics.size());                                         \
+        METRIC_CALL_INCREMENT_METHOD(*(_partition_metrics[partition_id]), name);                   \
     }
 
     __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(partition_configuration_changes)
@@ -139,24 +139,24 @@ public:
                           int64_t writable_ill_partitions,
                           int64_t healthy_partitions);
 
-#define __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(name)                                                 \
-    void increment_##name(const gpid &id)                                                        \
+#define __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(name)                                           \
+    void increment_##name(const gpid &id)                                                          \
     {                                                                                              \
         utils::auto_read_lock l(_lock);                                                            \
                                                                                                    \
-        auto iter = _entities.find(id.get_app_id());                                \
+        auto iter = _entities.find(id.get_app_id());                                               \
         if (dsn_unlikely(iter == _entities.end())) {                                               \
             return;                                                                                \
         }                                                                                          \
-        \
-        METRIC_CALL_PARTITION_INCREMENT_METHOD(*(iter->second), name, id.get_partition_index());                                       \
+                                                                                                   \
+        METRIC_CALL_PARTITION_INCREMENT_METHOD(*(iter->second), name, id.get_partition_index());   \
     }
 
     __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(partition_configuration_changes)
     __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(unwritable_partition_changes)
     __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(writable_partition_changes)
 
-#undef __METRIC_DEFINE_PARTITION_INCREMENT_METHOD 
+#undef __METRIC_DEFINE_PARTITION_INCREMENT_METHOD
 
 private:
     friend bool operator==(const table_metric_entities &, const table_metric_entities &);
