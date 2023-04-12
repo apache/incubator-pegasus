@@ -98,21 +98,6 @@ METRIC_DEFINE_gauge_int64(table,
                           "The number of healthy partitions, which means primary = 1 && "
                           "primary + secondary >= max_replica_count");
 
-METRIC_DEFINE_counter(table,
-                      partition_configuration_changes,
-                      dsn::metric_unit::kChanges,
-                      "The number of times the configuration has been changed");
-
-METRIC_DEFINE_counter(table,
-                      unwritable_partition_changes,
-                      dsn::metric_unit::kChanges,
-                      "The number of times the status of partition has been changed to unwritable");
-
-METRIC_DEFINE_counter(table,
-                      writable_partition_changes,
-                      dsn::metric_unit::kChanges,
-                      "The number of times the status of partition has been changed to writable");
-
 namespace dsn {
 
 namespace {
@@ -326,12 +311,13 @@ void table_metric_entities::set_greedy_balance_stats(const greedy_balance_stats 
         }
 
         METRIC_SET(*(iter->second),
-                   balance_operations,
+                   greedy_recent_balance_operations,
                    partition.first.get_partition_index(),
-                   partition.second.balance_operations);
+                   partition.second.greedy_recent_balance_operations);
 
 #define METRIC_INCREMENT_BY_BALANCE_STAT(name)                                                     \
-    METRIC_INCREMENT_BY(*(iter->second), name, id.get_partition_index(), partition.second.name)
+    METRIC_INCREMENT_BY(                                                                           \
+        *(iter->second), name, partition.first.get_partition_index(), partition.second.name)
 
         METRIC_INCREMENT_BY_BALANCE_STAT(greedy_move_primary_operations);
         METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_primary_operations);
