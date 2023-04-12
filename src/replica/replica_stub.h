@@ -62,7 +62,6 @@
 #include "replica_admin_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "runtime/security/access_controller.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -76,6 +75,10 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+
+namespace security {
+class access_controller;
+} // namespace security
 
 namespace replication {
 class configuration_query_by_node_response;

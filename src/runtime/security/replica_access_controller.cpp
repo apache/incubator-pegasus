@@ -15,22 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Disable class-memaccess warning to facilitate compilation with gcc>7
-// https://github.com/Tencent/rapidjson/issues/1700
-#pragma GCC diagnostic push
-#if defined(__GNUC__) && __GNUC__ >= 8
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-#endif
-#include <rapidjson/document.h>
+#include <utility>
 
-#pragma GCC diagnostic pop
-
+#include "common/json_helper.h"
 #include "replica_access_controller.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
-#include "utils/fmt_logging.h"
+#include "utils/blob.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
 namespace dsn {

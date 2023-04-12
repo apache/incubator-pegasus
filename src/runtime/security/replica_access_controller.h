@@ -21,6 +21,7 @@
 #include <unordered_set>
 
 #include "access_controller.h"
+#include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
 #include "utils/synchronize.h"
 
