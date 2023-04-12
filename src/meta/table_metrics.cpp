@@ -270,7 +270,7 @@ void table_metric_entities::set_health_stats(int32_t table_id,
         return;
     }
 
-#define METRIC_SET_HEALTH_STAT(name) METRIC_CALL_SET_METHOD(*(iter->second), name, name)
+#define METRIC_SET_HEALTH_STAT(name) METRIC_SET(*(iter->second), name, name)
 
     METRIC_SET_HEALTH_STAT(dead_partitions);
     METRIC_SET_HEALTH_STAT(unreadable_partitions);

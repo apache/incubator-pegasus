@@ -40,10 +40,10 @@ public:
 
     const metric_entity_ptr &partition_metric_entity() const;
 
-    METRIC_DEFINE_INCREMENT_METHOD(partition_configuration_changes)
-    METRIC_DEFINE_INCREMENT_METHOD(unwritable_partition_changes)
-    METRIC_DEFINE_INCREMENT_METHOD(writable_partition_changes)
-    METRIC_DEFINE_SET_METHOD(greedy_recent_balance_operations, int64_t)
+    METRIC_DEFINE_INCREMENT(partition_configuration_changes)
+    METRIC_DEFINE_INCREMENT(unwritable_partition_changes)
+    METRIC_DEFINE_INCREMENT(writable_partition_changes)
+    METRIC_DEFINE_SET(greedy_recent_balance_operations, int64_t)
 
 private:
     const metric_entity_ptr _partition_metric_entity;
@@ -66,26 +66,26 @@ public:
 
     void resize_partitions(int32_t partition_count);
 
-    METRIC_DEFINE_SET_METHOD(dead_partitions, int64_t)
-    METRIC_DEFINE_SET_METHOD(unreadable_partitions, int64_t)
-    METRIC_DEFINE_SET_METHOD(unwritable_partitions, int64_t)
-    METRIC_DEFINE_SET_METHOD(writable_ill_partitions, int64_t)
-    METRIC_DEFINE_SET_METHOD(healthy_partitions, int64_t)
+    METRIC_DEFINE_SET(dead_partitions, int64_t)
+    METRIC_DEFINE_SET(unreadable_partitions, int64_t)
+    METRIC_DEFINE_SET(unwritable_partitions, int64_t)
+    METRIC_DEFINE_SET(writable_ill_partitions, int64_t)
+    METRIC_DEFINE_SET(healthy_partitions, int64_t)
 
-#define __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(name)                                           \
+#define __METRIC_DEFINE_INCREMENT(name)                                           \
     void increment_##name(int32_t partition_id)                                                    \
     {                                                                                              \
         utils::auto_read_lock l(_partition_lock);                                                  \
                                                                                                    \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
-        METRIC_CALL_INCREMENT_METHOD(*(_partition_metrics[partition_id]), name);                   \
+        METRIC_INCREMENT(*(_partition_metrics[partition_id]), name);                   \
     }
 
-    __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(partition_configuration_changes)
-    __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(unwritable_partition_changes)
-    __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(writable_partition_changes)
+    __METRIC_DEFINE_INCREMENT(partition_configuration_changes)
+    __METRIC_DEFINE_INCREMENT(unwritable_partition_changes)
+    __METRIC_DEFINE_INCREMENT(writable_partition_changes)
 
-#undef __METRIC_DEFINE_PARTITION_INCREMENT_METHOD
+#undef __METRIC_DEFINE_INCREMENT
 
 private:
     const int32_t _table_id;
@@ -105,14 +105,6 @@ private:
 
 bool operator==(const table_metrics &lhs, const table_metrics &rhs);
 bool operator!=(const table_metrics &lhs, const table_metrics &rhs);
-
-// This macro could be used for both table_metrics and table_metric_entities:
-// * for table_metrics, the `id` argument is actually partition_id;
-// * for table_metric_entities, the `id` argument is actually gpid.
-//
-// It must be put before __METRIC_DEFINE_PARTITION_INCREMENT_METHOD() in table_metric_entities
-// which also calls this macro.
-#define METRIC_CALL_PARTITION_INCREMENT_METHOD(obj, name, id) (obj).increment_##name(id)
 
 // Manage the lifetime of all table-level metric entities of meta.
 //
@@ -139,7 +131,7 @@ public:
                           int64_t writable_ill_partitions,
                           int64_t healthy_partitions);
 
-#define __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(name)                                           \
+#define __METRIC_DEFINE_INCREMENT(name)                                           \
     void increment_##name(const gpid &id)                                                          \
     {                                                                                              \
         utils::auto_read_lock l(_lock);                                                            \
@@ -149,14 +141,14 @@ public:
             return;                                                                                \
         }                                                                                          \
                                                                                                    \
-        METRIC_CALL_PARTITION_INCREMENT_METHOD(*(iter->second), name, id.get_partition_index());   \
+        METRIC_INCREMENT(*(iter->second), name, id.get_partition_index());   \
     }
 
-    __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(partition_configuration_changes)
-    __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(unwritable_partition_changes)
-    __METRIC_DEFINE_PARTITION_INCREMENT_METHOD(writable_partition_changes)
+    __METRIC_DEFINE_INCREMENT(partition_configuration_changes)
+    __METRIC_DEFINE_INCREMENT(unwritable_partition_changes)
+    __METRIC_DEFINE_INCREMENT(writable_partition_changes)
 
-#undef __METRIC_DEFINE_PARTITION_INCREMENT_METHOD
+#undef __METRIC_DEFINE_INCREMENT
 
 private:
     friend bool operator==(const table_metric_entities &, const table_metric_entities &);
