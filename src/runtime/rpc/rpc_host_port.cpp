@@ -44,7 +44,16 @@ host_port::host_port(rpc_address addr)
         _port = addr.port();
     } break;
     case HOST_TYPE_GROUP:
-        CHECK(false, "type HOST_TYPE_GROUP not support!");
+        auto group_address = addr.group_address();
+        *this = host_port();
+        this->assign_group(group_address->name());
+        for (const auto &address : group_address->members()) {
+            CHECK_TRUE(this->group_host_port()->add(host_port(address)));
+        }
+        this->group_host_port()->set_update_leader_automatically(
+            group_address->is_update_leader_automatically());
+        this->group_host_port()->set_leader(host_port(group_address->leader()));
+        break;
     default:
         break;
     }
@@ -59,7 +68,8 @@ void host_port::reset()
         _port = 0;
         break;
     case HOST_TYPE_GROUP:
-        CHECK(false, "type HOST_TYPE_GROUP not support!");
+        group_host_port()->release_ref();
+        break;
     default:
         break;
     }
@@ -79,7 +89,9 @@ host_port &host_port::operator=(const host_port &other)
         _port = other.port();
         break;
     case HOST_TYPE_GROUP:
-        CHECK(false, "type HOST_TYPE_GROUP not support!");
+        _group_host_port = other.group_host_port();
+        group_host_port()->add_ref();
+        break;
     default:
         break;
     }
@@ -93,9 +105,19 @@ std::string host_port::to_string() const
     case HOST_TYPE_IPV4:
         return fmt::format("{}:{}", _host, _port);
     case HOST_TYPE_GROUP:
-        CHECK(false, "type HOST_TYPE_GROUP not support!");
+        return fmt::format("address group {}", group_host_port()->name());
     default:
         return "invalid address";
     }
 }
+
+void host_port::assign_group(const char *name)
+{
+    reset();
+    _type = HOST_TYPE_GROUP;
+    _group_host_port = new rpc_group_host_port(name);
+    // take the lifetime of rpc_uri_address, release_ref when change value or call destructor
+    _group_host_port->add_ref();
+}
+
 } // namespace dsn

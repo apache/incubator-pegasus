@@ -30,6 +30,8 @@
 
 namespace dsn {
 
+class rpc_group_host_port;
+
 class host_port
 {
 public:
@@ -57,10 +59,14 @@ public:
         return os << hp.to_string();
     }
 
+    rpc_group_host_port *group_host_port() const { return _group_host_port; }
+    void assign_group(const char *name);
+
 private:
     std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;
+    rpc_group_host_port *_group_host_port = nullptr;
 };
 
 inline bool operator==(const host_port &hp1, const host_port &hp2)
@@ -77,7 +83,7 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
     case HOST_TYPE_IPV4:
         return hp1.host() == hp2.host() && hp1.port() == hp2.port();
     case HOST_TYPE_GROUP:
-        CHECK(false, "type HOST_TYPE_GROUP not support!");
+        return hp1.group_host_port() == hp2.group_host_port();
     default:
         return true;
     }
@@ -97,7 +103,7 @@ struct hash<::dsn::host_port>
         case HOST_TYPE_IPV4:
             return std::hash<std::string>()(hp.host()) ^ std::hash<uint16_t>()(hp.port());
         case HOST_TYPE_GROUP:
-            CHECK(false, "type HOST_TYPE_GROUP not support!");
+            return std::hash<void *>()(hp.group_host_port());
         default:
             return 0;
         }
