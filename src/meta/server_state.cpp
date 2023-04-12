@@ -1620,15 +1620,15 @@ void server_state::update_configuration_locally(
         _config_change_subscriber(_all_apps);
     }
 
-    METRIC_CALL_TABLE_INCREMENT_METHOD(
-        _table_metric_entities, partition_configuration_changes, app.app_id);
+    METRIC_CALL_PARTITION_INCREMENT_METHOD(
+        _table_metric_entities, partition_configuration_changes, gpid);
     if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
-        METRIC_CALL_TABLE_INCREMENT_METHOD(
-            _table_metric_entities, unwritable_partition_changes, app.app_id);
+        METRIC_CALL_PARTITION_INCREMENT_METHOD(
+            _table_metric_entities, unwritable_partition_changes, gpid);
     }
     if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
-        METRIC_CALL_TABLE_INCREMENT_METHOD(
-            _table_metric_entities, writable_partition_changes, app.app_id);
+        METRIC_CALL_PARTITION_INCREMENT_METHOD(
+            _table_metric_entities, writable_partition_changes, gpid);
     }
 }
 
