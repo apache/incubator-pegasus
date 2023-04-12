@@ -26,14 +26,12 @@
 #include <time.h>
 #include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
 #include <ostream>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
@@ -43,6 +41,7 @@
 #include "shell/command_helper.h"
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"
+#include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
@@ -209,20 +208,17 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     }
 
     // wait thread complete
-    int sleep_seconds = 0;
-    while (sleep_seconds < 120) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        sleep_seconds++;
-        int completed_split_count = 0;
-        for (int i = 0; i < split_count; i++) {
-            if (contexts[i]->split_completed.load()) {
-                completed_split_count++;
+    ASSERT_IN_TIME(
+        [&] {
+            int completed_split_count = 0;
+            for (int i = 0; i < split_count; i++) {
+                if (contexts[i]->split_completed.load()) {
+                    completed_split_count++;
+                }
             }
-        }
-        if (completed_split_count == split_count) {
-            break;
-        }
-    }
+            ASSERT_EQ(completed_split_count, split_count);
+        },
+        120);
 
     ASSERT_FALSE(error_occurred.load()) << "error occurred, processing terminated or timeout!";
     ASSERT_NO_FATAL_FAILURE(verify_data());

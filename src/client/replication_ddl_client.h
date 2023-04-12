@@ -251,6 +251,8 @@ public:
     error_with<configuration_set_max_replica_count_response>
     set_max_replica_count(const std::string &app_name, int32_t max_replica_count);
 
+    void set_max_wait_app_ready_secs(uint32_t max_wait_secs) { _max_wait_secs = max_wait_secs; }
+
 private:
     bool static valid_app_char(int c);
 
@@ -341,6 +343,7 @@ private:
 private:
     dsn::rpc_address _meta_server;
     dsn::task_tracker _tracker;
+    uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.
 
     typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
     typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
