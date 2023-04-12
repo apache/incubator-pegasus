@@ -208,8 +208,8 @@ bool greedy_load_balancer::check(meta_view view, migration_list &list)
 void greedy_load_balancer::report(const dsn::replication::migration_list &list,
                                   bool balance_checker)
 {
-#define METRIC_INCREMENT_BALANCE_STAT(name) \
-            METRIC_INCREMENT(balance_stats, name, action.first, balance_checker)
+#define METRIC_INCREMENT_BALANCE_STAT(name)                                                        \
+    METRIC_INCREMENT(balance_stats, name, action.first, balance_checker)
 
     int counters[MAX_COUNT] = {0};
     greedy_balance_stats balance_stats;
@@ -235,7 +235,8 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
     }
 
     ::memcpy(t_operation_counters, counters, sizeof(counters));
-    METRIC_SET_GREEDY_BALANCE_STATS(_svc->get_server_state()->get_table_metric_entities(), balance_stats);
+    METRIC_SET_GREEDY_BALANCE_STATS(_svc->get_server_state()->get_table_metric_entities(),
+                                    balance_stats);
 
 #undef METRIC_INCREMENT_BALANCE_STAT
 }

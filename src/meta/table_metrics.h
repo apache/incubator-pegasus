@@ -88,11 +88,11 @@ public:
     METRIC_DEFINE_SET(writable_ill_partitions, int64_t)
     METRIC_DEFINE_SET(healthy_partitions, int64_t)
 
-#define __METRIC_DEFINE_INCREMENT_BY(name)                                                            \
-    void increment_by_##name(int32_t partition_id, int64_t x)                                                    \
+#define __METRIC_DEFINE_INCREMENT_BY(name)                                                         \
+    void increment_by_##name(int32_t partition_id, int64_t x)                                      \
     {                                                                                              \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
-        METRIC_INCREMENT_BY(*(_partition_metrics[partition_id]), name, x);                               \
+        METRIC_INCREMENT_BY(*(_partition_metrics[partition_id]), name, x);                         \
     }
 
     __METRIC_DEFINE_INCREMENT_BY(greedy_move_primary_operations)
@@ -114,11 +114,11 @@ public:
 
 #undef __METRIC_DEFINE_INCREMENT
 
-#define __METRIC_DEFINE_SET(name, value_type)                                                            \
-    void set_##name(int32_t partition_id, value_type value)                                                          \
+#define __METRIC_DEFINE_SET(name, value_type)                                                      \
+    void set_##name(int32_t partition_id, value_type value)                                        \
     {                                                                                              \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
-        METRIC_SET(*(_partition_metrics[partition_id]), name, value);                               \
+        METRIC_SET(*(_partition_metrics[partition_id]), name, value);                              \
     }
 
     __METRIC_DEFINE_SET(greedy_recent_balance_operations)
@@ -161,16 +161,16 @@ public:
 
     using partition_map = std::unordered_map<gpid, partition_stats>;
 
-#define __METRIC_DEFINE_INCREMENT(name) \
-     void       increment_##name(const gpid &id, bool balance_checker) \
-     {\
-         auto &partition = _partition_map[id]; \
-        ++(partition.balance_operations);\
-         if (balance_checker) {\
-             return;\
-         }\
-        ++(partition.name);\
-     }
+#define __METRIC_DEFINE_INCREMENT(name)                                                            \
+    void increment_##name(const gpid &id, bool balance_checker)                                    \
+    {                                                                                              \
+        auto &partition = _partition_map[id];                                                      \
+        ++(partition.balance_operations);                                                          \
+        if (balance_checker) {                                                                     \
+            return;                                                                                \
+        }                                                                                          \
+        ++(partition.name);                                                                        \
+    }
 
     __METRIC_DEFINE_INCREMENT(greedy_move_primary_operations)
     __METRIC_DEFINE_INCREMENT(greedy_copy_primary_operations)
@@ -178,8 +178,8 @@ public:
 
 #undef __METRIC_DEFINE_INCREMENT
 
-     const partition_map &stats() const { return _partition_map; }
-     
+    const partition_map &stats() const { return _partition_map; }
+
 private:
     partition_map _partition_map;
 
@@ -243,8 +243,7 @@ private:
 
 bool operator==(const table_metric_entities &lhs, const table_metric_entities &rhs);
 
-#define METRIC_SET_GREEDY_BALANCE_STATS(obj, ...)                                          \
-    (obj).set_greedy_balance_stats(##__VA_ARGS__)
+#define METRIC_SET_GREEDY_BALANCE_STATS(obj, ...) (obj).set_greedy_balance_stats(##__VA_ARGS__)
 
 #define METRIC_SET_TABLE_HEALTH_STATS(obj, table_id, ...)                                          \
     (obj).set_health_stats(table_id, ##__VA_ARGS__)

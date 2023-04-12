@@ -136,14 +136,16 @@ metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
 } // anonymous namespace
 
 partition_metrics::partition_metrics(int32_t table_id, int32_t partition_id)
-    : _table_id(table_id),_partition_id(partition_id),_partition_metric_entity(instantiate_partition_metric_entity(table_id, partition_id)),
+    : _table_id(table_id),
+      _partition_id(partition_id),
+      _partition_metric_entity(instantiate_partition_metric_entity(table_id, partition_id)),
       METRIC_VAR_INIT_partition(partition_configuration_changes),
       METRIC_VAR_INIT_partition(unwritable_partition_changes),
       METRIC_VAR_INIT_partition(writable_partition_changes),
-    METRIC_VAR_INIT_partition(greedy_recent_balance_operations),
-    METRIC_VAR_INIT_partition(greedy_move_primary_operations),
-    METRIC_VAR_INIT_partition(greedy_copy_primary_operations),
-    METRIC_VAR_INIT_partition(greedy_copy_secondary_operations)
+      METRIC_VAR_INIT_partition(greedy_recent_balance_operations),
+      METRIC_VAR_INIT_partition(greedy_move_primary_operations),
+      METRIC_VAR_INIT_partition(greedy_copy_primary_operations),
+      METRIC_VAR_INIT_partition(greedy_copy_secondary_operations)
 {
 }
 
@@ -172,7 +174,10 @@ bool operator==(const partition_metrics &lhs, const partition_metrics &rhs)
     return true;
 }
 
-bool operator!=(const partition_metrics &lhs, const partition_metrics &rhs) { return !(lhs == rhs); }
+bool operator!=(const partition_metrics &lhs, const partition_metrics &rhs)
+{
+    return !(lhs == rhs);
+}
 
 table_metrics::table_metrics(int32_t table_id, int32_t partition_count)
     : _table_id(table_id),
@@ -320,13 +325,17 @@ void table_metric_entities::set_greedy_balance_stats(const greedy_balance_stats 
             continue;
         }
 
-        METRIC_SET(*(iter->second), balance_operations, partition.first.get_partition_index(), partition.second.balance_operations);                         
+        METRIC_SET(*(iter->second),
+                   balance_operations,
+                   partition.first.get_partition_index(),
+                   partition.second.balance_operations);
 
-#define METRIC_INCREMENT_BY_BALANCE_STAT(name) METRIC_INCREMENT_BY(*(iter->second), name, id.get_partition_index(), partition.second.name) 
+#define METRIC_INCREMENT_BY_BALANCE_STAT(name)                                                     \
+    METRIC_INCREMENT_BY(*(iter->second), name, id.get_partition_index(), partition.second.name)
 
-        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_move_primary_operations);                         
-        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_primary_operations);                         
-        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_secondary_operations);                         
+        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_move_primary_operations);
+        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_primary_operations);
+        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_secondary_operations);
 
 #undef METRIC_INCREMENT_BY_BALANCE_STAT
     }
