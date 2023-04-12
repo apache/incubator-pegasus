@@ -20,8 +20,7 @@
 #pragma once
 
 #include <cstddef>
-// IWYU pragma: no_include <experimental/string_view>
-#include <stdint.h>
+#include <cstdint>
 // IWYU pragma: no_include <experimental/string_view>
 #include <functional>
 #include <iosfwd>
