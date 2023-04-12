@@ -17,7 +17,16 @@
 
 #include <utility>
 
+// Disable class-memaccess warning to facilitate compilation with gcc>7
+// https://github.com/Tencent/rapidjson/issues/1700
+#pragma GCC diagnostic push
+#if defined(__GNUC__) && __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
 #include "common/json_helper.h"
+
+#pragma GCC diagnostic pop
+
 #include "replica_access_controller.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_message.h"
