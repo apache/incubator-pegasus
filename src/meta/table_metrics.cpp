@@ -190,6 +190,12 @@ const metric_entity_ptr &table_metrics::table_metric_entity() const
 
 void table_metrics::resize_partitions(int32_t partition_count)
 {
+    LOG_INFO("resize partitions for table_metrics(table_id={}): old_partition_count={}, "
+             "new_partition_count={}",
+             _table_id,
+             _partition_metrics.size(),
+             partition_count);
+
     if (_partition_metrics.size() == partition_count) {
         return;
     }
@@ -234,22 +240,36 @@ bool operator!=(const table_metrics &lhs, const table_metrics &rhs) { return !(l
 
 void table_metric_entities::create_entity(int32_t table_id, int32_t partition_count)
 {
+    LOG_INFO("try to create entity for table_metric_entities(table_id={}): partition_count={}",
+             table_id,
+             partition_count);
+
     utils::auto_write_lock l(_lock);
 
     entity_map::const_iterator iter = _entities.find(table_id);
     if (dsn_unlikely(iter != _entities.end())) {
+        LOG_WARNING("entity has existed for table_metric_entities(table_id={})", table_id);
         return;
     }
 
     _entities[table_id] = std::make_unique<table_metrics>(table_id, partition_count);
+    LOG_INFO("entity has been created for table_metric_entities(table_id={}): partition_count={}",
+             table_id,
+             partition_count);
 }
 
 void table_metric_entities::resize_partitions(int32_t table_id, int32_t partition_count)
 {
+    LOG_INFO(
+        "try to resize partitions for table_metric_entities(table_id={}): new_partition_count={}",
+        table_id,
+        partition_count);
+
     utils::auto_write_lock l(_lock);
 
     auto iter = _entities.find(table_id);
     if (dsn_unlikely(iter == _entities.end())) {
+        LOG_WARNING("entity does not exist for table_metric_entities(table_id={})", table_id);
         return;
     }
 
@@ -258,14 +278,18 @@ void table_metric_entities::resize_partitions(int32_t table_id, int32_t partitio
 
 void table_metric_entities::remove_entity(int32_t table_id)
 {
+    LOG_INFO("try to remove entity for table_metric_entities(table_id={})", table_id);
+
     utils::auto_write_lock l(_lock);
 
     entity_map::const_iterator iter = _entities.find(table_id);
     if (dsn_unlikely(iter == _entities.end())) {
+        LOG_WARNING("entity does not exist for table_metric_entities(table_id={})", table_id);
         return;
     }
 
     _entities.erase(iter);
+    LOG_INFO("entity has been removed for table_metric_entities(table_id={})", table_id);
 }
 
 void table_metric_entities::clear_entities()

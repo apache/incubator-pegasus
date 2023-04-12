@@ -208,6 +208,7 @@ public:
     {
         app->partition_count = NEW_PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         app->helpers->split_states.splitting_count = app->partition_count / 2;
         for (int i = 0; i < app->partition_count; ++i) {
@@ -227,6 +228,7 @@ public:
     {
         app->partition_count = PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         app->helpers->split_states.splitting_count = 0;
         app->helpers->split_states.status.clear();
@@ -236,6 +238,7 @@ public:
     {
         app->partition_count = NEW_PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         for (int i = 0; i < app->partition_count; ++i) {
             app->helpers->contexts[i].config_owner = &app->partitions[i];

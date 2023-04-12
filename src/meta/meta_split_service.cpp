@@ -118,6 +118,7 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
         app->partition_count *= 2;
         app->helpers->contexts.resize(app->partition_count);
         app->partitions.resize(app->partition_count);
+        _state->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->envs[replica_envs::SPLIT_VALIDATE_PARTITION_HASH] = "true";
 
         for (int i = 0; i < app->partition_count; ++i) {
@@ -129,8 +130,6 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
                 app->helpers->split_states.status[i] = split_status::SPLITTING;
             }
         }
-
-        _state->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
 
         auto &response = rpc.response();
         response.err = ERR_OK;
@@ -561,7 +560,6 @@ void meta_split_service::do_cancel_partition_split(std::shared_ptr<app_state> ap
         app->partition_count /= 2;
         app->helpers->contexts.resize(app->partition_count);
         app->partitions.resize(app->partition_count);
-
         _state->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
     };
 
