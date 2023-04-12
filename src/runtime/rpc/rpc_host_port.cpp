@@ -18,8 +18,6 @@
  */
 
 #include <netinet/in.h>
-// IWYU pragma: no_include <experimental/string_view>
-#include <stdint.h>
 #include <utility>
 
 #include "fmt/core.h"
