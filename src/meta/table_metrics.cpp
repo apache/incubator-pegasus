@@ -136,7 +136,7 @@ metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
 } // anonymous namespace
 
 partition_metrics::partition_metrics(int32_t table_id, int32_t partition_id)
-    : _partition_metric_entity(instantiate_partition_metric_entity(table_id, partition_id)),
+    : _table_id(table_id),_partition_id(partition_id),_partition_metric_entity(instantiate_partition_metric_entity(table_id, partition_id)),
       METRIC_VAR_INIT_partition(partition_configuration_changes),
       METRIC_VAR_INIT_partition(unwritable_partition_changes),
       METRIC_VAR_INIT_partition(writable_partition_changes)
@@ -151,6 +151,24 @@ const metric_entity_ptr &partition_metrics::partition_metric_entity() const
                   "metric");
     return _partition_metric_entity;
 }
+
+bool operator==(const partition_metrics &lhs, const partition_metrics &rhs)
+{
+    if (&lhs == &rhs) {
+        return true;
+    }
+
+    if (lhs.partition_metric_entity().get() != rhs.partition_metric_entity().get()) {
+        CHECK_TRUE(lhs.table_id() != rhs.table_id() || lhs.partition_id() != rhs.partition_id());
+        return false;
+    }
+
+    CHECK_EQ(lhs.table_id(), rhs.table_id());
+    CHECK_EQ(lhs.partition_id(), rhs.partition_id());
+    return true;
+}
+
+bool operator!=(const partition_metrics &lhs, const partition_metrics &rhs) { return !(lhs == rhs); }
 
 table_metrics::table_metrics(int32_t table_id, int32_t partition_count)
     : _table_id(table_id),
@@ -181,8 +199,6 @@ const metric_entity_ptr &table_metrics::table_metric_entity() const
 
 void table_metrics::resize_partitions(int32_t partition_count)
 {
-    utils::auto_write_lock l(_partition_lock);
-
     if (_partition_metrics.size() == partition_count) {
         return;
     }
@@ -209,6 +225,17 @@ bool operator==(const table_metrics &lhs, const table_metrics &rhs)
     }
 
     CHECK_EQ(lhs.table_id(), rhs.table_id());
+
+    if (lhs._partition_metrics.size() != rhs._partition_metrics.size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < lhs._partition_metrics.size(); ++i) {
+        if (*(lhs._partition_metrics[i]) != *(rhs._partition_metrics[i])) {
+            return false;
+        }
+    }
+
     return true;
 }
 

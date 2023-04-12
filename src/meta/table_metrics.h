@@ -38,6 +38,8 @@ public:
     partition_metrics(int32_t table_id, int32_t partition_id);
     ~partition_metrics() = default;
 
+    inline int32_t table_id() const { return _table_id; }
+    inline int32_t partition_id() const { return _partition_id; }
     const metric_entity_ptr &partition_metric_entity() const;
 
     METRIC_DEFINE_INCREMENT(partition_configuration_changes)
@@ -46,6 +48,9 @@ public:
     METRIC_DEFINE_SET(greedy_recent_balance_operations, int64_t)
 
 private:
+    const int32_t _table_id;
+    const int32_t _partition_id;
+
     const metric_entity_ptr _partition_metric_entity;
     METRIC_VAR_DECLARE_counter(partition_configuration_changes);
     METRIC_VAR_DECLARE_counter(unwritable_partition_changes);
@@ -53,6 +58,9 @@ private:
 
     DISALLOW_COPY_AND_ASSIGN(partition_metrics);
 };
+
+bool operator==(const partition_metrics &lhs, const partition_metrics &rhs);
+bool operator!=(const partition_metrics &lhs, const partition_metrics &rhs);
 
 // Maintain a table-level metric entity of meta, and all metrics attached to it.
 class table_metrics
@@ -75,8 +83,6 @@ public:
 #define __METRIC_DEFINE_INCREMENT(name)                                                            \
     void increment_##name(int32_t partition_id)                                                    \
     {                                                                                              \
-        utils::auto_read_lock l(_partition_lock);                                                  \
-                                                                                                   \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
         METRIC_INCREMENT(*(_partition_metrics[partition_id]), name);                               \
     }
@@ -88,6 +94,8 @@ public:
 #undef __METRIC_DEFINE_INCREMENT
 
 private:
+    friend bool operator==(const table_metrics &, const table_metrics &);
+
     const int32_t _table_id;
 
     const metric_entity_ptr _table_metric_entity;
@@ -97,7 +105,6 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(writable_ill_partitions);
     METRIC_VAR_DECLARE_gauge_int64(healthy_partitions);
 
-    mutable utils::rw_lock_nr _partition_lock;
     std::vector<std::unique_ptr<partition_metrics>> _partition_metrics;
 
     DISALLOW_COPY_AND_ASSIGN(table_metrics);
