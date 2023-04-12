@@ -72,13 +72,13 @@ public:
     METRIC_DEFINE_SET(writable_ill_partitions, int64_t)
     METRIC_DEFINE_SET(healthy_partitions, int64_t)
 
-#define __METRIC_DEFINE_INCREMENT(name)                                           \
+#define __METRIC_DEFINE_INCREMENT(name)                                                            \
     void increment_##name(int32_t partition_id)                                                    \
     {                                                                                              \
         utils::auto_read_lock l(_partition_lock);                                                  \
                                                                                                    \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
-        METRIC_INCREMENT(*(_partition_metrics[partition_id]), name);                   \
+        METRIC_INCREMENT(*(_partition_metrics[partition_id]), name);                               \
     }
 
     __METRIC_DEFINE_INCREMENT(partition_configuration_changes)
@@ -131,7 +131,7 @@ public:
                           int64_t writable_ill_partitions,
                           int64_t healthy_partitions);
 
-#define __METRIC_DEFINE_INCREMENT(name)                                           \
+#define __METRIC_DEFINE_INCREMENT(name)                                                            \
     void increment_##name(const gpid &id)                                                          \
     {                                                                                              \
         utils::auto_read_lock l(_lock);                                                            \
@@ -141,7 +141,7 @@ public:
             return;                                                                                \
         }                                                                                          \
                                                                                                    \
-        METRIC_INCREMENT(*(iter->second), name, id.get_partition_index());   \
+        METRIC_INCREMENT(*(iter->second), name, id.get_partition_index());                         \
     }
 
     __METRIC_DEFINE_INCREMENT(partition_configuration_changes)
