@@ -21,6 +21,7 @@
 #include <unordered_set>
 
 #include "access_controller.h"
+#include "runtime/ranger/ranger_resource_policy.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
@@ -30,16 +31,19 @@ namespace security {
 class replica_access_controller : public access_controller
 {
 public:
-    explicit replica_access_controller(const std::string &name);
-    bool allowed(message_ex *msg) override;
+    explicit replica_access_controller(const std::string &replica_name);
+    bool allowed(message_ex *msg, ranger::access_type req_type) override;
     void update_allowed_users(const std::string &users) override;
+    void start_to_dump_and_sync_policies(const std::string &policies) override;
 
 private:
     utils::rw_lock_nr _lock; // [
-    std::unordered_set<std::string> _users;
+    std::unordered_set<std::string> _allowed_users;
     std::string _env_users;
     // ]
     std::string _name;
+    std::string _env_policies;
+    ranger::acl_policies _ranger_policies;
 
     friend class replica_access_controller_test;
 };

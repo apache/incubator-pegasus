@@ -46,14 +46,6 @@ access_controller::access_controller()
 
 access_controller::~access_controller() {}
 
-bool access_controller::pre_check(const std::string &user_name)
-{
-    if (!FLAGS_enable_acl || _super_users.find(user_name) != _super_users.end()) {
-        return true;
-    }
-    return false;
-}
-
 bool access_controller::is_enable_ranger_acl() { return FLAGS_enable_ranger_acl; }
 
 bool access_controller::is_super_user(const std::string &user_name) const
@@ -67,9 +59,9 @@ std::shared_ptr<access_controller> create_meta_access_controller(
     return std::make_shared<meta_access_controller>(policy_manager);
 }
 
-std::unique_ptr<access_controller> create_replica_access_controller(const std::string &name)
+std::unique_ptr<access_controller> create_replica_access_controller(const std::string &replica_name)
 {
-    return std::make_unique<replica_access_controller>(name);
+    return std::make_unique<replica_access_controller>(replica_name);
 }
 } // namespace security
 } // namespace dsn

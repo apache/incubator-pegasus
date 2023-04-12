@@ -39,8 +39,6 @@ public:
     meta_access_controller(
         const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager);
 
-    bool allowed(message_ex *msg) override;
-
     bool allowed(message_ex *msg, const std::string &app_name = "") override;
 
 private:

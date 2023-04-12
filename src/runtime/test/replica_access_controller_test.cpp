@@ -44,11 +44,14 @@ public:
         _replica_access_controller = std::make_unique<replica_access_controller>("test");
     }
 
-    bool allowed(dsn::message_ex *msg) { return _replica_access_controller->allowed(msg); }
+    bool allowed(dsn::message_ex *msg)
+    {
+        return _replica_access_controller->allowed(msg, dsn::ranger::access_type::kRead);
+    }
 
     void set_replica_users(std::unordered_set<std::string> &&replica_users)
     {
-        _replica_access_controller->_users.swap(replica_users);
+        _replica_access_controller->_allowed_users.swap(replica_users);
     }
 
     std::unique_ptr<replica_access_controller> _replica_access_controller;

@@ -62,6 +62,7 @@
 #include "replica_admin_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/security/access_controller.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -455,6 +456,8 @@ private:
     std::atomic_int _manual_emergency_checkpointing_count;
 
     bool _is_running;
+
+    std::unique_ptr<dsn::security::access_controller> _access_controller;
 
 #ifdef DSN_ENABLE_GPERF
     std::atomic_bool _is_releasing_memory{false};

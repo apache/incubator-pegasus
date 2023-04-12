@@ -36,7 +36,7 @@ class access_controller
 {
 public:
     access_controller();
-    virtual ~access_controller() = 0;
+    virtual ~access_controller();
 
     // Update the access controller.
     // users - the new allowed users to update
@@ -45,6 +45,10 @@ public:
     // Check whether the Ranger ACL is enabled or not.
     bool is_enable_ranger_acl();
 
+    // Update the access controller policy
+    // policies -  the new Ranger policies to update
+    virtual void start_to_dump_and_sync_policies(const std::string &policies) {}
+
     // Check if the message received is allowd to access the system.
     // msg - the message received
     virtual bool allowed(message_ex *msg, dsn::ranger::access_type req_type) { return false; }
@@ -52,22 +56,15 @@ public:
     // Check if the message received is allowd to access the table.
     // msg - the message received
     // app_name - tables involved in ACL
-    virtual bool allowed(message_ex *msg, const std::string &app_name) { return false; }
-
-    // TODO(wanghao): this method will be deleted in the next patch.
-    // check if the message received is allowd to do something.
-    // msg - the message received
-    virtual bool allowed(message_ex *msg) = 0;
+    virtual bool allowed(message_ex *msg, const std::string &app_name = "") { return false; }
 
 protected:
-    // TODO(wanghao): this method will be deleted in the next patch.
-    bool pre_check(const std::string &user_name);
-
     // Check if 'user_name' is the super user.
     bool is_super_user(const std::string &user_name) const;
-    friend class meta_access_controller_test;
 
     std::unordered_set<std::string> _super_users;
+
+    friend class meta_access_controller_test;
 };
 
 std::shared_ptr<access_controller> create_meta_access_controller(

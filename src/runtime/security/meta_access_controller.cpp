@@ -65,14 +65,10 @@ meta_access_controller::meta_access_controller(
                                         "RPC_CM_NOTIFY_STOP_SPLIT",
                                         "RPC_CM_QUERY_CHILD_STATE",
                                         "RPC_NEGOTIATION",
-                                        "RPC_CALL_RAW_MESSAGE",
                                         "RPC_CALL_RAW_SESSION_DISCONNECT",
-                                        "RPC_NFS_GET_FILE_SIZE",
                                         "RPC_FD_FAILURE_DETECTOR_PING",
                                         "RPC_CALL_RAW_MESSAGE",
-                                        "RPC_CALL_RAW_SESSION_DISCONNECT",
                                         "RPC_CONFIG_PROPOSAL",
-                                        "RPC_GROUP_CHECK",
                                         "RPC_QUERY_REPLICA_INFO",
                                         "RPC_QUERY_LAST_CHECKPOINT_INFO",
                                         "RPC_PREPARE",
@@ -89,15 +85,6 @@ meta_access_controller::meta_access_controller(
                                         "RPC_GROUP_BULK_LOAD"});
         _ranger_resource_policy_manager->start();
     }
-}
-
-bool meta_access_controller::allowed(message_ex *msg)
-{
-    if (pre_check(msg->io_session->get_client_username()) ||
-        _allowed_rpc_code_list.find(msg->rpc_code().code()) != _allowed_rpc_code_list.end()) {
-        return true;
-    }
-    return false;
 }
 
 bool meta_access_controller::allowed(message_ex *msg, const std::string &app_name)
@@ -135,7 +122,7 @@ void meta_access_controller::register_allowed_rpc_code_list(
     _allowed_rpc_code_list.clear();
     for (const auto &rpc_code : rpc_list) {
         auto code = task_code::try_get(rpc_code, TASK_CODE_INVALID);
-        CHECK_NE_MSG(code, TASK_CODE_INVALID, "invalid task code.");
+        CHECK_NE_MSG(code, TASK_CODE_INVALID, "invalid task code(code = {}).", rpc_code);
         _allowed_rpc_code_list.insert(code);
     }
 }

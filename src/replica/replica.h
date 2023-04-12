@@ -65,6 +65,7 @@
 #include "replica_context.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
+#include "runtime/security/access_controller.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
@@ -502,6 +503,9 @@ private:
     // update allowed users for access controller
     void update_ac_allowed_users(const std::map<std::string, std::string> &envs);
 
+    // update replica access controller Ranger policies
+    void update_ac_ranger_policies(const std::map<std::string, std::string> &envs);
+
     // update bool app envs
     void update_bool_envs(const std::map<std::string, std::string> &envs,
                           const std::string &name,
@@ -523,6 +527,9 @@ private:
     void update_app_name(const std::string &app_name);
 
     bool is_data_corrupted() const { return _data_corrupted; }
+
+    // use Apache Ranger for replica access control
+    bool access_controller_allowed(message_ex *msg, ranger::access_type req_type);
 
 private:
     friend class ::dsn::replication::test::test_checker;
