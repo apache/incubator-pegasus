@@ -394,7 +394,7 @@ private:
         return true;
     }
 
-    table_metric_entities &get_table_metric_entities() const { return _table_metric_entities; }
+    table_metric_entities &get_table_metric_entities() { return _table_metric_entities; }
 
 private:
     friend class bulk_load_service;

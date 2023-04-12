@@ -165,7 +165,7 @@ public:
     void increment_##name(const gpid &id, bool balance_checker)                                    \
     {                                                                                              \
         auto &partition = _partition_map[id];                                                      \
-        ++(partition.balance_operations);                                                          \
+        ++(partition.greedy_recent_balance_operations);                                            \
         if (balance_checker) {                                                                     \
             return;                                                                                \
         }                                                                                          \
