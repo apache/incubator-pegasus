@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "fmt/core.h"
+#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/utils.h"
 
@@ -43,7 +44,7 @@ host_port::host_port(rpc_address addr)
               addr.ipv4_str());
         _port = addr.port();
     } break;
-    case HOST_TYPE_GROUP:
+    case HOST_TYPE_GROUP: {
         auto group_address = addr.group_address();
         *this = host_port();
         this->assign_group(group_address->name());
@@ -53,7 +54,7 @@ host_port::host_port(rpc_address addr)
         this->group_host_port()->set_update_leader_automatically(
             group_address->is_update_leader_automatically());
         this->group_host_port()->set_leader(host_port(group_address->leader()));
-        break;
+    } break;
     default:
         break;
     }
