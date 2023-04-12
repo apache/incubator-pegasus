@@ -121,7 +121,7 @@ public:
         METRIC_SET(*(_partition_metrics[partition_id]), name, value);                              \
     }
 
-    __METRIC_DEFINE_SET(greedy_recent_balance_operations)
+    __METRIC_DEFINE_SET(greedy_recent_balance_operations, int64_t)
 
 #undef __METRIC_DEFINE_SET
 
@@ -243,7 +243,7 @@ private:
 
 bool operator==(const table_metric_entities &lhs, const table_metric_entities &rhs);
 
-#define METRIC_SET_GREEDY_BALANCE_STATS(obj, ...) (obj).set_greedy_balance_stats(##__VA_ARGS__)
+#define METRIC_SET_GREEDY_BALANCE_STATS(obj, ...) (obj).set_greedy_balance_stats(__VA_ARGS__)
 
 #define METRIC_SET_TABLE_HEALTH_STATS(obj, table_id, ...)                                          \
     (obj).set_health_stats(table_id, ##__VA_ARGS__)

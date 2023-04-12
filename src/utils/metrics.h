@@ -200,19 +200,19 @@ class error_code;
     void increment_by_##name(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }
 
 // To be adaptive to self-defined `increment_by` methods, arguments are declared as variadic.
-#define METRIC_INCREMENT_BY(obj, name, ...) (obj).increment_by_##name(##__VA_ARGS__)
+#define METRIC_INCREMENT_BY(obj, name, ...) (obj).increment_by_##name(__VA_ARGS__)
 
 #define METRIC_DEFINE_INCREMENT(name)                                                              \
     void increment_##name() { METRIC_VAR_INCREMENT(name); }
 
 // To be adaptive to self-defined `increment` methods, arguments are declared as variadic.
-#define METRIC_INCREMENT(obj, name, ...) (obj).increment_##name(##__VA_ARGS__)
+#define METRIC_INCREMENT(obj, name, ...) (obj).increment_##name(__VA_ARGS__)
 
 #define METRIC_DEFINE_SET(name, value_type)                                                        \
     void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
 
 // To be adaptive to self-defined `set` methods, arguments are declared as variadic.
-#define METRIC_SET(obj, name, ...) (obj).set_##name(##__VA_ARGS__)
+#define METRIC_SET(obj, name, ...) (obj).set_##name(__VA_ARGS__)
 
 namespace dsn {
 class metric;                  // IWYU pragma: keep
