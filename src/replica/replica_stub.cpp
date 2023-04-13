@@ -566,7 +566,7 @@ void replica_stub::initialize(bool clear /* = false*/)
     replication_options opts;
     opts.initialize();
     initialize(opts, clear);
-    _access_controller = dsn::make_unique<dsn::security::access_controller>();
+    _access_controller = std::make_unique<dsn::security::access_controller>();
 }
 
 void replica_stub::initialize(const replication_options &opts, bool clear /* = false*/)

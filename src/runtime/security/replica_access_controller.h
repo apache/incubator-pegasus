@@ -33,18 +33,36 @@ class replica_access_controller : public access_controller
 {
 public:
     explicit replica_access_controller(const std::string &replica_name);
+
+    // Check whether replica can be accessed, this method is compatible with ACL using
+    // '_allowed_users' and ACL using Ranger policy.
     bool allowed(message_ex *msg, ranger::access_type req_type) override;
+
+    // Update '_allowed_users' when the app_env(REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS) of the
+    // table changes
     void update_allowed_users(const std::string &users) override;
+
+    // Update '_ranger_policies' when the app_env(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES) of the
+    // table changes
     void start_to_dump_and_sync_policies(const std::string &policies) override;
 
 private:
     utils::rw_lock_nr _lock; // [
+    // Users will pass the access control in the old ACL.
     std::unordered_set<std::string> _allowed_users;
+
+    // App_env(REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS) to facilitate whether to update
+    // '_allowed_users'.
     std::string _env_users;
+
+    // App_env(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES) to facilitate whether to update
+    // '_ranger_policies'.
+    std::string _env_policies;
+
+    // The Ranger policies for ACL.
+    ranger::acl_policies _ranger_policies;
     // ]
     std::string _name;
-    std::string _env_policies;
-    ranger::acl_policies _ranger_policies;
 
     friend class replica_access_controller_test;
 };
