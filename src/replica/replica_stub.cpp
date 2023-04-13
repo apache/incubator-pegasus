@@ -83,7 +83,6 @@
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"
-#include "utils/smart_pointers.h"
 #include "utils/string_conv.h"
 #include "utils/string_view.h"
 #include "utils/strings.h"
