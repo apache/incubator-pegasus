@@ -17,7 +17,7 @@
 
 #include "table_metrics.h"
 
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <fmt/ostream.h>
 #include <stddef.h>

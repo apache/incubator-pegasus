@@ -18,7 +18,6 @@
  */
 
 #include <netinet/in.h>
-#include <stdint.h>
 #include <utility>
 
 #include "fmt/core.h"
