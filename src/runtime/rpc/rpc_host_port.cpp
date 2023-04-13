@@ -46,14 +46,13 @@ host_port::host_port(rpc_address addr)
     } break;
     case HOST_TYPE_GROUP: {
         auto group_address = addr.group_address();
-        *this = host_port();
-        this->assign_group(group_address->name());
+        assign_group(group_address->name());
         for (const auto &address : group_address->members()) {
-            CHECK_TRUE(this->group_host_port()->add(host_port(address)));
+            CHECK_TRUE(this->_group_host_port->add(host_port(address)));
         }
-        this->group_host_port()->set_update_leader_automatically(
+        _group_host_port->set_update_leader_automatically(
             group_address->is_update_leader_automatically());
-        this->group_host_port()->set_leader(host_port(group_address->leader()));
+        _group_host_port->set_leader(host_port(group_address->leader()));
     } break;
     default:
         break;
@@ -69,7 +68,7 @@ void host_port::reset()
         _port = 0;
         break;
     case HOST_TYPE_GROUP:
-        group_host_port()->release_ref();
+        _group_host_port->release_ref();
         break;
     default:
         break;
@@ -90,8 +89,8 @@ host_port &host_port::operator=(const host_port &other)
         _port = other.port();
         break;
     case HOST_TYPE_GROUP:
-        _group_host_port = other.group_host_port();
-        group_host_port()->add_ref();
+        _group_host_port = other._group_host_port;
+        _group_host_port->add_ref();
         break;
     default:
         break;
@@ -106,7 +105,7 @@ std::string host_port::to_string() const
     case HOST_TYPE_IPV4:
         return fmt::format("{}:{}", _host, _port);
     case HOST_TYPE_GROUP:
-        return fmt::format("address group {}", group_host_port()->name());
+        return fmt::format("address group {}", _group_host_port->name());
     default:
         return "invalid address";
     }

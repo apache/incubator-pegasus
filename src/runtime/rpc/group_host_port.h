@@ -1,27 +1,20 @@
 /*
- * The MIT License (MIT)
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Copyright (c) 2015 Microsoft Corporation
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * -=- Robust Distributed System Nucleus (rDSN) -=-
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #pragma once
@@ -37,6 +30,19 @@
 
 namespace dsn {
 
+static constexpr int kInvalidIndex = -1;
+
+
+// Base on group_address, a group of host_post.
+// Please use host_port like example if you want call group of host_port. 
+//  e.g.
+//
+//  dsn::rpc_host_port group;
+//  group.assign_group("test");
+//  group.group_host_port()->add(host_port("test_fqdn", 34601));
+//  group.group_host_port()->add(host_port("test_fqdn", 34602));
+//  group.group_host_port()->add(host_port("test_fqdn", 34603));
+//
 class rpc_group_host_port : public ref_counter
 {
 public:
@@ -60,7 +66,7 @@ public:
     {
         alr_t l(_lock);
         return _members.empty() ? host_port::s_invalid_host_port
-                                : _members[rand::next_u32(0, (uint32_t)_members.size() - 1)];
+                                : _members[rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1))];
     }
     host_port next(host_port current) const;
     host_port leader() const
@@ -91,7 +97,7 @@ private:
 inline rpc_group_host_port::rpc_group_host_port(const char *name)
 {
     _name = name;
-    _leader_index = -1;
+    _leader_index = kInvalidIndex;
     _update_leader_automatically = true;
 }
 
@@ -141,12 +147,12 @@ inline void rpc_group_host_port::set_leader(host_port hp)
 {
     alw_t l(_lock);
     if (hp.is_invalid()) {
-        _leader_index = -1;
+        _leader_index = kInvalidIndex;
         return;
     }
 
     CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
-    for (int i = 0; i < (int)_members.size(); i++) {
+    for (int i = 0; i < _members.size(); i++) {
         if (_members[i] == hp) {
             _leader_index = i;
             return;
@@ -154,7 +160,7 @@ inline void rpc_group_host_port::set_leader(host_port hp)
     }
 
     _members.push_back(hp);
-    _leader_index = (int)(_members.size() - 1);
+    _leader_index = static_cast<int>(_members.size() - 1);
 }
 
 inline host_port rpc_group_host_port::possible_leader()
@@ -163,8 +169,8 @@ inline host_port rpc_group_host_port::possible_leader()
     if (_members.empty()) {
         return host_port::s_invalid_host_port;
     }
-    if (_leader_index == -1) {
-        _leader_index = rand::next_u32(0, (uint32_t)_members.size() - 1);
+    if (_leader_index == kInvalidIndex) {
+        _leader_index = rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1));
     }
     return _members[_leader_index];
 }
@@ -177,8 +183,8 @@ inline bool rpc_group_host_port::remove(host_port hp)
         return false;
     }
 
-    if (-1 != _leader_index && hp == _members[_leader_index]) {
-        _leader_index = -1;
+    if (kInvalidIndex != _leader_index && hp == _members[_leader_index]) {
+        _leader_index = kInvalidIndex;
     }
 
     _members.erase(it);
@@ -206,12 +212,12 @@ inline host_port rpc_group_host_port::next(host_port current) const
     }
 
     if (current.is_invalid()) {
-        return _members[rand::next_u32(0, (uint32_t)_members.size() - 1)];
+        return _members[rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1))];
     }
 
     auto it = std::find(_members.begin(), _members.end(), current);
     if (it == _members.end()) {
-        return _members[rand::next_u32(0, (uint32_t)_members.size() - 1)];
+        return _members[rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1))];
     }
 
     it++;
