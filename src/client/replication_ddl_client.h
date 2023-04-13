@@ -257,7 +257,7 @@ private:
     bool static valid_app_char(int c);
 
     void end_meta_request(const rpc_response_task_ptr &callback,
-                          int retry_times,
+                          uint32_t retry_count,
                           error_code err,
                           dsn::message_ex *request,
                           dsn::message_ex *resp);

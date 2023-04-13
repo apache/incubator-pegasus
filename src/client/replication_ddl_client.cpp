@@ -52,6 +52,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/group_address.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
 #include "utils/time_utils.h"
@@ -59,6 +60,17 @@
 
 namespace dsn {
 namespace replication {
+
+DSN_DEFINE_uint32(ddl_client,
+                  ddl_client_max_retry_count,
+                  2,
+                  "The max count that retry for failed requests to meta server.");
+
+DSN_DEFINE_uint32(ddl_client,
+                  ddl_client_busy_retry_interval_ms,
+                  10 * 1000,
+                  "The retry interval after receiving ERR_BUSY_CREATING or ERR_BUSY_DROPPING from"
+                  "meta server.");
 
 #define VALIDATE_TABLE_NAME(app_name)                                                              \
     do {                                                                                           \
@@ -1435,18 +1447,24 @@ bool replication_ddl_client::valid_app_char(int c)
 }
 
 void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callback,
-                                              int retry_times,
+                                              uint32_t retry_count,
                                               error_code err,
                                               dsn::message_ex *request,
                                               dsn::message_ex *resp)
 {
-    if (err != dsn::ERR_OK && retry_times < 2) {
+    if (err != dsn::ERR_OK && retry_count < FLAGS_ddl_client_max_retry_count) {
+        if (err == dsn::ERR_BUSY_CREATING || err == ERR_BUSY_DROPPING) {
+            LOG_WARNING("have retried for {} times: will wait {} milliseconds before launch another retry for {}, max_replica_count={}", retry_count, FLAGS_ddl_client_busy_retry_interval_ms, request->local_rpc_code, FLAGS_ddl_client_max_retry_count);
+            std::this_thread::sleep_for(
+                    std::chrono::milliseconds(FLAGS_ddl_client_busy_retry_interval_ms));
+        }
+
         rpc::call(_meta_server,
                   request,
                   &_tracker,
-                  [this, retry_times, callback](
+                  [this, retry_count, callback](
                       error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-                      end_meta_request(callback, retry_times + 1, err, request, response);
+                      end_meta_request(callback, retry_count + 1, err, request, response);
                   });
     } else {
         callback->enqueue(err, (message_ex *)resp);
