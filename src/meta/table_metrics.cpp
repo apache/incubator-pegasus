@@ -315,15 +315,15 @@ void table_metric_entities::set_health_stats(int32_t table_id,
         return;
     }
 
-#define METRIC_SET_HEALTH_STAT(name) METRIC_SET(*(iter->second), name, name)
+#define __METRIC_SET(name) METRIC_SET(*(iter->second), name, name)
 
-    METRIC_SET_HEALTH_STAT(dead_partitions);
-    METRIC_SET_HEALTH_STAT(unreadable_partitions);
-    METRIC_SET_HEALTH_STAT(unwritable_partitions);
-    METRIC_SET_HEALTH_STAT(writable_ill_partitions);
-    METRIC_SET_HEALTH_STAT(healthy_partitions);
+    __METRIC_SET(dead_partitions);
+    __METRIC_SET(unreadable_partitions);
+    __METRIC_SET(unwritable_partitions);
+    __METRIC_SET(writable_ill_partitions);
+    __METRIC_SET(healthy_partitions);
 
-#undef METRIC_SET_HEALTH_STAT
+#undef __METRIC_SET
 }
 
 void table_metric_entities::set_greedy_balance_stats(const greedy_balance_stats &balance_stats)
@@ -342,15 +342,15 @@ void table_metric_entities::set_greedy_balance_stats(const greedy_balance_stats 
                    partition.first.get_partition_index(),
                    partition.second.greedy_recent_balance_operations);
 
-#define METRIC_INCREMENT_BY_BALANCE_STAT(name)                                                     \
+#define __METRIC_INCREMENT_BY(name)                                                                \
     METRIC_INCREMENT_BY(                                                                           \
         *(iter->second), name, partition.first.get_partition_index(), partition.second.name)
 
-        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_move_primary_operations);
-        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_primary_operations);
-        METRIC_INCREMENT_BY_BALANCE_STAT(greedy_copy_secondary_operations);
+        __METRIC_INCREMENT_BY(greedy_move_primary_operations);
+        __METRIC_INCREMENT_BY(greedy_copy_primary_operations);
+        __METRIC_INCREMENT_BY(greedy_copy_secondary_operations);
 
-#undef METRIC_INCREMENT_BY_BALANCE_STAT
+#undef __METRIC_INCREMENT_BY
     }
 }
 

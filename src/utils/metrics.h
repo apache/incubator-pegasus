@@ -198,10 +198,10 @@ class error_code;
 #define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
 
 #define METRIC_DEFINE_INCREMENT_BY(name)                                                           \
-    void increment_by_##name(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }
+    void increment_##name##_by(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }
 
 // To be adaptive to self-defined `increment_by` methods, arguments are declared as variadic.
-#define METRIC_INCREMENT_BY(obj, name, ...) (obj).increment_by_##name(__VA_ARGS__)
+#define METRIC_INCREMENT_BY(obj, name, ...) (obj).increment_##name##_by(__VA_ARGS__)
 
 #define METRIC_DEFINE_INCREMENT(name)                                                              \
     void increment_##name() { METRIC_VAR_INCREMENT(name); }

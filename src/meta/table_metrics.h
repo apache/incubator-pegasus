@@ -90,7 +90,7 @@ public:
     METRIC_DEFINE_SET(healthy_partitions, int64_t)
 
 #define __METRIC_DEFINE_INCREMENT_BY(name)                                                         \
-    void increment_by_##name(int32_t partition_id, int64_t x)                                      \
+    void increment_##name##_by(int32_t partition_id, int64_t x)                                    \
     {                                                                                              \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
         METRIC_INCREMENT_BY(*(_partition_metrics[partition_id]), name, x);                         \

@@ -209,7 +209,7 @@ bool greedy_load_balancer::check(meta_view view, migration_list &list)
 void greedy_load_balancer::report(const dsn::replication::migration_list &list,
                                   bool balance_checker)
 {
-#define METRIC_INCREMENT_BALANCE_STAT(name)                                                        \
+#define __METRIC_INCREMENT(name)                                                                   \
     METRIC_INCREMENT(balance_stats, name, action.first, balance_checker)
 
     int counters[MAX_COUNT] = {0};
@@ -220,15 +220,15 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
         switch (action.second.get()->balance_type) {
         case balancer_request_type::move_primary:
             counters[MOVE_PRI_COUNT]++;
-            METRIC_INCREMENT_BALANCE_STAT(greedy_move_primary_operations);
+            __METRIC_INCREMENT(greedy_move_primary_operations);
             break;
         case balancer_request_type::copy_primary:
             counters[COPY_PRI_COUNT]++;
-            METRIC_INCREMENT_BALANCE_STAT(greedy_copy_primary_operations);
+            __METRIC_INCREMENT(greedy_copy_primary_operations);
             break;
         case balancer_request_type::copy_secondary:
             counters[COPY_SEC_COUNT]++;
-            METRIC_INCREMENT_BALANCE_STAT(greedy_copy_secondary_operations);
+            __METRIC_INCREMENT(greedy_copy_secondary_operations);
             break;
         default:
             CHECK(false, "");
@@ -239,7 +239,7 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
     METRIC_SET_GREEDY_BALANCE_STATS(_svc->get_server_state()->get_table_metric_entities(),
                                     balance_stats);
 
-#undef METRIC_INCREMENT_BALANCE_STAT
+#undef __METRIC_INCREMENT
 }
 } // namespace replication
 } // namespace dsn
