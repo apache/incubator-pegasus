@@ -43,7 +43,7 @@ public:
     virtual void update_allowed_users(const std::string &users) {}
 
     // Check whether the Ranger ACL is enabled or not.
-    bool is_enable_ranger_acl();
+    bool is_enable_ranger_acl() const;
 
     // Update the access controller policy
     // policies -  the new Ranger policies to update
@@ -51,12 +51,12 @@ public:
 
     // Check if the message received is allowd to access the system.
     // msg - the message received
-    virtual bool allowed(message_ex *msg, dsn::ranger::access_type req_type) { return false; }
+    virtual bool allowed(message_ex *msg, dsn::ranger::access_type req_type) const { return false; }
 
     // Check if the message received is allowd to access the table.
     // msg - the message received
     // app_name - tables involved in ACL
-    virtual bool allowed(message_ex *msg, const std::string &app_name = "") { return false; }
+    virtual bool allowed(message_ex *msg, const std::string &app_name = "") const { return false; }
 
 protected:
     // Check if 'user_name' is the super user.

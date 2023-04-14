@@ -45,7 +45,7 @@ replica_access_controller::replica_access_controller(const std::string &replica_
     _name = replica_name;
 }
 
-bool replica_access_controller::allowed(message_ex *msg, ranger::access_type req_type)
+bool replica_access_controller::allowed(message_ex *msg, ranger::access_type req_type) const
 {
     const std::string &user_name = msg->io_session->get_client_username();
     if (!FLAGS_enable_ranger_acl) {
@@ -58,7 +58,7 @@ bool replica_access_controller::allowed(message_ex *msg, ranger::access_type req
             // everyone. This is a backdoor to allow old-version clients to gracefully upgrade.
             // After they are finally ensured to be fully upgraded, they can specify some usernames
             // to ACL and the table will be truly protected.
-            if (!_allowed_users.empty() && _allowed_users.find(user_name) == _allowed_users.end()) {
+            if (!_allowed_users.empty() && _allowed_users.count(user_name) == 0) {
                 LOG_INFO("{}: user_name({}) doesn't exist in acls map", _name, user_name);
                 return false;
             }
@@ -103,7 +103,7 @@ void replica_access_controller::update_ranger_policies(const std::string &polici
         }
     }
     ranger::acl_policies tmp_policies;
-    std::string tmp_policies_str = policies;
+    auto tmp_policies_str = policies;
     dsn::json::json_forwarder<ranger::acl_policies>::decode(
         dsn::blob::create_from_bytes(std::move(tmp_policies_str)), tmp_policies);
     {
@@ -113,7 +113,7 @@ void replica_access_controller::update_ranger_policies(const std::string &polici
     }
 }
 
-void replica_access_controller::check_allowed_users_valid()
+void replica_access_controller::check_allowed_users_valid() const
 {
     LOG_WARNING_IF(
         FLAGS_enable_acl && !FLAGS_enable_ranger_acl && _allowed_users.empty(),

@@ -87,7 +87,7 @@ meta_access_controller::meta_access_controller(
     }
 }
 
-bool meta_access_controller::allowed(message_ex *msg, const std::string &app_name)
+bool meta_access_controller::allowed(message_ex *msg, const std::string &app_name) const
 {
     const auto rpc_code = msg->rpc_code().code();
     const auto &user_name = msg->io_session->get_client_username();
@@ -108,7 +108,7 @@ bool meta_access_controller::allowed(message_ex *msg, const std::string &app_nam
     if (_allowed_rpc_code_list.find(rpc_code) != _allowed_rpc_code_list.end()) {
         return true;
     }
-    std::string database_name = ranger::get_database_name_from_app_name(app_name);
+    auto database_name = ranger::get_database_name_from_app_name(app_name);
     LOG_DEBUG("Ranger access controller with user_name = {}, rpc = {}, database_name = {}",
               user_name,
               msg->rpc_code(),

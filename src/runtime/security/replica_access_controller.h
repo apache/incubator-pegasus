@@ -36,7 +36,7 @@ public:
 
     // Check whether replica can be accessed, this method is compatible with ACL using
     // '_allowed_users' and ACL using Ranger policy.
-    bool allowed(message_ex *msg, ranger::access_type req_type) override;
+    bool allowed(message_ex *msg, ranger::access_type req_type) const override;
 
     // Update '_allowed_users' when the app_env(REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS) of the
     // table changes
@@ -48,10 +48,10 @@ public:
 
 private:
     // Security check to avoid allowed_users is not empty in special scenarios.
-    void check_allowed_users_valid();
+    void check_allowed_users_valid() const;
 
 private:
-    utils::rw_lock_nr _lock; // [
+    mutable utils::rw_lock_nr _lock;
     // Users will pass the access control in the old ACL.
     std::unordered_set<std::string> _allowed_users;
 
@@ -65,7 +65,7 @@ private:
 
     // The Ranger policies for ACL.
     ranger::acl_policies _ranger_policies;
-    // ]
+
     std::string _name;
 
     friend class replica_access_controller_test;
