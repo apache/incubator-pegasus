@@ -44,7 +44,11 @@ public:
 
     // Update '_ranger_policies' when the app_env(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES) of the
     // table changes
-    void start_to_dump_and_sync_policies(const std::string &policies) override;
+    void update_ranger_policies(const std::string &policies) override;
+
+private:
+    // Security check to avoid allowed_users is not empty in special scenarios.
+    void check_allowed_users_valid();
 
 private:
     utils::rw_lock_nr _lock; // [

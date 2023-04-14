@@ -570,7 +570,7 @@ void replica::update_ac_ranger_policies(const std::map<std::string, std::string>
 {
     auto iter = envs.find(replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES);
     if (iter != envs.end()) {
-        _access_controller->start_to_dump_and_sync_policies(iter->second);
+        _access_controller->update_ranger_policies(iter->second);
     }
 }
 

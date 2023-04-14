@@ -47,7 +47,7 @@ public:
 
     // Update the access controller policy
     // policies -  the new Ranger policies to update
-    virtual void start_to_dump_and_sync_policies(const std::string &policies) {}
+    virtual void update_ranger_policies(const std::string &policies) {}
 
     // Check if the message received is allowd to access the system.
     // msg - the message received

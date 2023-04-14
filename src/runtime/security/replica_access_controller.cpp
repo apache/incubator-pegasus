@@ -79,6 +79,7 @@ void replica_access_controller::update_allowed_users(const std::string &users)
         // check to see whether we should update it or not.
         utils::auto_read_lock l(_lock);
         if (_env_users == users) {
+            check_allowed_users_valid();
             return;
         }
     }
@@ -89,10 +90,11 @@ void replica_access_controller::update_allowed_users(const std::string &users)
         utils::auto_write_lock l(_lock);
         _allowed_users.swap(users_set);
         _env_users = users;
+        check_allowed_users_valid();
     }
 }
 
-void replica_access_controller::start_to_dump_and_sync_policies(const std::string &policies)
+void replica_access_controller::update_ranger_policies(const std::string &policies)
 {
     {
         utils::auto_read_lock l(_lock);
@@ -109,6 +111,13 @@ void replica_access_controller::start_to_dump_and_sync_policies(const std::strin
         _env_policies = policies;
         _ranger_policies = std::move(tmp_policies);
     }
+}
+
+void replica_access_controller::check_allowed_users_valid()
+{
+    LOG_WARNING_IF(
+        FLAGS_enable_acl && !FLAGS_enable_ranger_acl && _allowed_users.empty(),
+        "Without specifying any ACL, the table is not really protected, please check in time.")
 }
 
 } // namespace security
