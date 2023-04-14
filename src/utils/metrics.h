@@ -650,6 +650,8 @@ enum class metric_unit : size_t
     kWrites,
     kChanges,
     kOperations,
+    kDisconnections,
+    kServers,
     kInvalidUnit,
 };
 
