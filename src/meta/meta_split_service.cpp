@@ -35,6 +35,7 @@
 #include "meta/meta_service.h"
 #include "meta/meta_state_service.h"
 #include "meta/server_state.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_split_service.h"
 #include "meta_state_service_utils.h"
@@ -118,6 +119,7 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
         app->partition_count *= 2;
         app->helpers->contexts.resize(app->partition_count);
         app->partitions.resize(app->partition_count);
+        _state->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->envs[replica_envs::SPLIT_VALIDATE_PARTITION_HASH] = "true";
 
         for (int i = 0; i < app->partition_count; ++i) {
@@ -553,10 +555,13 @@ void meta_split_service::do_cancel_partition_split(std::shared_ptr<app_state> ap
         LOG_INFO("app({}) update partition count on remote storage, new partition count is {}",
                  app->app_name,
                  app->partition_count / 2);
+
         zauto_write_lock l(app_lock());
+
         app->partition_count /= 2;
         app->helpers->contexts.resize(app->partition_count);
         app->partitions.resize(app->partition_count);
+        _state->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
     };
 
     auto copy = *app;

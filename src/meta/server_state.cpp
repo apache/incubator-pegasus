@@ -85,6 +85,7 @@
 #include "utils/config_api.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
@@ -498,7 +499,7 @@ error_code server_state::sync_apps_to_remote_storage()
                   "invalid app name, name = {}",
                   kv_pair.second->app_name);
             _exist_apps.emplace(kv_pair.second->app_name, kv_pair.second);
-            _table_metric_entities.create_entity(kv_pair.first);
+            _table_metric_entities.create_entity(kv_pair.first, kv_pair.second->partition_count);
         }
     }
 
@@ -664,7 +665,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                         if (app->status == app_status::AS_AVAILABLE) {
                             app->status = app_status::AS_CREATING;
                             _exist_apps.emplace(app->app_name, app);
-                            _table_metric_entities.create_entity(app->app_id);
+                            _table_metric_entities.create_entity(app->app_id, app->partition_count);
                         } else if (app->status == app_status::AS_DROPPED) {
                             app->status = app_status::AS_DROPPING;
                         } else {
@@ -1167,7 +1168,7 @@ void server_state::create_app(dsn::message_ex *msg)
 
             _all_apps.emplace(app->app_id, app);
             _exist_apps.emplace(request.app_name, app);
-            _table_metric_entities.create_entity(app->app_id);
+            _table_metric_entities.create_entity(app->app_id, app->partition_count);
         }
     }
 
@@ -1397,7 +1398,8 @@ void server_state::recall_app(dsn::message_ex *msg)
                     target_app->helpers->pending_response = msg;
 
                     _exist_apps.emplace(target_app->app_name, target_app);
-                    _table_metric_entities.create_entity(target_app->app_id);
+                    _table_metric_entities.create_entity(target_app->app_id,
+                                                         target_app->partition_count);
                 }
             }
         }
@@ -1622,15 +1624,12 @@ void server_state::update_configuration_locally(
         _config_change_subscriber(_all_apps);
     }
 
-    METRIC_CALL_TABLE_INCREMENT_METHOD(
-        _table_metric_entities, partition_configuration_changes, app.app_id);
+    METRIC_INCREMENT(_table_metric_entities, partition_configuration_changes, gpid);
     if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
-        METRIC_CALL_TABLE_INCREMENT_METHOD(
-            _table_metric_entities, unwritable_partition_changes, app.app_id);
+        METRIC_INCREMENT(_table_metric_entities, unwritable_partition_changes, gpid);
     }
     if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
-        METRIC_CALL_TABLE_INCREMENT_METHOD(
-            _table_metric_entities, writable_partition_changes, app.app_id);
+        METRIC_INCREMENT(_table_metric_entities, writable_partition_changes, gpid);
     }
 }
 
@@ -2434,18 +2433,13 @@ void server_state::update_partition_metrics()
             counters[st]++;
         }
 
-        METRIC_CALL_TABLE_SET_METHOD(
-            _table_metric_entities, dead_partitions, app->app_id, counters[HS_DEAD]);
-        METRIC_CALL_TABLE_SET_METHOD(
-            _table_metric_entities, unreadable_partitions, app->app_id, counters[HS_UNREADABLE]);
-        METRIC_CALL_TABLE_SET_METHOD(
-            _table_metric_entities, unwritable_partitions, app->app_id, counters[HS_UNWRITABLE]);
-        METRIC_CALL_TABLE_SET_METHOD(_table_metric_entities,
-                                     writable_ill_partitions,
-                                     app->app_id,
-                                     counters[HS_WRITABLE_ILL]);
-        METRIC_CALL_TABLE_SET_METHOD(
-            _table_metric_entities, healthy_partitions, app->app_id, counters[HS_HEALTHY]);
+        METRIC_SET_TABLE_HEALTH_STATS(_table_metric_entities,
+                                      app->app_id,
+                                      counters[HS_DEAD],
+                                      counters[HS_UNREADABLE],
+                                      counters[HS_UNWRITABLE],
+                                      counters[HS_WRITABLE_ILL],
+                                      counters[HS_HEALTHY]);
 
         return true;
     };
