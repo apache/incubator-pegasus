@@ -163,8 +163,8 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
     disk_available_ratio = static_cast<int>(
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
-    METRIC_CALL_SET_METHOD(disk_capacity, total_disk_capacity_mb, disk_capacity_mb);
-    METRIC_CALL_SET_METHOD(disk_capacity, avail_disk_capacity_mb, disk_available_mb);
+    METRIC_SET(disk_capacity, total_disk_capacity_mb, disk_capacity_mb);
+    METRIC_SET(disk_capacity, avail_disk_capacity_mb, disk_available_mb);
 
     if (!update_disk_status) {
         LOG_INFO("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
