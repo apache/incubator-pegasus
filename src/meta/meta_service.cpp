@@ -67,6 +67,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
 
 METRIC_DEFINE_counter(server,
