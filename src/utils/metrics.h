@@ -167,6 +167,7 @@ class error_code;
 #define METRIC_VAR_INIT_server(name, ...) METRIC_VAR_INIT(name, server, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_disk(name, ...) METRIC_VAR_INIT(name, disk, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_table(name, ...) METRIC_VAR_INIT(name, table, ##__VA_ARGS__)
+#define METRIC_VAR_INIT_partition(name, ...) METRIC_VAR_INIT(name, partition, ##__VA_ARGS__)
 
 // Perform increment-related operations on metrics including gauge and counter.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
@@ -196,15 +197,23 @@ class error_code;
 
 #define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
 
-#define METRIC_DEFINE_SET_METHOD(name, value_type)                                                 \
-    void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
+#define METRIC_DEFINE_INCREMENT_BY(name)                                                           \
+    void increment_##name##_by(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }
 
-#define METRIC_CALL_SET_METHOD(obj, name, value) (obj).set_##name(value)
+// To be adaptive to self-defined `increment_by` methods, arguments are declared as variadic.
+#define METRIC_INCREMENT_BY(obj, name, ...) (obj).increment_##name##_by(__VA_ARGS__)
 
-#define METRIC_DEFINE_INCREMENT_METHOD(name)                                                       \
+#define METRIC_DEFINE_INCREMENT(name)                                                              \
     void increment_##name() { METRIC_VAR_INCREMENT(name); }
 
-#define METRIC_CALL_INCREMENT_METHOD(obj, name) (obj).increment_##name()
+// To be adaptive to self-defined `increment` methods, arguments are declared as variadic.
+#define METRIC_INCREMENT(obj, name, ...) (obj).increment_##name(__VA_ARGS__)
+
+#define METRIC_DEFINE_SET(name, value_type)                                                        \
+    void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
+
+// To be adaptive to self-defined `set` methods, arguments are declared as variadic.
+#define METRIC_SET(obj, name, ...) (obj).set_##name(__VA_ARGS__)
 
 namespace dsn {
 class metric;                  // IWYU pragma: keep
@@ -639,6 +648,7 @@ enum class metric_unit : size_t
     kCompactions,
     kWrites,
     kChanges,
+    kOperations,
     kInvalidUnit,
 };
 
