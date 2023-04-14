@@ -36,11 +36,11 @@
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "meta_rpc_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -173,6 +173,21 @@ struct backup_start_time
     DEFINE_JSON_SERIALIZATION(hour, minute)
 };
 
+class backup_policy_metrics
+{
+public:
+    backup_policy_metrics() = default;
+    backup_policy_metrics(const std::string &policy_name);
+
+    const metric_entity_ptr &backup_policy_metric_entity() const;
+
+    METRIC_DEFINE_SET(policy_recent_backup_duration_ms, int64_t)
+
+private:
+    metric_entity_ptr _backup_policy_metric_entity;
+    METRIC_VAR_DECLARE_gauge_int64(policy_recent_backup_duration_ms);
+};
+
 //
 // the backup process of meta server:
 //      1, write the app metadata to block filesystem
@@ -193,6 +208,8 @@ public:
     int32_t backup_history_count_to_keep;
     bool is_disable;
     backup_start_time start_time;
+    backup_policy_metrics metrics;
+
     policy()
         : app_ids(),
           backup_interval_seconds(0),
@@ -210,6 +227,8 @@ public:
                               backup_history_count_to_keep,
                               is_disable,
                               start_time)
+
+    void initialize_metrics();
 };
 
 struct backup_progress
@@ -327,7 +346,6 @@ mock_private :
     backup_progress _progress;
     std::string _backup_sig; // policy_name@backup_id, used when print backup related log
 
-    perf_counter_wrapper _counter_policy_recent_backup_duration_ms;
 //clang-format on
     dsn::task_tracker _tracker;
 };
