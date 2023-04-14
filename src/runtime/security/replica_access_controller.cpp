@@ -117,7 +117,7 @@ void replica_access_controller::check_allowed_users_valid()
 {
     LOG_WARNING_IF(
         FLAGS_enable_acl && !FLAGS_enable_ranger_acl && _allowed_users.empty(),
-        "Without specifying any ACL, the table is not really protected, please check in time.")
+        "Without specifying any ACL, the table is not really protected, please check in time.");
 }
 
 } // namespace security
