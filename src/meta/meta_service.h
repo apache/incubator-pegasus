@@ -55,7 +55,6 @@
 #include "meta_options.h"
 #include "meta_rpc_types.h"
 #include "meta_server_failure_detector.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
@@ -383,9 +382,9 @@ private:
 
     std::string _cluster_root;
 
-    perf_counter_wrapper _recent_disconnect_count;
-    perf_counter_wrapper _unalive_nodes_count;
-    perf_counter_wrapper _alive_nodes_count;
+    METRIC_VAR_DECLARE_counter(replica_server_disconnections);
+    METRIC_VAR_DECLARE_gauge_int64(unalive_replica_servers);
+    METRIC_VAR_DECLARE_gauge_int64(alive_replica_servers);
 
     dsn::task_tracker _tracker;
 
