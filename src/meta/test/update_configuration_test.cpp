@@ -496,7 +496,7 @@ void meta_service_test_app::cannot_run_balancer_test()
     std::shared_ptr<app_state> the_app = app_state::create(info);
     svc->_state->_all_apps.emplace(info.app_id, the_app);
     svc->_state->_exist_apps.emplace(info.app_name, the_app);
-    svc->_state->_table_metric_entities.create_entity(info.app_id);
+    svc->_state->_table_metric_entities.create_entity(info.app_id, info.partition_count);
 
     dsn::partition_configuration &pc = the_app->partitions[0];
     pc.primary = nodes[0];

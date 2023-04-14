@@ -18,6 +18,7 @@
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <iostream>
 #include <map>
