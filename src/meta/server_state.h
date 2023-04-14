@@ -213,6 +213,8 @@ public:
     task_tracker *tracker() { return &_tracker; }
     void wait_all_task() { _tracker.wait_outstanding_tasks(); }
 
+    table_metric_entities &get_table_metric_entities() { return _table_metric_entities; }
+
 private:
     FRIEND_TEST(backup_service_test, test_invalid_backup_request);
 
