@@ -55,7 +55,6 @@
 #include "meta_service.h"
 #include "meta_split_service.h"
 #include "partition_split_types.h"
-#include "perf_counter/perf_counter.h"
 #include "remote_cmd/remote_command.h"
 #include "runtime/ranger/ranger_resource_policy_manager.h"
 #include "runtime/rpc/rpc_holder.h"
@@ -68,7 +67,23 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
+
+METRIC_DEFINE_counter(server,
+                      replica_server_disconnections,
+                      dsn::metric_unit::kDisconnections,
+                      "The number of disconnections with replica servers");
+
+METRIC_DEFINE_gauge_int64(server,
+                          unalive_replica_servers,
+                          dsn::metric_unit::kServers,
+                          "The number of unalive replica servers");
+
+METRIC_DEFINE_gauge_int64(server,
+                          alive_replica_servers,
+                          dsn::metric_unit::kServers,
+                          "The number of alive replica servers");
 
 namespace dsn {
 namespace dist {
@@ -142,7 +157,13 @@ DSN_DECLARE_string(cold_backup_root);
     } while (0)
 
 meta_service::meta_service()
-    : serverlet("meta_service"), _failure_detector(nullptr), _started(false), _recovering(false)
+    : serverlet("meta_service"),
+      _failure_detector(nullptr),
+      _started(false),
+      _recovering(false),
+      METRIC_VAR_INIT_server(replica_server_disconnections),
+      METRIC_VAR_INIT_server(unalive_replica_servers),
+      METRIC_VAR_INIT_server(alive_replica_servers)
 {
     _opts.initialize();
     _meta_opts.initialize();
@@ -157,16 +178,6 @@ meta_service::meta_service()
             _function_level.store(meta_function_level::fl_steady);
         }
     }
-
-    _recent_disconnect_count.init_app_counter(
-        "eon.meta_service",
-        "recent_disconnect_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "replica server disconnect count in the recent period");
-    _unalive_nodes_count.init_app_counter(
-        "eon.meta_service", "unalive_nodes", COUNTER_TYPE_NUMBER, "current count of unalive nodes");
-    _alive_nodes_count.init_app_counter(
-        "eon.meta_service", "alive_nodes", COUNTER_TYPE_NUMBER, "current count of alive nodes");
 
     _meta_op_status.store(meta_op_status::FREE);
 }
@@ -242,9 +253,9 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
         }
     }
 
-    _recent_disconnect_count->add(is_alive ? 0 : nodes.size());
-    _unalive_nodes_count->set(_dead_set.size());
-    _alive_nodes_count->set(_alive_set.size());
+    METRIC_VAR_INCREMENT_BY(replica_server_disconnections, is_alive ? 0 : nodes.size());
+    METRIC_VAR_SET(unalive_replica_servers, _dead_set.size());
+    METRIC_VAR_SET(alive_replica_servers, _alive_set.size());
 
     if (!_started) {
         return;
@@ -327,7 +338,7 @@ void meta_service::start_service()
             _alive_set.insert(kv.first);
     }
 
-    _alive_nodes_count->set(_alive_set.size());
+    METRIC_VAR_SET(alive_replica_servers, _alive_set.size());
 
     for (const dsn::rpc_address &node : _alive_set) {
         // sync alive set and the failure_detector
