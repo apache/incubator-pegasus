@@ -70,11 +70,10 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-METRIC_DEFINE_counter(
-    server,
-    replica_server_disconnections,
-    dsn::metric_unit::kDisconnections,
-    "The number of disconnections with replica servers");
+METRIC_DEFINE_counter(server,
+                      replica_server_disconnections,
+                      dsn::metric_unit::kDisconnections,
+                      "The number of disconnections with replica servers");
 
 METRIC_DEFINE_gauge_int64(server,
                           unalive_replica_servers,
@@ -158,10 +157,13 @@ DSN_DECLARE_string(cold_backup_root);
     } while (0)
 
 meta_service::meta_service()
-    : serverlet("meta_service"), _failure_detector(nullptr), _started(false), _recovering(false),
-    METRIC_VAR_INIT_server(replica_server_disconnections),
-    METRIC_VAR_INIT_server(unalive_replica_servers),
-    METRIC_VAR_INIT_server(alive_replica_servers)
+    : serverlet("meta_service"),
+      _failure_detector(nullptr),
+      _started(false),
+      _recovering(false),
+      METRIC_VAR_INIT_server(replica_server_disconnections),
+      METRIC_VAR_INIT_server(unalive_replica_servers),
+      METRIC_VAR_INIT_server(alive_replica_servers)
 {
     _opts.initialize();
     _meta_opts.initialize();
