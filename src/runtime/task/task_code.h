@@ -200,4 +200,19 @@ DEFINE_TASK_CODE(TASK_CODE_INVALID, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 // define a task_code "task_code_inlined", it's mainly used in situations when you want execute
 // a task with "inline" mode.
 DEFINE_TASK_CODE(TASK_CODE_EXEC_INLINED, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-}
+
+} // namespace dsn
+
+namespace std {
+
+template <>
+class hash<dsn::task_code>
+{
+public:
+    std::size_t operator()(const dsn::task_code &code) const
+    {
+        return static_cast<std::size_t>(code.code());
+    }
+};
+
+} // namespace std

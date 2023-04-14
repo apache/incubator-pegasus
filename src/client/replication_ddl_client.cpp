@@ -37,6 +37,7 @@
 #include <iostream>
 #include <set>
 #include <thread>
+#include <unordered_map>
 
 #include "backup_types.h"
 #include "common//duplication_common.h"
@@ -71,6 +72,9 @@ DSN_DEFINE_uint32(ddl_client,
                   10 * 1000,
                   "The retry interval after receiving ERR_BUSY_CREATING or ERR_BUSY_DROPPING from"
                   "meta server.");
+
+struct retry_status
+static const std::unordered_map<task_code, >
 
 #define VALIDATE_TABLE_NAME(app_name)                                                              \
     do {                                                                                           \
