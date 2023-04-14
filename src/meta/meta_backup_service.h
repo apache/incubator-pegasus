@@ -39,6 +39,7 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/api_utilities.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
@@ -46,6 +47,7 @@
 namespace dsn {
 class message_ex;
 class rpc_address;
+
 namespace dist {
 namespace block_service {
 class block_filesystem;
@@ -184,8 +186,10 @@ public:
     METRIC_DEFINE_SET(policy_recent_backup_duration_ms, int64_t)
 
 private:
-    metric_entity_ptr _backup_policy_metric_entity;
+    const metric_entity_ptr _backup_policy_metric_entity;
     METRIC_VAR_DECLARE_gauge_int64(policy_recent_backup_duration_ms);
+
+    DISALLOW_COPY_AND_ASSIGN(backup_policy_metrics);
 };
 
 //
@@ -208,7 +212,6 @@ public:
     int32_t backup_history_count_to_keep;
     bool is_disable;
     backup_start_time start_time;
-    backup_policy_metrics metrics;
 
     policy()
         : app_ids(),
@@ -227,8 +230,6 @@ public:
                               backup_history_count_to_keep,
                               is_disable,
                               start_time)
-
-    void initialize_metrics();
 };
 
 struct backup_progress
@@ -346,7 +347,9 @@ mock_private :
     backup_progress _progress;
     std::string _backup_sig; // policy_name@backup_id, used when print backup related log
 
-//clang-format on
+    std::unique_ptr<backup_policy_metrics> _metrics;
+
+    //clang-format on
     dsn::task_tracker _tracker;
 };
 

@@ -49,6 +49,7 @@
 #include "utils/chrono_literals.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 #include "utils/time_utils.h"
 
 METRIC_DEFINE_entity(backup_policy);
@@ -87,12 +88,6 @@ const metric_entity_ptr &backup_policy_metrics::backup_policy_metric_entity() co
                   "backup_policy metric entity should has been instantiated: "
                   "uninitialized entity cannot be used to instantiate metric");
     return _backup_policy_metric_entity;
-}
-
-void policy::initialize_metrics()
-{
-    CHECK(!policy_name.empty(), "policy_name should has been initialized");
-    metrics = backup_policy_metrics(policy_name);
 }
 
 // TODO: backup_service and policy_context should need two locks, its own _lock and server_state's
@@ -867,6 +862,9 @@ void policy_context::start()
         continue_current_backup_unlocked();
     }
 
+    CHECK(!(_policy.policy_name.empty()), "policy_name should has been initialized");
+    _metrics = std::make_unique<backup_policy_metrics>(_policy.policy_name);
+
     issue_gc_backup_info_task_unlocked();
     LOG_INFO("{}: start gc backup info task succeed", _policy.policy_name);
 }
@@ -1041,7 +1039,7 @@ void policy_context::issue_gc_backup_info_task_unlocked()
             last_backup_duration_time_ms = (_cur_backup.end_time_ms - _cur_backup.start_time_ms);
         }
     }
-    METRIC_SET(_policy.metrics, policy_recent_backup_duration_ms, last_backup_duration_time_ms);
+    METRIC_SET(*_metrics, policy_recent_backup_duration_ms, last_backup_duration_time_ms);
 }
 
 void policy_context::sync_remove_backup_info(const backup_info &info, dsn::task_ptr sync_callback)
@@ -1232,7 +1230,6 @@ error_code backup_service::sync_policies_from_remote_storage()
                         std::shared_ptr<policy_context> policy_ctx = _factory(this);
                         policy tpolicy;
                         dsn::json::json_forwarder<policy>::decode(value, tpolicy);
-                        tpolicy.initialize_metrics();
                         policy_ctx->set_policy(tpolicy);
 
                         {
@@ -1365,7 +1362,6 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     p.start_time.parse_from(request.start_time);
     p.app_ids = app_ids;
     p.app_names = app_names;
-    p.initialize_metrics();
     policy_context_ptr->set_policy(p);
     do_add_policy(msg, policy_context_ptr, response.hint_message);
 }

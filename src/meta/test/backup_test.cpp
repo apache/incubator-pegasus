@@ -29,7 +29,6 @@
 #include <set>
 #include <string>
 #include <thread>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -271,7 +270,6 @@ protected:
         _policy.app_names[3] = "app3";
         _policy.app_names[4] = "app4";
         _policy.app_names[6] = "app6";
-        _policy.initialize_metrics();
         _mp._backup_service = _service->_backup_handler.get();
         _mp.set_policy(_policy);
 
