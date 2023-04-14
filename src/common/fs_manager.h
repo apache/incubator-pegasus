@@ -51,8 +51,8 @@ public:
 
     const metric_entity_ptr &disk_metric_entity() const;
 
-    METRIC_DEFINE_SET_METHOD(disk_capacity_total_mb, int64_t)
-    METRIC_DEFINE_SET_METHOD(disk_capacity_avail_mb, int64_t)
+    METRIC_DEFINE_SET(disk_capacity_total_mb, int64_t)
+    METRIC_DEFINE_SET(disk_capacity_avail_mb, int64_t)
 
 private:
     const metric_entity_ptr _disk_metric_entity;

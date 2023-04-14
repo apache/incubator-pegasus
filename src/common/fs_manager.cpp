@@ -166,8 +166,8 @@ void dir_node::update_disk_stat()
     disk_available_ratio = static_cast<int>(
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
-    METRIC_CALL_SET_METHOD(disk_capacity, disk_capacity_total_mb, disk_capacity_mb);
-    METRIC_CALL_SET_METHOD(disk_capacity, disk_capacity_avail_mb, disk_available_mb);
+    METRIC_SET(disk_capacity, disk_capacity_total_mb, disk_capacity_mb);
+    METRIC_SET(disk_capacity, disk_capacity_avail_mb, disk_available_mb);
 
     auto old_status = status;
     auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
