@@ -69,6 +69,7 @@
 #include "utils/enum_helper.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/threadpool_code.h"
 #include "utils/zlocks.h"
 
