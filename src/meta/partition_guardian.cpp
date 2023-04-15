@@ -446,7 +446,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             LOG_WARNING("{}: don't select any node for security reason, administrator can select "
                         "a proper one by shell",
                         gpid_name);
-            METRIC_INCREMENT(_svc->get_server_state()->get_table_metric_entities(), choose_primary_failed_operations, gpid);
+            METRIC_INCREMENT(_svc->get_server_state()->get_table_metric_entities(),
+                             choose_primary_failed_operations,
+                             gpid);
             ddd_partition_info pinfo;
             pinfo.config = pc;
             for (int i = 0; i < cc.dropped.size(); ++i) {
