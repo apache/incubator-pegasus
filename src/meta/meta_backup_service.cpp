@@ -862,7 +862,7 @@ void policy_context::start()
         continue_current_backup_unlocked();
     }
 
-    CHECK(!(_policy.policy_name.empty()), "policy_name should has been initialized");
+    CHECK(!_policy.policy_name.empty(), "policy_name should has been initialized");
     _metrics = std::make_unique<backup_policy_metrics>(_policy.policy_name);
 
     issue_gc_backup_info_task_unlocked();
