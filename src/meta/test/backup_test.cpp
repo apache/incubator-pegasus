@@ -269,7 +269,7 @@ protected:
         _policy.app_names[4] = "app4";
         _policy.app_names[6] = "app6";
         _mp._backup_service = _service->_backup_handler.get();
-        _mp.set_policy(policy(_policy));
+        _mp.set_policy(_policy);
 
         _service->_storage
             ->create_node(
