@@ -29,6 +29,7 @@
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "meta/server_load_balancer.h"
+#include "meta/server_state.h"
 #include "meta/table_metrics.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
