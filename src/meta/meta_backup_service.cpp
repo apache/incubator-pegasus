@@ -35,7 +35,6 @@
 #include "meta/meta_state_service.h"
 #include "meta_backup_service.h"
 #include "meta_service.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
@@ -50,13 +49,46 @@
 #include "utils/chrono_literals.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 #include "utils/time_utils.h"
+
+METRIC_DEFINE_entity(backup_policy);
+
+METRIC_DEFINE_gauge_int64(backup_policy,
+                          policy_recent_backup_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The recent backup duration");
 
 namespace dsn {
 namespace replication {
 
 DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
 DSN_DECLARE_int32(fd_lease_seconds);
+
+namespace {
+
+metric_entity_ptr instantiate_backup_policy_metric_entity(const std::string &policy_name)
+{
+    auto entity_id = fmt::format("backup_policy_{}", policy_name);
+
+    return METRIC_ENTITY_backup_policy.instantiate(entity_id, {{"policy_name", policy_name}});
+}
+
+} // anonymous namespace
+
+backup_policy_metrics::backup_policy_metrics(const std::string &policy_name)
+    : _backup_policy_metric_entity(instantiate_backup_policy_metric_entity(policy_name)),
+      METRIC_VAR_INIT_backup_policy(policy_recent_backup_duration_ms)
+{
+}
+
+const metric_entity_ptr &backup_policy_metrics::backup_policy_metric_entity() const
+{
+    CHECK_NOTNULL(_backup_policy_metric_entity,
+                  "backup_policy metric entity should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate metric");
+    return _backup_policy_metric_entity;
+}
 
 // TODO: backup_service and policy_context should need two locks, its own _lock and server_state's
 // _lock this maybe lead to deadlock, should refactor this
@@ -830,12 +862,8 @@ void policy_context::start()
         continue_current_backup_unlocked();
     }
 
-    std::string counter_name = _policy.policy_name + ".recent.backup.duration(ms)";
-    _counter_policy_recent_backup_duration_ms.init_app_counter(
-        "eon.meta.policy",
-        counter_name.c_str(),
-        COUNTER_TYPE_NUMBER,
-        "policy recent backup duration time");
+    CHECK(!_policy.policy_name.empty(), "policy_name should has been initialized");
+    _metrics = std::make_unique<backup_policy_metrics>(_policy.policy_name);
 
     issue_gc_backup_info_task_unlocked();
     LOG_INFO("{}: start gc backup info task succeed", _policy.policy_name);
@@ -1011,7 +1039,7 @@ void policy_context::issue_gc_backup_info_task_unlocked()
             last_backup_duration_time_ms = (_cur_backup.end_time_ms - _cur_backup.start_time_ms);
         }
     }
-    _counter_policy_recent_backup_duration_ms->set(last_backup_duration_time_ms);
+    METRIC_SET(*_metrics, policy_recent_backup_duration_ms, last_backup_duration_time_ms);
 }
 
 void policy_context::sync_remove_backup_info(const backup_info &info, dsn::task_ptr sync_callback)
@@ -1202,7 +1230,7 @@ error_code backup_service::sync_policies_from_remote_storage()
                         std::shared_ptr<policy_context> policy_ctx = _factory(this);
                         policy tpolicy;
                         dsn::json::json_forwarder<policy>::decode(value, tpolicy);
-                        policy_ctx->set_policy(std::move(tpolicy));
+                        policy_ctx->set_policy(tpolicy);
 
                         {
                             zauto_lock l(_lock);
@@ -1334,7 +1362,7 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     p.start_time.parse_from(request.start_time);
     p.app_ids = app_ids;
     p.app_names = app_names;
-    policy_context_ptr->set_policy(std::move(p));
+    policy_context_ptr->set_policy(p);
     do_add_policy(msg, policy_context_ptr, response.hint_message);
 }
 
