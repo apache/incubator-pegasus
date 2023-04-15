@@ -29,7 +29,7 @@
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "meta/server_load_balancer.h"
-#include "perf_counter/perf_counter.h"
+#include "meta/table_metrics.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
@@ -53,12 +53,6 @@ partition_guardian::partition_guardian(meta_service *svc) : _svc(svc)
     } else {
         _replica_assign_delay_ms_for_dropouts = 0;
     }
-
-    _recent_choose_primary_fail_count.init_app_counter(
-        "eon.server_load_balancer",
-        "recent_choose_primary_fail_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "choose primary fail count in the recent period");
 }
 
 pc_status partition_guardian::cure(meta_view view,
@@ -452,7 +446,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             LOG_WARNING("{}: don't select any node for security reason, administrator can select "
                         "a proper one by shell",
                         gpid_name);
-            _recent_choose_primary_fail_count->increment();
+            METRIC_INCREMENT(_svc->get_server_state()->get_table_metric_entities(), choose_primary_failed_operations, gpid);
             ddd_partition_info pinfo;
             pinfo.config = pc;
             for (int i = 0; i < cc.dropped.size(); ++i) {

@@ -52,6 +52,8 @@ public:
     METRIC_DEFINE_INCREMENT_BY(greedy_copy_primary_operations)
     METRIC_DEFINE_INCREMENT_BY(greedy_copy_secondary_operations)
 
+    METRIC_DEFINE_INCREMENT(choose_primary_failed_operations)
+
 private:
     const int32_t _table_id;
     const int32_t _partition_id;
@@ -64,6 +66,7 @@ private:
     METRIC_VAR_DECLARE_counter(greedy_move_primary_operations);
     METRIC_VAR_DECLARE_counter(greedy_copy_primary_operations);
     METRIC_VAR_DECLARE_counter(greedy_copy_secondary_operations);
+    METRIC_VAR_DECLARE_counter(choose_primary_failed_operations);
 
     DISALLOW_COPY_AND_ASSIGN(partition_metrics);
 };
@@ -112,6 +115,7 @@ public:
     __METRIC_DEFINE_INCREMENT(partition_configuration_changes)
     __METRIC_DEFINE_INCREMENT(unwritable_partition_changes)
     __METRIC_DEFINE_INCREMENT(writable_partition_changes)
+    __METRIC_DEFINE_INCREMENT(choose_primary_failed_operations)
 
 #undef __METRIC_DEFINE_INCREMENT
 
@@ -221,6 +225,7 @@ public:
     __METRIC_DEFINE_INCREMENT(partition_configuration_changes)
     __METRIC_DEFINE_INCREMENT(unwritable_partition_changes)
     __METRIC_DEFINE_INCREMENT(writable_partition_changes)
+    __METRIC_DEFINE_INCREMENT(choose_primary_failed_operations)
 
 #undef __METRIC_DEFINE_INCREMENT
 
