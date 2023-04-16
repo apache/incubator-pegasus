@@ -29,7 +29,6 @@
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
 #include "meta_data.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/command_manager.h"
 #include "utils/zlocks.h"
@@ -91,7 +90,6 @@ private:
     }
 
     meta_service *_svc;
-    perf_counter_wrapper _recent_choose_primary_fail_count;
 
     mutable zlock _ddd_partitions_lock; // [
     std::map<gpid, ddd_partition_info> _ddd_partitions;
