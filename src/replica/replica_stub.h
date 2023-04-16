@@ -76,6 +76,10 @@ class command_deregister;
 class message_ex;
 class nfs_node;
 
+namespace security {
+class access_controller;
+} // namespace security
+
 namespace replication {
 class configuration_query_by_node_response;
 class configuration_update_request;
@@ -455,6 +459,8 @@ private:
     std::atomic_int _manual_emergency_checkpointing_count;
 
     bool _is_running;
+
+    std::unique_ptr<dsn::security::access_controller> _access_controller;
 
 #ifdef DSN_ENABLE_GPERF
     std::atomic_bool _is_releasing_memory{false};

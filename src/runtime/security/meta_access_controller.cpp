@@ -45,9 +45,9 @@ meta_access_controller::meta_access_controller(
     // MetaServer serves the allow-list RPC from all users. RPCs unincluded are accessible to only
     // superusers.
     if (utils::is_empty(FLAGS_meta_acl_rpc_allow_list)) {
-        register_allowed_rpc_code_list({"RPC_CM_LIST_APPS",
+        register_allowed_rpc_code_list({"RPC_CM_CLUSTER_INFO",
+                                        "RPC_CM_LIST_APPS",
                                         "RPC_CM_LIST_NODES",
-                                        "RPC_CM_CLUSTER_INFO",
                                         "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX"});
     } else {
         std::vector<std::string> rpc_code_white_list;
@@ -57,50 +57,37 @@ meta_access_controller::meta_access_controller(
 
     // use Ranger policy
     if (FLAGS_enable_ranger_acl) {
-        register_allowed_rpc_code_list({"RPC_CM_UPDATE_PARTITION_CONFIGURATION",
+        register_allowed_rpc_code_list({"RPC_BULK_LOAD",
+                                        "RPC_CALL_RAW_MESSAGE",
+                                        "RPC_CALL_RAW_SESSION_DISCONNECT",
+                                        "RPC_CLEAR_COLD_BACKUP",
                                         "RPC_CM_CONFIG_SYNC",
                                         "RPC_CM_DUPLICATION_SYNC",
-                                        "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
-                                        "RPC_CM_REPORT_RESTORE_STATUS",
                                         "RPC_CM_NOTIFY_STOP_SPLIT",
                                         "RPC_CM_QUERY_CHILD_STATE",
-                                        "RPC_NEGOTIATION",
-                                        "RPC_CALL_RAW_MESSAGE",
-                                        "RPC_CALL_RAW_SESSION_DISCONNECT",
-                                        "RPC_NFS_GET_FILE_SIZE",
-                                        "RPC_FD_FAILURE_DETECTOR_PING",
-                                        "RPC_CALL_RAW_MESSAGE",
-                                        "RPC_CALL_RAW_SESSION_DISCONNECT",
+                                        "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
+                                        "RPC_CM_REPORT_RESTORE_STATUS",
+                                        "RPC_CM_UPDATE_PARTITION_CONFIGURATION",
                                         "RPC_CONFIG_PROPOSAL",
-                                        "RPC_GROUP_CHECK",
-                                        "RPC_QUERY_REPLICA_INFO",
-                                        "RPC_QUERY_LAST_CHECKPOINT_INFO",
-                                        "RPC_PREPARE",
-                                        "RPC_GROUP_CHECK",
-                                        "RPC_QUERY_APP_INFO",
-                                        "RPC_LEARN_COMPLETION_NOTIFY",
-                                        "RPC_LEARN_ADD_LEARNER",
-                                        "RPC_REMOVE_REPLICA",
                                         "RPC_COLD_BACKUP",
-                                        "RPC_CLEAR_COLD_BACKUP",
+                                        "RPC_FD_FAILURE_DETECTOR_PING",
+                                        "RPC_GROUP_BULK_LOAD",
+                                        "RPC_GROUP_CHECK",
+                                        "RPC_LEARN_ADD_LEARNER",
+                                        "RPC_LEARN_COMPLETION_NOTIFY",
+                                        "RPC_NEGOTIATION",
+                                        "RPC_PREPARE",
+                                        "RPC_QUERY_APP_INFO",
+                                        "RPC_QUERY_LAST_CHECKPOINT_INFO",
+                                        "RPC_QUERY_REPLICA_INFO",
+                                        "RPC_REMOVE_REPLICA",
                                         "RPC_SPLIT_NOTIFY_CATCH_UP",
-                                        "RPC_SPLIT_UPDATE_CHILD_PARTITION_COUNT",
-                                        "RPC_BULK_LOAD",
-                                        "RPC_GROUP_BULK_LOAD"});
+                                        "RPC_SPLIT_UPDATE_CHILD_PARTITION_COUNT"});
         _ranger_resource_policy_manager->start();
     }
 }
 
-bool meta_access_controller::allowed(message_ex *msg)
-{
-    if (pre_check(msg->io_session->get_client_username()) ||
-        _allowed_rpc_code_list.find(msg->rpc_code().code()) != _allowed_rpc_code_list.end()) {
-        return true;
-    }
-    return false;
-}
-
-bool meta_access_controller::allowed(message_ex *msg, const std::string &app_name)
+bool meta_access_controller::allowed(message_ex *msg, const std::string &app_name) const
 {
     const auto rpc_code = msg->rpc_code().code();
     const auto &user_name = msg->io_session->get_client_username();
@@ -121,7 +108,7 @@ bool meta_access_controller::allowed(message_ex *msg, const std::string &app_nam
     if (_allowed_rpc_code_list.find(rpc_code) != _allowed_rpc_code_list.end()) {
         return true;
     }
-    std::string database_name = ranger::get_database_name_from_app_name(app_name);
+    auto database_name = ranger::get_database_name_from_app_name(app_name);
     LOG_DEBUG("Ranger access controller with user_name = {}, rpc = {}, database_name = {}",
               user_name,
               msg->rpc_code(),
@@ -135,7 +122,7 @@ void meta_access_controller::register_allowed_rpc_code_list(
     _allowed_rpc_code_list.clear();
     for (const auto &rpc_code : rpc_list) {
         auto code = task_code::try_get(rpc_code, TASK_CODE_INVALID);
-        CHECK_NE_MSG(code, TASK_CODE_INVALID, "invalid task code.");
+        CHECK_NE_MSG(code, TASK_CODE_INVALID, "invalid task code(code = {}).", rpc_code);
         _allowed_rpc_code_list.insert(code);
     }
 }
