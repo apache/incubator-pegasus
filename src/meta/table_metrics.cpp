@@ -65,6 +65,11 @@ METRIC_DEFINE_counter(partition,
                       dsn::metric_unit::kOperations,
                       "The number of balance operations by greedy balancer that copy secondaries");
 
+METRIC_DEFINE_counter(partition,
+                      choose_primary_failed_operations,
+                      dsn::metric_unit::kOperations,
+                      "The number of operations that fail to choose the primary replica");
+
 METRIC_DEFINE_entity(table);
 
 // The number of partitions in each status, see `health_status` and `partition_health_status()`
@@ -133,7 +138,8 @@ partition_metrics::partition_metrics(int32_t table_id, int32_t partition_id)
       METRIC_VAR_INIT_partition(greedy_recent_balance_operations),
       METRIC_VAR_INIT_partition(greedy_move_primary_operations),
       METRIC_VAR_INIT_partition(greedy_copy_primary_operations),
-      METRIC_VAR_INIT_partition(greedy_copy_secondary_operations)
+      METRIC_VAR_INIT_partition(greedy_copy_secondary_operations),
+      METRIC_VAR_INIT_partition(choose_primary_failed_operations)
 {
 }
 
