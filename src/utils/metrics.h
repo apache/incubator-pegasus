@@ -170,7 +170,7 @@ class error_code;
 #define METRIC_VAR_INIT_partition(name, ...) METRIC_VAR_INIT(name, partition, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_backup_policy(name, ...) METRIC_VAR_INIT(name, backup_policy, ##__VA_ARGS__)
 
-// Perform increment-related operations on metrics including gauge and counter.
+// Perform increment-related operations on gauges and counters.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
     do {                                                                                           \
         const auto v = (x);                                                                        \
@@ -179,9 +179,13 @@ class error_code;
         }                                                                                          \
     } while (0)
 
+// Perform increment() operations on gauges and counters.
 #define METRIC_VAR_INCREMENT(name) _##name->increment()
 
-// Perform set() operations on metrics including gauge and percentile.
+// Perform decrement() operations on gauges.
+#define METRIC_VAR_DECREMENT(name) _##name->decrement()
+
+// Perform set() operations on gauges and percentiles.
 //
 // There are 2 kinds of invocations of set() for a metric:
 // * set(val): set a single value for a metric, such as gauge, percentile;
@@ -189,7 +193,7 @@ class error_code;
 // such as percentile.
 #define METRIC_VAR_SET(name, ...) _##name->set(__VA_ARGS__)
 
-// Read the current measurement of the metric.
+// Read the current measurement of gauges and counters.
 #define METRIC_VAR_VALUE(name) _##name->value()
 
 // Convenient macro that is used to compute latency automatically, which is dedicated to percentile.
@@ -650,6 +654,7 @@ enum class metric_unit : size_t
     kWrites,
     kChanges,
     kOperations,
+    kTasks,
     kDisconnections,
     kServers,
     kInvalidUnit,

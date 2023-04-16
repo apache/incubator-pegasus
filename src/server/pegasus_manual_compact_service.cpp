@@ -39,6 +39,16 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_manual_compact_queued_tasks,
+                          dsn::metric_unit::kTasks,
+                          "The number of current queued tasks of rocksdb manual compaction");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_manual_compact_running_tasks,
+                          dsn::metric_unit::kTasks,
+                          "The number of current running tasks of rocksdb manual compaction");
+
 namespace pegasus {
 namespace server {
 
@@ -58,17 +68,10 @@ pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_im
       _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_running_time_ms(0),
       _manual_compact_last_finish_time_ms(0),
-      _manual_compact_last_time_used_ms(0)
+      _manual_compact_last_time_used_ms(0),
+      METRIC_VAR_INIT_replica(rdb_manual_compact_queued_tasks),
+      METRIC_VAR_INIT_replica(rdb_manual_compact_running_tasks)
 {
-    _pfc_manual_compact_enqueue_count.init_app_counter("app.pegasus",
-                                                       "manual.compact.enqueue.count",
-                                                       COUNTER_TYPE_NUMBER,
-                                                       "current manual compact in queue count");
-
-    _pfc_manual_compact_running_count.init_app_counter("app.pegasus",
-                                                       "manual.compact.running.count",
-                                                       COUNTER_TYPE_NUMBER,
-                                                       "current manual compact running count");
 }
 
 void pegasus_manual_compact_service::init_last_finish_time_ms(uint64_t last_finish_time_ms)
@@ -106,9 +109,9 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
         rocksdb::CompactRangeOptions options;
         extract_manual_compact_opts(envs, compact_rule, options);
 
-        _pfc_manual_compact_enqueue_count->increment();
+        METRIC_VAR_INCREMENT(rdb_manual_compact_queued_tasks);
         dsn::tasking::enqueue(LPC_MANUAL_COMPACT, &_app->_tracker, [this, options]() {
-            _pfc_manual_compact_enqueue_count->decrement();
+            METRIC_VAR_DECREMENT(rdb_manual_compact_queued_tasks);
             manual_compact(options);
         });
     } else {
@@ -295,9 +298,12 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     }
 
     // if current running count exceeds the limit, it would not to be started.
-    _pfc_manual_compact_running_count->increment();
-    if (_pfc_manual_compact_running_count->get_integer_value() > _max_concurrent_running_count) {
-        _pfc_manual_compact_running_count->decrement();
+    // METRIC_VAR_AUTO_GAUGE_COUNT()
+    METRIC_VAR_INCREMENT(rdb_manual_compact_running_tasks);
+    auto cleanup = dsn::defer([this]() {
+        METRIC_VAR_DECREMENT(rdb_manual_compact_running_tasks);
+            });
+    if (METRIC_VAR_VALUE(rdb_manual_compact_running_tasks) > _max_concurrent_running_count) {
         LOG_INFO_PREFIX("ignored compact because exceed max_concurrent_running_count({})",
                         _max_concurrent_running_count.load());
         _manual_compact_enqueue_time_ms.store(0);
@@ -307,8 +313,6 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     uint64_t start = begin_manual_compact();
     uint64_t finish = _app->do_manual_compact(options);
     end_manual_compact(start, finish);
-
-    _pfc_manual_compact_running_count->decrement();
 }
 
 uint64_t pegasus_manual_compact_service::begin_manual_compact()
