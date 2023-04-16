@@ -55,7 +55,14 @@ public:
 
     void SetUp() override;
 
-    void run_cmd_from_project_root(const std::string &cmd);
+    static void run_cmd_from_project_root(const std::string &cmd);
+
+    // Get the count of alive replica servers.
+    static int get_replica_server_count();
+
+    // Get the leader replica count of the 'replica_server_index' (based on 1) replica server
+    // on the 'table_name'.
+    static int get_leader_count(const std::string &table_name, int replica_server_index);
 
 protected:
     const std::string cluster_name_;
