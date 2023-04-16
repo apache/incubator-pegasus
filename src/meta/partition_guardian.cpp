@@ -33,6 +33,7 @@
 #include "meta/table_metrics.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
