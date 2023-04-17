@@ -138,6 +138,7 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
     req->file_size_req.overwrite = rci->overwrite;
     req->file_size_req.__set_source_disk_tag(rci->source_disk_tag);
     req->file_size_req.__set_dest_disk_tag(rci->dest_disk_tag);
+    req->file_size_req.__set_pid(rci->pid);
     req->nfs_task = nfs_task;
     req->is_finished = false;
 
@@ -294,6 +295,7 @@ void nfs_client_impl::continue_copy()
                 copy_req.overwrite = ureq->file_size_req.overwrite;
                 copy_req.is_last = req->is_last;
                 copy_req.__set_source_disk_tag(ureq->file_size_req.source_disk_tag);
+                copy_req.__set_pid(ureq->file_size_req.pid);
                 req->remote_copy_task =
                     async_nfs_copy(copy_req,
                                    [=](error_code err, copy_response &&resp) {
