@@ -19,26 +19,37 @@
 
 #include "test_util.h"
 
+#include <nlohmann/json.hpp>
 #include <unistd.h>
+#include <fstream>
+#include <initializer_list>
 #include <utility>
 #include <vector>
 
 #include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
 #include "common/replication_other_types.h"
+#include "fmt/core.h"
 #include "gtest/gtest-message.h"
 #include "gtest/gtest-test-part.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
+#include "nlohmann/detail/iterators/iter_impl.hpp"
+#include "nlohmann/json_fwd.hpp"
 #include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"
+#include "utils/defer.h"
 #include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/rand.h"
+#include "utils/string_conv.h"
 
 using dsn::partition_configuration;
 using dsn::replication::replica_helper;
 using dsn::replication::replication_ddl_client;
 using dsn::rpc_address;
+using nlohmann::json;
 using std::vector;
 
 namespace pegasus {
@@ -86,6 +97,40 @@ void test_util::run_cmd_from_project_root(const std::string &cmd)
 {
     ASSERT_EQ(0, ::chdir(global_env::instance()._pegasus_root.c_str()));
     ASSERT_NO_FATAL_FAILURE(run_cmd(cmd));
+}
+
+int test_util::get_alive_replica_server_count()
+{
+    const auto json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
+    auto cleanup =
+        dsn::defer([json_filename]() { dsn::utils::filesystem::remove_path(json_filename); });
+    run_cmd_from_project_root(fmt::format("echo 'nodes -djo {}' | ./run.sh shell", json_filename));
+    std::ifstream f(json_filename);
+    const auto data = json::parse(f);
+    int replica_server_count = 0;
+    if (!dsn::buf2int32(data["summary"]["alive_node_count"], replica_server_count)) {
+        return -1;
+    }
+    return replica_server_count;
+}
+
+int test_util::get_leader_count(const std::string &table_name, int replica_server_index)
+{
+    const auto json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
+    auto cleanup =
+        dsn::defer([json_filename]() { dsn::utils::filesystem::remove_path(json_filename); });
+    run_cmd_from_project_root(
+        fmt::format("echo 'app {} -djo {}' | ./run.sh shell", table_name, json_filename));
+    std::ifstream f(json_filename);
+    const auto data = json::parse(f);
+    int leader_count = 0;
+    for (const auto &replica : data["replicas"]) {
+        const auto &primary = to_string(replica["primary"]);
+        if (primary.find(fmt::format("3480{}", replica_server_index)) != std::string::npos) {
+            leader_count++;
+        }
+    }
+    return leader_count;
 }
 
 } // namespace pegasus

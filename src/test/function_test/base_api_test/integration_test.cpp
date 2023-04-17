@@ -21,14 +21,13 @@
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <unistd.h>
 #include <iostream>
 #include <string>
 
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
-#include "test/function_test/utils/utils.h"
+#include "test_util/test_util.h"
 
 using namespace ::pegasus;
 
@@ -40,7 +39,13 @@ class integration_test : public test_util
 
 TEST_F(integration_test, write_corrupt_db)
 {
-    // Inject a write error kCorruption to RS-0.
+    // Make best effort to rebalance the cluster,
+    ASSERT_NO_FATAL_FAILURE(
+        run_cmd_from_project_root("echo 'set_meta_level lively' | ./run.sh shell"));
+    // Make sure RS-1 has some primaries of table 'temp'.
+    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 120);
+
+    // Inject a write error kCorruption to RS-1.
     ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root(
         "curl 'localhost:34801/updateConfig?inject_write_error_for_test=2'"));
 
@@ -57,13 +62,13 @@ TEST_F(integration_test, write_corrupt_db)
                 ok_count++;
                 break;
             } else if (ret == PERR_CORRUPTION) {
-                // Suppose there must some primaries on RS-0.
+                // Suppose there must some primaries on RS-1.
                 corruption_count++;
                 break;
             } else if (ret == PERR_TIMEOUT) {
-                // If RS-0 crashed before (learn failed when write storage engine but get
-                // kCorruption),
-                // a new write operation on the primary replica it ever held will cause timeout.
+                // If RS-1 crashed before (learn failed when write storage engine but get
+                // kCorruption), a new write operation on the primary replica it ever held will
+                // cause timeout.
                 // Force to fetch the latest route table.
                 client_ =
                     pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
@@ -92,27 +97,33 @@ TEST_F(integration_test, write_corrupt_db)
 
     EXPECT_GT(ok_count, 0);
     EXPECT_GT(corruption_count, 0);
-    std::cout << "ok_count: " << ok_count << ", corruption_count: " << corruption_count;
+    std::cout << "ok_count: " << ok_count << ", corruption_count: " << corruption_count
+              << std::endl;
 
-    // Now only 2 RS left.
-    std::string rs_count;
-    ASSERT_NO_FATAL_FAILURE(run_cmd(
-        "ps aux | grep 'pegasus_server config.ini -app_list replica' | grep -v grep | wc -l",
-        &rs_count));
-    ASSERT_EQ("2", rs_count);
+    // Now only 2 RSs left, or RS-1 has no leader replicas.
+    ASSERT_IN_TIME(
+        [&] {
+            ASSERT_TRUE(get_alive_replica_server_count() == 2 || get_leader_count("temp", 1) == 0);
+        },
+        60);
 
     // Replica server 0 is able to start normally.
     // After restart, the 'inject_write_error_for_test' config value will be reset to 0 (i.e. OK).
-    ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root("./run.sh start_onebox_instance -r 1"));
-    ASSERT_NO_FATAL_FAILURE(run_cmd(
-        "ps aux | grep 'pegasus_server config.ini -app_list replica' | grep -v grep | wc -l",
-        &rs_count));
-    ASSERT_EQ("3", rs_count);
+    if (get_alive_replica_server_count() == 2) {
+        ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root("./run.sh start_onebox_instance -r 1"));
+    } else {
+        ASSERT_EQ(3, get_alive_replica_server_count());
+        ASSERT_EQ(0, get_leader_count("temp", 1));
+        ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root("./run.sh restart_onebox_instance -r 1"));
+    }
+
+    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 60);
 
     // Make best effort to rebalance the cluster,
     ASSERT_NO_FATAL_FAILURE(
         run_cmd_from_project_root("echo 'set_meta_level lively' | ./run.sh shell"));
-    usleep(10 * 1000 * 1000);
+    // Make sure RS-1 has some primaries of table 'temp'.
+    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 120);
 
     for (int i = 0; i < 1000; i++) {
         std::string hkey = fmt::format("hkey2_{}", i);
@@ -123,8 +134,5 @@ TEST_F(integration_test, write_corrupt_db)
         ASSERT_EQ(value, got_value);
     }
 
-    ASSERT_NO_FATAL_FAILURE(run_cmd(
-        "ps aux | grep 'pegasus_server config.ini -app_list replica' | grep -v grep | wc -l",
-        &rs_count));
-    ASSERT_EQ("3", rs_count);
+    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 60);
 }
