@@ -21,14 +21,12 @@
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <unistd.h>
 #include <iostream>
 #include <string>
 
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
-#include "test/function_test/utils/utils.h"
 #include "test_util/test_util.h"
 
 using namespace ::pegasus;

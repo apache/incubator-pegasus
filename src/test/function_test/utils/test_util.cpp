@@ -19,19 +19,23 @@
 
 #include "test_util.h"
 
-#include <fstream>
 #include <nlohmann/json.hpp>
 #include <unistd.h>
+#include <fstream>
+#include <initializer_list>
 #include <utility>
 #include <vector>
 
 #include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
 #include "common/replication_other_types.h"
+#include "fmt/core.h"
 #include "gtest/gtest-message.h"
 #include "gtest/gtest-test-part.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
+#include "nlohmann/detail/iterators/iter_impl.hpp"
+#include "nlohmann/json_fwd.hpp"
 #include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"
