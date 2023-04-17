@@ -60,7 +60,11 @@ public:
         return os << hp.to_string();
     }
 
-    rpc_group_host_port *group_host_port() const { return _group_host_port; }
+    rpc_group_host_port *group_host_port() const
+    {
+        CHECK_NOTNULL(_group_host_port);
+        return _group_host_port;
+    }
     void assign_group(const char *name);
 
 private:

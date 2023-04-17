@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "runtime/rpc/group_host_port"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
@@ -47,6 +48,7 @@ class rpc_group_host_port : public ref_counter
 {
 public:
     rpc_group_host_port(const char *name);
+    rpc_group_host_port(const rpc_group_address &g_addr);
     rpc_group_host_port(const rpc_group_host_port &other);
     rpc_group_host_port &operator=(const rpc_group_host_port &other);
     bool add(host_port hp) WARN_UNUSED_RESULT;
@@ -107,6 +109,16 @@ inline rpc_group_host_port::rpc_group_host_port(const rpc_group_host_port &other
     _leader_index = other._leader_index;
     _update_leader_automatically = other._update_leader_automatically;
     _members = other._members;
+}
+
+inline rpc_group_host_port::rpc_group_host_port(const rpc_group_address &g_addr);
+{
+    _name = g_addr.name();
+    for (const auto &addr : g_addr.members()) {
+        CHECK_TRUE(add(host_port(addr)));
+    }
+    _update_leader_automatically = g_addr.is_update_leader_automatically(); 
+    set_leader(host_port(g_addr.leader()));
 }
 
 inline rpc_group_host_port &rpc_group_host_port::operator=(const rpc_group_host_port &other)
