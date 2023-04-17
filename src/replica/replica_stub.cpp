@@ -72,6 +72,7 @@
 #include "replica_disk_migrator.h"
 #include "replica_stub.h"
 #include "runtime/api_layer1.h"
+#include "runtime/ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/security/access_controller.h"
