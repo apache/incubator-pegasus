@@ -122,7 +122,7 @@ int test_util::get_leader_count(const std::string &table_name, int replica_serve
     run_cmd_from_project_root(
         fmt::format("echo 'app {} -djo {}' | ./run.sh shell", table_name, json_filename));
     std::ifstream f(json_filename);
-    json data = json::parse(f);
+    const auto data = json::parse(f);
     int leader_count = 0;
     for (const auto &replica : data["replicas"]) {
         const auto &primary = to_string(replica["primary"]);
