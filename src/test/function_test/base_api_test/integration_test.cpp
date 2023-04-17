@@ -28,6 +28,15 @@
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
 #include "test_util/test_util.h"
+#include "utils/flags.h"
+#include "base/pegasus_utils.h"
+
+namespace dsn {
+namespace replication {
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+} // namespace replication
+} // namespace dsn
 
 using namespace ::pegasus;
 
@@ -66,6 +75,7 @@ TEST_F(integration_test, write_corrupt_db)
                 corruption_count++;
                 break;
             } else if (ret == PERR_TIMEOUT) {
+                corruption_count++;
                 // If RS-1 crashed before (learn failed when write storage engine but get
                 // kCorruption), a new write operation on the primary replica it ever held will
                 // cause timeout.
@@ -95,11 +105,14 @@ TEST_F(integration_test, write_corrupt_db)
         ASSERT_EQ(value, got_value);
     }
 
-    EXPECT_GT(ok_count, 0);
-    EXPECT_GT(corruption_count, 0);
+    ASSERT_GT(ok_count, 0);
+    ASSERT_GT(corruption_count, 0);
     std::cout << "ok_count: " << ok_count << ", corruption_count: " << corruption_count
               << std::endl;
 
+    // Make effort to get a trustable alive replica server count.
+    KEEP_COND_FOR_TIME([&] { return get_alive_replica_server_count() == 3; }, 30);
+    LOG_WARNING("get_alive_replica_server_count: {}", get_alive_replica_server_count());
     // Now only 2 RSs left, or RS-1 has no leader replicas.
     ASSERT_IN_TIME(
         [&] {
@@ -123,7 +136,7 @@ TEST_F(integration_test, write_corrupt_db)
     ASSERT_NO_FATAL_FAILURE(
         run_cmd_from_project_root("echo 'set_meta_level lively' | ./run.sh shell"));
     // Make sure RS-1 has some primaries of table 'temp'.
-    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 120);
+    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 60);
 
     for (int i = 0; i < 1000; i++) {
         std::string hkey = fmt::format("hkey2_{}", i);

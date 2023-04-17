@@ -42,6 +42,7 @@
 #include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
 #include "utils/string_conv.h"
 
@@ -50,11 +51,12 @@ using dsn::replication::replica_helper;
 using dsn::replication::replication_ddl_client;
 using dsn::rpc_address;
 using nlohmann::json;
+using std::string;
 using std::vector;
 
 namespace pegasus {
 
-test_util::test_util(std::map<std::string, std::string> create_envs)
+test_util::test_util(std::map<string, string> create_envs)
     : cluster_name_("mycluster"), app_name_("temp"), create_envs_(std::move(create_envs))
 {
 }
@@ -93,10 +95,10 @@ void test_util::SetUp()
     ASSERT_EQ(partition_count_, partitions_.size());
 }
 
-void test_util::run_cmd_from_project_root(const std::string &cmd)
+void test_util::run_cmd_from_project_root(const string &cmd)
 {
     ASSERT_EQ(0, ::chdir(global_env::instance()._pegasus_root.c_str()));
-    ASSERT_NO_FATAL_FAILURE(run_cmd(cmd));
+    ASSERT_NO_FATAL_FAILURE(run_cmd_no_error(cmd));
 }
 
 int test_util::get_alive_replica_server_count()
@@ -107,14 +109,25 @@ int test_util::get_alive_replica_server_count()
     run_cmd_from_project_root(fmt::format("echo 'nodes -djo {}' | ./run.sh shell", json_filename));
     std::ifstream f(json_filename);
     const auto data = json::parse(f);
+    vector<string> rs_addrs;
+    for (const auto &rs : data["details"]) {
+        if (rs["status"] == "UNALIVE") {
+            continue;
+        }
+        rs_addrs.push_back(rs["address"]);
+    }
+
     int replica_server_count = 0;
-    if (!dsn::buf2int32(data["summary"]["alive_node_count"], replica_server_count)) {
-        return -1;
+    for (const auto &rs_addr : rs_addrs) {
+        int ret = run_cmd(fmt::format("curl {}/version", rs_addr));
+        if (ret == 0) {
+            replica_server_count++;
+        }
     }
     return replica_server_count;
 }
 
-int test_util::get_leader_count(const std::string &table_name, int replica_server_index)
+int test_util::get_leader_count(const string &table_name, int replica_server_index)
 {
     const auto json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
     auto cleanup =
@@ -126,7 +139,7 @@ int test_util::get_leader_count(const std::string &table_name, int replica_serve
     int leader_count = 0;
     for (const auto &replica : data["replicas"]) {
         const auto &primary = to_string(replica["primary"]);
-        if (primary.find(fmt::format("3480{}", replica_server_index)) != std::string::npos) {
+        if (primary.find(fmt::format("3480{}", replica_server_index)) != string::npos) {
             leader_count++;
         }
     }

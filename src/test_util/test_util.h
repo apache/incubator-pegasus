@@ -43,6 +43,12 @@ namespace pegasus {
         NO_PENDING_FATALS();                                                                       \
     } while (0)
 
+#define KEEP_COND_FOR_TIME(expr, sec)                                                              \
+    do {                                                                                           \
+        KeepConditionForTime(expr, sec);                                                           \
+        NO_PENDING_FATALS();                                                                       \
+    } while (0)
+
 // Wait until 'f()' succeeds without adding any GTest 'fatal failures'.
 // For example:
 //
@@ -66,5 +72,7 @@ enum class AssertBackoff
 void AssertEventually(const std::function<void(void)> &f,
                       int timeout_sec = 30,
                       AssertBackoff backoff = AssertBackoff::EXPONENTIAL);
-
+void KeepConditionForTime(const std::function<bool(void)> &f,
+                          int timeout_sec = 30,
+                          AssertBackoff backoff = AssertBackoff::EXPONENTIAL);
 } // namespace pegasus

@@ -93,4 +93,28 @@ void AssertEventually(const std::function<void(void)> &f, int timeout_sec, Asser
     }
 }
 
+void KeepConditionForTime(const std::function<bool(void)> &f,
+                          int timeout_sec,
+                          AssertBackoff backoff)
+{
+    uint64_t deadline = dsn_now_s() + timeout_sec;
+    for (int attempts = 0; dsn_now_s() < deadline; attempts++) {
+        if (!f()) {
+            break;
+        }
+        int sleep_ms = 0;
+        switch (backoff) {
+        case AssertBackoff::EXPONENTIAL:
+            sleep_ms = (attempts < 10) ? (1 << attempts) : 1000;
+            break;
+        case AssertBackoff::NONE:
+            sleep_ms = 1000;
+            break;
+        default:
+            LOG_FATAL("Unknown backoff type");
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+    }
+}
+
 } // namespace pegasus

@@ -44,29 +44,30 @@ meta_store::meta_store(pegasus_server_impl *server,
     _wt_opts.disableWAL = true;
 }
 
-uint64_t meta_store::get_last_flushed_decree() const
+dsn::error_code meta_store::get_last_flushed_decree(uint64_t *decree) const
 {
-    uint64_t last_flushed_decree = 0;
-    auto ec = get_value_from_meta_cf(true, LAST_FLUSHED_DECREE, &last_flushed_decree);
-    CHECK_EQ_PREFIX(::dsn::ERR_OK, ec);
-    return last_flushed_decree;
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
+                          get_value_from_meta_cf(true, LAST_FLUSHED_DECREE, decree),
+                          "get_value_from_meta_cf failed");
+    return dsn::ERR_OK;
 }
 
-uint32_t meta_store::get_data_version() const
+dsn::error_code meta_store::get_data_version(uint32_t *version) const
 {
     uint64_t pegasus_data_version = 0;
-    auto ec = get_value_from_meta_cf(false, DATA_VERSION, &pegasus_data_version);
-    CHECK_EQ_PREFIX(::dsn::ERR_OK, ec);
-    return static_cast<uint32_t>(pegasus_data_version);
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
+                          get_value_from_meta_cf(false, DATA_VERSION, &pegasus_data_version),
+                          "get_value_from_meta_cf failed");
+    *version = static_cast<uint32_t>(pegasus_data_version);
+    return dsn::ERR_OK;
 }
 
-uint64_t meta_store::get_last_manual_compact_finish_time() const
+dsn::error_code meta_store::get_last_manual_compact_finish_time(uint64_t *ts) const
 {
-    uint64_t last_manual_compact_finish_time = 0;
-    auto ec = get_value_from_meta_cf(
-        false, LAST_MANUAL_COMPACT_FINISH_TIME, &last_manual_compact_finish_time);
-    CHECK_EQ_PREFIX(::dsn::ERR_OK, ec);
-    return last_manual_compact_finish_time;
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
+                          get_value_from_meta_cf(false, LAST_MANUAL_COMPACT_FINISH_TIME, ts),
+                          "get_value_from_meta_cf failed");
+    return dsn::ERR_OK;
 }
 
 uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
