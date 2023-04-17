@@ -170,7 +170,7 @@ class error_code;
 #define METRIC_VAR_INIT_partition(name, ...) METRIC_VAR_INIT(name, partition, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_backup_policy(name, ...) METRIC_VAR_INIT(name, backup_policy, ##__VA_ARGS__)
 
-// Perform increment-related operations on metrics including gauge and counter.
+// Perform increment-related operations on gauges and counters.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
     do {                                                                                           \
         const auto v = (x);                                                                        \
@@ -179,9 +179,13 @@ class error_code;
         }                                                                                          \
     } while (0)
 
+// Perform increment() operations on gauges and counters.
 #define METRIC_VAR_INCREMENT(name) _##name->increment()
 
-// Perform set() operations on metrics including gauge and percentile.
+// Perform decrement() operations on gauges.
+#define METRIC_VAR_DECREMENT(name) _##name->decrement()
+
+// Perform set() operations on gauges and percentiles.
 //
 // There are 2 kinds of invocations of set() for a metric:
 // * set(val): set a single value for a metric, such as gauge, percentile;
@@ -189,7 +193,7 @@ class error_code;
 // such as percentile.
 #define METRIC_VAR_SET(name, ...) _##name->set(__VA_ARGS__)
 
-// Read the current measurement of the metric.
+// Read the current measurement of gauges and counters.
 #define METRIC_VAR_VALUE(name) _##name->value()
 
 // Convenient macro that is used to compute latency automatically, which is dedicated to percentile.
@@ -197,6 +201,10 @@ class error_code;
     dsn::auto_latency __##name##_auto_latency(_##name, ##__VA_ARGS__)
 
 #define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
+
+// Convenient macro that is used to increment/decrement gauge automatically in current scope.
+#define METRIC_VAR_AUTO_COUNT(name, ...)                                                           \
+    dsn::auto_count __##name##_auto_count(_##name, ##__VA_ARGS__)
 
 #define METRIC_DEFINE_INCREMENT_BY(name)                                                           \
     void increment_##name##_by(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }
@@ -650,6 +658,7 @@ enum class metric_unit : size_t
     kWrites,
     kChanges,
     kOperations,
+    kTasks,
     kDisconnections,
     kServers,
     kInvalidUnit,
@@ -1433,22 +1442,22 @@ using floating_percentile_prototype =
 class auto_latency
 {
 public:
-    auto_latency(const percentile_ptr<int64_t> &percentile) : _percentile(percentile) {}
+    auto_latency(const percentile_ptr<int64_t> &p) : _percentile(p) {}
 
-    auto_latency(const percentile_ptr<int64_t> &percentile, std::function<void(uint64_t)> callback)
-        : _percentile(percentile), _callback(std::move(callback))
+    auto_latency(const percentile_ptr<int64_t> &p, std::function<void(uint64_t)> callback)
+        : _percentile(p), _callback(std::move(callback))
     {
     }
 
-    auto_latency(const percentile_ptr<int64_t> &percentile, uint64_t start_time_ns)
-        : _percentile(percentile), _chrono(start_time_ns)
+    auto_latency(const percentile_ptr<int64_t> &p, uint64_t start_time_ns)
+        : _percentile(p), _chrono(start_time_ns)
     {
     }
 
-    auto_latency(const percentile_ptr<int64_t> &percentile,
+    auto_latency(const percentile_ptr<int64_t> &p,
                  uint64_t start_time_ns,
                  std::function<void(uint64_t)> callback)
-        : _percentile(percentile), _chrono(start_time_ns), _callback(std::move(callback))
+        : _percentile(p), _chrono(start_time_ns), _callback(std::move(callback))
     {
     }
 
@@ -1471,6 +1480,34 @@ private:
     std::function<void(uint64_t)> _callback;
 
     DISALLOW_COPY_AND_ASSIGN(auto_latency);
+};
+
+// Increment gauge and decrement it automatically at the end of the scope.
+class auto_count
+{
+public:
+    auto_count(const gauge_ptr<int64_t> &g) : _gauge(g) { _gauge->increment(); }
+
+    auto_count(const gauge_ptr<int64_t> &g, std::function<void()> callback)
+        : _gauge(g), _callback(std::move(callback))
+    {
+        _gauge->increment();
+    }
+
+    ~auto_count()
+    {
+        if (_callback) {
+            _callback();
+        }
+
+        _gauge->decrement();
+    }
+
+private:
+    gauge_ptr<int64_t> _gauge;
+    std::function<void()> _callback;
+
+    DISALLOW_COPY_AND_ASSIGN(auto_count);
 };
 
 } // namespace dsn
