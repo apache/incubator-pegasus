@@ -257,7 +257,7 @@ private:
     bool static valid_app_char(int c);
 
     void end_meta_request(const rpc_response_task_ptr &callback,
-                          uint32_t retry_count,
+                          uint32_t attempt_count,
                           error_code err,
                           dsn::message_ex *request,
                           dsn::message_ex *resp);
@@ -278,7 +278,7 @@ private:
                   &_tracker,
                   [this, task](
                       error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-                      end_meta_request(std::move(task), 0, err, request, response);
+                      end_meta_request(std::move(task), 1, err, request, response);
                   });
         return task;
     }
