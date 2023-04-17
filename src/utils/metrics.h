@@ -1482,6 +1482,7 @@ private:
     DISALLOW_COPY_AND_ASSIGN(auto_latency);
 };
 
+// Increment gauge and decrement it automatically at the end of the scope.
 class auto_count
 {
 public:
@@ -1495,10 +1496,11 @@ public:
 
     ~auto_count()
     {
-        _gauge->decrement();
         if (_callback) {
             _callback();
         }
+
+        _gauge->decrement();
     }
 
 private:
