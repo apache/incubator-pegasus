@@ -1449,7 +1449,7 @@ bool replication_ddl_client::valid_app_char(int c)
 
 namespace {
 
-bool should_sleep_before_retry(const dsn::error_code & err, uint32_t &sleep_ms)
+bool should_sleep_before_retry(const dsn::error_code &err, uint32_t &sleep_ms)
 {
     if (err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING) {
         sleep_ms = FLAGS_ddl_client_busy_retry_interval_ms;
@@ -1467,7 +1467,10 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
                                               dsn::message_ex *request,
                                               dsn::message_ex *resp)
 {
-    LOG_INFO("attempted {} {} times: max_replica_count={}", attempt_count, request->local_rpc_code, FLAGS_ddl_client_max_attempt_count);
+    LOG_INFO("attempted {} {} times: max_replica_count={}",
+             attempt_count,
+             request->local_rpc_code,
+             FLAGS_ddl_client_max_attempt_count);
 
     if (err == dsn::ERR_OK || attempt_count >= FLAGS_ddl_client_max_attempt_count) {
         callback->enqueue(err, (message_ex *)resp);
@@ -1476,9 +1479,11 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
 
     uint32_t sleep_ms = 0;
     if (should_sleep_before_retry(err, sleep_ms)) {
-        LOG_WARNING("sleep {} milliseconds before launch another attempt for {} since err={}", sleep_ms, request->local_rpc_code, err);
-        std::this_thread::sleep_for(
-                std::chrono::milliseconds(sleep_ms));
+        LOG_WARNING("sleep {} milliseconds before launch another attempt for {} since err={}",
+                    sleep_ms,
+                    request->local_rpc_code,
+                    err);
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
     }
 
     rpc::call(_meta_server,
