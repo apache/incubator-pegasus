@@ -99,7 +99,7 @@ void test_util::run_cmd_from_project_root(const std::string &cmd)
     ASSERT_NO_FATAL_FAILURE(run_cmd(cmd));
 }
 
-int test_util::get_replica_server_count()
+int test_util::get_alive_replica_server_count()
 {
     std::string json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
     auto cleanup =

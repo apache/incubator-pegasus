@@ -102,20 +102,22 @@ TEST_F(integration_test, write_corrupt_db)
 
     // Now only 2 RSs left, or RS-1 has no leader replicas.
     ASSERT_IN_TIME(
-        [&] { ASSERT_TRUE(get_replica_server_count() == 2 || get_leader_count("temp", 1) == 0); },
+        [&] {
+            ASSERT_TRUE(get_alive_replica_server_count() == 2 || get_leader_count("temp", 1) == 0);
+        },
         60);
 
     // Replica server 0 is able to start normally.
     // After restart, the 'inject_write_error_for_test' config value will be reset to 0 (i.e. OK).
-    if (get_replica_server_count() == 2) {
+    if (get_alive_replica_server_count() == 2) {
         ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root("./run.sh start_onebox_instance -r 1"));
     } else {
-        ASSERT_EQ(3, get_replica_server_count());
+        ASSERT_EQ(3, get_alive_replica_server_count());
         ASSERT_EQ(0, get_leader_count("temp", 1));
         ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root("./run.sh restart_onebox_instance -r 1"));
     }
 
-    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_replica_server_count()); }, 60);
+    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 60);
 
     // Make best effort to rebalance the cluster,
     ASSERT_NO_FATAL_FAILURE(
@@ -132,5 +134,5 @@ TEST_F(integration_test, write_corrupt_db)
         ASSERT_EQ(value, got_value);
     }
 
-    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_replica_server_count()); }, 60);
+    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 60);
 }
