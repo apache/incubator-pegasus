@@ -106,7 +106,7 @@ int test_util::get_alive_replica_server_count()
         dsn::defer([json_filename]() { dsn::utils::filesystem::remove_path(json_filename); });
     run_cmd_from_project_root(fmt::format("echo 'nodes -djo {}' | ./run.sh shell", json_filename));
     std::ifstream f(json_filename);
-    json data = json::parse(f);
+    const auto data = json::parse(f);
     int replica_server_count = 0;
     if (!dsn::buf2int32(data["summary"]["alive_node_count"], replica_server_count)) {
         return -1;
