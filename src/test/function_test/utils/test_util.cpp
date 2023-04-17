@@ -116,7 +116,7 @@ int test_util::get_alive_replica_server_count()
 
 int test_util::get_leader_count(const std::string &table_name, int replica_server_index)
 {
-    std::string json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
+    const auto json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
     auto cleanup =
         dsn::defer([json_filename]() { dsn::utils::filesystem::remove_path(json_filename); });
     run_cmd_from_project_root(
