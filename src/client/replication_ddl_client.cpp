@@ -1449,9 +1449,35 @@ bool replication_ddl_client::valid_app_char(int c)
 
 namespace {
 
+bool is_busy(const dsn::error_code &err)
+{
+    return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
+}
+
+bool should_attempt(
+        uint32_t attempt_count,
+        uint32_t busy_attempt_count,
+        const dsn::error_code &err
+        )
+{
+    if (err == dsn::ERR_OK) {
+        return false;
+    }
+
+    if (attempt_count < FLAGS_ddl_client_max_attempt_count) {
+        return true;
+    }
+
+    if (!is_busy(err)) {
+        return false;
+    }
+
+    return busy_attempt_count < FLAGS_ddl_client_max_attempt_count;
+}
+
 bool should_sleep_before_retry(const dsn::error_code &err, uint32_t &sleep_ms)
 {
-    if (err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING) {
+    if (is_busy(err)) {
         sleep_ms = FLAGS_ddl_client_busy_retry_interval_ms;
         return true;
     }
@@ -1463,23 +1489,31 @@ bool should_sleep_before_retry(const dsn::error_code &err, uint32_t &sleep_ms)
 
 void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callback,
                                               uint32_t attempt_count,
+                                              uint32_t busy_attempt_count,
                                               error_code err,
                                               dsn::message_ex *request,
                                               dsn::message_ex *resp)
 {
-    LOG_INFO("attempted {} {} times: max_replica_count={}",
-             attempt_count,
-             request->local_rpc_code,
-             FLAGS_ddl_client_max_attempt_count);
+    ++attempt_count;
+    if (is_busy(err)) {
+        ++busy_attempt_count;
+    }
 
-    if (err == dsn::ERR_OK || attempt_count >= FLAGS_ddl_client_max_attempt_count) {
+    LOG_INFO("attempt {}: attempt_count={}, busy_attempt_count={}, max_replica_count={}, err={}",
+             request->local_rpc_code,
+             attempt_count,
+             busy_attempt_count,
+             FLAGS_ddl_client_max_attempt_count,
+             err);
+
+    if (!should_attempt(attempt_count, busy_attempt_count, err)) {
         callback->enqueue(err, (message_ex *)resp);
         return;
     }
 
     uint32_t sleep_ms = 0;
     if (should_sleep_before_retry(err, sleep_ms)) {
-        LOG_WARNING("sleep {} milliseconds before launch another attempt for {} since err={}",
+        LOG_WARNING("sleep {} milliseconds before launch another attempt for {}: err={}",
                     sleep_ms,
                     request->local_rpc_code,
                     err);
@@ -1489,9 +1523,9 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
     rpc::call(_meta_server,
               request,
               &_tracker,
-              [this, attempt_count, callback](
+              [this, attempt_count, busy_attempt_count, callback](
                   error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-                  end_meta_request(callback, attempt_count + 1, err, request, response);
+                  end_meta_request(callback, attempt_count, busy_attempt_count, err, request, response);
               });
 }
 
