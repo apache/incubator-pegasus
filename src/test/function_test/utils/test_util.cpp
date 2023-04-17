@@ -101,7 +101,7 @@ void test_util::run_cmd_from_project_root(const std::string &cmd)
 
 int test_util::get_alive_replica_server_count()
 {
-    std::string json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
+    const auto json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
     auto cleanup =
         dsn::defer([json_filename]() { dsn::utils::filesystem::remove_path(json_filename); });
     run_cmd_from_project_root(fmt::format("echo 'nodes -djo {}' | ./run.sh shell", json_filename));
