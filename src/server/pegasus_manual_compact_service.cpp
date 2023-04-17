@@ -298,7 +298,6 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     }
 
     // if current running count exceeds the limit, it would not to be started.
-    // METRIC_VAR_AUTO_GAUGE_COUNT()
     METRIC_VAR_AUTO_COUNT(rdb_manual_compact_running_tasks);
     if (METRIC_VAR_VALUE(rdb_manual_compact_running_tasks) > _max_concurrent_running_count) {
         LOG_INFO_PREFIX("ignored compact because exceed max_concurrent_running_count({})",
