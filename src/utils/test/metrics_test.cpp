@@ -3096,6 +3096,8 @@ protected:
     void test_set_percentile(const std::vector<int64_t> &expected_samples);
     void test_set_percentile(size_t n, int64_t val);
 
+    void test_auto_count();
+
     const metric_entity_ptr _my_replica_metric_entity;
     METRIC_VAR_DECLARE_gauge_int64(test_replica_gauge_int64);
     METRIC_VAR_DECLARE_counter(test_replica_counter);
@@ -3134,6 +3136,19 @@ void MetricVarTest::test_set_percentile(size_t n, int64_t val)
     EXPECT_EQ(std::vector<int64_t>(n, val), METRIC_VAR_SAMPLES(test_replica_percentile_int64_ns));
 }
 
+void MetricVarTest::test_auto_count()
+{
+    ASSERT_EQ(0, METRIC_VAR_VALUE(test_replica_gauge_int64));
+
+    {
+        METRIC_VAR_AUTO_COUNT(test_replica_gauge_int64, [this]() {
+            ASSERT_EQ(1, METRIC_VAR_VALUE(test_replica_gauge_int64));
+        });
+    }
+
+    ASSERT_EQ(0, METRIC_VAR_VALUE(test_replica_gauge_int64));
+}
+
 #define TEST_METRIC_VAR_INCREMENT(name)                                                            \
     do {                                                                                           \
         ASSERT_EQ(0, METRIC_VAR_VALUE(name));                                                      \
@@ -3154,6 +3169,28 @@ void MetricVarTest::test_set_percentile(size_t n, int64_t val)
 TEST_F(MetricVarTest, IncrementGauge) { TEST_METRIC_VAR_INCREMENT(test_replica_gauge_int64); }
 
 TEST_F(MetricVarTest, IncrementCounter) { TEST_METRIC_VAR_INCREMENT(test_replica_counter); }
+
+#define TEST_METRIC_VAR_DECREMENT(name)                                                            \
+    do {                                                                                           \
+        ASSERT_EQ(0, METRIC_VAR_VALUE(name));                                                      \
+                                                                                                   \
+        METRIC_VAR_INCREMENT_BY(name, 11);                                                         \
+        ASSERT_EQ(11, METRIC_VAR_VALUE(name));                                                     \
+                                                                                                   \
+        METRIC_VAR_DECREMENT(name);                                                                \
+        ASSERT_EQ(10, METRIC_VAR_VALUE(name));                                                     \
+                                                                                                   \
+        METRIC_VAR_DECREMENT(name);                                                                \
+        ASSERT_EQ(9, METRIC_VAR_VALUE(name));                                                      \
+                                                                                                   \
+        METRIC_VAR_INCREMENT(name);                                                                \
+        ASSERT_EQ(10, METRIC_VAR_VALUE(name));                                                     \
+                                                                                                   \
+        METRIC_VAR_DECREMENT(name);                                                                \
+        ASSERT_EQ(9, METRIC_VAR_VALUE(name));                                                      \
+    } while (0);
+
+TEST_F(MetricVarTest, DecrementGauge) { TEST_METRIC_VAR_DECREMENT(test_replica_gauge_int64); }
 
 TEST_F(MetricVarTest, SetGauge)
 {
@@ -3194,5 +3231,7 @@ TEST_F(MetricVarTest, AutoLatencyMicroSeconds) { TEST_METRIC_VAR_AUTO_LATENCY(us
 TEST_F(MetricVarTest, AutoLatencyMilliSeconds) { TEST_METRIC_VAR_AUTO_LATENCY(ms, 1000 * 1000); }
 
 TEST_F(MetricVarTest, AutoLatencySeconds) { TEST_METRIC_VAR_AUTO_LATENCY(s, 1000 * 1000 * 1000); }
+
+TEST_F(MetricVarTest, AutoCount) { ASSERT_NO_FATAL_FAILURE(test_auto_count()); }
 
 } // namespace dsn
