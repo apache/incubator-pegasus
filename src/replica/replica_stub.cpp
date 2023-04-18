@@ -111,9 +111,9 @@ METRIC_DEFINE_gauge_int64(server,
                           "The number of closing replicas");
 
 METRIC_DEFINE_counter(server,
-                          committed_requests,
-                          dsn::metric_unit::kRequests,
-                          "The number of committed requests");
+                      committed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of committed requests");
 
 namespace dsn {
 namespace replication {
