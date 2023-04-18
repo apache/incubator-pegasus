@@ -1471,14 +1471,11 @@ bool need_retry(uint32_t attempt_count, uint32_t busy_attempt_count, const dsn::
     }
 
     // Though it has reached FLAGS_ddl_client_max_attempt_count, retry is still allowed as long
-    // as the busy attempt count has not reached FLAGS_ddl_client_max_attempt_count. 
+    // as the busy attempt count has not reached FLAGS_ddl_client_max_attempt_count.
     return busy_attempt_count < FLAGS_ddl_client_max_attempt_count;
 }
 
-bool should_sleep_before_retry(const dsn::error_code &err)
-{
-    return is_busy(err);
-}
+bool should_sleep_before_retry(const dsn::error_code &err) { return is_busy(err); }
 
 } // anonymous namespace
 
