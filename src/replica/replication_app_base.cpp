@@ -61,6 +61,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
+#include "utils/metrics.h"
 #include "utils/ports.h"
 #include "utils/string_view.h"
 #include "utils/threadpool_code.h"
