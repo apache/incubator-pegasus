@@ -192,6 +192,8 @@ type TableConnector interface {
 	// NOTE: this operation is not guaranteed to be atomic
 	BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error)
 
+	// Deprecated: danger operation: table is managed by client and should only be Close once when client is exiting.
+	// this operation will kill all table-related loops
 	Close() error
 }
 
