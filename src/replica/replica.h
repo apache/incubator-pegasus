@@ -284,7 +284,7 @@ public:
     //
     // Statistics
     //
-    void update_commit_qps(int count);
+    void update_commit_requests(int count);
 
     // routine for get extra envs from replica
     const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }

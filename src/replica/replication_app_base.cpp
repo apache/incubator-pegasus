@@ -485,7 +485,7 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
             "mutation {} committed on {}, batched_count = {}", mu->name(), str, batched_count);
     }
 
-    _replica->update_commit_qps(batched_count);
+    _replica->update_commit_requests(batched_count);
 
     return ERR_OK;
 }

@@ -230,9 +230,9 @@ void replica::update_last_checkpoint_generate_time()
 // Statistics //
 //            //
 
-void replica::update_commit_qps(int count)
+void replica::update_commit_requests(int count)
 {
-    _stub->_counter_replicas_commit_qps->add((uint64_t)count);
+    METRIC_INCREMENT_BY(*_stub, committed_requests, count);
 }
 
 void replica::init_state()
