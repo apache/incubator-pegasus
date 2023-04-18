@@ -1453,7 +1453,7 @@ bool is_busy(const dsn::error_code &err)
     return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
 }
 
-bool should_attempt(uint32_t attempt_count, uint32_t busy_attempt_count, const dsn::error_code &err)
+bool need_retry(uint32_t attempt_count, uint32_t busy_attempt_count, const dsn::error_code &err)
 {
     if (err == dsn::ERR_OK) {
         return false;
@@ -1501,7 +1501,7 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
              FLAGS_ddl_client_max_attempt_count,
              err);
 
-    if (!should_attempt(attempt_count, busy_attempt_count, err)) {
+    if (!need_retry(attempt_count, busy_attempt_count, err)) {
         callback->enqueue(err, (message_ex *)resp);
         return;
     }
