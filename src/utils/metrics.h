@@ -153,7 +153,8 @@ class error_code;
 //
 // Since a type tends to be a class template where there might be commas, use variadic arguments
 // instead of a single fixed argument to represent a type.
-#define METRIC_VAR_DECLARE(name, ...) __VA_ARGS__ _##name
+#define METRIC_VAR_NAME(name) _metric_##name
+#define METRIC_VAR_DECLARE(name, ...) __VA_ARGS__ METRIC_VAR_NAME(name)
 #define METRIC_VAR_DECLARE_gauge_int64(name) METRIC_VAR_DECLARE(name, dsn::gauge_ptr<int64_t>)
 #define METRIC_VAR_DECLARE_counter(name)                                                           \
     METRIC_VAR_DECLARE(name, dsn::counter_ptr<dsn::striped_long_adder, false>)
@@ -162,7 +163,7 @@ class error_code;
 
 // Initialize a metric variable in user class.
 #define METRIC_VAR_INIT(name, entity, ...)                                                         \
-    _##name(METRIC_##name.instantiate(entity##_metric_entity(), ##__VA_ARGS__))
+    METRIC_VAR_NAME(name)(METRIC_##name.instantiate(entity##_metric_entity(), ##__VA_ARGS__))
 #define METRIC_VAR_INIT_replica(name, ...) METRIC_VAR_INIT(name, replica, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_server(name, ...) METRIC_VAR_INIT(name, server, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_disk(name, ...) METRIC_VAR_INIT(name, disk, ##__VA_ARGS__)
@@ -175,15 +176,15 @@ class error_code;
     do {                                                                                           \
         const auto v = (x);                                                                        \
         if (v != 0) {                                                                              \
-            _##name->increment_by(v);                                                              \
+            METRIC_VAR_NAME(name)->increment_by(v);                                                \
         }                                                                                          \
     } while (0)
 
 // Perform increment() operations on gauges and counters.
-#define METRIC_VAR_INCREMENT(name) _##name->increment()
+#define METRIC_VAR_INCREMENT(name) METRIC_VAR_NAME(name)->increment()
 
 // Perform decrement() operations on gauges.
-#define METRIC_VAR_DECREMENT(name) _##name->decrement()
+#define METRIC_VAR_DECREMENT(name) METRIC_VAR_NAME(name)->decrement()
 
 // Perform set() operations on gauges and percentiles.
 //
@@ -191,20 +192,20 @@ class error_code;
 // * set(val): set a single value for a metric, such as gauge, percentile;
 // * set(n, val): set multiple repeated values (the number of duplicates is n) for a metric,
 // such as percentile.
-#define METRIC_VAR_SET(name, ...) _##name->set(__VA_ARGS__)
+#define METRIC_VAR_SET(name, ...) METRIC_VAR_NAME(name)->set(__VA_ARGS__)
 
 // Read the current measurement of gauges and counters.
-#define METRIC_VAR_VALUE(name) _##name->value()
+#define METRIC_VAR_VALUE(name) METRIC_VAR_NAME(name)->value()
 
 // Convenient macro that is used to compute latency automatically, which is dedicated to percentile.
 #define METRIC_VAR_AUTO_LATENCY(name, ...)                                                         \
-    dsn::auto_latency __##name##_auto_latency(_##name, ##__VA_ARGS__)
+    dsn::auto_latency __##name##_auto_latency(METRIC_VAR_NAME(name), ##__VA_ARGS__)
 
 #define METRIC_VAR_AUTO_LATENCY_DURATION_NS(name) __##name##_auto_latency.duration_ns()
 
 // Convenient macro that is used to increment/decrement gauge automatically in current scope.
 #define METRIC_VAR_AUTO_COUNT(name, ...)                                                           \
-    dsn::auto_count __##name##_auto_count(_##name, ##__VA_ARGS__)
+    dsn::auto_count __##name##_auto_count(METRIC_VAR_NAME(name), ##__VA_ARGS__)
 
 #define METRIC_DEFINE_INCREMENT_BY(name)                                                           \
     void increment_##name##_by(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }

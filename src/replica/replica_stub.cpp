@@ -221,7 +221,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(total_replicas),
       METRIC_VAR_INIT_server(opening_replicas),
       METRIC_VAR_INIT_server(closing_replicas),
-      METRIC_VAR_INIT_server(committed_requests),
+      METRIC_VAR_INIT_server(committed_requests)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
