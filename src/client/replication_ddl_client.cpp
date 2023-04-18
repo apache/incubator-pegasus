@@ -64,10 +64,9 @@ DSN_DEFINE_uint32(ddl_client,
                   "The max count that attempt for failed requests to meta server.");
 
 DSN_DEFINE_uint32(ddl_client,
-                  ddl_client_busy_retry_interval_ms,
+                  ddl_client_retry_interval_ms,
                   10 * 1000,
-                  "The retry interval after receiving ERR_BUSY_CREATING or ERR_BUSY_DROPPING from"
-                  "meta server.");
+                  "The retry interval after receiving error from meta server.");
 
 namespace dsn {
 namespace replication {
@@ -1448,36 +1447,37 @@ bool replication_ddl_client::valid_app_char(int c)
 
 namespace {
 
-bool is_busy(const dsn::error_code &err)
+inline bool is_busy(const dsn::error_code &err)
 {
     return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
 }
 
 bool need_retry(uint32_t attempt_count, uint32_t busy_attempt_count, const dsn::error_code &err)
 {
+    // For successful request, no need to retry.
     if (err == dsn::ERR_OK) {
         return false;
     }
 
+    // The request, albeit failed, has not reached the max attempt count. Thus just do retry.
     if (attempt_count < FLAGS_ddl_client_max_attempt_count) {
         return true;
     }
 
+    // Do NOT retry, since it has reached FLAGS_ddl_client_max_attempt_count and the error that
+    // led to fail of the last attempt is not busy error.
     if (!is_busy(err)) {
         return false;
     }
 
+    // Though it has reached FLAGS_ddl_client_max_attempt_count, retry is still allowed as long
+    // as the busy attempt count has not reached FLAGS_ddl_client_max_attempt_count. 
     return busy_attempt_count < FLAGS_ddl_client_max_attempt_count;
 }
 
-bool should_sleep_before_retry(const dsn::error_code &err, uint32_t &sleep_ms)
+bool should_sleep_before_retry(const dsn::error_code &err)
 {
-    if (is_busy(err)) {
-        sleep_ms = FLAGS_ddl_client_busy_retry_interval_ms;
-        return true;
-    }
-
-    return false;
+    return is_busy(err);
 }
 
 } // anonymous namespace
@@ -1506,13 +1506,12 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
         return;
     }
 
-    uint32_t sleep_ms = 0;
-    if (should_sleep_before_retry(err, sleep_ms)) {
+    if (should_sleep_before_retry(err)) {
         LOG_WARNING("sleep {} milliseconds before launch another attempt for {}: err={}",
-                    sleep_ms,
+                    FLAGS_ddl_client_retry_interval_ms,
                     request->local_rpc_code,
                     err);
-        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+        std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_ddl_client_retry_interval_ms));
     }
 
     rpc::call(_meta_server,
