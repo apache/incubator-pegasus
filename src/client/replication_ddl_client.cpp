@@ -1454,11 +1454,7 @@ bool is_busy(const dsn::error_code &err)
     return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
 }
 
-bool should_attempt(
-        uint32_t attempt_count,
-        uint32_t busy_attempt_count,
-        const dsn::error_code &err
-        )
+bool should_attempt(uint32_t attempt_count, uint32_t busy_attempt_count, const dsn::error_code &err)
 {
     if (err == dsn::ERR_OK) {
         return false;
@@ -1525,7 +1521,8 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
               &_tracker,
               [this, attempt_count, busy_attempt_count, callback](
                   error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-                  end_meta_request(callback, attempt_count, busy_attempt_count, err, request, response);
+                  end_meta_request(
+                      callback, attempt_count, busy_attempt_count, err, request, response);
               });
 }
 
