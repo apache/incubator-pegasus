@@ -229,11 +229,7 @@ void replica::update_last_checkpoint_generate_time()
 //            //
 // Statistics //
 //            //
-
-void replica::update_commit_requests(int count)
-{
-    METRIC_INCREMENT_BY(*_stub, committed_requests, count);
-}
+METRIC_IMPL_INCREMENT_BY(*_stub, committed_requests, replica::)
 
 void replica::init_state()
 {

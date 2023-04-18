@@ -207,23 +207,34 @@ class error_code;
 #define METRIC_VAR_AUTO_COUNT(name, ...)                                                           \
     dsn::auto_count __##name##_auto_count(METRIC_VAR_NAME(name), ##__VA_ARGS__)
 
+#define METRIC_FUNC_NAME_INCREMENT_BY(name) increment_##name##_by
+
 #define METRIC_DEFINE_INCREMENT_BY(name)                                                           \
-    void increment_##name##_by(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }
+    void METRIC_FUNC_NAME_INCREMENT_BY(name)(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }
 
 // To be adaptive to self-defined `increment_by` methods, arguments are declared as variadic.
-#define METRIC_INCREMENT_BY(obj, name, ...) (obj).increment_##name##_by(__VA_ARGS__)
+#define METRIC_INCREMENT_BY(obj, name, ...) (obj).METRIC_FUNC_NAME_INCREMENT_BY(name)(__VA_ARGS__)
+
+#define METRIC_DECLARE_INCREMENT_BY(name, prefix)                                                  \
+    void prefix METRIC_FUNC_NAME_INCREMENT_BY(name)(int64_t x)
+#define METRIC_IMPL_INCREMENT_BY(obj, name, prefix)                                                \
+    METRIC_DECLARE_INCREMENT_BY(name, prefix) { METRIC_INCREMENT_BY(obj, name, x); }
+
+#define METRIC_FUNC_NAME_INCREMENT(name) increment_##name
 
 #define METRIC_DEFINE_INCREMENT(name)                                                              \
-    void increment_##name() { METRIC_VAR_INCREMENT(name); }
+    void METRIC_FUNC_NAME_INCREMENT(name)() { METRIC_VAR_INCREMENT(name); }
 
 // To be adaptive to self-defined `increment` methods, arguments are declared as variadic.
-#define METRIC_INCREMENT(obj, name, ...) (obj).increment_##name(__VA_ARGS__)
+#define METRIC_INCREMENT(obj, name, ...) (obj).METRIC_FUNC_NAME_INCREMENT(name)(__VA_ARGS__)
+
+#define METRIC_FUNC_NAME_SET(name) set_##name
 
 #define METRIC_DEFINE_SET(name, value_type)                                                        \
-    void set_##name(value_type value) { METRIC_VAR_SET(name, value); }
+    void METRIC_FUNC_NAME_SET(name)(value_type value) { METRIC_VAR_SET(name, value); }
 
 // To be adaptive to self-defined `set` methods, arguments are declared as variadic.
-#define METRIC_SET(obj, name, ...) (obj).set_##name(__VA_ARGS__)
+#define METRIC_SET(obj, name, ...) (obj).METRIC_FUNC_NAME_SET(name)(__VA_ARGS__)
 
 namespace dsn {
 class metric;                  // IWYU pragma: keep
