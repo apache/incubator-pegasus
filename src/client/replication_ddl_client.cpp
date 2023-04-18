@@ -37,7 +37,6 @@
 #include <iostream>
 #include <set>
 #include <thread>
-#include <unordered_map>
 
 #include "backup_types.h"
 #include "common//duplication_common.h"
