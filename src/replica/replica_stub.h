@@ -55,12 +55,12 @@
 #include "dsn.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
 #include "metadata_types.h"
-#include "nfs/nfs_node.h"
 #include "partition_split_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
+#include "runtime/ranger/access_type.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/security/access_controller.h"
@@ -77,6 +77,12 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+namespace service {
+class copy_request;
+class copy_response;
+class get_file_size_request;
+class get_file_size_response;
+} // namespace service
 
 namespace replication {
 class configuration_query_by_node_response;

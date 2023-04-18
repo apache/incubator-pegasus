@@ -62,6 +62,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "nfs/nfs_node.h"
+#include "nfs_types.h"
 #include "perf_counter/perf_counter.h"
 #include "replica.h"
 #include "replica/duplication/replica_follower.h"
@@ -92,9 +93,9 @@
 #elif defined(DSN_USE_JEMALLOC)
 #include "utils/je_ctl.h"
 #endif
+#include "nfs/nfs_code_definition.h"
 #include "remote_cmd/remote_command.h"
 #include "utils/fail_point.h"
-#include "nfs/nfs_code_definition.h"
 
 namespace dsn {
 namespace replication {

@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
+#include "common/gpid.h"
 #include "nfs/nfs_node.h"
 #include "runtime/app_model.h"
 #include "runtime/rpc/rpc_address.h"

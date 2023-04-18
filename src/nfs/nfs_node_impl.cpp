@@ -43,8 +43,14 @@
 
 namespace dsn {
 class aio_task;
+template <typename TResponse>
+class rpc_replier;
 
 namespace service {
+class copy_request;
+class copy_response;
+class get_file_size_request;
+class get_file_size_response;
 
 nfs_node_simple::nfs_node_simple() : nfs_node()
 {

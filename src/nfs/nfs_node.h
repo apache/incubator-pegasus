@@ -31,16 +31,22 @@
 #include <vector>
 
 #include "aio/aio_task.h"
-#include "nfs_code_definition.h"
-#include "nfs_types.h"
+#include "common/gpid.h"
 #include "runtime/api_task.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/serverlet.h"
 #include "runtime/task/task_code.h"
 #include "utils/error_code.h"
 
 namespace dsn {
 class task_tracker;
+namespace service {
+class copy_request;
+class copy_response;
+class get_file_size_request;
+class get_file_size_response;
+} // namespace service
+template <typename TResponse>
+class rpc_replier;
 
 struct remote_copy_request
 {
