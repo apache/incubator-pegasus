@@ -27,8 +27,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <cstddef>
-#include <functional>
 #include <ostream>
 #include <string>
 
