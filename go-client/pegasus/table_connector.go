@@ -726,6 +726,7 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 			err = errors.New(err.Error() + " Rate of requests exceeds the throughput limit")
 		case base.ERR_INVALID_STATE:
 			err = errors.New(err.Error() + " The target replica is not primary")
+			retry = false
 		case base.ERR_OBJECT_NOT_FOUND:
 			err = errors.New(err.Error() + " The replica server doesn't serve this partition")
 		case base.ERR_SPLITTING:

@@ -226,8 +226,16 @@ func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 // single-routine worker used for sending requests.
 // Any error occurred will end up this goroutine as well as the connection.
 func (n *nodeSession) loopForRequest() error { // no error returned actually
+	//add ticker to trigger loop return
+	// since if correlative loopForResponse returned because of IsNetworkClosed(EOF),
+	// this loop will not receive any signal and runs forever
+	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
+		case <-ticker.C:
+			if n.conn.GetState() != rpc.ConnStateReady {
+				return nil
+			}
 		case <-n.tom.Dying():
 			return nil
 		case req := <-n.reqc:
@@ -335,7 +343,9 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		}
 
 		if !ready {
-			return fmt.Errorf("session %s is unable to connect (used %dms), the context error: %s", n, time.Since(dialStart)/time.Millisecond, ctx.Err())
+			//return error directly so that it can be recognized in `handleReplicaError`
+			n.logger.Printf("session %s is unable to connect (used %dms), the context error: %s", n, time.Since(dialStart)/time.Millisecond, ctx.Err())
+			return ctx.Err()
 		}
 	}
 	return nil

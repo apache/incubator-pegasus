@@ -261,7 +261,7 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	<-ptb.confUpdateCh
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
-	assert.True(t, retry)
+	assert.False(t, retry)
 
 	confUpdate, retry, err = ptb.handleReplicaError(base.ERR_PARENT_PARTITION_MISUSED, nil)
 	<-ptb.confUpdateCh
