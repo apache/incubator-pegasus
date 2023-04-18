@@ -1486,7 +1486,7 @@ bool should_sleep_before_retry(const dsn::error_code &err, uint32_t &sleep_ms)
 void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callback,
                                               uint32_t attempt_count,
                                               uint32_t busy_attempt_count,
-                                              error_code err,
+                                              const error_code &err,
                                               dsn::message_ex *request,
                                               dsn::message_ex *resp)
 {
