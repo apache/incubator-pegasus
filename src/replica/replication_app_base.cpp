@@ -61,11 +61,15 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "utils/metrics.h"
 #include "utils/ports.h"
 #include "utils/string_view.h"
 #include "utils/threadpool_code.h"
 #include "utils/utils.h"
+
+METRIC_DEFINE_counter(replica,
+                      committed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of committed requests");
 
 namespace dsn {
 class disk_file;
@@ -247,7 +251,8 @@ replication_app_base *replication_app_base::new_storage_instance(const std::stri
     return utils::factory_store<replication_app_base>::create(name.c_str(), PROVIDER_TYPE_MAIN, r);
 }
 
-replication_app_base::replication_app_base(replica *replica) : replica_base(replica)
+replication_app_base::replication_app_base(replica *replica)
+    : replica_base(replica), METRIC_VAR_INIT_replica(committed_requests)
 {
     _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
@@ -486,7 +491,7 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
             "mutation {} committed on {}, batched_count = {}", mu->name(), str, batched_count);
     }
 
-    METRIC_INCREMENT_BY(*_replica, committed_requests, batched_count);
+    METRIC_VAR_INCREMENT_BY(committed_requests, batched_count);
 
     return ERR_OK;
 }

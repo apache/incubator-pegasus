@@ -366,8 +366,6 @@ private:
     // Wait all replicas in closing state to be finished.
     void wait_closing_replicas_finished();
 
-    METRIC_DEFINE_INCREMENT_BY(committed_requests)
-
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::replica;
@@ -473,7 +471,6 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(total_replicas);
     METRIC_VAR_DECLARE_gauge_int64(opening_replicas);
     METRIC_VAR_DECLARE_gauge_int64(closing_replicas);
-    METRIC_VAR_DECLARE_counter(committed_requests);
 
     perf_counter_wrapper _counter_replicas_learning_count;
     perf_counter_wrapper _counter_replicas_learning_max_duration_time_ms;

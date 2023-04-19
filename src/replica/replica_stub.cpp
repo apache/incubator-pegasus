@@ -110,11 +110,6 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kReplicas,
                           "The number of closing replicas");
 
-METRIC_DEFINE_counter(server,
-                      committed_requests,
-                      dsn::metric_unit::kRequests,
-                      "The number of committed requests");
-
 namespace dsn {
 namespace replication {
 
@@ -220,8 +215,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _is_running(false),
       METRIC_VAR_INIT_server(total_replicas),
       METRIC_VAR_INIT_server(opening_replicas),
-      METRIC_VAR_INIT_server(closing_replicas),
-      METRIC_VAR_INIT_server(committed_requests)
+      METRIC_VAR_INIT_server(closing_replicas)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;

@@ -215,11 +215,6 @@ class error_code;
 // To be adaptive to self-defined `increment_by` methods, arguments are declared as variadic.
 #define METRIC_INCREMENT_BY(obj, name, ...) (obj).METRIC_FUNC_NAME_INCREMENT_BY(name)(__VA_ARGS__)
 
-#define METRIC_DECLARE_INCREMENT_BY(name, prefix)                                                  \
-    void prefix METRIC_FUNC_NAME_INCREMENT_BY(name)(int64_t x)
-#define METRIC_IMPL_INCREMENT_BY(obj, name, prefix)                                                \
-    METRIC_DECLARE_INCREMENT_BY(name, prefix) { METRIC_INCREMENT_BY(obj, name, x); }
-
 #define METRIC_FUNC_NAME_INCREMENT(name) increment_##name
 
 #define METRIC_DEFINE_INCREMENT(name)                                                              \

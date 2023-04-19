@@ -225,11 +225,6 @@ void replica::update_last_checkpoint_generate_time()
         _last_checkpoint_generate_time_ms + rand::next_u64(max_interval_ms / 2, max_interval_ms);
 }
 
-//            //
-// Statistics //
-//            //
-METRIC_IMPL_INCREMENT_BY(*_stub, committed_requests, replica::)
-
 void replica::init_state()
 {
     _inactive_is_transient = false;
