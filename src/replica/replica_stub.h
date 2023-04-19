@@ -276,7 +276,8 @@ public:
 
     template <typename TReqType, typename TRespType>
     bool check_status_and_authz_with_reply(const TReqType &request,
-                                           ::dsn::rpc_replier<TRespType> &reply)
+                                           ::dsn::rpc_replier<TRespType> &reply,
+                                           const ::dsn::ranger::access_type &ac_type)
     {
         if (!_access_controller->is_enable_ranger_acl()) {
             return true;
@@ -291,7 +292,7 @@ public:
             return false;
         }
         dsn::message_ex *msg = reply.response_message();
-        if (!rep->access_controller_allowed(msg, ranger::access_type::kWrite)) {
+        if (!rep->access_controller_allowed(msg, ac_type)) {
             TRespType resp;
             resp.error = ERR_ACL_DENY;
             reply(resp);

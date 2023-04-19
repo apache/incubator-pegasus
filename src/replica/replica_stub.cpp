@@ -1261,7 +1261,7 @@ void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
 void replica_stub::on_nfs_copy(const ::dsn::service::copy_request &request,
                                ::dsn::rpc_replier<::dsn::service::copy_response> &reply)
 {
-    if (check_status_and_authz_with_reply(request, reply)) {
+    if (check_status_and_authz_with_reply(request, reply, ranger::access_type::kWrite)) {
         _nfs->on_copy(request, reply);
     }
 }
@@ -1270,7 +1270,7 @@ void replica_stub::on_nfs_get_file_size(
     const ::dsn::service::get_file_size_request &request,
     ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply)
 {
-    if (check_status_and_authz_with_reply(request, reply)) {
+    if (check_status_and_authz_with_reply(request, reply, ranger::access_type::kWrite)) {
         _nfs->on_get_file_size(request, reply);
     }
 }
