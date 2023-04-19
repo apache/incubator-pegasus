@@ -62,7 +62,7 @@ public:
 
     rpc_group_host_port *group_host_port() const
     {
-        CHECK_NOTNULL(_group_host_port);
+        CHECK_NOTNULL(_group_host_port, "group_host_port cannot be null!");
         return _group_host_port;
     }
     void assign_group(const char *name);
