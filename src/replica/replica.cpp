@@ -47,7 +47,6 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "perf_counter/perf_counters.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
@@ -224,15 +223,6 @@ void replica::update_last_checkpoint_generate_time()
     // use random trigger time to avoid flush peek
     _next_checkpoint_interval_trigger_time_ms =
         _last_checkpoint_generate_time_ms + rand::next_u64(max_interval_ms / 2, max_interval_ms);
-}
-
-//            //
-// Statistics //
-//            //
-
-void replica::update_commit_qps(int count)
-{
-    _stub->_counter_replicas_commit_qps->add((uint64_t)count);
 }
 
 void replica::init_state()

@@ -93,7 +93,7 @@ public:
     METRIC_DEFINE_SET(healthy_partitions, int64_t)
 
 #define __METRIC_DEFINE_INCREMENT_BY(name)                                                         \
-    void increment_##name##_by(int32_t partition_id, int64_t x)                                    \
+    void METRIC_FUNC_NAME_INCREMENT_BY(name)(int32_t partition_id, int64_t x)                      \
     {                                                                                              \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
         METRIC_INCREMENT_BY(*(_partition_metrics[partition_id]), name, x);                         \
@@ -106,7 +106,7 @@ public:
 #undef __METRIC_DEFINE_INCREMENT_BY
 
 #define __METRIC_DEFINE_INCREMENT(name)                                                            \
-    void increment_##name(int32_t partition_id)                                                    \
+    void METRIC_FUNC_NAME_INCREMENT(name)(int32_t partition_id)                                    \
     {                                                                                              \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
         METRIC_INCREMENT(*(_partition_metrics[partition_id]), name);                               \
@@ -120,7 +120,7 @@ public:
 #undef __METRIC_DEFINE_INCREMENT
 
 #define __METRIC_DEFINE_SET(name, value_type)                                                      \
-    void set_##name(int32_t partition_id, value_type value)                                        \
+    void METRIC_FUNC_NAME_SET(name)(int32_t partition_id, value_type value)                        \
     {                                                                                              \
         CHECK_LT(partition_id, _partition_metrics.size());                                         \
         METRIC_SET(*(_partition_metrics[partition_id]), name, value);                              \
@@ -167,7 +167,7 @@ public:
     using partition_map = std::unordered_map<gpid, partition_stats>;
 
 #define __METRIC_DEFINE_INCREMENT(name)                                                            \
-    void increment_##name(const gpid &id, bool balance_checker)                                    \
+    void METRIC_FUNC_NAME_INCREMENT(name)(const gpid &id, bool balance_checker)                    \
     {                                                                                              \
         auto &partition = _partition_map[id];                                                      \
         ++(partition.greedy_recent_balance_operations);                                            \
@@ -210,7 +210,7 @@ public:
     void clear_entities();
 
 #define __METRIC_DEFINE_INCREMENT(name)                                                            \
-    void increment_##name(const gpid &id)                                                          \
+    void METRIC_FUNC_NAME_INCREMENT(name)(const gpid &id)                                          \
     {                                                                                              \
         utils::auto_read_lock l(_lock);                                                            \
                                                                                                    \
