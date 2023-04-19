@@ -3083,12 +3083,12 @@ protected:
 
     void SetUp() override
     {
-        _test_replica_gauge_int64->set(0);
-        _test_replica_counter->reset();
-        _test_replica_percentile_int64_ns->reset_tail_for_test();
-        _test_replica_percentile_int64_us->reset_tail_for_test();
-        _test_replica_percentile_int64_ms->reset_tail_for_test();
-        _test_replica_percentile_int64_s->reset_tail_for_test();
+        METRIC_VAR_SET(test_replica_gauge_int64, 0);
+        METRIC_VAR_NAME(test_replica_counter)->reset();
+        METRIC_VAR_NAME(test_replica_percentile_int64_ns)->reset_tail_for_test();
+        METRIC_VAR_NAME(test_replica_percentile_int64_us)->reset_tail_for_test();
+        METRIC_VAR_NAME(test_replica_percentile_int64_ms)->reset_tail_for_test();
+        METRIC_VAR_NAME(test_replica_percentile_int64_s)->reset_tail_for_test();
     }
 
     const metric_entity_ptr &my_replica_metric_entity() const { return _my_replica_metric_entity; }
@@ -3120,7 +3120,7 @@ MetricVarTest::MetricVarTest()
 {
 }
 
-#define METRIC_VAR_SAMPLES(name) _##name->samples_for_test()
+#define METRIC_VAR_SAMPLES(name) METRIC_VAR_NAME(name)->samples_for_test()
 
 void MetricVarTest::test_set_percentile(const std::vector<int64_t> &expected_samples)
 {
