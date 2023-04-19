@@ -47,6 +47,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
+#include "utils/metrics.h"
 #include "utils/ports.h"
 
 namespace dsn {
@@ -344,6 +345,9 @@ protected:
     replica_init_info _info;
 
     explicit replication_app_base(replication::replica *replica);
+
+private:
+    METRIC_VAR_DECLARE_counter(committed_requests);
 };
 USER_DEFINED_ENUM_FORMATTER(replication_app_base::chkpt_apply_mode)
 } // namespace replication
