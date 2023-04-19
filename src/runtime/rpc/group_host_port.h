@@ -77,7 +77,12 @@ public:
         return _leader_index >= 0 ? _members[_leader_index] : host_port::s_invalid_host_port;
     }
     void leader_forward();
+    // We should use 'possible_leader' for rpc group call, but not 'leader()'.
+    // Caz we not have leader sometimes in initialization phase.
     host_port possible_leader();
+
+    // failure_detector should avoid failure detecting logic is affected by rpc failure or rpc forwarding.
+    // So we need a switch to contronl update leader automatically.
     bool is_update_leader_automatically() const { return _update_leader_automatically; }
     void set_update_leader_automatically(bool value) { _update_leader_automatically = value; }
     const char *name() const { return _name.c_str(); }
