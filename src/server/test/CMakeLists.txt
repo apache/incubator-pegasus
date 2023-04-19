@@ -60,7 +60,6 @@ set(MY_PROJ_LIBS
         gmock
         hashtable
         )
-add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
