@@ -27,7 +27,7 @@
 #pragma once
 
 #ifdef PEGASUS_UNIT_TEST
-#include <dequeue>
+#include <deque>
 #endif
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
@@ -286,7 +286,7 @@ private:
                   &_tracker,
                   [this, task](
                       error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-#ifndef PEGASUS_UNIT_TEST
+#ifdef PEGASUS_UNIT_TEST
                       err = get_mock_error();
 #endif
                       end_meta_request(std::move(task), 0, 0, err, request, response);
@@ -356,18 +356,20 @@ private:
     dsn::task_tracker _tracker;
     uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.
 
-#ifndef PEGASUS_UNIT_TEST
+#ifdef PEGASUS_UNIT_TEST
     FRIEND_TEST(DDLClientTest, RetryEndMetaRequest);
-    void set_mock_errors(const std::vector<dsn::error_code> &mock_errors) {
+    void set_mock_errors(const std::vector<dsn::error_code> &mock_errors)
+    {
         _mock_errors.assign(mock_errors.begin(), mock_errors.end());
     }
-    dsn::error_code get_mock_error() {
+    dsn::error_code get_mock_error()
+    {
         CHECK_FALSE(_mock_errors.empty());
         auto err = _mock_errors.front();
         _mock_errors.pop_front();
         return err;
     }
-    std::dequeue<dsn::error_code> _mock_errors;
+    std::deque<dsn::error_code> _mock_errors;
 #endif
 
     typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;

@@ -18,7 +18,9 @@
 #include <gtest/gtest.h>
 
 #include "client/replication_ddl_client.h"
+#include "common/replication.codes.h"
 #include "meta_admin_types.h"
+#include "utils/flags.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
@@ -32,7 +34,7 @@ TEST(DDLClientTest, RetryEndMetaRequest)
     {
         std::vector<error_code> mock_errors;
     } tests[] = {
-        {ERR_TIMEOUT, ERR_BUSY_CREATING, ERR_BUSY_CREATING, ERR_BUSY_CREATING},
+        {{ERR_TIMEOUT, ERR_BUSY_CREATING, ERR_BUSY_CREATING, ERR_BUSY_CREATING}},
     };
 
     auto reserved_ddl_client_max_attempt_count = FLAGS_ddl_client_max_attempt_count;
@@ -45,7 +47,8 @@ TEST(DDLClientTest, RetryEndMetaRequest)
     auto req = std::make_shared<configuration_create_app_request>();
     for (const auto &test : tests) {
         auto ddl_client = std::make_unique<replication_ddl_client>(meta_list);
-        auto resp_task = ddl_client.request_meta<configuration_create_app_request>(RPC_CM_CREATE_APP, req);
+        auto resp_task =
+            ddl_client->request_meta<configuration_create_app_request>(RPC_CM_CREATE_APP, req);
         resp_task->wait();
 
         EXPECT_TRUE(ddl_client->_mock_errors.empty());

@@ -22,6 +22,9 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+    dsn_replication_common
+    dsn_runtime
+    dsn_utils
     gtest
     gtest_main
     )

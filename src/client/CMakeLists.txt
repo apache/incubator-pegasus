@@ -39,3 +39,5 @@ set(MY_PROJ_LIBS "")
 set(MY_BINPLACES "")
 
 dsn_add_static_library()
+
+add_subdirectory(test)
