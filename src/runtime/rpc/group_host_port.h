@@ -33,9 +33,8 @@ namespace dsn {
 
 static constexpr int kInvalidIndex = -1;
 
-
 // Base on group_address, a group of host_post.
-// Please use host_port like example if you want call group of host_port. 
+// Please use host_port like example if you want call group of host_port.
 //  e.g.
 //
 //  dsn::rpc_host_port group;
@@ -67,8 +66,9 @@ public:
     host_port random_member() const
     {
         alr_t l(_lock);
-        return _members.empty() ? host_port::s_invalid_host_port
-                                : _members[rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1))];
+        return _members.empty()
+                   ? host_port::s_invalid_host_port
+                   : _members[rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1))];
     }
     host_port next(host_port current) const;
     host_port leader() const
@@ -81,8 +81,8 @@ public:
     // Caz we not have leader sometimes in initialization phase.
     host_port possible_leader();
 
-    // failure_detector should avoid failure detecting logic is affected by rpc failure or rpc forwarding.
-    // So we need a switch to contronl update leader automatically.
+    // failure_detector should avoid failure detecting logic is affected by rpc failure or rpc
+    // forwarding. So we need a switch to contronl update leader automatically.
     bool is_update_leader_automatically() const { return _update_leader_automatically; }
     void set_update_leader_automatically(bool value) { _update_leader_automatically = value; }
     const char *name() const { return _name.c_str(); }
@@ -122,7 +122,7 @@ inline rpc_group_host_port::rpc_group_host_port(const rpc_group_address *g_addr)
     for (const auto &addr : g_addr->members()) {
         CHECK_TRUE(add(host_port(addr)));
     }
-    _update_leader_automatically = g_addr->is_update_leader_automatically(); 
+    _update_leader_automatically = g_addr->is_update_leader_automatically();
     set_leader(host_port(g_addr->leader()));
 }
 
