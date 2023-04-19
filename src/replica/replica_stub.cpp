@@ -97,6 +97,21 @@
 #include "remote_cmd/remote_command.h"
 #include "utils/fail_point.h"
 
+METRIC_DEFINE_gauge_int64(server,
+                          total_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The total number of replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          opening_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of opening replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          closing_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of closing replicas");
+
 namespace dsn {
 namespace replication {
 DSN_DEFINE_bool(replication,
@@ -194,7 +209,10 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _learn_app_concurrent_count(0),
       _bulk_load_downloading_count(0),
       _manual_emergency_checkpointing_count(0),
-      _is_running(false)
+      _is_running(false),
+      METRIC_VAR_INIT_server(total_replicas),
+      METRIC_VAR_INIT_server(opening_replicas),
+      METRIC_VAR_INIT_server(closing_replicas)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
@@ -212,20 +230,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    _counter_replicas_count.init_app_counter(
-        "eon.replica_stub", "replica(Count)", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
-    _counter_replicas_opening_count.init_app_counter("eon.replica_stub",
-                                                     "opening.replica(Count)",
-                                                     COUNTER_TYPE_NUMBER,
-                                                     "# in replica_stub._opening_replicas");
-    _counter_replicas_closing_count.init_app_counter("eon.replica_stub",
-                                                     "closing.replica(Count)",
-                                                     COUNTER_TYPE_NUMBER,
-                                                     "# in replica_stub._closing_replicas");
-    _counter_replicas_commit_qps.init_app_counter("eon.replica_stub",
-                                                  "replicas.commit.qps",
-                                                  COUNTER_TYPE_RATE,
-                                                  "server-level commit throughput");
     _counter_replicas_learning_count.init_app_counter("eon.replica_stub",
                                                       "replicas.learning.count",
                                                       COUNTER_TYPE_NUMBER,
@@ -804,7 +808,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     // attach rps
     _replicas = std::move(rps);
-    _counter_replicas_count->add((uint64_t)_replicas.size());
+    METRIC_VAR_INCREMENT_BY(total_replicas, _replicas.size());
     for (const auto &kv : _replicas) {
         _fs_manager.add_replica(kv.first, kv.second->dir());
     }
@@ -2005,10 +2009,10 @@ task_ptr replica_stub::begin_open_replica(
         if (rep->status() == partition_status::PS_INACTIVE && tsk->cancel(false)) {
             // reopen it
             _closing_replicas.erase(it);
-            _counter_replicas_closing_count->decrement();
+            METRIC_VAR_DECREMENT(closing_replicas);
 
             _replicas.emplace(id, rep);
-            _counter_replicas_count->increment();
+            METRIC_VAR_INCREMENT(total_replicas);
 
             _closed_replicas.erase(id);
 
@@ -2034,7 +2038,7 @@ task_ptr replica_stub::begin_open_replica(
         std::bind(&replica_stub::open_replica, this, app, id, group_check, configuration_update));
 
     _opening_replicas[id] = task;
-    _counter_replicas_opening_count->increment();
+    METRIC_VAR_INCREMENT(opening_replicas);
     _closed_replicas.erase(id);
 
     _replicas_lock.unlock_write();
@@ -2147,7 +2151,7 @@ void replica_stub::open_replica(
                      0,
                      "replica {} is not in _opening_replicas",
                      id.to_string());
-        _counter_replicas_opening_count->decrement();
+        METRIC_VAR_DECREMENT(opening_replicas);
         return;
     }
 
@@ -2157,13 +2161,13 @@ void replica_stub::open_replica(
                      0,
                      "replica {} is not in _opening_replicas",
                      id.to_string());
-        _counter_replicas_opening_count->decrement();
+        METRIC_VAR_DECREMENT(opening_replicas);
 
         CHECK(_replicas.find(id) == _replicas.end(),
               "replica {} is already in _replicas",
               id.to_string());
         _replicas.insert(replicas::value_type(rep->get_gpid(), rep));
-        _counter_replicas_count->increment();
+        METRIC_VAR_INCREMENT(total_replicas);
 
         _closed_replicas.erase(id);
     }
@@ -2330,7 +2334,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
         return nullptr;
     }
 
-    _counter_replicas_count->decrement();
+    METRIC_VAR_DECREMENT(total_replicas);
 
     int delay_ms = 0;
     if (r->status() == partition_status::PS_INACTIVE) {
@@ -2349,7 +2353,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
                                      0,
                                      std::chrono::milliseconds(delay_ms));
     _closing_replicas[id] = std::make_tuple(task, r, std::move(a_info), std::move(r_info));
-    _counter_replicas_closing_count->increment();
+    METRIC_VAR_INCREMENT(closing_replicas);
     return task;
 }
 
@@ -2369,7 +2373,7 @@ void replica_stub::close_replica(replica_ptr r)
         _closed_replicas.emplace(
             id, std::make_pair(std::get<2>(find->second), std::get<3>(find->second)));
         _closing_replicas.erase(find);
-        _counter_replicas_closing_count->decrement();
+        METRIC_VAR_DECREMENT(closing_replicas);
     }
 
     _fs_manager.remove_replica(id);
@@ -2833,7 +2837,7 @@ void replica_stub::close()
 
             task->cancel(true);
 
-            _counter_replicas_opening_count->decrement();
+            METRIC_VAR_DECREMENT(opening_replicas);
             _replicas_lock.lock_write();
             _opening_replicas.erase(_opening_replicas.begin());
         }
@@ -2841,7 +2845,7 @@ void replica_stub::close()
         while (!_replicas.empty()) {
             _replicas.begin()->second->close();
 
-            _counter_replicas_count->decrement();
+            METRIC_VAR_DECREMENT(total_replicas);
             _replicas.erase(_replicas.begin());
         }
     }
@@ -2965,7 +2969,7 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
             if (rep != nullptr) {
                 auto pr = _replicas.insert(replicas::value_type(child_pid, rep));
                 CHECK(pr.second, "child replica {} has been existed", rep->name());
-                _counter_replicas_count->increment();
+                METRIC_VAR_INCREMENT(total_replicas);
                 _closed_replicas.erase(child_pid);
             }
             return rep;
