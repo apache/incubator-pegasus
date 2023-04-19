@@ -40,13 +40,13 @@
 #include "utils/string_view.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
-} // namespace dsn
+} // namespace pegasus
 
 static const int max_length = 2048; // max data length read from file each time
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -94,10 +94,10 @@ error_code local_service::initialize(const std::vector<std::string> &args)
     if (_root.empty()) {
         LOG_INFO("initialize local block service succeed with empty root");
     } else {
-        if (::dsn::utils::filesystem::directory_exists(_root)) {
+        if (utils::filesystem::directory_exists(_root)) {
             LOG_WARNING("old local block service root dir has already exist, path({})", _root);
         } else {
-            CHECK(::dsn::utils::filesystem::create_directory(_root),
+            CHECK(utils::filesystem::create_directory(_root),
                   "local block service create directory({}) fail",
                   _root);
         }
@@ -106,30 +106,30 @@ error_code local_service::initialize(const std::vector<std::string> &args)
     return ERR_OK;
 }
 
-dsn::task_ptr local_service::list_dir(const ls_request &req,
-                                      dsn::task_code code,
-                                      const ls_callback &callback,
-                                      task_tracker *tracker)
+task_ptr local_service::list_dir(const ls_request &req,
+                                 task_code code,
+                                 const ls_callback &callback,
+                                 task_tracker *tracker)
 {
     ls_future_ptr tsk(new ls_future(code, callback, 0));
     tsk->set_tracker(tracker);
 
     // process
     auto list_dir_background = [this, req, tsk]() {
-        std::string dir_path = ::dsn::utils::filesystem::path_combine(_root, req.dir_name);
+        std::string dir_path = utils::filesystem::path_combine(_root, req.dir_name);
         std::vector<std::string> children;
 
         ls_response resp;
         resp.err = ERR_OK;
 
-        if (::dsn::utils::filesystem::file_exists(dir_path)) {
+        if (utils::filesystem::file_exists(dir_path)) {
             LOG_INFO("list_dir: invalid parameter({})", dir_path);
             resp.err = ERR_INVALID_PARAMETERS;
-        } else if (!::dsn::utils::filesystem::directory_exists(dir_path)) {
+        } else if (!utils::filesystem::directory_exists(dir_path)) {
             LOG_INFO("directory does not exist, dir = {}", dir_path);
             resp.err = ERR_OBJECT_NOT_FOUND;
         } else {
-            if (!::dsn::utils::filesystem::get_subfiles(dir_path, children, false)) {
+            if (!utils::filesystem::get_subfiles(dir_path, children, false)) {
                 LOG_ERROR("get files under directory: {} fail", dir_path);
                 resp.err = ERR_FS_INTERNAL;
                 children.clear();
@@ -150,7 +150,7 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
             }
 
             children.clear();
-            if (!::dsn::utils::filesystem::get_subdirectories(dir_path, children, false)) {
+            if (!utils::filesystem::get_subdirectories(dir_path, children, false)) {
                 LOG_ERROR("get subpaths under directory: {} fail", dir_path);
                 resp.err = ERR_FS_INTERNAL;
                 children.clear();
@@ -159,7 +159,7 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
                 tentry.is_directory = true;
 
                 for (const auto &dir : children) {
-                    tentry.entry_name = ::dsn::utils::filesystem::get_file_name(dir);
+                    tentry.entry_name = utils::filesystem::get_file_name(dir);
                     resp.entries->emplace_back(tentry);
                 }
             }
@@ -171,10 +171,10 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
     return tsk;
 }
 
-dsn::task_ptr local_service::create_file(const create_file_request &req,
-                                         dsn::task_code code,
-                                         const create_file_callback &cb,
-                                         task_tracker *tracker)
+task_ptr local_service::create_file(const create_file_request &req,
+                                    task_code code,
+                                    const create_file_callback &cb,
+                                    task_tracker *tracker)
 {
     create_file_future_ptr tsk(new create_file_future(code, cb, 0));
     tsk->set_tracker(tracker);
@@ -183,7 +183,7 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
         create_file_response resp;
         resp.err = ERR_OK;
         resp.file_handle =
-            new local_file_object(::dsn::utils::filesystem::path_combine(_root, req.file_name));
+            new local_file_object(utils::filesystem::path_combine(_root, req.file_name));
         tsk->enqueue_with(resp);
         return tsk;
     }
@@ -195,7 +195,7 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
         create_file_response resp;
         resp.err = ERR_OK;
 
-        dsn::ref_ptr<local_file_object> f = new local_file_object(file_path);
+        ref_ptr<local_file_object> f = new local_file_object(file_path);
         if (utils::filesystem::file_exists(file_path) &&
             utils::filesystem::file_exists(meta_file_path)) {
 
@@ -213,10 +213,10 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
     return tsk;
 }
 
-dsn::task_ptr local_service::remove_path(const remove_path_request &req,
-                                         dsn::task_code code,
-                                         const remove_path_callback &cb,
-                                         task_tracker *tracker)
+task_ptr local_service::remove_path(const remove_path_request &req,
+                                    task_code code,
+                                    const remove_path_callback &cb,
+                                    task_tracker *tracker)
 {
     remove_path_future_ptr tsk(new remove_path_future(code, cb, 0));
     tsk->set_tracker(tracker);
@@ -282,7 +282,7 @@ error_code local_file_object::load_metadata()
             "load meta data from {} failed, err = {}", metadata_path, utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
-    auto cleanup = dsn::defer([&is]() { is.close(); });
+    auto cleanup = defer([&is]() { is.close(); });
 
     file_metadata meta;
     bool ans = file_metadata_from_json(is, meta);
@@ -308,38 +308,38 @@ error_code local_file_object::store_metadata()
             "store to metadata file {} failed, err={}", metadata_path, utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
-    auto cleanup = dsn::defer([&os]() { os.close(); });
+    auto cleanup = defer([&os]() { os.close(); });
     os << nlohmann::json(meta);
 
     return ERR_OK;
 }
 
-dsn::task_ptr local_file_object::write(const write_request &req,
-                                       dsn::task_code code,
-                                       const write_callback &cb,
-                                       task_tracker *tracker)
+task_ptr local_file_object::write(const write_request &req,
+                                  task_code code,
+                                  const write_callback &cb,
+                                  task_tracker *tracker)
 {
     add_ref();
 
     write_future_ptr tsk(new write_future(code, cb, 0));
     tsk->set_tracker(tracker);
 
-    FAIL_POINT_INJECT_F("mock_local_service_write_failed", [=](dsn::string_view) {
+    FAIL_POINT_INJECT_F("mock_local_service_write_failed", [=](string_view) {
         auto write_failed = [=]() {
             write_response resp;
             resp.err = ERR_FS_INTERNAL;
             tsk->enqueue_with(resp);
             release_ref();
         };
-        dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(write_failed));
+        tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(write_failed));
         return tsk;
     });
 
     auto write_background = [this, req, tsk]() {
         write_response resp;
         resp.err = ERR_OK;
-        if (!::dsn::utils::filesystem::file_exists(file_name())) {
-            if (!::dsn::utils::filesystem::create_file(file_name())) {
+        if (!utils::filesystem::file_exists(file_name())) {
+            if (!utils::filesystem::create_file(file_name())) {
                 resp.err = ERR_FS_INTERNAL;
             }
         }
@@ -367,14 +367,14 @@ dsn::task_ptr local_file_object::write(const write_request &req,
         tsk->enqueue_with(resp);
         release_ref();
     };
-    ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(write_background));
+    tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(write_background));
     return tsk;
 }
 
-dsn::task_ptr local_file_object::read(const read_request &req,
-                                      dsn::task_code code,
-                                      const read_callback &cb,
-                                      task_tracker *tracker)
+task_ptr local_file_object::read(const read_request &req,
+                                 task_code code,
+                                 const read_callback &cb,
+                                 task_tracker *tracker)
 {
     add_ref();
 
@@ -419,14 +419,14 @@ dsn::task_ptr local_file_object::read(const read_request &req,
         release_ref();
     };
 
-    dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(read_func));
+    tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(read_func));
     return tsk;
 }
 
-dsn::task_ptr local_file_object::upload(const upload_request &req,
-                                        dsn::task_code code,
-                                        const upload_callback &cb,
-                                        task_tracker *tracker)
+task_ptr local_file_object::upload(const upload_request &req,
+                                   task_code code,
+                                   const upload_callback &cb,
+                                   task_tracker *tracker)
 {
     add_ref();
     upload_future_ptr tsk(new upload_future(code, cb, 0));
@@ -471,7 +471,7 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
             // calc the md5sum by source file for simplicity
             _size = total_sz;
             error_code res = utils::filesystem::md5sum(req.input_local_name, _md5_value);
-            if (res == dsn::ERR_OK) {
+            if (res == ERR_OK) {
                 _has_meta_synced = true;
                 store_metadata();
             } else {
@@ -487,15 +487,15 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
         tsk->enqueue_with(resp);
         release_ref();
     };
-    ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(upload_file_func));
+    tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(upload_file_func));
 
     return tsk;
 }
 
-dsn::task_ptr local_file_object::download(const download_request &req,
-                                          dsn::task_code code,
-                                          const download_callback &cb,
-                                          task_tracker *tracker)
+task_ptr local_file_object::download(const download_request &req,
+                                     task_code code,
+                                     const download_callback &cb,
+                                     task_tracker *tracker)
 {
     // download the whole file
     add_ref();
@@ -567,10 +567,10 @@ dsn::task_ptr local_file_object::download(const download_request &req,
         tsk->enqueue_with(resp);
         release_ref();
     };
-    ::dsn::tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(download_file_func));
+    tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(download_file_func));
 
     return tsk;
 }
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

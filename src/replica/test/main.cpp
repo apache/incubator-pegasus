@@ -21,10 +21,13 @@
 #include <thread>
 #include <vector>
 
+#include "client/partition_resolver.h"
 #include "replication_service_test_app.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
 #include "utils/error_code.h"
+
+using namespace pegasus::replication;
 
 int gtest_flags = 0;
 int gtest_ret = 0;
@@ -46,19 +49,19 @@ TEST(cold_backup_context, write_metadata_file) { app->write_backup_metadata_test
 
 TEST(cold_backup_context, write_current_chkpt_file) { app->write_current_chkpt_file_test(); }
 
-error_code replication_service_test_app::start(const std::vector<std::string> &args)
+pegasus::error_code replication_service_test_app::start(const std::vector<std::string> &args)
 {
     app = this;
     gtest_ret = RUN_ALL_TESTS();
     gtest_flags = 1;
-    return dsn::ERR_OK;
+    return ERR_OK;
 }
 
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::service_app::register_factory<replication_service_test_app>("replica");
+    pegasus::service_app::register_factory<replication_service_test_app>("replica");
 
     dsn_run_config("config-test.ini", false);
     while (gtest_flags == 0) {

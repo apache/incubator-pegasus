@@ -54,7 +54,7 @@ rm -rf $TMP_DIR
 mkdir -p $TMP_DIR
 $thrift --gen java ../../idl/backup.thrift
 $thrift --gen java ../../idl/bulk_load.thrift
-$thrift --gen java ../../idl/dsn.layer2.thrift
+$thrift --gen java ../../idl/pegasus.layer2.thrift
 $thrift --gen java ../../idl/duplication.thrift
 $thrift --gen java ../../idl/metadata.thrift
 $thrift --gen java ../../idl/meta_admin.thrift

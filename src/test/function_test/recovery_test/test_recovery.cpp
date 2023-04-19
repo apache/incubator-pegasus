@@ -31,6 +31,7 @@
 
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
+#include "common/gpid.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "runtime/rpc/rpc_address.h"
@@ -39,8 +40,8 @@
 #include "utils/error_code.h"
 #include "utils/rand.h"
 
-using namespace dsn::replication;
 using namespace pegasus;
+using namespace pegasus::replication;
 
 // TODO(yingchun): add a check for it, get config by curl
 // NOTE: THREAD_POOL_META_SERVER worker count should be greater than 1
@@ -48,7 +49,7 @@ using namespace pegasus;
 // 'distributed_lock_service_simple', which executes in threadpool THREAD_POOL_META_SERVER
 // As a result, failure detection lock executes in this pool
 // if worker count = 1, it will lead to ERR_TIMEOUT when execute 'ddl_client_->do_recovery'
-class recovery_test : public test_util
+class recovery_test : public ::pegasus::test_util
 {
 protected:
     void SetUp() override
@@ -60,7 +61,7 @@ protected:
             std::string sort_key = hash_key;
             std::string value = value_prefix + std::to_string(i);
 
-            pegasus::pegasus_client::internal_info info;
+            pegasus_client::internal_info info;
             int ans = client_->set(hash_key, sort_key, value, 5000, 0, &info);
             ASSERT_EQ(0, ans);
             ASSERT_TRUE(info.partition_index < partition_count_);
@@ -68,12 +69,12 @@ protected:
     }
 
 public:
-    std::vector<dsn::rpc_address> get_rpc_address_list(const std::vector<int> ports)
+    std::vector<rpc_address> get_rpc_address_list(const std::vector<int> ports)
     {
-        std::vector<dsn::rpc_address> result;
+        std::vector<rpc_address> result;
         result.reserve(ports.size());
         for (const int &p : ports) {
-            dsn::rpc_address address(global_env::instance()._host_ip.c_str(), p);
+            rpc_address address(global_env::instance()._host_ip.c_str(), p);
             result.push_back(address);
         }
         return result;
@@ -186,14 +187,14 @@ TEST_F(recovery_test, recovery)
 
         // then do recovery
         auto nodes = get_rpc_address_list({34801, 34802, 34803});
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
+        ASSERT_EQ(ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // send another recovery command
-        ASSERT_EQ(dsn::ERR_SERVICE_ALREADY_RUNNING,
+        ASSERT_EQ(ERR_SERVICE_ALREADY_RUNNING,
                   ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // then wait the apps to ready
-        ASSERT_EQ(dsn::ERR_OK,
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->create_app(app_name_, "pegasus", partition_count_, 3, {}, false));
 
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));
@@ -214,11 +215,11 @@ TEST_F(recovery_test, recovery)
         std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // recovery only from 1 & 2
-        std::vector<dsn::rpc_address> nodes = get_rpc_address_list({34801, 34802});
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
+        std::vector<rpc_address> nodes = get_rpc_address_list({34801, 34802});
+        ASSERT_EQ(ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // then wait the app to ready
-        ASSERT_EQ(dsn::ERR_OK,
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->create_app(app_name_, "pegasus", partition_count_, 3, {}, false));
 
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));
@@ -229,7 +230,7 @@ TEST_F(recovery_test, recovery)
     {
         ASSERT_NO_FATAL_FAILURE(prepare_recovery());
         for (int i = 0; i < partition_count_; ++i) {
-            int replica_id = dsn::rand::next_u32(1, 3);
+            int replica_id = rand::next_u32(1, 3);
             delete_replica(replica_id, 2, i);
         }
 
@@ -246,10 +247,10 @@ TEST_F(recovery_test, recovery)
 
         // then do recovery
         auto nodes = get_rpc_address_list({34801, 34802, 34803});
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
+        ASSERT_EQ(ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // then wait the apps to ready
-        ASSERT_EQ(dsn::ERR_OK,
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->create_app(app_name_, "pegasus", partition_count_, 3, {}, false));
 
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));
@@ -276,10 +277,10 @@ TEST_F(recovery_test, recovery)
 
         // then do recovery
         auto nodes = get_rpc_address_list({34801, 34802, 34803});
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
+        ASSERT_EQ(ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // then wait the apps to ready
-        ASSERT_EQ(dsn::ERR_OK,
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->create_app(app_name_, "pegasus", partition_count_, 3, {}, false));
 
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));

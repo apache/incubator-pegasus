@@ -39,7 +39,7 @@
 #include "utils/error_code.h"
 #include "utils/join_point.h"
 
-namespace dsn {
+namespace pegasus {
 
 // forward declaration
 class disk_file;
@@ -102,4 +102,4 @@ extern aio_task_ptr write_vector(disk_file *file,
 extern aio_context_ptr prepare_aio_context(aio_task *tsk);
 
 } // namespace file
-} // namespace dsn
+} // namespace pegasus

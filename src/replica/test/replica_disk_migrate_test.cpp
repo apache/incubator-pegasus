@@ -32,7 +32,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "replica/replica.h"
 #include "replica/replica_disk_migrator.h"
@@ -49,7 +49,7 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 using disk_migrate_rpc = rpc_holder<replica_disk_migrate_request, replica_disk_migrate_response>;
 
@@ -63,32 +63,32 @@ public:
 public:
     void SetUp() override { generate_fake_rpc(); }
 
-    replica_ptr get_replica(const dsn::gpid &pid) const
+    replica_ptr get_replica(const gpid &pid) const
     {
         replica_ptr rep = stub->get_replica(pid);
         return rep;
     }
 
-    void set_replica_status(const dsn::gpid &pid, partition_status::type status) const
+    void set_replica_status(const gpid &pid, partition_status::type status) const
     {
         get_replica(pid)->_config.status = status;
     }
 
-    void set_migration_status(const dsn::gpid &pid, const disk_migration_status::type &status)
+    void set_migration_status(const gpid &pid, const disk_migration_status::type &status)
     {
         replica_ptr rep = get_replica(pid);
         ASSERT_TRUE(rep);
         rep->disk_migrator()->set_status(status);
     }
 
-    void set_replica_dir(const dsn::gpid &pid, const std::string &dir)
+    void set_replica_dir(const gpid &pid, const std::string &dir)
     {
         replica_ptr rep = get_replica(pid);
         ASSERT_TRUE(rep);
         rep->_dir = dir;
     }
 
-    void set_replica_target_dir(const dsn::gpid &pid, const std::string &dir)
+    void set_replica_target_dir(const gpid &pid, const std::string &dir)
     {
         replica_ptr rep = get_replica(pid);
         ASSERT_TRUE(rep);
@@ -123,7 +123,7 @@ public:
         rep->disk_migrator()->migrate_replica_app_info(rpc.request());
     }
 
-    dsn::task_ptr close_current_replica(replica_disk_migrate_rpc &rpc)
+    task_ptr close_current_replica(replica_disk_migrate_rpc &rpc)
     {
         replica_ptr rep = get_replica(rpc.request().pid);
         return rep->disk_migrator()->close_current_replica(rpc.request());
@@ -155,13 +155,13 @@ TEST_F(replica_disk_migrate_test, on_migrate_replica)
     auto &response = fake_migrate_rpc.response();
 
     // replica not existed
-    request.pid = dsn::gpid(app_info_1.app_id, 100);
+    request.pid = gpid(app_info_1.app_id, 100);
     request.origin_disk = "tag_1";
     request.target_disk = "tag_2";
     stub->on_disk_migrate(fake_migrate_rpc);
     ASSERT_EQ(response.err, ERR_OBJECT_NOT_FOUND);
 
-    request.pid = dsn::gpid(app_info_1.app_id, 2);
+    request.pid = gpid(app_info_1.app_id, 2);
     request.origin_disk = "tag_1";
     request.target_disk = "tag_2";
     stub->on_disk_migrate(fake_migrate_rpc);
@@ -174,7 +174,7 @@ TEST_F(replica_disk_migrate_test, migrate_disk_replica_check)
     auto &request = *fake_migrate_rpc.mutable_request();
     auto &response = fake_migrate_rpc.response();
 
-    request.pid = dsn::gpid(app_info_1.app_id, 1);
+    request.pid = gpid(app_info_1.app_id, 1);
     request.origin_disk = "tag_1";
     request.target_disk = "tag_2";
 
@@ -190,7 +190,7 @@ TEST_F(replica_disk_migrate_test, migrate_disk_replica_check)
     ASSERT_EQ(response.err, ERR_INVALID_STATE);
 
     // check same disk
-    request.pid = dsn::gpid(app_info_1.app_id, 2);
+    request.pid = gpid(app_info_1.app_id, 2);
     request.origin_disk = "tag_1";
     request.target_disk = "tag_1";
     check_migration_args(fake_migrate_rpc);
@@ -232,7 +232,7 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_run)
 {
     auto &request = *fake_migrate_rpc.mutable_request();
 
-    request.pid = dsn::gpid(app_info_1.app_id, 2);
+    request.pid = gpid(app_info_1.app_id, 2);
     request.origin_disk = "tag_1";
     request.target_disk = "tag_empty_1";
     set_replica_dir(request.pid,
@@ -296,7 +296,7 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_run)
 TEST_F(replica_disk_migrate_test, disk_migrate_replica_close)
 {
     auto &request = *fake_migrate_rpc.mutable_request();
-    request.pid = dsn::gpid(app_info_1.app_id, 2);
+    request.pid = gpid(app_info_1.app_id, 2);
 
     // test invalid replica status
     set_replica_status(request.pid, partition_status::PS_PRIMARY);
@@ -311,7 +311,7 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_close)
 TEST_F(replica_disk_migrate_test, disk_migrate_replica_update)
 {
     auto &request = *fake_migrate_rpc.mutable_request();
-    request.pid = dsn::gpid(app_info_1.app_id, 3);
+    request.pid = gpid(app_info_1.app_id, 3);
     request.origin_disk = "tag_1";
     request.target_disk = "tag_empty_1";
 
@@ -365,7 +365,7 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_update)
 TEST_F(replica_disk_migrate_test, disk_migrate_replica_open)
 {
     auto &request = *fake_migrate_rpc.mutable_request();
-    request.pid = dsn::gpid(app_info_1.app_id, 4);
+    request.pid = gpid(app_info_1.app_id, 4);
     request.origin_disk = "tag_2";
     request.target_disk = "tag_empty_1";
 
@@ -392,4 +392,4 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_open)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

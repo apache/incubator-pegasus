@@ -31,7 +31,6 @@
 #include <utility>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "base/pegasus_key_schema.h"
 #include "client/partition_resolver.h"
 #include "include/rrdb/rrdb.client.h"
@@ -40,9 +39,8 @@
 #include "utils/error_code.h"
 #include "utils/utils.h"
 
-using namespace ::pegasus;
-using namespace ::dsn;
-using namespace ::replication;
+using namespace pegasus;
+using namespace pegasus::replication;
 
 class batch_get : public test_util
 {
@@ -50,8 +48,7 @@ class batch_get : public test_util
 
 TEST_F(batch_get, set_and_then_batch_get)
 {
-    auto rrdb_client =
-        new ::dsn::apps::rrdb_client(cluster_name_.c_str(), meta_list_, app_name_.c_str());
+    auto rrdb_client = new apps::rrdb_client(cluster_name_.c_str(), meta_list_, app_name_.c_str());
 
     int test_data_count = 100;
     int test_timeout_milliseconds = 3000;

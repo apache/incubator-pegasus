@@ -22,7 +22,7 @@
 #include "sasl_wrapper.h"
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 
 namespace security {
@@ -37,4 +37,4 @@ public:
     error_s step(const blob &input, blob &output);
 };
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

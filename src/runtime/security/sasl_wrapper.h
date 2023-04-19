@@ -22,13 +22,13 @@
 
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
-} // namespace dsn
+} // namespace pegasus
 
 typedef struct sasl_conn sasl_conn_t;
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 class sasl_wrapper
 {
@@ -56,4 +56,4 @@ protected:
 
 std::unique_ptr<sasl_wrapper> create_sasl_wrapper(bool is_client);
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

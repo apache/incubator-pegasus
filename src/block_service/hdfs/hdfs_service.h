@@ -31,16 +31,16 @@
 #include "utils/TokenBucket.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
-} // namespace dsn
+} // namespace pegasus
 
 namespace folly {
 
 using DynamicTokenBucket = BasicDynamicTokenBucket<std::chrono::steady_clock>;
 }
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -53,18 +53,18 @@ public:
 
     ~hdfs_service();
     error_code initialize(const std::vector<std::string> &args) override;
-    dsn::task_ptr list_dir(const ls_request &req,
-                           dsn::task_code code,
-                           const ls_callback &cb,
-                           dsn::task_tracker *tracker) override;
-    dsn::task_ptr create_file(const create_file_request &req,
-                              dsn::task_code code,
-                              const create_file_callback &cb,
-                              dsn::task_tracker *tracker) override;
-    dsn::task_ptr remove_path(const remove_path_request &req,
-                              dsn::task_code code,
-                              const remove_path_callback &cb,
-                              dsn::task_tracker *tracker) override;
+    task_ptr list_dir(const ls_request &req,
+                      task_code code,
+                      const ls_callback &cb,
+                      task_tracker *tracker) override;
+    task_ptr create_file(const create_file_request &req,
+                         task_code code,
+                         const create_file_callback &cb,
+                         task_tracker *tracker) override;
+    task_ptr remove_path(const remove_path_request &req,
+                         task_code code,
+                         const remove_path_callback &cb,
+                         task_tracker *tracker) override;
     void close();
 
     static std::string get_hdfs_entry_name(const std::string &hdfs_path);
@@ -89,22 +89,22 @@ public:
     ~hdfs_file_object();
     uint64_t get_size() override { return _size; }
     const std::string &get_md5sum() override { return _md5sum; }
-    dsn::task_ptr write(const write_request &req,
-                        dsn::task_code code,
-                        const write_callback &cb,
-                        dsn::task_tracker *tracker) override;
-    dsn::task_ptr read(const read_request &req,
-                       dsn::task_code code,
-                       const read_callback &cb,
-                       dsn::task_tracker *tracker) override;
-    dsn::task_ptr upload(const upload_request &req,
-                         dsn::task_code code,
-                         const upload_callback &cb,
-                         dsn::task_tracker *tracker) override;
-    dsn::task_ptr download(const download_request &req,
-                           dsn::task_code code,
-                           const download_callback &cb,
-                           dsn::task_tracker *tracker) override;
+    task_ptr write(const write_request &req,
+                   task_code code,
+                   const write_callback &cb,
+                   task_tracker *tracker) override;
+    task_ptr read(const read_request &req,
+                  task_code code,
+                  const read_callback &cb,
+                  task_tracker *tracker) override;
+    task_ptr upload(const upload_request &req,
+                    task_code code,
+                    const upload_callback &cb,
+                    task_tracker *tracker) override;
+    task_ptr download(const download_request &req,
+                      task_code code,
+                      const download_callback &cb,
+                      task_tracker *tracker) override;
     error_code get_file_meta();
 
 private:
@@ -122,4 +122,4 @@ private:
 };
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

@@ -42,7 +42,7 @@ public:
                     int try_count = 300);
 
 private:
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
     // client to access server.
     pegasus_client *_client;
 };

@@ -31,7 +31,7 @@ class DB;
 namespace pegasus {
 namespace server {
 
-class pegasus_event_listener : public rocksdb::EventListener, dsn::replication::replica_base
+class pegasus_event_listener : public rocksdb::EventListener, replication::replica_base
 {
 public:
     explicit pegasus_event_listener(replica_base *r);
@@ -44,17 +44,17 @@ public:
     void OnStallConditionsChanged(const rocksdb::WriteStallInfo &info) override;
 
 private:
-    ::dsn::perf_counter_wrapper _pfc_recent_flush_completed_count;
-    ::dsn::perf_counter_wrapper _pfc_recent_flush_output_bytes;
-    ::dsn::perf_counter_wrapper _pfc_recent_compaction_completed_count;
-    ::dsn::perf_counter_wrapper _pfc_recent_compaction_input_bytes;
-    ::dsn::perf_counter_wrapper _pfc_recent_compaction_output_bytes;
-    ::dsn::perf_counter_wrapper _pfc_recent_write_change_delayed_count;
-    ::dsn::perf_counter_wrapper _pfc_recent_write_change_stopped_count;
+    perf_counter_wrapper _pfc_recent_flush_completed_count;
+    perf_counter_wrapper _pfc_recent_flush_output_bytes;
+    perf_counter_wrapper _pfc_recent_compaction_completed_count;
+    perf_counter_wrapper _pfc_recent_compaction_input_bytes;
+    perf_counter_wrapper _pfc_recent_compaction_output_bytes;
+    perf_counter_wrapper _pfc_recent_write_change_delayed_count;
+    perf_counter_wrapper _pfc_recent_write_change_stopped_count;
 
     // replica-level perfcounter
-    ::dsn::perf_counter_wrapper _pfc_recent_rdb_compaction_input_bytes;
-    ::dsn::perf_counter_wrapper _pfc_recent_rdb_compaction_output_bytes;
+    perf_counter_wrapper _pfc_recent_rdb_compaction_input_bytes;
+    perf_counter_wrapper _pfc_recent_rdb_compaction_output_bytes;
 };
 
 } // namespace server

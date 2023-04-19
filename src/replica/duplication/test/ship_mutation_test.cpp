@@ -35,7 +35,7 @@
 #include "runtime/pipeline.h"
 #include "utils/chrono_literals.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 /*static*/ mock_mutation_duplicator::duplicate_function mock_mutation_duplicator::_func;
@@ -134,4 +134,4 @@ TEST_F(ship_mutation_test, pause)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

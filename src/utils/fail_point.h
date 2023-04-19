@@ -46,10 +46,10 @@
 // argument, preprocess for this macro would fail for mismatched arguments.
 #define FAIL_POINT_INJECT_F(name, ...)                                                             \
     do {                                                                                           \
-        if (dsn_likely(!::dsn::fail::_S_FAIL_POINT_ENABLED))                                       \
+        if (dsn_likely(!fail::_S_FAIL_POINT_ENABLED))                                              \
             break;                                                                                 \
         auto __Func = __VA_ARGS__;                                                                 \
-        auto __Res = ::dsn::fail::eval(name);                                                      \
+        auto __Res = fail::eval(name);                                                             \
         if (__Res != nullptr) {                                                                    \
             return __Func(*__Res);                                                                 \
         }                                                                                          \
@@ -63,26 +63,26 @@
 // argument, preprocess for this macro would fail for mismatched arguments.
 #define FAIL_POINT_INJECT_NOT_RETURN_F(name, ...)                                                  \
     do {                                                                                           \
-        if (dsn_likely(!::dsn::fail::_S_FAIL_POINT_ENABLED))                                       \
+        if (dsn_likely(!fail::_S_FAIL_POINT_ENABLED))                                              \
             break;                                                                                 \
         auto __Func = __VA_ARGS__;                                                                 \
-        auto __Res = ::dsn::fail::eval(name);                                                      \
+        auto __Res = fail::eval(name);                                                             \
         if (__Res != nullptr) {                                                                    \
             __Func(*__Res);                                                                        \
         }                                                                                          \
     } while (0)
 
-namespace dsn {
+namespace pegasus {
 namespace fail {
 
-extern const std::string *eval(dsn::string_view name);
+extern const std::string *eval(string_view name);
 
 /// Set new actions to a fail point at runtime.
 /// The format of an action is `[p%][cnt*]task[(arg)]`. `p%` is the expected probability that
 /// the action is triggered, and `cnt*` is the max times the action can be triggered.
 /// For example, `20%3*print(still alive!)` means the fail point has 20% chance to print a
 /// message "still alive!". And the message will be printed at most 3 times.
-extern void cfg(dsn::string_view name, dsn::string_view action);
+extern void cfg(string_view name, string_view action);
 
 extern void setup();
 
@@ -92,4 +92,4 @@ extern void teardown();
 extern bool _S_FAIL_POINT_ENABLED;
 
 } // namespace fail
-} // namespace dsn
+} // namespace pegasus

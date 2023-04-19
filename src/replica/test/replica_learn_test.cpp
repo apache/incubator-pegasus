@@ -26,13 +26,13 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "mock_utils.h"
 #include "replica/duplication/test/duplication_test_base.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 /*static*/ mock_mutation_duplicator::duplicate_function mock_mutation_duplicator::_func;
@@ -180,4 +180,4 @@ TEST_F(replica_learn_test, get_learn_start_decree) { test_get_learn_start_decree
 TEST_F(replica_learn_test, get_max_gced_decree_for_learn) { test_get_max_gced_decree_for_learn(); }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -44,21 +44,21 @@
 #include "utils/flags.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
-namespace tools {
-
 DSN_DECLARE_bool(enable_udp);
+
+namespace pegasus {
+namespace tools {
 
 void nativerun::install(service_spec &spec)
 {
     if (spec.env_factory_name == "")
-        spec.env_factory_name = ("dsn::env_provider");
+        spec.env_factory_name = ("pegasus::env_provider");
 
     if (spec.timer_factory_name == "")
-        spec.timer_factory_name = ("dsn::tools::simple_timer_service");
+        spec.timer_factory_name = ("pegasus::tools::simple_timer_service");
     {
         network_client_config cs;
-        cs.factory_name = "dsn::tools::asio_network_provider";
+        cs.factory_name = "pegasus::tools::asio_network_provider";
         cs.message_buffer_block_size = 1024 * 64;
         spec.network_default_client_cfs[RPC_CHANNEL_TCP] = cs;
     }
@@ -66,14 +66,14 @@ void nativerun::install(service_spec &spec)
         network_server_config cs2;
         cs2.port = 0;
         cs2.channel = RPC_CHANNEL_TCP;
-        cs2.factory_name = "dsn::tools::asio_network_provider";
+        cs2.factory_name = "pegasus::tools::asio_network_provider";
         cs2.message_buffer_block_size = 1024 * 64;
         spec.network_default_server_cfs[cs2] = cs2;
     }
     if (FLAGS_enable_udp) {
         {
             network_client_config client_conf;
-            client_conf.factory_name = "dsn::tools::asio_udp_provider";
+            client_conf.factory_name = "pegasus::tools::asio_udp_provider";
             client_conf.message_buffer_block_size = 1024 * 64;
             spec.network_default_client_cfs[RPC_CHANNEL_UDP] = client_conf;
         }
@@ -81,38 +81,38 @@ void nativerun::install(service_spec &spec)
             network_server_config server_conf;
             server_conf.port = 0;
             server_conf.channel = RPC_CHANNEL_UDP;
-            server_conf.factory_name = "dsn::tools::asio_udp_provider";
+            server_conf.factory_name = "pegasus::tools::asio_udp_provider";
             server_conf.message_buffer_block_size = 1024 * 64;
             spec.network_default_server_cfs[server_conf] = server_conf;
         }
     }
 
     if (spec.logging_factory_name == "")
-        spec.logging_factory_name = "dsn::tools::simple_logger";
+        spec.logging_factory_name = "pegasus::tools::simple_logger";
 
     if (spec.lock_factory_name == "")
-        spec.lock_factory_name = ("dsn::tools::std_lock_provider");
+        spec.lock_factory_name = ("pegasus::tools::std_lock_provider");
 
     if (spec.lock_nr_factory_name == "")
-        spec.lock_nr_factory_name = ("dsn::tools::std_lock_nr_provider");
+        spec.lock_nr_factory_name = ("pegasus::tools::std_lock_nr_provider");
 
     if (spec.rwlock_nr_factory_name == "")
-        spec.rwlock_nr_factory_name = ("dsn::tools::std_rwlock_nr_provider");
+        spec.rwlock_nr_factory_name = ("pegasus::tools::std_rwlock_nr_provider");
 
     if (spec.semaphore_factory_name == "")
-        spec.semaphore_factory_name = ("dsn::tools::std_semaphore_provider");
+        spec.semaphore_factory_name = ("pegasus::tools::std_semaphore_provider");
 
     for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); ++it) {
         threadpool_spec &tspec = *it;
 
         if (tspec.worker_factory_name == "")
-            tspec.worker_factory_name = ("dsn::task_worker");
+            tspec.worker_factory_name = ("pegasus::task_worker");
 
         if (tspec.queue_factory_name == "")
-            tspec.queue_factory_name = ("dsn::tools::simple_task_queue");
+            tspec.queue_factory_name = ("pegasus::tools::simple_task_queue");
     }
 }
 
 void nativerun::run() { tool_app::run(); }
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

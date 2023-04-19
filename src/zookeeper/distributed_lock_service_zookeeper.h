@@ -51,7 +51,7 @@
 #include "utils/error_code.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 class zookeeper_session;

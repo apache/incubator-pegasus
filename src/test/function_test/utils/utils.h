@@ -27,6 +27,7 @@
 #include "utils/strings.h"
 #include "utils/process_utils.h"
 
+namespace pegasus {
 #define RETRY_OPERATION(CLIENT_FUNCTION, RESULT)                                                   \
     do {                                                                                           \
         for (int i = 0; i < 60; ++i) {                                                             \
@@ -46,14 +47,14 @@ inline std::string generate_random_string(uint32_t str_len = 20)
                                    "1234567890");
     std::string result;
     for (int i = 0; i < str_len; i++) {
-        result += chars[dsn::rand::next_u32(chars.size())];
+        result += chars[rand::next_u32(chars.size())];
     }
     return result;
 }
 
 inline std::string generate_hotkey(bool is_hotkey, int probability = 100, uint32_t str_len = 20)
 {
-    if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
+    if (is_hotkey && (rand::next_u32(100) < probability)) {
         return "ThisisahotkeyThisisahotkey";
     }
     return generate_random_string(str_len);
@@ -67,7 +68,7 @@ inline std::vector<std::string> generate_str_vector_by_random(uint32_t single_st
     result.reserve(arr_len);
     for (int i = 0; i < arr_len; i++) {
         result.emplace_back(generate_random_string(
-            random_value_size ? dsn::rand::next_u32(single_str_len) : single_str_len));
+            random_value_size ? rand::next_u32(single_str_len) : single_str_len));
     }
     return result;
 }
@@ -209,9 +210,9 @@ inline void compare(const T &expect, const U &actual)
 inline int run_cmd(const std::string &cmd, std::string *output = nullptr)
 {
     std::stringstream ss;
-    int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
+    int ret = utils::pipe_execute(cmd.c_str(), ss);
     if (output) {
-        *output = dsn::utils::trim_string((char *)ss.str().c_str());
+        *output = utils::trim_string((char *)ss.str().c_str());
     }
     return ret;
 }
@@ -227,3 +228,4 @@ inline void run_cmd_no_error(const std::string &cmd, std::string *output = nullp
         *output = tmp;
     }
 }
+} // namespace pegasus

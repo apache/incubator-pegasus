@@ -21,7 +21,7 @@
 #include "runtime/serverlet.h"
 #include "http_server.h"
 
-namespace dsn {
+namespace pegasus {
 
 class http_server : public serverlet<http_server>
 {
@@ -35,4 +35,4 @@ public:
 
 extern void http_response_reply(const http_response &resp, message_ex *req);
 
-} // namespace dsn
+} // namespace pegasus

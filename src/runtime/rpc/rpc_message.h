@@ -53,10 +53,10 @@
 #define DSN_MAX_TASK_CODE_NAME_LENGTH 48
 #define DSN_MAX_ERROR_CODE_NAME_LENGTH 48
 
-namespace dsn {
+namespace pegasus {
 class rpc_session;
 
-typedef dsn::ref_ptr<rpc_session> rpc_session_ptr;
+typedef ref_ptr<rpc_session> rpc_session_ptr;
 
 struct fast_code
 {
@@ -98,8 +98,8 @@ typedef struct message_header
     uint64_t id;       // sequence id, used to match request and response
     uint64_t trace_id; // used for tracking source
     char rpc_name[DSN_MAX_TASK_CODE_NAME_LENGTH];
-    fast_code rpc_code; // dsn::task_code
-    dsn::gpid gpid;     // global partition id
+    fast_code rpc_code; // task_code
+    gpid gpid_;         // global partition id
     msg_context_t context;
 
     // Attention:
@@ -123,7 +123,7 @@ typedef struct message_header
     struct
     {
         char error_name[DSN_MAX_ERROR_CODE_NAME_LENGTH];
-        fast_code error_code; // dsn::error_code
+        fast_code error_code; // error_code
     } server;
 
     message_header() = default;
@@ -146,7 +146,7 @@ public:
     rpc_session_ptr io_session; // send/recv session
     rpc_address to_address;     // always ipv4/v6 address, it is the to_node's net address
     rpc_address server_address; // used by requests, and may be of uri/group address
-    dsn::task_code local_rpc_code;
+    task_code local_rpc_code;
     network_header_format hdr_format;
     int send_retry_count;
 
@@ -169,12 +169,12 @@ public:
     // routines for create messages
     //
     static message_ex *create_receive_message(const blob &data);
-    static message_ex *create_request(dsn::task_code rpc_code,
+    static message_ex *create_request(task_code rpc_code,
                                       int timeout_milliseconds = 0,
                                       int thread_hash = 0,
                                       uint64_t partition_hash = 0);
 
-    static message_ex *create_received_request(dsn::task_code rpc_code,
+    static message_ex *create_received_request(task_code rpc_code,
                                                dsn_msg_serialize_format format,
                                                void *buffer,
                                                int size,
@@ -238,6 +238,6 @@ private:
     bool _rw_committed; // mark if it is in middle state of reading/writing
     bool _is_read;      // is for read(recv) or write(send)
 };
-typedef dsn::ref_ptr<message_ex> message_ptr;
+typedef ref_ptr<message_ex> message_ptr;
 
-} // namespace dsn
+} // namespace pegasus

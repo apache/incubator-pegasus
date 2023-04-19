@@ -42,9 +42,10 @@
 
 // an invalid enum value must be provided so as to be the default value when parsing failed
 #define ENUM_BEGIN2(type, name, invalid_value)                                                     \
-    static inline ::dsn::enum_helper_xxx<type> *RegisterEnu_##name()                               \
+    static inline ::pegasus::enum_helper_xxx<type> *RegisterEnu_##name()                           \
     {                                                                                              \
-        ::dsn::enum_helper_xxx<type> *helper = new ::dsn::enum_helper_xxx<type>(invalid_value);
+        ::pegasus::enum_helper_xxx<type> *helper =                                                 \
+            new ::pegasus::enum_helper_xxx<type>(invalid_value);
 
 #define ENUM_BEGIN(type, invalid_value) ENUM_BEGIN2(type, type, invalid_value)
 
@@ -57,16 +58,16 @@
     }                                                                                              \
     inline type enum_from_string(const char *s, type invalid_value)                                \
     {                                                                                              \
-        return ::dsn::enum_helper_xxx<type>::instance(RegisterEnu_##name).parse(s);                \
+        return ::pegasus::enum_helper_xxx<type>::instance(RegisterEnu_##name).parse(s);            \
     }                                                                                              \
     inline const char *enum_to_string(type val)                                                    \
     {                                                                                              \
-        return ::dsn::enum_helper_xxx<type>::instance(RegisterEnu_##name).to_string(val);          \
+        return ::pegasus::enum_helper_xxx<type>::instance(RegisterEnu_##name).to_string(val);      \
     }
 
 #define ENUM_END(type) ENUM_END2(type, type)
 
-namespace dsn {
+namespace pegasus {
 
 template <typename TEnum>
 class enum_helper_xxx
@@ -126,4 +127,4 @@ private:
 template <typename TEnum>
 std::unique_ptr<enum_helper_xxx<TEnum>> enum_helper_xxx<TEnum>::_instance;
 
-} // namespace dsn
+} // namespace pegasus

@@ -29,7 +29,7 @@
 #include "common/manual_compact.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
@@ -37,7 +37,7 @@
 #include "metadata_types.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class meta_app_compaction_test : public meta_test_base
 {
@@ -209,4 +209,4 @@ TEST_F(meta_app_compaction_test, test_query_compaction)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

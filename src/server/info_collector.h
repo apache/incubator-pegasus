@@ -35,10 +35,9 @@
 #include "shell/command_helper.h"
 #include "utils/synchronize.h"
 
-struct shell_context;
-
 namespace pegasus {
 class pegasus_client;
+struct shell_context;
 
 namespace server {
 
@@ -135,66 +134,66 @@ public:
                                         row_stats.partition_count);
         }
 
-        ::dsn::perf_counter_wrapper get_qps;
-        ::dsn::perf_counter_wrapper multi_get_qps;
-        ::dsn::perf_counter_wrapper put_qps;
-        ::dsn::perf_counter_wrapper multi_put_qps;
-        ::dsn::perf_counter_wrapper remove_qps;
-        ::dsn::perf_counter_wrapper multi_remove_qps;
-        ::dsn::perf_counter_wrapper incr_qps;
-        ::dsn::perf_counter_wrapper check_and_set_qps;
-        ::dsn::perf_counter_wrapper check_and_mutate_qps;
-        ::dsn::perf_counter_wrapper scan_qps;
-        ::dsn::perf_counter_wrapper duplicate_qps;
-        ::dsn::perf_counter_wrapper dup_shipped_ops;
-        ::dsn::perf_counter_wrapper dup_failed_shipping_ops;
-        ::dsn::perf_counter_wrapper dup_recent_mutation_loss_count;
-        ::dsn::perf_counter_wrapper recent_read_cu;
-        ::dsn::perf_counter_wrapper recent_write_cu;
-        ::dsn::perf_counter_wrapper recent_expire_count;
-        ::dsn::perf_counter_wrapper recent_filter_count;
-        ::dsn::perf_counter_wrapper recent_abnormal_count;
-        ::dsn::perf_counter_wrapper recent_write_throttling_delay_count;
-        ::dsn::perf_counter_wrapper recent_write_throttling_reject_count;
-        ::dsn::perf_counter_wrapper recent_read_throttling_delay_count;
-        ::dsn::perf_counter_wrapper recent_read_throttling_reject_count;
-        ::dsn::perf_counter_wrapper recent_backup_request_throttling_delay_count;
-        ::dsn::perf_counter_wrapper recent_backup_request_throttling_reject_count;
-        ::dsn::perf_counter_wrapper recent_write_splitting_reject_count;
-        ::dsn::perf_counter_wrapper recent_read_splitting_reject_count;
-        ::dsn::perf_counter_wrapper recent_write_bulk_load_ingestion_reject_count;
-        ::dsn::perf_counter_wrapper storage_mb;
-        ::dsn::perf_counter_wrapper storage_count;
-        ::dsn::perf_counter_wrapper rdb_block_cache_hit_rate;
-        ::dsn::perf_counter_wrapper rdb_block_cache_mem_usage;
-        ::dsn::perf_counter_wrapper rdb_index_and_filter_blocks_mem_usage;
-        ::dsn::perf_counter_wrapper rdb_memtable_mem_usage;
-        ::dsn::perf_counter_wrapper rdb_estimate_num_keys;
-        ::dsn::perf_counter_wrapper rdb_bf_seek_negatives_rate;
-        ::dsn::perf_counter_wrapper rdb_bf_point_negatives_rate;
-        ::dsn::perf_counter_wrapper rdb_bf_point_false_positive_rate;
-        ::dsn::perf_counter_wrapper read_qps;
-        ::dsn::perf_counter_wrapper write_qps;
-        ::dsn::perf_counter_wrapper backup_request_qps;
-        ::dsn::perf_counter_wrapper backup_request_bytes;
+        perf_counter_wrapper get_qps;
+        perf_counter_wrapper multi_get_qps;
+        perf_counter_wrapper put_qps;
+        perf_counter_wrapper multi_put_qps;
+        perf_counter_wrapper remove_qps;
+        perf_counter_wrapper multi_remove_qps;
+        perf_counter_wrapper incr_qps;
+        perf_counter_wrapper check_and_set_qps;
+        perf_counter_wrapper check_and_mutate_qps;
+        perf_counter_wrapper scan_qps;
+        perf_counter_wrapper duplicate_qps;
+        perf_counter_wrapper dup_shipped_ops;
+        perf_counter_wrapper dup_failed_shipping_ops;
+        perf_counter_wrapper dup_recent_mutation_loss_count;
+        perf_counter_wrapper recent_read_cu;
+        perf_counter_wrapper recent_write_cu;
+        perf_counter_wrapper recent_expire_count;
+        perf_counter_wrapper recent_filter_count;
+        perf_counter_wrapper recent_abnormal_count;
+        perf_counter_wrapper recent_write_throttling_delay_count;
+        perf_counter_wrapper recent_write_throttling_reject_count;
+        perf_counter_wrapper recent_read_throttling_delay_count;
+        perf_counter_wrapper recent_read_throttling_reject_count;
+        perf_counter_wrapper recent_backup_request_throttling_delay_count;
+        perf_counter_wrapper recent_backup_request_throttling_reject_count;
+        perf_counter_wrapper recent_write_splitting_reject_count;
+        perf_counter_wrapper recent_read_splitting_reject_count;
+        perf_counter_wrapper recent_write_bulk_load_ingestion_reject_count;
+        perf_counter_wrapper storage_mb;
+        perf_counter_wrapper storage_count;
+        perf_counter_wrapper rdb_block_cache_hit_rate;
+        perf_counter_wrapper rdb_block_cache_mem_usage;
+        perf_counter_wrapper rdb_index_and_filter_blocks_mem_usage;
+        perf_counter_wrapper rdb_memtable_mem_usage;
+        perf_counter_wrapper rdb_estimate_num_keys;
+        perf_counter_wrapper rdb_bf_seek_negatives_rate;
+        perf_counter_wrapper rdb_bf_point_negatives_rate;
+        perf_counter_wrapper rdb_bf_point_false_positive_rate;
+        perf_counter_wrapper read_qps;
+        perf_counter_wrapper write_qps;
+        perf_counter_wrapper backup_request_qps;
+        perf_counter_wrapper backup_request_bytes;
 
-        ::dsn::perf_counter_wrapper get_bytes;
-        ::dsn::perf_counter_wrapper multi_get_bytes;
-        ::dsn::perf_counter_wrapper scan_bytes;
-        ::dsn::perf_counter_wrapper put_bytes;
-        ::dsn::perf_counter_wrapper multi_put_bytes;
-        ::dsn::perf_counter_wrapper check_and_set_bytes;
-        ::dsn::perf_counter_wrapper check_and_mutate_bytes;
-        ::dsn::perf_counter_wrapper read_bytes;
-        ::dsn::perf_counter_wrapper write_bytes;
-        ::dsn::perf_counter_wrapper recent_rdb_compaction_input_bytes;
-        ::dsn::perf_counter_wrapper recent_rdb_compaction_output_bytes;
-        ::dsn::perf_counter_wrapper rdb_read_l2andup_hit_rate;
-        ::dsn::perf_counter_wrapper rdb_read_l1_hit_rate;
-        ::dsn::perf_counter_wrapper rdb_read_l0_hit_rate;
-        ::dsn::perf_counter_wrapper rdb_read_memtable_hit_rate;
-        ::dsn::perf_counter_wrapper rdb_write_amplification;
-        ::dsn::perf_counter_wrapper rdb_read_amplification;
+        perf_counter_wrapper get_bytes;
+        perf_counter_wrapper multi_get_bytes;
+        perf_counter_wrapper scan_bytes;
+        perf_counter_wrapper put_bytes;
+        perf_counter_wrapper multi_put_bytes;
+        perf_counter_wrapper check_and_set_bytes;
+        perf_counter_wrapper check_and_mutate_bytes;
+        perf_counter_wrapper read_bytes;
+        perf_counter_wrapper write_bytes;
+        perf_counter_wrapper recent_rdb_compaction_input_bytes;
+        perf_counter_wrapper recent_rdb_compaction_output_bytes;
+        perf_counter_wrapper rdb_read_l2andup_hit_rate;
+        perf_counter_wrapper rdb_read_l1_hit_rate;
+        perf_counter_wrapper rdb_read_l0_hit_rate;
+        perf_counter_wrapper rdb_read_memtable_hit_rate;
+        perf_counter_wrapper rdb_write_amplification;
+        perf_counter_wrapper rdb_read_amplification;
     };
 
     info_collector();
@@ -212,12 +211,12 @@ public:
     void on_storage_size_stat(int remaining_retry_count);
 
 private:
-    dsn::task_tracker _tracker;
-    ::dsn::rpc_address _meta_servers;
+    task_tracker _tracker;
+    rpc_address _meta_servers;
     std::string _cluster_name;
     std::shared_ptr<shell_context> _shell_context;
-    ::dsn::task_ptr _app_stat_timer_task;
-    ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
+    task_ptr _app_stat_timer_task;
+    utils::ex_lock_nr _app_stat_counter_lock;
     std::map<std::string, app_stat_counters *> _app_stat_counters;
 
     // client to access server.
@@ -226,11 +225,11 @@ private:
     std::unique_ptr<result_writer> _result_writer;
     uint32_t _capacity_unit_retry_wait_seconds;
     uint32_t _capacity_unit_retry_max_count;
-    ::dsn::task_ptr _capacity_unit_stat_timer_task;
+    task_ptr _capacity_unit_stat_timer_task;
     uint32_t _storage_size_retry_wait_seconds;
     uint32_t _storage_size_retry_max_count;
-    ::dsn::task_ptr _storage_size_stat_timer_task;
-    ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
+    task_ptr _storage_size_stat_timer_task;
+    utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
     std::map<std::string, string> _capacity_unit_update_info;
     // _hotspot_calculator_store is to save hotspot_partition_calculator for each table, a

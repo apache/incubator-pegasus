@@ -35,7 +35,7 @@
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class mutation_batch_test : public duplication_test_base
@@ -110,4 +110,4 @@ TEST_F(mutation_batch_test, mutation_buffer_commit)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

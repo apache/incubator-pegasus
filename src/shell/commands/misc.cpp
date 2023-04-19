@@ -27,6 +27,7 @@
 #include "shell/command_helper.h"
 #include "shell/commands.h"
 
+namespace pegasus {
 bool version(command_executor *e, shell_context *sc, arguments args)
 {
     std::ostringstream oss;
@@ -41,3 +42,4 @@ bool exit_shell(command_executor *e, shell_context *sc, arguments args)
     dsn_exit(0);
     return true;
 }
+} // namespace pegasus

@@ -35,7 +35,7 @@
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_address.h"
 
-namespace dsn {
+namespace pegasus {
 
 static inline uint32_t host_ipv4(uint8_t sec1, uint8_t sec2, uint8_t sec3, uint8_t sec4)
 {
@@ -249,4 +249,4 @@ TEST(rpc_address_test, rpc_group_address)
     ASSERT_EQ(invalid_addr, g->leader());
 }
 
-} // namespace dsn
+} // namespace pegasus

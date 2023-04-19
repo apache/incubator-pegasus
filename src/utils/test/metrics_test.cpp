@@ -43,7 +43,7 @@
 #include "utils/strings.h"
 #include "utils/test/nth_element_utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 DSN_DECLARE_uint64(entity_retirement_delay_ms);
 
@@ -73,11 +73,11 @@ private:
 using my_gauge_prototype = metric_prototype_with<my_gauge>;
 using my_gauge_ptr = ref_ptr<my_gauge>;
 
-} // namespace dsn
+} // namespace pegasus
 
 #define METRIC_DEFINE_my_gauge(entity_type, name, unit, desc, ...)                                 \
-    ::dsn::my_gauge_prototype METRIC_##name(                                                       \
-        {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
+    ::pegasus::my_gauge_prototype METRIC_##name(                                                   \
+        {#entity_type, pegasus::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 
 METRIC_DEFINE_entity(my_server);
 METRIC_DEFINE_entity(my_table);
@@ -88,93 +88,93 @@ METRIC_DEFINE_entity(my_app);
 
 METRIC_DEFINE_my_gauge(my_server,
                        my_server_latency,
-                       dsn::metric_unit::kMicroSeconds,
+                       pegasus::metric_unit::kMicroSeconds,
                        "a server-level latency for test");
 METRIC_DEFINE_my_gauge(my_server,
                        my_server_duration,
-                       dsn::metric_unit::kSeconds,
+                       pegasus::metric_unit::kSeconds,
                        "a server-level duration for test");
 
 METRIC_DEFINE_my_gauge(my_replica,
                        my_replica_latency,
-                       dsn::metric_unit::kNanoSeconds,
+                       pegasus::metric_unit::kNanoSeconds,
                        "a replica-level latency for test");
 METRIC_DEFINE_my_gauge(my_replica,
                        my_replica_duration,
-                       dsn::metric_unit::kMilliSeconds,
+                       pegasus::metric_unit::kMilliSeconds,
                        "a replica-level duration for test");
 
 METRIC_DEFINE_gauge_int64(my_server,
                           test_server_gauge_int64,
-                          dsn::metric_unit::kMilliSeconds,
+                          pegasus::metric_unit::kMilliSeconds,
                           "a server-level gauge of int64 type for test");
 
 METRIC_DEFINE_gauge_int64(my_table,
                           test_table_gauge_int64,
-                          dsn::metric_unit::kMilliSeconds,
+                          pegasus::metric_unit::kMilliSeconds,
                           "a table-level gauge of int64 type for test");
 
 METRIC_DEFINE_gauge_int64(my_replica,
                           test_replica_gauge_int64,
-                          dsn::metric_unit::kMilliSeconds,
+                          pegasus::metric_unit::kMilliSeconds,
                           "a replica-level gauge of int64 type for test");
 
 METRIC_DEFINE_gauge_int64(my_app,
                           test_app_gauge_int64,
-                          dsn::metric_unit::kMilliSeconds,
+                          pegasus::metric_unit::kMilliSeconds,
                           "an app-level gauge of int64 type for test");
 
 METRIC_DEFINE_gauge_double(my_server,
                            test_server_gauge_double,
-                           dsn::metric_unit::kSeconds,
+                           pegasus::metric_unit::kSeconds,
                            "a server-level gauge of double type for test");
 
 METRIC_DEFINE_counter(my_server,
                       test_server_counter,
-                      dsn::metric_unit::kRequests,
+                      pegasus::metric_unit::kRequests,
                       "a server-level counter for test");
 
 METRIC_DEFINE_counter(my_table,
                       test_table_counter,
-                      dsn::metric_unit::kRequests,
+                      pegasus::metric_unit::kRequests,
                       "a table-level counter for test");
 
 METRIC_DEFINE_counter(my_replica,
                       test_replica_counter,
-                      dsn::metric_unit::kRequests,
+                      pegasus::metric_unit::kRequests,
                       "a replica-level counter for test");
 
 METRIC_DEFINE_counter(my_app,
                       test_app_counter,
-                      dsn::metric_unit::kRequests,
+                      pegasus::metric_unit::kRequests,
                       "an app-level counter for test");
 
 METRIC_DEFINE_concurrent_counter(my_server,
                                  test_server_concurrent_counter,
-                                 dsn::metric_unit::kRequests,
+                                 pegasus::metric_unit::kRequests,
                                  "a server-level concurrent_counter for test");
 
 METRIC_DEFINE_volatile_counter(my_server,
                                test_server_volatile_counter,
-                               dsn::metric_unit::kRequests,
+                               pegasus::metric_unit::kRequests,
                                "a server-level volatile_counter for test");
 
 METRIC_DEFINE_concurrent_volatile_counter(my_server,
                                           test_server_concurrent_volatile_counter,
-                                          dsn::metric_unit::kRequests,
+                                          pegasus::metric_unit::kRequests,
                                           "a server-level concurrent_volatile_counter for test");
 
 METRIC_DEFINE_percentile_int64(my_server,
                                test_server_percentile_int64,
-                               dsn::metric_unit::kNanoSeconds,
+                               pegasus::metric_unit::kNanoSeconds,
                                "a server-level percentile of int64 type for test");
 
 METRIC_DEFINE_percentile_double(my_server,
                                 test_server_percentile_double,
-                                dsn::metric_unit::kNanoSeconds,
+                                pegasus::metric_unit::kNanoSeconds,
                                 "a server-level percentile of double type for test");
 
-namespace dsn {
+namespace pegasus {
 
 TEST(metrics_test, create_entity)
 {
@@ -447,7 +447,7 @@ void run_increment_by(MetricPtr &my_metric,
 
     int64_t expected_value = base_value;
     for (int64_t i = 0; i < n; ++i) {
-        auto delta = static_cast<int64_t>(dsn::rand::next_u64(1000000));
+        auto delta = static_cast<int64_t>(pegasus::rand::next_u64(1000000));
         if (allow_negative && delta % 3 == 0) {
             delta = -delta;
         }
@@ -501,7 +501,7 @@ void run_decrement(MetricPtr &my_metric,
     result = expected_value;
 }
 
-void run_gauge_increment_cases(dsn::gauge_prototype<int64_t> *prototype, int64_t num_threads)
+void run_gauge_increment_cases(pegasus::gauge_prototype<int64_t> *prototype, int64_t num_threads)
 {
     // Test cases:
     // - test the gauge with small-scale computations
@@ -534,7 +534,7 @@ void run_gauge_increment_cases(dsn::gauge_prototype<int64_t> *prototype, int64_t
     }
 }
 
-void run_gauge_increment_cases(dsn::gauge_prototype<int64_t> *prototype)
+void run_gauge_increment_cases(pegasus::gauge_prototype<int64_t> *prototype)
 {
     // Do single-threaded tests
     run_gauge_increment_cases(prototype, 1);
@@ -546,7 +546,7 @@ void run_gauge_increment_cases(dsn::gauge_prototype<int64_t> *prototype)
 TEST(metrics_test, gauge_increment) { run_gauge_increment_cases(&METRIC_test_server_gauge_int64); }
 
 template <typename Adder>
-void run_counter_cases(dsn::counter_prototype<Adder> *prototype, int64_t num_threads)
+void run_counter_cases(pegasus::counter_prototype<Adder> *prototype, int64_t num_threads)
 {
     // Test cases:
     // - test the counter with small-scale computations
@@ -579,7 +579,7 @@ void run_counter_cases(dsn::counter_prototype<Adder> *prototype, int64_t num_thr
 }
 
 template <typename Adder>
-void run_counter_cases(dsn::counter_prototype<Adder> *prototype)
+void run_counter_cases(pegasus::counter_prototype<Adder> *prototype)
 {
     // Do single-threaded tests
     run_counter_cases(prototype, 1);
@@ -596,7 +596,7 @@ TEST(metrics_test, counter)
 }
 
 template <typename Adder>
-void run_volatile_counter_write_and_read(dsn::volatile_counter_ptr<Adder> &my_metric,
+void run_volatile_counter_write_and_read(pegasus::volatile_counter_ptr<Adder> &my_metric,
                                          int64_t num_operations,
                                          int64_t num_threads_write,
                                          int64_t num_threads_read)
@@ -607,7 +607,7 @@ void run_volatile_counter_write_and_read(dsn::volatile_counter_ptr<Adder> &my_me
 
     int64_t expected_value = 0;
     for (int64_t i = 0; i < n; ++i) {
-        auto delta = static_cast<int64_t>(dsn::rand::next_u64(1000000));
+        auto delta = static_cast<int64_t>(pegasus::rand::next_u64(1000000));
         expected_value += delta;
         deltas.push_back(delta);
     }
@@ -662,7 +662,7 @@ void run_volatile_counter_write_and_read(dsn::volatile_counter_ptr<Adder> &my_me
 }
 
 template <typename Adder>
-void run_volatile_counter_cases(dsn::volatile_counter_prototype<Adder> *prototype,
+void run_volatile_counter_cases(pegasus::volatile_counter_prototype<Adder> *prototype,
                                 int64_t num_threads_write,
                                 int64_t num_threads_read)
 {
@@ -691,7 +691,7 @@ void run_volatile_counter_cases(dsn::volatile_counter_prototype<Adder> *prototyp
 }
 
 template <typename Adder>
-void run_volatile_counter_cases(dsn::volatile_counter_prototype<Adder> *prototype)
+void run_volatile_counter_cases(pegasus::volatile_counter_prototype<Adder> *prototype)
 {
     // Write with single thread and read with single thread
     run_volatile_counter_cases(prototype, 1, 1);
@@ -3056,4 +3056,4 @@ INSTANTIATE_TEST_CASE_P(MetricsTest,
                         MetricsRetirementTest,
                         testing::ValuesIn(metrics_retirement_tests));
 
-} // namespace dsn
+} // namespace pegasus

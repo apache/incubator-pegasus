@@ -172,21 +172,21 @@ TEST(update_ttl_test, filter)
         {false, 0, "hashkey", 0, "hashkey", SMT_MATCH_ANYWHERE, UTOT_FROM_CURRENT, 1000},
         {true, 1300, "hashkey", 300, "hashkey", SMT_MATCH_ANYWHERE, UTOT_FROM_CURRENT, 1000},
         {true,
-         1000 + pegasus::utils::epoch_begin,
+         1000 + utils::epoch_begin,
          "hashkey",
          300,
          "hashkey",
          SMT_MATCH_ANYWHERE,
          UTOT_TIMESTAMP,
-         1000 + pegasus::utils::epoch_begin},
+         1000 + utils::epoch_begin},
         {false,
-         1000 + pegasus::utils::epoch_begin,
+         1000 + utils::epoch_begin,
          "hashkey",
          300,
          "hashkey111",
          SMT_MATCH_ANYWHERE,
          UTOT_TIMESTAMP,
-         1000 + pegasus::utils::epoch_begin},
+         1000 + utils::epoch_begin},
     };
 
     uint32_t data_version = 1;
@@ -213,7 +213,7 @@ TEST(update_ttl_test, filter)
             uint32_t new_ts = pegasus_extract_expire_ts(data_version, new_value);
             switch (test.op_type) {
             case UTOT_TIMESTAMP:
-                ASSERT_EQ(new_ts + pegasus::utils::epoch_begin, test.expect_ts);
+                ASSERT_EQ(new_ts + utils::epoch_begin, test.expect_ts);
                 break;
             case UTOT_FROM_CURRENT:
                 ASSERT_EQ(new_ts, test.expect_ts);

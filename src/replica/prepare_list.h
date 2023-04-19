@@ -35,7 +35,7 @@
 #include "replica/replica_base.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 enum commit_type
@@ -88,4 +88,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

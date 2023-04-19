@@ -24,7 +24,7 @@
 #include "meta/meta_state_service.h"
 #include "common/replication.codes.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace mss {
 
@@ -63,12 +63,12 @@ struct op_type
 };
 
 /// Base class for all operations.
-struct operation : pipeline::environment
+struct operation : ::pegasus::pipeline::environment
 {
     void initialize(meta_storage *storage)
     {
         _ms = storage;
-        task_tracker(storage->_tracker).thread_pool(LPC_META_STATE_HIGH);
+        this->task_tracker(storage->_tracker).thread_pool(LPC_META_STATE_HIGH);
     }
 
     // The common strategy for error handling:
@@ -92,7 +92,7 @@ struct operation : pipeline::environment
 
     dist::meta_state_service *remote_storage() const { return _ms->_remote; }
 
-    dsn::task_tracker *tracker() const { return _ms->_tracker; }
+    ::pegasus::task_tracker *tracker() const { return _ms->_tracker; }
 
 private:
     meta_storage *_ms{nullptr};
@@ -112,7 +112,7 @@ struct on_create_recursively : operation
     struct arguments
     {
         std::function<void()> cb;
-        dsn::blob val;
+        blob val;
         std::queue<std::string> nodes;
     };
     std::shared_ptr<arguments> args;
@@ -159,7 +159,7 @@ struct on_create : operation
     struct arguments
     {
         std::function<void()> cb;
-        dsn::blob val;
+        blob val;
         std::string node;
     };
     std::shared_ptr<arguments> args;
@@ -250,7 +250,7 @@ struct on_set_data : operation
     {
         std::function<void()> cb;
         std::string node;
-        dsn::blob val;
+        blob val;
     };
     std::shared_ptr<arguments> args;
 
@@ -310,4 +310,4 @@ struct on_get_children : operation
 
 } // namespace mss
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

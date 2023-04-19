@@ -49,7 +49,7 @@
 
 #include "common/gpid.h"
 #include "common/manual_compact.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
 #include "perf_counter/perf_counter_wrapper.h"
@@ -58,7 +58,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class command_deregister;
 class message_ex;
@@ -165,17 +165,18 @@ public:
 
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &config);
+    bool query_configuration_by_gpid(const gpid pid,
+                                     /*out*/ partition_configuration &config);
 
     // app options
-    void create_app(dsn::message_ex *msg);
-    void drop_app(dsn::message_ex *msg);
-    void recall_app(dsn::message_ex *msg);
+    void create_app(message_ex *msg);
+    void drop_app(message_ex *msg);
+    void recall_app(message_ex *msg);
     void rename_app(configuration_rename_app_rpc rpc);
     void list_apps(const configuration_list_apps_request &request,
                    configuration_list_apps_response &response,
-                   dsn::message_ex *msg = nullptr) const;
-    void restore_app(dsn::message_ex *msg);
+                   message_ex *msg = nullptr) const;
+    void restore_app(message_ex *msg);
 
     // app env operations
     void set_app_envs(const app_env_rpc &env_rpc);
@@ -185,7 +186,7 @@ public:
     // update configuration
     void on_config_sync(configuration_query_by_node_rpc rpc);
     void on_update_configuration(std::shared_ptr<configuration_update_request> &request,
-                                 dsn::message_ex *msg);
+                                 message_ex *msg);
 
     // dump & restore
     error_code dump_from_remote_storage(const char *local_path, bool sync_immediately);
@@ -240,27 +241,26 @@ private:
     // else indicate error that remote storage responses
     error_code sync_apps_to_remote_storage();
 
-    error_code sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &node_list,
+    error_code sync_apps_from_replica_nodes(const std::vector<rpc_address> &node_list,
                                             bool skip_bad_nodes,
                                             bool skip_lost_partitions,
                                             std::string &hint_message);
-    void
-    sync_app_from_backup_media(const configuration_restore_request &request,
-                               std::function<void(dsn::error_code, const dsn::blob &)> &&callback);
-    std::pair<dsn::error_code, std::shared_ptr<app_state>> restore_app_info(
-        dsn::message_ex *msg, const configuration_restore_request &req, const dsn::blob &app_info);
+    void sync_app_from_backup_media(const configuration_restore_request &request,
+                                    std::function<void(error_code, const blob &)> &&callback);
+    std::pair<error_code, std::shared_ptr<app_state>> restore_app_info(
+        message_ex *msg, const configuration_restore_request &req, const blob &app_info);
 
     error_code initialize_default_apps();
     void initialize_node_state();
 
-    void check_consistency(const dsn::gpid &gpid);
+    void check_consistency(const gpid &pid);
 
     error_code construct_apps(const std::vector<query_app_info_response> &query_app_responses,
-                              const std::vector<dsn::rpc_address> &replica_nodes,
+                              const std::vector<rpc_address> &replica_nodes,
                               std::string &hint_message);
     error_code construct_partitions(
         const std::vector<query_replica_info_response> &query_replica_info_responses,
-        const std::vector<dsn::rpc_address> &replica_nodes,
+        const std::vector<rpc_address> &replica_nodes,
         bool skip_lost_partitions,
         std::string &hint_message);
 
@@ -294,9 +294,8 @@ private:
                                    int pidx,
                                    const rpc_address &address);
 
-    void on_partition_node_dead(std::shared_ptr<app_state> &app,
-                                int pidx,
-                                const dsn::rpc_address &address);
+    void
+    on_partition_node_dead(std::shared_ptr<app_state> &app, int pidx, const rpc_address &address);
     void send_proposal(rpc_address target, const configuration_update_request &proposal);
     void send_proposal(const configuration_proposal_action &action,
                        const partition_configuration &pc,
@@ -314,10 +313,10 @@ private:
     {
         return _apps_root + "/" + boost::lexical_cast<std::string>(app.app_id);
     }
-    std::string get_partition_path(const dsn::gpid &gpid) const
+    std::string get_partition_path(const gpid &pid) const
     {
         std::stringstream oss;
-        oss << _apps_root << "/" << gpid.get_app_id() << "/" << gpid.get_partition_index();
+        oss << _apps_root << "/" << pid.get_app_id() << "/" << pid.get_partition_index();
         return oss.str();
     }
     std::string get_partition_path(const app_state &app, int partition_id) const
@@ -369,10 +368,10 @@ private:
 
     void recover_all_partitions_max_replica_count(std::shared_ptr<app_state> &app,
                                                   int32_t max_replica_count,
-                                                  dsn::task_tracker &tracker);
+                                                  task_tracker &tracker);
     void recover_app_max_replica_count(std::shared_ptr<app_state> &app,
                                        int32_t max_replica_count,
-                                       dsn::task_tracker &tracker);
+                                       task_tracker &tracker);
 
     // Used for `on_start_manual_compaction`
     bool parse_compaction_envs(start_manual_compact_rpc rpc,
@@ -413,7 +412,7 @@ private:
     FRIEND_TEST(policy_context_test, test_app_dropped_during_backup);
     FRIEND_TEST(policy_context_test, test_backup_failed);
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
     meta_service *_meta_svc;
     std::string _apps_root;
@@ -448,4 +447,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

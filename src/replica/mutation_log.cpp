@@ -55,25 +55,27 @@
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+
+namespace pegasus {
 namespace replication {
 DSN_DEFINE_bool(replication,
                 plog_force_flush,
                 false,
                 "when write private log, whether to flush file after write done");
 
-::dsn::task_ptr mutation_log_shared::append(mutation_ptr &mu,
-                                            dsn::task_code callback_code,
-                                            dsn::task_tracker *tracker,
-                                            aio_handler &&callback,
-                                            int hash,
-                                            int64_t *pending_size)
+task_ptr mutation_log_shared::append(mutation_ptr &mu,
+                                     task_code callback_code,
+                                     task_tracker *tracker,
+                                     aio_handler &&callback,
+                                     int hash,
+                                     int64_t *pending_size)
 {
     auto d = mu->data.header.decree;
-    ::dsn::aio_task_ptr cb =
-        callback ? file::create_aio_task(
-                       callback_code, tracker, std::forward<aio_handler>(callback), hash)
-                 : nullptr;
+    aio_task_ptr cb = callback
+                          ? file::create_aio_task(
+                                callback_code, tracker, std::forward<aio_handler>(callback), hash)
+                          : nullptr;
 
     _slock.lock();
 
@@ -228,17 +230,17 @@ mutation_log_private::mutation_log_private(const std::string &dir,
     mutation_log_private::init_states();
 }
 
-::dsn::task_ptr mutation_log_private::append(mutation_ptr &mu,
-                                             dsn::task_code callback_code,
-                                             dsn::task_tracker *tracker,
-                                             aio_handler &&callback,
-                                             int hash,
-                                             int64_t *pending_size)
+task_ptr mutation_log_private::append(mutation_ptr &mu,
+                                      task_code callback_code,
+                                      task_tracker *tracker,
+                                      aio_handler &&callback,
+                                      int hash,
+                                      int64_t *pending_size)
 {
-    dsn::aio_task_ptr cb =
-        callback ? file::create_aio_task(
-                       callback_code, tracker, std::forward<aio_handler>(callback), hash)
-                 : nullptr;
+    aio_task_ptr cb = callback
+                          ? file::create_aio_task(
+                                callback_code, tracker, std::forward<aio_handler>(callback), hash)
+                          : nullptr;
 
     _plock.lock();
 
@@ -531,8 +533,8 @@ error_code mutation_log::open(replay_callback read_callback,
     CHECK(nullptr == _current_log_file, "");
 
     // create dir if necessary
-    if (!dsn::utils::filesystem::path_exists(_dir)) {
-        if (!dsn::utils::filesystem::create_directory(_dir)) {
+    if (!path_exists(_dir)) {
+        if (!create_directory(_dir)) {
             LOG_ERROR("open mutation_log: create log path failed");
             return ERR_FILE_OPERATION_FAILED;
         }
@@ -543,7 +545,7 @@ error_code mutation_log::open(replay_callback read_callback,
     _io_error_callback = write_error_callback;
 
     std::vector<std::string> file_list;
-    if (!dsn::utils::filesystem::get_subfiles(_dir, file_list, false)) {
+    if (!get_subfiles(_dir, file_list, false)) {
         LOG_ERROR("open mutation_log: get subfiles failed.");
         return ERR_FILE_OPERATION_FAILED;
     }
@@ -783,7 +785,7 @@ error_code mutation_log::create_new_log_file()
                            _current_log_file->start_offset(),
                            LPC_WRITE_REPLICATION_LOG_COMMON,
                            &_tracker,
-                           [this, blk, logf](::dsn::error_code err, size_t sz) {
+                           [this, blk, logf](error_code err, size_t sz) {
                                delete blk;
                                if (ERR_OK != err) {
                                    LOG_ERROR(
@@ -937,7 +939,7 @@ error_code mutation_log::reset_from(const std::string &dir,
     error_s es = log_utils::check_log_files_continuity(dir);
     if (!es.is_ok()) {
         LOG_ERROR("the log files of source dir {} are invalid: {}, will remove it", dir, es);
-        if (!utils::filesystem::remove_path(dir)) {
+        if (!remove_path(dir)) {
             LOG_ERROR("remove source dir {} failed", dir);
             return ERR_FILE_OPERATION_FAILED;
         }
@@ -945,7 +947,7 @@ error_code mutation_log::reset_from(const std::string &dir,
     }
 
     std::string temp_dir = fmt::format("{}.{}", _dir, dsn_now_ns());
-    if (!utils::filesystem::rename_path(_dir, temp_dir)) {
+    if (!rename_path(_dir, temp_dir)) {
         LOG_ERROR("rename current log dir {} to temp dir {} failed", _dir, temp_dir);
         return ERR_FILE_OPERATION_FAILED;
     }
@@ -954,15 +956,15 @@ error_code mutation_log::reset_from(const std::string &dir,
     error_code err = ERR_OK;
 
     // If successful, just remove temp dir; otherwise, rename temp dir back to current dir.
-    auto temp_dir_resolve = dsn::defer([this, temp_dir, &err]() {
+    auto temp_dir_resolve = defer([this, temp_dir, &err]() {
         if (err == ERR_OK) {
-            if (!dsn::utils::filesystem::remove_path(temp_dir)) {
+            if (!remove_path(temp_dir)) {
                 // Removing temp dir failed is allowed, it's just garbage.
                 LOG_ERROR("remove temp dir {} failed", temp_dir);
             }
         } else {
             // Once rollback failed, dir should be recovered manually in case data is lost.
-            CHECK(utils::filesystem::rename_path(temp_dir, _dir),
+            CHECK(rename_path(temp_dir, _dir),
                   "rename temp dir {} back to current dir {} failed",
                   temp_dir,
                   _dir);
@@ -970,15 +972,15 @@ error_code mutation_log::reset_from(const std::string &dir,
     });
 
     // Rename source dir to current dir.
-    if (!utils::filesystem::rename_path(dir, _dir)) {
+    if (!rename_path(dir, _dir)) {
         LOG_ERROR("rename source dir {} to current dir {} failed", dir, _dir);
         return err;
     }
     LOG_INFO("rename source dir {} to current dir {} successfully", dir, _dir);
 
-    auto dir_resolve = dsn::defer([this, dir, &err]() {
+    auto dir_resolve = defer([this, dir, &err]() {
         if (err != ERR_OK) {
-            CHECK(utils::filesystem::rename_path(_dir, dir),
+            CHECK(rename_path(_dir, dir),
                   "rename current dir {} back to source dir {} failed",
                   _dir,
                   dir);
@@ -1261,7 +1263,7 @@ static bool should_reserve_file(log_file_ptr log,
     uint64_t file_last_write_time = log->last_write_time();
     if (file_last_write_time == 0) {
         time_t tm;
-        if (!dsn::utils::filesystem::last_write_time(log->path(), tm)) {
+        if (!last_write_time(log->path(), tm)) {
             // get file last write time failed, reserve it for safety
             LOG_WARNING("get last write time of file {} failed", log->path());
             return true;
@@ -1380,7 +1382,7 @@ int mutation_log::garbage_collection(gpid gpid,
 
         // delete file
         auto &fpath = log->path();
-        if (!dsn::utils::filesystem::remove_path(fpath)) {
+        if (!remove_path(fpath)) {
             LOG_ERROR("gc_private @ {}: fail to remove {}, stop current gc cycle ...",
                       _private_gpid,
                       fpath);
@@ -1630,7 +1632,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
 
         // delete file
         auto &fpath = log->path();
-        if (!dsn::utils::filesystem::remove_path(fpath)) {
+        if (!remove_path(fpath)) {
             LOG_ERROR("gc_shared: fail to remove {}, stop current gc cycle ...", fpath);
             break;
         }
@@ -1718,4 +1720,4 @@ std::map<int, log_file_ptr> mutation_log::get_log_file_map() const
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

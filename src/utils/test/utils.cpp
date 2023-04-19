@@ -56,8 +56,8 @@
 #include "utils/strings.h"
 #include "utils/utils.h"
 
-using namespace ::dsn;
-using namespace ::dsn::utils;
+namespace pegasus {
+namespace utils {
 
 TEST(core, get_last_component)
 {
@@ -75,10 +75,10 @@ TEST(core, crc)
         buffer[i] = rand::next_u32(0, 200);
     }
 
-    auto c1 = dsn::utils::crc32_calc(buffer, 12, 0);
-    auto c2 = dsn::utils::crc32_calc(buffer + 12, 12, c1);
-    auto c3 = dsn::utils::crc32_calc(buffer, 24, 0);
-    auto c4 = dsn::utils::crc32_concat(0, 0, c1, 12, c1, c2, 12);
+    auto c1 = crc32_calc(buffer, 12, 0);
+    auto c2 = crc32_calc(buffer + 12, 12, c1);
+    auto c3 = crc32_calc(buffer, 24, 0);
+    auto c4 = crc32_concat(0, 0, c1, 12, c1, c2, 12);
     EXPECT_TRUE(c3 == c4);
 }
 
@@ -96,9 +96,9 @@ TEST(core, binary_io)
     EXPECT_TRUE(value3 == value);
 }
 
-void check_empty(const char *str) { EXPECT_TRUE(dsn::utils::is_empty(str)); }
+void check_empty(const char *str) { EXPECT_TRUE(is_empty(str)); }
 
-void check_nonempty(const char *str) { EXPECT_FALSE(dsn::utils::is_empty(str)); }
+void check_nonempty(const char *str) { EXPECT_FALSE(is_empty(str)); }
 
 TEST(core, check_c_string_empty)
 {
@@ -140,22 +140,22 @@ TEST_P(CStringEqualityTest, CStringEquals)
     bool is_equal_ignore_case;
     std::tie(lhs, rhs, is_equal, is_equal_ignore_case) = GetParam();
 
-    EXPECT_EQ(is_equal, dsn::utils::equals(lhs, rhs));
+    EXPECT_EQ(is_equal, equals(lhs, rhs));
 
-    EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs));
+    EXPECT_EQ(is_equal_ignore_case, iequals(lhs, rhs));
 
     if (rhs != nullptr) {
         // Since NULL pointer cannot be used to construct std::string, related test cases
         // are neglected.
         std::string rhs_str(rhs);
-        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs_str));
+        EXPECT_EQ(is_equal_ignore_case, iequals(lhs, rhs_str));
     }
 
     if (lhs != nullptr) {
         // Since NULL pointer cannot be used to construct std::string, related test cases
         // are neglected.
         std::string lhs_str(lhs);
-        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs_str, rhs));
+        EXPECT_EQ(is_equal_ignore_case, iequals(lhs_str, rhs));
     }
 }
 
@@ -190,25 +190,25 @@ TEST_P(CStringNBytesEqualityTest, CStringNBytesEquals)
     bool is_equal_memory;
     std::tie(lhs, rhs, n, is_equal, is_equal_ignore_case, is_equal_memory) = GetParam();
 
-    EXPECT_EQ(is_equal, dsn::utils::equals(lhs, rhs, n));
+    EXPECT_EQ(is_equal, equals(lhs, rhs, n));
 
-    EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs, n));
+    EXPECT_EQ(is_equal_ignore_case, iequals(lhs, rhs, n));
 
     if (rhs != nullptr) {
         // Since NULL pointer cannot be used to construct std::string, related test cases
         // are neglected.
         std::string rhs_str(rhs);
-        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs_str, n));
+        EXPECT_EQ(is_equal_ignore_case, iequals(lhs, rhs_str, n));
     }
 
     if (lhs != nullptr) {
         // Since NULL pointer cannot be used to construct std::string, related test cases
         // are neglected.
         std::string lhs_str(lhs);
-        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs_str, rhs, n));
+        EXPECT_EQ(is_equal_ignore_case, iequals(lhs_str, rhs, n));
     }
 
-    EXPECT_EQ(is_equal_memory, dsn::utils::mequals(lhs, rhs, n));
+    EXPECT_EQ(is_equal_memory, mequals(lhs, rhs, n));
 }
 
 const std::vector<c_string_n_bytes_equality> c_string_n_bytes_equality_tests = {
@@ -474,7 +474,7 @@ TEST(core, find_string_prefix)
     }
 }
 
-class foo : public ::dsn::ref_counter
+class foo : public ref_counter
 {
 public:
     foo(int &count) : _count(count) { _count++; }
@@ -485,7 +485,7 @@ private:
     int &_count;
 };
 
-typedef ::dsn::ref_ptr<foo> foo_ptr;
+typedef ref_ptr<foo> foo_ptr;
 
 TEST(core, ref_ptr)
 {
@@ -575,7 +575,9 @@ TEST(core, get_intersection)
     set2.insert(4);
     set2.insert(5);
 
-    auto intersection = utils::get_intersection(set1, set2);
+    auto intersection = get_intersection(set1, set2);
     ASSERT_EQ(intersection.size(), 1);
     ASSERT_EQ(*intersection.begin(), 3);
 }
+} // namespace utils
+} // namespace pegasus

@@ -49,8 +49,9 @@
 using std::vector;
 using std::string;
 
-using namespace dsn;
-using namespace dsn::tools;
+using namespace pegasus;
+using namespace pegasus::tools;
+using namespace pegasus::utils::filesystem;
 
 static const int simple_logger_gc_gap = 20;
 
@@ -58,10 +59,10 @@ static void get_log_file_index(vector<int> &log_index)
 {
     vector<string> sub_list;
     string path = "./";
-    ASSERT_TRUE(utils::filesystem::get_subfiles(path, sub_list, false));
+    ASSERT_TRUE(get_subfiles(path, sub_list, false));
 
     for (auto &ptr : sub_list) {
-        auto &&name = utils::filesystem::get_file_name(ptr);
+        auto &&name = get_file_name(ptr);
         if (name.length() <= 8 || name.substr(0, 4) != "log.")
             continue;
         int index;
@@ -76,7 +77,7 @@ static void clear_files(vector<int> &log_index)
     char file[256] = {};
     for (auto i : log_index) {
         snprintf_p(file, 256, "log.%d.txt", i);
-        dsn::utils::filesystem::remove_path(string(file));
+        remove_path(string(file));
     }
 }
 
@@ -84,7 +85,7 @@ static void prepare_test_dir()
 {
     const char *dir = "./test";
     string dr(dir);
-    ASSERT_TRUE(dsn::utils::filesystem::create_directory(dr));
+    ASSERT_TRUE(create_directory(dr));
     ASSERT_EQ(0, ::chdir(dir));
 }
 
@@ -92,7 +93,7 @@ static void finish_test_dir()
 {
     const char *dir = "./test";
     ASSERT_EQ(0, ::chdir("..")) << "chdir failed, err = " << utils::safe_strerror(errno);
-    ASSERT_TRUE(utils::filesystem::remove_path(dir)) << "remove_directory " << dir << " failed";
+    ASSERT_TRUE(remove_path(dir)) << "remove_directory " << dir << " failed";
 }
 
 void log_print(logging_provider *logger, const char *fmt, ...)
@@ -106,7 +107,7 @@ void log_print(logging_provider *logger, const char *fmt, ...)
 TEST(tools_common, simple_logger)
 {
     // Deregister commands to avoid re-register error.
-    dsn::logging_provider::instance()->deregister_commands();
+    logging_provider::instance()->deregister_commands();
 
     {
         auto logger = std::make_unique<screen_logger>(true);

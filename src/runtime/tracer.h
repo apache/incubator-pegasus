@@ -93,7 +93,7 @@ is_trace = false
 
 </PRE>
 */
-namespace dsn {
+namespace pegasus {
 struct service_spec;
 
 namespace tools {
@@ -109,4 +109,4 @@ private:
 };
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

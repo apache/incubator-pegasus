@@ -42,7 +42,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class binary_reader;
 class binary_writer;
 class blob;
@@ -87,7 +87,7 @@ typedef std::unordered_map<gpid, replica_log_info> replica_log_info_map;
 
 class log_file;
 
-typedef dsn::ref_ptr<log_file> log_file_ptr;
+typedef ref_ptr<log_file> log_file_ptr;
 
 //
 // the log file is structured with sequences of log_blocks,
@@ -140,7 +140,7 @@ public:
     //  - ERR_INCOMPLETE_DATA
     //  - ERR_INVALID_DATA
     //  - other io errors caused by file read operator
-    error_code read_next_log_block(/*out*/ ::dsn::blob &bb);
+    error_code read_next_log_block(/*out*/ blob &bb);
 
     //
     // write routines
@@ -156,17 +156,17 @@ public:
     // returns:
     //   - non-null if io task is in pending
     //   - null if error
-    dsn::aio_task_ptr commit_log_block(log_block &block,
-                                       int64_t offset,
-                                       dsn::task_code evt,
-                                       dsn::task_tracker *tracker,
-                                       aio_handler &&callback,
-                                       int hash);
-    dsn::aio_task_ptr commit_log_blocks(log_appender &pending,
-                                        dsn::task_code evt,
-                                        dsn::task_tracker *tracker,
-                                        aio_handler &&callback,
-                                        int hash);
+    aio_task_ptr commit_log_block(log_block &block,
+                                  int64_t offset,
+                                  task_code evt,
+                                  task_tracker *tracker,
+                                  aio_handler &&callback,
+                                  int hash);
+    aio_task_ptr commit_log_blocks(log_appender &pending,
+                                   task_code evt,
+                                   task_tracker *tracker,
+                                   aio_handler &&callback,
+                                   int hash);
 
     //
     // others
@@ -235,4 +235,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

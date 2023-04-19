@@ -22,7 +22,7 @@
 #include <gtest/gtest.h>
 #include <unistd.h>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 #define INVALIDATE_SITUATION_CHECK(env)                                                            \
@@ -165,4 +165,4 @@ TEST_F(token_bucket_throttling_controller_test, test_parse_env_basic_token_bucke
 
 TEST_F(token_bucket_throttling_controller_test, throttle_test) { throttle_test(); }
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

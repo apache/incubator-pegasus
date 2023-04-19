@@ -37,7 +37,7 @@
 #include "runtime/rpc/rpc_message.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class duplication_sync_timer_test : public duplication_test_base
@@ -394,4 +394,4 @@ TEST_F(duplication_sync_timer_test, receive_illegal_duplication_status)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

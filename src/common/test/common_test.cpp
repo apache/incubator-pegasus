@@ -23,9 +23,9 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 
-namespace dsn {
+namespace pegasus {
 TEST(duplication_common, get_current_cluster_name)
 {
     ASSERT_STREQ(get_current_cluster_name(), "master-cluster");
 }
-} // namespace dsn
+} // namespace pegasus

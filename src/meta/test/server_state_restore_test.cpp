@@ -28,7 +28,7 @@
 #include "backup_types.h"
 #include "common/backup_common.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
@@ -41,7 +41,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class server_state_restore_test : public meta_test_base
@@ -115,12 +115,12 @@ public:
 
         // test sync_app_from_backup_media()
         auto req = create_restore_request(old_app_id, backup_id, user_specified_path);
-        dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_START_RESTORE);
-        dsn::marshall(msg, req);
+        message_ex *msg = message_ex::create_request(RPC_CM_START_RESTORE);
+        marshall(msg, req);
         error_code ret = ERR_UNKNOWN;
-        dsn::blob app_info;
+        blob app_info;
         _ss->sync_app_from_backup_media(
-            req, [&ret, &app_info](dsn::error_code err, const dsn::blob &app_info_data) {
+            req, [&ret, &app_info](error_code err, const blob &app_info_data) {
                 ret = err;
                 app_info = app_info_data;
             });
@@ -178,4 +178,4 @@ TEST_F(server_state_restore_test, test_restore_app_with_specific_path)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -63,6 +63,7 @@
 #include "runtime/task/task_worker.h"
 #include "runtime/tool_api.h"
 #include "utils/api_utilities.h"
+#include "utils/autoref_ptr.h"
 #include "utils/command_manager.h"
 #include "utils/config_api.h"
 #include "utils/coredump.h"
@@ -92,12 +93,12 @@ DSN_DEFINE_double(core,
                   "[0.0, 10.0]");
 #endif
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
-} // namespace security
-} // namespace dsn
+
+using namespace pegasus::utils::filesystem;
+using namespace pegasus;
+
 //
 // global state
 //
@@ -106,9 +107,9 @@ static struct _all_info_
     unsigned int magic;
     bool engine_ready;
     bool config_completed;
-    std::unique_ptr<::dsn::tools::tool_app> tool;
-    ::dsn::service_engine *engine;
-    std::vector<::dsn::task_spec *> task_specs;
+    std::unique_ptr<tools::tool_app> tool;
+    service_engine *engine;
+    std::vector<task_spec *> task_specs;
 
     bool is_config_completed() const { return magic == 0xdeadbeef && config_completed; }
 
@@ -116,19 +117,18 @@ static struct _all_info_
 
 } dsn_all;
 
-std::unique_ptr<dsn::command_deregister> dump_log_cmd;
+std::unique_ptr<command_deregister> dump_log_cmd;
 
-volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
+volatile int *dsn_task_queue_virtual_length_ptr(task_code code, int hash)
 {
-    return dsn::task::get_current_node()->computation()->get_task_queue_virtual_length_ptr(code,
-                                                                                           hash);
+    return task::get_current_node()->computation()->get_task_queue_virtual_length_ptr(code, hash);
 }
 
-bool dsn_task_is_running_inside(dsn::task *t) { return ::dsn::task::get_current_task() == t; }
+bool dsn_task_is_running_inside(task *t) { return task::get_current_task() == t; }
 
 void dsn_coredump()
 {
-    ::dsn::utils::coredump::write();
+    utils::coredump::write();
     ::abort();
 }
 
@@ -139,39 +139,37 @@ void dsn_coredump()
 //------------------------------------------------------------------------------
 
 // rpc calls
-dsn::rpc_address dsn_primary_address() { return ::dsn::task::get_current_rpc()->primary_address(); }
+rpc_address dsn_primary_address() { return task::get_current_rpc()->primary_address(); }
 
-bool dsn_rpc_register_handler(dsn::task_code code,
-                              const char *extra_name,
-                              const dsn::rpc_request_handler &cb)
+bool dsn_rpc_register_handler(task_code code, const char *extra_name, const rpc_request_handler &cb)
 {
-    return ::dsn::task::get_current_node()->rpc_register_handler(code, extra_name, cb);
+    return task::get_current_node()->rpc_register_handler(code, extra_name, cb);
 }
 
-bool dsn_rpc_unregiser_handler(dsn::task_code code)
+bool dsn_rpc_unregiser_handler(task_code code)
 {
-    return ::dsn::task::get_current_node()->rpc_unregister_handler(code);
+    return task::get_current_node()->rpc_unregister_handler(code);
 }
 
-void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
+void dsn_rpc_call(rpc_address server, rpc_response_task *rpc_call)
 {
     CHECK_EQ_MSG(rpc_call->spec().type, TASK_TYPE_RPC_RESPONSE, "invalid task_type");
 
     auto msg = rpc_call->get_request();
     msg->server_address = server;
-    ::dsn::task::get_current_rpc()->call(msg, dsn::rpc_response_task_ptr(rpc_call));
+    task::get_current_rpc()->call(msg, rpc_response_task_ptr(rpc_call));
 }
 
-dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *request)
+message_ex *dsn_rpc_call_wait(rpc_address server, message_ex *request)
 {
-    auto msg = ((::dsn::message_ex *)request);
+    auto msg = ((message_ex *)request);
     msg->server_address = server;
 
-    ::dsn::rpc_response_task *rtask = new ::dsn::rpc_response_task(msg, nullptr, 0);
+    rpc_response_task *rtask = new rpc_response_task(msg, nullptr, 0);
     rtask->add_ref();
-    ::dsn::task::get_current_rpc()->call(msg, dsn::rpc_response_task_ptr(rtask));
+    task::get_current_rpc()->call(msg, rpc_response_task_ptr(rtask));
     rtask->wait();
-    if (rtask->error() == ::dsn::ERR_OK) {
+    if (rtask->error() == ERR_OK) {
         auto msg = rtask->get_response();
         msg->add_ref();       // released by callers
         rtask->release_ref(); // added above
@@ -182,24 +180,23 @@ dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *req
     }
 }
 
-void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request)
+void dsn_rpc_call_one_way(rpc_address server, message_ex *request)
 {
-    auto msg = ((::dsn::message_ex *)request);
+    auto msg = ((message_ex *)request);
     msg->server_address = server;
 
-    ::dsn::task::get_current_rpc()->call(msg, nullptr);
+    task::get_current_rpc()->call(msg, nullptr);
 }
 
-void dsn_rpc_reply(dsn::message_ex *response, dsn::error_code err)
+void dsn_rpc_reply(message_ex *response, error_code err)
 {
-    auto msg = ((::dsn::message_ex *)response);
-    ::dsn::task::get_current_rpc()->reply(msg, err);
+    auto msg = ((message_ex *)response);
+    task::get_current_rpc()->reply(msg, err);
 }
 
-void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
+void dsn_rpc_forward(message_ex *request, rpc_address addr)
 {
-    ::dsn::task::get_current_rpc()->forward((::dsn::message_ex *)(request),
-                                            ::dsn::rpc_address(addr));
+    task::get_current_rpc()->forward((message_ex *)(request), rpc_address(addr));
 }
 
 //------------------------------------------------------------------------------
@@ -223,17 +220,17 @@ bool dsn_run_config(const char *config, bool is_server)
 
     printf("dsn exit with code %d\n", code);
     fflush(stdout);
-    ::dsn::tools::sys_exit.execute(::dsn::SYS_EXIT_NORMAL);
+    tools::sys_exit.execute(SYS_EXIT_NORMAL);
 
     _exit(code);
 }
 
 bool dsn_mimic_app(const char *app_role, int index)
 {
-    auto worker = ::dsn::task::get_current_worker2();
+    auto worker = task::get_current_worker2();
     CHECK(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
 
-    auto cnode = ::dsn::task::get_current_node2();
+    auto cnode = task::get_current_node2();
     if (cnode != nullptr) {
         const std::string &name = cnode->spec().full_name;
         if (cnode->spec().role_name == std::string(app_role) && cnode->spec().index == index) {
@@ -244,11 +241,11 @@ bool dsn_mimic_app(const char *app_role, int index)
         }
     }
 
-    const auto &nodes = dsn::service_engine::instance().get_all_nodes();
+    const auto &nodes = service_engine::instance().get_all_nodes();
     for (const auto &n : nodes) {
         if (n.second->spec().role_name == std::string(app_role) &&
             n.second->spec().index == index) {
-            ::dsn::task::set_tls_dsn_context(n.second.get(), nullptr);
+            task::set_tls_dsn_context(n.second.get(), nullptr);
             return true;
         }
     }
@@ -289,13 +286,13 @@ void dsn_run(int argc, char **argv, bool is_server)
     std::string app_list = "";
 
     for (int i = 2; i < argc;) {
-        if (dsn::utils::equals(argv[i], "-cargs")) {
+        if (utils::equals(argv[i], "-cargs")) {
             if (++i < argc) {
                 config_args = std::string(argv[i++]);
             }
         }
 
-        else if (dsn::utils::equals(argv[i], "-app_list")) {
+        else if (utils::equals(argv[i], "-app_list")) {
             if (++i < argc) {
                 app_list = std::string(argv[i++]);
             }
@@ -313,7 +310,7 @@ void dsn_run(int argc, char **argv, bool is_server)
     }
 }
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 bool is_engine_ready() { return dsn_all.is_engine_ready(); }
@@ -321,7 +318,7 @@ bool is_engine_ready() { return dsn_all.is_engine_ready(); }
 tool_app *get_current_tool() { return dsn_all.tool.get(); }
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus
 
 extern void dsn_core_init();
 
@@ -330,8 +327,8 @@ inline void dsn_global_init()
     // make perf_counters destructed after service_engine,
     // because service_engine relies on the former to monitor
     // task queues length.
-    dsn::perf_counters::instance();
-    dsn::service_engine::instance();
+    perf_counters::instance();
+    service_engine::instance();
 }
 
 static std::string dsn_log_prefixed_message_func()
@@ -340,37 +337,34 @@ static std::string dsn_log_prefixed_message_func()
     res.resize(100);
     char *prefixed_message = const_cast<char *>(res.c_str());
 
-    int tid = dsn::utils::get_current_tid();
-    auto t = dsn::task::get_current_task_id();
+    int tid = utils::get_current_tid();
+    auto t = task::get_current_task_id();
     if (t) {
-        if (nullptr != dsn::task::get_current_worker2()) {
+        if (nullptr != task::get_current_worker2()) {
             sprintf(prefixed_message,
                     "%6s.%7s%d.%016" PRIx64 ": ",
-                    dsn::task::get_current_node_name(),
-                    dsn::task::get_current_worker2()->pool_spec().name.c_str(),
-                    dsn::task::get_current_worker2()->index(),
+                    task::get_current_node_name(),
+                    task::get_current_worker2()->pool_spec().name.c_str(),
+                    task::get_current_worker2()->index(),
                     t);
         } else {
             sprintf(prefixed_message,
                     "%6s.%7s.%05d.%016" PRIx64 ": ",
-                    dsn::task::get_current_node_name(),
+                    task::get_current_node_name(),
                     "io-thrd",
                     tid,
                     t);
         }
     } else {
-        if (nullptr != dsn::task::get_current_worker2()) {
+        if (nullptr != task::get_current_worker2()) {
             sprintf(prefixed_message,
                     "%6s.%7s%u: ",
-                    dsn::task::get_current_node_name(),
-                    dsn::task::get_current_worker2()->pool_spec().name.c_str(),
-                    dsn::task::get_current_worker2()->index());
+                    task::get_current_node_name(),
+                    task::get_current_worker2()->pool_spec().name.c_str(),
+                    task::get_current_worker2()->index());
         } else {
-            sprintf(prefixed_message,
-                    "%6s.%7s.%05d: ",
-                    dsn::task::get_current_node_name(),
-                    "io-thrd",
-                    tid);
+            sprintf(
+                prefixed_message, "%6s.%7s.%05d: ", task::get_current_node_name(), "io-thrd", tid);
         }
     }
 
@@ -392,16 +386,16 @@ bool run(const char *config_file,
         printf("Fail to load config file %s\n", config_file);
         return false;
     }
-    dsn::flags_initialize();
+    flags_initialize();
 
     dsn_global_init();
     dsn_core_init();
-    ::dsn::task::set_tls_dsn_context(nullptr, nullptr);
+    task::set_tls_dsn_context(nullptr, nullptr);
 
     dsn_all.engine_ready = false;
     dsn_all.config_completed = false;
     dsn_all.tool = nullptr;
-    dsn_all.engine = &::dsn::service_engine::instance();
+    dsn_all.engine = &service_engine::instance();
     dsn_all.magic = 0xdeadbeef;
 
     // pause when necessary
@@ -410,12 +404,12 @@ bool run(const char *config_file,
         getchar();
     }
 
-    for (int i = 0; i <= dsn::task_code::max(); i++) {
-        dsn_all.task_specs.push_back(::dsn::task_spec::get(i));
+    for (int i = 0; i <= task_code::max(); i++) {
+        dsn_all.task_specs.push_back(task_spec::get(i));
     }
 
     // initialize global specification from config file
-    ::dsn::service_spec spec;
+    service_spec spec;
     if (!spec.init()) {
         printf("error in config file %s, exit ...\n", config_file);
         return false;
@@ -425,25 +419,23 @@ bool run(const char *config_file,
 
     // setup data dir
     auto &data_dir = spec.data_dir;
-    CHECK(!dsn::utils::filesystem::file_exists(data_dir), "{} should not be a file.", data_dir);
-    if (!dsn::utils::filesystem::directory_exists(data_dir)) {
-        CHECK(dsn::utils::filesystem::create_directory(data_dir), "Fail to create {}", data_dir);
+    CHECK(!file_exists(data_dir), "{} should not be a file.", data_dir);
+    if (!directory_exists(data_dir)) {
+        CHECK(create_directory(data_dir), "Fail to create {}", data_dir);
     }
     std::string cdir;
-    CHECK(dsn::utils::filesystem::get_absolute_path(data_dir, cdir),
-          "Fail to get absolute path from {}",
-          data_dir);
+    CHECK(get_absolute_path(data_dir, cdir), "Fail to get absolute path from {}", data_dir);
     spec.data_dir = cdir;
 
-    ::dsn::utils::coredump::init();
+    utils::coredump::init();
 
     // setup log dir
-    spec.dir_log = ::dsn::utils::filesystem::path_combine(cdir, "log");
-    dsn::utils::filesystem::create_directory(spec.dir_log);
+    spec.dir_log = path_combine(cdir, "log");
+    create_directory(spec.dir_log);
 
     // init tools
-    dsn_all.tool.reset(::dsn::utils::factory_store<::dsn::tools::tool_app>::create(
-        spec.tool.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.tool.c_str()));
+    dsn_all.tool.reset(utils::factory_store<tools::tool_app>::create(
+        spec.tool.c_str(), PROVIDER_TYPE_MAIN, spec.tool.c_str()));
     dsn_all.tool->install(spec);
 
     // init app specs
@@ -460,34 +452,33 @@ bool run(const char *config_file,
     dsn_log_init(spec.logging_factory_name, spec.dir_log, dsn_log_prefixed_message_func);
 
     // prepare minimum necessary
-    ::dsn::service_engine::instance().init_before_toollets(spec);
+    service_engine::instance().init_before_toollets(spec);
 
     LOG_INFO("process({}) start: {}, date: {}",
              getpid(),
-             dsn::utils::process_start_millis(),
-             dsn::utils::process_start_date_time_mills());
+             utils::process_start_millis(),
+             utils::process_start_date_time_mills());
 
     // init toollets
     for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it) {
-        auto tlet =
-            dsn::tools::internal_use_only::get_toollet(it->c_str(), ::dsn::PROVIDER_TYPE_MAIN);
+        auto tlet = tools::internal_use_only::get_toollet(it->c_str(), PROVIDER_TYPE_MAIN);
         CHECK_NOTNULL(tlet, "toolet not found");
         tlet->install(spec);
     }
 
     // init provider specific system inits
-    dsn::tools::sys_init_before_app_created.execute();
+    tools::sys_init_before_app_created.execute();
 
     // TODO: register sys_exit execution
 
     // init runtime
-    ::dsn::service_engine::instance().init_after_toollets();
+    service_engine::instance().init_after_toollets();
 
     dsn_all.engine_ready = true;
 
     // init security if FLAGS_enable_auth == true
-    if (dsn::security::FLAGS_enable_auth) {
-        if (!dsn::security::init(is_server)) {
+    if (FLAGS_enable_auth) {
+        if (!security::init(is_server)) {
             return false;
         }
         // if FLAGS_enable_auth is false but FLAGS_enable_zookeeper_kerberos, we should init
@@ -495,15 +486,15 @@ bool run(const char *config_file,
         // include two steps:
         // 1) apply kerberos ticket and keep it valid
         // 2) complete sasl init for client(use FLAGS_sasl_plugin_path)
-    } else if (dsn::security::FLAGS_enable_zookeeper_kerberos && app_list == "meta") {
-        if (!dsn::security::init_for_zookeeper_client()) {
+    } else if (FLAGS_enable_zookeeper_kerberos && app_list == "meta") {
+        if (!security::init_for_zookeeper_client()) {
             return false;
         }
     }
 
     // split app_name and app_index
     std::list<std::string> applistkvs;
-    ::dsn::utils::split_args(app_list.c_str(), applistkvs, ';');
+    utils::split_args(app_list.c_str(), applistkvs, ';');
 
     // init apps
     for (auto &sp : spec.app_specs) {
@@ -518,7 +509,7 @@ bool run(const char *config_file,
         } else {
             for (auto &kv : applistkvs) {
                 std::list<std::string> argskvs;
-                ::dsn::utils::split_args(kv.c_str(), argskvs, '@');
+                utils::split_args(kv.c_str(), argskvs, '@');
                 if (std::string("apps.") + argskvs.front() == sp.config_section) {
                     if (argskvs.size() < 2)
                         create_it = true;
@@ -530,11 +521,11 @@ bool run(const char *config_file,
         }
 
         if (create_it) {
-            ::dsn::service_engine::instance().start_node(sp);
+            service_engine::instance().start_node(sp);
         }
     }
 
-    if (dsn::service_engine::instance().get_all_nodes().size() == 0) {
+    if (service_engine::instance().get_all_nodes().size() == 0) {
         printf("no app are created, usually because \n"
                "app_name is not specified correctly, should be 'xxx' in [apps.xxx]\n"
                "or app_index (1-based) is greater than specified count in config file\n");
@@ -542,27 +533,27 @@ bool run(const char *config_file,
     }
 
     dump_log_cmd =
-        dsn::command_manager::instance().register_command({"config-dump"},
-                                                          "config-dump - dump configuration",
-                                                          "config-dump [to-this-config-file]",
-                                                          [](const std::vector<std::string> &args) {
-                                                              std::ostringstream oss;
-                                                              std::ofstream off;
-                                                              std::ostream *os = &oss;
-                                                              if (args.size() > 0) {
-                                                                  off.open(args[0]);
-                                                                  os = &off;
+        command_manager::instance().register_command({"config-dump"},
+                                                     "config-dump - dump configuration",
+                                                     "config-dump [to-this-config-file]",
+                                                     [](const std::vector<std::string> &args) {
+                                                         std::ostringstream oss;
+                                                         std::ofstream off;
+                                                         std::ostream *os = &oss;
+                                                         if (args.size() > 0) {
+                                                             off.open(args[0]);
+                                                             os = &off;
 
-                                                                  oss << "config dump to file "
-                                                                      << args[0] << std::endl;
-                                                              }
+                                                             oss << "config dump to file "
+                                                                 << args[0] << std::endl;
+                                                         }
 
-                                                              dsn_config_dump(*os);
-                                                              return oss.str();
-                                                          });
+                                                         dsn_config_dump(*os);
+                                                         return oss.str();
+                                                     });
 
     // invoke customized init after apps are created
-    dsn::tools::sys_init_after_app_created.execute();
+    tools::sys_init_after_app_created.execute();
 
     // start the tool
     dsn_all.tool->run();
@@ -574,20 +565,18 @@ bool run(const char *config_file,
     }
 
     // add this to allow mimic app call from this thread.
-    memset((void *)&dsn::tls_dsn, 0, sizeof(dsn::tls_dsn));
+    memset((void *)&tls_dsn, 0, sizeof(tls_dsn));
 
     return true;
 }
 
-namespace dsn {
-service_app *service_app::new_service_app(const std::string &type,
-                                          const dsn::service_app_info *info)
+namespace pegasus {
+service_app *service_app::new_service_app(const std::string &type, const service_app_info *info)
 {
-    return dsn::utils::factory_store<service_app>::create(
-        type.c_str(), dsn::PROVIDER_TYPE_MAIN, info);
+    return utils::factory_store<service_app>::create(type.c_str(), PROVIDER_TYPE_MAIN, info);
 }
 
-service_app::service_app(const dsn::service_app_info *info) : _info(info), _started(false)
+service_app::service_app(const service_app_info *info) : _info(info), _started(false)
 {
     security::negotiation_manager::instance().open_service();
 }
@@ -608,4 +597,4 @@ void service_app::get_all_service_apps(std::vector<service_app *> *apps)
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

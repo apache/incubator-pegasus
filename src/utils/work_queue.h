@@ -39,7 +39,7 @@
 #include "utils/link.h"
 #include <cassert>
 
-namespace dsn {
+namespace pegasus {
 
 template <typename T>
 class work_queue

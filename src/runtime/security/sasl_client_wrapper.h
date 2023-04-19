@@ -22,7 +22,7 @@
 #include "sasl_wrapper.h"
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 
 namespace security {
@@ -40,4 +40,4 @@ public:
 };
 
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

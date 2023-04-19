@@ -44,17 +44,13 @@
 #include "zookeeper/zookeeper.jute.h"
 #include "zookeeper_session.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
 DSN_DEFINE_string(security,
                   zookeeper_kerberos_service_name,
                   "zookeeper",
                   "zookeeper kerberos service name");
-} // namespace security
-} // namespace dsn
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 // TODO(yingchun): to keep compatibility, the global name is FLAGS_timeout_ms. The name is not very
 //  suitable, maybe improve the macro to us another global name.
@@ -165,9 +161,9 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
 {
     utils::auto_write_lock l(_watcher_lock);
     if (nullptr == _handle) {
-        if (dsn::security::FLAGS_enable_zookeeper_kerberos) {
+        if (FLAGS_enable_zookeeper_kerberos) {
             zoo_sasl_params_t sasl_params = {0};
-            sasl_params.service = dsn::security::FLAGS_zookeeper_kerberos_service_name;
+            sasl_params.service = FLAGS_zookeeper_kerberos_service_name;
             sasl_params.mechlist = "GSSAPI";
             _handle = zookeeper_init_sasl(FLAGS_hosts_list,
                                           global_watcher,

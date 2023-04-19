@@ -33,7 +33,7 @@
 #include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "fmt/core.h"
 #include "runtime/service_app.h"
 #include "utils/config_api.h"
@@ -43,7 +43,8 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled");
@@ -123,9 +124,9 @@ void replication_options::initialize()
     if (slog_dir.empty()) {
         slog_dir = app_dir;
     } else {
-        slog_dir = utils::filesystem::path_combine(slog_dir, app_name);
+        slog_dir = path_combine(slog_dir, app_name);
     }
-    slog_dir = utils::filesystem::path_combine(slog_dir, "slog");
+    slog_dir = path_combine(slog_dir, "slog");
 
     // get config_data_dirs and config_data_dir_tags from config
     std::vector<std::string> config_data_dirs;
@@ -163,8 +164,8 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     }
 }
 
-/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node,
-                                            /*inout*/ std::vector<::dsn::rpc_address> &nodeList)
+/*static*/ bool replica_helper::remove_node(rpc_address node,
+                                            /*inout*/ std::vector<rpc_address> &nodeList)
 {
     auto it = std::find(nodeList.begin(), nodeList.end(), node);
     if (it != nodeList.end()) {
@@ -176,7 +177,7 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
 }
 
 /*static*/ bool replica_helper::get_replica_config(const partition_configuration &partition_config,
-                                                   ::dsn::rpc_address node,
+                                                   rpc_address node,
                                                    /*out*/ replica_configuration &replica_config)
 {
     replica_config.pid = partition_config.pid;
@@ -198,16 +199,16 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     }
 }
 
-bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
+bool replica_helper::load_meta_servers(/*out*/ std::vector<rpc_address> &servers,
                                        const char *section,
                                        const char *key)
 {
     servers.clear();
     std::string server_list = dsn_config_get_value_string(section, key, "", "");
     std::vector<std::string> lv;
-    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
+    utils::split_args(server_list.c_str(), lv, ',');
     for (auto &s : lv) {
-        ::dsn::rpc_address addr;
+        rpc_address addr;
         std::vector<std::string> hostname_port;
         uint32_t ip = 0;
         utils::split_args(s.c_str(), hostname_port, ':');
@@ -218,12 +219,12 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
                      section,
                      key);
         uint32_t port_num = 0;
-        CHECK(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
+        CHECK(internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
               "invalid address '{}' specified in config [{}].{}",
               s,
               section,
               key);
-        if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
+        if (0 != (ip = rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
             addr.assign_ipv4(ip, static_cast<uint16_t>(port_num));
         } else if (!addr.from_string_ipv4(s.c_str())) {
             LOG_ERROR("invalid address '{}' specified in config [{}].{}", s, section, key);
@@ -275,7 +276,7 @@ replication_options::get_data_dir_and_tag(const std::string &config_dirs_str,
                 err_msg = fmt::format("invalid data_dir item({}) in config", dir);
                 return false;
             }
-            dir = utils::filesystem::path_combine(tag_and_dir[1], app_name);
+            dir = path_combine(tag_and_dir[1], app_name);
             for (unsigned i = 0; i < dir_tags.size(); ++i) {
                 if (dirs[i] == dir) {
                     err_msg = fmt::format("dir({}) and dir({}) conflict", dirs[i], dir);
@@ -296,7 +297,7 @@ replication_options::get_data_dir_and_tag(const std::string &config_dirs_str,
     for (unsigned i = 0; i < dirs.size(); ++i) {
         const std::string &dir = dirs[i];
         LOG_INFO("data_dirs[{}] = {}, tag = {}", i + 1, dir, dir_tags[i]);
-        data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
+        data_dirs.push_back(path_combine(dir, "reps"));
         data_dir_tags.push_back(dir_tags[i]);
     }
     return true;
@@ -396,4 +397,4 @@ const std::string replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND("rocksdb.allow_inges
 const std::string replica_envs::UPDATE_MAX_REPLICA_COUNT("max_replica_count.update");
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

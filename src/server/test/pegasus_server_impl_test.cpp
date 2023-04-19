@@ -65,7 +65,7 @@ public:
         // test key
         std::string test_hash_key = "test_hash_key";
         std::string test_sort_key = "test_sort_key";
-        dsn::blob test_key;
+        blob test_key;
         pegasus_generate_key(test_key, test_hash_key, test_sort_key);
 
         // do all of the tests
@@ -79,15 +79,15 @@ public:
             // do on_get/on_multi_get operation,
             long before_count = _server->_pfc_recent_abnormal_count->get_integer_value();
             if (!test.is_multi_get) {
-                get_rpc rpc(std::make_unique<dsn::blob>(test_key), dsn::apps::RPC_RRDB_RRDB_GET);
+                get_rpc rpc(std::make_unique<blob>(test_key), apps::RPC_RRDB_RRDB_GET);
                 _server->on_get(rpc);
             } else {
-                ::dsn::apps::multi_get_request request;
-                request.__set_hash_key(dsn::blob(test_hash_key.data(), 0, test_hash_key.size()));
-                request.__set_sort_keys({dsn::blob(test_sort_key.data(), 0, test_sort_key.size())});
-                ::dsn::rpc_replier<::dsn::apps::multi_get_response> reply(nullptr);
-                multi_get_rpc rpc(std::make_unique<::dsn::apps::multi_get_request>(request),
-                                  dsn::apps::RPC_RRDB_RRDB_MULTI_GET);
+                apps::multi_get_request request;
+                request.__set_hash_key(blob(test_hash_key.data(), 0, test_hash_key.size()));
+                request.__set_sort_keys({blob(test_sort_key.data(), 0, test_sort_key.size())});
+                rpc_replier<apps::multi_get_response> reply(nullptr);
+                multi_get_rpc rpc(std::make_unique<apps::multi_get_request>(request),
+                                  apps::RPC_RRDB_RRDB_MULTI_GET);
                 _server->on_multi_get(rpc);
             }
             long after_count = _server->_pfc_recent_abnormal_count->get_integer_value();
@@ -170,24 +170,24 @@ TEST_F(pegasus_server_impl_test, test_update_user_specified_compaction)
 TEST_F(pegasus_server_impl_test, test_load_from_duplication_data)
 {
     auto origin_file = fmt::format("{}/{}", _server->duplication_dir(), "checkpoint");
-    dsn::utils::filesystem::create_directory(_server->duplication_dir());
-    dsn::utils::filesystem::create_file(origin_file);
-    ASSERT_TRUE(dsn::utils::filesystem::file_exists(origin_file));
+    utils::filesystem::create_directory(_server->duplication_dir());
+    utils::filesystem::create_file(origin_file);
+    ASSERT_TRUE(utils::filesystem::file_exists(origin_file));
 
     EXPECT_CALL(*_server, is_duplication_follower()).WillRepeatedly(testing::Return(true));
 
     auto tempFolder = "invalid";
-    dsn::utils::filesystem::rename_path(_server->data_dir(), tempFolder);
-    ASSERT_EQ(start(), dsn::ERR_FILE_OPERATION_FAILED);
+    utils::filesystem::rename_path(_server->data_dir(), tempFolder);
+    ASSERT_EQ(start(), ERR_FILE_OPERATION_FAILED);
 
-    dsn::utils::filesystem::rename_path(tempFolder, _server->data_dir());
+    utils::filesystem::rename_path(tempFolder, _server->data_dir());
     auto rdb_path = fmt::format("{}/rdb/", _server->data_dir());
     auto new_file = fmt::format("{}/{}", rdb_path, "checkpoint");
-    ASSERT_EQ(start(), dsn::ERR_LOCAL_APP_FAILURE);
-    ASSERT_TRUE(dsn::utils::filesystem::directory_exists(rdb_path));
-    ASSERT_FALSE(dsn::utils::filesystem::file_exists(origin_file));
-    ASSERT_TRUE(dsn::utils::filesystem::file_exists(new_file));
-    dsn::utils::filesystem::remove_file_name(new_file);
+    ASSERT_EQ(start(), ERR_LOCAL_APP_FAILURE);
+    ASSERT_TRUE(utils::filesystem::directory_exists(rdb_path));
+    ASSERT_FALSE(utils::filesystem::file_exists(origin_file));
+    ASSERT_TRUE(utils::filesystem::file_exists(new_file));
+    utils::filesystem::remove_file_name(new_file);
 }
 
 } // namespace server

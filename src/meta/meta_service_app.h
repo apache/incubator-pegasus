@@ -32,7 +32,7 @@
 #include "runtime/service_app.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class meta_service;
@@ -41,9 +41,9 @@ namespace test {
 class test_checker;
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
-namespace dsn {
+namespace pegasus {
 
 namespace service {
 
@@ -56,13 +56,13 @@ public:
     meta_service_app(const service_app_info *info);
     virtual ~meta_service_app();
 
-    virtual ::dsn::error_code start(const std::vector<std::string> &args) override;
+    virtual error_code start(const std::vector<std::string> &args) override;
 
-    virtual ::dsn::error_code stop(bool cleanup = false) override;
+    virtual error_code stop(bool cleanup = false) override;
 
 private:
-    friend class ::dsn::replication::test::test_checker;
-    std::unique_ptr<dsn::replication::meta_service> _service;
+    friend class replication::test::test_checker;
+    std::unique_ptr<replication::meta_service> _service;
 };
 } // namespace service
-} // namespace dsn
+} // namespace pegasus

@@ -59,7 +59,7 @@
 #define FTW_SKIP_SIBLINGS 3
 #endif
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 namespace filesystem {
 
@@ -110,7 +110,7 @@ error_code get_process_image_path(int pid, std::string &path);
 
 inline error_code get_current_process_image_path(std::string &path)
 {
-    auto err = dsn::utils::filesystem::get_process_image_path(-1, path);
+    auto err = get_process_image_path(-1, path);
     assert(err == ERR_OK);
     return err;
 }
@@ -160,4 +160,4 @@ bool check_dir_rw(const std::string &path, /*out*/ std::string &err_msg);
 
 } // namespace filesystem
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

@@ -23,7 +23,7 @@
 #include "negotiation.h"
 #include "runtime/rpc/rpc_message.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class error_s;
 
@@ -54,4 +54,4 @@ private:
 };
 
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

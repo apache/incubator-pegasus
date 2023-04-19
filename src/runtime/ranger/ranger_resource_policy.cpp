@@ -19,7 +19,7 @@
 
 #include "runtime/ranger/access_type.h"
 
-namespace dsn {
+namespace pegasus {
 namespace ranger {
 
 bool policy_item::match(const access_type &ac_type, const std::string &user_name) const
@@ -69,4 +69,4 @@ bool acl_policies::allowed(const access_type &ac_type, const std::string &user_n
 }
 
 } // namespace ranger
-} // namespace dsn
+} // namespace pegasus

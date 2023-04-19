@@ -30,9 +30,13 @@
 #include "replica_admin_types.h"
 #include "runtime/rpc/rpc_holder.h"
 
+namespace pegasus {
 struct row_data;
 struct shell_context;
+} // namespace pegasus
 
+using pegasus::replication::detect_hotkey_request;
+using pegasus::replication::detect_hotkey_response;
 namespace pegasus {
 namespace server {
 
@@ -41,7 +45,7 @@ typedef std::list<std::vector<hotspot_partition_stat>> stat_histories;
 // hot_partition_counters c[index_of_partitions][type_of_read(0)/write(1)_stat]
 // so if we have n partitions, we will get 2*n hot_partition_counters, to demonstrate both
 // read/write hotspot value
-typedef std::vector<std::array<dsn::perf_counter_wrapper, 2>> hot_partition_counters;
+typedef std::vector<std::array<perf_counter_wrapper, 2>> hot_partition_counters;
 
 // hotspot_partition_calculator is used to find the hot partition in a table.
 class hotspot_partition_calculator
@@ -63,8 +67,8 @@ public:
     void data_analyse();
     void send_detect_hotkey_request(const std::string &app_name,
                                     const uint64_t partition_index,
-                                    const dsn::replication::hotkey_type::type hotkey_type,
-                                    const dsn::replication::detect_action::type action);
+                                    const replication::hotkey_type::type hotkey_type,
+                                    const replication::detect_action::type action);
 
 private:
     // empirical rule to calculate hot point of each partition
@@ -80,7 +84,7 @@ private:
     hot_partition_counters _hot_points;
     // hotspot_cnt c[type_of_read(0)/write(1)_stat] = number of hot partition count in one table
     // per data_analyse
-    std::array<dsn::perf_counter_wrapper, 2> _total_hotspot_cnt;
+    std::array<perf_counter_wrapper, 2> _total_hotspot_cnt;
 
     // saving historical data can improve accuracy
     stat_histories _partitions_stat_histories;
@@ -92,7 +96,7 @@ private:
     // hotkey on the replica automatically
     std::vector<std::array<int, 2>> _hotpartition_counter;
 
-    typedef dsn::rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
+    typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
 
     friend class hotspot_partition_test;
 };

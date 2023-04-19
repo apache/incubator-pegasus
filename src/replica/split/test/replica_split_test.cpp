@@ -32,7 +32,7 @@
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
 #include "replica/mutation.h"
@@ -50,7 +50,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_split_test : public replica_test_base
@@ -353,7 +353,7 @@ public:
         _parent_replica->tracker()->wait_outstanding_tasks();
     }
 
-    void test_on_register_child_reply(partition_status::type status, dsn::error_code resp_err)
+    void test_on_register_child_reply(partition_status::type status, error_code resp_err)
     {
         stub->set_state_connected();
         stub->set_rpc_address(PRIMARY);
@@ -1036,4 +1036,4 @@ TEST_F(replica_split_test, check_partition_hash_test)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

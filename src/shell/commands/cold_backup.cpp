@@ -39,6 +39,7 @@
 #include "utils/error_code.h"
 #include "utils/strings.h"
 
+namespace pegasus {
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
@@ -73,7 +74,7 @@ bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'a': {
             std::vector<std::string> app_list;
-            ::dsn::utils::split_args(optarg, app_list, ',');
+            utils::split_args(optarg, app_list, ',');
             for (const auto &app : app_list) {
                 int32_t id = atoi(app.c_str());
                 if (id <= 0) {
@@ -130,13 +131,13 @@ bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    ::dsn::error_code ret = sc->ddl_client->add_backup_policy(policy_name,
-                                                              backup_provider_type,
-                                                              app_ids,
-                                                              backup_interval_seconds,
-                                                              backup_history_cnt,
-                                                              start_time);
-    if (ret != ::dsn::ERR_OK) {
+    error_code ret = sc->ddl_client->add_backup_policy(policy_name,
+                                                       backup_provider_type,
+                                                       app_ids,
+                                                       backup_interval_seconds,
+                                                       backup_history_cnt,
+                                                       start_time);
+    if (ret != ERR_OK) {
         fprintf(stderr, "add backup policy failed, err = %s\n", ret.to_string());
     }
     return true;
@@ -144,8 +145,8 @@ bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    ::dsn::error_code err = sc->ddl_client->ls_backup_policy();
-    if (err != ::dsn::ERR_OK) {
+    error_code err = sc->ddl_client->ls_backup_policy();
+    if (err != ERR_OK) {
         std::cout << "ls backup policy failed" << std::endl;
     } else {
         std::cout << std::endl << "ls backup policy succeed" << std::endl;
@@ -171,7 +172,7 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
         switch (c) {
         case 'p': {
             std::vector<std::string> names;
-            ::dsn::utils::split_args(optarg, names, ',');
+            utils::split_args(optarg, names, ',');
             for (const auto &policy_name : names) {
                 if (policy_name.empty()) {
                     fprintf(stderr, "invalid, empty policy_name, just ignore\n");
@@ -196,8 +197,8 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "empty policy_name, please assign policy_name you want to query\n");
         return false;
     }
-    ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
-    if (ret != ::dsn::ERR_OK) {
+    error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
+    if (ret != ERR_OK) {
         fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
     } else {
         std::cout << std::endl << "query backup policy succeed" << std::endl;
@@ -236,7 +237,7 @@ bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args
             break;
         case 'a':
             app_id_strs.clear();
-            ::dsn::utils::split_args(optarg, app_id_strs, ',');
+            utils::split_args(optarg, app_id_strs, ',');
             for (const auto &s_appid : app_id_strs) {
                 int32_t appid = boost::lexical_cast<int32_t>(s_appid);
                 if (appid <= 0) {
@@ -249,7 +250,7 @@ bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args
             break;
         case 'r':
             app_id_strs.clear();
-            ::dsn::utils::split_args(optarg, app_id_strs, ',');
+            utils::split_args(optarg, app_id_strs, ',');
             for (const auto &s_appid : app_id_strs) {
                 int32_t appid = boost::lexical_cast<int32_t>(s_appid);
                 if (appid <= 0) {
@@ -300,13 +301,13 @@ bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args
         }
     }
 
-    dsn::error_code ret = sc->ddl_client->update_backup_policy(policy_name,
-                                                               add_appids,
-                                                               remove_appids,
-                                                               backup_interval_seconds,
-                                                               backup_history_count,
-                                                               start_time);
-    if (ret != dsn::ERR_OK) {
+    error_code ret = sc->ddl_client->update_backup_policy(policy_name,
+                                                          add_appids,
+                                                          remove_appids,
+                                                          backup_interval_seconds,
+                                                          backup_history_count,
+                                                          start_time);
+    if (ret != ERR_OK) {
         fprintf(stderr, "modify backup policy failed, with err = %s\n", ret.to_string());
     }
     return true;
@@ -339,8 +340,8 @@ bool disable_backup_policy(command_executor *e, shell_context *sc, arguments arg
         return false;
     }
 
-    ::dsn::error_code ret = sc->ddl_client->disable_backup_policy(policy_name);
-    if (ret != dsn::ERR_OK) {
+    error_code ret = sc->ddl_client->disable_backup_policy(policy_name);
+    if (ret != ERR_OK) {
         fprintf(stderr, "disable backup policy failed, with err = %s\n", ret.to_string());
     }
     return true;
@@ -372,8 +373,8 @@ bool enable_backup_policy(command_executor *e, shell_context *sc, arguments args
         return false;
     }
 
-    ::dsn::error_code ret = sc->ddl_client->enable_backup_policy(policy_name);
-    if (ret != dsn::ERR_OK) {
+    error_code ret = sc->ddl_client->enable_backup_policy(policy_name);
+    if (ret != ERR_OK) {
         fprintf(stderr, "enable backup policy failed, with err = %s\n", ret.to_string());
     }
     return true;
@@ -446,15 +447,15 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
         new_app_name = old_app_name;
     }
 
-    ::dsn::error_code err = sc->ddl_client->do_restore(backup_provider_type,
-                                                       old_cluster_name,
-                                                       old_policy_name,
-                                                       timestamp,
-                                                       old_app_name,
-                                                       old_app_id,
-                                                       new_app_name,
-                                                       skip_bad_partition);
-    if (err != ::dsn::ERR_OK) {
+    error_code err = sc->ddl_client->do_restore(backup_provider_type,
+                                                old_cluster_name,
+                                                old_policy_name,
+                                                timestamp,
+                                                old_app_name,
+                                                old_app_id,
+                                                new_app_name,
+                                                skip_bad_partition);
+    if (err != ERR_OK) {
         fprintf(stderr, "restore app failed with err(%s)\n", err.to_string());
     }
     return true;
@@ -489,9 +490,9 @@ bool query_restore_status(command_executor *e, shell_context *sc, arguments args
             return false;
         }
     }
-    ::dsn::error_code ret = sc->ddl_client->query_restore(restore_app_id, detailed);
+    error_code ret = sc->ddl_client->query_restore(restore_app_id, detailed);
 
-    if (ret != ::dsn::ERR_OK) {
+    if (ret != ERR_OK) {
         fprintf(stderr,
                 "query restore status failed, restore_app_id(%d), err = %s\n",
                 restore_app_id,
@@ -499,3 +500,4 @@ bool query_restore_status(command_executor *e, shell_context *sc, arguments args
     }
     return true;
 }
+} // namespace pegasus

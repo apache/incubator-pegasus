@@ -40,16 +40,16 @@ class pegasus_server_impl;
 // - pegasus_data_version
 // - pegasus_last_flushed_decree
 // - pegasus_last_manual_compact_finish_time
-class meta_store : public dsn::replication::replica_base
+class meta_store : public replication::replica_base
 {
 public:
     meta_store(pegasus_server_impl *server, rocksdb::DB *db, rocksdb::ColumnFamilyHandle *meta_cf);
 
-    dsn::error_code get_last_flushed_decree(uint64_t *decree) const;
+    error_code get_last_flushed_decree(uint64_t *decree) const;
     uint64_t get_decree_from_readonly_db(rocksdb::DB *db,
                                          rocksdb::ColumnFamilyHandle *meta_cf) const;
-    dsn::error_code get_data_version(uint32_t *version) const;
-    dsn::error_code get_last_manual_compact_finish_time(uint64_t *ts) const;
+    error_code get_data_version(uint32_t *version) const;
+    error_code get_last_manual_compact_finish_time(uint64_t *ts) const;
     std::string get_usage_scenario() const;
 
     void set_last_flushed_decree(uint64_t decree) const;
@@ -58,25 +58,24 @@ public:
     void set_usage_scenario(const std::string &usage_scenario) const;
 
 private:
-    ::dsn::error_code
+    error_code
     get_value_from_meta_cf(bool read_flushed_data, const std::string &key, uint64_t *value) const;
-    ::dsn::error_code get_string_value_from_meta_cf(bool read_flushed_data,
-                                                    const std::string &key,
-                                                    std::string *value) const;
-    ::dsn::error_code set_value_to_meta_cf(const std::string &key, uint64_t value) const;
-    ::dsn::error_code set_string_value_to_meta_cf(const std::string &key,
-                                                  const std::string &value) const;
+    error_code get_string_value_from_meta_cf(bool read_flushed_data,
+                                             const std::string &key,
+                                             std::string *value) const;
+    error_code set_value_to_meta_cf(const std::string &key, uint64_t value) const;
+    error_code set_string_value_to_meta_cf(const std::string &key, const std::string &value) const;
 
-    static ::dsn::error_code get_value_from_meta_cf(rocksdb::DB *db,
+    static error_code get_value_from_meta_cf(rocksdb::DB *db,
+                                             rocksdb::ColumnFamilyHandle *cf,
+                                             bool read_flushed_data,
+                                             const std::string &key,
+                                             uint64_t *value);
+    static error_code get_string_value_from_meta_cf(rocksdb::DB *db,
                                                     rocksdb::ColumnFamilyHandle *cf,
                                                     bool read_flushed_data,
                                                     const std::string &key,
-                                                    uint64_t *value);
-    static ::dsn::error_code get_string_value_from_meta_cf(rocksdb::DB *db,
-                                                           rocksdb::ColumnFamilyHandle *cf,
-                                                           bool read_flushed_data,
-                                                           const std::string &key,
-                                                           std::string *value);
+                                                    std::string *value);
 
     friend class pegasus_write_service;
     friend class rocksdb_wrapper;

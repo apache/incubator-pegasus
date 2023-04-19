@@ -28,7 +28,7 @@
 #include "common/duplication_common.h"
 #include "common/gpid.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "duplication_test_base.h"
 #include "metadata_types.h"
 #include "nfs/nfs_node.h"
@@ -41,7 +41,7 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_follower_test : public duplication_test_base
@@ -57,7 +57,7 @@ public:
         _app_info.partition_count = 8;
     }
 
-    void update_mock_replica(const dsn::app_info &app)
+    void update_mock_replica(const app_info &app)
     {
         bool is_duplication_follower =
             (app.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey) !=
@@ -112,7 +112,7 @@ public:
     }
 
 public:
-    dsn::app_info _app_info;
+    app_info _app_info;
     mock_replica_ptr _mock_replica;
 };
 
@@ -245,10 +245,10 @@ TEST_F(replica_follower_test, test_nfs_copy_checkpoint)
 
     std::string dest = utils::filesystem::path_combine(
         _mock_replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);
-    dsn::utils::filesystem::create_directory(dest);
-    ASSERT_TRUE(dsn::utils::filesystem::path_exists(dest));
+    utils::filesystem::create_directory(dest);
+    ASSERT_TRUE(utils::filesystem::path_exists(dest));
     ASSERT_EQ(nfs_copy_checkpoint(follower, ERR_OK, resp), ERR_OK);
-    ASSERT_FALSE(dsn::utils::filesystem::path_exists(dest));
+    ASSERT_FALSE(utils::filesystem::path_exists(dest));
     ASSERT_FALSE(wait_follower_task_completed(follower));
 
     fail::setup();
@@ -259,4 +259,4 @@ TEST_F(replica_follower_test, test_nfs_copy_checkpoint)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

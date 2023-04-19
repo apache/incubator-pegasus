@@ -39,10 +39,7 @@
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 
-using namespace std;
-using namespace ::pegasus;
-
-DEFINE_TASK_CODE(LPC_DEFAUT_TASK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
+using std::string;
 
 DSN_DEFINE_int32(pressureclient, qps, 0, "qps of pressure client");
 DSN_DEFINE_int32(pressureclient, hashkey_len, 64, "hashkey length");
@@ -59,19 +56,23 @@ DSN_DEFINE_int64(pressureclient,
                  "The sortkey range to generate, in format [0, ****key_limit].");
 DSN_DEFINE_string(pressureclient, cluster_name, "onebox", "cluster name");
 DSN_DEFINE_validator(cluster_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !pegasus::utils::is_empty(value); });
 
 DSN_DEFINE_string(pressureclient, app_name, "temp", "app name");
 DSN_DEFINE_validator(app_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !pegasus::utils::is_empty(value); });
 
 DSN_DEFINE_string(pressureclient, operation_name, "", "operation name");
 DSN_DEFINE_validator(operation_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !pegasus::utils::is_empty(value); });
+
+using namespace pegasus;
+
+DEFINE_TASK_CODE(LPC_DEFAUT_TASK, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 // for app
 static pegasus_client *pg_client = nullptr;
-static string op_name; // set/get/scan/del
+static std::string op_name; // set/get/scan/del
 // fill string in prefix, until with size(len)
 std::string fill_string(const std::string &str, int len)
 {
@@ -81,7 +82,7 @@ std::string fill_string(const std::string &str, int len)
 
 std::string get_hashkey()
 {
-    std::string key = to_string(dsn::rand::next_u64(0, FLAGS_hashkey_limit));
+    std::string key = std::to_string(rand::next_u64(0, FLAGS_hashkey_limit));
     if (key.size() >= FLAGS_hashkey_len) {
         return key;
     } else {
@@ -91,7 +92,7 @@ std::string get_hashkey()
 
 std::string get_sortkey()
 {
-    std::string key = to_string(dsn::rand::next_u64(0, FLAGS_sortkey_limit));
+    std::string key = std::to_string(rand::next_u64(0, FLAGS_sortkey_limit));
     if (key.size() >= FLAGS_sortkey_len) {
         return key;
     } else {
@@ -129,9 +130,9 @@ bool verify(const std::string &hashkey, const std::string &sortkey, const std::s
 
 void test_set(int32_t qps)
 {
-    atomic_int qps_quota(qps);
-    ::dsn::task_ptr quota_task = ::dsn::tasking::enqueue_timer(
-        LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
+    std::atomic_int qps_quota(qps);
+    task_ptr quota_task = tasking::enqueue_timer(
+        LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, std::chrono::seconds(1));
     LOG_INFO("start to test set, with qps({})", qps);
     while (true) {
         if (qps_quota.load() >= 10) {
@@ -151,9 +152,9 @@ void test_set(int32_t qps)
 
 void test_get(int32_t qps)
 {
-    atomic_int qps_quota(qps);
-    dsn::task_ptr quota_task = dsn::tasking::enqueue_timer(
-        LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
+    std::atomic_int qps_quota(qps);
+    task_ptr quota_task = tasking::enqueue_timer(
+        LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, std::chrono::seconds(1));
 
     LOG_INFO("start to test get, with qps({})", qps);
     while (true) {
@@ -191,9 +192,9 @@ void test_get(int32_t qps)
 
 void test_del(int32_t qps)
 {
-    atomic_int qps_quota(qps);
-    dsn::task_ptr quota_task = dsn::tasking::enqueue_timer(
-        LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
+    std::atomic_int qps_quota(qps);
+    task_ptr quota_task = tasking::enqueue_timer(
+        LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, std::chrono::seconds(1));
 
     LOG_INFO("start to test get, with qps({})", qps);
     while (true) {
@@ -235,12 +236,12 @@ void initialize()
 int main(int argc, const char **argv)
 {
     if (argc != 2) {
-        cout << "Usage: " << argv[0] << " <config_file>" << endl;
+        std::cout << "Usage: " << argv[0] << " <config_file>" << std::endl;
         return -1;
     }
 
-    if (!pegasus_client_factory::initialize(argv[1])) {
-        cout << "Initialize pegasus_client load " << argv[1] << " file failed" << endl;
+    if (!pegasus::pegasus_client_factory::initialize(argv[1])) {
+        std::cout << "Initialize pegasus_client load " << argv[1] << " file failed" << std::endl;
         return -1;
     }
     initialize();

@@ -28,21 +28,20 @@
 #include "utils/string_view.h"
 
 namespace pegasus {
-
-class value_schema_manager : public dsn::utils::singleton<value_schema_manager>
+class value_schema_manager : public utils::singleton<value_schema_manager>
 {
 public:
     void register_schema(std::unique_ptr<value_schema> schema);
     /// using the raw value in rocksdb and data version stored in meta column family to get data
     /// version
-    value_schema *get_value_schema(uint32_t meta_cf_data_version, dsn::string_view value) const;
+    value_schema *get_value_schema(uint32_t meta_cf_data_version, string_view value) const;
     value_schema *get_value_schema(uint32_t version) const;
     value_schema *get_latest_value_schema() const;
 
 private:
     value_schema_manager();
     ~value_schema_manager() = default;
-    friend class dsn::utils::singleton<value_schema_manager>;
+    friend class utils::singleton<value_schema_manager>;
 
     std::array<std::unique_ptr<value_schema>, data_version::VERSION_COUNT> _schemas;
 };

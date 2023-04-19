@@ -42,7 +42,7 @@
 #include "utils/error_code.h"
 #include "utils/factory_store.h"
 
-namespace dsn {
+namespace pegasus {
 struct meta_state_service_utils_test : ::testing::Test
 {
     void SetUp() override
@@ -71,7 +71,7 @@ protected:
 TEST_F(meta_state_service_utils_test, create_recursively)
 {
     _storage->create_node_recursively(
-        std::queue<std::string>({"/1", "2", "3", "4"}), dsn::blob("a", 0, 1), [&]() {
+        std::queue<std::string>({"/1", "2", "3", "4"}), blob("a", 0, 1), [&]() {
             _storage->get_data("/1", [](const blob &val) { ASSERT_EQ(val.data(), nullptr); });
 
             _storage->get_data("/1/2", [](const blob &val) { ASSERT_EQ(val.data(), nullptr); });
@@ -83,7 +83,7 @@ TEST_F(meta_state_service_utils_test, create_recursively)
         });
     _tracker.wait_outstanding_tasks();
 
-    _storage->create_node_recursively(std::queue<std::string>({"/1"}), dsn::blob("a", 0, 1), [&]() {
+    _storage->create_node_recursively(std::queue<std::string>({"/1"}), blob("a", 0, 1), [&]() {
         _storage->get_data("/1", [](const blob &val) { ASSERT_EQ(val.data(), nullptr); });
     });
     _tracker.wait_outstanding_tasks();
@@ -95,8 +95,7 @@ TEST_F(meta_state_service_utils_test, create_recursively)
 TEST_F(meta_state_service_utils_test, delete_and_get)
 {
     // create and delete
-    _storage->create_node(
-        "/2", dsn::blob("b", 0, 1), [&]() { _storage->delete_node("/2", []() {}); });
+    _storage->create_node("/2", blob("b", 0, 1), [&]() { _storage->delete_node("/2", []() {}); });
     _tracker.wait_outstanding_tasks();
 
     // try get
@@ -107,8 +106,8 @@ TEST_F(meta_state_service_utils_test, delete_and_get)
 TEST_F(meta_state_service_utils_test, delete_recursively)
 {
     _storage->create_node_recursively(
-        std::queue<std::string>({"/1", "2", "3", "4"}), dsn::blob("c", 0, 1), [&]() {
-            _storage->set_data("/1", dsn::blob("c", 0, 1), [&]() {
+        std::queue<std::string>({"/1", "2", "3", "4"}), blob("c", 0, 1), [&]() {
+            _storage->set_data("/1", blob("c", 0, 1), [&]() {
                 _storage->get_data("/1", [](const blob &val) { ASSERT_EQ(val.to_string(), "c"); });
             });
         });
@@ -153,10 +152,10 @@ TEST_F(meta_state_service_utils_test, concurrent)
 
 TEST_F(meta_state_service_utils_test, get_children)
 {
-    _storage->create_node("/1", dsn::blob(), [this]() {
-        _storage->create_node("/1/99", dsn::blob(), []() {});
-        _storage->create_node("/1/999", dsn::blob(), []() {});
-        _storage->create_node("/1/9999", dsn::blob(), []() {});
+    _storage->create_node("/1", blob(), [this]() {
+        _storage->create_node("/1/99", blob(), []() {});
+        _storage->create_node("/1/999", blob(), []() {});
+        _storage->create_node("/1/9999", blob(), []() {});
     });
     _tracker.wait_outstanding_tasks();
 
@@ -189,4 +188,4 @@ TEST_F(meta_state_service_utils_test, get_children)
     });
     _tracker.wait_outstanding_tasks();
 }
-} // namespace dsn
+} // namespace pegasus

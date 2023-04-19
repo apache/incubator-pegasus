@@ -37,7 +37,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace dsn {
+namespace pegasus {
 namespace fail {
 
 struct fail_point
@@ -131,4 +131,4 @@ private:
 };
 
 } // namespace fail
-} // namespace dsn
+} // namespace pegasus

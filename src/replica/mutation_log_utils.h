@@ -35,7 +35,7 @@
 #include "utils/errors.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace log_utils {
 
@@ -82,4 +82,4 @@ inline error_s check_log_files_continuity(const std::string &dir)
 
 } // namespace log_utils
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

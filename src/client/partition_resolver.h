@@ -43,7 +43,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
 
 namespace replication {
@@ -51,24 +51,23 @@ namespace replication {
 class partition_resolver : public ref_counter
 {
 public:
-    static dsn::ref_ptr<partition_resolver>
-    get_resolver(const char *cluster_name,
-                 const std::vector<dsn::rpc_address> &meta_list,
-                 const char *app_name);
+    static ref_ptr<partition_resolver> get_resolver(const char *cluster_name,
+                                                    const std::vector<rpc_address> &meta_list,
+                                                    const char *app_name);
 
     template <typename TReq, typename TCallback>
-    dsn::rpc_response_task_ptr call_op(dsn::task_code code,
-                                       TReq &&request,
-                                       dsn::task_tracker *tracker,
-                                       TCallback &&callback,
-                                       std::chrono::milliseconds timeout,
-                                       uint64_t partition_hash,
-                                       int reply_hash = 0)
+    rpc_response_task_ptr call_op(task_code code,
+                                  TReq &&request,
+                                  task_tracker *tracker,
+                                  TCallback &&callback,
+                                  std::chrono::milliseconds timeout,
+                                  uint64_t partition_hash,
+                                  int reply_hash = 0)
     {
-        dsn::message_ex *msg = dsn::message_ex::create_request(
-            code, static_cast<int>(timeout.count()), 0, partition_hash);
+        message_ex *msg =
+            message_ex::create_request(code, static_cast<int>(timeout.count()), 0, partition_hash);
         marshall(msg, std::forward<TReq>(request));
-        dsn::rpc_response_task_ptr response_task = rpc::create_rpc_response_task(
+        rpc_response_task_ptr response_task = rpc::create_rpc_response_task(
             msg, tracker, std::forward<TCallback>(callback), reply_hash);
         call_task(response_task);
         return response_task;
@@ -78,12 +77,12 @@ public:
     // and send the read/write request.
     // if got reply or error, call the callback.
     // parameters like request data, timeout, callback handler are all wrapped
-    // into "task", you may want to refer to dsn::rpc_response_task for details.
-    void call_task(const dsn::rpc_response_task_ptr &task);
+    // into "task", you may want to refer to rpc_response_task for details.
+    void call_task(const rpc_response_task_ptr &task);
 
     std::string get_app_name() const { return _app_name; }
 
-    dsn::rpc_address get_meta_server() const { return _meta_server; }
+    rpc_address get_meta_server() const { return _meta_server; }
 
     const char *log_prefix() const { return _app_name.c_str(); }
 
@@ -105,7 +104,7 @@ protected:
         ///< IPv4 of the target to send request to
         rpc_address address;
         ///< global partition indentity
-        dsn::gpid pid;
+        gpid pid;
     };
 
     /**
@@ -150,4 +149,4 @@ protected:
 typedef ref_ptr<partition_resolver> partition_resolver_ptr;
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

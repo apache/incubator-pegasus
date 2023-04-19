@@ -45,7 +45,7 @@
 #include "utils/zlock_provider.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace lock_checker {
 __thread int zlock_exclusive_count;
@@ -76,14 +76,14 @@ zlock::zlock(bool recursive)
 {
     if (recursive) {
         lock_provider *last = utils::factory_store<lock_provider>::create(
-            dsn::service_engine::instance().spec().lock_factory_name.c_str(),
-            dsn::PROVIDER_TYPE_MAIN,
+            service_engine::instance().spec().lock_factory_name.c_str(),
+            PROVIDER_TYPE_MAIN,
             nullptr);
         _h = last;
     } else {
         lock_nr_provider *last = utils::factory_store<lock_nr_provider>::create(
-            dsn::service_engine::instance().spec().lock_nr_factory_name.c_str(),
-            dsn::PROVIDER_TYPE_MAIN,
+            service_engine::instance().spec().lock_nr_factory_name.c_str(),
+            PROVIDER_TYPE_MAIN,
             nullptr);
         _h = last;
     }
@@ -116,7 +116,7 @@ zrwlock_nr::zrwlock_nr()
 {
     rwlock_nr_provider *last = utils::factory_store<rwlock_nr_provider>::create(
         service_engine::instance().spec().rwlock_nr_factory_name.c_str(),
-        dsn::PROVIDER_TYPE_MAIN,
+        PROVIDER_TYPE_MAIN,
         nullptr);
     _h = last;
 }
@@ -235,4 +235,4 @@ bool zevent::wait(int timeout_milliseconds)
         return std::atomic_compare_exchange_strong(&_signaled, &signaled, false);
     }
 }
-} // namespace dsn
+} // namespace pegasus

@@ -34,7 +34,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 class partition_configuration;
 class rpc_address;
 class task_tracker;
@@ -183,10 +183,10 @@ private:
     void on_copy_mutation(mutation_ptr &mu);
 
     // when child copy mutation synchronously, child replica send ack to its parent
-    void ack_parent(dsn::error_code ec, mutation_ptr &mu);
+    void ack_parent(error_code ec, mutation_ptr &mu);
 
     // when child copy mutation synchronously, parent replica handle child ack
-    void on_copy_mutation_reply(dsn::error_code ec, ballot b, decree d);
+    void on_copy_mutation_reply(error_code ec, ballot b, decree d);
 
     // parent partition pause or cancel split
     void parent_stop_split(split_status::type meta_split_status);
@@ -254,4 +254,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -24,7 +24,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 TEST(ip_to_hostname, ipv4_validate)
@@ -75,40 +75,39 @@ TEST(ip_to_hostname, localhost)
     rpc_example_valid.assign_ipv4(valid_ip.c_str(), 23010);
 
     // static bool hostname(const rpc_address &address,std::string *hostname_result);
-    ASSERT_TRUE(dsn::utils::hostname(rpc_example_valid, &hostname_result));
+    ASSERT_TRUE(utils::hostname(rpc_example_valid, &hostname_result));
     ASSERT_EQ(expected_hostname_port, hostname_result);
 
     // static bool hostname_from_ip(uint32_t ip, std::string* hostname_result);
-    ASSERT_TRUE(dsn::utils::hostname_from_ip(htonl(rpc_example_valid.ip()), &hostname_result));
+    ASSERT_TRUE(utils::hostname_from_ip(htonl(rpc_example_valid.ip()), &hostname_result));
     ASSERT_EQ(expected_hostname, hostname_result);
 
     // static bool hostname_from_ip(const char *ip,std::string *hostname_result);
-    ASSERT_TRUE(dsn::utils::hostname_from_ip(valid_ip.c_str(), &hostname_result));
+    ASSERT_TRUE(utils::hostname_from_ip(valid_ip.c_str(), &hostname_result));
     ASSERT_EQ(expected_hostname, hostname_result);
 
     // static bool hostname_from_ip_port(const char *ip_port,std::string *hostname_result);
-    ASSERT_TRUE(dsn::utils::hostname_from_ip_port(valid_ip_port.c_str(), &hostname_result));
+    ASSERT_TRUE(utils::hostname_from_ip_port(valid_ip_port.c_str(), &hostname_result));
     ASSERT_EQ(expected_hostname_port, hostname_result);
 
     // static bool list_hostname_from_ip(const char *ip_port_list,std::string
     // *hostname_result_list);
-    ASSERT_TRUE(dsn::utils::list_hostname_from_ip(valid_ip_list.c_str(), &hostname_result));
+    ASSERT_TRUE(utils::list_hostname_from_ip(valid_ip_list.c_str(), &hostname_result));
     ASSERT_EQ(expected_hostname_list, hostname_result);
 
-    ASSERT_FALSE(dsn::utils::list_hostname_from_ip("127.0.0.1,127.0.0.23323,111127.0.0.3",
-                                                   &hostname_result));
+    ASSERT_FALSE(
+        utils::list_hostname_from_ip("127.0.0.1,127.0.0.23323,111127.0.0.3", &hostname_result));
     ASSERT_EQ("localhost,127.0.0.23323,111127.0.0.3", hostname_result);
 
-    ASSERT_FALSE(dsn::utils::list_hostname_from_ip("123.456.789.111,127.0.0.1", &hostname_result));
+    ASSERT_FALSE(utils::list_hostname_from_ip("123.456.789.111,127.0.0.1", &hostname_result));
     ASSERT_EQ("123.456.789.111,localhost", hostname_result);
 
     // static bool list_hostname_from_ip_port(const char *ip_port_list,std::string
     // *hostname_result_list);
-    ASSERT_TRUE(
-        dsn::utils::list_hostname_from_ip_port(valid_ip_port_list.c_str(), &hostname_result));
+    ASSERT_TRUE(utils::list_hostname_from_ip_port(valid_ip_port_list.c_str(), &hostname_result));
     ASSERT_EQ(expected_hostname_port_list, hostname_result);
 
-    ASSERT_FALSE(dsn::utils::list_hostname_from_ip_port(
+    ASSERT_FALSE(utils::list_hostname_from_ip_port(
         "127.0.3333.1:23456,1127.0.0.2:22233,127.0.0.1:8080", &hostname_result));
     ASSERT_EQ("127.0.3333.1:23456,1127.0.0.2:22233,localhost:8080", hostname_result);
 }
@@ -120,12 +119,12 @@ TEST(ip_to_hostname, invalid_ip)
     const std::string invalid_ip = "123.456.789.111";
     const std::string invalid_ip_port = "123.456.789.111:23010";
 
-    ASSERT_FALSE(dsn::utils::hostname_from_ip(invalid_ip.c_str(), &hostname_result));
+    ASSERT_FALSE(utils::hostname_from_ip(invalid_ip.c_str(), &hostname_result));
     ASSERT_EQ(invalid_ip, hostname_result);
 
-    ASSERT_FALSE(dsn::utils::hostname_from_ip_port(invalid_ip_port.c_str(), &hostname_result));
+    ASSERT_FALSE(utils::hostname_from_ip_port(invalid_ip_port.c_str(), &hostname_result));
     ASSERT_EQ(invalid_ip_port, hostname_result);
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

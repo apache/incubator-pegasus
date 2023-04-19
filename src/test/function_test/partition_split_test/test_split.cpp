@@ -41,9 +41,8 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 
-using namespace dsn;
-using namespace dsn::replication;
 using namespace pegasus;
+using namespace pegasus::replication;
 
 class partition_split_test : public test_util
 {

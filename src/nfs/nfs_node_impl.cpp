@@ -41,7 +41,7 @@
 #include "nfs_server_impl.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 class aio_task;
 template <typename TResponse>
 class rpc_replier;
@@ -89,17 +89,16 @@ error_code nfs_node_simple::stop()
     return ERR_OK;
 }
 
-void nfs_node_simple::on_copy(const copy_request &request, ::dsn::rpc_replier<copy_response> &reply)
+void nfs_node_simple::on_copy(const copy_request &request, rpc_replier<copy_response> &reply)
 {
     _server->on_copy(request, reply);
 }
 
-void nfs_node_simple::on_get_file_size(
-    const ::dsn::service::get_file_size_request &request,
-    ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply)
+void nfs_node_simple::on_get_file_size(const service::get_file_size_request &request,
+                                       rpc_replier<service::get_file_size_response> &reply)
 {
     _server->on_get_file_size(request, reply);
 }
 
 } // namespace service
-} // namespace dsn
+} // namespace pegasus

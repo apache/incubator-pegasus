@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace dsn {
+namespace pegasus {
 namespace rand {
 
 /// This package offers several functions for random number generation.
@@ -62,4 +62,4 @@ inline double next_double01() { return next_u64(0, 1000000000) / 1000000000.0; }
 extern void reseed_thread_local_rng(uint64_t seed);
 
 } // namespace rand
-} // namespace dsn
+} // namespace pegasus

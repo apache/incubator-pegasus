@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-include "../../idl/dsn.thrift"
+include "../../idl/pegasus.thrift"
 
-namespace cpp dsn.apps
+namespace cpp pegasus.apps
 
 struct duplicate_request
 {
@@ -31,10 +31,10 @@ struct duplicate_entry
     1: optional i64 timestamp
 
     // The code to identify this write.
-    2: optional dsn.task_code task_code
+    2: optional pegasus.task_code task_code
 
     // The binary form of the write.
-    3: optional dsn.blob raw_message
+    3: optional pegasus.blob raw_message
 
     // ID of the cluster where this write comes from.
     4: optional byte cluster_id

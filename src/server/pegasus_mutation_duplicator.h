@@ -35,13 +35,13 @@
 #include "utils/string_view.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class error_code;
 namespace replication {
 struct replica_base;
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace client {
@@ -50,19 +50,19 @@ class pegasus_client_impl;
 
 namespace server {
 
-using namespace dsn::literals::chrono_literals;
+using namespace literals::chrono_literals;
 
 // Duplicates the loaded mutations to the remote pegasus cluster using pegasus client.
-class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator
+class pegasus_mutation_duplicator : public replication::mutation_duplicator
 {
-    using mutation_tuple_set = dsn::replication::mutation_tuple_set;
-    using mutation_tuple = dsn::replication::mutation_tuple;
-    using duplicate_rpc = dsn::apps::duplicate_rpc;
+    using mutation_tuple_set = replication::mutation_tuple_set;
+    using mutation_tuple = replication::mutation_tuple;
+    using duplicate_rpc = apps::duplicate_rpc;
 
 public:
-    pegasus_mutation_duplicator(dsn::replication::replica_base *r,
-                                dsn::string_view remote_cluster,
-                                dsn::string_view app);
+    pegasus_mutation_duplicator(replication::replica_base *r,
+                                string_view remote_cluster,
+                                string_view app);
 
     void duplicate(mutation_tuple_set muts, callback cb) override;
 
@@ -71,7 +71,7 @@ public:
 private:
     void send(uint64_t hash, callback cb);
 
-    void on_duplicate_reply(uint64_t hash, callback, duplicate_rpc, dsn::error_code err);
+    void on_duplicate_reply(uint64_t hash, callback, duplicate_rpc, error_code err);
 
 private:
     friend class pegasus_mutation_duplicator_test;
@@ -85,17 +85,17 @@ private:
     // Writes with the same hash are duplicated in mutation order to preserve data consistency,
     // otherwise they are duplicated concurrently to improve performance.
     std::map<uint64_t, std::deque<duplicate_rpc>> _inflights; // hash -> duplicate_rpc
-    dsn::zlock _lock;
+    zlock _lock;
 
     size_t _total_shipped_size{0};
 
-    dsn::perf_counter_wrapper _shipped_ops;
-    dsn::perf_counter_wrapper _failed_shipping_ops;
+    perf_counter_wrapper _shipped_ops;
+    perf_counter_wrapper _failed_shipping_ops;
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and
 // calculates the hash value from the write's hash key.
-extern uint64_t get_hash_from_request(dsn::task_code rpc_code, const dsn::blob &request_data);
+extern uint64_t get_hash_from_request(task_code rpc_code, const blob &request_data);
 
 } // namespace server
 } // namespace pegasus

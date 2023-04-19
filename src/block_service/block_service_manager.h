@@ -26,7 +26,7 @@
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 class block_filesystem;
@@ -86,4 +86,4 @@ private:
 
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

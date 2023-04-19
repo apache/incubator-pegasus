@@ -33,7 +33,7 @@
 #include "runtime/pipeline.h"
 #include "utils/chrono_literals.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica;
@@ -112,4 +112,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

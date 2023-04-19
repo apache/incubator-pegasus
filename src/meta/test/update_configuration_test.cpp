@@ -43,7 +43,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "dummy_balancer.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
@@ -68,14 +68,14 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 DSN_DECLARE_uint64(node_live_percentage_threshold_for_update);
 DSN_DECLARE_uint64(replica_assign_delay_ms_for_dropouts);
 
-class fake_sender_meta_service : public dsn::replication::meta_service
+class fake_sender_meta_service : public replication::meta_service
 {
 private:
     meta_service_test_app *_app;
@@ -83,23 +83,23 @@ private:
 public:
     fake_sender_meta_service(meta_service_test_app *app) : meta_service(), _app(app) {}
 
-    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override
+    virtual void reply_message(message_ex *request, message_ex *response) override
     {
         destroy_message(response);
     }
-    virtual void send_message(const dsn::rpc_address &target, dsn::message_ex *request) override
+    virtual void send_message(const rpc_address &target, message_ex *request) override
     {
         // we expect this is a configuration_update_request proposal
-        dsn::message_ex *recv_request = create_corresponding_receive(request);
+        message_ex *recv_request = create_corresponding_receive(request);
 
         std::shared_ptr<configuration_update_request> update_req =
             std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
 
         destroy_message(request);
         destroy_message(recv_request);
 
-        dsn::partition_configuration &pc = update_req->config;
+        partition_configuration &pc = update_req->config;
         pc.ballot++;
 
         switch (update_req->type) {
@@ -135,10 +135,10 @@ public:
     }
 };
 
-class null_meta_service : public dsn::replication::meta_service
+class null_meta_service : public replication::meta_service
 {
 public:
-    void send_message(const dsn::rpc_address &target, dsn::message_ex *request)
+    void send_message(const rpc_address &target, message_ex *request)
     {
         LOG_INFO("send request to {}", target);
         request->add_ref();
@@ -151,10 +151,10 @@ class dummy_partition_guardian : public partition_guardian
 public:
     explicit dummy_partition_guardian(meta_service *s) : partition_guardian(s) {}
 
-    pc_status cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action)
+    pc_status cure(meta_view view, const gpid &gpid, configuration_proposal_action &action)
     {
         action.type = config_type::CT_INVALID;
-        const dsn::partition_configuration &pc = *get_config(*view.apps, gpid);
+        const partition_configuration &pc = *get_config(*view.apps, gpid);
         if (!pc.primary.is_invalid() && pc.secondaries.size() == 2)
             return pc_status::healthy;
         return pc_status::ill;
@@ -162,14 +162,13 @@ public:
 };
 
 void meta_service_test_app::call_update_configuration(
-    meta_service *svc, std::shared_ptr<dsn::replication::configuration_update_request> &request)
+    meta_service *svc, std::shared_ptr<replication::configuration_update_request> &request)
 {
-    dsn::message_ex *fake_request =
-        dsn::message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
-    ::dsn::marshall(fake_request, *request);
+    message_ex *fake_request = message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
+    marshall(fake_request, *request);
     fake_request->add_ref();
 
-    dsn::tasking::enqueue(
+    tasking::enqueue(
         LPC_META_STATE_HIGH,
         nullptr,
         std::bind(&server_state::on_update_configuration, svc->_state.get(), request, fake_request),
@@ -179,32 +178,32 @@ void meta_service_test_app::call_update_configuration(
 void meta_service_test_app::call_config_sync(
     meta_service *svc, std::shared_ptr<configuration_query_by_node_request> &request)
 {
-    dsn::message_ex *fake_request = dsn::message_ex::create_request(RPC_CM_CONFIG_SYNC);
-    ::dsn::marshall(fake_request, *request);
+    message_ex *fake_request = message_ex::create_request(RPC_CM_CONFIG_SYNC);
+    marshall(fake_request, *request);
 
-    dsn::message_ex *recvd_request = create_corresponding_receive(fake_request);
+    message_ex *recvd_request = create_corresponding_receive(fake_request);
     destroy_message(fake_request);
 
     auto rpc = rpc_holder<configuration_query_by_node_request,
                           configuration_query_by_node_response>::auto_reply(recvd_request);
-    dsn::tasking::enqueue(LPC_META_STATE_HIGH,
-                          nullptr,
-                          std::bind(&server_state::on_config_sync, svc->_state.get(), rpc),
-                          server_state::sStateHash);
+    tasking::enqueue(LPC_META_STATE_HIGH,
+                     nullptr,
+                     std::bind(&server_state::on_config_sync, svc->_state.get(), rpc),
+                     server_state::sStateHash);
 }
 
 bool meta_service_test_app::wait_state(server_state *ss, const state_validator &validator, int time)
 {
     for (int i = 0; i != time;) {
-        dsn::task_ptr t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                                                nullptr,
-                                                std::bind(&server_state::check_all_partitions, ss),
-                                                server_state::sStateHash,
-                                                std::chrono::seconds(1));
+        task_ptr t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                                      nullptr,
+                                      std::bind(&server_state::check_all_partitions, ss),
+                                      server_state::sStateHash,
+                                      std::chrono::seconds(1));
         t->wait();
 
         {
-            dsn::zauto_read_lock l(ss->_lock);
+            zauto_read_lock l(ss->_lock);
             if (validator(ss->_all_apps))
                 return true;
         }
@@ -216,19 +215,19 @@ bool meta_service_test_app::wait_state(server_state *ss, const state_validator &
 
 void meta_service_test_app::update_configuration_test()
 {
-    dsn::error_code ec;
+    error_code ec;
     std::shared_ptr<fake_sender_meta_service> svc(new fake_sender_meta_service(this));
-    svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(svc.get()));
+    svc->_failure_detector.reset(new replication::meta_server_failure_detector(svc.get()));
     ec = svc->remote_storage_initialize();
-    ASSERT_EQ(ec, dsn::ERR_OK);
+    ASSERT_EQ(ec, ERR_OK);
     svc->_partition_guardian.reset(new partition_guardian(svc.get()));
     svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *ss = svc->_state.get();
     ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
-    dsn::app_info info;
+    app_info info;
     info.is_stateful = true;
-    info.status = dsn::app_status::AS_CREATING;
+    info.status = app_status::AS_CREATING;
     info.app_id = 1;
     info.app_name = "simple_kv.instance0";
     info.app_type = "simple_kv";
@@ -238,16 +237,16 @@ void meta_service_test_app::update_configuration_test()
 
     ss->_all_apps.emplace(1, app);
 
-    std::vector<dsn::rpc_address> nodes;
+    std::vector<rpc_address> nodes;
     generate_node_list(nodes, 4, 4);
 
-    dsn::partition_configuration &pc0 = app->partitions[0];
+    partition_configuration &pc0 = app->partitions[0];
     pc0.primary = nodes[0];
     pc0.secondaries.push_back(nodes[1]);
     pc0.secondaries.push_back(nodes[2]);
     pc0.ballot = 3;
 
-    dsn::partition_configuration &pc1 = app->partitions[1];
+    partition_configuration &pc1 = app->partitions[1];
     pc1.primary = nodes[1];
     pc1.secondaries.push_back(nodes[0]);
     pc1.secondaries.push_back(nodes[2]);
@@ -261,16 +260,16 @@ void meta_service_test_app::update_configuration_test()
 
     // test remove primary
     state_validator validator1 = [pc0](const app_mapper &apps) {
-        const dsn::partition_configuration *pc = get_config(apps, pc0.pid);
+        const partition_configuration *pc = get_config(apps, pc0.pid);
         return pc->ballot == pc0.ballot + 2 && pc->secondaries.size() == 1 &&
                std::find(pc0.secondaries.begin(), pc0.secondaries.end(), pc->primary) !=
                    pc0.secondaries.end();
     };
 
     // test kickoff secondary
-    dsn::rpc_address addr = nodes[0];
+    rpc_address addr = nodes[0];
     state_validator validator2 = [pc1, addr](const app_mapper &apps) {
-        const dsn::partition_configuration *pc = get_config(apps, pc1.pid);
+        const partition_configuration *pc = get_config(apps, pc1.pid);
         return pc->ballot == pc1.ballot + 1 && pc->secondaries.size() == 1 &&
                pc->secondaries.front() != addr;
     };
@@ -282,7 +281,7 @@ void meta_service_test_app::update_configuration_test()
     // test add secondary
     svc->set_node_state({nodes[3]}, true);
     state_validator validator3 = [pc0](const app_mapper &apps) {
-        const dsn::partition_configuration *pc = get_config(apps, pc0.pid);
+        const partition_configuration *pc = get_config(apps, pc0.pid);
         return pc->ballot == pc0.ballot + 1 && pc->secondaries.size() == 2;
     };
     // the default delay for add node is 5 miniutes
@@ -295,19 +294,19 @@ void meta_service_test_app::update_configuration_test()
 
 void meta_service_test_app::adjust_dropped_size()
 {
-    dsn::error_code ec;
+    error_code ec;
     std::shared_ptr<null_meta_service> svc(new null_meta_service());
-    svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(svc.get()));
+    svc->_failure_detector.reset(new replication::meta_server_failure_detector(svc.get()));
     ec = svc->remote_storage_initialize();
-    ASSERT_EQ(ec, dsn::ERR_OK);
+    ASSERT_EQ(ec, ERR_OK);
     svc->_partition_guardian.reset(new partition_guardian(svc.get()));
     svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *ss = svc->_state.get();
     ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
-    dsn::app_info info;
+    app_info info;
     info.is_stateful = true;
-    info.status = dsn::app_status::AS_CREATING;
+    info.status = app_status::AS_CREATING;
     info.app_id = 1;
     info.app_name = "simple_kv.instance0";
     info.app_type = "simple_kv";
@@ -317,11 +316,11 @@ void meta_service_test_app::adjust_dropped_size()
 
     ss->_all_apps.emplace(1, app);
 
-    std::vector<dsn::rpc_address> nodes;
+    std::vector<rpc_address> nodes;
     generate_node_list(nodes, 10, 10);
 
     // first, the replica is healthy, and there are 2 dropped
-    dsn::partition_configuration &pc = app->partitions[0];
+    partition_configuration &pc = app->partitions[0];
     pc.primary = nodes[0];
     pc.secondaries = {nodes[1], nodes[2]};
     pc.ballot = 10;
@@ -386,7 +385,7 @@ static void clone_app_mapper(app_mapper &output, const app_mapper &input)
     output.clear();
     for (auto &iter : input) {
         const std::shared_ptr<app_state> &old_app = iter.second;
-        dsn::app_info info = *old_app;
+        app_info info = *old_app;
         std::shared_ptr<app_state> new_app = app_state::create(info);
         for (unsigned int i = 0; i != old_app->partition_count; ++i)
             new_app->partitions[i] = old_app->partitions[i];
@@ -396,18 +395,18 @@ static void clone_app_mapper(app_mapper &output, const app_mapper &input)
 
 void meta_service_test_app::apply_balancer_test()
 {
-    dsn::error_code ec;
+    error_code ec;
     std::shared_ptr<fake_sender_meta_service> meta_svc(new fake_sender_meta_service(this));
     ec = meta_svc->remote_storage_initialize();
-    ASSERT_EQ(dsn::ERR_OK, ec);
+    ASSERT_EQ(ERR_OK, ec);
 
     meta_svc->_failure_detector.reset(
-        new dsn::replication::meta_server_failure_detector(meta_svc.get()));
+        new replication::meta_server_failure_detector(meta_svc.get()));
     meta_svc->_partition_guardian.reset(new partition_guardian(meta_svc.get()));
     meta_svc->_balancer.reset(new greedy_load_balancer(meta_svc.get()));
 
     // initialize data structure
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
     generate_node_list(node_list, 5, 10);
 
     server_state *ss = meta_svc->_state.get();
@@ -421,10 +420,10 @@ void meta_service_test_app::apply_balancer_test()
 
     // before initialize, we need to mark apps to AS_CREATING:
     for (auto &kv : ss->_all_apps) {
-        kv.second->status = dsn::app_status::AS_CREATING;
+        kv.second->status = app_status::AS_CREATING;
     }
     ss->initialize(meta_svc.get(), "/meta_test/apps");
-    ASSERT_EQ(dsn::ERR_OK, meta_svc->_state->sync_apps_to_remote_storage());
+    ASSERT_EQ(ERR_OK, meta_svc->_state->sync_apps_to_remote_storage());
     ASSERT_TRUE(ss->spin_wait_staging(30));
     ss->initialize_node_state();
 
@@ -447,11 +446,10 @@ void meta_service_test_app::apply_balancer_test()
 
     ss->set_replica_migration_subscriber_for_test(migration_actions);
     while (true) {
-        dsn::task_ptr tsk =
-            dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                                  nullptr,
-                                  [&result, ss]() { result = ss->check_all_partitions(); },
-                                  server_state::sStateHash);
+        task_ptr tsk = tasking::enqueue(LPC_META_STATE_NORMAL,
+                                        nullptr,
+                                        [&result, ss]() { result = ss->check_all_partitions(); },
+                                        server_state::sStateHash);
         tsk->wait();
         if (result)
             break;
@@ -479,10 +477,10 @@ void meta_service_test_app::cannot_run_balancer_test()
     svc->_balancer.reset(new dummy_balancer(svc.get()));
     svc->_partition_guardian.reset(new dummy_partition_guardian(svc.get()));
 
-    std::vector<dsn::rpc_address> nodes;
+    std::vector<rpc_address> nodes;
     generate_node_list(nodes, 10, 10);
 
-    dsn::app_info info;
+    app_info info;
     info.app_id = 1;
     info.app_name = "test";
     info.app_type = "pegasus";
@@ -490,13 +488,13 @@ void meta_service_test_app::cannot_run_balancer_test()
     info.is_stateful = true;
     info.max_replica_count = 3;
     info.partition_count = 1;
-    info.status = dsn::app_status::AS_AVAILABLE;
+    info.status = app_status::AS_AVAILABLE;
 
     std::shared_ptr<app_state> the_app = app_state::create(info);
     svc->_state->_all_apps.emplace(info.app_id, the_app);
     svc->_state->_exist_apps.emplace(info.app_name, the_app);
 
-    dsn::partition_configuration &pc = the_app->partitions[0];
+    partition_configuration &pc = the_app->partitions[0];
     pc.primary = nodes[0];
     pc.secondaries = {nodes[1], nodes[2]};
 
@@ -528,15 +526,15 @@ void meta_service_test_app::cannot_run_balancer_test()
 
     // some apps are staging
     REGENERATE_NODE_MAPPER;
-    the_app->status = dsn::app_status::AS_DROPPING;
+    the_app->status = app_status::AS_DROPPING;
     ASSERT_FALSE(svc->_state->check_all_partitions());
 
     // call function can run balancer
-    the_app->status = dsn::app_status::AS_AVAILABLE;
+    the_app->status = app_status::AS_AVAILABLE;
     ASSERT_TRUE(svc->_state->can_run_balancer());
 
     // recover original FLAGS_min_live_node_count_for_unfreeze
     FLAGS_min_live_node_count_for_unfreeze = reserved_min_live_node_count_for_unfreeze;
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -13,15 +13,16 @@
 
 #include "utils/autoref_ptr.h"
 
+namespace pegasus {
 namespace {
 
-class SelfAssign : public dsn::ref_counter
+class SelfAssign : public ref_counter
 {
 protected:
     virtual ~SelfAssign() = default;
 
 private:
-    friend class dsn::ref_counter;
+    friend class ref_counter;
 };
 
 class Derived : public SelfAssign
@@ -30,10 +31,10 @@ protected:
     ~Derived() override = default;
 
 private:
-    friend class dsn::ref_counter;
+    friend class ref_counter;
 };
 
-class ScopedRefPtrToSelf : public dsn::ref_counter
+class ScopedRefPtrToSelf : public ref_counter
 {
 public:
     ScopedRefPtrToSelf() : self_ptr_(this) {}
@@ -42,10 +43,10 @@ public:
 
     static void reset_was_destroyed() { was_destroyed_ = false; }
 
-    dsn::ref_ptr<ScopedRefPtrToSelf> self_ptr_;
+    ref_ptr<ScopedRefPtrToSelf> self_ptr_;
 
 private:
-    friend class dsn::ref_counter;
+    friend class ref_counter;
     ~ScopedRefPtrToSelf() { was_destroyed_ = true; }
 
     static bool was_destroyed_;
@@ -53,7 +54,7 @@ private:
 
 bool ScopedRefPtrToSelf::was_destroyed_ = false;
 
-class ScopedRefPtrCountBase : public dsn::ref_counter
+class ScopedRefPtrCountBase : public ref_counter
 {
 public:
     ScopedRefPtrCountBase() { ++constructor_count_; }
@@ -72,7 +73,7 @@ protected:
     virtual ~ScopedRefPtrCountBase() { ++destructor_count_; }
 
 private:
-    friend class dsn::ref_counter;
+    friend class ref_counter;
 
     static int constructor_count_;
     static int destructor_count_;
@@ -100,7 +101,7 @@ protected:
     ~ScopedRefPtrCountDerived() override { ++destructor_count_; }
 
 private:
-    friend class dsn::ref_counter;
+    friend class ref_counter;
 
     static int constructor_count_;
     static int destructor_count_;
@@ -109,25 +110,25 @@ private:
 int ScopedRefPtrCountDerived::constructor_count_ = 0;
 int ScopedRefPtrCountDerived::destructor_count_ = 0;
 
-class Other : public dsn::ref_counter
+class Other : public ref_counter
 {
 private:
-    friend class dsn::ref_counter;
+    friend class ref_counter;
 
     ~Other() = default;
 };
 
-dsn::ref_ptr<Other> Overloaded(dsn::ref_ptr<Other> other) { return other; }
+ref_ptr<Other> Overloaded(ref_ptr<Other> other) { return other; }
 
-dsn::ref_ptr<SelfAssign> Overloaded(dsn::ref_ptr<SelfAssign> self_assign) { return self_assign; }
+ref_ptr<SelfAssign> Overloaded(ref_ptr<SelfAssign> self_assign) { return self_assign; }
 
-class InitialRefCountIsOne : public dsn::ref_counter
+class InitialRefCountIsOne : public ref_counter
 {
 public:
     InitialRefCountIsOne() = default;
 
 private:
-    friend class dsn::ref_counter;
+    friend class ref_counter;
     ~InitialRefCountIsOne() = default;
 };
 
@@ -136,7 +137,7 @@ private:
 TEST(RefCountedUnitTest, TestSelfAssignment)
 {
     SelfAssign *p = new SelfAssign;
-    dsn::ref_ptr<SelfAssign> var(p);
+    ref_ptr<SelfAssign> var(p);
     // var = var;
     EXPECT_EQ(var.get(), p);
     // comment the following two lines because clang compiler would complain with "-Wself-move"
@@ -169,13 +170,13 @@ TEST(RefCountedUnitTest, ScopedRefPtrToSelfMoveAssignment)
     // Releasing |check->self_ptr_| will delete |check|.
     // The move assignment operator must assign |check->self_ptr_| first then
     // release |check->self_ptr_|.
-    check->self_ptr_ = dsn::ref_ptr<ScopedRefPtrToSelf>();
+    check->self_ptr_ = ref_ptr<ScopedRefPtrToSelf>();
     EXPECT_TRUE(ScopedRefPtrToSelf::was_destroyed());
 }
 
 TEST(RefCountedUnitTest, BooleanTesting)
 {
-    dsn::ref_ptr<SelfAssign> ptr_to_an_instance = new SelfAssign;
+    ref_ptr<SelfAssign> ptr_to_an_instance = new SelfAssign;
     EXPECT_TRUE(ptr_to_an_instance);
     EXPECT_FALSE(!ptr_to_an_instance);
 
@@ -188,7 +189,7 @@ TEST(RefCountedUnitTest, BooleanTesting)
         ADD_FAILURE() << "Pointer to an instance should result in !x being false.";
     }
 
-    dsn::ref_ptr<SelfAssign> null_ptr;
+    ref_ptr<SelfAssign> null_ptr;
     EXPECT_FALSE(null_ptr);
     EXPECT_TRUE(!null_ptr);
 
@@ -204,8 +205,8 @@ TEST(RefCountedUnitTest, BooleanTesting)
 
 TEST(RefCountedUnitTest, Equality)
 {
-    dsn::ref_ptr<SelfAssign> p1(new SelfAssign);
-    dsn::ref_ptr<SelfAssign> p2(new SelfAssign);
+    ref_ptr<SelfAssign> p1(new SelfAssign);
+    ref_ptr<SelfAssign> p2(new SelfAssign);
 
     EXPECT_EQ(p1, p1);
     EXPECT_EQ(p2, p2);
@@ -216,8 +217,8 @@ TEST(RefCountedUnitTest, Equality)
 
 TEST(RefCountedUnitTest, NullptrEquality)
 {
-    dsn::ref_ptr<SelfAssign> ptr_to_an_instance(new SelfAssign);
-    dsn::ref_ptr<SelfAssign> ptr_to_nullptr;
+    ref_ptr<SelfAssign> ptr_to_an_instance(new SelfAssign);
+    ref_ptr<SelfAssign> ptr_to_nullptr;
 
     EXPECT_NE(nullptr, ptr_to_an_instance);
     EXPECT_NE(ptr_to_an_instance, nullptr);
@@ -227,8 +228,8 @@ TEST(RefCountedUnitTest, NullptrEquality)
 
 TEST(RefCountedUnitTest, ConvertibleEquality)
 {
-    dsn::ref_ptr<Derived> p1(new Derived);
-    dsn::ref_ptr<SelfAssign> p2;
+    ref_ptr<Derived> p1(new Derived);
+    ref_ptr<SelfAssign> p2;
 
     EXPECT_NE(p1, p2);
     EXPECT_NE(p2, p1);
@@ -245,12 +246,12 @@ TEST(RefCountedUnitTest, MoveAssignment1)
 
     {
         ScopedRefPtrCountBase *raw = new ScopedRefPtrCountBase();
-        dsn::ref_ptr<ScopedRefPtrCountBase> p1(raw);
+        ref_ptr<ScopedRefPtrCountBase> p1(raw);
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
         {
-            dsn::ref_ptr<ScopedRefPtrCountBase> p2;
+            ref_ptr<ScopedRefPtrCountBase> p2;
 
             p2 = std::move(p1);
             EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
@@ -275,12 +276,12 @@ TEST(RefCountedUnitTest, MoveAssignment2)
 
     {
         ScopedRefPtrCountBase *raw = new ScopedRefPtrCountBase();
-        dsn::ref_ptr<ScopedRefPtrCountBase> p1;
+        ref_ptr<ScopedRefPtrCountBase> p1;
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
         {
-            dsn::ref_ptr<ScopedRefPtrCountBase> p2(raw);
+            ref_ptr<ScopedRefPtrCountBase> p2(raw);
             EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
             EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
@@ -307,12 +308,12 @@ TEST(RefCountedUnitTest, MoveAssignmentSameInstance1)
 
     {
         ScopedRefPtrCountBase *raw = new ScopedRefPtrCountBase();
-        dsn::ref_ptr<ScopedRefPtrCountBase> p1(raw);
+        ref_ptr<ScopedRefPtrCountBase> p1(raw);
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
         {
-            dsn::ref_ptr<ScopedRefPtrCountBase> p2(p1);
+            ref_ptr<ScopedRefPtrCountBase> p2(p1);
             EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
             EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
@@ -339,12 +340,12 @@ TEST(RefCountedUnitTest, MoveAssignmentSameInstance2)
 
     {
         ScopedRefPtrCountBase *raw = new ScopedRefPtrCountBase();
-        dsn::ref_ptr<ScopedRefPtrCountBase> p1(raw);
+        ref_ptr<ScopedRefPtrCountBase> p1(raw);
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
         {
-            dsn::ref_ptr<ScopedRefPtrCountBase> p2(p1);
+            ref_ptr<ScopedRefPtrCountBase> p2(p1);
             EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
             EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
@@ -371,13 +372,13 @@ TEST(RefCountedUnitTest, MoveAssignmentDifferentInstances)
 
     {
         ScopedRefPtrCountBase *raw1 = new ScopedRefPtrCountBase();
-        dsn::ref_ptr<ScopedRefPtrCountBase> p1(raw1);
+        ref_ptr<ScopedRefPtrCountBase> p1(raw1);
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
         {
             ScopedRefPtrCountBase *raw2 = new ScopedRefPtrCountBase();
-            dsn::ref_ptr<ScopedRefPtrCountBase> p2(raw2);
+            ref_ptr<ScopedRefPtrCountBase> p2(raw2);
             EXPECT_EQ(2, ScopedRefPtrCountBase::constructor_count());
             EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
@@ -404,8 +405,8 @@ TEST(RefCountedUnitTest, MoveAssignmentSelfMove)
 
     {
         ScopedRefPtrCountBase *raw = new ScopedRefPtrCountBase;
-        dsn::ref_ptr<ScopedRefPtrCountBase> p1(raw);
-        dsn::ref_ptr<ScopedRefPtrCountBase> &p1_ref = p1;
+        ref_ptr<ScopedRefPtrCountBase> p1(raw);
+        ref_ptr<ScopedRefPtrCountBase> &p1_ref = p1;
 
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
@@ -427,7 +428,7 @@ TEST(RefCountedUnitTest, MoveAssignmentDerived)
 
     {
         ScopedRefPtrCountBase *raw1 = new ScopedRefPtrCountBase();
-        dsn::ref_ptr<ScopedRefPtrCountBase> p1(raw1);
+        ref_ptr<ScopedRefPtrCountBase> p1(raw1);
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountDerived::constructor_count());
@@ -435,7 +436,7 @@ TEST(RefCountedUnitTest, MoveAssignmentDerived)
 
         {
             ScopedRefPtrCountDerived *raw2 = new ScopedRefPtrCountDerived();
-            dsn::ref_ptr<ScopedRefPtrCountDerived> p2(raw2);
+            ref_ptr<ScopedRefPtrCountDerived> p2(raw2);
             EXPECT_EQ(2, ScopedRefPtrCountBase::constructor_count());
             EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
             EXPECT_EQ(1, ScopedRefPtrCountDerived::constructor_count());
@@ -470,12 +471,12 @@ TEST(RefCountedUnitTest, MoveConstructor)
 
     {
         ScopedRefPtrCountBase *raw = new ScopedRefPtrCountBase();
-        dsn::ref_ptr<ScopedRefPtrCountBase> p1(raw);
+        ref_ptr<ScopedRefPtrCountBase> p1(raw);
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
 
         {
-            dsn::ref_ptr<ScopedRefPtrCountBase> p2(std::move(p1));
+            ref_ptr<ScopedRefPtrCountBase> p2(std::move(p1));
             EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
             EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
             EXPECT_EQ(nullptr, p1.get());
@@ -499,14 +500,14 @@ TEST(RefCountedUnitTest, MoveConstructorDerived)
 
     {
         ScopedRefPtrCountDerived *raw1 = new ScopedRefPtrCountDerived();
-        dsn::ref_ptr<ScopedRefPtrCountDerived> p1(raw1);
+        ref_ptr<ScopedRefPtrCountDerived> p1(raw1);
         EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
         EXPECT_EQ(1, ScopedRefPtrCountDerived::constructor_count());
         EXPECT_EQ(0, ScopedRefPtrCountDerived::destructor_count());
 
         {
-            dsn::ref_ptr<ScopedRefPtrCountBase> p2(std::move(p1));
+            ref_ptr<ScopedRefPtrCountBase> p2(std::move(p1));
             EXPECT_EQ(1, ScopedRefPtrCountBase::constructor_count());
             EXPECT_EQ(0, ScopedRefPtrCountBase::destructor_count());
             EXPECT_EQ(1, ScopedRefPtrCountDerived::constructor_count());
@@ -531,47 +532,48 @@ TEST(RefCountedUnitTest, MoveConstructorDerived)
 
 TEST(RefCountedUnitTest, TestOverloadResolutionCopy)
 {
-    const dsn::ref_ptr<Derived> derived(new Derived);
-    const dsn::ref_ptr<SelfAssign> expected(derived);
-    EXPECT_EQ(expected, Overloaded((dsn::ref_ptr<SelfAssign>)(derived)));
+    const ref_ptr<Derived> derived(new Derived);
+    const ref_ptr<SelfAssign> expected(derived);
+    EXPECT_EQ(expected, Overloaded((ref_ptr<SelfAssign>)(derived)));
 
-    const dsn::ref_ptr<Other> other(new Other);
-    EXPECT_EQ(other, Overloaded((dsn::ref_ptr<Other>)other));
+    const ref_ptr<Other> other(new Other);
+    EXPECT_EQ(other, Overloaded((ref_ptr<Other>)other));
 }
 
 TEST(RefCountedUnitTest, TestOverloadResolutionMove)
 {
-    dsn::ref_ptr<Derived> derived(new Derived);
-    const dsn::ref_ptr<SelfAssign> expected(derived);
-    EXPECT_EQ(expected, Overloaded((dsn::ref_ptr<SelfAssign>)(std::move(derived))));
+    ref_ptr<Derived> derived(new Derived);
+    const ref_ptr<SelfAssign> expected(derived);
+    EXPECT_EQ(expected, Overloaded((ref_ptr<SelfAssign>)(std::move(derived))));
 
-    dsn::ref_ptr<Other> other(new Other);
-    const dsn::ref_ptr<Other> other2(other);
-    EXPECT_EQ(other2, Overloaded((dsn::ref_ptr<Other>)(std::move(other))));
+    ref_ptr<Other> other(new Other);
+    const ref_ptr<Other> other2(other);
+    EXPECT_EQ(other2, Overloaded((ref_ptr<Other>)(std::move(other))));
 }
 
 TEST(RefCountedUnitTest, TestMakeRefCounted)
 {
-    dsn::ref_ptr<Derived> derived = new Derived;
+    ref_ptr<Derived> derived = new Derived;
     EXPECT_TRUE(derived->get_count() == 1);
     derived = nullptr;
 
-    dsn::ref_ptr<Derived> derived2(new Derived());
+    ref_ptr<Derived> derived2(new Derived());
     EXPECT_TRUE(derived2->get_count() == 1);
     derived2 = nullptr;
 }
 
 TEST(RefCountedUnitTest, TestInitialRefCountIsOne)
 {
-    dsn::ref_ptr<InitialRefCountIsOne> obj(new InitialRefCountIsOne());
+    ref_ptr<InitialRefCountIsOne> obj(new InitialRefCountIsOne());
     EXPECT_TRUE(obj->get_count() == 1);
     obj = nullptr;
 
-    dsn::ref_ptr<InitialRefCountIsOne> obj2(new InitialRefCountIsOne);
+    ref_ptr<InitialRefCountIsOne> obj2(new InitialRefCountIsOne);
     EXPECT_TRUE(obj2->get_count() == 1);
     obj2 = nullptr;
 
-    dsn::ref_ptr<Other> obj3(new Other());
+    ref_ptr<Other> obj3(new Other());
     EXPECT_TRUE(obj3->get_count() == 1);
     obj3 = nullptr;
 }
+} // namespace pegasus

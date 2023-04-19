@@ -38,7 +38,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 class service_node;
 
@@ -85,7 +85,7 @@ public:
     {
     }
 };
-typedef dsn::ref_ptr<aio_context> aio_context_ptr;
+typedef ref_ptr<aio_context> aio_context_ptr;
 
 class aio_task : public task
 {
@@ -117,7 +117,7 @@ public:
 
     std::vector<dsn_file_buffer_t> _unmerged_write_buffers;
     blob _merged_write_buffer_holder;
-    std::shared_ptr<dsn::utils::latency_tracer> _tracer;
+    std::shared_ptr<utils::latency_tracer> _tracer;
 
 protected:
     void clear_non_trivial_on_task_end() override { _cb = nullptr; }
@@ -127,6 +127,6 @@ private:
     size_t _transferred_size;
     aio_handler _cb;
 };
-typedef dsn::ref_ptr<aio_task> aio_task_ptr;
+typedef ref_ptr<aio_task> aio_task_ptr;
 
-} // namespace dsn
+} // namespace pegasus

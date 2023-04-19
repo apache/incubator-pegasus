@@ -49,7 +49,7 @@
 #include "utils/error_code.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 class zookeeper_session;
@@ -77,39 +77,39 @@ public:
                                  task_code cb_code,
                                  const err_callback &cb_create,
                                  const blob &value = blob(),
-                                 dsn::task_tracker *tracker = nullptr) override;
+                                 task_tracker *tracker = nullptr) override;
 
     virtual task_ptr delete_node(const std::string &node,
                                  bool recursively_delete,
                                  task_code cb_code,
                                  const err_callback &cb_delete,
-                                 dsn::task_tracker *tracker = nullptr) override;
+                                 task_tracker *tracker = nullptr) override;
 
     virtual task_ptr node_exist(const std::string &node,
                                 task_code cb_code,
                                 const err_callback &cb_exist,
-                                dsn::task_tracker *tracker = nullptr) override;
+                                task_tracker *tracker = nullptr) override;
 
     virtual task_ptr get_data(const std::string &node,
                               task_code cb_code,
                               const err_value_callback &cb_get_data,
-                              dsn::task_tracker *tracker = nullptr) override;
+                              task_tracker *tracker = nullptr) override;
 
     virtual task_ptr set_data(const std::string &node,
                               const blob &value,
                               task_code cb_code,
                               const err_callback &cb_set_data,
-                              dsn::task_tracker *tracker = nullptr) override;
+                              task_tracker *tracker = nullptr) override;
 
     virtual task_ptr get_children(const std::string &node,
                                   task_code cb_code,
                                   const err_stringv_callback &cb_get_children,
-                                  dsn::task_tracker *tracker = nullptr) override;
+                                  task_tracker *tracker = nullptr) override;
 
     task_ptr delete_empty_node(const std::string &node,
                                task_code cb_code,
                                const err_callback &cb_delete,
-                               dsn::task_tracker *tracker);
+                               task_tracker *tracker);
     int hash() const { return (int)(((uint64_t)this) & 0xffffffff); }
 
 private:
@@ -120,7 +120,7 @@ private:
     zookeeper_session *_session;
     utils::notify_event _notifier;
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
     static void on_zoo_session_evt(ref_this ptr, int zoo_state);
     static void visit_zookeeper_internal(ref_this ptr,

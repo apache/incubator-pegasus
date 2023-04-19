@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-include "dsn.thrift"
+include "pegasus.thrift"
 
-namespace cpp dsn.security
+namespace cpp pegasus.security
 namespace java org.apache.pegasus.apps
 
 // negotiation process:
@@ -61,12 +61,12 @@ enum negotiation_status {
 
 struct negotiation_request {
     1: negotiation_status status;
-    2: dsn.blob msg;
+    2: pegasus.blob msg;
 }
 
 struct negotiation_response {
     1: negotiation_status status;
-    2: dsn.blob msg;
+    2: pegasus.blob msg;
 }
 
 // JAVA ONLY

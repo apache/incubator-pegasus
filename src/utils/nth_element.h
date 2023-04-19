@@ -27,7 +27,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 
 // The finder helps to find multiple nth elements of a sequence container (e.g. std::vector)
 // at a time, based on nth_element() of STL.
@@ -121,4 +121,4 @@ public:
 template <typename T, typename = typename std::enable_if<std::is_floating_point<T>::value>::type>
 using floating_stl_nth_element_finder = stl_nth_element_finder<T, floating_comparator<T>>;
 
-} // namespace dsn
+} // namespace pegasus

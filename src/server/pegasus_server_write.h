@@ -32,17 +32,17 @@
 #include "rrdb/rrdb_types.h"
 #include "runtime/task/task_code.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class message_ex;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
 class pegasus_server_impl;
 
 /// This class implements the interface of `pegasus_sever_impl::on_batched_write_requests`.
-class pegasus_server_write : public dsn::replication::replica_base
+class pegasus_server_write : public replication::replica_base
 {
 public:
     pegasus_server_write(pegasus_server_impl *server);
@@ -55,16 +55,14 @@ public:
     /// As long as the returned error is rocksdb::Status::kOk, the operation is guaranteed to be
     /// successfully applied into rocksdb, which means an empty_put will be called
     /// even if there's no write.
-    int on_batched_write_requests(dsn::message_ex **requests,
-                                  int count,
-                                  int64_t decree,
-                                  uint64_t timestamp);
+    int
+    on_batched_write_requests(message_ex **requests, int count, int64_t decree, uint64_t timestamp);
 
     void set_default_ttl(uint32_t ttl);
 
 private:
     /// Delay replying for the batched requests until all of them complete.
-    int on_batched_writes(dsn::message_ex **requests, int count);
+    int on_batched_writes(message_ex **requests, int count);
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
@@ -82,7 +80,7 @@ private:
 
     // Ensure that the write request is directed to the right partition.
     // In verbose mode it will log for every request.
-    void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
+    void request_key_check(int64_t decree, message_ex *m, const blob &key);
 
 private:
     void init_non_batch_write_handlers();
@@ -99,10 +97,10 @@ private:
     db_write_context _write_ctx;
     int64_t _decree;
 
-    typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
+    typedef std::map<task_code, std::function<int(message_ex *)>> non_batch_writes_map;
     non_batch_writes_map _non_batch_write_handlers;
 
-    ::dsn::perf_counter_wrapper _pfc_recent_corrupt_write_count;
+    perf_counter_wrapper _pfc_recent_corrupt_write_count;
 };
 
 } // namespace server

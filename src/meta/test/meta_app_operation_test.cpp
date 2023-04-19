@@ -32,7 +32,6 @@
 #include "common/json_helper.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
@@ -41,7 +40,7 @@
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
-#include "misc/misc.h"
+#include "pegasus.layer2_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_tracker.h"
@@ -50,8 +49,10 @@
 #include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/rand.h"
 
-namespace dsn {
+using pegasus::rand::next_u32;
+namespace pegasus {
 class blob;
 
 namespace replication {
@@ -171,12 +172,12 @@ public:
         // set remote env of app
         auto app_path = _ss->get_app_path(*app);
         auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
-        auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
-        dsn::task_tracker tracker;
+        auto json_config = json::json_forwarder<app_info>::encode(ainfo);
+        task_tracker tracker;
         _ms->get_remote_storage()->set_data(app_path,
                                             json_config,
                                             LPC_META_STATE_HIGH,
-                                            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                                            [](error_code ec) { ASSERT_EQ(ec, ERR_OK); },
                                             &tracker);
         tracker.wait_outstanding_tasks();
     }
@@ -224,12 +225,12 @@ public:
             // set remote max_replica_count of each partition
             auto partition_path = _ss->get_partition_path(partition_config.pid);
             auto json_config =
-                dsn::json::json_forwarder<partition_configuration>::encode(partition_config);
-            dsn::task_tracker tracker;
+                json::json_forwarder<partition_configuration>::encode(partition_config);
+            task_tracker tracker;
             _ms->get_remote_storage()->set_data(partition_path,
                                                 json_config,
                                                 LPC_META_STATE_HIGH,
-                                                [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                                                [](error_code ec) { ASSERT_EQ(ec, ERR_OK); },
                                                 &tracker);
             tracker.wait_outstanding_tasks();
         }
@@ -240,12 +241,12 @@ public:
         // set remote max_replica_count of app
         auto app_path = _ss->get_app_path(*app);
         auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
-        auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
-        dsn::task_tracker tracker;
+        auto json_config = json::json_forwarder<app_info>::encode(ainfo);
+        task_tracker tracker;
         _ms->get_remote_storage()->set_data(app_path,
                                             json_config,
                                             LPC_META_STATE_HIGH,
-                                            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                                            [](error_code ec) { ASSERT_EQ(ec, ERR_OK); },
                                             &tracker);
         tracker.wait_outstanding_tasks();
     }
@@ -264,7 +265,7 @@ public:
 
             // verify remote max_replica_count of each partition
             auto partition_path = _ss->get_partition_path(partition_config.pid);
-            dsn::task_tracker tracker;
+            task_tracker tracker;
             _ms->get_remote_storage()->get_data(
                 partition_path,
                 LPC_META_CALLBACK,
@@ -273,8 +274,7 @@ public:
                     ASSERT_EQ(ec, ERR_OK);
 
                     partition_configuration partition_config;
-                    dsn::json::json_forwarder<partition_configuration>::decode(value,
-                                                                               partition_config);
+                    json::json_forwarder<partition_configuration>::decode(value, partition_config);
 
                     ASSERT_EQ(partition_config.pid, expected_pid);
                     ASSERT_EQ(partition_config.max_replica_count, expected_max_replica_count);
@@ -297,7 +297,7 @@ public:
 
         // verify remote max_replica_count of the app
         auto app_path = _ss->get_app_path(*app);
-        dsn::task_tracker tracker;
+        task_tracker tracker;
         _ms->get_remote_storage()->get_data(
             app_path,
             LPC_META_CALLBACK,
@@ -305,7 +305,7 @@ public:
                 ASSERT_EQ(ec, ERR_OK);
 
                 app_info ainfo;
-                dsn::json::json_forwarder<app_info>::decode(value, ainfo);
+                json::json_forwarder<app_info>::decode(value, ainfo);
 
                 ASSERT_EQ(ainfo.app_name, app->app_name);
                 ASSERT_EQ(ainfo.app_id, app->app_id);
@@ -613,7 +613,7 @@ TEST_F(meta_app_operation_test, get_max_replica_count)
         std::function<void()> recover_partition_max_replica_count = []() {};
 
         if (test.expected_err == ERR_INCONSISTENT_STATE) {
-            auto partition_index = static_cast<int32_t>(random32(0, partition_count - 1));
+            auto partition_index = static_cast<int32_t>(next_u32(0, partition_count - 1));
             set_partition_max_replica_count(test.app_name, partition_index, 2);
             recover_partition_max_replica_count =
                 [ this, app_name = test.app_name, partition_index ]()
@@ -790,7 +790,7 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
 
         // choose and set a partition randomly with an inconsistent max_replica_count
         if (test.expected_err == ERR_INCONSISTENT_STATE) {
-            auto partition_index = static_cast<int32_t>(random32(0, partition_count - 1));
+            auto partition_index = static_cast<int32_t>(next_u32(0, partition_count - 1));
             set_partition_max_replica_count(
                 test.app_name, partition_index, test.initial_max_replica_count + 1);
         }
@@ -864,4 +864,4 @@ TEST_F(meta_app_operation_test, rename_app)
     ASSERT_EQ(app_id_1, app->app_id);
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

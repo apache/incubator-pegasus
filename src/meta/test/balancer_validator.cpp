@@ -37,7 +37,7 @@
 #include <vector>
 
 #include "common/replication_other_types.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include "common/serialization_helper/pegasus.layer2_types.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
@@ -50,10 +50,10 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
-static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_configuration &pc)
+static void check_cure(app_mapper &apps, node_mapper &nodes, partition_configuration &pc)
 {
     meta_service svc;
     partition_guardian guardian(&svc);
@@ -215,7 +215,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
 
 void meta_service_test_app::balancer_validator()
 {
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
     generate_node_list(node_list, 20, 100);
 
     app_mapper apps;
@@ -255,15 +255,15 @@ void meta_service_test_app::balancer_validator()
     }
 
     std::shared_ptr<app_state> &the_app = apps[1];
-    for (::dsn::partition_configuration &pc : the_app->partitions) {
+    for (partition_configuration &pc : the_app->partitions) {
         CHECK(!pc.primary.is_invalid(), "");
         CHECK_GE(pc.secondaries.size(), pc.max_replica_count - 1);
     }
 
     // now test the cure
-    ::dsn::partition_configuration &pc = the_app->partitions[0];
+    partition_configuration &pc = the_app->partitions[0];
     nodes[pc.primary].remove_partition(pc.pid, false);
-    for (const dsn::rpc_address &addr : pc.secondaries)
+    for (const rpc_address &addr : pc.secondaries)
         nodes[addr].remove_partition(pc.pid, false);
     pc.primary.set_invalid();
     pc.secondaries.clear();
@@ -272,7 +272,7 @@ void meta_service_test_app::balancer_validator()
     check_cure(apps, nodes, pc);
 }
 
-dsn::rpc_address get_rpc_address(const std::string &ip_port)
+rpc_address get_rpc_address(const std::string &ip_port)
 {
     int splitter = ip_port.find_first_of(':');
     return rpc_address(ip_port.substr(0, splitter).c_str(),
@@ -289,7 +289,7 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
     infile >> total_nodes;
 
     std::string ip_port;
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
     for (int i = 0; i < total_nodes; ++i) {
         infile >> ip_port;
         node_list.push_back(get_rpc_address(ip_port));
@@ -347,4 +347,4 @@ void meta_service_test_app::balance_config_file()
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

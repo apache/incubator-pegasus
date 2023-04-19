@@ -51,7 +51,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace tools {
@@ -176,7 +176,7 @@ void asio_rpc_session::send(uint64_t signature)
 }
 
 asio_rpc_session::asio_rpc_session(asio_network_provider &net,
-                                   ::dsn::rpc_address remote_addr,
+                                   rpc_address remote_addr,
                                    std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
                                    message_parser_ptr &parser,
                                    bool is_client)
@@ -222,4 +222,4 @@ void asio_rpc_session::connect()
     }
 }
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

@@ -25,7 +25,7 @@
 #include <mutex>
 #include <ostream>
 
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
@@ -37,7 +37,7 @@
 #include "utils/string_view.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
@@ -95,13 +95,12 @@ bool calc_disk_load(node_mapper &nodes,
     }
 }
 
-std::unordered_map<dsn::rpc_address, disk_load>
-get_node_loads(const std::shared_ptr<app_state> &app,
-               const app_mapper &apps,
-               node_mapper &nodes,
-               bool only_primary)
+std::unordered_map<rpc_address, disk_load> get_node_loads(const std::shared_ptr<app_state> &app,
+                                                          const app_mapper &apps,
+                                                          node_mapper &nodes,
+                                                          bool only_primary)
 {
-    std::unordered_map<dsn::rpc_address, disk_load> node_loads;
+    std::unordered_map<rpc_address, disk_load> node_loads;
     for (auto iter = nodes.begin(); iter != nodes.end(); ++iter) {
         if (!calc_disk_load(
                 nodes, apps, app->app_id, iter->first, only_primary, node_loads[iter->first])) {
@@ -181,7 +180,7 @@ load_balance_policy::load_balance_policy(meta_service *svc)
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
+        _ctrl_balancer_ignored_apps = command_manager::instance().register_command(
             {"meta.lb.ignored_app_list"},
             "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
             "get, set and clear balancer ignored_app_list",
@@ -290,7 +289,7 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
                                                disk_load *prev_load,
                                                disk_load *current_load)
 {
-    std::list<dsn::gpid> potential_moving = calc_potential_moving(app, from, to);
+    std::list<gpid> potential_moving = calc_potential_moving(app, from, to);
     auto potential_moving_size = potential_moving.size();
     CHECK_LE_MSG(plan_moving,
                  potential_moving_size,
@@ -301,7 +300,7 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
                  potential_moving_size);
 
     while (plan_moving-- > 0) {
-        dsn::gpid selected = select_moving(potential_moving, prev_load, current_load, from, to);
+        gpid selected = select_moving(potential_moving, prev_load, current_load, from, to);
 
         const partition_configuration &pc = app->partitions[selected.get_partition_index()];
         auto balancer_result = _migration_result->emplace(
@@ -315,10 +314,11 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
     }
 }
 
-std::list<dsn::gpid> load_balance_policy::calc_potential_moving(
-    const std::shared_ptr<app_state> &app, const rpc_address &from, const rpc_address &to)
+std::list<gpid> load_balance_policy::calc_potential_moving(const std::shared_ptr<app_state> &app,
+                                                           const rpc_address &from,
+                                                           const rpc_address &to)
 {
-    std::list<dsn::gpid> potential_moving;
+    std::list<gpid> potential_moving;
     const node_state &ns = _global_view->nodes->find(from)->second;
     ns.for_each_primary(app->app_id, [&](const gpid &pid) {
         const partition_configuration &pc = app->partitions[pid.get_partition_index()];
@@ -330,13 +330,13 @@ std::list<dsn::gpid> load_balance_policy::calc_potential_moving(
     return potential_moving;
 }
 
-dsn::gpid load_balance_policy::select_moving(std::list<dsn::gpid> &potential_moving,
-                                             disk_load *prev_load,
-                                             disk_load *current_load,
-                                             rpc_address from,
-                                             rpc_address to)
+gpid load_balance_policy::select_moving(std::list<gpid> &potential_moving,
+                                        disk_load *prev_load,
+                                        disk_load *current_load,
+                                        rpc_address from,
+                                        rpc_address to)
 {
-    std::list<dsn::gpid>::iterator selected = potential_moving.end();
+    std::list<gpid>::iterator selected = potential_moving.end();
     int max = std::numeric_limits<int>::min();
 
     for (auto it = potential_moving.begin(); it != potential_moving.end(); ++it) {
@@ -417,7 +417,7 @@ std::string load_balance_policy::set_balancer_ignored_app_ids(const std::vector<
     }
 
     std::vector<std::string> app_ids;
-    dsn::utils::split_args(args[1].c_str(), app_ids, ',');
+    utils::split_args(args[1].c_str(), app_ids, ',');
     if (app_ids.empty()) {
         return invalid_arguments;
     }
@@ -425,13 +425,13 @@ std::string load_balance_policy::set_balancer_ignored_app_ids(const std::vector<
     std::set<app_id> app_list;
     for (const std::string &app_id_str : app_ids) {
         app_id app;
-        if (!dsn::buf2int32(app_id_str, app)) {
+        if (!buf2int32(app_id_str, app)) {
             return invalid_arguments;
         }
         app_list.insert(app);
     }
 
-    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
+    zauto_write_lock l(_balancer_ignored_apps_lock);
     _balancer_ignored_apps = std::move(app_list);
     return "set ok";
 }
@@ -439,7 +439,7 @@ std::string load_balance_policy::set_balancer_ignored_app_ids(const std::vector<
 std::string load_balance_policy::get_balancer_ignored_app_ids()
 {
     std::stringstream oss;
-    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
+    zauto_read_lock l(_balancer_ignored_apps_lock);
     if (_balancer_ignored_apps.empty()) {
         return "no ignored apps";
     }
@@ -454,14 +454,14 @@ std::string load_balance_policy::get_balancer_ignored_app_ids()
 
 std::string load_balance_policy::clear_balancer_ignored_app_ids()
 {
-    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
+    zauto_write_lock l(_balancer_ignored_apps_lock);
     _balancer_ignored_apps.clear();
     return "clear ok";
 }
 
 bool load_balance_policy::is_ignored_app(app_id app_id)
 {
-    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
+    zauto_read_lock l(_balancer_ignored_apps_lock);
     return _balancer_ignored_apps.find(app_id) != _balancer_ignored_apps.end();
 }
 
@@ -483,7 +483,7 @@ void load_balance_policy::number_nodes(const node_mapper &nodes)
 
 ford_fulkerson::ford_fulkerson(const std::shared_ptr<app_state> &app,
                                const node_mapper &nodes,
-                               const std::unordered_map<dsn::rpc_address, int> &address_id,
+                               const std::unordered_map<rpc_address, int> &address_id,
                                uint32_t higher_count,
                                uint32_t lower_count,
                                int replicas_low)
@@ -617,8 +617,8 @@ copy_replica_operation::copy_replica_operation(
     const std::shared_ptr<app_state> app,
     const app_mapper &apps,
     node_mapper &nodes,
-    const std::vector<dsn::rpc_address> &address_vec,
-    const std::unordered_map<dsn::rpc_address, int> &address_id)
+    const std::vector<rpc_address> &address_vec,
+    const std::unordered_map<rpc_address, int> &address_id)
     : _app(app), _apps(apps), _nodes(nodes), _address_vec(address_vec), _address_id(address_id)
 {
 }
@@ -740,8 +740,8 @@ copy_primary_operation::copy_primary_operation(
     const std::shared_ptr<app_state> app,
     const app_mapper &apps,
     node_mapper &nodes,
-    const std::vector<dsn::rpc_address> &address_vec,
-    const std::unordered_map<dsn::rpc_address, int> &address_id,
+    const std::vector<rpc_address> &address_vec,
+    const std::unordered_map<rpc_address, int> &address_id,
     bool have_lower_than_average,
     int replicas_low)
     : copy_replica_operation(app, apps, nodes, address_vec, address_id)
@@ -780,4 +780,4 @@ bool copy_primary_operation::can_continue()
 
 enum balance_type copy_primary_operation::get_balance_type() { return balance_type::COPY_PRIMARY; }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

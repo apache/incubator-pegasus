@@ -71,7 +71,7 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include "utils/flags.h"
 #include "utils/join_point.h"
 
-namespace dsn {
+namespace pegasus {
 struct service_spec;
 
 namespace tools {
@@ -367,7 +367,7 @@ static void profiler_on_rpc_response_enqueue(rpc_response_task *resp)
 
 void profiler::install(service_spec &)
 {
-    s_task_code_max = dsn::task_code::max();
+    s_task_code_max = task_code::max();
     s_spec_profilers.reset(new task_spec_profiler[s_task_code_max + 1]);
     task_ext_for_profiler::register_ext();
     message_ext_for_profiler::register_ext();
@@ -377,7 +377,7 @@ void profiler::install(service_spec &)
         if (i == TASK_CODE_INVALID)
             continue;
 
-        std::string name(dsn::task_code(i).to_string());
+        std::string name(task_code(i).to_string());
         std::string section_name = std::string("task.") + name;
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
@@ -571,4 +571,4 @@ void profiler::install(service_spec &)
 profiler::profiler(const char *name) : toollet(name) {}
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

@@ -33,13 +33,13 @@
 #include <utility>
 
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 
 DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
@@ -82,4 +82,4 @@ TEST(message_utils, complex_convertion)
     ASSERT_EQ(rpc.request().app_name, "haha");
 }
 
-} // namespace dsn
+} // namespace pegasus

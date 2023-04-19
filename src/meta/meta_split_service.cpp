@@ -30,7 +30,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "meta/meta_state_service.h"
@@ -47,7 +47,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 meta_split_service::meta_split_service(meta_service *meta_srv)
@@ -140,7 +140,7 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
     auto copy = *app;
     copy.partition_count *= 2;
     copy.envs[replica_envs::SPLIT_VALIDATE_PARTITION_HASH] = "true";
-    blob value = dsn::json::json_forwarder<app_info>::encode(copy);
+    blob value = json::json_forwarder<app_info>::encode(copy);
     _meta_svc->get_meta_storage()->set_data(
         _state->get_app_path(*app), std::move(value), on_write_storage_complete);
 }
@@ -216,7 +216,7 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
             app_name,
             parent_gpid,
             child_gpid,
-            dsn::enum_to_string(iter->second));
+            enum_to_string(iter->second));
         response.err = ERR_INVALID_STATE;
         return;
     }
@@ -230,12 +230,11 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
     parent_context.pending_sync_task = add_child_on_remote_storage(rpc, true);
 }
 
-dsn::task_ptr meta_split_service::add_child_on_remote_storage(register_child_rpc rpc,
-                                                              bool create_new)
+task_ptr meta_split_service::add_child_on_remote_storage(register_child_rpc rpc, bool create_new)
 {
     const auto &request = rpc.request();
     const std::string &partition_path = _state->get_partition_path(request.child_config.pid);
-    blob value = dsn::json::json_forwarder<partition_configuration>::encode(request.child_config);
+    blob value = json::json_forwarder<partition_configuration>::encode(request.child_config);
     if (create_new) {
         return _meta_svc->get_remote_storage()->create_node(
             partition_path,
@@ -424,9 +423,8 @@ void meta_split_service::do_control_single(std::shared_ptr<app_state> app, contr
                  control_type_str(control_type));
     } else {
         response.err = ERR_INVALID_STATE;
-        response.__set_hint_msg(fmt::format("partition[{}] wrong split_status({})",
-                                            parent_pidx,
-                                            dsn::enum_to_string(iter->second)));
+        response.__set_hint_msg(fmt::format(
+            "partition[{}] wrong split_status({})", parent_pidx, enum_to_string(iter->second)));
         LOG_ERROR("{} split for app({}) failed, {}",
                   control_type_str(control_type),
                   app_name,
@@ -464,7 +462,7 @@ void meta_split_service::do_control_all(std::shared_ptr<app_state> app, control_
             LOG_INFO("app({}) partition({}) cancel split, old status = {}",
                      app->app_name,
                      kv.first,
-                     dsn::enum_to_string(kv.second));
+                     enum_to_string(kv.second));
             kv.second = split_status::CANCELING;
         }
         return;
@@ -497,7 +495,7 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
     CHECK(request.meta_split_status == split_status::PAUSING ||
               request.meta_split_status == split_status::CANCELING,
           "invalid split_status({})",
-          dsn::enum_to_string(request.meta_split_status));
+          enum_to_string(request.meta_split_status));
 
     const std::string &stop_type =
         rpc.request().meta_split_status == split_status::PAUSING ? "pause" : "cancel";
@@ -518,7 +516,7 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
         LOG_WARNING("app({}) partition({}) split_status = {}, ignore out-dated {} split request",
                     app->app_name,
                     request.parent_gpid,
-                    dsn::enum_to_string(iter->second),
+                    enum_to_string(iter->second),
                     stop_type);
         response.err = ERR_INVALID_VERSION;
         return;
@@ -561,7 +559,7 @@ void meta_split_service::do_cancel_partition_split(std::shared_ptr<app_state> ap
 
     auto copy = *app;
     copy.partition_count = rpc.request().partition_count;
-    blob value = dsn::json::json_forwarder<app_info>::encode(copy);
+    blob value = json::json_forwarder<app_info>::encode(copy);
     _meta_svc->get_meta_storage()->set_data(
         _state->get_app_path(*app), std::move(value), on_write_storage_complete);
 }
@@ -603,4 +601,4 @@ void meta_split_service::query_child_state(query_child_state_rpc rpc)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

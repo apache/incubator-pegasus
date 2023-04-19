@@ -44,9 +44,7 @@
 #include <thread>
 #include <vector>
 
-#include "utils/utils.h"
-
-using namespace ::dsn::utils;
+namespace pegasus {
 
 struct queue_data
 {
@@ -56,7 +54,7 @@ struct queue_data
     queue_data(int32_t pri, int32_t idx) : priority(pri), queue_index(idx) {}
 };
 
-typedef priority_queue<queue_data *, 3> my_priority_queue;
+typedef utils::priority_queue<queue_data *, 3> my_priority_queue;
 TEST(core, priority_queue)
 {
     my_priority_queue q("my_priority_queue_name");
@@ -106,7 +104,7 @@ TEST(core, priority_queue)
     }
 }
 
-typedef blocking_priority_queue<queue_data *, 3> my_blocking_priority_queue;
+typedef utils::blocking_priority_queue<queue_data *, 3> my_blocking_priority_queue;
 TEST(core, blocking_priority_queue)
 {
     my_blocking_priority_queue q("my_blocking_priority_queue_name");
@@ -158,3 +156,4 @@ TEST(core, blocking_priority_queue)
     t1.join();
     t2.join();
 }
+} // namespace pegasus

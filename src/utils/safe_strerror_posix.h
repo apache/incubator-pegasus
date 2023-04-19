@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <string>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 // This file declares safe, portable alternatives to the POSIX strerror()

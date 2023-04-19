@@ -56,7 +56,7 @@
 #include <pthread.h>
 #endif
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 bool hostname_from_ip(uint32_t ip, std::string *hostname_result)
@@ -107,7 +107,7 @@ bool hostname_from_ip(const char *ip, std::string *hostname_result)
 
 bool hostname_from_ip_port(const char *ip_port, std::string *hostname_result)
 {
-    dsn::rpc_address addr;
+    rpc_address addr;
     if (!addr.from_string_ipv4(ip_port)) {
         LOG_WARNING("invalid ip_port({})", ip_port);
         *hostname_result = ip_port;
@@ -135,7 +135,7 @@ bool hostname(const rpc_address &address, std::string *hostname_result)
 bool list_hostname_from_ip(const char *ip_list, std::string *hostname_result_list)
 {
     std::vector<std::string> splitted_ip;
-    dsn::utils::split_args(ip_list, splitted_ip, ',');
+    split_args(ip_list, splitted_ip, ',');
 
     if (splitted_ip.empty()) {
         LOG_WARNING("invalid ip_list({})", ip_list);
@@ -162,7 +162,7 @@ bool list_hostname_from_ip(const char *ip_list, std::string *hostname_result_lis
 bool list_hostname_from_ip_port(const char *ip_port_list, std::string *hostname_result_list)
 {
     std::vector<std::string> splitted_ip_port;
-    dsn::utils::split_args(ip_port_list, splitted_ip_port, ',');
+    split_args(ip_port_list, splitted_ip_port, ',');
 
     if (splitted_ip_port.empty()) {
         LOG_WARNING("invalid ip_list({})", ip_port_list);
@@ -186,4 +186,4 @@ bool list_hostname_from_ip_port(const char *ip_port_list, std::string *hostname_
     return all_ok;
 }
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

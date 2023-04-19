@@ -23,7 +23,7 @@
 
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -54,4 +54,4 @@ private:
 
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

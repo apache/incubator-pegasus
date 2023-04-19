@@ -33,7 +33,7 @@
 #include "replica/replica_stub.h"
 #include "utils/string_conv.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 void replica_http_service::query_duplication_handler(const http_request &req, http_response &resp)
@@ -167,4 +167,4 @@ void replica_http_service::query_manual_compaction_handler(const http_request &r
 void replica_http_service::update_config(const std::string &name) { _stub->update_config(name); }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

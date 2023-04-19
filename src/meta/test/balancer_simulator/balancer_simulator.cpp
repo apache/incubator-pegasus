@@ -33,59 +33,63 @@
 #include <utility>
 #include <vector>
 
-#include "backup_types.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta/server_load_balancer.h"
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
+#include "pegasus.layer2_types.h"
 #include "runtime/app_model.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
+#include "utils/rand.h"
 
-using namespace dsn::replication;
+using pegasus::rand::next_u32;
+
+namespace pegasus {
+namespace replication {
 
 class simple_priority_queue
 {
 public:
-    simple_priority_queue(const std::vector<dsn::rpc_address> &nl,
+    simple_priority_queue(const std::vector<rpc_address> &nl,
                           server_load_balancer::node_comparator &&compare)
         : container(nl), cmp(std::move(compare))
     {
         std::make_heap(container.begin(), container.end(), cmp);
     }
-    void push(const dsn::rpc_address &addr)
+    void push(const rpc_address &addr)
     {
         container.push_back(addr);
         std::push_heap(container.begin(), container.end(), cmp);
     }
-    dsn::rpc_address pop()
+    rpc_address pop()
     {
         std::pop_heap(container.begin(), container.end(), cmp);
-        dsn::rpc_address result = container.back();
+        rpc_address result = container.back();
         container.pop_back();
         return result;
     }
-    dsn::rpc_address top() const { return container.front(); }
+    rpc_address top() const { return container.front(); }
     bool empty() const { return container.empty(); }
+
 private:
-    std::vector<dsn::rpc_address> container;
+    std::vector<rpc_address> container;
     server_load_balancer::node_comparator cmp;
 };
 
 void generate_balanced_apps(/*out*/ app_mapper &apps,
                             node_mapper &nodes,
-                            const std::vector<dsn::rpc_address> &node_list)
+                            const std::vector<rpc_address> &node_list)
 {
     nodes.clear();
     for (const auto &node : node_list)
         nodes[node].set_alive(true);
 
-    int partitions_per_node = random32(20, 100);
-    dsn::app_info info;
-    info.status = dsn::app_status::AS_AVAILABLE;
+    int partitions_per_node = next_u32(20, 100);
+    app_info info;
+    info.status = app_status::AS_AVAILABLE;
     info.is_stateful = true;
     info.app_id = 1;
     info.app_name = "test";
@@ -97,8 +101,8 @@ void generate_balanced_apps(/*out*/ app_mapper &apps,
 
     simple_priority_queue pq1(node_list, server_load_balancer::primary_comparator(nodes));
     // generate balanced primary
-    for (dsn::partition_configuration &pc : the_app->partitions) {
-        dsn::rpc_address n = pq1.pop();
+    for (partition_configuration &pc : the_app->partitions) {
+        rpc_address n = pq1.pop();
         nodes[n].put_partition(pc.pid, true);
         pc.primary = n;
         pq1.push(n);
@@ -106,12 +110,12 @@ void generate_balanced_apps(/*out*/ app_mapper &apps,
 
     // generate balanced secondary
     simple_priority_queue pq2(node_list, server_load_balancer::partition_comparator(nodes));
-    std::vector<dsn::rpc_address> temp;
+    std::vector<rpc_address> temp;
 
-    for (dsn::partition_configuration &pc : the_app->partitions) {
+    for (partition_configuration &pc : the_app->partitions) {
         temp.clear();
         while (pc.secondaries.size() + 1 < pc.max_replica_count) {
-            dsn::rpc_address n = pq2.pop();
+            rpc_address n = pq2.pop();
             if (!is_member(pc, n)) {
                 pc.secondaries.push_back(n);
                 nodes[n].put_partition(pc.pid, false);
@@ -149,10 +153,10 @@ void random_move_primary(app_mapper &apps, node_mapper &nodes, int primary_move_
 {
     app_state &the_app = *(apps[0]);
     int space_size = the_app.partition_count * 100;
-    for (dsn::partition_configuration &pc : the_app.partitions) {
-        int n = random32(1, space_size) / 100;
+    for (partition_configuration &pc : the_app.partitions) {
+        int n = next_u32(1, space_size) / 100;
         if (n < primary_move_ratio) {
-            int indice = random32(0, 1);
+            int indice = next_u32(0, 1);
             nodes[pc.primary].remove_partition(pc.pid, true);
             std::swap(pc.primary, pc.secondaries[indice]);
             nodes[pc.primary].put_partition(pc.pid, true);
@@ -164,7 +168,7 @@ void greedy_balancer_perfect_move_primary()
 {
     app_mapper apps;
     node_mapper nodes;
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
 
     generate_node_list(node_list, 20, 100);
     generate_balanced_apps(apps, nodes, node_list);
@@ -189,10 +193,12 @@ void greedy_balancer_perfect_move_primary()
         LOG_DEBUG("round {}: balance checker operation count = {}", ++i, ml.size());
     }
 }
+} // namespace replication
+} // namespace pegasus
 
 int main(int, char **)
 {
     dsn_run_config("config.ini", false);
-    greedy_balancer_perfect_move_primary();
+    pegasus::replication::greedy_balancer_perfect_move_primary();
     return 0;
 }

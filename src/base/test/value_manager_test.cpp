@@ -26,14 +26,11 @@
 #include "base/value_schema_manager.h"
 #include "pegasus_value_schema.h"
 #include "utils/string_view.h"
-#include "value_field.h"
 
-using namespace pegasus;
+namespace pegasus {
 
-extern std::string generate_value(value_schema *schema,
-                                  uint32_t expire_ts,
-                                  uint64_t time_tag,
-                                  dsn::string_view user_data);
+extern std::string
+generate_value(value_schema *schema, uint32_t expire_ts, uint64_t time_tag, string_view user_data);
 
 TEST(value_schema_manager, get_latest_value_schema)
 {
@@ -48,10 +45,10 @@ TEST(value_schema_manager, get_value_schema)
         uint32_t version;
         bool schema_exist;
     } tests[] = {
-        {pegasus::data_version::VERSION_0, true},
-        {pegasus::data_version::VERSION_1, true},
-        {pegasus::data_version::VERSION_2, true},
-        {pegasus::data_version::VERSION_MAX + 1, false},
+        {data_version::VERSION_0, true},
+        {data_version::VERSION_1, true},
+        {data_version::VERSION_2, true},
+        {data_version::VERSION_MAX + 1, false},
     };
 
     for (const auto &t : tests) {
@@ -73,12 +70,12 @@ TEST(pegasus_value_manager, get_value_schema)
         uint32_t value_schema_version;
         data_version expect_version;
     } tests[] = {
-        {0, 0, pegasus::data_version::VERSION_0},
-        {1, 0, pegasus::data_version::VERSION_1},
-        {0, 1, pegasus::data_version::VERSION_0},
-        {1, 1, pegasus::data_version::VERSION_1},
-        {0, 2, pegasus::data_version::VERSION_2},
-        {1, 2, pegasus::data_version::VERSION_2},
+        {0, 0, data_version::VERSION_0},
+        {1, 0, data_version::VERSION_1},
+        {0, 1, data_version::VERSION_0},
+        {1, 1, data_version::VERSION_1},
+        {0, 2, data_version::VERSION_2},
+        {1, 2, data_version::VERSION_2},
     };
 
     for (const auto &t : tests) {
@@ -91,3 +88,4 @@ TEST(pegasus_value_manager, get_value_schema)
         ASSERT_EQ(t.expect_version, schema->version());
     }
 }
+} // namespace pegasus

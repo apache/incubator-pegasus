@@ -28,7 +28,7 @@
 #include "utils/blob.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 // each block in log file has a log_block_header
@@ -136,4 +136,4 @@ protected:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

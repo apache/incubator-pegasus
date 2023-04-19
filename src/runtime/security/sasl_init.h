@@ -19,9 +19,9 @@
 
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 // you must have already initialized kerberos before call init_sasl
 error_s init_sasl(bool is_server);
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

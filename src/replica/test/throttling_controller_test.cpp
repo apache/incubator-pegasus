@@ -21,7 +21,7 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class throttling_controller_test : public ::testing::Test
@@ -130,4 +130,4 @@ TEST_F(throttling_controller_test, parse_env_basic) { test_parse_env_basic(); }
 TEST_F(throttling_controller_test, parse_env_multiplier) { test_parse_env_multiplier(); }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

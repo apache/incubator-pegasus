@@ -55,7 +55,7 @@
 #include "utils/join_point.h"
 #include "utils/rand.h"
 
-namespace dsn {
+namespace pegasus {
 struct service_spec;
 
 namespace tools {
@@ -321,16 +321,15 @@ void fault_injector::install(service_spec &spec)
 {
     task_ext_for_fj::register_ext();
 
-    s_fj_opts = new fj_opt[dsn::task_code::max() + 1];
+    s_fj_opts = new fj_opt[task_code::max() + 1];
     fj_opt default_opt;
     read_config("task..default", default_opt);
 
-    for (int i = 0; i <= dsn::task_code::max(); i++) {
+    for (int i = 0; i <= task_code::max(); i++) {
         if (i == TASK_CODE_INVALID)
             continue;
 
-        std::string section_name =
-            std::string("task.") + std::string(dsn::task_code(i).to_string());
+        std::string section_name = std::string("task.") + std::string(task_code(i).to_string());
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
 

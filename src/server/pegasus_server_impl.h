@@ -51,6 +51,10 @@
 #include "utils/flags.h"
 #include "utils/rand.h"
 #include "utils/synchronize.h"
+#include "utils/token_bucket_throttling_controller.h"
+
+using throttling_controller = pegasus::utils::token_bucket_throttling_controller;
+using pegasus::utils::to_string_view;
 
 namespace pegasus {
 namespace server {
@@ -66,7 +70,7 @@ class Statistics;
 class WriteBufferManager;
 } // namespace rocksdb
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class message_ex;
 namespace replication {
@@ -75,12 +79,7 @@ class detect_hotkey_response;
 class learn_state;
 class replica;
 } // namespace replication
-
-namespace utils {
-class token_bucket_throttling_controller;
-} // namespace utils
-} // namespace dsn
-typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
@@ -110,10 +109,10 @@ public:
     static void register_service()
     {
         replication_app_base::register_storage_engine(
-            "pegasus", replication_app_base::create<pegasus::server::pegasus_server_impl>);
+            "pegasus", replication_app_base::create<server::pegasus_server_impl>);
         register_rpc_handlers();
     }
-    explicit pegasus_server_impl(dsn::replication::replica *r);
+    explicit pegasus_server_impl(replication::replica *r);
 
     ~pegasus_server_impl() override;
 
@@ -134,31 +133,28 @@ public:
     //  - ERR_OK
     //  - ERR_FILE_OPERATION_FAILED
     //  - ERR_LOCAL_APP_FAILURE
-    ::dsn::error_code start(int argc, char **argv) override;
+    error_code start(int argc, char **argv) override;
 
     void cancel_background_work(bool wait);
 
     // returns:
     //  - ERR_OK
     //  - ERR_FILE_OPERATION_FAILED
-    ::dsn::error_code stop(bool clear_state) override;
+    error_code stop(bool clear_state) override;
 
     /// Each of the write request (specifically, the rpc that's configured as write, see
     /// option `rpc_request_is_write_operation` in rDSN `task_spec`) will first be
     /// replicated to the replicas through the underlying PacificA protocol in rDSN, and
     /// after being committed, the mutation will be applied into rocksdb by this function.
     ///
-    /// \see dsn::replication::replication_app_base::apply_mutation
-    /// \inherit dsn::replication::replication_app_base
+    /// \see replication::replication_app_base::apply_mutation
+    /// \inherit replication::replication_app_base
     int on_batched_write_requests(int64_t decree,
                                   uint64_t timestamp,
-                                  dsn::message_ex **requests,
+                                  message_ex **requests,
                                   int count) override;
 
-    ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override
-    {
-        return ::dsn::ERR_OK;
-    }
+    error_code prepare_get_checkpoint(blob &learn_req) override { return ERR_OK; }
 
     // returns:
     //  - ERR_OK: checkpoint succeed
@@ -166,7 +162,7 @@ public:
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
     // ATTENTION: make sure that no other threads is writing into the replica.
-    ::dsn::error_code sync_checkpoint() override;
+    error_code sync_checkpoint() override;
 
     // returns:
     //  - ERR_OK: checkpoint succeed
@@ -174,7 +170,7 @@ public:
     //  - ERR_LOCAL_APP_FAILURE: some internal failure
     //  - ERR_FILE_OPERATION_FAILED: some file failure
     //  - ERR_TRY_AGAIN: flush memtable triggered, need try again later
-    ::dsn::error_code async_checkpoint(bool flush_memtable) override;
+    error_code async_checkpoint(bool flush_memtable) override;
 
     //
     // copy the latest checkpoint to checkpoint_dir, and the decree of the checkpoint
@@ -183,16 +179,16 @@ public:
     //
     // must be thread safe
     // this method will not trigger flush(), just copy even if the app is empty.
-    ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                             /*output*/ int64_t *last_decree,
-                                             bool flush_memtable = false) override;
+    error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                      /*output*/ int64_t *last_decree,
+                                      bool flush_memtable = false) override;
 
     //
     // help function, just copy checkpoint to specified dir and ignore _is_checkpointing.
     // if checkpoint_dir already exist, this function will delete it first.
-    ::dsn::error_code copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
-                                                    /**output*/ int64_t *checkpoint_decree,
-                                                    bool flush_memtable = false);
+    error_code copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
+                                             /**output*/ int64_t *checkpoint_decree,
+                                             bool flush_memtable = false);
 
     // get the last checkpoint
     // if succeed:
@@ -203,9 +199,9 @@ public:
     //  - ERR_OK
     //  - ERR_OBJECT_NOT_FOUND
     //  - ERR_FILE_OPERATION_FAILED
-    ::dsn::error_code get_checkpoint(int64_t learn_start,
-                                     const dsn::blob &learn_request,
-                                     dsn::replication::learn_state &state) override;
+    error_code get_checkpoint(int64_t learn_start,
+                              const blob &learn_request,
+                              replication::learn_state &state) override;
 
     // apply checkpoint, this will clear and recreate the db
     // if succeed:
@@ -216,8 +212,8 @@ public:
     //  - error code of close()
     //  - error code of open()
     //  - error code of checkpoint()
-    ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
-                                               const dsn::replication::learn_state &state) override;
+    error_code storage_apply_checkpoint(chkpt_apply_mode mode,
+                                        const replication::learn_state &state) override;
 
     int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
 
@@ -227,12 +223,12 @@ public:
 
     void set_partition_version(int32_t partition_version) override;
 
-    std::string dump_write_request(dsn::message_ex *request) override;
+    std::string dump_write_request(message_ex *request) override;
 
     // Not thread-safe
-    void set_ingestion_status(dsn::replication::ingestion_status::type status) override;
+    void set_ingestion_status(replication::ingestion_status::type status) override;
 
-    dsn::replication::ingestion_status::type get_ingestion_status() override
+    replication::ingestion_status::type get_ingestion_status() override
     {
         return _ingestion_status;
     }
@@ -262,42 +258,41 @@ private:
 
     void set_last_durable_decree(int64_t decree) { _last_durable_decree.store(decree); }
 
-    void append_key_value(std::vector<::dsn::apps::key_value> &kvs,
+    void append_key_value(std::vector<apps::key_value> &kvs,
                           const rocksdb::Slice &key,
                           const rocksdb::Slice &value,
                           bool no_value,
                           bool request_expire_ts);
 
-    range_iteration_state
-    validate_key_value_for_scan(const rocksdb::Slice &key,
-                                const rocksdb::Slice &value,
-                                ::dsn::apps::filter_type::type hash_key_filter_type,
-                                const ::dsn::blob &hash_key_filter_pattern,
-                                ::dsn::apps::filter_type::type sort_key_filter_type,
-                                const ::dsn::blob &sort_key_filter_pattern,
-                                uint32_t epoch_now,
-                                bool request_validate_hash);
+    range_iteration_state validate_key_value_for_scan(const rocksdb::Slice &key,
+                                                      const rocksdb::Slice &value,
+                                                      apps::filter_type::type hash_key_filter_type,
+                                                      const blob &hash_key_filter_pattern,
+                                                      apps::filter_type::type sort_key_filter_type,
+                                                      const blob &sort_key_filter_pattern,
+                                                      uint32_t epoch_now,
+                                                      bool request_validate_hash);
 
     range_iteration_state
-    append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
+    append_key_value_for_multi_get(std::vector<apps::key_value> &kvs,
                                    const rocksdb::Slice &key,
                                    const rocksdb::Slice &value,
-                                   ::dsn::apps::filter_type::type sort_key_filter_type,
-                                   const ::dsn::blob &sort_key_filter_pattern,
+                                   apps::filter_type::type sort_key_filter_type,
+                                   const blob &sort_key_filter_pattern,
                                    uint32_t epoch_now,
                                    bool no_value);
 
     // return true if the filter type is supported
-    bool is_filter_type_supported(::dsn::apps::filter_type::type filter_type)
+    bool is_filter_type_supported(apps::filter_type::type filter_type)
     {
-        return filter_type >= ::dsn::apps::filter_type::FT_NO_FILTER &&
-               filter_type <= ::dsn::apps::filter_type::FT_MATCH_POSTFIX;
+        return filter_type >= apps::filter_type::FT_NO_FILTER &&
+               filter_type <= apps::filter_type::FT_MATCH_POSTFIX;
     }
 
     // return true if the data is valid for the filter
-    bool validate_filter(::dsn::apps::filter_type::type filter_type,
-                         const ::dsn::blob &filter_pattern,
-                         const ::dsn::blob &value);
+    bool validate_filter(apps::filter_type::type filter_type,
+                         const blob &filter_pattern,
+                         const blob &value);
 
     void update_replica_rocksdb_statistics();
 
@@ -366,7 +361,7 @@ private:
     uint64_t get_random_nearby(uint64_t base_value)
     {
         uint64_t gap = base_value / 4;
-        return dsn::rand::next_u64(base_value - gap, base_value + gap);
+        return rand::next_u64(base_value - gap, base_value + gap);
     }
 
     // return true if value in range of [0.75, 1.25] * base_value
@@ -381,8 +376,8 @@ private:
     // return true if expired
     bool check_if_record_expired(uint32_t epoch_now, rocksdb::Slice raw_value)
     {
-        return pegasus::check_if_record_expired(
-            _pegasus_data_version, epoch_now, utils::to_string_view(raw_value));
+        return ::pegasus::check_if_record_expired(
+            _pegasus_data_version, epoch_now, to_string_view(raw_value));
     }
 
     bool is_multi_get_abnormal(uint64_t time_used, uint64_t size, uint64_t iterate_count)
@@ -432,19 +427,19 @@ private:
         return false;
     }
 
-    ::dsn::error_code
+    error_code
     check_column_families(const std::string &path, bool *missing_meta_cf, bool *miss_data_cf);
 
     void release_db();
 
-    ::dsn::error_code flush_all_family_columns(bool wait);
+    error_code flush_all_family_columns(bool wait);
 
-    void on_detect_hotkey(const dsn::replication::detect_hotkey_request &req,
-                          dsn::replication::detect_hotkey_response &resp) override;
+    void on_detect_hotkey(const replication::detect_hotkey_request &req,
+                          replication::detect_hotkey_response &resp) override;
 
     uint32_t query_data_version() const override;
 
-    dsn::replication::manual_compaction_status::type query_compact_status() const override;
+    replication::manual_compaction_status::type query_compact_status() const override;
 
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
@@ -453,7 +448,7 @@ private:
     static const std::string DATA_COLUMN_FAMILY_NAME;
     static const std::string META_COLUMN_FAMILY_NAME;
 
-    dsn::gpid _gpid;
+    gpid _gpid;
     std::string _primary_address;
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
@@ -493,24 +488,24 @@ private:
 
     uint32_t _checkpoint_reserve_min_count;
     uint32_t _checkpoint_reserve_time_seconds;
-    std::atomic_bool _is_checkpointing;         // whether the db is doing checkpoint
-    ::dsn::utils::ex_lock_nr _checkpoints_lock; // protected the following checkpoints vector
-    std::deque<int64_t> _checkpoints;           // ordered checkpoints
+    std::atomic_bool _is_checkpointing;  // whether the db is doing checkpoint
+    utils::ex_lock_nr _checkpoints_lock; // protected the following checkpoints vector
+    std::deque<int64_t> _checkpoints;    // ordered checkpoints
 
     pegasus_context_cache _context_cache;
 
-    ::dsn::task_ptr _update_replica_rdb_stat;
-    static ::dsn::task_ptr _update_server_rdb_stat;
+    task_ptr _update_replica_rdb_stat;
+    static task_ptr _update_server_rdb_stat;
 
     pegasus_manual_compact_service _manual_compact_svc;
 
     std::atomic<int32_t> _partition_version;
     bool _validate_partition_hash{false};
 
-    dsn::replication::ingestion_status::type _ingestion_status{
-        dsn::replication::ingestion_status::IS_INVALID};
+    replication::ingestion_status::type _ingestion_status{
+        replication::ingestion_status::IS_INVALID};
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
     std::shared_ptr<hotkey_collector> _read_hotkey_collector;
     std::shared_ptr<hotkey_collector> _write_hotkey_collector;
@@ -518,47 +513,47 @@ private:
     std::shared_ptr<throttling_controller> _read_size_throttling_controller;
 
     // perf counters
-    ::dsn::perf_counter_wrapper _pfc_get_qps;
-    ::dsn::perf_counter_wrapper _pfc_multi_get_qps;
-    ::dsn::perf_counter_wrapper _pfc_batch_get_qps;
-    ::dsn::perf_counter_wrapper _pfc_scan_qps;
+    perf_counter_wrapper _pfc_get_qps;
+    perf_counter_wrapper _pfc_multi_get_qps;
+    perf_counter_wrapper _pfc_batch_get_qps;
+    perf_counter_wrapper _pfc_scan_qps;
 
-    ::dsn::perf_counter_wrapper _pfc_get_latency;
-    ::dsn::perf_counter_wrapper _pfc_multi_get_latency;
-    ::dsn::perf_counter_wrapper _pfc_batch_get_latency;
-    ::dsn::perf_counter_wrapper _pfc_scan_latency;
+    perf_counter_wrapper _pfc_get_latency;
+    perf_counter_wrapper _pfc_multi_get_latency;
+    perf_counter_wrapper _pfc_batch_get_latency;
+    perf_counter_wrapper _pfc_scan_latency;
 
-    ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
-    ::dsn::perf_counter_wrapper _pfc_recent_filter_count;
-    ::dsn::perf_counter_wrapper _pfc_recent_abnormal_count;
+    perf_counter_wrapper _pfc_recent_expire_count;
+    perf_counter_wrapper _pfc_recent_filter_count;
+    perf_counter_wrapper _pfc_recent_abnormal_count;
 
     // rocksdb internal statistics
     // server level
-    static ::dsn::perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
-    static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
+    static perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
+    static perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
     // replica level
-    dsn::perf_counter_wrapper _pfc_rdb_sst_count;
-    dsn::perf_counter_wrapper _pfc_rdb_sst_size;
-    dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
-    dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
-    dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
+    perf_counter_wrapper _pfc_rdb_sst_count;
+    perf_counter_wrapper _pfc_rdb_sst_size;
+    perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
+    perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
+    perf_counter_wrapper _pfc_rdb_estimate_num_keys;
 
-    dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
-    dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;
-    dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
-    dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
-    dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
-    dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
-    dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
-    dsn::perf_counter_wrapper _pfc_rdb_write_amplification;
-    dsn::perf_counter_wrapper _pfc_rdb_read_amplification;
-    dsn::perf_counter_wrapper _pfc_rdb_memtable_hit_count;
-    dsn::perf_counter_wrapper _pfc_rdb_memtable_total_count;
-    dsn::perf_counter_wrapper _pfc_rdb_l0_hit_count;
-    dsn::perf_counter_wrapper _pfc_rdb_l1_hit_count;
-    dsn::perf_counter_wrapper _pfc_rdb_l2andup_hit_count;
+    perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
+    perf_counter_wrapper _pfc_rdb_bf_seek_total;
+    perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
+    perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
+    perf_counter_wrapper _pfc_rdb_bf_point_negatives;
+    perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
+    perf_counter_wrapper _pfc_rdb_block_cache_total_count;
+    perf_counter_wrapper _pfc_rdb_write_amplification;
+    perf_counter_wrapper _pfc_rdb_read_amplification;
+    perf_counter_wrapper _pfc_rdb_memtable_hit_count;
+    perf_counter_wrapper _pfc_rdb_memtable_total_count;
+    perf_counter_wrapper _pfc_rdb_l0_hit_count;
+    perf_counter_wrapper _pfc_rdb_l1_hit_count;
+    perf_counter_wrapper _pfc_rdb_l2andup_hit_count;
 
-    dsn::perf_counter_wrapper _counter_recent_read_throttling_reject_count;
+    perf_counter_wrapper _counter_recent_read_throttling_reject_count;
 };
 
 } // namespace server

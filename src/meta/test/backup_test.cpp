@@ -35,7 +35,7 @@
 #include "backup_types.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
@@ -62,7 +62,7 @@
 #include "utils/time_utils.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class meta_options;
 class mock_policy;
@@ -73,7 +73,7 @@ DSN_DECLARE_string(meta_state_service_type);
 
 struct method_record
 {
-    dsn::utils::notify_event event;
+    utils::notify_event event;
     int count;
     int max_call_count;
     // whether the event will be triggered when count==max_call_count
@@ -94,7 +94,7 @@ protected:
 #define MOCK_ADD_RECORD(records, method_name) records[#method_name] = method_record()
 #define MOCK_HELPER_FUNCS(method_name)                                                             \
     int &counter_##method_name() { return _records[#method_name].count; }                          \
-    dsn::utils::notify_event &notifier_##method_name() { return _records[#method_name].event; }    \
+    utils::notify_event &notifier_##method_name() { return _records[#method_name].event; }         \
     int maxcall_##method_name() { return _records[#method_name].max_call_count; }                  \
     void set_maxcall_##method_name(int callcount)                                                  \
     {                                                                                              \
@@ -174,7 +174,7 @@ public:
     DEFINE_MOCK0(policy_context, continue_current_backup_unlocked)
     DEFINE_MOCK1(policy_context, start_backup_app_meta_unlocked, int32_t)
     DEFINE_MOCK1(policy_context, finish_backup_app_unlocked, int32_t)
-    DEFINE_MOCK2(policy_context, write_backup_app_finish_flag_unlocked, int32_t, dsn::task_ptr)
+    DEFINE_MOCK2(policy_context, write_backup_app_finish_flag_unlocked, int32_t, task_ptr)
 
     MOCK_HELPER_FUNCS(start)
     void start()
@@ -188,30 +188,29 @@ class progress_liar : public meta_service
 {
 public:
     // req is held by callback, we don't need to handle the life-time of it
-    virtual void send_request(dsn::message_ex *req,
-                              const rpc_address &target,
-                              const rpc_response_task_ptr &callback)
+    virtual void
+    send_request(message_ex *req, const rpc_address &target, const rpc_response_task_ptr &callback)
     {
         // need to handle life-time manually
-        dsn::message_ex *recved_req = create_corresponding_receive(req);
+        message_ex *recved_req = create_corresponding_receive(req);
 
         backup_request b_req;
-        dsn::unmarshall(recved_req, b_req);
+        unmarshall(recved_req, b_req);
 
         backup_response b_resp;
         b_resp.backup_id = b_req.backup_id;
-        b_resp.err = dsn::ERR_OK;
+        b_resp.err = ERR_OK;
         b_resp.pid = b_req.pid;
         b_resp.policy_name = b_req.policy.policy_name;
         b_resp.progress = check_progress(b_req.pid);
 
         // need to handle life-time manually
-        dsn::message_ex *response_for_send = recved_req->create_response();
-        dsn::marshall(response_for_send, b_resp);
+        message_ex *response_for_send = recved_req->create_response();
+        marshall(response_for_send, b_resp);
 
         // life time is handled by callback
-        dsn::message_ex *response_for_receive = create_corresponding_receive(response_for_send);
-        callback->enqueue(dsn::ERR_OK, (dsn::message_ex *)response_for_receive);
+        message_ex *response_for_receive = create_corresponding_receive(response_for_send);
+        callback->enqueue(ERR_OK, (message_ex *)response_for_receive);
 
         destroy_message(recved_req);
         destroy_message(response_for_send);
@@ -245,8 +244,8 @@ protected:
     {
         meta_test_base::SetUp();
 
-        dsn::error_code ec = _service->remote_storage_initialize();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        error_code ec = _service->remote_storage_initialize();
+        ASSERT_EQ(ec, ERR_OK);
         _service->_started = true;
         _service->_backup_handler =
             std::make_shared<backup_service>(_service.get(), policy_root, ".", nullptr);
@@ -254,10 +253,9 @@ protected:
         _service->_backup_handler->backup_option().request_backup_period_ms = 20_ms;
         _service->_backup_handler->backup_option().issue_backup_interval_ms = 1000_ms;
         _service->_storage
-            ->create_node(
-                policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
+            ->create_node(policy_root, TASK_CODE_EXEC_INLINED, [&ec](error_code err) { ec = err; })
             ->wait();
-        ASSERT_EQ(dsn::ERR_OK, ec);
+        ASSERT_EQ(ERR_OK, ec);
 
         _policy.policy_name = test_policy_name;
         _policy.is_disable = false;
@@ -274,10 +272,9 @@ protected:
         _mp.set_policy(policy(_policy));
 
         _service->_storage
-            ->create_node(
-                policy_dir, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
+            ->create_node(policy_dir, TASK_CODE_EXEC_INLINED, [&ec](error_code err) { ec = err; })
             ->wait();
-        ASSERT_EQ(dsn::ERR_OK, ec);
+        ASSERT_EQ(ERR_OK, ec);
     }
 
     const std::string policy_root = "/test";
@@ -324,13 +321,13 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
         //          not all apps are deleted.
         // Result: we can get continue-curr called
         std::cout << "issue a new backup without backup histories" << std::endl;
-        dsn::app_info info;
+        app_info info;
         info.is_stateful = true;
         info.app_id = 3;
         info.app_type = "simple_kv";
         info.max_replica_count = 3;
         info.partition_count = 32;
-        info.status = dsn::app_status::AS_AVAILABLE;
+        info.status = app_status::AS_AVAILABLE;
         state->_all_apps.emplace(info.app_id, app_state::create(info));
 
         {
@@ -386,7 +383,7 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
             // issue by test -> issue by period delay -> issue by dropped retry ->
             // issue by dropped retry
             _mp.set_maxcall_issue_new_backup_unlocked(4);
-            state->_all_apps[3]->status = dsn::app_status::AS_DROPPED;
+            state->_all_apps[3]->status = app_status::AS_DROPPED;
 
             _mp.issue_new_backup_unlocked();
         }
@@ -430,7 +427,7 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
             _mp.set_maxcall_write_backup_app_finish_flag_unlocked(4);
             _mp.trigger_beyond_write_backup_app_finish_flag_unlocked() = false;
 
-            state->_all_apps[3]->status = dsn::app_status::AS_AVAILABLE;
+            state->_all_apps[3]->status = app_status::AS_AVAILABLE;
             _mp.issue_new_backup_unlocked();
         }
 
@@ -458,13 +455,13 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
             _mp.reset_records();
 
             _mp.prepare_current_backup_on_new_unlocked();
-            dsn::task_ptr tsk = tasking::create_task(TASK_CODE_EXEC_INLINED, nullptr, []() {});
+            task_ptr tsk = tasking::create_task(TASK_CODE_EXEC_INLINED, nullptr, []() {});
             _mp.sync_backup_to_remote_storage_unlocked(_mp._cur_backup, tsk, true);
             tsk->wait();
             _mp.set_maxcall_issue_new_backup_unlocked(1);
 
             ASSERT_EQ(_mp._progress.unfinished_apps, _policy.app_ids.size());
-            app->status = dsn::app_status::AS_DROPPED;
+            app->status = app_status::AS_DROPPED;
 
             _mp.continue_current_backup_unlocked();
         }
@@ -500,11 +497,11 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
         int64_t cur_start_time_ms = static_cast<int64_t>(dsn_now_ms());
         {
             zauto_lock l(_mp._lock);
-            std::vector<dsn::rpc_address> node_list;
+            std::vector<rpc_address> node_list;
             generate_node_list(node_list, 3, 3);
 
             app_state *app = state->_all_apps[3].get();
-            app->status = dsn::app_status::AS_AVAILABLE;
+            app->status = app_status::AS_AVAILABLE;
             for (partition_configuration &pc : app->partitions) {
                 pc.primary = node_list[0];
                 pc.secondaries = {node_list[1], node_list[2]};
@@ -607,13 +604,13 @@ TEST_F(policy_context_test, test_backup_failed)
     fail::cfg("mock_local_service_write_failed", "100%1*return(ERR_FS_INTERNAL)");
 
     // app 1 is available.
-    dsn::app_info info;
+    app_info info;
     info.is_stateful = true;
     info.app_id = 1;
     info.app_type = "simple_kv";
     info.max_replica_count = 3;
     info.partition_count = 4;
-    info.status = dsn::app_status::AS_AVAILABLE;
+    info.status = app_status::AS_AVAILABLE;
     _service->get_server_state()->_all_apps.emplace(info.app_id, app_state::create(info));
 
     {
@@ -639,11 +636,11 @@ TEST_F(policy_context_test, test_should_start_backup)
 {
     uint64_t now = dsn_now_ms();
     int32_t hour = 0, min = 0, sec = 0;
-    ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+    utils::time_ms_to_date_time(now, hour, min, sec);
     while (min == 59) {
         std::this_thread::sleep_for(std::chrono::minutes(1));
         now = dsn_now_ms();
-        ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+        utils::time_ms_to_date_time(now, hour, min, sec);
     }
 
     int64_t oneday_sec = 1 * 24 * 60 * 60;
@@ -776,7 +773,7 @@ TEST_F(meta_backup_service_test, test_add_backup_policy)
 {
     // create policy meta root.
     bool flag = false;
-    dsn::task_ptr task_test =
+    task_ptr task_test =
         tasking::create_task(LPC_DEFAULT_CALLBACK, nullptr, [&flag]() { flag = true; });
     _backup_svc->start_create_policy_meta_root(task_test);
     while (!flag) {
@@ -880,4 +877,4 @@ TEST_F(meta_backup_service_test, test_add_backup_policy)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

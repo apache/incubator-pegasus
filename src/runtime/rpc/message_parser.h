@@ -35,7 +35,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 
 // TODO(wutao1): call it read_buffer, and make it an utility
 // Not-Thread-Safe.
@@ -131,4 +131,4 @@ public:
     static std::string get_debug_string(const char *bytes);
 };
 
-} // namespace dsn
+} // namespace pegasus

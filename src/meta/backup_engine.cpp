@@ -30,7 +30,7 @@
 #include "common/gpid.h"
 #include "common/json_helper.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/backup_engine.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
@@ -51,7 +51,9 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+
+namespace pegasus {
 namespace replication {
 
 backup_engine::backup_engine(backup_service *service)
@@ -111,14 +113,13 @@ error_code backup_engine::set_backup_path(const std::string &path)
     return ERR_OK;
 }
 
-error_code backup_engine::write_backup_file(const std::string &file_name,
-                                            const dsn::blob &write_buffer)
+error_code backup_engine::write_backup_file(const std::string &file_name, const blob &write_buffer)
 {
     dist::block_service::create_file_request create_file_req;
     create_file_req.ignore_metadata = true;
     create_file_req.file_name = file_name;
 
-    dsn::error_code err;
+    error_code err;
     dist::block_service::block_file_ptr remote_file;
     _block_service
         ->create_file(create_file_req,
@@ -128,7 +129,7 @@ error_code backup_engine::write_backup_file(const std::string &file_name,
                           remote_file = resp.file_handle;
                       })
         ->wait();
-    if (err != dsn::ERR_OK) {
+    if (err != ERR_OK) {
         LOG_INFO("create file {} failed", file_name);
         return err;
     }
@@ -144,7 +145,7 @@ error_code backup_engine::write_backup_file(const std::string &file_name,
 
 error_code backup_engine::backup_app_meta()
 {
-    dsn::blob app_info_buffer;
+    blob app_info_buffer;
     {
         zauto_read_lock l;
         _backup_service->get_state()->lock_read(l);
@@ -157,11 +158,10 @@ error_code backup_engine::backup_app_meta()
         // Because we don't restore app envs, so no need to write app envs to backup file.
         // TODO(zhangyifan): backup and restore app envs when needed.
         tmp.envs.clear();
-        app_info_buffer = dsn::json::json_forwarder<app_info>::encode(tmp);
+        app_info_buffer = json::json_forwarder<app_info>::encode(tmp);
     }
 
-    std::string backup_root =
-        dsn::utils::filesystem::path_combine(_backup_path, _backup_service->backup_root());
+    std::string backup_root = path_combine(_backup_path, _backup_service->backup_root());
     std::string file_name = cold_backup::get_app_metadata_file(
         backup_root, _cur_backup.app_name, _cur_backup.app_id, _cur_backup.backup_id);
     return write_backup_file(file_name, app_info_buffer);
@@ -169,7 +169,7 @@ error_code backup_engine::backup_app_meta()
 
 void backup_engine::backup_app_partition(const gpid &pid)
 {
-    dsn::rpc_address partition_primary;
+    rpc_address partition_primary;
     {
         zauto_read_lock l;
         _backup_service->get_state()->lock_read(l);
@@ -239,7 +239,7 @@ inline void backup_engine::handle_replica_backup_failed(const backup_response &r
     _backup_status[pid.get_partition_index()] = backup_status::FAILED;
 }
 
-inline void backup_engine::retry_backup(const dsn::gpid pid)
+inline void backup_engine::retry_backup(const gpid pid)
 {
     tasking::enqueue(LPC_DEFAULT_CALLBACK,
                      &_tracker,
@@ -311,10 +311,9 @@ void backup_engine::on_backup_reply(const error_code err,
 
 void backup_engine::write_backup_info()
 {
-    std::string backup_root =
-        dsn::utils::filesystem::path_combine(_backup_path, _backup_service->backup_root());
+    std::string backup_root = path_combine(_backup_path, _backup_service->backup_root());
     std::string file_name = cold_backup::get_backup_info_file(backup_root, _cur_backup.backup_id);
-    blob buf = dsn::json::json_forwarder<app_backup_info>::encode(_cur_backup);
+    blob buf = json::json_forwarder<app_backup_info>::encode(_cur_backup);
     error_code err = write_backup_file(file_name, buf);
     if (err == ERR_FS_INTERNAL) {
         LOG_ERROR(
@@ -396,4 +395,4 @@ backup_item backup_engine::get_backup_item() const
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

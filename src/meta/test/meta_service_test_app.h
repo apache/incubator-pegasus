@@ -54,7 +54,7 @@
 #include "meta/meta_service.h"
 #include "common/replication.codes.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class spin_counter
@@ -75,17 +75,17 @@ public:
 
 struct reply_context
 {
-    dsn::message_ex *response;
+    message_ex *response;
     spin_counter e;
 };
 
-inline dsn::message_ex *create_corresponding_receive(dsn::message_ex *request_msg)
+inline message_ex *create_corresponding_receive(message_ex *request_msg)
 {
     return request_msg->copy(true, true);
 }
 
 // fake_receiver_meta_service overrides `reply_message` of meta_service
-class fake_receiver_meta_service : public dsn::replication::meta_service
+class fake_receiver_meta_service : public replication::meta_service
 {
 public:
     fake_receiver_meta_service() : meta_service()
@@ -93,10 +93,10 @@ public:
         _access_controller = security::create_meta_access_controller(nullptr);
     }
     virtual ~fake_receiver_meta_service() {}
-    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override
+    virtual void reply_message(message_ex *request, message_ex *response) override
     {
         uint64_t ptr;
-        dsn::unmarshall(request, ptr);
+        unmarshall(request, ptr);
         reply_context *ctx = reinterpret_cast<reply_context *>(ptr);
         ctx->response = create_corresponding_receive(response);
         ctx->response->add_ref();
@@ -110,20 +110,20 @@ public:
 };
 
 // release the dsn_message who's reference is 0
-inline void destroy_message(dsn::message_ex *msg)
+inline void destroy_message(message_ex *msg)
 {
     msg->add_ref();
     msg->release_ref();
 }
 
-class meta_service_test_app : public dsn::service_app
+class meta_service_test_app : public service_app
 {
 public:
-    meta_service_test_app(const dsn::service_app_info *info) : service_app(info) {}
+    meta_service_test_app(const service_app_info *info) : service_app(info) {}
 
 public:
-    virtual dsn::error_code start(const std::vector<std::string> &args) override;
-    virtual dsn::error_code stop(bool /*cleanup*/) { return dsn::ERR_OK; }
+    virtual error_code start(const std::vector<std::string> &args) override;
+    virtual error_code stop(bool /*cleanup*/) { return ERR_OK; }
     void state_sync_test();
     void update_configuration_test();
     void balancer_validator();
@@ -140,40 +140,39 @@ public:
     // test for bug found
     void adjust_dropped_size();
 
-    void call_update_configuration(
-        dsn::replication::meta_service *svc,
-        std::shared_ptr<dsn::replication::configuration_update_request> &request);
-    void call_config_sync(
-        dsn::replication::meta_service *svc,
-        std::shared_ptr<dsn::replication::configuration_query_by_node_request> &request);
+    void
+    call_update_configuration(replication::meta_service *svc,
+                              std::shared_ptr<replication::configuration_update_request> &request);
+    void
+    call_config_sync(replication::meta_service *svc,
+                     std::shared_ptr<replication::configuration_query_by_node_request> &request);
 
 private:
-    typedef std::function<bool(const dsn::replication::app_mapper &)> state_validator;
-    bool
-    wait_state(dsn::replication::server_state *ss, const state_validator &validator, int time = -1);
+    typedef std::function<bool(const replication::app_mapper &)> state_validator;
+    bool wait_state(replication::server_state *ss, const state_validator &validator, int time = -1);
 };
 
 template <typename TRequest, typename RequestHandler>
 std::shared_ptr<reply_context>
-fake_rpc_call(dsn::task_code rpc_code,
-              dsn::task_code server_state_write_code,
+fake_rpc_call(task_code rpc_code,
+              task_code server_state_write_code,
               RequestHandler *handle_class,
-              void (RequestHandler::*handle)(dsn::message_ex *request),
+              void (RequestHandler::*handle)(message_ex *request),
               const TRequest &data,
               int hash = 0,
               std::chrono::milliseconds delay = std::chrono::milliseconds(0))
 {
-    dsn::message_ex *msg = dsn::message_ex::create_request(rpc_code);
-    dsn::marshall(msg, data);
+    message_ex *msg = message_ex::create_request(rpc_code);
+    marshall(msg, data);
 
     std::shared_ptr<reply_context> result = std::make_shared<reply_context>();
     result->e.block();
     uint64_t ptr = reinterpret_cast<uint64_t>(result.get());
-    dsn::marshall(msg, ptr);
+    marshall(msg, ptr);
 
-    dsn::message_ex *received = create_corresponding_receive(msg);
+    message_ex *received = create_corresponding_receive(msg);
     received->add_ref();
-    dsn::tasking::enqueue(
+    tasking::enqueue(
         server_state_write_code, nullptr, std::bind(handle, handle_class, received), hash, delay);
 
     // release the sending message
@@ -204,9 +203,9 @@ fake_rpc_call(dsn::task_code rpc_code,
 #define fake_wait_rpc(context, response_data)                                                      \
     do {                                                                                           \
         context->e.wait();                                                                         \
-        ::dsn::unmarshall(context->response, response_data);                                       \
+        unmarshall(context->response, response_data);                                              \
         context->response->release_ref();                                                          \
     } while (0)
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

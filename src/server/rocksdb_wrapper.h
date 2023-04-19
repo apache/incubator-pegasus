@@ -36,9 +36,9 @@ class ColumnFamilyHandle;
 class DB;
 } // namespace rocksdb
 
-namespace dsn {
+namespace pegasus {
 class perf_counter_wrapper;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 
@@ -47,7 +47,7 @@ class pegasus_server_impl;
 struct db_get_context;
 struct db_write_context;
 
-class rocksdb_wrapper : public dsn::replication::replica_base
+class rocksdb_wrapper : public replication::replica_base
 {
 public:
     rocksdb_wrapper(pegasus_server_impl *server);
@@ -57,18 +57,16 @@ public:
     /// is returned.
     /// \result ctx.expired=true if record expired. Still rocksdb::Status::kOk is returned.
     /// \result ctx.found=false if record is not found. Still rocksdb::Status::kOk is returned.
-    int get(dsn::string_view raw_key, /*out*/ db_get_context *ctx);
+    int get(string_view raw_key, /*out*/ db_get_context *ctx);
 
-    int write_batch_put(int64_t decree,
-                        dsn::string_view raw_key,
-                        dsn::string_view value,
-                        uint32_t expire_sec);
+    int
+    write_batch_put(int64_t decree, string_view raw_key, string_view value, uint32_t expire_sec);
     int write_batch_put_ctx(const db_write_context &ctx,
-                            dsn::string_view raw_key,
-                            dsn::string_view value,
+                            string_view raw_key,
+                            string_view value,
                             uint32_t expire_sec);
     int write(int64_t decree);
-    int write_batch_delete(int64_t decree, dsn::string_view raw_key);
+    int write_batch_delete(int64_t decree, string_view raw_key);
     void clear_up_write_batch();
     int ingest_files(int64_t decree,
                      const std::vector<std::string> &sst_file_list,
@@ -87,7 +85,7 @@ private:
     rocksdb::ColumnFamilyHandle *_meta_cf;
 
     const uint32_t _pegasus_data_version;
-    dsn::perf_counter_wrapper &_pfc_recent_expire_count;
+    perf_counter_wrapper &_pfc_recent_expire_count;
     volatile uint32_t _default_ttl;
 
     friend class rocksdb_wrapper_test;

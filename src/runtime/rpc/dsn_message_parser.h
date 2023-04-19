@@ -37,7 +37,7 @@
 
 #include "runtime/rpc/message_parser.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 class dsn_message_parser : public message_parser

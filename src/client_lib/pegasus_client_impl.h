@@ -36,11 +36,11 @@
 #include "utils/blob.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 class message_ex;
 class task_tracker;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace client {
@@ -254,10 +254,10 @@ public:
 
     /// \internal
     /// This is an internal function for duplication.
-    /// \see pegasus::server::pegasus_mutation_duplicator
-    void async_duplicate(dsn::apps::duplicate_rpc rpc,
-                         std::function<void(dsn::error_code)> &&callback,
-                         dsn::task_tracker *tracker);
+    /// \see server::pegasus_mutation_duplicator
+    void async_duplicate(apps::duplicate_rpc rpc,
+                         std::function<void(error_code)> &&callback,
+                         task_tracker *tracker);
 
     virtual const char *get_error_string(int error_code) const override;
 
@@ -281,16 +281,16 @@ public:
 
         ~pegasus_scanner_impl() override;
 
-        pegasus_scanner_impl(::dsn::apps::rrdb_client *client,
+        pegasus_scanner_impl(apps::rrdb_client *client,
                              std::vector<uint64_t> &&hash,
                              const scan_options &options,
                              bool validate_partition_hash,
                              bool full_scan);
-        pegasus_scanner_impl(::dsn::apps::rrdb_client *client,
+        pegasus_scanner_impl(apps::rrdb_client *client,
                              std::vector<uint64_t> &&hash,
                              const scan_options &options,
-                             const ::dsn::blob &start_key,
-                             const ::dsn::blob &stop_key,
+                             const blob &start_key,
+                             const blob &stop_key,
                              bool validate_partition_hash,
                              bool full_scan);
 
@@ -302,20 +302,20 @@ public:
             COUNT_ONLY_FINISHED
         };
 
-        ::dsn::apps::rrdb_client *_client;
-        ::dsn::blob _start_key;
-        ::dsn::blob _stop_key;
+        apps::rrdb_client *_client;
+        blob _start_key;
+        blob _stop_key;
         scan_options _options;
         std::vector<uint64_t> _splits_hash;
 
         uint64_t _hash;
-        std::vector<::dsn::apps::key_value> _kvs;
+        std::vector<apps::key_value> _kvs;
         internal_info _info;
         int32_t _p;
         int32_t _kv_count;
 
         int64_t _context;
-        mutable ::dsn::zlock _lock;
+        mutable zlock _lock;
         std::list<async_scan_next_callback_t> _queue;
         volatile bool _rpc_started;
         bool _validate_partition_hash;
@@ -325,13 +325,13 @@ public:
         void _async_next_internal();
         void _start_scan();
         void _next_batch();
-        void _on_scan_response(::dsn::error_code, dsn::message_ex *, dsn::message_ex *);
+        void _on_scan_response(error_code, message_ex *, message_ex *);
         void _split_reset();
 
     private:
         static const char _holder[];
-        static const ::dsn::blob _min;
-        static const ::dsn::blob _max;
+        static const blob _min;
+        static const blob _max;
     };
 
     static int get_client_error(int server_error);
@@ -364,8 +364,8 @@ private:
 private:
     std::string _cluster_name;
     std::string _app_name;
-    ::dsn::rpc_address _meta_server;
-    ::dsn::apps::rrdb_client *_client;
+    rpc_address _meta_server;
+    apps::rrdb_client *_client;
 
     ///
     /// \brief _client_error_to_string

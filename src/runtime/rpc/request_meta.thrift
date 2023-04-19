@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-namespace cpp dsn
+namespace cpp pegasus
 namespace go replication
 
 // Metadata field of the request in rDSN's thrift protocol (version 1).

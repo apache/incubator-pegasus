@@ -22,7 +22,7 @@
 #include "utils/errors.h"
 #include "utils/singleton.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace replication {
 class replica_http_service_test;
@@ -89,4 +89,4 @@ private:
     std::map<std::string, std::shared_ptr<http_call>> _call_map;
 };
 
-} // namespace dsn
+} // namespace pegasus

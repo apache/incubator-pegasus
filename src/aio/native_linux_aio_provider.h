@@ -32,7 +32,7 @@
 #include "aio_provider.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 class disk_engine;
 
 class native_linux_aio_provider : public aio_provider
@@ -54,4 +54,4 @@ protected:
     error_code aio_internal(aio_task *aio);
 };
 
-} // namespace dsn
+} // namespace pegasus

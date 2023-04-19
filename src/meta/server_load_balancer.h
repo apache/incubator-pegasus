@@ -48,7 +48,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/extensible_object.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class configuration_balancer_request;
 class configuration_balancer_response;
@@ -92,8 +92,8 @@ public:
     static void *s_create(void *related_ns);
     static void s_delete(void *_this);
 };
-typedef dsn::object_extension_helper<newly_partitions, node_state> newly_partitions_ext;
-newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::rpc_address &addr);
+typedef object_extension_helper<newly_partitions, node_state> newly_partitions_ext;
+newly_partitions *get_newly_partitions(node_mapper &mapper, const rpc_address &addr);
 
 class server_load_balancer
 {
@@ -200,4 +200,4 @@ protected:
     meta_service *_svc;
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

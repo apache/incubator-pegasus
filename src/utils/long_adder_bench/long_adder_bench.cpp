@@ -26,12 +26,14 @@
 #include <vector>
 
 #include "runtime/api_layer1.h"
+#include "utils/error_code.h"
 #include "utils/long_adder.h"
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
+using namespace pegasus;
 // The simplest implementation of long adder: just wrap std::atomic<int64_t>.
 class simple_long_adder
 {
@@ -74,7 +76,7 @@ public:
 
     inline void increment_by(int64_t x)
     {
-        auto task_id = static_cast<uint32_t>(dsn::utils::get_current_tid());
+        auto task_id = static_cast<uint32_t>(utils::get_current_tid());
         _value[task_id % DIVIDE_CONTAINER].fetch_add(x, std::memory_order_relaxed);
     }
 
@@ -129,7 +131,7 @@ void print_usage(const char *cmd)
 template <typename Adder>
 void run_bench(int64_t num_operations, int64_t num_threads, const char *name)
 {
-    dsn::long_adder_wrapper<Adder> adder;
+    long_adder_wrapper<Adder> adder;
 
     std::vector<std::thread> threads;
 
@@ -167,7 +169,7 @@ int main(int argc, char **argv)
     }
 
     int64_t num_operations;
-    if (!dsn::buf2int64(argv[1], num_operations)) {
+    if (!buf2int64(argv[1], num_operations)) {
         fmt::print(stderr, "Invalid num_operations: {}\n\n", argv[1]);
 
         print_usage(argv[0]);
@@ -175,7 +177,7 @@ int main(int argc, char **argv)
     }
 
     int64_t num_threads;
-    if (!dsn::buf2int64(argv[2], num_threads)) {
+    if (!buf2int64(argv[2], num_threads)) {
         fmt::print(stderr, "Invalid num_threads: {}\n\n", argv[2]);
 
         print_usage(argv[0]);
@@ -183,14 +185,14 @@ int main(int argc, char **argv)
     }
 
     const char *long_adder_type = argv[3];
-    if (dsn::utils::equals(long_adder_type, "simple_long_adder")) {
+    if (utils::equals(long_adder_type, "simple_long_adder")) {
         run_bench<simple_long_adder>(num_operations, num_threads, long_adder_type);
-    } else if (dsn::utils::equals(long_adder_type, "divided_long_adder")) {
+    } else if (utils::equals(long_adder_type, "divided_long_adder")) {
         run_bench<divided_long_adder>(num_operations, num_threads, long_adder_type);
-    } else if (dsn::utils::equals(long_adder_type, "striped_long_adder")) {
-        run_bench<dsn::striped_long_adder>(num_operations, num_threads, long_adder_type);
-    } else if (dsn::utils::equals(long_adder_type, "concurrent_long_adder")) {
-        run_bench<dsn::concurrent_long_adder>(num_operations, num_threads, long_adder_type);
+    } else if (utils::equals(long_adder_type, "striped_long_adder")) {
+        run_bench<striped_long_adder>(num_operations, num_threads, long_adder_type);
+    } else if (utils::equals(long_adder_type, "concurrent_long_adder")) {
+        run_bench<concurrent_long_adder>(num_operations, num_threads, long_adder_type);
     } else {
         fmt::print(stderr, "Invalid long_adder_type: {}\n\n", long_adder_type);
 

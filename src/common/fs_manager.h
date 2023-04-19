@@ -33,7 +33,7 @@
 #include "utils/flags.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 
 namespace replication {
@@ -72,8 +72,8 @@ public:
     // and protected by the lock in fs_manager.
     uint64_t replicas_count(app_id id) const;
     uint64_t replicas_count() const;
-    bool has(const dsn::gpid &pid) const;
-    uint64_t remove(const dsn::gpid &pid);
+    bool has(const gpid &pid) const;
+    uint64_t remove(const gpid &pid);
     bool update_disk_stat(const bool update_disk_status);
 };
 
@@ -87,12 +87,12 @@ public:
     void initialize(const std::vector<std::string> &data_dirs,
                     const std::vector<std::string> &data_dir_tags);
 
-    dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
-    void allocate_dir(const dsn::gpid &pid,
+    error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
+    void allocate_dir(const gpid &pid,
                       const std::string &type,
                       /*out*/ std::string &dir);
-    void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
-    void remove_replica(const dsn::gpid &pid);
+    void add_replica(const gpid &pid, const std::string &pid_dir);
+    void remove_replica(const gpid &pid);
     bool for_each_dir_node(const std::function<bool(const dir_node &)> &func) const;
     void update_disk_stat(bool check_status_changed = true);
 
@@ -150,5 +150,5 @@ private:
     FRIEND_TEST(fs_manager, get_dir_node);
     FRIEND_TEST(replica_test, test_auto_trash);
 };
-} // replication
-} // dsn
+} // namespace replication
+} // namespace pegasus

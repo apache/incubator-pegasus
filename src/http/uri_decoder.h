@@ -22,7 +22,7 @@
 #include "utils/errors.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace uri {
 
 /// \brief Decodes a sequence according to the percent decoding rules.
@@ -30,4 +30,4 @@ namespace uri {
 error_with<std::string> decode(const string_view &encoded_uri);
 
 } // namespace uri
-} // namespace dsn
+} // namespace pegasus

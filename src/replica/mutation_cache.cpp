@@ -37,7 +37,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 mutation_cache::mutation_cache(decree init_decree, int max_count)

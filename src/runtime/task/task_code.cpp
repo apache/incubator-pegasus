@@ -34,9 +34,9 @@
 #include "utils/command_manager.h"
 #include "utils/customizable_id.h"
 
-namespace dsn {
+namespace pegasus {
 
-typedef dsn::utils::customized_id_mgr<dsn::task_code> task_code_mgr;
+typedef utils::customized_id_mgr<task_code> task_code_mgr;
 
 namespace utils {
 template <>
@@ -49,11 +49,11 @@ void task_code_mgr::register_commands()
         [](const std::vector<std::string> &args) {
             std::stringstream ss;
 
-            for (int code = 0; code <= dsn::task_code::max(); code++) {
+            for (int code = 0; code <= task_code::max(); code++) {
                 if (code == TASK_CODE_INVALID)
                     continue;
 
-                std::string codes = dsn::task_code(code).to_string();
+                std::string codes = task_code(code).to_string();
                 if (args.size() == 0) {
                     ss << "    " << codes << std::endl;
                 } else {
@@ -100,7 +100,7 @@ task_code::task_code(const char *name) : _internal_code(task_code_mgr::instance(
 task_code::task_code(const char *name,
                      dsn_task_type_t tt,
                      dsn_task_priority_t pri,
-                     dsn::threadpool_code pool)
+                     threadpool_code pool)
     : task_code(name)
 {
     task_spec::register_task_code(*this, tt, pri, pool);
@@ -109,7 +109,7 @@ task_code::task_code(const char *name,
 task_code::task_code(const char *name,
                      dsn_task_type_t tt,
                      dsn_task_priority_t pri,
-                     dsn::threadpool_code pool,
+                     threadpool_code pool,
                      bool is_storage_write,
                      bool allow_batch,
                      bool is_idempotent)

@@ -32,13 +32,13 @@
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace dist {
 namespace cmd {
 
-DEFINE_TASK_CODE_RPC(RPC_CLI_CLI_CALL, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_CLI_CLI_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 typedef rpc_holder<command, std::string> remote_command_rpc;
 
@@ -59,7 +59,7 @@ task_ptr async_call_remote(rpc_address remote,
 
 bool register_remote_command_rpc()
 {
-    rpc_request_handler cb = [](dsn::message_ex *msg) {
+    rpc_request_handler cb = [](message_ex *msg) {
         auto rpc = remote_command_rpc::auto_reply(msg);
         command_manager::instance().run_command(
             rpc.request().cmd, rpc.request().arguments, rpc.response());
@@ -70,4 +70,4 @@ bool register_remote_command_rpc()
 
 } // namespace cmd
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

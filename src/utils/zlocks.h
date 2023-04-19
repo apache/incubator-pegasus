@@ -43,7 +43,7 @@
 /// used for synchronization inner the rdsn core runtime.
 ///
 
-namespace dsn {
+namespace pegasus {
 class ilock;
 class zlock
 {
@@ -111,12 +111,10 @@ private:
     std::atomic<bool> _signaled;
     bool _manualReset;
 };
-}
 
 ///
 /// RAII wrapper of rdsn's synchronization objects
 ///
-namespace dsn {
 class zauto_lock
 {
 public:
@@ -188,14 +186,12 @@ private:
     bool _locked;
     zrwlock_nr *_lock;
 };
-}
 
 ///
 /// utils function used to check the lock safety
 ///
-namespace dsn {
 namespace lock_checker {
 void check_wait_safety();
 void check_dangling_lock();
 }
-}
+} // namespace pegasus

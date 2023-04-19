@@ -32,9 +32,7 @@
 #include <utility>
 #include <vector>
 
-#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-#include "common/gpid.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "runtime/api_layer1.h"
@@ -46,10 +44,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
-using namespace dsn;
-using namespace dsn::replication;
-using namespace pegasus;
 using std::string;
+namespace pegasus {
 
 enum class throttle_type
 {
@@ -175,7 +171,7 @@ public:
             auto h_key = generate_hotkey(test_plan.is_hotkey, 75, test_hashkey_len);
             auto s_key = generate_random_string(test_sortkey_len);
             auto value = generate_random_string(test_plan.random_value_size
-                                                    ? dsn::rand::next_u32(test_plan.single_value_sz)
+                                                    ? rand::next_u32(test_plan.single_value_sz)
                                                     : test_plan.single_value_sz);
             auto sortkey_value_pairs = generate_sortkey_value_map(
                 generate_str_vector_by_random(test_sortkey_len, test_plan.multi_count),
@@ -726,3 +722,4 @@ TEST_F(throttle_test, test)
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 100);
 }
+} // namespace pegasus

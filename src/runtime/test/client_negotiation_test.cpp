@@ -34,7 +34,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 class client_negotiation_test : public testing::Test
 {
@@ -203,4 +203,4 @@ TEST_F(client_negotiation_test, on_challenge)
     }
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

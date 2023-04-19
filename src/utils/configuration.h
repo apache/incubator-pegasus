@@ -39,7 +39,7 @@
 
 #include "string_conv.h"
 
-namespace dsn {
+namespace pegasus {
 
 class configuration
 {
@@ -174,7 +174,7 @@ inline int64_t configuration::get_value<int64_t>(const char *section,
         return default_value;
     } else {
         int64_t result = default_value;
-        bool suc = dsn::buf2int64(value, result);
+        bool suc = buf2int64(value, result);
         assert(suc || result == default_value);
         return result;
     }
@@ -202,7 +202,7 @@ inline uint64_t configuration::get_value<uint64_t>(const char *section,
         return default_value;
     } else {
         uint64_t result = default_value;
-        bool suc = dsn::buf2uint64(value, result);
+        bool suc = buf2uint64(value, result);
         assert(suc || result == default_value);
         return result;
     }
@@ -227,10 +227,10 @@ inline bool configuration::get_value<bool>(const char *section,
         return default_value;
     } else {
         bool result = default_value;
-        bool suc = dsn::buf2bool(value, result);
+        bool suc = buf2bool(value, result);
         assert(suc || result == default_value);
         return result;
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

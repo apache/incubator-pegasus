@@ -74,7 +74,7 @@ int64_t run_nth_element(const std::vector<int64_t> &expected_elements,
 
 int64_t run_stl_nth_element(const std::vector<int64_t> &array,
                             const std::vector<int64_t> &expected_elements,
-                            dsn::stl_nth_element_finder<int64_t> &finder)
+                            pegasus::stl_nth_element_finder<int64_t> &finder)
 {
     auto start = dsn_now_ns();
     std::vector<int64_t> container(array.size());
@@ -100,8 +100,8 @@ void run_bench(size_t num_operations,
                 static_cast<size_t>(num * 0.999)};
     };
 
-    dsn::perf_counter_nth_element_finder perf_counter_finder;
-    dsn::stl_nth_element_finder<int64_t> stl_finder;
+    pegasus::perf_counter_nth_element_finder perf_counter_finder;
+    pegasus::stl_nth_element_finder<int64_t> stl_finder;
 
     std::map<std::string, int64_t> exec_time_map = {{"perf_counter_nth_element", 0},
                                                     {"stl_nth_element", 0}};
@@ -113,7 +113,7 @@ void run_bench(size_t num_operations,
             real_nths = nths;
         }
 
-        dsn::integral_nth_element_case_generator<int64_t> generator(
+        pegasus::integral_nth_element_case_generator<int64_t> generator(
             array_size, 0, range_size, real_nths);
 
         std::vector<int64_t> array;
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     }
 
     uint64_t num_operations;
-    if (!dsn::buf2uint64(argv[1], num_operations)) {
+    if (!pegasus::buf2uint64(argv[1], num_operations)) {
         fmt::print(stderr, "Invalid num_operations: {}\n\n", argv[1]);
 
         print_usage(argv[0]);
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
     }
 
     uint64_t array_size;
-    if (!dsn::buf2uint64(argv[2], array_size)) {
+    if (!pegasus::buf2uint64(argv[2], array_size)) {
         fmt::print(stderr, "Invalid array_size: {}\n\n", argv[2]);
 
         print_usage(argv[0]);
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
     }
 
     uint64_t range_size;
-    if (!dsn::buf2uint64(argv[3], range_size)) {
+    if (!pegasus::buf2uint64(argv[3], range_size)) {
         fmt::print(stderr, "Invalid range_size: {}\n\n", argv[3]);
 
         print_usage(argv[0]);
@@ -203,10 +203,10 @@ int main(int argc, char **argv)
     std::vector<size_t> nths;
     if (argc >= 5) {
         std::vector<std::string> nth_strs;
-        dsn::utils::split_args(argv[4], nth_strs, ',');
+        pegasus::utils::split_args(argv[4], nth_strs, ',');
         for (const auto &s : nth_strs) {
             uint64_t nth;
-            if (!dsn::buf2uint64(s, nth)) {
+            if (!pegasus::buf2uint64(s, nth)) {
                 fmt::print(stderr, "Invalid nth number: {}\n\n", s);
 
                 print_usage(argv[0]);

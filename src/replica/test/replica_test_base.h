@@ -36,7 +36,7 @@
 
 #include "mock_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_stub_test_base : public ::testing::Test
@@ -84,4 +84,4 @@ public:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

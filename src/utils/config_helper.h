@@ -105,7 +105,7 @@
         val.fld.clear();                                                                           \
         std::string vv = dsn_config_get_value_string(section, #fld, "", dsptr);                    \
         std::list<std::string> lv;                                                                 \
-        ::dsn::utils::split_args(vv.c_str(), lv, ',');                                             \
+        utils::split_args(vv.c_str(), lv, ',');                                                    \
         for (auto &v : lv) {                                                                       \
             if (!type::is_exist(v.c_str())) {                                                      \
                 printf("invalid enum configuration '[%s] %s = %s'\n", section, #fld, v.c_str());   \
@@ -121,7 +121,7 @@
 #define CONFIG_FLD_STRING_LIST(fld, dsptr)                                                         \
     {                                                                                              \
         std::string vv = dsn_config_get_value_string(section, #fld, "", dsptr);                    \
-        ::dsn::utils::split_args(vv.c_str(), val.fld, ',');                                        \
+        utils::split_args(vv.c_str(), val.fld, ',');                                               \
         if (val.fld.size() == 0 && default_value)                                                  \
             val.fld = default_value->fld;                                                          \
     }
@@ -131,7 +131,7 @@
     {                                                                                              \
         std::string vv = dsn_config_get_value_string(section, #fld, "", dsptr);                    \
         std::list<std::string> lv;                                                                 \
-        ::dsn::utils::split_args(vv.c_str(), lv, ',');                                             \
+        utils::split_args(vv.c_str(), lv, ',');                                                    \
         if (lv.size() == 0 && default_value)                                                       \
             val.fld = default_value->fld;                                                          \
         else {                                                                                     \

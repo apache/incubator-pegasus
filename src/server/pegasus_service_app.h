@@ -28,33 +28,33 @@
 namespace pegasus {
 namespace server {
 
-class pegasus_replication_service_app : public ::dsn::replication::replication_service_app
+class pegasus_replication_service_app : public replication::replication_service_app
 {
 public:
-    pegasus_replication_service_app(const dsn::service_app_info *info)
-        : ::dsn::replication::replication_service_app::replication_service_app(info),
+    pegasus_replication_service_app(const service_app_info *info)
+        : replication::replication_service_app::replication_service_app(info),
           _updater_started(false)
     {
     }
 
-    virtual ::dsn::error_code start(const std::vector<std::string> &args) override
+    virtual error_code start(const std::vector<std::string> &args) override
     {
         // args for replication http service
         std::vector<std::string> args_new(args);
         args_new.emplace_back(PEGASUS_VERSION);
         args_new.emplace_back(PEGASUS_GIT_COMMIT);
-        ::dsn::error_code ret = ::dsn::replication::replication_service_app::start(args_new);
+        error_code ret = replication::replication_service_app::start(args_new);
 
-        if (ret == ::dsn::ERR_OK) {
+        if (ret == ERR_OK) {
             pegasus_counter_reporter::instance().start();
             _updater_started = true;
         }
         return ret;
     }
 
-    virtual ::dsn::error_code stop(bool cleanup = false) override
+    virtual error_code stop(bool cleanup = false) override
     {
-        ::dsn::error_code ret = ::dsn::replication::replication_service_app::stop();
+        error_code ret = replication::replication_service_app::stop();
         if (_updater_started) {
             pegasus_counter_reporter::instance().stop();
         }
@@ -65,32 +65,32 @@ private:
     bool _updater_started;
 };
 
-class pegasus_meta_service_app : public ::dsn::service::meta_service_app
+class pegasus_meta_service_app : public service::meta_service_app
 {
 public:
-    pegasus_meta_service_app(const dsn::service_app_info *info)
-        : ::dsn::service::meta_service_app::meta_service_app(info), _updater_started(false)
+    pegasus_meta_service_app(const service_app_info *info)
+        : service::meta_service_app::meta_service_app(info), _updater_started(false)
     {
     }
 
-    virtual ::dsn::error_code start(const std::vector<std::string> &args) override
+    virtual error_code start(const std::vector<std::string> &args) override
     {
         // args for meta http service
         std::vector<std::string> args_new(args);
         args_new.emplace_back(PEGASUS_VERSION);
         args_new.emplace_back(PEGASUS_GIT_COMMIT);
-        ::dsn::error_code ret = ::dsn::service::meta_service_app::start(args_new);
+        error_code ret = service::meta_service_app::start(args_new);
 
-        if (ret == ::dsn::ERR_OK) {
+        if (ret == ERR_OK) {
             pegasus_counter_reporter::instance().start();
             _updater_started = true;
         }
         return ret;
     }
 
-    virtual ::dsn::error_code stop(bool cleanup = false) override
+    virtual error_code stop(bool cleanup = false) override
     {
-        ::dsn::error_code ret = ::dsn::service::meta_service_app::stop();
+        error_code ret = service::meta_service_app::stop();
         if (_updater_started) {
             pegasus_counter_reporter::instance().stop();
         }

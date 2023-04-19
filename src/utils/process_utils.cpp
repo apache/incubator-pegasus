@@ -36,7 +36,7 @@ using std::ios_base;
 using std::ifstream;
 using std::string;
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 __thread tls_tid s_tid;

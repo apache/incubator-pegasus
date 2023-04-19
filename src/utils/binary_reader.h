@@ -34,13 +34,13 @@
 
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 class binary_reader
 {
 public:
     // given bb on ctor
-    binary_reader(const blob &blob);
-    binary_reader(blob &&blob);
+    binary_reader(const blob &bb);
+    binary_reader(blob &&bb);
 
     // or delayed init
     binary_reader() {}
@@ -71,8 +71,8 @@ public:
 
     int read(/*out*/ std::string &s);
     virtual int read(char *buffer, int sz);
-    int read(blob &blob);
-    virtual int read(blob &blob, int len);
+    int read(blob &bb);
+    virtual int read(blob &bb, int len);
 
     blob get_buffer() const { return _blob; }
     blob get_remaining_buffer() const { return _blob.range(static_cast<int>(_ptr - _blob.data())); }
@@ -81,7 +81,7 @@ public:
     int get_remaining_size() const { return _remaining_size; }
 
 protected:
-    int inner_read(blob &blob, int len);
+    int inner_read(blob &bb, int len);
     int inner_read(char *buffer, int sz);
 
 private:
@@ -107,4 +107,4 @@ inline int binary_reader::read_pod(/*out*/ T &val)
         return 0;
     }
 }
-} // namespace dsn
+} // namespace pegasus

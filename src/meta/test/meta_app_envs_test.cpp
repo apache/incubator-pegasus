@@ -37,7 +37,7 @@
 #include "meta_test_base.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class meta_app_envs_test : public meta_test_base
 {
@@ -195,4 +195,4 @@ TEST_F(meta_app_envs_test, update_app_envs_test)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

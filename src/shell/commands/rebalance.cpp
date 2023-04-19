@@ -41,12 +41,21 @@
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 
+using pegasus::replication::configuration_balancer_request;
+using pegasus::replication::configuration_meta_control_response;
+using pegasus::replication::configuration_proposal_action;
+using pegasus::replication::config_type;
+using pegasus::replication::meta_function_level;
+using pegasus::replication::_config_type_VALUES_TO_NAMES;
+using pegasus::replication::_meta_function_level_VALUES_TO_NAMES;
+
+namespace pegasus {
 bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc <= 1)
         return false;
 
-    dsn::replication::meta_function_level::type l;
+    meta_function_level::type l;
     l = type_from_string(_meta_function_level_VALUES_TO_NAMES,
                          std::string("fl_") + args.argv[1],
                          meta_function_level::fl_invalid);
@@ -55,7 +64,7 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
                   args.argv[1]);
 
     configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(l);
-    if (resp.err == dsn::ERR_OK) {
+    if (resp.err == ERR_OK) {
         std::cout << "control meta level ok, the old level is "
                   << _meta_function_level_VALUES_TO_NAMES.find(resp.old_level)->second << std::endl;
     } else {
@@ -66,9 +75,9 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
 
 bool get_meta_level(command_executor *e, shell_context *sc, arguments args)
 {
-    configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(
-        dsn::replication::meta_function_level::fl_invalid);
-    if (resp.err == dsn::ERR_OK) {
+    configuration_meta_control_response resp =
+        sc->ddl_client->control_meta_function_level(meta_function_level::fl_invalid);
+    if (resp.err == ERR_OK) {
         std::cout << "current meta level is "
                   << _meta_function_level_VALUES_TO_NAMES.find(resp.old_level)->second << std::endl;
     } else {
@@ -87,9 +96,9 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
                                            {0, 0, 0, 0}};
 
     dverify(args.argc >= 9);
-    dsn::replication::configuration_balancer_request request;
+    configuration_balancer_request request;
     request.gpid.set_app_id(-1);
-    dsn::rpc_address target, node;
+    rpc_address target, node;
     std::string proposal_type = "CT_";
     request.force = false;
     bool ans;
@@ -133,7 +142,7 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
     verify_logged(
         tp != config_type::CT_INVALID, "parse %s as config_type failed.\n", proposal_type.c_str());
     request.action_list = {new_proposal_action(target, node, tp)};
-    dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
+    error_code err = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send proposal response: " << err.to_string() << std::endl;
     return true;
 }
@@ -149,10 +158,10 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
     if (args.argc < 9)
         return false;
 
-    dsn::replication::configuration_balancer_request request;
+    configuration_balancer_request request;
     request.gpid.set_app_id(-1);
     std::string balance_type;
-    dsn::rpc_address from, to;
+    rpc_address from, to;
     bool ans;
 
     optind = 0;
@@ -203,9 +212,9 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
         actions.emplace_back(new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_sec") {
         actions.emplace_back(
-            new_proposal_action(dsn::rpc_address(), to, config_type::CT_ADD_SECONDARY_FOR_LB));
+            new_proposal_action(rpc_address(), to, config_type::CT_ADD_SECONDARY_FOR_LB));
         actions.emplace_back(
-            new_proposal_action(dsn::rpc_address(), from, config_type::CT_DOWNGRADE_TO_INACTIVE));
+            new_proposal_action(rpc_address(), from, config_type::CT_DOWNGRADE_TO_INACTIVE));
     } else {
         fprintf(stderr, "parse %s as a balance type failed\n", balance_type.c_str());
         return false;
@@ -223,7 +232,8 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "need set the gpid by -g\n");
         return false;
     }
-    dsn::error_code ec = sc->ddl_client->send_balancer_proposal(request);
+    error_code ec = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send balance proposal result: " << ec.to_string() << std::endl;
     return true;
 }
+} // namespace pegasus

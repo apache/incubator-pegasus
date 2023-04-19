@@ -44,13 +44,9 @@
 namespace pegasus {
 namespace server {
 
-DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
-                 TASK_PRIORITY_COMMON,
-                 ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
-                 TASK_PRIORITY_COMMON,
-                 ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 DSN_DEFINE_uint32(pegasus.collector, app_stat_interval_seconds, 10, "app stat interval seconds");
 DSN_DEFINE_uint32(pegasus.collector,
@@ -67,24 +63,24 @@ DSN_DEFINE_string(pegasus.collector,
                   "app for recording usage statistics, including read/write capacity unit and "
                   "storage size");
 DSN_DEFINE_validator(usage_stat_app,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 
 info_collector::info_collector()
 {
-    std::vector<::dsn::rpc_address> meta_servers;
-    replica_helper::load_meta_servers(meta_servers);
+    std::vector<rpc_address> meta_servers;
+    replication::replica_helper::load_meta_servers(meta_servers);
 
     _meta_servers.assign_group("meta-servers");
     for (auto &ms : meta_servers) {
         CHECK(_meta_servers.group_address()->add(ms), "");
     }
 
-    _cluster_name = dsn::get_current_cluster_name();
+    _cluster_name = get_current_cluster_name();
 
     _shell_context = std::make_shared<shell_context>();
     _shell_context->current_cluster_name = _cluster_name;
     _shell_context->meta_list = meta_servers;
-    _shell_context->ddl_client.reset(new replication_ddl_client(meta_servers));
+    _shell_context->ddl_client.reset(new replication::replication_ddl_client(meta_servers));
 
     // initialize the _client.
     CHECK(pegasus_client_factory::initialize(nullptr), "Initialize the pegasus client failed");
@@ -117,28 +113,28 @@ info_collector::~info_collector()
 void info_collector::start()
 {
     _app_stat_timer_task =
-        ::dsn::tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
-                                      &_tracker,
-                                      [this] { on_app_stat(); },
-                                      std::chrono::seconds(FLAGS_app_stat_interval_seconds),
-                                      0,
-                                      std::chrono::minutes(1));
+        tasking::enqueue_timer(LPC_PEGASUS_APP_STAT_TIMER,
+                               &_tracker,
+                               [this] { on_app_stat(); },
+                               std::chrono::seconds(FLAGS_app_stat_interval_seconds),
+                               0,
+                               std::chrono::minutes(1));
 
-    _capacity_unit_stat_timer_task = ::dsn::tasking::enqueue_timer(
-        LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
-        &_tracker,
-        [this] { on_capacity_unit_stat(_capacity_unit_retry_max_count); },
-        std::chrono::seconds(FLAGS_capacity_unit_fetch_interval_seconds),
-        0,
-        std::chrono::minutes(1));
+    _capacity_unit_stat_timer_task =
+        tasking::enqueue_timer(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                               &_tracker,
+                               [this] { on_capacity_unit_stat(_capacity_unit_retry_max_count); },
+                               std::chrono::seconds(FLAGS_capacity_unit_fetch_interval_seconds),
+                               0,
+                               std::chrono::minutes(1));
 
-    _storage_size_stat_timer_task = ::dsn::tasking::enqueue_timer(
-        LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
-        &_tracker,
-        [this] { on_storage_size_stat(_storage_size_retry_max_count); },
-        std::chrono::seconds(FLAGS_storage_size_fetch_interval_seconds),
-        0,
-        std::chrono::minutes(1));
+    _storage_size_stat_timer_task =
+        tasking::enqueue_timer(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
+                               &_tracker,
+                               [this] { on_storage_size_stat(_storage_size_retry_max_count); },
+                               std::chrono::seconds(FLAGS_storage_size_fetch_interval_seconds),
+                               0,
+                               std::chrono::minutes(1));
 }
 
 void info_collector::stop() { _tracker.cancel_outstanding_tasks(); }
@@ -181,7 +177,7 @@ void info_collector::on_app_stat()
 
 info_collector::app_stat_counters *info_collector::get_app_counters(const std::string &app_name)
 {
-    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_app_stat_counter_lock);
+    utils::auto_lock<utils::ex_lock_nr> l(_app_stat_counter_lock);
     auto find = _app_stat_counters.find(app_name);
     if (find != _app_stat_counters.end()) {
         return find->second;
@@ -270,11 +266,11 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
                         "wait {} seconds to retry",
                         remaining_retry_count,
                         _capacity_unit_retry_wait_seconds);
-            ::dsn::tasking::enqueue(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
-                                    &_tracker,
-                                    [=] { on_capacity_unit_stat(remaining_retry_count - 1); },
-                                    0,
-                                    std::chrono::seconds(_capacity_unit_retry_wait_seconds));
+            tasking::enqueue(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                             &_tracker,
+                             [=] { on_capacity_unit_stat(remaining_retry_count - 1); },
+                             0,
+                             std::chrono::seconds(_capacity_unit_retry_wait_seconds));
         } else {
             LOG_ERROR("get capacity unit stat failed, remaining_retry_count = 0, no retry anymore");
         }
@@ -294,7 +290,7 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
 bool info_collector::has_capacity_unit_updated(const std::string &node_address,
                                                const std::string &timestamp)
 {
-    ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_capacity_unit_update_info_lock);
+    utils::auto_lock<utils::ex_lock_nr> l(_capacity_unit_update_info_lock);
     auto find = _capacity_unit_update_info.find(node_address);
     if (find == _capacity_unit_update_info.end()) {
         _capacity_unit_update_info[node_address] = timestamp;
@@ -317,11 +313,11 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
                         "seconds to retry",
                         remaining_retry_count,
                         _storage_size_retry_wait_seconds);
-            ::dsn::tasking::enqueue(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
-                                    &_tracker,
-                                    [=] { on_storage_size_stat(remaining_retry_count - 1); },
-                                    0,
-                                    std::chrono::seconds(_storage_size_retry_wait_seconds));
+            tasking::enqueue(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
+                             &_tracker,
+                             [=] { on_storage_size_stat(remaining_retry_count - 1); },
+                             0,
+                             std::chrono::seconds(_storage_size_retry_wait_seconds));
         } else {
             LOG_ERROR("get storage size stat failed, remaining_retry_count = 0, no retry anymore");
         }

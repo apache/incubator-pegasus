@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace cpp dsn
+namespace cpp pegasus
 namespace go base
 namespace java org.apache.pegasus.base
 namespace py pypegasus.base

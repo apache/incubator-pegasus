@@ -30,7 +30,7 @@
 #include "utils/rand.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 
 static constexpr int kInvalidIndex = -1;
 
@@ -38,7 +38,7 @@ static constexpr int kInvalidIndex = -1;
 // Please use host_port like example if you want call group of host_port.
 //  e.g.
 //
-//  dsn::rpc_host_port group;
+//  rpc_host_port group;
 //  group.assign_group("test");
 //  group.group_host_port()->add(host_port("test_fqdn", 34601));
 //  group.group_host_port()->add(host_port("test_fqdn", 34602));
@@ -254,4 +254,4 @@ inline host_port rpc_group_host_port::next(const host_port &current) const
     return it == _members.end() ? _members[0] : *it;
 }
 
-} // namespace dsn
+} // namespace pegasus

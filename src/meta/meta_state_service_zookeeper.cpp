@@ -42,7 +42,7 @@
 #include "zookeeper/zookeeper_session.h"
 #include "zookeeper/zookeeper_session_mgr.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 DSN_DECLARE_int32(timeout_ms);
@@ -204,7 +204,7 @@ task_ptr meta_state_service_zookeeper::create_node(const std::string &node,
                                                    task_code cb_code,
                                                    const err_callback &cb_create,
                                                    const blob &value,
-                                                   dsn::task_tracker *tracker)
+                                                   task_tracker *tracker)
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_create, 0));
     tsk->set_tracker(tracker);
@@ -221,7 +221,7 @@ task_ptr meta_state_service_zookeeper::submit_transaction(
     const std::shared_ptr<transaction_entries> &entries,
     task_code cb_code,
     const err_callback &cb_transaction,
-    dsn::task_tracker *tracker)
+    task_tracker *tracker)
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_transaction, 0));
     tsk->set_tracker(tracker);
@@ -244,7 +244,7 @@ task_ptr meta_state_service_zookeeper::submit_transaction(
 task_ptr meta_state_service_zookeeper::delete_empty_node(const std::string &node,
                                                          task_code cb_code,
                                                          const err_callback &cb_delete,
-                                                         dsn::task_tracker *tracker)
+                                                         task_tracker *tracker)
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_delete, 0));
     tsk->set_tracker(tracker);
@@ -258,7 +258,7 @@ task_ptr meta_state_service_zookeeper::delete_node(const std::string &node,
                                                    bool recursively_delete,
                                                    task_code cb_code,
                                                    const err_callback &cb_delete,
-                                                   dsn::task_tracker *tracker)
+                                                   task_tracker *tracker)
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_delete, 0));
     tsk->set_tracker(tracker);
@@ -311,7 +311,7 @@ task_ptr meta_state_service_zookeeper::delete_node(const std::string &node,
 task_ptr meta_state_service_zookeeper::get_data(const std::string &node,
                                                 task_code cb_code,
                                                 const err_value_callback &cb_get_data,
-                                                dsn::task_tracker *tracker)
+                                                task_tracker *tracker)
 {
     err_value_future_ptr tsk(new err_value_future(cb_code, cb_get_data, 0));
     tsk->set_tracker(tracker);
@@ -326,7 +326,7 @@ task_ptr meta_state_service_zookeeper::set_data(const std::string &node,
                                                 const blob &value,
                                                 task_code cb_code,
                                                 const err_callback &cb_set_data,
-                                                dsn::task_tracker *tracker)
+                                                task_tracker *tracker)
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_set_data, 0));
     tsk->set_tracker(tracker);
@@ -341,7 +341,7 @@ task_ptr meta_state_service_zookeeper::set_data(const std::string &node,
 task_ptr meta_state_service_zookeeper::node_exist(const std::string &node,
                                                   task_code cb_code,
                                                   const err_callback &cb_exist,
-                                                  dsn::task_tracker *tracker)
+                                                  task_tracker *tracker)
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_exist, 0));
     tsk->set_tracker(tracker);
@@ -355,7 +355,7 @@ task_ptr meta_state_service_zookeeper::node_exist(const std::string &node,
 task_ptr meta_state_service_zookeeper::get_children(const std::string &node,
                                                     task_code cb_code,
                                                     const err_stringv_callback &cb_get_children,
-                                                    dsn::task_tracker *tracker)
+                                                    task_tracker *tracker)
 {
     err_stringv_future_ptr tsk(new err_stringv_future(cb_code, cb_get_children, 0));
     tsk->set_tracker(tracker);
@@ -407,7 +407,7 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(ref_this,
         blob data;
         if (ZOK == op->_output.error) {
             std::shared_ptr<char> buf(
-                dsn::utils::make_shared_array<char>(op->_output.get_op.value_length));
+                utils::make_shared_array<char>(op->_output.get_op.value_length));
             memcpy(buf.get(), op->_output.get_op.value, op->_output.get_op.value_length);
             data.assign(buf, 0, op->_output.get_op.value_length);
         }

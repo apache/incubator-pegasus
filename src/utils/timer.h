@@ -19,7 +19,7 @@
 
 #include "utils/chrono_literals.h"
 
-namespace dsn {
+namespace pegasus {
 
 class timer
 {
@@ -59,4 +59,4 @@ private:
     std::chrono::time_point<std::chrono::system_clock> _start;
 };
 
-} // namespace dsn
+} // namespace pegasus

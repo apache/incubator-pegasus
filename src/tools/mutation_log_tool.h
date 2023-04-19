@@ -40,7 +40,7 @@
 #include <iostream>
 #include <string>
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace replication {
@@ -51,8 +51,8 @@ public:
     bool
     dump(const std::string &log_dir,
          std::ostream &output,
-         std::function<void(
-             int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)> callback);
+         std::function<void(int64_t decree, int64_t timestamp, message_ex **requests, int count)>
+             callback);
 };
 }
 }

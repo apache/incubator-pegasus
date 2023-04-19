@@ -76,13 +76,13 @@ ENUM_REG(TASK_PRIORITY_COMMON)
 ENUM_REG(TASK_PRIORITY_HIGH)
 ENUM_END(dsn_task_priority_t)
 
-namespace dsn {
+namespace pegasus {
 
 /// task code is an index for a specific kind of task. with the index, you can
 /// get properties of this kind of task: name, type, priority, etc. you may want to refer to
 /// task_spec.h for the detailed task properties.
 ///
-/// Like dsn::blob, task_code is a special thrift primitive type that's defined
+/// Like blob, task_code is a special thrift primitive type that's defined
 /// by the rDSN framework. Internally as a C++ object, it's is represented as an integer,
 /// but in thrift representation it's serialized as a string.
 ///
@@ -91,7 +91,7 @@ namespace dsn {
 ///
 ///  **.thrift
 ///    x: 1: i32  task_code;
-///    ✓: 1: dsn.task_code  task_code;
+///    ✓: 1: pegasus.task_code  task_code;
 ///
 class task_code
 {
@@ -100,15 +100,12 @@ public:
 
     constexpr explicit task_code(int code) : _internal_code(code) {}
 
-    task_code(const char *name,
-              dsn_task_type_t tt,
-              dsn_task_priority_t pri,
-              dsn::threadpool_code pool);
+    task_code(const char *name, dsn_task_type_t tt, dsn_task_priority_t pri, threadpool_code pool);
 
     task_code(const char *name,
               dsn_task_type_t tt,
               dsn_task_priority_t pri,
-              dsn::threadpool_code pool,
+              threadpool_code pool,
               bool is_storage_write,
               bool allow_batch,
               bool is_idempotent);
@@ -144,14 +141,14 @@ private:
 
 // you can define task_code by the following macros
 #define DEFINE_NAMED_TASK_CODE(x, name, pri, pool)                                                 \
-    __selectany const ::dsn::task_code x(#name, TASK_TYPE_COMPUTE, pri, pool);
+    __selectany const ::pegasus::task_code x(#name, TASK_TYPE_COMPUTE, pri, pool);
 
 #define DEFINE_NAMED_TASK_CODE_AIO(x, name, pri, pool)                                             \
-    __selectany const ::dsn::task_code x(#name, TASK_TYPE_AIO, pri, pool);
+    __selectany const ::pegasus::task_code x(#name, TASK_TYPE_AIO, pri, pool);
 
 #define DEFINE_NAMED_TASK_CODE_RPC(x, name, pri, pool)                                             \
-    __selectany const ::dsn::task_code x(#name, TASK_TYPE_RPC_REQUEST, pri, pool);                 \
-    __selectany const ::dsn::task_code x##_ACK(#name "_ACK", TASK_TYPE_RPC_RESPONSE, pri, pool);
+    __selectany const ::pegasus::task_code x(#name, TASK_TYPE_RPC_REQUEST, pri, pool);             \
+    __selectany const ::pegasus::task_code x##_ACK(#name "_ACK", TASK_TYPE_RPC_RESPONSE, pri, pool);
 
 /*! define a new task code with TASK_TYPE_COMPUTATION */
 #define DEFINE_TASK_CODE(x, pri, pool) DEFINE_NAMED_TASK_CODE(x, x, pri, pool)
@@ -178,15 +175,15 @@ private:
 // the reason is that the storage rpc's response mainly runs at client side, which is not
 // necessary to start so many threadpools
 #define DEFINE_STORAGE_RPC_CODE(x, pri, pool, is_write, allow_batch, is_idempotent)                \
-    __selectany const ::dsn::task_code x(                                                          \
+    __selectany const ::pegasus::task_code x(                                                      \
         #x, TASK_TYPE_RPC_REQUEST, pri, pool, is_write, allow_batch, is_idempotent);               \
-    __selectany const ::dsn::task_code x##_ACK(#x "_ACK",                                          \
-                                               TASK_TYPE_RPC_RESPONSE,                             \
-                                               pri,                                                \
-                                               THREAD_POOL_DEFAULT,                                \
-                                               is_write,                                           \
-                                               allow_batch,                                        \
-                                               is_idempotent);
+    __selectany const ::pegasus::task_code x##_ACK(#x "_ACK",                                      \
+                                                   TASK_TYPE_RPC_RESPONSE,                         \
+                                                   pri,                                            \
+                                                   THREAD_POOL_DEFAULT,                            \
+                                                   is_write,                                       \
+                                                   allow_batch,                                    \
+                                                   is_idempotent);
 
 #define ALLOW_BATCH true
 #define NOT_ALLOW_BATCH false
@@ -197,8 +194,9 @@ private:
 // some error status when you want to return task_code in some functions.
 DEFINE_TASK_CODE(TASK_CODE_INVALID, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-// define a task_code "task_code_inlined", it's mainly used in situations when you want execute
+// define a task_code "task_code_inlined", it's mainly used in situations when
+// you want execute
 // a task with "inline" mode.
 DEFINE_TASK_CODE(TASK_CODE_EXEC_INLINED, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-} // namespace dsn
+} // namespace pegasus

@@ -35,7 +35,7 @@
 #include "utils/smart_pointers.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 
 // error_s gives a detailed description of the error tagged by error_code.
 // For example:
@@ -72,7 +72,7 @@ public:
     error_s(error_s &&rhs) noexcept = default;
     error_s &operator=(error_s &&) noexcept = default;
 
-    static error_s make(error_code code, dsn::string_view reason) { return error_s(code, reason); }
+    static error_s make(error_code code, string_view reason) { return error_s(code, reason); }
 
     static error_s make(error_code code)
     {
@@ -143,14 +143,14 @@ public:
     }
 
 private:
-    error_s(error_code code, dsn::string_view msg) noexcept : _info(new error_info(code, msg)) {}
+    error_s(error_code code, string_view msg) noexcept : _info(new error_info(code, msg)) {}
 
     struct error_info
     {
         error_code code;
         std::string msg; // TODO(wutao1): use raw char* to improve performance?
 
-        error_info(error_code c, dsn::string_view s) : code(c), msg(s) {}
+        error_info(error_code c, string_view s) : code(c), msg(s) {}
     };
 
     void copy(const error_s &rhs)
@@ -217,13 +217,13 @@ private:
     std::unique_ptr<T> _value;
 };
 
-} // namespace dsn
+} // namespace pegasus
 
 #define FMT_ERR(ec, msg, args...) error_s::make(ec, fmt::format(msg, ##args))
 
 #define RETURN_NOT_OK(s)                                                                           \
     do {                                                                                           \
-        const ::dsn::error_s &_s = (s);                                                            \
+        const error_s &_s = (s);                                                                   \
         if (dsn_unlikely(!_s.is_ok())) {                                                           \
             return _s;                                                                             \
         }                                                                                          \
@@ -231,6 +231,6 @@ private:
 
 #define CHECK_OK(s, ...)                                                                           \
     do {                                                                                           \
-        const ::dsn::error_s &_s = (s);                                                            \
+        const error_s &_s = (s);                                                                   \
         CHECK(_s.is_ok(), fmt::format(__VA_ARGS__));                                               \
     } while (false);

@@ -25,7 +25,7 @@
 #include "utils/chrono_literals.h"
 #include "utils/absl/utility/utility.h"
 
-namespace dsn {
+namespace pegasus {
 namespace pipeline {
 
 // The environment for execution.
@@ -52,7 +52,7 @@ struct environment
         __conf.thread_hash = hash;
         return *this;
     }
-    environment &task_tracker(dsn::task_tracker *tracker)
+    environment &task_tracker(pegasus::task_tracker *tracker)
     {
         __conf.tracker = tracker;
         return *this;
@@ -61,7 +61,7 @@ struct environment
     struct
     {
         task_code thread_pool_code;
-        dsn::task_tracker *tracker{nullptr};
+        pegasus::task_tracker *tracker{nullptr};
         int thread_hash{0};
     } __conf;
 };
@@ -299,4 +299,4 @@ static void repeat(Runnable &&r, std::chrono::milliseconds delay_ms = 0_ms)
 }
 
 } // namespace pipeline
-} // namespace dsn
+} // namespace pegasus

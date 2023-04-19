@@ -29,7 +29,7 @@
 #include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 bool validate_app_env(const std::string &env_name,
@@ -42,7 +42,7 @@ bool validate_app_env(const std::string &env_name,
 bool check_slow_query(const std::string &env_value, std::string &hint_message)
 {
     uint64_t threshold = 0;
-    if (!dsn::buf2uint64(env_value, threshold) ||
+    if (!buf2uint64(env_value, threshold) ||
         threshold < replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS) {
         hint_message = fmt::format("Slow query threshold must be >= {}ms",
                                    replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS);
@@ -74,7 +74,7 @@ bool check_deny_client(const std::string &env_value, std::string &hint_message)
 bool check_rocksdb_iteration(const std::string &env_value, std::string &hint_message)
 {
     uint64_t threshold = 0;
-    if (!dsn::buf2uint64(env_value, threshold) || threshold < 0) {
+    if (!buf2uint64(env_value, threshold) || threshold < 0) {
         hint_message = "Rocksdb iteration threshold must be greater than zero";
         return false;
     }
@@ -144,7 +144,7 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
 bool check_bool_value(const std::string &env_value, std::string &hint_message)
 {
     bool result = false;
-    if (!dsn::buf2bool(env_value, result)) {
+    if (!buf2bool(env_value, result)) {
         hint_message = fmt::format("invalid string {}, should be \"true\" or \"false\"", env_value);
         return false;
     }
@@ -217,4 +217,4 @@ void app_env_validator::register_all_validators()
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

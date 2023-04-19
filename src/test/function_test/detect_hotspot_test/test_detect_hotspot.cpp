@@ -36,12 +36,10 @@
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"
 #include "utils/error_code.h"
-#include "utils/utils.h"
 
-using namespace ::dsn;
-using namespace pegasus;
+namespace pegasus {
 
-class detect_hotspot_test : public test_util
+class detect_hotspot_test : public ::pegasus::test_util
 {
 protected:
     const int64_t max_detection_second = 100;
@@ -87,19 +85,19 @@ protected:
 
     void get_result(detection_type dt, key_type expect_hotspot)
     {
-        dsn::replication::detect_hotkey_request req;
+        replication::detect_hotkey_request req;
         if (dt == detection_type::write_data) {
-            req.type = dsn::replication::hotkey_type::type::WRITE;
+            req.type = replication::hotkey_type::type::WRITE;
         } else {
-            req.type = dsn::replication::hotkey_type::type::READ;
+            req.type = replication::hotkey_type::type::READ;
         }
-        req.action = dsn::replication::detect_action::QUERY;
+        req.action = replication::detect_action::QUERY;
 
         bool find_hotkey = false;
-        dsn::replication::detect_hotkey_response resp;
+        replication::detect_hotkey_response resp;
         for (int partition_index = 0; partition_index < partitions_.size(); partition_index++) {
-            req.pid = dsn::gpid(app_id_, partition_index);
-            ASSERT_EQ(dsn::ERR_OK,
+            req.pid = gpid(app_id_, partition_index);
+            ASSERT_EQ(ERR_OK,
                       ddl_client_->detect_hotkey(partitions_[partition_index].primary, req, resp));
             if (!resp.hotkey_result.empty()) {
                 find_hotkey = true;
@@ -108,7 +106,7 @@ protected:
         }
         if (expect_hotspot == key_type::hotspot_dataset) {
             ASSERT_TRUE(find_hotkey);
-            ASSERT_EQ(dsn::ERR_OK, resp.err);
+            ASSERT_EQ(ERR_OK, resp.err);
             ASSERT_EQ("ThisisahotkeyThisisahotkey", resp.hotkey_result);
         } else {
             ASSERT_FALSE(find_hotkey);
@@ -117,17 +115,17 @@ protected:
         // Wait for collector sending the next start detecting command
         sleep(15);
 
-        req.action = dsn::replication::detect_action::STOP;
+        req.action = replication::detect_action::STOP;
         for (int partition_index = 0; partition_index < partitions_.size(); partition_index++) {
-            ASSERT_EQ(dsn::ERR_OK,
+            ASSERT_EQ(ERR_OK,
                       ddl_client_->detect_hotkey(partitions_[partition_index].primary, req, resp));
-            ASSERT_EQ(dsn::ERR_OK, resp.err);
+            ASSERT_EQ(ERR_OK, resp.err);
         }
 
-        req.action = dsn::replication::detect_action::QUERY;
+        req.action = replication::detect_action::QUERY;
         for (int partition_index = 0; partition_index < partitions_.size(); partition_index++) {
-            req.pid = dsn::gpid(app_id_, partition_index);
-            ASSERT_EQ(dsn::ERR_OK,
+            req.pid = gpid(app_id_, partition_index);
+            ASSERT_EQ(ERR_OK,
                       ddl_client_->detect_hotkey(partitions_[partition_index].primary, req, resp));
             ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::STOPPED",
                       resp.err_hint);
@@ -153,18 +151,18 @@ protected:
     void capture_until_maxtime()
     {
         int target_partition = 2;
-        dsn::replication::detect_hotkey_request req;
-        req.type = dsn::replication::hotkey_type::type::WRITE;
-        req.action = dsn::replication::detect_action::START;
-        req.pid = dsn::gpid(app_id_, target_partition);
+        replication::detect_hotkey_request req;
+        req.type = replication::hotkey_type::type::WRITE;
+        req.action = replication::detect_action::START;
+        req.pid = gpid(app_id_, target_partition);
 
-        dsn::replication::detect_hotkey_response resp;
-        ASSERT_EQ(dsn::ERR_OK,
+        replication::detect_hotkey_response resp;
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->detect_hotkey(partitions_[target_partition].primary, req, resp));
-        ASSERT_EQ(dsn::ERR_OK, resp.err);
+        ASSERT_EQ(ERR_OK, resp.err);
 
-        req.action = dsn::replication::detect_action::QUERY;
-        ASSERT_EQ(dsn::ERR_OK,
+        req.action = replication::detect_action::QUERY;
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->detect_hotkey(partitions_[target_partition].primary, req, resp));
         ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::COARSE_DETECTING",
                   resp.err_hint);
@@ -174,8 +172,8 @@ protected:
         ASSERT_NO_FATAL_FAILURE(generate_dataset(
             max_seconds_to_detect_hotkey, detection_type::write_data, key_type::random_dataset));
 
-        req.action = dsn::replication::detect_action::QUERY;
-        ASSERT_EQ(dsn::ERR_OK,
+        req.action = replication::detect_action::QUERY;
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->detect_hotkey(partitions_[target_partition].primary, req, resp));
         ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::STOPPED",
                   resp.err_hint);
@@ -216,3 +214,4 @@ TEST_F(detect_hotspot_test, write_hotspot_data_test)
     ASSERT_NO_FATAL_FAILURE(read_random_data());
     std::cout << "read random data passed....." << std::endl;
 }
+} // namespace pegasus

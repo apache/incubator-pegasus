@@ -41,7 +41,7 @@
 
 #include "utils/singleton.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 // TODO: seperate this into per-node service, so we can use
@@ -62,4 +62,4 @@ private:
 };
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

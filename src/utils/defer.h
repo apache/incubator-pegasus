@@ -19,7 +19,7 @@
 
 #include <utility>
 
-namespace dsn {
+namespace pegasus {
 
 // `defer` is an useful util to implement RAII in golang, much alike
 // `try...finally...` in java. In C++ we used to implement an RAII class
@@ -43,7 +43,7 @@ namespace dsn {
 //
 // ```cpp
 // c_object *obj = c_object_new();
-// auto cleanup = dsn::defer([obj]() { c_object_free(obj); });
+// auto cleanup = pegasus::defer([obj]() { c_object_free(obj); });
 // ```
 
 template <typename Func>
@@ -69,4 +69,4 @@ inline deferred_action<Func> defer(Func &&func)
     return deferred_action<Func>(std::forward<Func>(func));
 }
 
-} // namespace dsn
+} // namespace pegasus

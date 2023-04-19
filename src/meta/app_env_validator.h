@@ -22,7 +22,7 @@
 #include <string>
 #include "utils/singleton.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 bool validate_app_env(const std::string &env_name,
@@ -49,4 +49,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

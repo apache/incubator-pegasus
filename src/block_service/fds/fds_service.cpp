@@ -46,7 +46,9 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+using pegasus::utils::safe_strerror;
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -159,7 +161,7 @@ error_code fds_service::initialize(const std::vector<std::string> &args)
 
     _client.reset(new galaxy::fds::GalaxyFDSClient(access_key, secret_key, config));
     _bucket_name = args[3];
-    return dsn::ERR_OK;
+    return ERR_OK;
 }
 
 #define FDS_EXCEPTION_HANDLE(ERR_REFERENCE, OPERATION, INPUT_PARAMETER)                            \
@@ -188,10 +190,10 @@ error_code fds_service::initialize(const std::vector<std::string> &args)
         ERR_REFERENCE = ERR_FS_INTERNAL;                                                           \
     }
 
-dsn::task_ptr fds_service::list_dir(const ls_request &req,
-                                    dsn::task_code code,
-                                    const ls_callback &callback,
-                                    dsn::task_tracker *tracker = nullptr)
+task_ptr fds_service::list_dir(const ls_request &req,
+                               task_code code,
+                               const ls_callback &callback,
+                               task_tracker *tracker = nullptr)
 {
     ls_future_ptr t(new ls_future(code, callback, 0));
     t->set_tracker(tracker);
@@ -206,7 +208,7 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
             while (true) {
                 const std::vector<galaxy::fds::FDSObjectSummary> &objs = result->objectSummaries();
                 const std::vector<std::string> &common_prefix = result->commonPrefixes();
-                resp.err = dsn::ERR_OK;
+                resp.err = ERR_OK;
 
                 // fds listing's objects are with full-path, we must extract the postfix to emulate
                 // the filesystem structure
@@ -245,7 +247,7 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
         }
         FDS_EXCEPTION_HANDLE(resp.err, "listObject", req.dir_name.c_str())
 
-        if (resp.err == dsn::ERR_OK && resp.entries->empty()) {
+        if (resp.err == ERR_OK && resp.entries->empty()) {
             try {
                 if (_client->doesObjectExist(_bucket_name,
                                              utils::path_to_fds(req.dir_name, false))) {
@@ -268,20 +270,20 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
         t->enqueue_with(resp);
     };
 
-    dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, list_dir_in_background);
+    tasking::enqueue(LPC_FDS_CALL, nullptr, list_dir_in_background);
     return t;
 }
 
-dsn::task_ptr fds_service::create_file(const create_file_request &req,
-                                       dsn::task_code code,
-                                       const create_file_callback &cb,
-                                       dsn::task_tracker *tracker = nullptr)
+task_ptr fds_service::create_file(const create_file_request &req,
+                                  task_code code,
+                                  const create_file_callback &cb,
+                                  task_tracker *tracker = nullptr)
 {
     create_file_future_ptr t(new create_file_future(code, cb, 0));
     t->set_tracker(tracker);
     if (req.ignore_metadata) {
         create_file_response resp;
-        resp.err = dsn::ERR_OK;
+        resp.err = ERR_OK;
         resp.file_handle =
             new fds_file_object(this, req.file_name, utils::path_to_fds(req.file_name, false));
         t->enqueue_with(resp);
@@ -293,7 +295,7 @@ dsn::task_ptr fds_service::create_file(const create_file_request &req,
         resp.err = ERR_IO_PENDING;
         std::string fds_path = utils::path_to_fds(req.file_name, false);
 
-        dsn::ref_ptr<fds_file_object> f = new fds_file_object(this, req.file_name, fds_path);
+        ref_ptr<fds_file_object> f = new fds_file_object(this, req.file_name, fds_path);
         resp.err = f->get_file_meta();
         if (resp.err == ERR_OK || resp.err == ERR_OBJECT_NOT_FOUND) {
             resp.err = ERR_OK;
@@ -303,14 +305,14 @@ dsn::task_ptr fds_service::create_file(const create_file_request &req,
         t->enqueue_with(resp);
     };
 
-    dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, create_file_in_background);
+    tasking::enqueue(LPC_FDS_CALL, nullptr, create_file_in_background);
     return t;
 }
 
-dsn::task_ptr fds_service::remove_path(const remove_path_request &req,
-                                       dsn::task_code code,
-                                       const remove_path_callback &cb,
-                                       dsn::task_tracker *tracker)
+task_ptr fds_service::remove_path(const remove_path_request &req,
+                                  task_code code,
+                                  const remove_path_callback &cb,
+                                  task_tracker *tracker)
 {
     remove_path_future_ptr callback(new remove_path_future(code, cb, 0));
     callback->set_tracker(tracker);
@@ -381,7 +383,7 @@ dsn::task_ptr fds_service::remove_path(const remove_path_request &req,
         return;
     };
 
-    dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, remove_path_background);
+    tasking::enqueue(LPC_FDS_CALL, nullptr, remove_path_background);
     return callback;
 }
 
@@ -412,7 +414,7 @@ error_code fds_file_object::get_file_meta()
               "can't find {} in object({})'s metadata",
               fds_service::FILE_LENGTH_CUSTOM_KEY,
               _fds_path);
-        bool valid = dsn::buf2uint64(iter->second, _size);
+        bool valid = buf2uint64(iter->second, _size);
         CHECK(valid, "error to get file size");
 
         // get md5 key
@@ -569,10 +571,10 @@ error_code fds_file_object::put_content(/*in-out*/ std::istream &is,
     return err;
 }
 
-dsn::task_ptr fds_file_object::write(const write_request &req,
-                                     dsn::task_code code,
-                                     const write_callback &cb,
-                                     dsn::task_tracker *tracker = nullptr)
+task_ptr fds_file_object::write(const write_request &req,
+                                task_code code,
+                                const write_callback &cb,
+                                task_tracker *tracker = nullptr)
 {
     write_future_ptr t(new write_future(code, cb, 0));
     t->set_tracker(tracker);
@@ -588,15 +590,15 @@ dsn::task_ptr fds_file_object::write(const write_request &req,
         release_ref();
     };
 
-    dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, write_in_background);
+    tasking::enqueue(LPC_FDS_CALL, nullptr, write_in_background);
     return t;
 }
 
 // TODO: handle the localfile path
-dsn::task_ptr fds_file_object::upload(const upload_request &req,
-                                      dsn::task_code code,
-                                      const upload_callback &cb,
-                                      dsn::task_tracker *tracker = nullptr)
+task_ptr fds_file_object::upload(const upload_request &req,
+                                 task_code code,
+                                 const upload_callback &cb,
+                                 task_tracker *tracker = nullptr)
 {
     upload_future_ptr t(new upload_future(code, cb, 0));
     t->set_tracker(tracker);
@@ -606,7 +608,7 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
         const std::string &local_file = req.input_local_name;
         // get file size
         int64_t file_sz = 0;
-        dsn::utils::filesystem::file_size(local_file, file_sz);
+        file_size(local_file, file_sz);
 
         upload_response resp;
         // TODO: we can cache the whole file in buffer, then upload the buffer rather than the
@@ -618,8 +620,8 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
             LOG_ERROR("fds upload failed: open local file({}) failed when upload to({}), error({})",
                       local_file,
                       file_name(),
-                      ::dsn::utils::safe_strerror(errno));
-            resp.err = dsn::ERR_FILE_OPERATION_FAILED;
+                      safe_strerror(errno));
+            resp.err = ERR_FILE_OPERATION_FAILED;
         } else {
             resp.err = put_content(is, file_sz, resp.uploaded_size);
             is.close();
@@ -629,14 +631,14 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
         release_ref();
     };
 
-    dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, upload_background);
+    tasking::enqueue(LPC_FDS_CALL, nullptr, upload_background);
     return t;
 }
 
-dsn::task_ptr fds_file_object::read(const read_request &req,
-                                    dsn::task_code code,
-                                    const read_callback &cb,
-                                    dsn::task_tracker *tracker = nullptr)
+task_ptr fds_file_object::read(const read_request &req,
+                               task_code code,
+                               const read_callback &cb,
+                               task_tracker *tracker = nullptr)
 {
     read_future_ptr t(new read_future(code, cb, 0));
     t->set_tracker(tracker);
@@ -657,15 +659,15 @@ dsn::task_ptr fds_file_object::read(const read_request &req,
         release_ref();
     };
 
-    dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, read_in_background);
+    tasking::enqueue(LPC_FDS_CALL, nullptr, read_in_background);
     return t;
 }
 
 // TODO: handle the localfile path
-dsn::task_ptr fds_file_object::download(const download_request &req,
-                                        dsn::task_code code,
-                                        const download_callback &cb,
-                                        dsn::task_tracker *tracker = nullptr)
+task_ptr fds_file_object::download(const download_request &req,
+                                   task_code code,
+                                   const download_callback &cb,
+                                   task_tracker *tracker = nullptr)
 {
     download_future_ptr t(new download_future(code, cb, 0));
     t->set_tracker(tracker);
@@ -677,7 +679,7 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
         LOG_ERROR("fds download failed: fail to open localfile({}) when download({}), error({})",
                   req.output_local_name,
                   _fds_path,
-                  ::dsn::utils::safe_strerror(errno));
+                  safe_strerror(errno));
         resp.err = ERR_FILE_OPERATION_FAILED;
         resp.downloaded_size = 0;
         t->enqueue_with(resp);
@@ -695,13 +697,12 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
             resp.downloaded_size = handle->tellp();
         }
         handle->close();
-        if (resp.err != ERR_OK && dsn::utils::filesystem::file_exists(req.output_local_name)) {
+        if (resp.err != ERR_OK && file_exists(req.output_local_name)) {
             LOG_ERROR("fail to download file {} from fds, remove localfile {}",
                       _fds_path,
                       req.output_local_name);
-            dsn::utils::filesystem::remove_path(req.output_local_name);
-        } else if ((resp.err = dsn::utils::filesystem::md5sum(req.output_local_name,
-                                                              resp.file_md5)) != ERR_OK) {
+            remove_path(req.output_local_name);
+        } else if ((resp.err = md5sum(req.output_local_name, resp.file_md5)) != ERR_OK) {
             LOG_ERROR("download failed when calculate the md5sum of local file {}",
                       req.output_local_name);
         }
@@ -709,9 +710,9 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
         release_ref();
     };
 
-    dsn::tasking::enqueue(LPC_FDS_CALL, nullptr, download_background);
+    tasking::enqueue(LPC_FDS_CALL, nullptr, download_background);
     return t;
 }
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

@@ -19,9 +19,9 @@
 
 #include "time_utils.h"
 
-uint64_t dsn_now_ns() { return dsn::utils::clock::instance()->now_ns(); }
+uint64_t dsn_now_ns() { return pegasus::utils::clock::instance()->now_ns(); }
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 std::unique_ptr<clock> clock::_clock = std::make_unique<clock>();
@@ -33,4 +33,4 @@ uint64_t clock::now_ns() const { return get_current_physical_time_ns(); }
 void clock::mock(clock *mock_clock) { _clock.reset(mock_clock); }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

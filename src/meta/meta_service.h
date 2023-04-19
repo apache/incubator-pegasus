@@ -51,6 +51,7 @@
 #include "common/manual_compact.h"
 #include "common/partition_split_common.h"
 #include "common/replication_common.h"
+#include "common/replication_enums.h"
 #include "meta_admin_types.h"
 #include "meta_options.h"
 #include "meta_rpc_types.h"
@@ -73,7 +74,7 @@
 #include "utils/threadpool_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class command_deregister;
 
 namespace ranger {
@@ -84,6 +85,7 @@ class meta_state_service;
 } // namespace dist
 
 namespace replication {
+using pegasus::enum_to_string;
 class backup_service;
 class bulk_load_service;
 class meta_duplication_service;
@@ -100,7 +102,7 @@ namespace test {
 class test_checker;
 }
 
-DEFINE_TASK_CODE(LPC_DEFAULT_CALLBACK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_DEFAULT_CALLBACK, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 enum class meta_op_status
 {
@@ -169,22 +171,19 @@ public:
     void set_function_level(meta_function_level::type level) { _function_level.store(level); }
 
     template <typename TResponse>
-    void reply_data(dsn::message_ex *request, const TResponse &data)
+    void reply_data(message_ex *request, const TResponse &data)
     {
-        dsn::message_ex *response = request->create_response();
-        dsn::marshall(response, data);
+        message_ex *response = request->create_response();
+        marshall(response, data);
         reply_message(request, response);
     }
 
-    virtual void reply_message(dsn::message_ex *, dsn::message_ex *response)
-    {
-        dsn_rpc_reply(response);
-    }
-    virtual void send_message(const rpc_address &target, dsn::message_ex *request)
+    virtual void reply_message(message_ex *, message_ex *response) { dsn_rpc_reply(response); }
+    virtual void send_message(const rpc_address &target, message_ex *request)
     {
         dsn_rpc_call_one_way(target, request);
     }
-    virtual void send_request(dsn::message_ex * /*req*/,
+    virtual void send_request(message_ex * /*req*/,
                               const rpc_address &target,
                               const rpc_response_task_ptr &callback)
     {
@@ -198,7 +197,7 @@ public:
     void start_service();
     void balancer_run();
 
-    dsn::task_tracker *tracker() { return &_tracker; }
+    task_tracker *tracker() { return &_tracker; }
 
     size_t get_alive_node_count() const;
 
@@ -229,12 +228,12 @@ private:
 
     // update configuration
     void on_propose_balancer(configuration_balancer_rpc rpc);
-    void on_update_configuration(dsn::message_ex *req);
+    void on_update_configuration(message_ex *req);
 
     // app operations
-    void on_create_app(dsn::message_ex *req);
-    void on_drop_app(dsn::message_ex *req);
-    void on_recall_app(dsn::message_ex *req);
+    void on_create_app(message_ex *req);
+    void on_drop_app(message_ex *req);
+    void on_recall_app(message_ex *req);
     void on_rename_app(configuration_rename_app_rpc rpc);
     void on_list_apps(configuration_list_apps_rpc rpc);
     void on_list_nodes(configuration_list_nodes_rpc rpc);
@@ -255,8 +254,8 @@ private:
     // backup/restore
     void on_start_backup_app(start_backup_app_rpc rpc);
     void on_query_backup_status(query_backup_status_rpc rpc);
-    void on_start_restore(dsn::message_ex *req);
-    void on_add_backup_policy(dsn::message_ex *req);
+    void on_start_restore(message_ex *req);
+    void on_add_backup_policy(message_ex *req);
     void on_query_backup_policy(query_backup_policy_rpc policy_rpc);
     void on_modify_backup_policy(configuration_modify_backup_policy_rpc rpc);
     void on_report_restore_status(configuration_report_restore_status_rpc rpc);
@@ -295,7 +294,7 @@ private:
 
     // if return 'kNotLeaderAndCannotForwardRpc' and 'forward_address' != nullptr, then return
     // leader by 'forward_address'.
-    meta_leader_state check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address);
+    meta_leader_state check_leader(message_ex *req, rpc_address *forward_address);
     template <typename TRpcHolder>
     meta_leader_state check_leader(TRpcHolder rpc, /*out*/ rpc_address *forward_address);
 
@@ -387,7 +386,7 @@ private:
     perf_counter_wrapper _unalive_nodes_count;
     perf_counter_wrapper _alive_nodes_count;
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
     std::shared_ptr<security::access_controller> _access_controller;
 
@@ -401,7 +400,7 @@ private:
 template <typename TRpcHolder>
 meta_leader_state meta_service::check_leader(TRpcHolder rpc, rpc_address *forward_address)
 {
-    dsn::rpc_address leader;
+    rpc_address leader;
     if (!_failure_detector->get_leader(&leader)) {
         if (!rpc.dsn_request()->header->context.u.is_forward_supported) {
             if (forward_address != nullptr)
@@ -502,10 +501,10 @@ bool meta_service::check_status_and_authz_with_reply(message_ex *msg)
 {
     TReqType req;
     TRespType resp;
-    dsn::message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
-    dsn::unmarshall(copied_msg, req);
+    message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
+    unmarshall(copied_msg, req);
     return check_status_and_authz_with_reply(msg, resp, req.app_name);
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

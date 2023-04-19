@@ -21,12 +21,12 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
 DSN_DEFINE_string(replication, cluster_name, "", "name of this cluster");
 
+namespace pegasus {
 /*extern*/ const char *get_current_cluster_name()
 {
     CHECK(!utils::is_empty(FLAGS_cluster_name), "cluster_name is not set");
     return FLAGS_cluster_name;
 }
-} // namespace dsn
+} // namespace pegasus

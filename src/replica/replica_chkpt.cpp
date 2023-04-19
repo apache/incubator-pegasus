@@ -72,7 +72,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_int32(replication,
@@ -456,4 +456,4 @@ void replica::on_checkpoint_completed(error_code err)
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

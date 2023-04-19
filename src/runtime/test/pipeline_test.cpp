@@ -34,7 +34,7 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/chrono_literals.h"
 
-namespace dsn {
+namespace pegasus {
 
 TEST(pipeline_test, pause)
 {
@@ -137,4 +137,4 @@ TEST(pipeline_test, verify_link_and_fork)
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

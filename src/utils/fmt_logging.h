@@ -87,7 +87,7 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
         CHECK_EXPRESSION(var1 == var2,                                                             \
-                         dsn::utils::equals(_v1, _v2),                                             \
+                         utils::equals(_v1, _v2),                                                  \
                          "{} vs {} {}",                                                            \
                          null_str_printer(_v1),                                                    \
                          null_str_printer(_v2),                                                    \
@@ -99,7 +99,7 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
         CHECK_EXPRESSION(var1 != var2,                                                             \
-                         !dsn::utils::equals(_v1, _v2),                                            \
+                         !utils::equals(_v1, _v2),                                                 \
                          "{} vs {} {}",                                                            \
                          null_str_printer(_v1),                                                    \
                          null_str_printer(_v2),                                                    \
@@ -111,7 +111,7 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
         CHECK_EXPRESSION(var1 == var2,                                                             \
-                         dsn::utils::iequals(_v1, _v2),                                            \
+                         utils::iequals(_v1, _v2),                                                 \
                          "{} vs {} {}",                                                            \
                          null_str_printer(_v1),                                                    \
                          null_str_printer(_v2),                                                    \
@@ -123,7 +123,7 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
         CHECK_EXPRESSION(var1 != var2,                                                             \
-                         !dsn::utils::iequals(_v1, _v2),                                           \
+                         !utils::iequals(_v1, _v2),                                                \
                          "{} vs {} {}",                                                            \
                          null_str_printer(_v1),                                                    \
                          null_str_printer(_v2),                                                    \
@@ -254,7 +254,7 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #define CHECK_LE_PREFIX(var1, var2) CHECK_LE_PREFIX_MSG(var1, var2, "")
 #define CHECK_GT_PREFIX(var1, var2) CHECK_GT_PREFIX_MSG(var1, var2, "")
 #define CHECK_LT_PREFIX(var1, var2) CHECK_LT_PREFIX_MSG(var1, var2, "")
-#define CHECK_OK_PREFIX(x) CHECK_EQ_PREFIX_MSG(x, ::dsn::ERR_OK, "")
+#define CHECK_OK_PREFIX(x) CHECK_EQ_PREFIX_MSG(x, ERR_OK, "")
 
 // Return the given status if condition is not true.
 #define LOG_AND_RETURN_NOT_TRUE(level, s, err, ...)                                                \
@@ -268,8 +268,8 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 // Return the given status if it is not ERR_OK.
 #define LOG_AND_RETURN_NOT_OK(level, s, ...)                                                       \
     do {                                                                                           \
-        ::dsn::error_code _err = (s);                                                              \
-        LOG_AND_RETURN_NOT_TRUE(level, _err == ::dsn::ERR_OK, _err, __VA_ARGS__);                  \
+        error_code _err = (s);                                                                     \
+        LOG_AND_RETURN_NOT_TRUE(level, _err == ERR_OK, _err, __VA_ARGS__);                         \
     } while (0)
 
 #ifndef NDEBUG

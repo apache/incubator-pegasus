@@ -47,9 +47,10 @@
 #include "utils/join_point.h"
 #include "utils/strings.h"
 
-using namespace dsn::utils;
+using namespace pegasus::utils::filesystem;
+using namespace pegasus::utils;
 
-namespace dsn {
+namespace pegasus {
 
 service_node::service_node(service_app_spec &app_spec) { _app_spec = app_spec; }
 
@@ -60,7 +61,7 @@ bool service_node::rpc_register_handler(task_code code,
     return _rpc->register_rpc_handler(code, extra_name, h);
 }
 
-bool service_node::rpc_unregister_handler(dsn::task_code rpc_code)
+bool service_node::rpc_unregister_handler(task_code rpc_code)
 {
     return _rpc->unregister_rpc_handler(rpc_code);
 }
@@ -74,7 +75,7 @@ error_code service_node::init_rpc_engine()
     return _rpc->start(_app_spec);
 }
 
-dsn::error_code service_node::start_app()
+error_code service_node::start_app()
 {
     CHECK(_entity, "entity hasn't initialized");
     _entity->set_address(rpc()->primary_address());
@@ -82,18 +83,18 @@ dsn::error_code service_node::start_app()
     std::vector<std::string> args;
     utils::split_args(spec().arguments.c_str(), args);
     args.insert(args.begin(), spec().full_name);
-    dsn::error_code res = _entity->start(args);
-    if (res == dsn::ERR_OK) {
+    error_code res = _entity->start(args);
+    if (res == ERR_OK) {
         _entity->set_started(true);
     }
     return res;
 }
 
-dsn::error_code service_node::stop_app(bool cleanup)
+error_code service_node::stop_app(bool cleanup)
 {
     CHECK(_entity, "entity hasn't initialized");
-    dsn::error_code res = _entity->stop(cleanup);
-    if (res == dsn::ERR_OK) {
+    error_code res = _entity->stop(cleanup);
+    if (res == ERR_OK) {
         _entity->set_started(false);
     }
     return res;
@@ -116,8 +117,8 @@ error_code service_node::start()
     error_code err = ERR_OK;
 
     // init data dir
-    if (!dsn::utils::filesystem::path_exists(spec().data_dir))
-        dsn::utils::filesystem::create_directory(spec().data_dir);
+    if (!path_exists(spec().data_dir))
+        create_directory(spec().data_dir);
 
     // init task engine
     _computation = std::make_unique<task_engine>(this);
@@ -135,7 +136,7 @@ error_code service_node::start()
 
     // create service_app
     {
-        ::dsn::tools::node_scoper scoper(this);
+        tools::node_scoper scoper(this);
         init_service_app();
     }
 
@@ -169,7 +170,7 @@ rpc_request_task *service_node::generate_intercepted_request_task(message_ex *re
     rpc_request_task *t = new rpc_request_task(req,
                                                std::bind(&service_app::on_intercepted_request,
                                                          _entity.get(),
-                                                         req->header->gpid,
+                                                         req->header->gpid_,
                                                          is_write,
                                                          std::placeholders::_1),
                                                this);
@@ -190,13 +191,13 @@ service_engine::service_engine()
 {
     _env = nullptr;
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"engine"},
-        "engine - get engine internal information",
-        "engine [app-id]",
-        &service_engine::get_runtime_info));
+    _cmds.emplace_back(
+        command_manager::instance().register_command({"engine"},
+                                                     "engine - get engine internal information",
+                                                     "engine [app-id]",
+                                                     &service_engine::get_runtime_info));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(command_manager::instance().register_command(
         {"system.queue"},
         "system.queue - get queue internal information",
         "system.queue",
@@ -283,4 +284,4 @@ bool service_engine::is_simulator() const { return _simulator; }
 
 void service_engine::set_simulator() { _simulator = true; }
 
-} // namespace dsn
+} // namespace pegasus

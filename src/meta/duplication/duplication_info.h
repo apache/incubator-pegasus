@@ -36,7 +36,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class app_state;
@@ -246,13 +246,13 @@ public:
     const std::string prefix_for_log;
 };
 
-extern void json_encode(dsn::json::JsonWriter &out, const duplication_status::type &s);
+extern void json_encode(json::JsonWriter &out, const duplication_status::type &s);
 
-extern bool json_decode(const dsn::json::JsonObject &in, duplication_status::type &s);
+extern bool json_decode(const json::JsonObject &in, duplication_status::type &s);
 
-extern void json_encode(dsn::json::JsonWriter &out, const duplication_fail_mode::type &s);
+extern void json_encode(json::JsonWriter &out, const duplication_fail_mode::type &s);
 
-extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::type &s);
+extern bool json_decode(const json::JsonObject &in, duplication_fail_mode::type &s);
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

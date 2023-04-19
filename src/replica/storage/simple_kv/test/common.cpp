@@ -43,11 +43,11 @@
 
 #include "checker.h"
 #include "common/replication_enums.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace test {
 
@@ -72,7 +72,7 @@ const char *partition_status_to_short_string(partition_status::type s)
     case partition_status::PS_INVALID:
         return "inv";
     default:
-        CHECK(false, "invalid partition_status, status = {}", ::dsn::enum_to_string(s));
+        CHECK(false, "invalid partition_status, status = {}", pegasus::enum_to_string(s));
         return "";
     }
 }
@@ -111,20 +111,20 @@ rpc_address node_to_address(const std::string &name)
     return test_checker::instance().node_name_to_address(name);
 }
 
-std::string gpid_to_string(gpid gpid)
+std::string gpid_to_string(gpid pid)
 {
     std::stringstream oss;
-    oss << gpid.get_app_id() << "." << gpid.get_partition_index();
+    oss << pid.get_app_id() << "." << pid.get_partition_index();
     return oss.str();
 }
 
-bool gpid_from_string(const std::string &str, gpid &gpid)
+bool gpid_from_string(const std::string &str, gpid &pid)
 {
     size_t pos = str.find('.');
     if (pos == std::string::npos)
         return false;
-    gpid.set_app_id(boost::lexical_cast<int32_t>(str.substr(0, pos)));
-    gpid.set_partition_index(boost::lexical_cast<int32_t>(str.substr(pos + 1)));
+    pid.set_app_id(boost::lexical_cast<int32_t>(str.substr(0, pos)));
+    pid.set_partition_index(boost::lexical_cast<int32_t>(str.substr(pos + 1)));
     return true;
 }
 
@@ -176,7 +176,7 @@ bool replica_state::from_string(const std::string &str)
         return false;
     std::string s = str.substr(1, str.size() - 2);
     std::vector<std::string> splits;
-    dsn::utils::split_args(s.c_str(), splits, ',');
+    utils::split_args(s.c_str(), splits, ',');
     if (splits.size() != 4 && splits.size() != 5)
         return false;
     if (!id.from_string(splits[0]))
@@ -213,7 +213,7 @@ bool state_snapshot::from_string(const std::string &str)
     state_map.clear();
     std::string s = str.substr(1, str.size() - 2);
     std::vector<std::string> splits;
-    dsn::utils::split_args(s.c_str(), splits, '{');
+    utils::split_args(s.c_str(), splits, '{');
     for (std::string &i : splits) {
         if (i.empty())
             continue;
@@ -309,7 +309,7 @@ bool parti_config::from_string(const std::string &str)
             s[i] = ';';
     }
     std::vector<std::string> splits;
-    dsn::utils::split_args(s.c_str(), splits, ',');
+    utils::split_args(s.c_str(), splits, ',');
     size_t i = 0;
 #ifdef ENABLE_GPID
     // gpid
@@ -324,7 +324,7 @@ bool parti_config::from_string(const std::string &str)
     std::string sec = splits[i++];
     if (sec.size() < 2 || sec[0] != '[' || sec[sec.size() - 1] != ']')
         return false;
-    dsn::utils::split_args(sec.substr(1, sec.size() - 2).c_str(), secondaries, ';');
+    utils::split_args(sec.substr(1, sec.size() - 2).c_str(), secondaries, ';');
     std::sort(secondaries.begin(), secondaries.end());
     if (i != splits.size())
         return false;

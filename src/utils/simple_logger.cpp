@@ -47,7 +47,8 @@
 
 DSN_DECLARE_string(logging_start_level);
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 namespace tools {
 
 DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "whether to flush immediately");
@@ -81,9 +82,9 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
 
     uint64_t ts = dsn_now_ns();
     std::string time_str;
-    dsn::utils::time_ms_to_string(ts / 1000000, time_str);
+    pegasus::utils::time_ms_to_string(ts / 1000000, time_str);
 
-    int tid = dsn::utils::get_current_tid();
+    int tid = pegasus::utils::get_current_tid();
     fmt::print(fp,
                "{}{} ({} {}) {}",
                s_level_char[log_level],
@@ -104,7 +105,7 @@ void screen_logger::dsn_logv(const char *file,
                              const char *fmt,
                              va_list args)
 {
-    utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+    utils::auto_lock<utils::ex_lock_nr> l(_lock);
 
     print_header(stdout, log_level);
     if (!_short_header) {
@@ -128,11 +129,9 @@ simple_logger::simple_logger(const char *log_dir)
 
     // check existing log files
     std::vector<std::string> sub_list;
-    CHECK(dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false),
-          "Fail to get subfiles in {}",
-          _log_dir);
+    CHECK(get_subfiles(_log_dir, sub_list, false), "Fail to get subfiles in {}", _log_dir);
     for (auto &fpath : sub_list) {
-        auto &&name = dsn::utils::filesystem::get_file_name(fpath);
+        auto &&name = get_file_name(fpath);
         if (name.length() <= 8 || name.substr(0, 4) != "log.")
             continue;
 
@@ -155,16 +154,16 @@ simple_logger::simple_logger(const char *log_dir)
 
     create_log_file();
 
-    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-        {"flush-log"},
-        "flush-log - flush log to stderr or log file",
-        "flush-log",
-        [this](const std::vector<std::string> &args) {
-            this->flush();
-            return "Flush done.";
-        }));
+    _cmds.emplace_back(
+        command_manager::instance().register_command({"flush-log"},
+                                                     "flush-log - flush log to stderr or log file",
+                                                     "flush-log",
+                                                     [this](const std::vector<std::string> &args) {
+                                                         this->flush();
+                                                         return "Flush done.";
+                                                     }));
 
-    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(command_manager::instance().register_command(
         {"reset-log-start-level"},
         "reset-log-start-level - reset the log start level",
         "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
@@ -201,7 +200,7 @@ void simple_logger::create_log_file()
     while (_index - _start_index > FLAGS_max_number_of_log_files_on_disk) {
         std::stringstream str2;
         str2 << "log." << _start_index++ << ".txt";
-        auto dp = utils::filesystem::path_combine(_log_dir, str2.str());
+        auto dp = path_combine(_log_dir, str2.str());
         if (utils::filesystem::file_exists(dp)) {
             if (::remove(dp.c_str()) != 0) {
                 // if remove failed, just print log and ignore it.
@@ -213,13 +212,13 @@ void simple_logger::create_log_file()
 
 simple_logger::~simple_logger(void)
 {
-    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock<utils::ex_lock> l(_lock);
     ::fclose(_log);
 }
 
 void simple_logger::flush()
 {
-    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock<utils::ex_lock> l(_lock);
     ::fflush(_log);
     ::fflush(stdout);
 }
@@ -236,7 +235,7 @@ void simple_logger::dsn_logv(const char *file,
         va_copy(args2, args);
     }
 
-    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock<utils::ex_lock> l(_lock);
 
     print_header(_log, log_level);
     if (!FLAGS_short_header) {
@@ -268,7 +267,7 @@ void simple_logger::dsn_log(const char *file,
                             dsn_log_level_t log_level,
                             const char *str)
 {
-    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+    utils::auto_lock<utils::ex_lock> l(_lock);
 
     print_header(_log, log_level);
     if (!FLAGS_short_header) {
@@ -293,4 +292,4 @@ void simple_logger::dsn_log(const char *file,
 }
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

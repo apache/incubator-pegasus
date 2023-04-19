@@ -26,7 +26,7 @@
 
 /*
  * Description:
- *     transform zookeeper error code to dsn error code, header
+ *     transform zookeeper error code to pegasus error code, header
  *
  * Revision history:
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
@@ -35,7 +35,7 @@
 
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 error_code from_zerror(int zerr);

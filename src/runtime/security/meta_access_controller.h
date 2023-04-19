@@ -24,7 +24,7 @@
 
 #include "access_controller.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace ranger {
@@ -49,4 +49,4 @@ private:
     std::shared_ptr<ranger::ranger_resource_policy_manager> _ranger_resource_policy_manager;
 };
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

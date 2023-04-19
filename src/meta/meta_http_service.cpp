@@ -35,7 +35,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include "common/serialization_helper/pegasus.layer2_types.h"
 #include "duplication_types.h"
 #include "meta/duplication/meta_duplication_service.h"
 #include "meta/meta_backup_service.h"
@@ -55,7 +55,7 @@
 #include "utils/output_utils.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 DSN_DECLARE_string(hosts_list);
 } // namespace dist
@@ -100,16 +100,16 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         resp.body = fmt::format("table not found: \"{}\"", app_name);
         return;
     }
-    if (response.err != dsn::ERR_OK) {
+    if (response.err != ERR_OK) {
         resp.body = response.err.to_string();
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
 
     // output as json format
-    dsn::utils::multi_table_printer mtp;
+    utils::multi_table_printer mtp;
     std::ostringstream out;
-    dsn::utils::table_printer tp_general("general");
+    utils::table_printer tp_general("general");
     tp_general.add_row_name_and_data("app_name", app_name);
     tp_general.add_row_name_and_data("app_id", response.app_id);
     tp_general.add_row_name_and_data("partition_count", response.partition_count);
@@ -122,7 +122,7 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
     mtp.add(std::move(tp_general));
 
     if (detailed) {
-        dsn::utils::table_printer tp_details("replicas");
+        utils::table_printer tp_details("replicas");
         tp_details.add_title("pidx");
         tp_details.add_column("ballot");
         tp_details.add_column("replica_count");
@@ -173,7 +173,7 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         mtp.add(std::move(tp_details));
 
         // 'node' section.
-        dsn::utils::table_printer tp_nodes("nodes");
+        utils::table_printer tp_nodes("nodes");
         tp_nodes.add_title("node");
         tp_nodes.add_column("primary");
         tp_nodes.add_column("secondary");
@@ -191,7 +191,7 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         mtp.add(std::move(tp_nodes));
 
         // healthy partition count section.
-        dsn::utils::table_printer tp_hpc("healthy");
+        utils::table_printer tp_hpc("healthy");
         tp_hpc.add_row_name_and_data("fully_healthy_partition_count", fully_healthy);
         tp_hpc.add_row_name_and_data("unhealthy_partition_count",
                                      response.partition_count - fully_healthy);
@@ -200,7 +200,7 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         mtp.add(std::move(tp_hpc));
     }
 
-    mtp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    mtp.output(out, utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
@@ -220,22 +220,22 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         return;
     configuration_list_apps_response response;
     configuration_list_apps_request request;
-    request.status = dsn::app_status::AS_INVALID;
+    request.status = app_status::AS_INVALID;
 
     _service->_state->list_apps(request, response);
 
-    if (response.err != dsn::ERR_OK) {
+    if (response.err != ERR_OK) {
         resp.body = response.err.to_string();
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
-    std::vector<::dsn::app_info> &apps = response.infos;
+    std::vector<app_info> &apps = response.infos;
 
     // output as json format
     std::ostringstream out;
-    dsn::utils::multi_table_printer mtp;
+    utils::multi_table_printer mtp;
     int available_app_count = 0;
-    dsn::utils::table_printer tp_general("general_info");
+    utils::table_printer tp_general("general_info");
     tp_general.add_title("app_id");
     tp_general.add_column("status");
     tp_general.add_column("app_name");
@@ -248,7 +248,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
     tp_general.add_column("drop_expire");
     tp_general.add_column("envs_count");
     for (const auto &app : apps) {
-        if (app.status != dsn::app_status::AS_AVAILABLE) {
+        if (app.status != app_status::AS_AVAILABLE) {
             continue;
         }
         std::string status_str = enum_to_string(app.status);
@@ -256,7 +256,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         std::string create_time = "-";
         if (app.create_second > 0) {
             char buf[24] = {0};
-            dsn::utils::time_ms_to_string((uint64_t)app.create_second * 1000, buf);
+            utils::time_ms_to_string((uint64_t)app.create_second * 1000, buf);
             create_time = buf;
         }
         std::string drop_time = "-";
@@ -266,12 +266,12 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         } else if (app.status == app_status::AS_DROPPED && app.expire_second > 0) {
             if (app.drop_second > 0) {
                 char buf[24] = {0};
-                dsn::utils::time_ms_to_string((uint64_t)app.drop_second * 1000, buf);
+                utils::time_ms_to_string((uint64_t)app.drop_second * 1000, buf);
                 drop_time = buf;
             }
             if (app.expire_second > 0) {
                 char buf[24] = {0};
-                dsn::utils::time_ms_to_string((uint64_t)app.expire_second * 1000, buf);
+                utils::time_ms_to_string((uint64_t)app.expire_second * 1000, buf);
                 drop_expire_time = buf;
             }
         }
@@ -295,7 +295,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
     int total_write_unhealthy_app_count = 0;
     int total_read_unhealthy_app_count = 0;
     if (detailed && available_app_count > 0) {
-        dsn::utils::table_printer tp_health("healthy_info");
+        utils::table_printer tp_health("healthy_info");
         tp_health.add_title("app_id");
         tp_health.add_column("app_name");
         tp_health.add_column("partition_count");
@@ -317,7 +317,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             int write_unhealthy = 0;
             int read_unhealthy = 0;
             for (int i = 0; i < response.partitions.size(); i++) {
-                const dsn::partition_configuration &p = response.partitions[i];
+                const partition_configuration &p = response.partitions[i];
                 int replica_count = 0;
                 if (!p.primary.is_invalid()) {
                     replica_count++;
@@ -353,7 +353,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         mtp.add(std::move(tp_health));
     }
 
-    dsn::utils::table_printer tp_count("summary");
+    utils::table_printer tp_count("summary");
     tp_count.add_row_name_and_data("total_app_count", available_app_count);
     if (detailed && available_app_count > 0) {
         tp_count.add_row_name_and_data("fully_healthy_app_count", total_fully_healthy_app_count);
@@ -364,7 +364,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
     }
     mtp.add(std::move(tp_count));
 
-    mtp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    mtp.output(out, utils::table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
@@ -384,7 +384,7 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
     if (!redirect_if_not_primary(req, resp))
         return;
 
-    std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
+    std::map<rpc_address, list_nodes_helper> tmp_map;
     for (const auto &node : _service->_alive_set) {
         tmp_map.emplace(node, list_nodes_helper(node.to_std_string(), "ALIVE"));
     }
@@ -397,7 +397,7 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
     if (detailed) {
         configuration_list_apps_response response;
         configuration_list_apps_request request;
-        request.status = dsn::app_status::AS_AVAILABLE;
+        request.status = app_status::AS_AVAILABLE;
         _service->_state->list_apps(request, response);
         for (const auto &app : response.infos) {
             query_cfg_request request_app;
@@ -408,7 +408,7 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
             CHECK_EQ(app.partition_count, response_app.partition_count);
 
             for (int i = 0; i < response_app.partitions.size(); i++) {
-                const dsn::partition_configuration &p = response_app.partitions[i];
+                const partition_configuration &p = response_app.partitions[i];
                 if (!p.primary.is_invalid()) {
                     auto find = tmp_map.find(p.primary);
                     if (find != tmp_map.end()) {
@@ -427,8 +427,8 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
 
     // output as json format
     std::ostringstream out;
-    dsn::utils::multi_table_printer mtp;
-    dsn::utils::table_printer tp_details("details");
+    utils::multi_table_printer mtp;
+    utils::table_printer tp_details("details");
     tp_details.add_title("address");
     tp_details.add_column("status");
     if (detailed) {
@@ -447,12 +447,12 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
     }
     mtp.add(std::move(tp_details));
 
-    dsn::utils::table_printer tp_count("summary");
+    utils::table_printer tp_count("summary");
     tp_count.add_row_name_and_data("total_node_count", alive_node_count + unalive_node_count);
     tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
     tp_count.add_row_name_and_data("unalive_node_count", unalive_node_count);
     mtp.add(std::move(tp_count));
-    mtp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    mtp.output(out, utils::table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
@@ -463,7 +463,7 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
     if (!redirect_if_not_primary(req, resp))
         return;
 
-    dsn::utils::table_printer tp;
+    utils::table_printer tp;
     std::ostringstream out;
     std::string meta_servers_str;
     int ms_size = _service->_opts.meta_servers.size();
@@ -475,7 +475,7 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
     }
     tp.add_row_name_and_data("meta_servers", meta_servers_str);
     tp.add_row_name_and_data("primary_meta_server", dsn_primary_address().to_std_string());
-    tp.add_row_name_and_data("zookeeper_hosts", dsn::dist::FLAGS_hosts_list);
+    tp.add_row_name_and_data("zookeeper_hosts", dist::FLAGS_hosts_list);
     tp.add_row_name_and_data("zookeeper_root", _service->_cluster_root);
     tp.add_row_name_and_data(
         "meta_function_level",
@@ -489,7 +489,7 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
     _service->_state->get_cluster_balance_score(primary_stddev, total_stddev);
     tp.add_row_name_and_data("primary_replica_count_stddev", primary_stddev);
     tp.add_row_name_and_data("total_replica_count_stddev", total_stddev);
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, utils::table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
@@ -517,16 +517,16 @@ void meta_http_service::get_app_envs_handler(const http_request &req, http_respo
     // get all of the apps
     configuration_list_apps_response response;
     configuration_list_apps_request request;
-    request.status = dsn::app_status::AS_AVAILABLE;
+    request.status = app_status::AS_AVAILABLE;
     _service->_state->list_apps(request, response);
-    if (response.err != dsn::ERR_OK) {
+    if (response.err != ERR_OK) {
         resp.body = response.err.to_string();
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
 
     // using app envs to generate a table_printer
-    dsn::utils::table_printer tp;
+    utils::table_printer tp;
     for (auto &app : response.infos) {
         if (app.app_name == app_name) {
             for (auto env : app.envs) {
@@ -538,7 +538,7 @@ void meta_http_service::get_app_envs_handler(const http_request &req, http_respo
 
     // output as json format
     std::ostringstream out;
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
@@ -547,8 +547,8 @@ std::string set_to_string(const std::set<int32_t> &s)
 {
     std::stringstream out;
     rapidjson::OStreamWrapper wrapper(out);
-    dsn::json::JsonWriter writer(wrapper);
-    dsn::json::json_encode(writer, s);
+    json::JsonWriter writer(wrapper);
+    json::json_encode(writer, s);
     return out.str();
 }
 
@@ -578,7 +578,7 @@ void meta_http_service::query_backup_policy_handler(const http_request &req, htt
     _service->_backup_handler->query_backup_policy(http_to_rpc);
     auto rpc_return = http_to_rpc.response();
 
-    dsn::utils::table_printer tp_query_backup_policy;
+    utils::table_printer tp_query_backup_policy;
     tp_query_backup_policy.add_title("name");
     tp_query_backup_policy.add_column("backup_provider_type");
     tp_query_backup_policy.add_column("backup_interval");
@@ -596,7 +596,7 @@ void meta_http_service::query_backup_policy_handler(const http_request &req, htt
         tp_query_backup_policy.append_data(cur_policy.backup_history_count_to_keep);
     }
     std::ostringstream out;
-    tp_query_backup_policy.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp_query_backup_policy.output(out, utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
@@ -680,11 +680,11 @@ void meta_http_service::start_bulk_load_handler(const http_request &req, http_re
 
     auto rpc_resp = rpc.response();
     // output as json format
-    dsn::utils::table_printer tp;
+    utils::table_printer tp;
     tp.add_row_name_and_data("error", rpc_resp.err.to_string());
     tp.add_row_name_and_data("hint_msg", rpc_resp.hint_msg);
     std::ostringstream out;
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
@@ -714,11 +714,11 @@ void meta_http_service::query_bulk_load_handler(const http_request &req, http_re
     _service->_bulk_load_svc->on_query_bulk_load_status(rpc);
     auto rpc_resp = rpc.response();
     // output as json format
-    dsn::utils::table_printer tp;
+    utils::table_printer tp;
     tp.add_row_name_and_data("error", rpc_resp.err.to_string());
-    tp.add_row_name_and_data("app_status", dsn::enum_to_string(rpc_resp.app_status));
+    tp.add_row_name_and_data("app_status", enum_to_string(rpc_resp.app_status));
     std::ostringstream out;
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
@@ -865,14 +865,14 @@ void meta_http_service::update_app_env(const std::string &app_name,
 
     auto rpc_resp = rpc.response();
     // output as json format
-    dsn::utils::table_printer tp;
+    utils::table_printer tp;
     tp.add_row_name_and_data("error", rpc_resp.err.to_string());
     tp.add_row_name_and_data("hint_message", rpc_resp.hint_message);
     std::ostringstream out;
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

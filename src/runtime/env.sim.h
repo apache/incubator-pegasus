@@ -37,7 +37,7 @@
 
 #include "runtime/env_provider.h"
 
-namespace dsn {
+namespace pegasus {
 class task_worker;
 
 namespace tools {

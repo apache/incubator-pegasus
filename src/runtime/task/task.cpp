@@ -46,7 +46,7 @@
 #include "utils/utils.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 __thread struct __tls_dsn__ tls_dsn;
 __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
 
@@ -105,7 +105,7 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
     dsn_mimic_app("mimic", 1);
 }
 
-task::task(dsn::task_code code, int hash, service_node *node)
+task::task(task_code code, int hash, service_node *node)
     : _state(TASK_STATE_READY), _wait_event(nullptr)
 {
     _spec = task_spec::get(code);
@@ -434,7 +434,7 @@ void task::enqueue(task_worker_pool *pool)
 
 const std::vector<task_worker *> &get_threadpool_threads_info(threadpool_code code)
 {
-    return dsn::task::get_current_node2()->computation()->get_pool(code)->workers();
+    return task::get_current_node2()->computation()->get_pool(code)->workers();
 }
 
 timer_task::timer_task(
@@ -492,4 +492,4 @@ void timer_task::update_interval(int interval_ms)
     _interval_ms = interval_ms;
 }
 
-} // namespace dsn
+} // namespace pegasus

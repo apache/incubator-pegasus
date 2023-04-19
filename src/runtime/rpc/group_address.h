@@ -35,7 +35,7 @@
 #include "utils/rand.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_group_address : public ref_counter
 {
 public:
@@ -220,4 +220,4 @@ inline rpc_address rpc_group_address::next(rpc_address current) const
     return it == _members.end() ? _members[0] : *it;
 }
 
-} // namespace dsn
+} // namespace pegasus

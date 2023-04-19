@@ -24,7 +24,7 @@
 #include "meta_admin_types.h"
 #include "meta/meta_service.h" // IWYU pragma: keep
 
-namespace dsn {
+namespace pegasus {
 class rpc_address;
 
 namespace replication {
@@ -88,4 +88,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

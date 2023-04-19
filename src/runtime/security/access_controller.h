@@ -23,7 +23,7 @@
 
 #include "runtime/ranger/access_type.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace ranger {
@@ -51,7 +51,7 @@ public:
 
     // Check if the message received is allowd to access the system.
     // msg - the message received
-    virtual bool allowed(message_ex *msg, dsn::ranger::access_type req_type) const { return false; }
+    virtual bool allowed(message_ex *msg, ranger::access_type req_type) const { return false; }
 
     // Check if the message received is allowd to access the table.
     // msg - the message received
@@ -73,4 +73,4 @@ std::shared_ptr<access_controller> create_meta_access_controller(
 std::unique_ptr<access_controller>
 create_replica_access_controller(const std::string &replica_name);
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

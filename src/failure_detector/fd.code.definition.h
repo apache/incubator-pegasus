@@ -42,7 +42,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "fd_types.h"
 
-namespace dsn {
+namespace pegasus {
 namespace fd {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
@@ -52,9 +52,9 @@ DEFINE_TASK_CODE_RPC(RPC_FD_FAILURE_DETECTOR_PING, TASK_PRIORITY_COMMON, THREAD_
 // test timer task code
 DEFINE_TASK_CODE(LPC_FD_TEST_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-inline bool is_failure_detector_message(dsn::task_code code)
+inline bool is_failure_detector_message(task_code code)
 {
     return code == RPC_FD_FAILURE_DETECTOR_PING || code == RPC_FD_FAILURE_DETECTOR_PING_ACK;
 }
 } // namespace fd
-} // namespace dsn
+} // namespace pegasus

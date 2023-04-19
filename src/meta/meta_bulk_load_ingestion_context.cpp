@@ -21,14 +21,14 @@
 #include <utility>
 #include <vector>
 
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_uint32(meta_server,
@@ -200,4 +200,4 @@ void ingestion_context::reset_all()
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

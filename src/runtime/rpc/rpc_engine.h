@@ -45,7 +45,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 
 class rpc_engine;
 class service_node;
@@ -104,7 +104,7 @@ private:
     };
     typedef std::unordered_map<uint64_t, match_entry> rpc_requests;
     rpc_requests _requests[MATCHER_BUCKET_NR];
-    ::dsn::utils::ex_lock_nr_spin _requests_lock[MATCHER_BUCKET_NR];
+    utils::ex_lock_nr_spin _requests_lock[MATCHER_BUCKET_NR];
 };
 
 class rpc_server_dispatcher
@@ -151,16 +151,15 @@ public:
     //
     // management routines
     //
-    ::dsn::error_code start(const service_app_spec &spec);
+    error_code start(const service_app_spec &spec);
     void start_serving() { _is_serving = true; }
     void stop_serving() { _is_serving = false; }
 
     //
     // rpc registrations
     //
-    bool
-    register_rpc_handler(dsn::task_code code, const char *extra_name, const rpc_request_handler &h);
-    bool unregister_rpc_handler(dsn::task_code rpc_code);
+    bool register_rpc_handler(task_code code, const char *extra_name, const rpc_request_handler &h);
+    bool unregister_rpc_handler(task_code rpc_code);
 
     //
     // rpc routines
@@ -174,7 +173,7 @@ public:
     // information inquery
     //
     service_node *node() const { return _node; }
-    ::dsn::rpc_address primary_address() const { return _local_primary_address; }
+    rpc_address primary_address() const { return _local_primary_address; }
     rpc_client_matcher *matcher() { return &_rpc_matcher; }
 
     // call with group address only
@@ -201,7 +200,7 @@ private:
         _client_nets; // <format, <CHANNEL, network*>>
     std::unordered_map<int, std::vector<std::unique_ptr<network>>>
         _server_nets; // <port, <CHANNEL, network*>>
-    ::dsn::rpc_address _local_primary_address;
+    rpc_address _local_primary_address;
     rpc_client_matcher _rpc_matcher;
     rpc_server_dispatcher _rpc_dispatcher;
 
@@ -227,4 +226,4 @@ rpc_engine::call_address(rpc_address addr, message_ex *request, const rpc_respon
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

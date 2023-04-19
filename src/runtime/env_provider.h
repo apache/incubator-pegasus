@@ -30,7 +30,7 @@
 #include "utils/utils.h"
 #include <random>
 
-namespace dsn {
+namespace pegasus {
 /*!
 @addtogroup tool-api-providers
 @{
@@ -49,4 +49,4 @@ public:
     env_provider(env_provider *inner_provider){};
 };
 /*@}*/
-} // namespace dsn
+} // namespace pegasus

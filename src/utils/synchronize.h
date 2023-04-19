@@ -31,7 +31,7 @@
 #include "utils/hpc_locks/autoresetevent.h"
 #include "utils/hpc_locks/rwlock.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 class ex_lock

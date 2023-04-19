@@ -24,7 +24,7 @@
 #include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
@@ -35,7 +35,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/throttling_controller.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 #define THROTTLE_REQUEST(op_type, throttling_type, request, request_units)                         \
@@ -148,4 +148,4 @@ void replica::update_throttle_env_internal(const std::map<std::string, std::stri
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

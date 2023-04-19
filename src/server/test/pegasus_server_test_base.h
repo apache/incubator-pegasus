@@ -32,7 +32,7 @@ namespace server {
 class mock_pegasus_server_impl : public pegasus_server_impl
 {
 public:
-    mock_pegasus_server_impl(dsn::replication::replica *r) : pegasus_server_impl(r) {}
+    mock_pegasus_server_impl(replication::replica *r) : pegasus_server_impl(r) {}
 
 public:
     MOCK_CONST_METHOD0(is_duplication_follower, bool());
@@ -44,20 +44,20 @@ public:
     pegasus_server_test_base()
     {
         // Remove rdb to prevent rocksdb recovery from last test.
-        dsn::utils::filesystem::remove_path("./data/rdb");
-        _replica_stub = dsn::replication::create_test_replica_stub();
+        utils::filesystem::remove_path("./data/rdb");
+        _replica_stub = replication::create_test_replica_stub();
 
-        _gpid = dsn::gpid(100, 1);
-        dsn::app_info app_info;
+        _gpid = gpid(100, 1);
+        app_info app_info;
         app_info.app_type = "pegasus";
 
-        _replica = dsn::replication::create_test_replica(
-            _replica_stub, _gpid, app_info, "./", false, false);
+        _replica =
+            replication::create_test_replica(_replica_stub, _gpid, app_info, "./", false, false);
 
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
     }
 
-    dsn::error_code start(const std::map<std::string, std::string> &envs = {})
+    error_code start(const std::map<std::string, std::string> &envs = {})
     {
         std::unique_ptr<char *[]> argvs = std::make_unique<char *[]>(1 + envs.size() * 2);
         char **argv = argvs.get();
@@ -77,15 +77,15 @@ public:
         // do not clear state
         _server->stop(false);
 
-        dsn::replication::destroy_replica_stub(_replica_stub);
-        dsn::replication::destroy_replica(_replica);
+        replication::destroy_replica_stub(_replica_stub);
+        replication::destroy_replica(_replica);
     }
 
 protected:
     std::unique_ptr<mock_pegasus_server_impl> _server;
-    dsn::replication::replica *_replica;
-    dsn::replication::replica_stub *_replica_stub;
-    dsn::gpid _gpid;
+    replication::replica *_replica;
+    replication::replica_stub *_replica_stub;
+    gpid _gpid;
 };
 
 } // namespace server

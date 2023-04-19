@@ -27,7 +27,7 @@
 #include "replica/test/replica_test_base.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_backup_manager_test : public replica_test_base
@@ -53,4 +53,4 @@ TEST_F(replica_backup_manager_test, clear_cold_backup)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

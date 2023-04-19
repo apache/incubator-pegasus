@@ -32,7 +32,7 @@
 #include "aio/aio_provider.h"
 #include "disk_engine.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
 
 namespace file {
@@ -144,4 +144,4 @@ namespace file {
     return disk_engine::provider().prepare_aio_context(tsk);
 }
 } // namespace file
-} // namespace dsn
+} // namespace pegasus

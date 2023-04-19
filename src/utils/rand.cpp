@@ -18,7 +18,7 @@
 #include "utils/rand.h"
 #include <random>
 
-namespace dsn {
+namespace pegasus {
 namespace rand {
 
 thread_local std::ranlux48_base g_thread_local_rng(std::random_device{}());
@@ -31,4 +31,4 @@ thread_local std::ranlux48_base g_thread_local_rng(std::random_device{}());
 /*extern*/ void reseed_thread_local_rng(uint64_t seed) { g_thread_local_rng.seed(seed); }
 
 } // namespace rand
-} // namespace dsn
+} // namespace pegasus

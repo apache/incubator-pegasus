@@ -30,7 +30,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_uint64(
@@ -73,21 +73,21 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
     std::vector<std::string> sub_list;
     for (auto &dir : data_dirs) {
         std::vector<std::string> tmp_list;
-        if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
+        if (!utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
             LOG_WARNING("gc_disk: failed to get subdirectories in {}", dir);
             return error_s::make(ERR_OBJECT_NOT_FOUND, "failed to get subdirectories");
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
     }
     for (auto &fpath : sub_list) {
-        auto name = dsn::utils::filesystem::get_file_name(fpath);
+        auto name = utils::filesystem::get_file_name(fpath);
         if (!is_data_dir_removable(name)) {
             continue;
         }
         std::string folder_suffix = name.substr(name.length() - 4);
 
         time_t mt;
-        if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
+        if (!utils::filesystem::last_write_time(fpath, mt)) {
             LOG_WARNING("gc_disk: failed to get last write time of {}", fpath);
             continue;
         }
@@ -112,7 +112,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
         }
 
         if (last_write_time + remove_interval_seconds <= current_time_ms / 1000) {
-            if (!dsn::utils::filesystem::remove_path(fpath)) {
+            if (!utils::filesystem::remove_path(fpath)) {
                 LOG_WARNING("gc_disk: failed to delete directory '{}', time_used_ms = {}",
                             fpath,
                             dsn_now_ms() - current_time_ms);
@@ -135,7 +135,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
 void move_to_err_path(const std::string &path, const std::string &log_prefix)
 {
     const std::string new_path = fmt::format("{}.{}{}", path, dsn_now_us(), kFolderSuffixErr);
-    CHECK(dsn::utils::filesystem::rename_path(path, new_path),
+    CHECK(utils::filesystem::rename_path(path, new_path),
           "{}: failed to move directory from '{}' to '{}'",
           log_prefix,
           path,
@@ -143,4 +143,4 @@ void move_to_err_path(const std::string &path, const std::string &log_prefix)
     LOG_WARNING("{}: succeed to move directory from '{}' to '{}'", log_prefix, path, new_path);
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

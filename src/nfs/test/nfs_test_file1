@@ -1,9 +1,9 @@
 [apps..default]
 run = true
 count = 1
-network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider, 65536
-network.client.RPC_CHANNEL_UDP = dsn::tools::asio_network_provider, 65536
-network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, dsn::tools::asio_network_provider, 65536
+network.client.RPC_CHANNEL_TCP = pegasus::tools::asio_network_provider, 65536
+network.client.RPC_CHANNEL_UDP = pegasus::tools::asio_network_provider, 65536
+network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, pegasus::tools::asio_network_provider, 65536
 
 [apps.client]
 name = client
@@ -23,10 +23,10 @@ ports = 20101,20102
 run = true
 count = 1
 pools = THREAD_POOL_DEFAULT, THREAD_POOL_TEST_SERVER
-network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-network.server.20101.RPC_CHANNEL_TCP = NET_HDR_DSN,dsn::tools::asio_network_provider,65536
-network.server.20102.RPC_CHANNEL_TCP = NET_HDR_DSN,dsn::tools::asio_network_provider,65536
-network.server.20103.RPC_CHANNEL_TCP = NET_HDR_DSN,dsn::tools::asio_network_provider,65536
+network.client.RPC_CHANNEL_TCP = pegasus::tools::asio_network_provider,65536
+network.server.20101.RPC_CHANNEL_TCP = NET_HDR_DSN,pegasus::tools::asio_network_provider,65536
+network.server.20102.RPC_CHANNEL_TCP = NET_HDR_DSN,pegasus::tools::asio_network_provider,65536
+network.server.20103.RPC_CHANNEL_TCP = NET_HDR_DSN,pegasus::tools::asio_network_provider,65536
 
 [apps.server_group]
 name = server_group
@@ -56,7 +56,7 @@ cli_local = true
 cli_remote = true
 
 logging_start_level = LOG_LEVEL_DEBUG
-logging_factory_name = dsn::tools::simple_logger
+logging_factory_name = pegasus::tools::simple_logger
 
 
 [tools.simulator]

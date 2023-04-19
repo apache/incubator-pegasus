@@ -33,7 +33,7 @@
 #include "utils/blob.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 class server_negotiation_test : public testing::Test
 {
@@ -51,7 +51,7 @@ public:
     {
         auto request = std::make_unique<negotiation_request>();
         request->status = status;
-        request->msg = dsn::blob::create_from_bytes(msg.data(), msg.length());
+        request->msg = blob::create_from_bytes(msg.data(), msg.length());
         return negotiation_rpc(std::move(request), RPC_NEGOTIATION);
     }
 
@@ -257,4 +257,4 @@ TEST_F(server_negotiation_test, on_challenge_resp)
     }
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

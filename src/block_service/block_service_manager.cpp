@@ -33,7 +33,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -91,9 +91,9 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
 
     std::vector<std::string> args;
     utils::split_args(arguments, args);
-    dsn::error_code err = fs->initialize(args);
+    error_code err = fs->initialize(args);
 
-    if (dsn::ERR_OK == err) {
+    if (ERR_OK == err) {
         LOG_INFO("create block filesystem ok for provider {}", provider);
         _fs_map.emplace(provider, std::unique_ptr<block_filesystem>(fs));
     } else {
@@ -194,4 +194,4 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
 
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

@@ -36,7 +36,7 @@ add_library(dsn_runtime STATIC
         $<TARGET_OBJECTS:dsn.task>
         $<TARGET_OBJECTS:dsn.perf_counter>
         core_main.cpp
-        dsn.layer2_types.cpp
+        pegasus.layer2_types.cpp
         env.sim.cpp
         fault_injector.cpp
         global_config.cpp

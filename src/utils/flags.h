@@ -64,7 +64,7 @@ struct hash<flag_tag>
 
 #define DSN_DEFINE_VARIABLE(type, section, name, default_value, desc)                              \
     type FLAGS_##name = default_value;                                                             \
-    static dsn::flag_registerer FLAGS_REG_##name(#section, #name, desc, &FLAGS_##name)
+    static pegasus::flag_registerer FLAGS_REG_##name(#section, #name, desc, &FLAGS_##name)
 
 #define DSN_DEFINE_int32(section, name, val, desc)                                                 \
     DSN_DEFINE_VARIABLE(int32_t, section, name, val, desc)
@@ -87,7 +87,7 @@ struct hash<flag_tag>
 // The program corrupts if the validation failed.
 #define DSN_DEFINE_validator(name, validator)                                                      \
     static auto FLAGS_VALIDATOR_FN_##name = validator;                                             \
-    static const dsn::flag_validator FLAGS_VALIDATOR_##name(                                       \
+    static const pegasus::flag_validator FLAGS_VALIDATOR_##name(                                   \
         #name, []() -> bool { return FLAGS_VALIDATOR_FN_##name(FLAGS_##name); })
 
 // There are scenarios where inconsistency should be detected and avoided between 2 or more flags.
@@ -118,18 +118,18 @@ struct hash<flag_tag>
 // argument, but return true if the validation passed otherwise false, with a hint message
 // set as the output argument `std::string &`, if any.
 #define DSN_DEFINE_group_validator(name, validator)                                                \
-    static const dsn::group_flag_validator FLAGS_GROUP_VALIDATOR_##name(#name, validator)
+    static const pegasus::group_flag_validator FLAGS_GROUP_VALIDATOR_##name(#name, validator)
 
 #define DSN_TAG_VARIABLE(name, tag)                                                                \
     COMPILE_ASSERT(sizeof(decltype(FLAGS_##name)), exist_##name##_##tag);                          \
-    static dsn::flag_tagger FLAGS_TAGGER_##name##_##tag(#name, flag_tag::tag)
+    static pegasus::flag_tagger FLAGS_TAGGER_##name##_##tag(#name, flag_tag::tag)
 
 #define UPDATE_CONFIG(fn, flag, name)                                                              \
     if (name == #flag) {                                                                           \
         fn(FLAGS_##flag);                                                                          \
     }
 
-namespace dsn {
+namespace pegasus {
 
 // An utility class that registers a flag upon initialization.
 class flag_registerer
@@ -180,4 +180,4 @@ extern std::string list_all_flags();
 
 // get the json string of a specified flag
 extern error_with<std::string> get_flag_str(const std::string &flag_name);
-} // namespace dsn
+} // namespace pegasus

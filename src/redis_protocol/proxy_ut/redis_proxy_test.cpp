@@ -62,35 +62,36 @@
 #include "utils/strings.h"
 
 using namespace boost::asio;
-using namespace ::pegasus::proxy;
+namespace pegasus {
+namespace proxy {
 
-class proxy_test_app : public ::dsn::service_app
+class proxy_test_app : public service_app
 {
 public:
-    explicit proxy_test_app(const dsn::service_app_info *info) : service_app(info) {}
+    explicit proxy_test_app(const service_app_info *info) : service_app(info) {}
 
-    ::dsn::error_code start(const std::vector<std::string> &args) override
+    error_code start(const std::vector<std::string> &args) override
     {
         if (args.size() < 3) {
-            return ::dsn::ERR_INVALID_PARAMETERS;
+            return ERR_INVALID_PARAMETERS;
         }
 
-        proxy_session::factory f = [](proxy_stub *p, dsn::message_ex *m) {
+        proxy_session::factory f = [](proxy_stub *p, message_ex *m) {
             return std::make_shared<redis_parser>(p, m);
         };
         _proxy = std::make_unique<proxy_stub>(f, args[1].c_str(), args[2].c_str());
-        return ::dsn::ERR_OK;
+        return ERR_OK;
     }
-    ::dsn::error_code stop(bool) override { return ::dsn::ERR_OK; }
+    error_code stop(bool) override { return ERR_OK; }
 
 private:
-    std::unique_ptr<pegasus::proxy::proxy_stub> _proxy;
+    std::unique_ptr<proxy::proxy_stub> _proxy;
 };
 
 class redis_test_parser : public redis_parser
 {
 public:
-    redis_test_parser(proxy_stub *stub, dsn::message_ex *msg) : redis_parser(stub, msg)
+    redis_test_parser(proxy_stub *stub, message_ex *msg) : redis_parser(stub, msg)
     {
         _reserved_entry.reserve(20);
         for (int i = 0; i < 20; ++i) {
@@ -112,24 +113,24 @@ public:
         _reserved_entry[index]->request.sub_requests = std::move(msg.sub_requests);
     }
 
-    static dsn::message_ex *create_message(const char *data)
+    static message_ex *create_message(const char *data)
     {
-        return dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, strlen(data));
+        return message_ex::create_received_request(
+            RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, (void *)data, strlen(data));
     }
 
-    static dsn::message_ex *create_message(const char *data, int length)
+    static message_ex *create_message(const char *data, int length)
     {
-        return dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, length);
+        return message_ex::create_received_request(
+            RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, (void *)data, length);
     }
 
-    static dsn::message_ex *marshalling_array(const redis_request &request)
+    static message_ex *marshalling_array(const redis_request &request)
     {
-        dsn::message_ex *msg = create_message("dummy");
+        message_ex *msg = create_message("dummy");
 
-        dsn::message_ex *resp = msg->create_response();
-        ::dsn::rpc_write_stream stream(resp);
+        message_ex *resp = msg->create_response();
+        rpc_write_stream stream(resp);
 
         stream.write_pod('*');
         std::string count_str = std::to_string(request.sub_request_count);
@@ -158,8 +159,7 @@ protected:
             ASSERT_EQ(bs1.length, bs2.length);
             if (bs1.length > 0) {
                 ASSERT_EQ(bs1.data.length(), bs2.data.length());
-                ASSERT_TRUE(
-                    dsn::utils::mequals(bs1.data.data(), bs2.data.data(), bs2.data.length()));
+                ASSERT_TRUE(utils::mequals(bs1.data.data(), bs2.data.data(), bs2.data.length()));
             }
         }
 
@@ -189,9 +189,9 @@ class proxy_test : public ::testing::Test
 public:
     proxy_test()
     {
-        dsn::message_ex *msg = dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, nullptr, 0);
-        msg->header->from_address = dsn::rpc_address("127.0.0.1", 123);
+        message_ex *msg = message_ex::create_received_request(
+            RPC_CALL_RAW_MESSAGE, DSF_THRIFT_BINARY, nullptr, 0);
+        msg->header->from_address = rpc_address("127.0.0.1", 123);
         _parser.reset(new redis_test_parser(nullptr, msg));
     }
 
@@ -202,7 +202,7 @@ public:
     {
         _parser->set_msg(index, std::move(msg));
     }
-    bool parse(dsn::message_ex *msg) { return _parser->parse(msg); }
+    bool parse(message_ex *msg) { return _parser->parse(msg); }
     bool got_message() { return _parser->_got_a_message; }
     int parsed_entry_count() { return _parser->_entry_index; }
 
@@ -306,21 +306,21 @@ TEST_F(proxy_test, test_nil_bulk_string)
 TEST_F(proxy_test, test_random_cases)
 {
     int total_requests = 10;
-    std::vector<dsn::message_ex *> fake_requests;
+    std::vector<message_ex *> fake_requests;
     int total_body_size = 0;
 
     // create several requests
     for (int i = 0; i < total_requests; ++i) {
-        int sub_request_count = dsn::rand::next_u32(1, 20);
+        int sub_request_count = rand::next_u32(1, 20);
         std::vector<redis_test_parser::redis_bulk_string> sub_requests(sub_request_count);
         for (auto &sub_request : sub_requests) {
-            sub_request.length = dsn::rand::next_u32(0, 8);
+            sub_request.length = rand::next_u32(0, 8);
             if (sub_request.length == 0) {
                 sub_request.length = -1;
             } else if (sub_request.length == 1) {
                 sub_request.length = 0;
             } else {
-                sub_request.length = dsn::rand::next_u32(1, 256);
+                sub_request.length = rand::next_u32(1, 256);
                 std::shared_ptr<char> raw_buf(new char[sub_request.length],
                                               std::default_delete<char[]>());
                 memset(raw_buf.get(), 't', sub_request.length);
@@ -330,8 +330,8 @@ TEST_F(proxy_test, test_random_cases)
 
         redis_test_parser::redis_request request(sub_request_count, std::move(sub_requests));
         set_msg(i, request);
-        dsn::message_ex *fake_response = redis_test_parser::marshalling_array(request);
-        dsn::message_ex *fake_request = fake_response->copy(true, true);
+        message_ex *fake_response = redis_test_parser::marshalling_array(request);
+        message_ex *fake_request = fake_response->copy(true, true);
 
         fake_response->add_ref();
         fake_response->release_ref();
@@ -344,7 +344,7 @@ TEST_F(proxy_test, test_random_cases)
     std::shared_ptr<char> msg_buffer(new char[total_body_size + 10], std::default_delete<char[]>());
     char *msg_buffer_ptr = msg_buffer.get();
 
-    for (dsn::message_ex *fake_request : fake_requests) {
+    for (message_ex *fake_request : fake_requests) {
         void *rw_ptr;
         size_t length;
         while (fake_request->read_next(&rw_ptr, &length)) {
@@ -363,7 +363,7 @@ TEST_F(proxy_test, test_random_cases)
     // first create a big message, test the pipeline
     {
         reset();
-        dsn::message_ex *msg = redis_test_parser::create_message(msg_buffer_ptr, total_body_size);
+        message_ex *msg = redis_test_parser::create_message(msg_buffer_ptr, total_body_size);
         ASSERT_TRUE(parse(msg));
         ASSERT_EQ(parsed_entry_count(), total_requests);
     }
@@ -371,17 +371,17 @@ TEST_F(proxy_test, test_random_cases)
     // let's split the messages into different pieces
     {
         reset();
-        size_t slice_count = dsn::rand::next_u32(total_requests, total_body_size);
+        size_t slice_count = rand::next_u32(total_requests, total_body_size);
         std::set<int> offsets;
         while (offsets.size() < slice_count - 1) {
-            offsets.insert(dsn::rand::next_u32(1, total_body_size - 1));
+            offsets.insert(rand::next_u32(1, total_body_size - 1));
         }
         offsets.insert(total_body_size);
 
         int last_offset = 0;
         for (int offset : offsets) {
-            dsn::message_ex *msg = redis_test_parser::create_message(msg_buffer_ptr + last_offset,
-                                                                     offset - last_offset);
+            message_ex *msg = redis_test_parser::create_message(msg_buffer_ptr + last_offset,
+                                                                offset - last_offset);
             ASSERT_TRUE(parse(msg));
             last_offset = offset;
         }
@@ -393,7 +393,7 @@ TEST_F(proxy_test, test_parse_parameters)
 {
     double radius_m = 0;
     std::string unit;
-    pegasus::geo::geo_client::SortType sort_type = pegasus::geo::geo_client::SortType::random;
+    geo::geo_client::SortType sort_type = geo::geo_client::SortType::random;
     int count = 0;
     bool WITHCOORD = false;
     bool WITHDIST = false;
@@ -401,7 +401,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
     {
         radius_m = 0;
-        sort_type = pegasus::geo::geo_client::SortType::random;
+        sort_type = geo::geo_client::SortType::random;
         count = 0;
         WITHCOORD = false;
         WITHDIST = false;
@@ -425,7 +425,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
         ASSERT_DOUBLE_EQ(radius_m, 100);
         ASSERT_EQ(unit, "m");
-        ASSERT_EQ(sort_type, pegasus::geo::geo_client::SortType::asc);
+        ASSERT_EQ(sort_type, geo::geo_client::SortType::asc);
         ASSERT_EQ(count, -1);
         ASSERT_TRUE(WITHCOORD);
         ASSERT_TRUE(WITHDIST);
@@ -434,7 +434,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
     {
         radius_m = 0;
-        sort_type = pegasus::geo::geo_client::SortType::random;
+        sort_type = geo::geo_client::SortType::random;
         count = 0;
         WITHCOORD = false;
         WITHDIST = false;
@@ -454,7 +454,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
         ASSERT_DOUBLE_EQ(radius_m, 100230);
         ASSERT_EQ(unit, "km");
-        ASSERT_EQ(sort_type, pegasus::geo::geo_client::SortType::desc);
+        ASSERT_EQ(sort_type, geo::geo_client::SortType::desc);
         ASSERT_EQ(count, 500);
         ASSERT_FALSE(WITHCOORD);
         ASSERT_FALSE(WITHDIST);
@@ -463,7 +463,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
     {
         radius_m = 0;
-        sort_type = pegasus::geo::geo_client::SortType::random;
+        sort_type = geo::geo_client::SortType::random;
         count = 0;
         WITHCOORD = false;
         WITHDIST = false;
@@ -486,7 +486,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
         ASSERT_DOUBLE_EQ(radius_m, 100);
         ASSERT_EQ(unit, "m");
-        ASSERT_EQ(sort_type, pegasus::geo::geo_client::SortType::asc);
+        ASSERT_EQ(sort_type, geo::geo_client::SortType::asc);
         ASSERT_EQ(count, -1);
         ASSERT_TRUE(WITHCOORD);
         ASSERT_TRUE(WITHDIST);
@@ -495,7 +495,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
     {
         radius_m = 0;
-        sort_type = pegasus::geo::geo_client::SortType::random;
+        sort_type = geo::geo_client::SortType::random;
         count = 0;
         WITHCOORD = false;
         WITHDIST = false;
@@ -514,7 +514,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
         ASSERT_DOUBLE_EQ(radius_m, 100230);
         ASSERT_EQ(unit, "km");
-        ASSERT_EQ(sort_type, pegasus::geo::geo_client::SortType::desc);
+        ASSERT_EQ(sort_type, geo::geo_client::SortType::desc);
         ASSERT_EQ(count, 500);
         ASSERT_FALSE(WITHCOORD);
         ASSERT_FALSE(WITHDIST);
@@ -532,7 +532,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
 TEST(proxy, connection)
 {
-    ::dsn::rpc_address redis_address("127.0.0.1", 12345);
+    rpc_address redis_address("127.0.0.1", 12345);
     ip::tcp::endpoint redis_endpoint(ip::address_v4(redis_address.ip()), redis_address.port());
 
     io_service ios;
@@ -603,8 +603,8 @@ TEST(proxy, connection)
             boost::asio::read(client_socket, boost::asio::buffer(got_reply, strlen(resps1)));
         got_reply[got_length] = 0;
         ASSERT_EQ(got_length, strlen(resps1));
-        ASSERT_TRUE(dsn::utils::equals(got_reply, resps1, got_length) ||
-                    dsn::utils::equals(got_reply, resps2, got_length));
+        ASSERT_TRUE(utils::equals(got_reply, resps1, got_length) ||
+                    utils::equals(got_reply, resps2, got_length));
     }
 
     {
@@ -640,14 +640,16 @@ TEST(proxy, connection)
 
 void dsn_init()
 {
-    dsn::service_app::register_factory<proxy_test_app>("proxy");
+    service_app::register_factory<proxy_test_app>("proxy");
     dsn_run_config("config.ini", false);
 }
+} // namespace proxy
+} // namespace pegasus
 
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
-    dsn_init();
+    pegasus::proxy::dsn_init();
     int ret = RUN_ALL_TESTS();
     dsn_exit(ret);
 }

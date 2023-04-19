@@ -39,7 +39,7 @@
 
 #include "meta_admin_types.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 // TODO(yingchun): remove it
@@ -67,4 +67,4 @@ public:
                                               const std::string &postfix);
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

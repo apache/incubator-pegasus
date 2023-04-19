@@ -65,7 +65,7 @@
 #include "utils/ports.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace test {
 
@@ -74,7 +74,7 @@ parse_kv_map(int line_no, const std::string &str, std::map<std::string, std::str
 {
     kv_map.clear();
     std::vector<std::string> splits;
-    dsn::utils::split_args(str.c_str(), splits, ',');
+    utils::split_args(str.c_str(), splits, ',');
     for (std::string &i : splits) {
         if (i.empty())
             continue;
@@ -641,9 +641,9 @@ bool event_on_aio::check_satisfied(const event *ev) const
 void event_on_aio::init(aio_task *tsk)
 {
     event_on_task::init(tsk);
-    if (tsk->get_aio_context()->type == dsn::AIO_Invalid)
+    if (tsk->get_aio_context()->type == AIO_Invalid)
         return; // for flush task, the type is AIO_Invalid
-    _type = (tsk->get_aio_context()->type == dsn::AIO_Read ? "READ" : "WRITE");
+    _type = (tsk->get_aio_context()->type == AIO_Read ? "READ" : "WRITE");
     _file_offset = boost::lexical_cast<std::string>(tsk->get_aio_context()->file_offset);
     _buffer_size = boost::lexical_cast<std::string>(tsk->get_aio_context()->buffer_size);
 }
@@ -812,8 +812,8 @@ bool client_case_line::parse(const std::string &params)
     }
     case end_write: {
         _id = boost::lexical_cast<int>(kv_map["id"]);
-        _err = dsn::error_code::try_get(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(),
-                                        ERR_UNKNOWN);
+        _err = error_code::try_get(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(),
+                                   ERR_UNKNOWN);
         _write_resp = boost::lexical_cast<int>(kv_map["resp"]);
         if (_err == ERR_UNKNOWN)
             parse_ok = false;
@@ -821,8 +821,8 @@ bool client_case_line::parse(const std::string &params)
     }
     case end_read: {
         _id = boost::lexical_cast<int>(kv_map["id"]);
-        _err = dsn::error_code::try_get(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(),
-                                        ERR_UNKNOWN);
+        _err = error_code::try_get(boost::algorithm::to_upper_copy(kv_map["err"]).c_str(),
+                                   ERR_UNKNOWN);
         _read_resp = kv_map["resp"];
         if (_err == ERR_UNKNOWN)
             parse_ok = false;
@@ -894,19 +894,19 @@ static const char *s_replica_config_commands[] = {"none",
                                                   "remove",
                                                   nullptr};
 
-dsn::replication::config_type::type
+replication::config_type::type
 client_case_line::parse_config_command(const std::string &command_name) const
 {
     for (int i = 0; s_replica_config_commands[i] != nullptr; ++i) {
         if (boost::iequals(command_name, s_replica_config_commands[i])) {
-            return (dsn::replication::config_type::type)i;
+            return (replication::config_type::type)i;
         }
     }
     return config_type::CT_INVALID;
 }
 
 std::string
-client_case_line::config_command_to_string(dsn::replication::config_type::type cfg_command) const
+client_case_line::config_command_to_string(replication::config_type::type cfg_command) const
 {
     return s_replica_config_commands[cfg_command];
 }
@@ -932,7 +932,7 @@ void client_case_line::get_read_params(int &id, std::string &key, int &timeout_m
 }
 
 void client_case_line::get_replica_config_params(rpc_address &receiver,
-                                                 dsn::replication::config_type::type &type,
+                                                 replication::config_type::type &type,
                                                  rpc_address &node) const
 {
     CHECK_EQ(_type, replica_config);
@@ -941,14 +941,14 @@ void client_case_line::get_replica_config_params(rpc_address &receiver,
     node = _config_node;
 }
 
-bool client_case_line::check_write_result(int id, ::dsn::error_code err, int32_t resp)
+bool client_case_line::check_write_result(int id, error_code err, int32_t resp)
 {
-    return id == _id && err == _err && (err != dsn::ERR_OK || resp == _write_resp);
+    return id == _id && err == _err && (err != ERR_OK || resp == _write_resp);
 }
 
-bool client_case_line::check_read_result(int id, ::dsn::error_code err, const std::string &resp)
+bool client_case_line::check_read_result(int id, error_code err, const std::string &resp)
 {
-    return id == _id && err == _err && (err != dsn::ERR_OK || resp == _read_resp);
+    return id == _id && err == _err && (err != ERR_OK || resp == _read_resp);
 }
 
 bool test_case::s_inited = false;
@@ -1184,7 +1184,7 @@ bool test_case::check_client_write(int &id, std::string &key, std::string &value
 }
 
 bool test_case::check_replica_config(rpc_address &receiver,
-                                     dsn::replication::config_type::type &type,
+                                     replication::config_type::type &type,
                                      rpc_address &node)
 {
     if (!check_client_instruction(client_case_line::replica_config))
@@ -1205,7 +1205,7 @@ bool test_case::check_client_read(int &id, std::string &key, int &timeout_ms)
     return true;
 }
 
-void test_case::on_end_write(int id, ::dsn::error_code err, int32_t resp)
+void test_case::on_end_write(int id, error_code err, int32_t resp)
 {
     if (g_done)
         return;
@@ -1247,7 +1247,7 @@ void test_case::on_end_write(int id, ::dsn::error_code err, int32_t resp)
     forward();
 }
 
-void test_case::on_end_read(int id, ::dsn::error_code err, const std::string &resp)
+void test_case::on_end_read(int id, error_code err, const std::string &resp)
 {
     if (g_done)
         return;

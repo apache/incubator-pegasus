@@ -32,7 +32,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 DSN_DECLARE_bool(enable_acl);
 
@@ -54,7 +54,7 @@ public:
         return !FLAGS_enable_acl || _meta_access_controller->is_super_user(user_name);
     }
 
-    bool allowed(dsn::message_ex *msg) { return _meta_access_controller->allowed(msg); }
+    bool allowed(message_ex *msg) { return _meta_access_controller->allowed(msg); }
 
     std::shared_ptr<access_controller> _meta_access_controller;
 };
@@ -101,7 +101,7 @@ TEST_F(meta_access_controller_test, allowed)
         new tools::sim_network_provider(nullptr, nullptr));
     auto sim_session = sim_net->create_client_session(rpc_address("localhost", 10086));
     for (const auto &test : tests) {
-        dsn::message_ptr msg = message_ex::create_request(test.rpc_code);
+        message_ptr msg = message_ex::create_request(test.rpc_code);
         msg->io_session = sim_session;
 
         ASSERT_EQ(allowed(msg), test.result);
@@ -110,4 +110,4 @@ TEST_F(meta_access_controller_test, allowed)
     FLAGS_enable_acl = origin_enable_acl;
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

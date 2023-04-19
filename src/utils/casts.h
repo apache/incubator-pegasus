@@ -20,7 +20,7 @@
 #include <cassert>
 #include <type_traits>
 
-namespace dsn {
+namespace pegasus {
 
 // Downcasting is to convert a base-class pointer(reference) to a derived-class
 // pointer(reference). As a usual approach, RTTI (dynamic_cast<>) is not efficient.
@@ -44,4 +44,4 @@ inline To down_cast(From *from)
     return static_cast<To>(from);
 }
 
-} // namespace dsn
+} // namespace pegasus

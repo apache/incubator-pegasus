@@ -25,7 +25,7 @@
  */
 #pragma once
 
-namespace dsn {
+namespace pegasus {
 
 ///
 /// a simple class used to check if some code is accessed by only one thread.

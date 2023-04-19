@@ -33,7 +33,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 DSN_DECLARE_bool(enable_acl);
 
@@ -45,9 +45,9 @@ public:
         _replica_access_controller = std::make_unique<replica_access_controller>("test");
     }
 
-    bool allowed(dsn::message_ex *msg)
+    bool allowed(message_ex *msg)
     {
-        return _replica_access_controller->allowed(msg, dsn::ranger::access_type::kRead);
+        return _replica_access_controller->allowed(msg, ranger::access_type::kRead);
     }
 
     void set_replica_users(std::unordered_set<std::string> &&replica_users)
@@ -75,7 +75,7 @@ TEST_F(replica_access_controller_test, allowed)
     std::unique_ptr<tools::sim_network_provider> sim_net(
         new tools::sim_network_provider(nullptr, nullptr));
     auto sim_session = sim_net->create_client_session(rpc_address("localhost", 10086));
-    dsn::message_ptr msg = message_ex::create_request(RPC_CM_LIST_APPS);
+    message_ptr msg = message_ex::create_request(RPC_CM_LIST_APPS);
     msg->io_session = sim_session;
 
     for (auto &test : tests) {
@@ -88,4 +88,4 @@ TEST_F(replica_access_controller_test, allowed)
     FLAGS_enable_acl = origin_enable_acl;
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

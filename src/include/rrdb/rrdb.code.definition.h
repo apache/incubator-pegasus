@@ -21,7 +21,7 @@
 
 #include "common/replication.codes.h"
 
-namespace dsn {
+namespace pegasus {
 namespace apps {
 DEFINE_STORAGE_WRITE_RPC_CODE(RPC_RRDB_RRDB_PUT, ALLOW_BATCH, IS_IDEMPOTENT)
 DEFINE_STORAGE_WRITE_RPC_CODE(RPC_RRDB_RRDB_MULTI_PUT, NOT_ALLOW_BATCH, IS_IDEMPOTENT)

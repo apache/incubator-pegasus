@@ -42,7 +42,7 @@
 
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 template <typename T, int priority_count, typename TQueue = std::queue<T>>
@@ -59,7 +59,7 @@ public:
     {
         assert(priority >= 0 && priority < priority_count); // "wrong priority");
 
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock<utils::ex_lock_nr_spin> l(_lock);
         {
             _items[priority].push(obj);
             return ++_count;
@@ -68,14 +68,14 @@ public:
 
     virtual T dequeue()
     {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock<utils::ex_lock_nr_spin> l(_lock);
         long ct = 0;
         return dequeue_impl(ct);
     }
 
     virtual T dequeue(/*out*/ long &ct)
     {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock<utils::ex_lock_nr_spin> l(_lock);
         return dequeue_impl(ct);
     }
 
@@ -83,7 +83,7 @@ public:
 
     long count() const
     {
-        auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        auto_lock<utils::ex_lock_nr_spin> l(_lock);
         return _count;
     }
 
@@ -147,5 +147,5 @@ public:
 private:
     semaphore _sema;
 };
-}
-} // end namespace
+} // namespace utils
+} // namespace pegasus

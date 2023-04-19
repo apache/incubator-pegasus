@@ -33,7 +33,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
 namespace dist {
 namespace block_service {
@@ -197,4 +197,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

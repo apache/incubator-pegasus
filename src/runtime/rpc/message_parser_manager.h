@@ -37,7 +37,7 @@
 
 #include "runtime/rpc/message_parser.h"
 
-namespace dsn {
+namespace pegasus {
 class message_parser_manager : public utils::singleton<message_parser_manager>
 {
 public:

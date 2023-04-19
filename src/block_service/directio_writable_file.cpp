@@ -30,7 +30,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -166,4 +166,4 @@ bool direct_io_writable_file::write(const char *s, size_t n)
 
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

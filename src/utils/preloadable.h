@@ -19,7 +19,7 @@
 
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 template <typename T>

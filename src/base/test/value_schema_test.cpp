@@ -35,26 +35,24 @@
 #include "utils/string_view.h"
 #include "value_field.h"
 
-using namespace pegasus;
+namespace pegasus {
 
 uint32_t extract_expire_ts(value_schema *schema, const std::string &raw_value)
 {
-    auto field = schema->extract_field(raw_value, pegasus::value_field_type::EXPIRE_TIMESTAMP);
+    auto field = schema->extract_field(raw_value, value_field_type::EXPIRE_TIMESTAMP);
     auto expire_ts_field = static_cast<expire_timestamp_field *>(field.get());
     return expire_ts_field->expire_ts;
 }
 
 uint64_t extract_time_tag(value_schema *schema, const std::string &raw_value)
 {
-    auto field = schema->extract_field(raw_value, pegasus::value_field_type::TIME_TAG);
+    auto field = schema->extract_field(raw_value, value_field_type::TIME_TAG);
     auto time_field = static_cast<time_tag_field *>(field.get());
     return time_field->time_tag;
 }
 
-std::string generate_value(value_schema *schema,
-                           uint32_t expire_ts,
-                           uint64_t time_tag,
-                           dsn::string_view user_data)
+std::string
+generate_value(value_schema *schema, uint32_t expire_ts, uint64_t time_tag, string_view user_data)
 {
     std::string write_buf;
     std::vector<rocksdb::Slice> write_slices;
@@ -106,7 +104,7 @@ TEST(value_schema, generate_and_extract)
             ASSERT_EQ(t.time_tag, extract_time_tag(schema, raw_value));
         }
 
-        dsn::blob user_data = schema->extract_user_data(std::move(raw_value));
+        blob user_data = schema->extract_user_data(std::move(raw_value));
         ASSERT_EQ(t.user_data, user_data.to_string());
     }
 }
@@ -134,3 +132,4 @@ TEST(value_schema, update_expire_ts)
         ASSERT_EQ(t.update_expire_ts, extract_expire_ts(schema, raw_value));
     }
 }
+} // namespace pegasus

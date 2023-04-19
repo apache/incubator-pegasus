@@ -23,7 +23,7 @@
 #include "utils/blob.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
 namespace dist {
 class meta_state_service;
@@ -111,4 +111,4 @@ void meta_storage::get_children(std::string &&node,
 
 } // namespace mss
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

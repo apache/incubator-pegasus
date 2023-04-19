@@ -36,6 +36,7 @@
 #include "test/function_test/utils/utils.h"
 #include "utils/fmt_logging.h"
 
+namespace pegasus {
 global_env::global_env()
 {
     get_dirs();
@@ -63,10 +64,11 @@ void global_env::get_dirs()
 
 void global_env::get_hostip()
 {
-    uint32_t ip = dsn::rpc_address::ipv4_from_network_interface("lo");
+    uint32_t ip = rpc_address::ipv4_from_network_interface("lo");
     uint32_t ipnet = htonl(ip);
     char buffer[512] = {0};
     memset(buffer, 0, sizeof(buffer));
     CHECK(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)), "");
     _host_ip = buffer;
 }
+} // namespace pegasus

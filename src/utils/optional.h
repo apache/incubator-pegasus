@@ -36,7 +36,7 @@
 #pragma once
 #include <utility>
 
-namespace dsn {
+namespace pegasus {
 struct none_placeholder_t
 {
 };

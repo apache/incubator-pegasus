@@ -63,12 +63,12 @@ private:
 public:
     RecursiveBenaphore() : m_contentionCount(0), m_recursion(0)
     {
-        m_owner = ::dsn::utils::INVALID_TID;
+        m_owner = ::pegasus::utils::INVALID_TID;
     }
 
     void lock()
     {
-        auto tid = ::dsn::utils::get_current_tid();
+        auto tid = ::pegasus::utils::get_current_tid();
         if (m_contentionCount.fetch_add(1, std::memory_order_acquire) > 0) {
             if (tid != m_owner.load(std::memory_order_relaxed))
                 m_sema.wait();
@@ -80,7 +80,7 @@ public:
 
     bool tryLock()
     {
-        auto tid = ::dsn::utils::get_current_tid();
+        auto tid = ::pegasus::utils::get_current_tid();
         if (m_owner.load(std::memory_order_relaxed) == tid) {
             // Already inside the lock
             m_contentionCount.fetch_add(1, std::memory_order_relaxed);
@@ -100,12 +100,12 @@ public:
     void unlock()
     {
 #ifndef NDEBUG
-        auto tid = ::dsn::utils::get_current_tid();
+        auto tid = ::pegasus::utils::get_current_tid();
         assert(tid == m_owner.load(std::memory_order_relaxed));
 #endif
         int recur = --m_recursion;
         if (recur == 0)
-            m_owner.store(::dsn::utils::INVALID_TID, std::memory_order_relaxed);
+            m_owner.store(::pegasus::utils::INVALID_TID, std::memory_order_relaxed);
         if (m_contentionCount.fetch_sub(1, std::memory_order_release) > 1) {
             if (recur == 0)
                 m_sema.signal();

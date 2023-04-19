@@ -37,7 +37,7 @@
 #include "runtime/task/task_spec.h"
 #include "utils/customizable_id.h"
 
-namespace dsn {
+namespace pegasus {
 
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP)
 
@@ -105,4 +105,4 @@ private:
     std::queue<std::unique_ptr<message_ex>> _received_messages;
 };
 
-} // namespace dsn
+} // namespace pegasus

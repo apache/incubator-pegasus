@@ -28,7 +28,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 DSN_DEFINE_string(security, sasl_plugin_path, "/usr/lib/sasl2", "path to search sasl plugins");
 
@@ -148,4 +148,4 @@ error_s init_sasl(bool is_server)
     return ret;
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

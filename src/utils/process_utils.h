@@ -22,7 +22,7 @@
 
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 ///
 /// execute command in a seperate process,

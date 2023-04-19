@@ -26,13 +26,13 @@
 
 include "backup.thrift"
 include "bulk_load.thrift"
-include "dsn.thrift"
-include "dsn.layer2.thrift"
+include "pegasus.thrift"
+include "pegasus.layer2.thrift"
 include "duplication.thrift"
 include "metadata.thrift"
 include "partition_split.thrift"
 
-namespace cpp dsn.replication
+namespace cpp pegasus.replication
 namespace go admin
 namespace java org.apache.pegasus.replication
 
@@ -65,11 +65,11 @@ enum node_status
 // also served as proposals from meta server to replica servers
 struct configuration_update_request
 {
-    1:dsn.layer2.app_info                 info;
-    2:dsn.layer2.partition_configuration  config;
-    3:config_type              type = config_type.CT_INVALID;
-    4:dsn.rpc_address          node;
-    5:dsn.rpc_address          host_node; // deprecated, only used by stateless apps
+    1:pegasus.layer2.app_info                 info;
+    2:pegasus.layer2.partition_configuration  config;
+    3:config_type                             type = config_type.CT_INVALID;
+    4:pegasus.rpc_address                     node;
+    5:pegasus.rpc_address                     host_node; // deprecated, only used by stateless apps
 
     // Used for partition split
     // if replica is splitting (whose split_status is not NOT_SPLIT)
@@ -81,8 +81,8 @@ struct configuration_update_request
 // meta server (config mgr) => primary | secondary (downgrade) (w/ new config)
 struct configuration_update_response
 {
-    1:dsn.error_code           err;
-    2:dsn.layer2.partition_configuration  config;
+    1:pegasus.error_code                     err;
+    2:pegasus.layer2.partition_configuration config;
 }
 
 // client => meta server
@@ -100,28 +100,28 @@ struct replica_server_info
 
 struct configuration_query_by_node_request
 {
-    1:dsn.rpc_address  node;
+    1:pegasus.rpc_address node;
     2:optional list<metadata.replica_info> stored_replicas;
     3:optional replica_server_info info;
 }
 
 struct configuration_query_by_node_response
 {
-    1:dsn.error_code err;
+    1:pegasus.error_code err;
     2:list<configuration_update_request> partitions;
     3:optional list<metadata.replica_info> gc_replicas;
 }
 
 struct configuration_recovery_request
 {
-    1:list<dsn.rpc_address> recovery_set;
+    1:list<pegasus.rpc_address> recovery_set;
     2:bool skip_bad_nodes;
     3:bool skip_lost_partitions;
 }
 
 struct configuration_recovery_response
 {
-    1:dsn.error_code err;
+    1:pegasus.error_code err;
     2:string hint_message;
 }
 
@@ -146,8 +146,8 @@ struct configuration_create_app_request
 // meta server => client
 struct configuration_create_app_response
 {
-    1:dsn.error_code   err;
-    2:i32              appid;
+    1:pegasus.error_code err;
+    2:i32                appid;
 }
 
 struct drop_app_options
@@ -164,7 +164,7 @@ struct configuration_drop_app_request
 
 struct configuration_drop_app_response
 {
-    1:dsn.error_code   err;
+    1:pegasus.error_code   err;
 }
 
 struct configuration_rename_app_request
@@ -175,7 +175,7 @@ struct configuration_rename_app_request
 
 struct configuration_rename_app_response
 {
-    1:dsn.error_code err;
+    1:pegasus.error_code err;
     2:string hint_message;
 }
 
@@ -187,30 +187,30 @@ struct configuration_recall_app_request
 
 struct configuration_recall_app_response
 {
-    1:dsn.error_code err;
-    2:dsn.layer2.app_info info;
+    1:pegasus.error_code err;
+    2:pegasus.layer2.app_info info;
 }
 
 struct configuration_list_apps_request
 {
-    1:dsn.layer2.app_status    status = app_status.AS_INVALID;
+    1:pegasus.layer2.app_status status = app_status.AS_INVALID;
 }
 
 struct configuration_list_apps_response
 {
-    1:dsn.error_code              err;
-    2:list<dsn.layer2.app_info>   infos;
+    1:pegasus.error_code            err;
+    2:list<pegasus.layer2.app_info> infos;
 }
 
 struct query_app_info_request
 {
-    1:dsn.rpc_address meta_server;
+    1:pegasus.rpc_address meta_server;
 }
 
 struct query_app_info_response
 {
-    1:dsn.error_code err;
-    2:list<dsn.layer2.app_info> apps;
+    1:pegasus.error_code err;
+    2:list<pegasus.layer2.app_info> apps;
 }
 
 enum app_env_operation
@@ -234,7 +234,7 @@ struct configuration_update_app_env_request
 
 struct configuration_update_app_env_response
 {
-    1:dsn.error_code err;
+    1:pegasus.error_code err;
     2:string hint_message;
 }
 
@@ -254,8 +254,8 @@ struct start_app_manual_compact_response
     // - ERR_APP_DROPPED: app has been dropped
     // - ERR_OPERATION_DISABLED: app disable manual compaction
     // - ERR_INVALID_PARAMETERS: invalid manual compaction parameters
-    1:dsn.error_code    err;
-    2:string            hint_msg;
+    1:pegasus.error_code err;
+    2:string             hint_msg;
 }
 
 struct query_app_manual_compact_request
@@ -269,17 +269,17 @@ struct query_app_manual_compact_response
     // - ERR_APP_NOT_EXIST: app not exist
     // - ERR_APP_DROPPED: app has been dropped
     // - ERR_INVALID_STATE: app is not executing manual compaction
-    1:dsn.error_code    err;
-    2:string            hint_msg;
-    3:optional i32      progress;
+    1:pegasus.error_code err;
+    2:string             hint_msg;
+    3:optional i32       progress;
 }
 
 /////////////////// Nodes Management ////////////////////
 
 struct node_info
 {
-    1:node_status      status = node_status.NS_INVALID;
-    2:dsn.rpc_address  address;
+    1:node_status         status = node_status.NS_INVALID;
+    2:pegasus.rpc_address address;
 }
 
 struct configuration_list_nodes_request
@@ -289,8 +289,8 @@ struct configuration_list_nodes_request
 
 struct configuration_list_nodes_response
 {
-    1:dsn.error_code   err;
-    2:list<node_info>  infos;
+    1:pegasus.error_code err;
+    2:list<node_info>    infos;
 }
 
 struct configuration_cluster_info_request
@@ -299,9 +299,9 @@ struct configuration_cluster_info_request
 
 struct configuration_cluster_info_response
 {
-    1:dsn.error_code   err;
-    2:list<string>     keys;
-    3:list<string>     values;
+    1:pegasus.error_code err;
+    2:list<string>       keys;
+    3:list<string>       values;
 }
 
 enum meta_function_level
@@ -329,7 +329,7 @@ struct configuration_meta_control_request
 
 struct configuration_meta_control_response
 {
-    1:dsn.error_code err;
+    1:pegasus.error_code err;
     2:meta_function_level old_level;
 }
 
@@ -342,8 +342,8 @@ enum balancer_request_type
 
 struct configuration_proposal_action
 {
-    1:dsn.rpc_address target;
-    2:dsn.rpc_address node;
+    1:pegasus.rpc_address target;
+    2:pegasus.rpc_address node;
     3:config_type type;
 
     // depricated now
@@ -353,7 +353,7 @@ struct configuration_proposal_action
 
 struct configuration_balancer_request
 {
-    1:dsn.gpid gpid;
+    1:pegasus.gpid gpid;
     2:list<configuration_proposal_action> action_list;
     3:optional bool force = false;
     4:optional balancer_request_type balance_type;
@@ -361,7 +361,7 @@ struct configuration_balancer_request
 
 struct configuration_balancer_response
 {
-    1:dsn.error_code err;
+    1:pegasus.error_code err;
 }
 
 struct ddd_diagnose_request
@@ -369,30 +369,30 @@ struct ddd_diagnose_request
     // app_id == -1 means return all partitions of all apps
     // app_id != -1 && partition_id == -1 means return all partitions of specified app
     // app_id != -1 && partition_id != -1 means return specified partition
-    1:dsn.gpid pid;
+    1:pegasus.gpid pid;
 }
 
 struct ddd_node_info
 {
-    1:dsn.rpc_address node;
-    2:i64             drop_time_ms;
-    3:bool            is_alive; // if the node is alive now
-    4:bool            is_collected; // if replicas has been collected from this node
-    5:i64             ballot; // collected && ballot == -1 means replica not exist on this node
-    6:i64             last_committed_decree;
-    7:i64             last_prepared_decree;
+    1:pegasus.rpc_address node;
+    2:i64                 drop_time_ms;
+    3:bool                is_alive; // if the node is alive now
+    4:bool                is_collected; // if replicas has been collected from this node
+    5:i64                 ballot; // collected && ballot == -1 means replica not exist on this node
+    6:i64                 last_committed_decree;
+    7:i64                 last_prepared_decree;
 }
 
 struct ddd_partition_info
 {
-    1:dsn.layer2.partition_configuration config;
-    2:list<ddd_node_info>                dropped;
-    3:string                             reason;
+    1:pegasus.layer2.partition_configuration config;
+    2:list<ddd_node_info>                    dropped;
+    3:string                                 reason;
 }
 
 struct ddd_diagnose_response
 {
-    1:dsn.error_code           err;
+    1:pegasus.error_code       err;
     2:list<ddd_partition_info> partitions;
 }
 
@@ -403,7 +403,7 @@ struct configuration_get_max_replica_count_request
 
 struct configuration_get_max_replica_count_response
 {
-    1:dsn.error_code            err;
+    1:pegasus.error_code        err;
     2:i32                       max_replica_count;
     3:string                    hint_message;
 }
@@ -416,7 +416,7 @@ struct configuration_set_max_replica_count_request
 
 struct configuration_set_max_replica_count_response
 {
-    1:dsn.error_code            err;
+    1:pegasus.error_code        err;
     2:i32                       old_max_replica_count;
     3:string                    hint_message;
 }

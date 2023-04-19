@@ -47,7 +47,7 @@
 #include "perf_counter/perf_counter_wrapper.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 
 TEST(perf_counters_test, counter_create_remove)
 {
@@ -148,14 +148,14 @@ TEST(perf_counters_test, snapshot)
     // in the beginning, builtin counters are in counter_list
     ASSERT_TRUE(check_map_contains(counter_keys, expected));
 
-    dsn::perf_counter_wrapper c1;
+    perf_counter_wrapper c1;
     c1.init_global_counter("a", "s", "test_counter", COUNTER_TYPE_NUMBER, "");
-    dsn::perf_counter_wrapper c2;
+    perf_counter_wrapper c2;
     c2.init_global_counter("a", "s", "test_counter", COUNTER_TYPE_NUMBER, "");
 
-    dsn::perf_counter_wrapper c3;
+    perf_counter_wrapper c3;
     c3.init_global_counter("b", "s", "test_counter", COUNTER_TYPE_VOLATILE_NUMBER, "");
-    dsn::perf_counter_wrapper c4;
+    perf_counter_wrapper c4;
     c4.init_global_counter("b", "s", "test_counter", COUNTER_TYPE_VOLATILE_NUMBER, "");
 
     // snapshot will contain new counters
@@ -170,14 +170,14 @@ TEST(perf_counters_test, snapshot)
     perf_counters::instance().iterate_snapshot(iter);
     ASSERT_TRUE(check_map_contains(counter_keys, expected));
 
-    dsn::perf_counter_wrapper c5;
+    perf_counter_wrapper c5;
     c5.init_global_counter("c", "s", "test_counter", COUNTER_TYPE_RATE, "");
-    dsn::perf_counter_wrapper c6;
+    perf_counter_wrapper c6;
     c6.init_global_counter("c", "s", "test_counter", COUNTER_TYPE_RATE, "");
 
-    dsn::perf_counter_wrapper c7;
+    perf_counter_wrapper c7;
     c7.init_global_counter("d", "s", "test_counter", COUNTER_TYPE_NUMBER_PERCENTILES, "");
-    dsn::perf_counter_wrapper c8;
+    perf_counter_wrapper c8;
     c8.init_global_counter("d", "s", "test_counter", COUNTER_TYPE_NUMBER_PERCENTILES, "");
 
     // new counters won't be contained in snapshot if you don't call "take snapshot"
@@ -263,32 +263,31 @@ TEST(perf_counters_test, snapshot)
 
 TEST(perf_counters_test, query_snapshot_by_regexp)
 {
-    dsn::perf_counter_wrapper c1;
+    perf_counter_wrapper c1;
     c1.init_global_counter("a", "s", "test_counter", COUNTER_TYPE_NUMBER, "");
-    dsn::perf_counter_wrapper c2;
+    perf_counter_wrapper c2;
     c2.init_global_counter("a", "s", "test_counter", COUNTER_TYPE_NUMBER, "");
 
-    dsn::perf_counter_wrapper c3;
+    perf_counter_wrapper c3;
     c3.init_global_counter("b", "s", "test_counter", COUNTER_TYPE_VOLATILE_NUMBER, "");
-    dsn::perf_counter_wrapper c4;
+    perf_counter_wrapper c4;
     c4.init_global_counter("b", "s", "test_counter", COUNTER_TYPE_VOLATILE_NUMBER, "");
 
-    dsn::perf_counter_wrapper c5;
+    perf_counter_wrapper c5;
     c5.init_global_counter("c", "s", "test_counter", COUNTER_TYPE_RATE, "");
-    dsn::perf_counter_wrapper c6;
+    perf_counter_wrapper c6;
     c6.init_global_counter("c", "s", "test_counter", COUNTER_TYPE_RATE, "");
 
-    dsn::perf_counter_wrapper c7;
+    perf_counter_wrapper c7;
     c7.init_global_counter("d", "s", "test_counter", COUNTER_TYPE_NUMBER_PERCENTILES, "");
-    dsn::perf_counter_wrapper c8;
+    perf_counter_wrapper c8;
     c8.init_global_counter("d", "s", "test_counter", COUNTER_TYPE_NUMBER_PERCENTILES, "");
 
     perf_counters::instance().take_snapshot();
     std::string result = perf_counters::instance().list_snapshot_by_regexp({".*\\*s\\*.*"});
 
-    dsn::perf_counter_info info;
-    dsn::json::json_forwarder<dsn::perf_counter_info>::decode(
-        dsn::blob(result.c_str(), 0, result.size()), info);
+    perf_counter_info info;
+    json::json_forwarder<perf_counter_info>::decode(blob(result.c_str(), 0, result.size()), info);
     ASSERT_STREQ("OK", info.result.c_str());
     ASSERT_GT(info.timestamp, 0);
     ASSERT_TRUE(!info.timestamp_str.empty());
@@ -303,14 +302,13 @@ TEST(perf_counters_test, query_snapshot_by_regexp)
         {"d*s*test_counter.p999", dsn_counter_type_to_string(COUNTER_TYPE_NUMBER_PERCENTILES)},
     };
     std::map<std::string, std::string> actual;
-    for (const dsn::perf_counter_metric &m : info.counters) {
+    for (const perf_counter_metric &m : info.counters) {
         actual.emplace(m.name, m.type);
     }
     ASSERT_EQ(expected, actual);
 
     result = perf_counters::instance().list_snapshot_by_regexp({"hahaha"});
-    dsn::json::json_forwarder<dsn::perf_counter_info>::decode(
-        dsn::blob(result.c_str(), 0, result.size()), info);
+    json::json_forwarder<perf_counter_info>::decode(blob(result.c_str(), 0, result.size()), info);
     ASSERT_STREQ("OK", info.result.c_str());
     ASSERT_GT(info.timestamp, 0);
     ASSERT_TRUE(!info.timestamp_str.empty());
@@ -318,8 +316,7 @@ TEST(perf_counters_test, query_snapshot_by_regexp)
     ASSERT_TRUE(info.counters.empty());
 
     result = perf_counters::instance().list_snapshot_by_regexp({""});
-    dsn::json::json_forwarder<dsn::perf_counter_info>::decode(
-        dsn::blob(result.c_str(), 0, result.size()), info);
+    json::json_forwarder<perf_counter_info>::decode(blob(result.c_str(), 0, result.size()), info);
     ASSERT_STREQ("OK", info.result.c_str());
     ASSERT_GT(info.timestamp, 0);
     ASSERT_TRUE(!info.timestamp_str.empty());
@@ -356,4 +353,4 @@ TEST(perf_counters_test, get_by_fullname)
         }
     }
 }
-} // namespace dsn
+} // namespace pegasus

@@ -32,19 +32,19 @@
 #include <string>
 #include <vector>
 
-#include "client/partition_resolver.h"
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "metadata_types.h"
 #include "misc/misc.h"
+#include "pegasus.layer2_types.h"
 #include "runtime/rpc/rpc_address.h"
 
-using namespace dsn::replication;
+namespace pegasus {
+namespace replication {
 
 TEST(meta_data, dropped_cmp)
 {
-    dsn::rpc_address n;
+    rpc_address n;
 
     dropped_replica d1, d2;
     // time not equal
@@ -113,10 +113,10 @@ TEST(meta_data, collect_replica)
     app_mapper app;
     node_mapper nodes;
 
-    dsn::app_info info;
+    app_info info;
     info.app_id = 1;
     info.is_stateful = true;
-    info.status = dsn::app_status::AS_AVAILABLE;
+    info.status = app_status::AS_AVAILABLE;
     info.app_name = "test";
     info.app_type = "test";
     info.max_replica_count = 3;
@@ -127,12 +127,12 @@ TEST(meta_data, collect_replica)
 
     replica_info rep;
     rep.app_type = "test";
-    rep.pid = dsn::gpid(1, 0);
+    rep.pid = gpid(1, 0);
 
-    dsn::partition_configuration &pc = *get_config(app, rep.pid);
+    partition_configuration &pc = *get_config(app, rep.pid);
     config_context &cc = *get_config_context(app, rep.pid);
 
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
     generate_node_list(node_list, 10, 10);
 
 #define CLEAR_REPLICA                                                                              \
@@ -356,10 +356,10 @@ TEST(meta_data, construct_replica)
     app_mapper app;
     node_mapper nodes;
 
-    dsn::app_info info;
+    app_info info;
     info.app_id = 1;
     info.is_stateful = true;
-    info.status = dsn::app_status::AS_AVAILABLE;
+    info.status = app_status::AS_AVAILABLE;
     info.app_name = "test";
     info.app_type = "test";
     info.max_replica_count = 3;
@@ -370,12 +370,12 @@ TEST(meta_data, construct_replica)
 
     replica_info rep;
     rep.app_type = "test";
-    rep.pid = dsn::gpid(1, 0);
+    rep.pid = gpid(1, 0);
 
-    dsn::partition_configuration &pc = *get_config(app, rep.pid);
+    partition_configuration &pc = *get_config(app, rep.pid);
     config_context &cc = *get_config_context(app, rep.pid);
 
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
     generate_node_list(node_list, 10, 10);
 
 #define CLEAR_REPLICA                                                                              \
@@ -423,7 +423,7 @@ TEST(meta_data, construct_replica)
         ASSERT_EQ(node_list[4], pc.primary);
         ASSERT_TRUE(pc.secondaries.empty());
 
-        std::vector<dsn::rpc_address> nodes = {node_list[2], node_list[3]};
+        std::vector<rpc_address> nodes = {node_list[2], node_list[3]};
         ASSERT_EQ(nodes, pc.last_drops);
         ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(2, cc.prefered_dropped);
@@ -440,7 +440,7 @@ TEST(meta_data, construct_replica)
         ASSERT_EQ(node_list[2], pc.primary);
         ASSERT_TRUE(pc.secondaries.empty());
 
-        std::vector<dsn::rpc_address> nodes = {node_list[0], node_list[1]};
+        std::vector<rpc_address> nodes = {node_list[0], node_list[1]};
         ASSERT_EQ(nodes, pc.last_drops);
         ASSERT_EQ(2, cc.dropped.size());
         ASSERT_EQ(1, cc.prefered_dropped);
@@ -458,10 +458,12 @@ TEST(meta_data, construct_replica)
         ASSERT_EQ(node_list[3], pc.primary);
         ASSERT_TRUE(pc.secondaries.empty());
 
-        std::vector<dsn::rpc_address> nodes = {node_list[1], node_list[2]};
+        std::vector<rpc_address> nodes = {node_list[1], node_list[2]};
         ASSERT_EQ(nodes, pc.last_drops);
 
         ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(2, cc.prefered_dropped);
     }
 }
+} // namespace replication
+} // namespace pegasus

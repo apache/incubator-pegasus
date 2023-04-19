@@ -29,7 +29,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_address;
 
 namespace replication {
@@ -50,7 +50,7 @@ app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(
         _only_primary_balancer = false;
         _only_move_primary = false;
     }
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(command_manager::instance().register_command(
         {"meta.lb.balancer_in_turn"},
         "meta.lb.balancer_in_turn <true|false>",
         "control whether do app balancer in turn",
@@ -58,7 +58,7 @@ app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(
             return remote_command_set_bool_flag(_balancer_in_turn, "lb.balancer_in_turn", args);
         }));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(command_manager::instance().register_command(
         {"meta.lb.only_primary_balancer"},
         "meta.lb.only_primary_balancer <true|false>",
         "control whether do only primary balancer",
@@ -67,7 +67,7 @@ app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(
                 _only_primary_balancer, "lb.only_primary_balancer", args);
         }));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(command_manager::instance().register_command(
         {"meta.lb.only_move_primary"},
         "meta.lb.only_move_primary <true|false>",
         "control whether only move primary in balancer",
@@ -137,8 +137,8 @@ copy_secondary_operation::copy_secondary_operation(
     const std::shared_ptr<app_state> app,
     const app_mapper &apps,
     node_mapper &nodes,
-    const std::vector<dsn::rpc_address> &address_vec,
-    const std::unordered_map<dsn::rpc_address, int> &address_id,
+    const std::vector<rpc_address> &address_vec,
+    const std::unordered_map<rpc_address, int> &address_id,
     int replicas_low)
     : copy_replica_operation(app, apps, nodes, address_vec, address_id), _replicas_low(replicas_low)
 {
@@ -197,4 +197,4 @@ bool copy_secondary_operation::can_select(gpid pid, migration_list *result)
 balance_type copy_secondary_operation::get_balance_type() { return balance_type::COPY_SECONDARY; }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

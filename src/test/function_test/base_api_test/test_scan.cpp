@@ -57,14 +57,14 @@ public:
     void SetUp() override
     {
         test_util::SetUp();
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0));
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->create_app(app_name_, "pegasus", 8, 3, {}, false));
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0));
+        ASSERT_EQ(ERR_OK, ddl_client_->create_app(app_name_, "pegasus", 8, 3, {}, false));
         client_ = pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
         ASSERT_TRUE(client_ != nullptr);
         ASSERT_NO_FATAL_FAILURE(fill_database());
     }
 
-    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
+    void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
 
     // REQUIRED: 'buffer_' has been filled with random chars.
     const std::string random_string() const
@@ -384,7 +384,7 @@ TEST_F(scan_test, REQUEST_EXPIRE_TS)
     std::vector<pegasus_client::pegasus_scanner *> raw_scanners;
     ASSERT_EQ(PERR_OK, client_->get_unordered_scanners(3, options, raw_scanners));
 
-    std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
+    std::vector<pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto raw_scanner : raw_scanners) {
         ASSERT_NE(nullptr, raw_scanner);
         scanners.push_back(raw_scanner->get_smart_wrapper());
@@ -397,20 +397,20 @@ TEST_F(scan_test, REQUEST_EXPIRE_TS)
     for (auto scanner : scanners) {
         std::atomic_bool split_completed(false);
         while (!split_completed.load()) {
-            dsn::utils::notify_event op_completed;
+            utils::notify_event op_completed;
             scanner->async_next([&](int err,
                                     std::string &&hash_key,
                                     std::string &&sort_key,
                                     std::string &&value,
-                                    pegasus::pegasus_client::internal_info &&info,
+                                    pegasus_client::internal_info &&info,
                                     uint32_t expire_ts_seconds,
                                     int32_t kv_count) {
-                if (err == pegasus::PERR_OK) {
+                if (err == PERR_OK) {
                     check_and_put(data, hash_key, sort_key, value);
                     if (expire_ts_seconds > 0) {
                         check_and_put(ttl_data, hash_key, sort_key, value, expire_ts_seconds);
                     }
-                } else if (err == pegasus::PERR_SCAN_COMPLETE) {
+                } else if (err == PERR_SCAN_COMPLETE) {
                     split_completed.store(true);
                 } else {
                     ASSERT_TRUE(false) << "Error occurred when scan. error="
@@ -432,7 +432,7 @@ TEST_F(scan_test, ITERATION_TIME_LIMIT)
     auto response = ddl_client_->set_app_envs(
         client_->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(1)});
     ASSERT_EQ(true, response.is_ok());
-    ASSERT_EQ(dsn::ERR_OK, response.get_value().err);
+    ASSERT_EQ(ERR_OK, response.get_value().err);
     // wait envs to be synced.
     std::this_thread::sleep_for(std::chrono::seconds(30));
 
@@ -457,5 +457,5 @@ TEST_F(scan_test, ITERATION_TIME_LIMIT)
     response = ddl_client_->set_app_envs(
         client_->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(100)});
     ASSERT_TRUE(response.is_ok());
-    ASSERT_EQ(dsn::ERR_OK, response.get_value().err);
+    ASSERT_EQ(ERR_OK, response.get_value().err);
 }

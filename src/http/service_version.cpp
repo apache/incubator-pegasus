@@ -17,8 +17,8 @@
 
 #include "service_version.h"
 
-namespace dsn {
+namespace pegasus {
 
 service_version app_version;
 
-} // namespace dsn
+} // namespace pegasus

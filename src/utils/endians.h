@@ -25,7 +25,7 @@
 #include "ports.h"
 #include "string_view.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace endian {
 
@@ -155,4 +155,4 @@ private:
     size_t _size{0};
 };
 
-} // namespace dsn
+} // namespace pegasus

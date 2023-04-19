@@ -32,7 +32,7 @@
 #include "runtime/task/task_code.h"
 #include "task_queue.h"
 
-namespace dsn {
+namespace pegasus {
 class task;
 class task_worker_pool;
 

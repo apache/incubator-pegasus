@@ -35,10 +35,9 @@
 #include "base/pegasus_const.h"
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-#include "common/gpid.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
 #include "include/pegasus/client.h"
+#include "pegasus.layer2_types.h"
 #include "pegasus/error.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
@@ -49,9 +48,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
 
-using namespace ::dsn;
-using namespace ::dsn::replication;
 using namespace pegasus;
+using namespace pegasus::replication;
 
 // TODO(yingchun): backup & restore festure is on refactoring, we can refactor the related function
 // test later.
@@ -64,10 +62,10 @@ public:
     {
         std::string provider_dir = "block_service/local_service";
         policy_dir = "onebox/" + provider_dir + '/' +
-                     dsn::utils::filesystem::path_combine(cluster_name, policy_name);
+                     utils::filesystem::path_combine(cluster_name, policy_name);
         backup_dir = "onebox/" + provider_dir + '/' + cluster_name;
 
-        std::vector<dsn::rpc_address> meta_list;
+        std::vector<rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name.c_str()));
         ASSERT_FALSE(meta_list.empty());
@@ -85,8 +83,7 @@ public:
             old_app_id = app_id;
         }
         ASSERT_GE(app_id, 0);
-        pg_client =
-            pegasus::pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
+        pg_client = pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
         ASSERT_NE(pg_client, nullptr);
 
         write_data();
@@ -130,7 +127,7 @@ public:
         std::cout << "start to get " << kv_pair_cnt << " key-value pairs, using get()..."
                   << std::endl;
         new_pg_client =
-            pegasus::pegasus_client_factory::get_client(cluster_name.c_str(), new_app_name.c_str());
+            pegasus_client_factory::get_client(cluster_name.c_str(), new_app_name.c_str());
         ASSERT_NE(nullptr, new_pg_client);
 
         int64_t start = dsn_now_ms();
@@ -215,7 +212,7 @@ public:
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
                                                "rm restore_app_from_backup_test_tmp";
         std::stringstream ss;
-        int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
+        int ret = utils::pipe_execute(cmd.c_str(), ss);
         std::cout << cmd << " output: " << ss.str() << std::endl;
         CHECK_EQ(ret, 0);
         std::string result = ss.str();
@@ -236,14 +233,14 @@ public:
     bool find_second_backup_timestamp()
     {
         std::vector<std::string> dirs;
-        ::dsn::utils::filesystem::get_subdirectories(policy_dir, dirs, false);
+        utils::filesystem::get_subdirectories(policy_dir, dirs, false);
         return (dirs.size() >= 2);
     }
 
     bool is_app_info_backup_complete()
     {
         std::string backup_info = backup_dir + "/" + std::to_string(time_stamp) + "/backup_info";
-        return dsn::utils::filesystem::file_exists(backup_info);
+        return utils::filesystem::file_exists(backup_info);
     }
 
 public:

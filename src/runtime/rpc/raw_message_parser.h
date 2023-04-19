@@ -39,7 +39,7 @@
 #include "runtime/task/task_spec.h"
 #include "utils/customizable_id.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_RAW)

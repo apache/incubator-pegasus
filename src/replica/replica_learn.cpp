@@ -52,7 +52,7 @@
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -81,7 +81,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_int32(replication,
@@ -258,8 +259,8 @@ void replica::init_learn(uint64_t signature)
                     _potential_secondary_states.learning_copy_file_size,
                     _potential_secondary_states.learning_copy_buffer_size);
 
-    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_LEARN, 0, get_gpid().thread_hash());
-    dsn::marshall(msg, request);
+    message_ex *msg = message_ex::create_request(RPC_LEARN, 0, get_gpid().thread_hash());
+    marshall(msg, request);
     _potential_secondary_states.learning_task = rpc::call(
         _config.primary,
         msg,
@@ -360,7 +361,7 @@ decree replica::get_learn_start_decree(const learn_request &request) // on prima
     return learn_start_decree;
 }
 
-void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
+void replica::on_learn(message_ex *msg, const learn_request &request)
 {
     _checker.only_one_thread_access();
 
@@ -531,7 +532,7 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
                             response.state.files.size(),
                             response.state.to_decree_included);
         } else {
-            ::dsn::error_code err = _app->get_checkpoint(
+            error_code err = _app->get_checkpoint(
                 learn_start_decree, request.app_specific_learn_request, response.state);
 
             if (err != ERR_OK) {
@@ -665,10 +666,10 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         // backup old data dir
         if (err == ERR_OK) {
             std::string old_dir = _app->data_dir();
-            if (dsn::utils::filesystem::directory_exists(old_dir)) {
+            if (directory_exists(old_dir)) {
                 char rename_dir[1024];
                 sprintf(rename_dir, "%s.%" PRIu64 ".discarded", old_dir.c_str(), dsn_now_us());
-                CHECK(dsn::utils::filesystem::rename_path(old_dir, rename_dir),
+                CHECK(rename_path(old_dir, rename_dir),
                       "{}: failed to move directory from '{}' to '{}'",
                       name(),
                       old_dir,
@@ -869,10 +870,10 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
     else if (resp.state.files.size() > 0) {
         auto learn_dir = _app->learn_dir();
-        utils::filesystem::remove_path(learn_dir);
+        remove_path(learn_dir);
         utils::filesystem::create_directory(learn_dir);
 
-        if (!dsn::utils::filesystem::directory_exists(learn_dir)) {
+        if (!directory_exists(learn_dir)) {
             LOG_ERROR_PREFIX(
                 "on_learn_reply[{:#018x}]: learnee = {}, create replica learn dir {} failed",
                 req.signature,
@@ -1065,7 +1066,7 @@ void replica::on_copy_remote_state_completed(error_code err,
         }
 
         for (auto &f : resp.state.files) {
-            std::string file = utils::filesystem::path_combine(_app->learn_dir(), f);
+            std::string file = path_combine(_app->learn_dir(), f);
             lstate.files.push_back(file);
         }
 
@@ -1247,8 +1248,7 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
         is_local_error ? partition_status::PS_ERROR : partition_status::PS_INACTIVE);
 }
 
-error_code replica::handle_learning_succeeded_on_primary(::dsn::rpc_address node,
-                                                         uint64_t learn_signature)
+error_code replica::handle_learning_succeeded_on_primary(rpc_address node, uint64_t learn_signature)
 {
     auto it = _primary_states.learners.find(node);
     if (it == _primary_states.learners.end()) {
@@ -1299,9 +1299,9 @@ void replica::notify_learn_completion()
         _potential_secondary_states.completion_notify_task->cancel(false);
     }
 
-    dsn::message_ex *msg =
-        dsn::message_ex::create_request(RPC_LEARN_COMPLETION_NOTIFY, 0, get_gpid().thread_hash());
-    dsn::marshall(msg, report);
+    message_ex *msg =
+        message_ex::create_request(RPC_LEARN_COMPLETION_NOTIFY, 0, get_gpid().thread_hash());
+    marshall(msg, report);
 
     _potential_secondary_states.completion_notify_task =
         rpc::call(_config.primary, msg, &_tracker, [
@@ -1613,4 +1613,4 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
     return err;
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

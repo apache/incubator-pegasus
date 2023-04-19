@@ -52,7 +52,7 @@ is_profile = false
 </PRE>
 */
 
-namespace dsn {
+namespace pegasus {
 struct service_spec;
 
 namespace tools {
@@ -65,4 +65,4 @@ public:
 };
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

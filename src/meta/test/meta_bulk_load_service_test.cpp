@@ -40,7 +40,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_options.h"
@@ -58,7 +58,7 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class bulk_load_service_test : public meta_test_base
 {
@@ -409,7 +409,7 @@ public:
                          ainfo.app_name,
                          ainfo.app_id,
                          app_path,
-                         dsn::enum_to_string(ainfo.status));
+                         enum_to_string(ainfo.status));
                 for (const auto &kv : partition_bulk_load_info_map) {
                     mock_partition_bulk_load_info_on_remote_storage(gpid(ainfo.app_id, kv.first),
                                                                     kv.second);
@@ -427,7 +427,7 @@ public:
                 LOG_INFO("create partition[{}] bulk load dir({}), bulk_load_status={}",
                          pid,
                          partition_path,
-                         dsn::enum_to_string(pinfo.status));
+                         enum_to_string(pinfo.status));
             });
     }
 
@@ -1671,4 +1671,4 @@ TEST_F(bulk_load_failover_test, status_inconsistency_wrong_bulk_load_dir)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

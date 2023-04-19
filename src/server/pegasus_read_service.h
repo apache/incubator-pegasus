@@ -24,26 +24,21 @@
 namespace pegasus {
 namespace server {
 
-typedef ::dsn::rpc_holder<::dsn::blob, ::dsn::apps::read_response> get_rpc;
-typedef ::dsn::rpc_holder<dsn::apps::multi_get_request, dsn::apps::multi_get_response>
-    multi_get_rpc;
-typedef ::dsn::rpc_holder<::dsn::apps::batch_get_request, ::dsn::apps::batch_get_response>
-    batch_get_rpc;
-typedef ::dsn::rpc_holder<::dsn::blob, dsn::apps::count_response> sortkey_count_rpc;
-typedef ::dsn::rpc_holder<::dsn::blob, dsn::apps::ttl_response> ttl_rpc;
-typedef ::dsn::rpc_holder<::dsn::apps::get_scanner_request, dsn::apps::scan_response>
-    get_scanner_rpc;
-typedef ::dsn::rpc_holder<::dsn::apps::scan_request, dsn::apps::scan_response> scan_rpc;
+typedef rpc_holder<blob, apps::read_response> get_rpc;
+typedef rpc_holder<apps::multi_get_request, apps::multi_get_response> multi_get_rpc;
+typedef rpc_holder<apps::batch_get_request, apps::batch_get_response> batch_get_rpc;
+typedef rpc_holder<blob, apps::count_response> sortkey_count_rpc;
+typedef rpc_holder<blob, apps::ttl_response> ttl_rpc;
+typedef rpc_holder<apps::get_scanner_request, apps::scan_response> get_scanner_rpc;
+typedef rpc_holder<apps::scan_request, apps::scan_response> scan_rpc;
 
-class pegasus_read_service : public dsn::replication::replication_app_base,
-                             public dsn::replication::storage_serverlet<pegasus_read_service>
+class pegasus_read_service : public replication::replication_app_base,
+                             public replication::storage_serverlet<pegasus_read_service>
 {
 public:
-    pegasus_read_service(dsn::replication::replica *r) : dsn::replication::replication_app_base(r)
-    {
-    }
+    pegasus_read_service(replication::replica *r) : replication::replication_app_base(r) {}
 
-    int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
+    int on_request(message_ex *request) override WARN_UNUSED_RESULT
     {
         return handle_request(request);
     }
@@ -69,19 +64,19 @@ protected:
 
     static void register_rpc_handlers()
     {
-        register_rpc_handler_with_rpc_holder(dsn::apps::RPC_RRDB_RRDB_GET, "get", on_get);
+        register_rpc_handler_with_rpc_holder(apps::RPC_RRDB_RRDB_GET, "get", on_get);
         register_rpc_handler_with_rpc_holder(
-            dsn::apps::RPC_RRDB_RRDB_MULTI_GET, "multi_get", on_multi_get);
+            apps::RPC_RRDB_RRDB_MULTI_GET, "multi_get", on_multi_get);
         register_rpc_handler_with_rpc_holder(
-            dsn::apps::RPC_RRDB_RRDB_BATCH_GET, "batch_get", on_batch_get);
+            apps::RPC_RRDB_RRDB_BATCH_GET, "batch_get", on_batch_get);
         register_rpc_handler_with_rpc_holder(
-            dsn::apps::RPC_RRDB_RRDB_SORTKEY_COUNT, "sortkey_count", on_sortkey_count);
-        register_rpc_handler_with_rpc_holder(dsn::apps::RPC_RRDB_RRDB_TTL, "ttl", on_ttl);
+            apps::RPC_RRDB_RRDB_SORTKEY_COUNT, "sortkey_count", on_sortkey_count);
+        register_rpc_handler_with_rpc_holder(apps::RPC_RRDB_RRDB_TTL, "ttl", on_ttl);
         register_rpc_handler_with_rpc_holder(
-            dsn::apps::RPC_RRDB_RRDB_GET_SCANNER, "get_scanner", on_get_scanner);
-        register_rpc_handler_with_rpc_holder(dsn::apps::RPC_RRDB_RRDB_SCAN, "scan", on_scan);
+            apps::RPC_RRDB_RRDB_GET_SCANNER, "get_scanner", on_get_scanner);
+        register_rpc_handler_with_rpc_holder(apps::RPC_RRDB_RRDB_SCAN, "scan", on_scan);
         register_async_rpc_handler(
-            dsn::apps::RPC_RRDB_RRDB_CLEAR_SCANNER, "clear_scanner", on_clear_scanner);
+            apps::RPC_RRDB_RRDB_CLEAR_SCANNER, "clear_scanner", on_clear_scanner);
     }
 
 private:

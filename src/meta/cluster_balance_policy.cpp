@@ -24,13 +24,13 @@
 #include <iterator>
 #include <unordered_map>
 
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/load_balance_policy.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class meta_service;
 
@@ -559,4 +559,4 @@ bool cluster_balance_policy::apply_move(const move_info &move,
     return true;
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

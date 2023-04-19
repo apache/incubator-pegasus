@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <string>
 
-namespace dsn {
+namespace pegasus {
 
 namespace replication {
 
@@ -86,4 +86,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -30,21 +30,24 @@
 #include "server/compaction_operation.h"
 #include "server/pegasus_server_impl.h"
 #include "utils/error_code.h"
+#include "utils/utils.h"
 
 std::atomic_bool gtest_done{false};
 std::atomic_int gtest_ret{false};
 
-class gtest_app : public dsn::service_app
+using namespace pegasus;
+
+class gtest_app : public service_app
 {
 public:
-    explicit gtest_app(const dsn::service_app_info *info) : dsn::service_app(info) {}
+    explicit gtest_app(const service_app_info *info) : service_app(info) {}
 
-    dsn::error_code start(const std::vector<std::string> &args) override
+    error_code start(const std::vector<std::string> &args) override
     {
-        dsn::service_app::start(args);
+        service_app::start(args);
         gtest_ret = RUN_ALL_TESTS();
         gtest_done = true;
-        return dsn::ERR_OK;
+        return ERR_OK;
     }
 };
 
@@ -52,12 +55,11 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::service_app::register_factory<gtest_app>("replica");
+    service_app::register_factory<gtest_app>("replica");
 
-    dsn::replication::replication_app_base::register_storage_engine(
-        "pegasus",
-        dsn::replication::replication_app_base::create<pegasus::server::pegasus_server_impl>);
-    pegasus::server::register_compaction_operations();
+    replication::replication_app_base::register_storage_engine(
+        "pegasus", replication::replication_app_base::create<server::pegasus_server_impl>);
+    server::register_compaction_operations();
 
     dsn_run_config("config.ini", false);
     while (!gtest_done) {

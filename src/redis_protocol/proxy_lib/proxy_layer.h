@@ -31,26 +31,24 @@
 #include "utils/threadpool_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace proxy {
 
-DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT,
-                     TASK_PRIORITY_COMMON,
-                     ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 class proxy_stub;
 
 class proxy_session : public std::enable_shared_from_this<proxy_session>
 {
 public:
-    typedef std::function<std::shared_ptr<proxy_session>(proxy_stub *p, dsn::message_ex *first_msg)>
+    typedef std::function<std::shared_ptr<proxy_session>(proxy_stub *p, message_ex *first_msg)>
         factory;
-    proxy_session(proxy_stub *p, dsn::message_ex *first_msg);
+    proxy_session(proxy_stub *p, message_ex *first_msg);
     virtual ~proxy_session();
 
     // on_recv_request & on_remove_session are called by proxy_stub when messages are got from
@@ -62,13 +60,13 @@ public:
     //
     // however, during the running of on_recv_request, an "on_remove_session" may be called,
     // the proxy_session and its derived class may need to do some synchronization on this.
-    void on_recv_request(dsn::message_ex *msg);
+    void on_recv_request(message_ex *msg);
     void on_remove_session();
 
 protected:
     // return true if parse ok
-    virtual bool parse(dsn::message_ex *msg) = 0;
-    dsn::message_ex *create_response();
+    virtual bool parse(message_ex *msg) = 0;
+    message_ex *create_response();
 
     const char *log_prefix() const { return _remote_address.to_string(); }
 
@@ -76,14 +74,15 @@ protected:
     proxy_stub *_stub;
     std::atomic_bool _is_session_reset;
 
-    // when get message from raw parser, request & response of "dsn::message_ex*" are not in couple.
+    // when get message from raw parser, request & response of "message_ex*" are not in
+    // couple.
     // we need to backup one request to create a response struct.
-    dsn::message_ex *_backup_one_request;
+    message_ex *_backup_one_request;
     // the client address for which this session served
-    dsn::rpc_address _remote_address;
+    rpc_address _remote_address;
 };
 
-class proxy_stub : public ::dsn::serverlet<proxy_stub>
+class proxy_stub : public serverlet<proxy_stub>
 {
 public:
     proxy_stub(const proxy_session::factory &f,
@@ -106,16 +105,16 @@ public:
         this->unregister_rpc_handler(RPC_CALL_RAW_MESSAGE);
         this->unregister_rpc_handler(RPC_CALL_RAW_SESSION_DISCONNECT);
     }
-    void remove_session(dsn::rpc_address remote_address);
+    void remove_session(rpc_address remote_address);
 
 private:
-    void on_rpc_request(dsn::message_ex *request);
-    void on_recv_remove_session_request(dsn::message_ex *);
+    void on_rpc_request(message_ex *request);
+    void on_recv_remove_session_request(message_ex *);
 
-    ::dsn::zrwlock_nr _lock;
-    std::unordered_map<::dsn::rpc_address, std::shared_ptr<proxy_session>> _sessions;
+    zrwlock_nr _lock;
+    std::unordered_map<rpc_address, std::shared_ptr<proxy_session>> _sessions;
     proxy_session::factory _factory;
-    ::dsn::rpc_address _uri_address;
+    rpc_address _uri_address;
     std::string _cluster;
     std::string _app;
     std::string _geo_app;

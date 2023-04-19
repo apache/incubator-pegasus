@@ -44,7 +44,7 @@
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "duplication/replica_duplicator_manager.h"
 #include "metadata_types.h"
 #include "mutation.h"
@@ -68,8 +68,9 @@
 #include "utils/string_view.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
+
 DSN_DEFINE_bool(replication, group_check_disabled, false, "whether group check is disabled");
 DSN_DEFINE_int32(replication,
                  group_check_interval_ms,
@@ -80,7 +81,7 @@ DSN_DECLARE_bool(empty_write_disabled);
 
 void replica::init_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_init_group_check", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("replica_init_group_check", [](string_view) {});
 
     _checker.only_one_thread_access();
 
@@ -100,7 +101,7 @@ void replica::init_group_check()
 
 void replica::broadcast_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](string_view) {});
 
     CHECK_NOTNULL(_primary_states.group_check_task, "");
 
@@ -123,7 +124,7 @@ void replica::broadcast_group_check()
         if (it->first == _stub->_primary_address)
             continue;
 
-        ::dsn::rpc_address addr = it->first;
+        rpc_address addr = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app = _app_info;
@@ -148,7 +149,7 @@ void replica::broadcast_group_check()
 
         LOG_INFO_PREFIX("send group check to {} with state {}", addr, enum_to_string(it->second));
 
-        dsn::task_ptr callback_task =
+        task_ptr callback_task =
             rpc::call(addr,
                       RPC_GROUP_CHECK,
                       *request,
@@ -274,4 +275,4 @@ void replica::inject_error(error_code err)
                      get_gpid().thread_hash());
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

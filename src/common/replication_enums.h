@@ -27,13 +27,13 @@
 #pragma once
 
 #include "utils/enum_helper.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include "common/serialization_helper/pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "consensus_types.h"
 #include "meta_admin_types.h"
 #include "replica_admin_types.h"
 
-namespace dsn {
+namespace pegasus {
 ENUM_BEGIN2(app_status::type, app_status, app_status::AS_INVALID)
 ENUM_REG(app_status::AS_AVAILABLE)
 ENUM_REG(app_status::AS_CREATING)
@@ -162,4 +162,4 @@ ENUM_REG(replication::manual_compaction_status::QUEUING)
 ENUM_REG(replication::manual_compaction_status::RUNNING)
 ENUM_REG(replication::manual_compaction_status::FINISHED)
 ENUM_END2(replication::manual_compaction_status::type, manual_compaction_status)
-} // namespace dsn
+} // namespace pegasus

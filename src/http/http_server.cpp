@@ -41,11 +41,11 @@
 #include "utils/output_utils.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 
 DSN_DEFINE_bool(http, enable_http_server, true, "whether to enable the embedded HTTP server");
 
-namespace {
+namespace internal {
 error_s update_config(const http_request &req)
 {
     if (req.query_args.size() != 1) {
@@ -57,7 +57,7 @@ error_s update_config(const http_request &req)
     return update_flag(iter->first, iter->second);
 }
 
-} // anonymous namespace
+} // anonymous internal
 
 /*extern*/ std::string http_status_code_to_string(http_status_code code)
 {
@@ -111,7 +111,7 @@ void http_service::register_handler(std::string sub_path, http_callback cb, std:
 
 void http_server_base::update_config_handler(const http_request &req, http_response &resp)
 {
-    auto res = dsn::update_config(req);
+    auto res = internal::update_config(req);
     if (res.is_ok()) {
         CHECK_EQ(1, req.query_args.size());
         update_config(req.query_args.begin()->first);
@@ -119,7 +119,7 @@ void http_server_base::update_config_handler(const http_request &req, http_respo
     utils::table_printer tp;
     tp.add_row_name_and_data("update_status", res.description());
     std::ostringstream out;
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
@@ -211,7 +211,7 @@ void http_server::serve(message_ex *msg)
 
     // parse path
     std::vector<std::string> args;
-    dsn::utils::split_args(unresolved_path.c_str(), args, '/');
+    utils::split_args(unresolved_path.c_str(), args, '/');
     std::vector<std::string> real_args;
     for (std::string &arg : args) {
         if (!arg.empty()) {
@@ -232,7 +232,7 @@ void http_server::serve(message_ex *msg)
     // find if there are method args (<ip>:<port>/<service>/<method>?<arg>=<val>&<arg>=<val>)
     if (!unresolved_query.empty()) {
         std::vector<std::string> method_arg_val;
-        dsn::utils::split_args(unresolved_query.c_str(), method_arg_val, '&');
+        utils::split_args(unresolved_query.c_str(), method_arg_val, '&');
         for (const std::string &arg_val : method_arg_val) {
             size_t sep = arg_val.find_first_of('=');
             if (sep == std::string::npos) {
@@ -293,4 +293,4 @@ void http_server::serve(message_ex *msg)
     services_holder.push_back(std::unique_ptr<http_service>(svc));
 }
 
-} // namespace dsn
+} // namespace pegasus

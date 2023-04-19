@@ -28,7 +28,7 @@
 #include "common/backup_common.h"
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/backup_engine.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
@@ -52,7 +52,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
@@ -64,7 +64,7 @@ DSN_DECLARE_int32(fd_lease_seconds);
 void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
 {
     server_state *state = _backup_service->get_state();
-    dsn::blob buffer;
+    blob buffer;
     bool app_available = false;
     {
         zauto_read_lock l;
@@ -74,11 +74,11 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
             app_available = true;
             // do not persistent envs to backup file
             if (app->envs.empty()) {
-                buffer = dsn::json::json_forwarder<app_info>::encode(*app);
+                buffer = json::json_forwarder<app_info>::encode(*app);
             } else {
                 app_state tmp = *app;
                 tmp.envs.clear();
-                buffer = dsn::json::json_forwarder<app_info>::encode(tmp);
+                buffer = json::json_forwarder<app_info>::encode(tmp);
             }
         }
     }
@@ -99,7 +99,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
         int total_partitions = iter->second;
         for (int32_t pidx = 0; pidx < total_partitions; ++pidx) {
             update_partition_progress_unlocked(
-                gpid(app_id, pidx), cold_backup_constant::PROGRESS_FINISHED, dsn::rpc_address());
+                gpid(app_id, pidx), cold_backup_constant::PROGRESS_FINISHED, rpc_address());
         }
         return;
     }
@@ -111,7 +111,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                                                                    app_id,
                                                                    _cur_backup.backup_id);
 
-    dsn::error_code err;
+    error_code err;
     dist::block_service::block_file_ptr remote_file;
     // here we can use synchronous way coz create_file with ignored metadata is very fast
     _block_service
@@ -122,7 +122,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                           remote_file = resp.file_handle;
                       })
         ->wait();
-    if (err != dsn::ERR_OK) {
+    if (err != ERR_OK) {
         LOG_ERROR("{}: create file {} failed, restart this backup later",
                   _backup_sig,
                   create_file_req.file_name);
@@ -145,7 +145,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
         dist::block_service::write_request{buffer},
         LPC_DEFAULT_CALLBACK,
         [this, remote_file, buffer, app_id](const dist::block_service::write_response &resp) {
-            if (resp.err == dsn::ERR_OK) {
+            if (resp.err == ERR_OK) {
                 CHECK_EQ(resp.written_size, buffer.length());
                 {
                     zauto_lock l(_lock);
@@ -190,8 +190,7 @@ void policy_context::start_backup_app_partitions_unlocked(int32_t app_id)
     }
 }
 
-void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
-                                                           dsn::task_ptr write_callback)
+void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id, task_ptr write_callback)
 {
     if (_progress.is_app_skipped[app_id]) {
         LOG_WARNING("app is unavaliable, skip write finish flag for this app(app_id = {})", app_id);
@@ -208,7 +207,7 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
         flag.total_checkpoint_size += pair.second;
     }
 
-    dsn::error_code err;
+    error_code err;
     dist::block_service::block_file_ptr remote_file;
 
     dist::block_service::create_file_request create_file_req;
@@ -257,7 +256,7 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
         return;
     }
 
-    blob buf = ::dsn::json::json_forwarder<backup_flag>::encode(flag);
+    blob buf = json::json_forwarder<backup_flag>::encode(flag);
 
     remote_file->write(
         dist::block_service::write_request{buf},
@@ -324,10 +323,9 @@ void policy_context::finish_backup_app_unlocked(int32_t app_id)
     }
 }
 
-void policy_context::write_backup_info_unlocked(const backup_info &b_info,
-                                                dsn::task_ptr write_callback)
+void policy_context::write_backup_info_unlocked(const backup_info &b_info, task_ptr write_callback)
 {
-    dsn::error_code err;
+    error_code err;
     dist::block_service::block_file_ptr remote_file;
 
     dist::block_service::create_file_request create_file_req;
@@ -364,7 +362,7 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
                   _backup_sig,
                   create_file_req.file_name);
 
-    blob buf = dsn::json::json_forwarder<backup_info>::encode(b_info);
+    blob buf = json::json_forwarder<backup_info>::encode(b_info);
 
     remote_file->write(
         dist::block_service::write_request{buf},
@@ -436,7 +434,7 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
 
         // update the progress-chain: partition => app => current_backup_instance
         if (--_progress.unfinished_partitions_per_app[pid.get_app_id()] == 0) {
-            dsn::task_ptr task_after_write_finish_flag =
+            task_ptr task_after_write_finish_flag =
                 tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this, pid]() {
                     zauto_lock l(_lock);
                     finish_backup_app_unlocked(pid.get_app_id());
@@ -454,7 +452,7 @@ void policy_context::record_partition_checkpoint_size_unlock(const gpid &pid, in
 
 void policy_context::start_backup_partition_unlocked(gpid pid)
 {
-    dsn::rpc_address partition_primary;
+    rpc_address partition_primary;
     {
         // check app and partition status
         zauto_read_lock l;
@@ -466,7 +464,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
                 "{}: app {} is not available, skip to backup it.", _backup_sig, pid.get_app_id());
             _progress.is_app_skipped[pid.get_app_id()] = true;
             update_partition_progress_unlocked(
-                pid, cold_backup_constant::PROGRESS_FINISHED, dsn::rpc_address());
+                pid, cold_backup_constant::PROGRESS_FINISHED, rpc_address());
             return;
         }
         partition_primary = app->partitions[pid.get_partition_index()].primary;
@@ -491,10 +489,9 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
     req.policy = *(static_cast<const policy_info *>(&_policy));
     req.backup_id = _cur_backup.backup_id;
     req.app_name = _policy.app_names.at(pid.get_app_id());
-    dsn::message_ex *request =
-        dsn::message_ex::create_request(RPC_COLD_BACKUP, 0, pid.thread_hash());
-    dsn::marshall(request, req);
-    dsn::rpc_response_task_ptr rpc_callback = rpc::create_rpc_response_task(
+    message_ex *request = message_ex::create_request(RPC_COLD_BACKUP, 0, pid.thread_hash());
+    marshall(request, req);
+    rpc_response_task_ptr rpc_callback = rpc::create_rpc_response_task(
         request,
         &_tracker,
         [this, pid, partition_primary](error_code err, backup_response &&response) {
@@ -516,7 +513,7 @@ void policy_context::on_backup_reply(error_code err,
              _backup_sig,
              pid.to_string(),
              primary.to_string());
-    if (err == dsn::ERR_OK && response.err == dsn::ERR_OK) {
+    if (err == ERR_OK && response.err == ERR_OK) {
         CHECK_EQ_MSG(response.policy_name,
                      _policy.policy_name,
                      "policy names don't match, pid({}), replica_server({})",
@@ -551,7 +548,7 @@ void policy_context::on_backup_reply(error_code err,
                 return;
             }
         }
-    } else if (response.err == dsn::ERR_LOCAL_APP_FAILURE) {
+    } else if (response.err == ERR_LOCAL_APP_FAILURE) {
         zauto_lock l(_lock);
         _is_backup_failed = true;
         LOG_ERROR("{}: backup got error {} for partition {} from {}, don't try again when got "
@@ -634,12 +631,12 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
                                                             task_ptr sync_callback,
                                                             bool create_new_node)
 {
-    dsn::blob backup_data = dsn::json::json_forwarder<backup_info>::encode(b_info);
+    blob backup_data = json::json_forwarder<backup_info>::encode(b_info);
     std::string backup_info_path =
         _backup_service->get_backup_path(_policy.policy_name, b_info.backup_id);
 
-    auto callback = [this, b_info, sync_callback, create_new_node](dsn::error_code err) {
-        if (dsn::ERR_OK == err || (create_new_node && ERR_NODE_ALREADY_EXIST == err)) {
+    auto callback = [this, b_info, sync_callback, create_new_node](error_code err) {
+        if (ERR_OK == err || (create_new_node && ERR_NODE_ALREADY_EXIST == err)) {
             LOG_INFO("{}: synced backup_info({}) to remote storage successfully, "
                      "start real backup work, new_node_create({})",
                      _policy.policy_name,
@@ -701,7 +698,7 @@ void policy_context::continue_current_backup_unlocked()
             _progress.unfinished_partitions_per_app.end()) {
             start_backup_app_meta_unlocked(app);
         } else {
-            dsn::task_ptr task_after_write_finish_flag =
+            task_ptr task_after_write_finish_flag =
                 tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this, app]() {
                     zauto_lock l(_lock);
                     finish_backup_app_unlocked(app);
@@ -727,7 +724,7 @@ bool policy_context::should_start_backup_unlocked()
     int32_t hour = 0, min = 0, sec = 0;
     if (recent_backup_start_time_ms == 0) {
         //  the first time to backup, just consider the start time
-        ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+        utils::time_ms_to_date_time(now, hour, min, sec);
         return _policy.start_time.should_start_backup(hour, min);
     } else {
         uint64_t next_backup_time_ms =
@@ -737,7 +734,7 @@ bool policy_context::should_start_backup_unlocked()
             // time-drift into consideration
 
             // compute the time-drift
-            ::dsn::utils::time_ms_to_date_time(recent_backup_start_time_ms, hour, min, sec);
+            utils::time_ms_to_date_time(recent_backup_start_time_ms, hour, min, sec);
             int64_t time_dirft_ms = _policy.start_time.compute_time_drift_ms(hour, min);
 
             if (time_dirft_ms >= 0) {
@@ -757,7 +754,7 @@ bool policy_context::should_start_backup_unlocked()
             }
         }
         if (next_backup_time_ms <= now) {
-            ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+            utils::time_ms_to_date_time(now, hour, min, sec);
             return _policy.start_time.should_start_backup(hour, min);
         } else {
             return false;
@@ -936,17 +933,16 @@ void policy_context::gc_backup_info_unlocked(const backup_info &info_to_gc)
 {
     char start_time[30] = {'\0'};
     char end_time[30] = {'\0'};
-    ::dsn::utils::time_ms_to_date_time(
-        static_cast<uint64_t>(info_to_gc.start_time_ms), start_time, 30);
-    ::dsn::utils::time_ms_to_date_time(static_cast<uint64_t>(info_to_gc.end_time_ms), end_time, 30);
+    utils::time_ms_to_date_time(static_cast<uint64_t>(info_to_gc.start_time_ms), start_time, 30);
+    utils::time_ms_to_date_time(static_cast<uint64_t>(info_to_gc.end_time_ms), end_time, 30);
     LOG_INFO("{}: start to gc backup info, backup_id({}), start_time({}), end_time({})",
              _policy.policy_name,
              info_to_gc.backup_id,
              start_time,
              end_time);
 
-    dsn::task_ptr sync_callback =
-        ::dsn::tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this, info_to_gc]() {
+    task_ptr sync_callback =
+        tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this, info_to_gc]() {
             dist::block_service::remove_path_request req;
             req.path =
                 cold_backup::get_backup_path(_backup_service->backup_root(), info_to_gc.backup_id);
@@ -957,7 +953,7 @@ void policy_context::gc_backup_info_unlocked(const backup_info &info_to_gc)
                 [this, info_to_gc](const dist::block_service::remove_path_response &resp) {
                     // remove dir ok or dir is not exist
                     if (resp.err == ERR_OK || resp.err == ERR_OBJECT_NOT_FOUND) {
-                        dsn::task_ptr remove_local_backup_info_task = tasking::create_task(
+                        task_ptr remove_local_backup_info_task = tasking::create_task(
                             LPC_DEFAULT_CALLBACK, &_tracker, [this, info_to_gc]() {
                                 zauto_lock l(_lock);
                                 _backup_history.erase(info_to_gc.backup_id);
@@ -1014,12 +1010,12 @@ void policy_context::issue_gc_backup_info_task_unlocked()
     _counter_policy_recent_backup_duration_ms->set(last_backup_duration_time_ms);
 }
 
-void policy_context::sync_remove_backup_info(const backup_info &info, dsn::task_ptr sync_callback)
+void policy_context::sync_remove_backup_info(const backup_info &info, task_ptr sync_callback)
 {
     std::string backup_info_path =
         _backup_service->get_backup_path(_policy.policy_name, info.backup_id);
-    auto callback = [this, info, sync_callback](dsn::error_code err) {
-        if (err == dsn::ERR_OK || err == dsn::ERR_OBJECT_NOT_FOUND) {
+    auto callback = [this, info, sync_callback](error_code err) {
+        if (err == ERR_OK || err == ERR_OBJECT_NOT_FOUND) {
             LOG_INFO("{}: sync remove backup_info on remote storage successfully, backup_id({})",
                      _policy.policy_name,
                      info.backup_id);
@@ -1068,18 +1064,18 @@ backup_service::backup_service(meta_service *meta_svc,
     _in_initialize.store(true);
 }
 
-void backup_service::start_create_policy_meta_root(dsn::task_ptr callback)
+void backup_service::start_create_policy_meta_root(task_ptr callback)
 {
     LOG_DEBUG("create policy meta root({}) on remote_storage", _policy_meta_root);
     _meta_svc->get_remote_storage()->create_node(
-        _policy_meta_root, LPC_DEFAULT_CALLBACK, [this, callback](dsn::error_code err) {
-            if (err == dsn::ERR_OK || err == ERR_NODE_ALREADY_EXIST) {
+        _policy_meta_root, LPC_DEFAULT_CALLBACK, [this, callback](error_code err) {
+            if (err == ERR_OK || err == ERR_NODE_ALREADY_EXIST) {
                 LOG_INFO(
                     "create policy meta root({}) succeed, with err({})", _policy_meta_root, err);
                 callback->enqueue();
-            } else if (err == dsn::ERR_TIMEOUT) {
+            } else if (err == ERR_TIMEOUT) {
                 LOG_ERROR("create policy meta root({}) timeout, try it later", _policy_meta_root);
-                dsn::tasking::enqueue(
+                tasking::enqueue(
                     LPC_DEFAULT_CALLBACK,
                     &_tracker,
                     std::bind(&backup_service::start_create_policy_meta_root, this, callback),
@@ -1096,8 +1092,8 @@ void backup_service::start_sync_policies()
     // TODO: make sync_policies_from_remote_storage function to async
     //       sync-api will leader to deadlock when the threadnum = 1 in default threadpool
     LOG_INFO("backup service start to sync policies from remote storage");
-    dsn::error_code err = sync_policies_from_remote_storage();
-    if (err == dsn::ERR_OK) {
+    error_code err = sync_policies_from_remote_storage();
+    if (err == ERR_OK) {
         for (auto &policy_kv : _policy_states) {
             LOG_INFO("policy({}) start to backup", policy_kv.first);
             policy_kv.second->start();
@@ -1107,13 +1103,13 @@ void backup_service::start_sync_policies()
                 "can't sync policies from remote storage, user should config some policies");
         }
         _in_initialize.store(false);
-    } else if (err == dsn::ERR_TIMEOUT) {
+    } else if (err == ERR_TIMEOUT) {
         LOG_ERROR("sync policies got timeout, retry it later");
-        dsn::tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                              &_tracker,
-                              std::bind(&backup_service::start_sync_policies, this),
-                              0,
-                              _opt.meta_retry_delay_ms);
+        tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                         &_tracker,
+                         std::bind(&backup_service::start_sync_policies, this),
+                         0,
+                         _opt.meta_retry_delay_ms);
     } else {
         CHECK(false,
               "sync policies from remote storage encounter error({}), we can't handle "
@@ -1127,14 +1123,14 @@ error_code backup_service::sync_policies_from_remote_storage()
     //      -- <root>/policy_name/backup_id_1
     //      --                   /backup_id_2
     error_code err = ERR_OK;
-    dsn::task_tracker tracker;
+    task_tracker tracker;
 
     auto init_backup_info = [this, &err, &tracker](const std::string &policy_name) {
         auto after_get_backup_info = [this, &err, policy_name](error_code ec, const blob &value) {
             if (ec == ERR_OK) {
                 LOG_DEBUG("sync a backup string({}) from remote storage", value.data());
                 backup_info tbackup_info;
-                dsn::json::json_forwarder<backup_info>::decode(value, tbackup_info);
+                json::json_forwarder<backup_info>::decode(value, tbackup_info);
 
                 policy_context *ptr = nullptr;
                 {
@@ -1201,7 +1197,7 @@ error_code backup_service::sync_policies_from_remote_storage()
                     if (ec == ERR_OK) {
                         std::shared_ptr<policy_context> policy_ctx = _factory(this);
                         policy tpolicy;
-                        dsn::json::json_forwarder<policy>::decode(value, tpolicy);
+                        json::json_forwarder<policy>::decode(value, tpolicy);
                         policy_ctx->set_policy(std::move(tpolicy));
 
                         {
@@ -1239,18 +1235,18 @@ error_code backup_service::sync_policies_from_remote_storage()
 
 void backup_service::start()
 {
-    dsn::task_ptr after_create_policy_meta_root =
+    task_ptr after_create_policy_meta_root =
         tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this]() { start_sync_policies(); });
     start_create_policy_meta_root(after_create_policy_meta_root);
 }
 
-void backup_service::add_backup_policy(dsn::message_ex *msg)
+void backup_service::add_backup_policy(message_ex *msg)
 {
     configuration_add_backup_policy_request request;
     configuration_add_backup_policy_response response;
 
-    dsn::message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
-    ::dsn::unmarshall(msg, request);
+    message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
+    unmarshall(msg, request);
     std::set<int32_t> app_ids;
     std::map<int32_t, std::string> app_names;
 
@@ -1338,7 +1334,7 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     do_add_policy(msg, policy_context_ptr, response.hint_message);
 }
 
-void backup_service::do_add_policy(dsn::message_ex *req,
+void backup_service::do_add_policy(message_ex *req,
                                    std::shared_ptr<policy_context> p,
                                    const std::string &hint_msg)
 {
@@ -1744,4 +1740,4 @@ void backup_service::query_backup_status(query_backup_status_rpc rpc)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

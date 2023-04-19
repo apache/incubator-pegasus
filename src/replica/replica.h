@@ -53,7 +53,7 @@
 #include <vector>
 
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
@@ -76,7 +76,7 @@
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 class perf_counter;
 class rpc_address;
@@ -114,7 +114,7 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 
-typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
+typedef ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
 namespace test {
 class test_checker;
@@ -128,7 +128,7 @@ class test_checker;
             return;                                                                                \
         }                                                                                          \
         if (!_split_mgr->check_partition_hash(                                                     \
-                ((dsn::message_ex *)request)->header->client.partition_hash, #op_type)) {          \
+                ((message_ex *)request)->header->client.partition_hash, #op_type)) {               \
             response_client_##op_type(request, ERR_PARENT_PARTITION_MISUSED);                      \
             return;                                                                                \
         }                                                                                          \
@@ -197,8 +197,8 @@ public:
     //
     //    messages from peers (primary or secondary)
     //
-    void on_prepare(dsn::message_ex *request);
-    void on_learn(dsn::message_ex *msg, const learn_request &request);
+    void on_prepare(message_ex *request);
+    void on_learn(message_ex *msg, const learn_request &request);
     void on_learn_completion_notification(const group_check_response &report,
                                           /*out*/ learn_notify_response &response);
     void on_learn_completion_notification_reply(error_code err,
@@ -236,7 +236,7 @@ public:
     const replication_options *options() const { return _options; }
     replica_stub *get_replica_stub() { return _stub; }
     bool verbose_commit_log() const;
-    dsn::task_tracker *tracker() { return &_tracker; }
+    task_tracker *tracker() { return &_tracker; }
 
     //
     // Duplication
@@ -299,8 +299,8 @@ protected:
 private:
     // common helpers
     void init_state();
-    void response_client_read(dsn::message_ex *request, error_code error);
-    void response_client_write(dsn::message_ex *request, error_code error);
+    void response_client_read(message_ex *request, error_code error);
+    void response_client_write(message_ex *request, error_code error);
     void execute_mutation(mutation_ptr &mu);
     mutation_ptr new_mutation(decree decree);
 
@@ -322,7 +322,7 @@ private:
     // See more about it in `replica_bulk_loader.cpp`
     void
     init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations = false);
-    void send_prepare_message(::dsn::rpc_address addr,
+    void send_prepare_message(rpc_address addr,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
@@ -331,8 +331,8 @@ private:
     void on_append_log_completed(mutation_ptr &mu, error_code err, size_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr,
                           error_code err,
-                          dsn::message_ex *request,
-                          dsn::message_ex *reply);
+                          message_ex *request,
+                          message_ex *reply);
     void do_possible_commit_on_primary(mutation_ptr &mu);
     void ack_prepare_message(error_code err, mutation_ptr &mu);
     void cleanup_preparing_mutations(bool wait);
@@ -348,8 +348,7 @@ private:
                                         learn_response &&resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err, bool is_local_error);
-    error_code handle_learning_succeeded_on_primary(::dsn::rpc_address node,
-                                                    uint64_t learn_signature);
+    error_code handle_learning_succeeded_on_primary(rpc_address node, uint64_t learn_signature);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state &state);
 
@@ -377,7 +376,7 @@ private:
     // failure handling
     void handle_local_failure(error_code error);
     void handle_remote_failure(partition_status::type status,
-                               ::dsn::rpc_address node,
+                               rpc_address node,
                                error_code error,
                                const std::string &caused_by);
 
@@ -385,17 +384,17 @@ private:
     // reconfiguration
     void assign_primary(configuration_update_request &proposal);
     void add_potential_secondary(configuration_update_request &proposal);
-    void upgrade_to_secondary_on_primary(::dsn::rpc_address node);
+    void upgrade_to_secondary_on_primary(rpc_address node);
     void downgrade_to_secondary_on_primary(configuration_update_request &proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request &proposal);
     void remove(configuration_update_request &proposal);
     void update_configuration_on_meta_server(config_type::type type,
-                                             ::dsn::rpc_address node,
+                                             rpc_address node,
                                              partition_configuration &newConfig);
     void
     on_update_configuration_on_meta_server_reply(error_code err,
-                                                 dsn::message_ex *request,
-                                                 dsn::message_ex *response,
+                                                 message_ex *request,
+                                                 message_ex *response,
                                                  std::shared_ptr<configuration_update_request> req);
     void replay_prepare_list();
     bool is_same_ballot_status_change_allowed(partition_status::type olds,
@@ -460,11 +459,11 @@ private:
     error_code download_checkpoint(const configuration_restore_request &req,
                                    const std::string &remote_chkpt_dir,
                                    const std::string &local_chkpt_dir);
-    dsn::error_code find_valid_checkpoint(const configuration_restore_request &req,
-                                          /*out*/ std::string &remote_chkpt_dir);
-    dsn::error_code restore_checkpoint();
+    error_code find_valid_checkpoint(const configuration_restore_request &req,
+                                     /*out*/ std::string &remote_chkpt_dir);
+    error_code restore_checkpoint();
 
-    dsn::error_code skip_restore_partition(const std::string &restore_dir);
+    error_code skip_restore_partition(const std::string &restore_dir);
     void tell_meta_to_restore_rollback();
 
     void report_restore_status_to_meta();
@@ -531,9 +530,9 @@ private:
     bool access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const;
 
 private:
-    friend class ::dsn::replication::test::test_checker;
-    friend class ::dsn::replication::mutation_queue;
-    friend class ::dsn::replication::replica_stub;
+    friend class replication::test::test_checker;
+    friend class replication::mutation_queue;
+    friend class replication::replica_stub;
     friend class mock_replica;
     friend class throttling_controller_test;
     friend class replica_learn_test;
@@ -565,7 +564,7 @@ private:
     mutation_log_ptr _private_log;
 
     // local checkpoint timer for gc, checkpoint, etc.
-    dsn::task_ptr _checkpoint_timer;
+    task_ptr _checkpoint_timer;
 
     // application
     std::unique_ptr<replication_app_base> _app;
@@ -614,7 +613,7 @@ private:
     //                       so should restore rollback
     //      ERR_IGNORE_DAMAGED_DATA : data on backup media is damaged but we can skip the damage
     //                                data, so skip the damaged partition
-    dsn::error_code _restore_status;
+    error_code _restore_status;
 
     bool _inactive_is_transient; // upgrade to P/S is allowed only iff true
     bool _is_initializing;       // when initializing, switching to primary need to update ballot
@@ -663,9 +662,9 @@ private:
     perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;
     perf_counter_wrapper _counter_backup_request_qps;
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
     // the thread access checker
-    dsn::thread_access_checker _checker;
+    thread_access_checker _checker;
 
     std::unique_ptr<security::access_controller> _access_controller;
 
@@ -675,6 +674,6 @@ private:
     // Indicate where the storage engine data is corrupted and unrecoverable.
     bool _data_corrupted{false};
 };
-typedef dsn::ref_ptr<replica> replica_ptr;
+typedef ref_ptr<replica> replica_ptr;
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

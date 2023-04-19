@@ -40,7 +40,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER)
 

@@ -50,7 +50,7 @@
 #include "utils/ports.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 class env_provider;
 class rpc_engine;
@@ -261,13 +261,13 @@ protected:
     //
     // circular reference may occur if we don't clear them manually, for example:
     //
-    // class A: public dsn::ref_counter {
+    // class A: public ref_counter {
     // public:
     //   int value;
     //   task_ptr my_task;
     // };
     //
-    // dsn::ref_ptr<A> a_obj = new A();
+    // ref_ptr<A> a_obj = new A();
     // a_obj->my_task = tasking::enqueue(task_code,
     //                                   [a_obj](){ std::cout << value << std::endl; });
     //
@@ -315,7 +315,7 @@ public:
     // used by task queue only
     task *next;
 };
-typedef dsn::ref_ptr<dsn::task> task_ptr;
+typedef ref_ptr<task> task_ptr;
 
 class raw_task : public task
 {
@@ -374,7 +374,7 @@ private:
     int _interval_ms;
     task_handler _cb;
 };
-typedef dsn::ref_ptr<dsn::timer_task> timer_task_ptr;
+typedef ref_ptr<timer_task> timer_task_ptr;
 
 template <typename First, typename... Remaining>
 class future_task : public task
@@ -451,7 +451,7 @@ protected:
     rpc_request_handler _handler;
     uint64_t _enqueue_ts_ns;
 };
-typedef dsn::ref_ptr<rpc_request_task> rpc_request_task_ptr;
+typedef ref_ptr<rpc_request_task> rpc_request_task_ptr;
 
 class rpc_response_task : public task
 {
@@ -529,7 +529,7 @@ private:
 
     friend class rpc_engine;
 };
-typedef dsn::ref_ptr<rpc_response_task> rpc_response_task_ptr;
+typedef ref_ptr<rpc_response_task> rpc_response_task_ptr;
 
 const std::vector<task_worker *> &get_threadpool_threads_info(threadpool_code code);
 
@@ -600,4 +600,4 @@ __inline /*static*/ env_provider *task::get_current_env()
     return tls_dsn.env;
 }
 
-} // namespace dsn
+} // namespace pegasus

@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "partition_kill_testor.h"
 #include "remote_cmd/remote_command.h"
 #include "runtime/task/task.h"
@@ -68,7 +68,7 @@ void partition_kill_testor::run()
     std::vector<int> random_indexs;
     generate_random(random_indexs, random_num, 0, partitions.size() - 1);
 
-    std::vector<dsn::task_ptr> tasks(random_num);
+    std::vector<task_ptr> tasks(random_num);
     std::vector<std::pair<bool, std::string>> results(random_num);
 
     std::vector<std::string> arguments(2);
@@ -76,11 +76,11 @@ void partition_kill_testor::run()
         int index = random_indexs[i];
         const auto &p = partitions[index];
 
-        arguments[0] = to_string(p.pid.get_app_id());
-        arguments[1] = to_string(p.pid.get_partition_index());
+        arguments[0] = std::to_string(p.pid.get_app_id());
+        arguments[1] = std::to_string(p.pid.get_partition_index());
 
-        auto callback = [&results, i](::dsn::error_code err, const std::string &resp) {
-            if (err == ::dsn::ERR_OK) {
+        auto callback = [&results, i](error_code err, const std::string &resp) {
+            if (err == ERR_OK) {
                 results[i].first = true;
                 results[i].second = resp;
             } else {
@@ -88,11 +88,11 @@ void partition_kill_testor::run()
                 results[i].second = err.to_string();
             }
         };
-        tasks[i] = dsn::dist::cmd::async_call_remote(p.primary,
-                                                     "replica.kill_partition",
-                                                     arguments,
-                                                     callback,
-                                                     std::chrono::milliseconds(5000));
+        tasks[i] = dist::cmd::async_call_remote(p.primary,
+                                                "replica.kill_partition",
+                                                arguments,
+                                                callback,
+                                                std::chrono::milliseconds(5000));
     }
 
     for (int i = 0; i < tasks.size(); ++i) {

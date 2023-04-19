@@ -34,7 +34,7 @@
 #include "utils/rand.h"
 #include "utils/safe_strerror_posix.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace {
 
@@ -277,4 +277,4 @@ int64_t concurrent_long_adder::fetch_and_reset()
     return sum;
 }
 
-} // namespace dsn
+} // namespace pegasus

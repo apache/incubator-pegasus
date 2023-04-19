@@ -34,7 +34,7 @@
 #include "utils/singleton.h"
 #include "utils/command_manager.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 #define DEFINE_CUSTOMIZED_ID(T, name) __selectany const T name(#name);
@@ -44,10 +44,10 @@ namespace utils {
     struct T##_                                                                                    \
     {                                                                                              \
     };                                                                                             \
-    typedef dsn::utils::customized_id<T##_> T;
+    typedef utils::customized_id<T##_> T;
 
 template <typename T>
-class customized_id_mgr : public dsn::utils::singleton<customized_id_mgr<T>>
+class customized_id_mgr : public utils::singleton<customized_id_mgr<T>>
 {
 public:
     customized_id_mgr() : _names(199) { register_commands(); }
@@ -207,5 +207,5 @@ int customized_id_mgr<T>::register_id(const char *name)
     _names2.push_back(std::string(name));
     return code;
 }
-}
-} // end namespace dsn::utils
+} // namespace utils
+} // namespace pegasus

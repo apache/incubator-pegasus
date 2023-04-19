@@ -35,7 +35,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -53,7 +53,9 @@
 #include "utils/fmt_logging.h"
 #include "utils/uniq_timestamp_us.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+
+namespace pegasus {
 namespace replication {
 DSN_DEFINE_bool(replication, checkpoint_disabled, false, "whether checkpoint is disabled");
 DSN_DEFINE_int32(replication,
@@ -68,8 +70,8 @@ DSN_DEFINE_int32(replication,
 
 error_code replica::initialize_on_new()
 {
-    // if (dsn::utils::filesystem::directory_exists(_dir) &&
-    //    !dsn::utils::filesystem::remove_path(_dir))
+    // if (directory_exists(_dir) &&
+    //    !remove_path(_dir))
     //{
     //    LOG_ERROR("cannot allocate new replica @ {}, as the dir is already exists", _dir);
     //    return ERR_PATH_ALREADY_EXIST;
@@ -78,15 +80,14 @@ error_code replica::initialize_on_new()
     // TODO: check if _dir contain other file or directory except for
     // "restore.policy_name.backup_id"
     // which is applied to restore from cold backup
-    if (!dsn::utils::filesystem::directory_exists(_dir) &&
-        !dsn::utils::filesystem::create_directory(_dir)) {
+    if (!directory_exists(_dir) && !create_directory(_dir)) {
         LOG_ERROR("cannot allocate new replica @ {}, because create dir failed", _dir);
         return ERR_FILE_OPERATION_FAILED;
     }
 
     auto err = store_app_info(_app_info);
     if (err != ERR_OK) {
-        dsn::utils::filesystem::remove_path(_dir);
+        remove_path(_dir);
         return err;
     }
 
@@ -97,7 +98,7 @@ error_code replica::initialize_on_load()
 {
     LOG_INFO_PREFIX("initialize replica on load, dir = {}", _dir);
 
-    if (!dsn::utils::filesystem::directory_exists(_dir)) {
+    if (!directory_exists(_dir)) {
         LOG_ERROR_PREFIX("cannot load replica, because dir {} is not exist", _dir);
         return ERR_PATH_NOT_FOUND;
     }
@@ -116,7 +117,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 {
     CHECK(nullptr == _app, "");
     error_code err;
-    std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
+    std::string log_dir = path_combine(dir(), "plog");
 
     _app.reset(replication_app_base::new_storage_instance(_app_info.app_type, this));
     CHECK(nullptr == _private_log, "");
@@ -219,12 +220,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
         if (nullptr == _private_log) {
             LOG_INFO_PREFIX("clear private log, dir = {}", log_dir);
-            CHECK(dsn::utils::filesystem::remove_path(log_dir),
-                  "Fail to delete directory {}",
-                  log_dir);
-            CHECK(dsn::utils::filesystem::create_directory(log_dir),
-                  "Fail to create directory {}",
-                  log_dir);
+            CHECK(remove_path(log_dir), "Fail to delete directory {}", log_dir);
+            CHECK(create_directory(log_dir), "Fail to create directory {}", log_dir);
 
             _private_log =
                 new mutation_log_private(log_dir, FLAGS_log_private_file_size_mb, get_gpid(), this);
@@ -354,4 +351,4 @@ void replica::reset_prepare_list_after_replay()
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

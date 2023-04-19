@@ -28,7 +28,7 @@
 #include <utility>
 #include <vector>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 class table_printer;
@@ -226,4 +226,4 @@ private:
     std::vector<table_printer> _tps;
 };
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

@@ -23,7 +23,7 @@
 
 #include "replica/test/replica_test_base.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_disk_test_base : public replica_test_base
@@ -154,18 +154,18 @@ public:
     {
         stub->_fs_manager._dir_nodes.clear();
         stub->_fs_manager._available_data_dirs.clear();
-        dsn::utils::filesystem::remove_path("add_new_not_empty_disk");
+        utils::filesystem::remove_path("add_new_not_empty_disk");
     }
 
 public:
     int empty_dir_nodes_count = 1;
     int dir_nodes_count = 5;
 
-    dsn::app_info app_info_1;
+    app_info app_info_1;
     int app_id_1_primary_count_for_disk = 1;
     int app_id_1_secondary_count_for_disk = 2;
 
-    dsn::app_info app_info_2;
+    app_info app_info_2;
     int app_id_2_primary_count_for_disk = 2;
     int app_id_2_secondary_count_for_disk = 4;
 
@@ -254,4 +254,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

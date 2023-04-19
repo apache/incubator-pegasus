@@ -36,16 +36,15 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
-namespace tools {
 DSN_DECLARE_bool(enable_udp);
-}
+
+namespace pegasus {
 
 constexpr int TASK_SPEC_STORE_CAPACITY = 512;
 
-std::set<dsn::task_code> &get_storage_rpc_req_codes()
+std::set<task_code> &get_storage_rpc_req_codes()
 {
-    static std::set<dsn::task_code> s_storage_rpc_req_codes;
+    static std::set<task_code> s_storage_rpc_req_codes;
     return s_storage_rpc_req_codes;
 }
 
@@ -55,7 +54,7 @@ static std::array<std::unique_ptr<task_spec>, TASK_SPEC_STORE_CAPACITY> s_task_s
 void task_spec::register_task_code(task_code code,
                                    dsn_task_type_t type,
                                    dsn_task_priority_t pri,
-                                   dsn::threadpool_code pool)
+                                   threadpool_code pool)
 {
     CHECK_GE(code, 0);
     CHECK_LT(code, TASK_SPEC_STORE_CAPACITY);
@@ -70,8 +69,7 @@ void task_spec::register_task_code(task_code code,
             // then the response code's definition will reassign a proper valid threadpool code.
             // please refer to the DEFINE_TASK_CODE_RPC/DEFINE_STORAGE_RPC_CODE in task_code.h
             // for more details.
-            dsn::task_code ack_code(
-                ack_name.c_str(), TASK_TYPE_RPC_RESPONSE, pri, THREAD_POOL_INVALID);
+            task_code ack_code(ack_name.c_str(), TASK_TYPE_RPC_RESPONSE, pri, THREAD_POOL_INVALID);
             spec->rpc_paired_code = ack_code;
             task_spec::get(ack_code.code())->rpc_paired_code = code;
         }
@@ -131,11 +129,8 @@ task_spec *task_spec::get(int code)
     return s_task_spec_store[code].get();
 }
 
-task_spec::task_spec(int code,
-                     const char *name,
-                     dsn_task_type_t type,
-                     dsn_task_priority_t pri,
-                     dsn::threadpool_code pool)
+task_spec::task_spec(
+    int code, const char *name, dsn_task_type_t type, dsn_task_priority_t pri, threadpool_code pool)
     : code(code),
       type(type),
       name(name),
@@ -200,12 +195,11 @@ bool task_spec::init()
     if (!read_config("task..default", default_spec))
         return false;
 
-    for (int code = 0; code <= dsn::task_code::max(); code++) {
+    for (int code = 0; code <= task_code::max(); code++) {
         if (code == TASK_CODE_INVALID)
             continue;
 
-        std::string section_name =
-            std::string("task.") + std::string(dsn::task_code(code).to_string());
+        std::string section_name = std::string("task.") + std::string(task_code(code).to_string());
         task_spec *spec = task_spec::get(code);
         CHECK_NOTNULL(spec, "");
 
@@ -231,7 +225,7 @@ bool task_spec::init()
             }
         }
 
-        if (spec->rpc_call_channel == RPC_CHANNEL_UDP && !dsn::tools::FLAGS_enable_udp) {
+        if (spec->rpc_call_channel == RPC_CHANNEL_UDP && !FLAGS_enable_udp) {
             LOG_ERROR("task rpc_call_channel RPC_CHANNEL_UCP need udp service, make sure "
                       "[network].enable_udp");
             return false;

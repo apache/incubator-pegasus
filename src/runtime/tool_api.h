@@ -66,7 +66,7 @@ Component providers define the interface for the local components (e.g., network
 #include "utils/join_point.h"
 #include "utils/logging_provider.h" // IWYU pragma: keep
 
-namespace dsn {
+namespace pegasus {
 class service_node;
 struct service_spec;
 
@@ -134,26 +134,18 @@ public:
 };
 
 namespace internal_use_only {
-bool register_component_provider(const char *name,
-                                 timer_service::factory f,
-                                 ::dsn::provider_type type);
-bool register_component_provider(const char *name,
-                                 task_queue::factory f,
-                                 ::dsn::provider_type type);
-bool register_component_provider(const char *name,
-                                 task_worker::factory f,
-                                 ::dsn::provider_type type);
-bool register_component_provider(const char *name, network::factory f, ::dsn::provider_type type);
-bool register_component_provider(const char *name,
-                                 env_provider::factory f,
-                                 ::dsn::provider_type type);
+bool register_component_provider(const char *name, timer_service::factory f, provider_type type);
+bool register_component_provider(const char *name, task_queue::factory f, provider_type type);
+bool register_component_provider(const char *name, task_worker::factory f, provider_type type);
+bool register_component_provider(const char *name, network::factory f, provider_type type);
+bool register_component_provider(const char *name, env_provider::factory f, provider_type type);
 bool register_component_provider(network_header_format fmt,
                                  const std::vector<const char *> &signatures,
                                  message_parser::factory f,
                                  size_t sz);
-bool register_toollet(const char *name, toollet::factory f, ::dsn::provider_type type);
-bool register_tool(const char *name, tool_app::factory f, ::dsn::provider_type type);
-toollet *get_toollet(const char *name, ::dsn::provider_type type);
+bool register_toollet(const char *name, toollet::factory f, provider_type type);
+bool register_tool(const char *name, tool_app::factory f, provider_type type);
+toollet *get_toollet(const char *name, provider_type type);
 } // namespace internal_use_only
 
 /*!
@@ -168,7 +160,7 @@ template <typename T>
 bool register_component_provider(const char *name)
 {
     return internal_use_only::register_component_provider(
-        name, T::template create<T>, ::dsn::PROVIDER_TYPE_MAIN);
+        name, T::template create<T>, PROVIDER_TYPE_MAIN);
 }
 
 template <typename T>
@@ -181,7 +173,7 @@ template <typename T>
 bool register_component_aspect(const char *name)
 {
     return internal_use_only::register_component_provider(
-        name, T::template create<T>, ::dsn::PROVIDER_TYPE_ASPECT);
+        name, T::template create<T>, PROVIDER_TYPE_ASPECT);
 }
 template <typename T>
 bool register_message_header_parser(network_header_format fmt,
@@ -191,18 +183,17 @@ template <typename T>
 bool register_toollet(const char *name)
 {
     return internal_use_only::register_toollet(
-        name, toollet::template create<T>, ::dsn::PROVIDER_TYPE_MAIN);
+        name, toollet::template create<T>, PROVIDER_TYPE_MAIN);
 }
 template <typename T>
 bool register_tool(const char *name)
 {
-    return internal_use_only::register_tool(
-        name, tool_app::template create<T>, ::dsn::PROVIDER_TYPE_MAIN);
+    return internal_use_only::register_tool(name, tool_app::template create<T>, PROVIDER_TYPE_MAIN);
 }
 template <typename T>
 T *get_toollet(const char *name)
 {
-    return (T *)internal_use_only::get_toollet(name, ::dsn::PROVIDER_TYPE_MAIN);
+    return (T *)internal_use_only::get_toollet(name, PROVIDER_TYPE_MAIN);
 }
 tool_app *get_current_tool();
 const service_spec &spec();
@@ -226,4 +217,4 @@ bool register_message_header_parser(network_header_format fmt,
 #define DSN_REGISTER_COMPONENT_PROVIDER(type, name)                                                \
     static tools::component_provider_registerer<type> COMPONENT_PROVIDER_REG_##type(name)
 
-} // namespace dsn
+} // namespace pegasus

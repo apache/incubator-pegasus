@@ -24,7 +24,7 @@
 #include "runtime/rpc/message_parser.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 
 class message_reader_test : public testing::Test
 {
@@ -114,4 +114,4 @@ TEST_F(message_reader_test, read_data) { test_read_data(); }
 
 TEST_F(message_reader_test, consume_buffer) { test_consume_buffer(); }
 
-} // namespace dsn
+} // namespace pegasus

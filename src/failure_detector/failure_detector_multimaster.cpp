@@ -43,11 +43,11 @@
 #include "utils/error_code.h"
 #include "utils/rand.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 slave_failure_detector_with_multimaster::slave_failure_detector_with_multimaster(
-    std::vector<::dsn::rpc_address> &meta_servers,
+    std::vector<rpc_address> &meta_servers,
     std::function<void()> &&master_disconnected_callback,
     std::function<void()> &&master_connected_callback)
 {
@@ -74,7 +74,7 @@ void slave_failure_detector_with_multimaster::set_leader_for_test(rpc_address me
     _meta_servers.group_address()->set_leader(meta);
 }
 
-void slave_failure_detector_with_multimaster::end_ping(::dsn::error_code err,
+void slave_failure_detector_with_multimaster::end_ping(error_code err,
                                                        const fd::beacon_ack &ack,
                                                        void *)
 {
@@ -120,7 +120,7 @@ void slave_failure_detector_with_multimaster::end_ping(::dsn::error_code err,
 
 // client side
 void slave_failure_detector_with_multimaster::on_master_disconnected(
-    const std::vector<::dsn::rpc_address> &nodes)
+    const std::vector<rpc_address> &nodes)
 {
     bool primary_disconnected = false;
     rpc_address leader = _meta_servers.group_address()->leader();
@@ -134,7 +134,7 @@ void slave_failure_detector_with_multimaster::on_master_disconnected(
     }
 }
 
-void slave_failure_detector_with_multimaster::on_master_connected(::dsn::rpc_address node)
+void slave_failure_detector_with_multimaster::on_master_connected(rpc_address node)
 {
     /*
     * well, this is called in on_ping_internal, which is called by rep::end_ping.

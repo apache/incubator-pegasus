@@ -26,10 +26,10 @@
 #include <pegasus/error.h>
 #include <sys/types.h>
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
-#include "backup_types.h"
 #include "base/pegasus_rpc_types.h"
 #include "common/duplication_common.h"
 #include "common/gpid.h"
@@ -37,6 +37,7 @@
 #include "duplication_internal_types.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
+#include "pegasus_value_schema.h"
 #include "replica/replica_base.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
@@ -47,16 +48,17 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 
+using pegasus::replication::replica_base;
+using pegasus::replication::mutation_tuple_set;
+
 namespace pegasus {
 namespace server {
-
-using namespace dsn::replication;
 
 class pegasus_mutation_duplicator_test : public pegasus_server_test_base
 {
 protected:
-    dsn::task_tracker _tracker;
-    dsn::pipeline::environment _env;
+    task_tracker _tracker;
+    pipeline::environment _env;
 
 public:
     pegasus_mutation_duplicator_test()
@@ -66,7 +68,7 @@ public:
 
     void test_duplicate()
     {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
+        replica_base replica(gpid(1, 1), "fake_replica", "temp");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
 
@@ -80,13 +82,13 @@ public:
         uint batch_count = 0;
         for (uint64_t i = 0; i < 400; i++) {
             uint64_t ts = 200 + i;
-            dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_PUT;
+            task_code code = apps::RPC_RRDB_RRDB_PUT;
 
-            dsn::apps::update_request request;
-            pegasus::pegasus_generate_key(request.key, std::string("hash"), sort_key);
-            dsn::message_ptr msg =
-                dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
-            auto data = dsn::move_message_to_blob(msg.get());
+            apps::update_request request;
+            pegasus_generate_key(request.key, std::string("hash"), sort_key);
+            message_ptr msg =
+                from_thrift_request_to_received_message(request, apps::RPC_RRDB_RRDB_PUT);
+            auto data = move_message_to_blob(msg.get());
 
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
@@ -121,7 +123,7 @@ public:
                                                         ASSERT_EQ(total_shipped_size, final_size);
                                                     },
                                                     rpc,
-                                                    dsn::ERR_OK);
+                                                    ERR_OK);
 
                 // schedule next round
                 _tracker.wait_outstanding_tasks();
@@ -135,7 +137,7 @@ public:
 
     void test_duplicate_failed()
     {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
+        replica_base replica(gpid(1, 1), "fake_replica", "temp");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
 
@@ -149,13 +151,13 @@ public:
         uint batch_count = 0;
         for (uint64_t i = 0; i < 400; i++) {
             uint64_t ts = 200 + i;
-            dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_PUT;
+            task_code code = apps::RPC_RRDB_RRDB_PUT;
 
-            dsn::apps::update_request request;
-            pegasus::pegasus_generate_key(request.key, std::string("hash"), sort_key);
-            dsn::message_ptr msg =
-                dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
-            auto data = dsn::move_message_to_blob(msg.get());
+            apps::update_request request;
+            pegasus_generate_key(request.key, std::string("hash"), sort_key);
+            message_ptr msg =
+                from_thrift_request_to_received_message(request, apps::RPC_RRDB_RRDB_PUT);
+            auto data = move_message_to_blob(msg.get());
 
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
@@ -176,8 +178,7 @@ public:
             ASSERT_EQ(duplicator_impl->_inflights.begin()->second.size(), batch_count - 1);
 
             // failed
-            duplicator_impl->on_duplicate_reply(
-                get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_TIMEOUT);
+            duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, ERR_TIMEOUT);
 
             // schedule next round
             _tracker.wait_outstanding_tasks();
@@ -190,7 +191,7 @@ public:
 
             // with other error
             rpc.response().error = PERR_INVALID_ARGUMENT;
-            duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_OK);
+            duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, ERR_OK);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -199,8 +200,7 @@ public:
 
             // with other error
             rpc.response().error = PERR_OK;
-            duplicator_impl->on_duplicate_reply(
-                get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_IO_PENDING);
+            duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, ERR_IO_PENDING);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -211,7 +211,7 @@ public:
 
     void test_duplicate_isolated_hashkeys()
     {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
+        replica_base replica(gpid(1, 1), "fake_replica", "temp");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
 
@@ -226,13 +226,12 @@ public:
         uint batch_count = 0;
         for (uint64_t i = 0; i < total_size; i++) {
             uint64_t ts = 200 + i;
-            dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_PUT;
+            task_code code = apps::RPC_RRDB_RRDB_PUT;
 
-            dsn::apps::update_request request;
-            pegasus::pegasus_generate_key(
-                request.key, std::string("hash") + std::to_string(i), sort_key);
-            dsn::message_ptr msg = dsn::from_thrift_request_to_received_message(request, code);
-            auto data = dsn::move_message_to_blob(msg.get());
+            apps::update_request request;
+            pegasus_generate_key(request.key, std::string("hash") + std::to_string(i), sort_key);
+            message_ptr msg = from_thrift_request_to_received_message(request, code);
+            auto data = move_message_to_blob(msg.get());
 
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
@@ -259,8 +258,8 @@ public:
             // reply with success
             auto rpc_list = std::move(duplicate_rpc::mail_box());
             for (const auto &rpc : rpc_list) {
-                rpc.response().error = dsn::ERR_OK;
-                duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_OK);
+                rpc.response().error = ERR_OK;
+                duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, ERR_OK);
             }
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
@@ -270,7 +269,7 @@ public:
 
     void test_create_duplicator()
     {
-        replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
+        replica_base replica(gpid(1, 1), "fake_replica", "temp");
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
@@ -292,44 +291,41 @@ TEST_F(pegasus_mutation_duplicator_test, get_hash_from_request)
 {
     std::string hash_key("hash");
     std::string sort_key("sort");
-    uint64_t hash =
-        pegasus::pegasus_hash_key_hash(dsn::blob(hash_key.data(), 0, hash_key.length()));
+    uint64_t hash = pegasus_hash_key_hash(blob(hash_key.data(), 0, hash_key.length()));
 
     {
-        dsn::apps::multi_put_request request;
+        apps::multi_put_request request;
         request.hash_key.assign(hash_key.data(), 0, hash_key.length());
-        dsn::message_ptr msg = dsn::from_thrift_request_to_received_message(
-            request, dsn::apps::RPC_RRDB_RRDB_MULTI_PUT);
-        auto data = dsn::move_message_to_blob(msg.get());
-        ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_MULTI_PUT, data));
+        message_ptr msg =
+            from_thrift_request_to_received_message(request, apps::RPC_RRDB_RRDB_MULTI_PUT);
+        auto data = move_message_to_blob(msg.get());
+        ASSERT_EQ(hash, get_hash_from_request(apps::RPC_RRDB_RRDB_MULTI_PUT, data));
     }
 
     {
-        dsn::apps::multi_remove_request request;
+        apps::multi_remove_request request;
         request.hash_key.assign(hash_key.data(), 0, hash_key.length());
-        dsn::message_ptr msg = dsn::from_thrift_request_to_received_message(
-            request, dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE);
+        message_ptr msg =
+            from_thrift_request_to_received_message(request, apps::RPC_RRDB_RRDB_MULTI_REMOVE);
 
-        auto data = dsn::move_message_to_blob(msg.get());
-        ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE, data));
+        auto data = move_message_to_blob(msg.get());
+        ASSERT_EQ(hash, get_hash_from_request(apps::RPC_RRDB_RRDB_MULTI_REMOVE, data));
     }
 
     {
-        dsn::apps::update_request request;
-        pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
-        dsn::message_ptr msg =
-            dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
-        auto data = dsn::move_message_to_blob(msg.get());
-        ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_PUT, data));
+        apps::update_request request;
+        pegasus_generate_key(request.key, hash_key, sort_key);
+        message_ptr msg = from_thrift_request_to_received_message(request, apps::RPC_RRDB_RRDB_PUT);
+        auto data = move_message_to_blob(msg.get());
+        ASSERT_EQ(hash, get_hash_from_request(apps::RPC_RRDB_RRDB_PUT, data));
     }
 
     {
-        dsn::blob key;
-        pegasus::pegasus_generate_key(key, hash_key, sort_key);
-        dsn::message_ptr msg =
-            dsn::from_thrift_request_to_received_message(key, dsn::apps::RPC_RRDB_RRDB_REMOVE);
-        auto data = dsn::move_message_to_blob(msg.get());
-        ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_REMOVE, data));
+        blob key;
+        pegasus_generate_key(key, hash_key, sort_key);
+        message_ptr msg = from_thrift_request_to_received_message(key, apps::RPC_RRDB_RRDB_REMOVE);
+        auto data = move_message_to_blob(msg.get());
+        ASSERT_EQ(hash, get_hash_from_request(apps::RPC_RRDB_RRDB_REMOVE, data));
     }
 }
 
@@ -340,21 +336,20 @@ TEST_F(pegasus_mutation_duplicator_test, read_after_get_hash_key)
 {
     std::string hash_key("hash");
     std::string sort_key("sort");
-    uint64_t hash =
-        pegasus::pegasus_hash_key_hash(dsn::blob(hash_key.data(), 0, hash_key.length()));
+    uint64_t hash = pegasus_hash_key_hash(blob(hash_key.data(), 0, hash_key.length()));
 
-    dsn::message_ex *msg;
+    message_ex *msg;
     {
-        dsn::apps::update_request request;
-        pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
-        msg = dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
+        apps::update_request request;
+        pegasus_generate_key(request.key, hash_key, sort_key);
+        msg = from_thrift_request_to_received_message(request, apps::RPC_RRDB_RRDB_PUT);
     }
-    auto data = dsn::move_message_to_blob(msg);
-    ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_PUT, data));
+    auto data = move_message_to_blob(msg);
+    ASSERT_EQ(hash, get_hash_from_request(apps::RPC_RRDB_RRDB_PUT, data));
 
-    pegasus::put_rpc rpc(msg);
-    dsn::blob raw_key;
-    pegasus::pegasus_generate_key(raw_key, hash_key, sort_key);
+    put_rpc rpc(msg);
+    blob raw_key;
+    pegasus_generate_key(raw_key, hash_key, sort_key);
     ASSERT_EQ(rpc.request().key.to_string(), raw_key.to_string());
 }
 
@@ -371,28 +366,27 @@ TEST_F(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplic
 
 TEST_F(pegasus_mutation_duplicator_test, duplicate_duplicate)
 {
-    replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
+    replica_base replica(gpid(1, 1), "fake_replica", "temp");
     auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
     duplicator->set_task_environment(&_env);
 
-    dsn::apps::update_request request;
-    pegasus::pegasus_generate_key(request.key, std::string("hash"), std::string("sort"));
-    dsn::message_ptr msg =
-        dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
-    auto data = dsn::move_message_to_blob(msg.get());
+    apps::update_request request;
+    pegasus_generate_key(request.key, std::string("hash"), std::string("sort"));
+    message_ptr msg = from_thrift_request_to_received_message(request, apps::RPC_RRDB_RRDB_PUT);
+    auto data = move_message_to_blob(msg.get());
 
     // a duplicate from onebox2
-    dsn::apps::duplicate_request dup;
-    dsn::apps::duplicate_entry entry;
+    apps::duplicate_request dup;
+    apps::duplicate_entry entry;
     entry.cluster_id = 2;
     entry.raw_message = data;
     entry.timestamp = 200;
     dup.entries.emplace_back(entry);
-    msg = dsn::from_thrift_request_to_received_message(dup, dsn::apps::RPC_RRDB_RRDB_DUPLICATE);
-    data = dsn::move_message_to_blob(msg.get());
+    msg = from_thrift_request_to_received_message(dup, apps::RPC_RRDB_RRDB_DUPLICATE);
+    data = move_message_to_blob(msg.get());
 
     mutation_tuple_set muts;
-    muts.insert(std::make_tuple(200, dsn::apps::RPC_RRDB_RRDB_DUPLICATE, data));
+    muts.insert(std::make_tuple(200, apps::RPC_RRDB_RRDB_DUPLICATE, data));
     RPC_MOCKING(duplicate_rpc)
     {
         duplicator->duplicate(muts, [&](size_t sz) {

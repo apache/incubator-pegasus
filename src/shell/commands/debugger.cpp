@@ -64,6 +64,9 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 
+using namespace pegasus::utils::filesystem;
+
+namespace pegasus {
 bool sst_dump(command_executor *e, shell_context *sc, arguments args)
 {
     rocksdb::SSTDumpTool tool;
@@ -106,7 +109,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "ERROR: input is not specified\n");
         return false;
     }
-    if (!dsn::utils::filesystem::directory_exists(input)) {
+    if (!directory_exists(input)) {
         fprintf(stderr, "ERROR: input %s is not a directory\n", input.c_str());
         return false;
     }
@@ -124,101 +127,93 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream &os = *os_ptr;
 
-    std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex * *requests, int count)>
+    std::function<void(int64_t decree, int64_t timestamp, message_ex * *requests, int count)>
         callback;
     if (detailed) {
         callback = [&os, sc](
-            int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count) mutable {
+            int64_t decree, int64_t timestamp, message_ex **requests, int count) mutable {
             for (int i = 0; i < count; ++i) {
-                dsn::message_ex *request = requests[i];
+                message_ex *request = requests[i];
                 CHECK_NOTNULL(request, "");
-                ::dsn::message_ex *msg = (::dsn::message_ex *)request;
+                message_ex *msg = (message_ex *)request;
                 if (msg->local_rpc_code == RPC_REPLICATION_WRITE_EMPTY) {
                     os << INDENT << "[EMPTY]" << std::endl;
-                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_PUT) {
-                    ::dsn::apps::update_request update;
-                    ::dsn::unmarshall(request, update);
+                } else if (msg->local_rpc_code == apps::RPC_RRDB_RRDB_PUT) {
+                    apps::update_request update;
+                    unmarshall(request, update);
                     std::string hash_key, sort_key;
-                    pegasus::pegasus_restore_key(update.key, hash_key, sort_key);
-                    os << INDENT << "[PUT] \""
-                       << pegasus::utils::c_escape_string(hash_key, sc->escape_all) << "\" : \""
-                       << pegasus::utils::c_escape_string(sort_key, sc->escape_all) << "\" => "
+                    pegasus_restore_key(update.key, hash_key, sort_key);
+                    os << INDENT << "[PUT] \"" << utils::c_escape_string(hash_key, sc->escape_all)
+                       << "\" : \"" << utils::c_escape_string(sort_key, sc->escape_all) << "\" => "
                        << update.expire_ts_seconds << " : \""
-                       << pegasus::utils::c_escape_string(update.value, sc->escape_all) << "\""
-                       << std::endl;
-                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_REMOVE) {
-                    ::dsn::blob key;
-                    ::dsn::unmarshall(request, key);
+                       << utils::c_escape_string(update.value, sc->escape_all) << "\"" << std::endl;
+                } else if (msg->local_rpc_code == apps::RPC_RRDB_RRDB_REMOVE) {
+                    blob key;
+                    unmarshall(request, key);
                     std::string hash_key, sort_key;
-                    pegasus::pegasus_restore_key(key, hash_key, sort_key);
+                    pegasus_restore_key(key, hash_key, sort_key);
                     os << INDENT << "[REMOVE] \""
-                       << pegasus::utils::c_escape_string(hash_key, sc->escape_all) << "\" : \""
-                       << pegasus::utils::c_escape_string(sort_key, sc->escape_all) << "\""
-                       << std::endl;
-                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-                    ::dsn::apps::multi_put_request update;
-                    ::dsn::unmarshall(request, update);
+                       << utils::c_escape_string(hash_key, sc->escape_all) << "\" : \""
+                       << utils::c_escape_string(sort_key, sc->escape_all) << "\"" << std::endl;
+                } else if (msg->local_rpc_code == apps::RPC_RRDB_RRDB_MULTI_PUT) {
+                    apps::multi_put_request update;
+                    unmarshall(request, update);
                     os << INDENT << "[MULTI_PUT] " << update.kvs.size() << std::endl;
-                    for (::dsn::apps::key_value &kv : update.kvs) {
+                    for (apps::key_value &kv : update.kvs) {
                         os << INDENT << INDENT << "[PUT] \""
-                           << pegasus::utils::c_escape_string(update.hash_key, sc->escape_all)
-                           << "\" : \"" << pegasus::utils::c_escape_string(kv.key, sc->escape_all)
-                           << "\" => " << update.expire_ts_seconds << " : \""
-                           << pegasus::utils::c_escape_string(kv.value, sc->escape_all) << "\""
-                           << std::endl;
+                           << utils::c_escape_string(update.hash_key, sc->escape_all) << "\" : \""
+                           << utils::c_escape_string(kv.key, sc->escape_all) << "\" => "
+                           << update.expire_ts_seconds << " : \""
+                           << utils::c_escape_string(kv.value, sc->escape_all) << "\"" << std::endl;
                     }
-                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
-                    ::dsn::apps::multi_remove_request update;
-                    ::dsn::unmarshall(request, update);
+                } else if (msg->local_rpc_code == apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
+                    apps::multi_remove_request update;
+                    unmarshall(request, update);
                     os << INDENT << "[MULTI_REMOVE] " << update.sort_keys.size() << std::endl;
-                    for (::dsn::blob &sort_key : update.sort_keys) {
+                    for (blob &sort_key : update.sort_keys) {
                         os << INDENT << INDENT << "[REMOVE] \""
-                           << pegasus::utils::c_escape_string(update.hash_key, sc->escape_all)
-                           << "\" : \"" << pegasus::utils::c_escape_string(sort_key, sc->escape_all)
-                           << "\"" << std::endl;
+                           << utils::c_escape_string(update.hash_key, sc->escape_all) << "\" : \""
+                           << utils::c_escape_string(sort_key, sc->escape_all) << "\"" << std::endl;
                     }
-                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_INCR) {
-                    ::dsn::apps::incr_request update;
-                    ::dsn::unmarshall(request, update);
+                } else if (msg->local_rpc_code == apps::RPC_RRDB_RRDB_INCR) {
+                    apps::incr_request update;
+                    unmarshall(request, update);
                     std::string hash_key, sort_key;
-                    pegasus::pegasus_restore_key(update.key, hash_key, sort_key);
-                    os << INDENT << "[INCR] \""
-                       << pegasus::utils::c_escape_string(hash_key, sc->escape_all) << "\" : \""
-                       << pegasus::utils::c_escape_string(sort_key, sc->escape_all) << "\" => "
+                    pegasus_restore_key(update.key, hash_key, sort_key);
+                    os << INDENT << "[INCR] \"" << utils::c_escape_string(hash_key, sc->escape_all)
+                       << "\" : \"" << utils::c_escape_string(sort_key, sc->escape_all) << "\" => "
                        << update.increment << std::endl;
-                } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
-                    dsn::apps::check_and_set_request update;
-                    dsn::unmarshall(request, update);
+                } else if (msg->local_rpc_code == apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+                    apps::check_and_set_request update;
+                    unmarshall(request, update);
                     auto set_sort_key =
                         update.set_diff_sort_key ? update.set_sort_key : update.check_sort_key;
                     std::string check_operand;
-                    if (pegasus::cas_is_check_operand_needed(update.check_type)) {
+                    if (cas_is_check_operand_needed(update.check_type)) {
                         check_operand = fmt::format(
                             "\"{}\" ",
-                            pegasus::utils::c_escape_string(update.check_operand, sc->escape_all));
+                            utils::c_escape_string(update.check_operand, sc->escape_all));
                     }
                     os << INDENT
-                       << fmt::format(
-                              "[CHECK_AND_SET] \"{}\" : IF SORT_KEY({}) {} {}"
-                              "THEN SET SORT_KEY({}) => VALUE({}) [expire={}]\n",
-                              pegasus::utils::c_escape_string(update.hash_key, sc->escape_all),
-                              pegasus::utils::c_escape_string(update.check_sort_key,
-                                                              sc->escape_all),
-                              pegasus::cas_check_type_to_string(update.check_type),
-                              check_operand,
-                              pegasus::utils::c_escape_string(set_sort_key, sc->escape_all),
-                              pegasus::utils::c_escape_string(update.set_value, sc->escape_all),
-                              update.set_expire_ts_seconds);
+                       << fmt::format("[CHECK_AND_SET] \"{}\" : IF SORT_KEY({}) {} {}"
+                                      "THEN SET SORT_KEY({}) => VALUE({}) [expire={}]\n",
+                                      utils::c_escape_string(update.hash_key, sc->escape_all),
+                                      utils::c_escape_string(update.check_sort_key, sc->escape_all),
+                                      cas_check_type_to_string(update.check_type),
+                                      check_operand,
+                                      utils::c_escape_string(set_sort_key, sc->escape_all),
+                                      utils::c_escape_string(update.set_value, sc->escape_all),
+                                      update.set_expire_ts_seconds);
                 } else {
                     os << INDENT << "ERROR: unsupported code "
-                       << ::dsn::task_code(msg->local_rpc_code).to_string() << "("
-                       << msg->local_rpc_code << ")" << std::endl;
+                       << task_code(msg->local_rpc_code).to_string() << "(" << msg->local_rpc_code
+                       << ")" << std::endl;
                 }
             }
         };
     }
 
-    dsn::replication::mutation_log_tool tool;
+    replication::mutation_log_tool tool;
     bool ret = tool.dump(input, os, callback);
     if (!ret) {
         fprintf(stderr, "ERROR: dump failed\n");
@@ -251,8 +246,8 @@ bool local_get(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    ::dsn::blob key;
-    pegasus::pegasus_generate_key(key, hash_key, sort_key);
+    blob key;
+    pegasus_generate_key(key, hash_key, sort_key);
     rocksdb::Slice skey(key.data(), key.length());
     std::string value;
     rocksdb::ReadOptions rd_opts;
@@ -260,13 +255,13 @@ bool local_get(command_executor *e, shell_context *sc, arguments args)
     if (!status.ok()) {
         fprintf(stderr, "ERROR: get failed: %s\n", status.ToString().c_str());
     } else {
-        uint32_t expire_ts = pegasus::pegasus_extract_expire_ts(0, value);
-        dsn::blob user_data;
-        pegasus::pegasus_extract_user_data(0, std::move(value), user_data);
+        uint32_t expire_ts = pegasus_extract_expire_ts(0, value);
+        blob user_data;
+        pegasus_extract_user_data(0, std::move(value), user_data);
         fprintf(stderr,
                 "%u : \"%s\"\n",
                 expire_ts,
-                pegasus::utils::c_escape_string(user_data, sc->escape_all).c_str());
+                utils::c_escape_string(user_data, sc->escape_all).c_str());
     }
 
     delete db;
@@ -280,8 +275,8 @@ bool rdb_key_str2hex(command_executor *e, shell_context *sc, arguments args)
     }
     std::string hash_key = sds_to_string(args.argv[1]);
     std::string sort_key = sds_to_string(args.argv[2]);
-    ::dsn::blob key;
-    pegasus::pegasus_generate_key(key, hash_key, sort_key);
+    blob key;
+    pegasus_generate_key(key, hash_key, sort_key);
     rocksdb::Slice skey(key.data(), key.length());
     fprintf(stderr, "\"%s\"\n", skey.ToString(true).c_str());
     return true;
@@ -293,13 +288,11 @@ bool rdb_key_hex2str(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
     std::string hex_rdb_key = sds_to_string(args.argv[1]);
-    dsn::blob key = dsn::blob::create_from_bytes(rocksdb::LDBCommand::HexToString(hex_rdb_key));
+    blob key = blob::create_from_bytes(rocksdb::LDBCommand::HexToString(hex_rdb_key));
     std::string hash_key, sort_key;
-    pegasus::pegasus_restore_key(key, hash_key, sort_key);
-    fmt::print(
-        stderr, "\nhash key: \"{}\"\n", pegasus::utils::c_escape_string(hash_key, sc->escape_all));
-    fmt::print(
-        stderr, "\nsort key: \"{}\"\n", pegasus::utils::c_escape_string(sort_key, sc->escape_all));
+    pegasus_restore_key(key, hash_key, sort_key);
+    fmt::print(stderr, "\nhash key: \"{}\"\n", utils::c_escape_string(hash_key, sc->escape_all));
+    fmt::print(stderr, "\nsort key: \"{}\"\n", utils::c_escape_string(sort_key, sc->escape_all));
     return true;
 }
 
@@ -310,15 +303,16 @@ bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args)
     }
     std::string hex_rdb_value = sds_to_string(args.argv[1]);
     std::string pegasus_value = rocksdb::LDBCommand::HexToString(hex_rdb_value);
-    auto expire_ts = static_cast<int64_t>(pegasus::pegasus_extract_expire_ts(0, pegasus_value)) +
-                     pegasus::utils::epoch_begin; // TODO(wutao): pass user specified version
+    auto expire_ts = static_cast<int64_t>(pegasus_extract_expire_ts(0, pegasus_value)) +
+                     utils::epoch_begin; // TODO(wutao): pass user specified version
     std::time_t tm(expire_ts);
     fmt::print(stderr, "\nWhen to expire:\n  {:%Y-%m-%d %H:%M:%S}\n", *std::localtime(&tm));
 
-    dsn::blob user_data;
-    pegasus::pegasus_extract_user_data(0, std::move(pegasus_value), user_data);
+    blob user_data;
+    pegasus_extract_user_data(0, std::move(pegasus_value), user_data);
     fprintf(stderr,
             "user_data:\n  \"%s\"\n",
-            pegasus::utils::c_escape_string(user_data.to_string(), sc->escape_all).c_str());
+            utils::c_escape_string(user_data.to_string(), sc->escape_all).c_str());
     return true;
 }
+} // namespace pegasus

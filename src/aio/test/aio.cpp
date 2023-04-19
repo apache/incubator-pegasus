@@ -48,12 +48,12 @@
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 class disk_file;
-} // namespace dsn
+} // namespace pegasus
 
-using namespace ::dsn;
-
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_TEST_SERVER)
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER);
 
@@ -72,7 +72,7 @@ TEST(core, aio)
 
     // new write
     for (int i = 0; i < 100; i++) {
-        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr);
+        auto t = file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr);
         tasks.push_back(t);
         offset += len;
     }
@@ -85,7 +85,7 @@ TEST(core, aio)
     offset = 0;
     tasks.clear();
     for (int i = 0; i < 100; i++) {
-        auto t = ::dsn::file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr);
+        auto t = file::write(fp, buffer, len, offset, LPC_AIO_TEST, nullptr, nullptr);
         tasks.push_back(t);
         offset += len;
     }
@@ -103,8 +103,8 @@ TEST(core, aio)
         buffers[i].size = len;
     }
     for (int i = 0; i < 10; i++) {
-        tasks.push_back(::dsn::file::write_vector(
-            fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, nullptr));
+        tasks.push_back(
+            file::write_vector(fp, buffers.get(), 10, offset, LPC_AIO_TEST, nullptr, nullptr));
         offset += 10 * len;
     }
     for (auto &t : tasks) {
@@ -122,7 +122,7 @@ TEST(core, aio)
     offset = 0;
     tasks.clear();
     for (int i = 0; i < 100; i++) {
-        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr);
+        auto t = file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr);
         tasks.push_back(t);
         offset += len;
     }
@@ -137,19 +137,19 @@ TEST(core, aio)
     tasks.clear();
     for (int i = 0; i < 200; i++) {
         buffer2[0] = 'x';
-        auto t = ::dsn::file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr);
+        auto t = file::read(fp, buffer2, len, offset, LPC_AIO_TEST, nullptr, nullptr);
         offset += len;
 
         t->wait();
         EXPECT_TRUE(t->get_transferred_size() == (size_t)len);
-        EXPECT_TRUE(dsn::utils::mequals(buffer, buffer2, len));
+        EXPECT_TRUE(utils::mequals(buffer, buffer2, len));
     }
 
     err = file::close(fp);
     fail::teardown();
     EXPECT_TRUE(err == ERR_OK);
 
-    utils::filesystem::remove_path("tmp");
+    remove_path("tmp");
 }
 
 TEST(core, aio_share)
@@ -163,7 +163,7 @@ TEST(core, aio_share)
     file::close(fp);
     file::close(fp2);
 
-    utils::filesystem::remove_path("tmp");
+    remove_path("tmp");
 }
 
 TEST(core, operation_failed)
@@ -174,9 +174,9 @@ TEST(core, operation_failed)
     auto fp = file::open("tmp_test_file", O_WRONLY, 0600);
     EXPECT_TRUE(fp == nullptr);
 
-    auto err = std::make_unique<dsn::error_code>();
+    auto err = std::make_unique<error_code>();
     auto count = std::make_unique<size_t>();
-    auto io_callback = [&err, &count](::dsn::error_code e, size_t n) {
+    auto io_callback = [&err, &count](error_code e, size_t n) {
         *err = e;
         *count = n;
     };
@@ -185,53 +185,53 @@ TEST(core, operation_failed)
     EXPECT_TRUE(fp != nullptr);
     char buffer[512];
     const char *str = "hello file";
-    auto t = ::dsn::file::write(fp, str, strlen(str), 0, LPC_AIO_TEST, nullptr, io_callback, 0);
+    auto t = file::write(fp, str, strlen(str), 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == strlen(str));
 
-    t = ::dsn::file::read(fp, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
+    t = file::read(fp, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_FILE_OPERATION_FAILED);
 
     auto fp2 = file::open("tmp_test_file", O_RDONLY | O_BINARY, 0);
     EXPECT_TRUE(fp2 != nullptr);
 
-    t = ::dsn::file::read(fp2, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
+    t = file::read(fp2, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == strlen(str));
-    EXPECT_TRUE(dsn::utils::equals(buffer, str, 10));
+    EXPECT_TRUE(utils::equals(buffer, str, 10));
 
-    t = ::dsn::file::read(fp2, buffer, 5, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
+    t = file::read(fp2, buffer, 5, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == 5);
-    EXPECT_TRUE(dsn::utils::equals(buffer, str, 5));
+    EXPECT_TRUE(utils::equals(buffer, str, 5));
 
-    t = ::dsn::file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
+    t = file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     LOG_INFO("error code: {}", *err);
     file::close(fp);
     file::close(fp2);
     fail::teardown();
 
-    EXPECT_TRUE(utils::filesystem::remove_path("tmp_test_file"));
+    EXPECT_TRUE(remove_path("tmp_test_file"));
 }
 
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_READ, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE_AIO(LPC_AIO_TEST_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 struct aio_result
 {
-    dsn::error_code err;
+    error_code err;
     size_t sz;
 };
 TEST(core, dsn_file)
 {
     int64_t fin_size, fout_size;
-    ASSERT_TRUE(utils::filesystem::file_size("copy_source.txt", fin_size));
+    ASSERT_TRUE(file_size("copy_source.txt", fin_size));
     ASSERT_LT(0, fin_size);
 
-    dsn::disk_file *fin = file::open("copy_source.txt", O_RDONLY, 0);
+    disk_file *fin = file::open("copy_source.txt", O_RDONLY, 0);
     ASSERT_NE(nullptr, fin);
-    dsn::disk_file *fout = file::open("copy_dest.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
+    disk_file *fout = file::open("copy_dest.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
     ASSERT_NE(nullptr, fout);
     char buffer[1024];
     uint64_t offset = 0;
@@ -243,14 +243,14 @@ TEST(core, dsn_file)
                                       offset,
                                       LPC_AIO_TEST_READ,
                                       nullptr,
-                                      [&rin](dsn::error_code err, size_t sz) {
+                                      [&rin](error_code err, size_t sz) {
                                           rin.err = err;
                                           rin.sz = sz;
                                       },
                                       0);
         ASSERT_NE(nullptr, tin);
 
-        if (dsn::tools::get_current_tool()->name() != "simulator") {
+        if (tools::get_current_tool()->name() != "simulator") {
             // at least 1 for tin, but if already read completed, then only 1
             ASSERT_LE(1, tin->get_count());
         }
@@ -264,7 +264,7 @@ TEST(core, dsn_file)
         ASSERT_LT(0u, rin.sz);
         ASSERT_EQ(rin.sz, tin->get_transferred_size());
         // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator") {
+        if (tools::get_current_tool()->name() == "simulator") {
             ASSERT_EQ(1, tin->get_count());
         }
 
@@ -275,7 +275,7 @@ TEST(core, dsn_file)
                                         offset,
                                         LPC_AIO_TEST_WRITE,
                                         nullptr,
-                                        [&rout](dsn::error_code err, size_t sz) {
+                                        [&rout](error_code err, size_t sz) {
                                             rout.err = err;
                                             rout.sz = sz;
                                         },
@@ -287,7 +287,7 @@ TEST(core, dsn_file)
         ASSERT_EQ(rin.sz, rout.sz);
         ASSERT_EQ(rin.sz, tout->get_transferred_size());
         // this is only true for simulator
-        if (dsn::tools::get_current_tool()->name() == "simulator") {
+        if (tools::get_current_tool()->name() == "simulator") {
             ASSERT_EQ(1, tout->get_count());
         }
 
@@ -300,6 +300,7 @@ TEST(core, dsn_file)
     ASSERT_EQ(ERR_OK, file::close(fout));
     ASSERT_EQ(ERR_OK, file::close(fin));
 
-    ASSERT_TRUE(utils::filesystem::file_size("copy_dest.txt", fout_size));
+    ASSERT_TRUE(file_size("copy_dest.txt", fout_size));
     ASSERT_EQ(fin_size, fout_size);
 }
+} // namespace pegasus

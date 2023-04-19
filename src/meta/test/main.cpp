@@ -38,7 +38,7 @@
 int gtest_flags = 0;
 int gtest_ret = 0;
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_META_TEST)
@@ -79,7 +79,7 @@ TEST(meta, adjust_dropped_size) { g_app->adjust_dropped_size(); }
 
 TEST(meta, app_envs_basic_test) { g_app->app_envs_basic_test(); }
 
-dsn::error_code meta_service_test_app::start(const std::vector<std::string> &args)
+error_code meta_service_test_app::start(const std::vector<std::string> &args)
 {
     if (FLAGS_random_seed == 0) {
         FLAGS_random_seed = static_cast<uint32_t>(time(nullptr));
@@ -96,17 +96,18 @@ dsn::error_code meta_service_test_app::start(const std::vector<std::string> &arg
     g_app = this;
     gtest_ret = RUN_ALL_TESTS();
     gtest_flags = 1;
-    return dsn::ERR_OK;
+    return ERR_OK;
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
-    dsn::service_app::register_factory<dsn::replication::meta_service_test_app>("test_meta");
-    dsn::service::meta_service_app::register_all();
+    pegasus::service_app::register_factory<pegasus::replication::meta_service_test_app>(
+        "test_meta");
+    pegasus::service::meta_service_app::register_all();
     dsn_run_config("config-test.ini", false);
     while (gtest_flags == 0) {
         std::this_thread::sleep_for(std::chrono::seconds(1));

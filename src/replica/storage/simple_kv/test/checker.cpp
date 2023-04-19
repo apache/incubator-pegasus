@@ -45,7 +45,7 @@
 #include "case.h"
 #include "checker.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_service.h"
 #include "meta/meta_service_app.h"
@@ -67,7 +67,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 
 namespace replication {
@@ -82,8 +82,7 @@ public:
 
 public:
     checker_partition_guardian(meta_service *svc) : partition_guardian(svc) {}
-    pc_status
-    cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action) override
+    pc_status cure(meta_view view, const gpid &gpid, configuration_proposal_action &action) override
     {
         const partition_configuration &pc = *get_config(*view.apps, gpid);
         action.type = config_type::CT_INVALID;
@@ -208,7 +207,7 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
         }
     }
 
-    const auto &nodes = dsn::service_engine::instance().get_all_nodes();
+    const auto &nodes = service_engine::instance().get_all_nodes();
     for (const auto &node : nodes) {
         int id = node.second->id();
         std::string name = node.second->full_name();
@@ -245,7 +244,7 @@ void test_checker::exit()
     }
 
     if (test_case::s_close_replica_stub_on_exit) {
-        dsn::tools::tool_app *app = dsn::tools::get_current_tool();
+        tools::tool_app *app = tools::get_current_tool();
         app->stop_all_apps(true);
     }
 }
@@ -274,7 +273,7 @@ void test_checker::check()
     }
 }
 
-void test_checker::on_replica_state_change(::dsn::rpc_address from,
+void test_checker::on_replica_state_change(rpc_address from,
                                            const replica_configuration &new_config,
                                            bool is_closing)
 {
@@ -401,9 +400,8 @@ rpc_address test_checker::node_name_to_address(const std::string &name)
 
 void install_checkers()
 {
-    dsn::tools::simulator::register_checker("simple_kv.checker",
-                                            dsn::tools::checker::create<wrap_checker>);
+    tools::simulator::register_checker("simple_kv.checker", tools::checker::create<wrap_checker>);
 }
 } // namespace test
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

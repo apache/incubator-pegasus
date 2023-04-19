@@ -33,7 +33,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 DSN_DECLARE_string(service_fqdn);
 DSN_DECLARE_string(service_name);
@@ -176,4 +176,4 @@ void server_negotiation::succ_negotiation(negotiation_rpc rpc, const std::string
     LOG_INFO("{}: negotiation succeed", _name);
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

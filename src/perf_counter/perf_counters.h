@@ -37,7 +37,7 @@
 #include "utils/singleton.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 
 class command_deregister;
 
@@ -172,4 +172,4 @@ private:
     std::vector<std::unique_ptr<command_deregister>> _cmds;
 };
 
-} // namespace dsn
+} // namespace pegasus

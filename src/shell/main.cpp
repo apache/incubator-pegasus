@@ -47,6 +47,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
+namespace pegasus {
 std::map<std::string, command_executor *> s_commands_map;
 shell_context s_global_context;
 size_t s_max_name_length = 0;
@@ -548,7 +549,7 @@ void print_help(command_executor *e, size_t name_width, size_t option_width)
     for (i = 0; i < options.size(); i++) {
         if (i - line_start >= option_width && line_end >= line_start) {
             std::string s = options.substr(line_start, line_end - line_start + 1);
-            std::string r = dsn::utils::trim_string((char *)s.c_str());
+            std::string r = utils::trim_string((char *)s.c_str());
             if (!r.empty())
                 lines.push_back(r);
             line_start = line_end + 2;
@@ -561,7 +562,7 @@ void print_help(command_executor *e, size_t name_width, size_t option_width)
     line_end = i - 1;
     if (line_end >= line_start) {
         std::string s = options.substr(line_start, line_end - line_start + 1);
-        std::string r = dsn::utils::trim_string((char *)s.c_str());
+        std::string r = utils::trim_string((char *)s.c_str());
         if (!r.empty())
             lines.push_back(r);
     }
@@ -610,7 +611,7 @@ static void completionCallback(const char *buf, linenoiseCompletions *lc)
         const command_executor &c = commands[i];
 
         size_t matchlen = strlen(buf);
-        if (dsn::utils::iequals(buf, c.name, matchlen)) {
+        if (utils::iequals(buf, c.name, matchlen)) {
             linenoiseAddCompletion(lc, c.name);
         }
     }
@@ -621,7 +622,7 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
 {
     int argc;
     sds *argv = sdssplitargs(buf, &argc);
-    auto cleanup = dsn::defer([argc, argv]() { sdsfreesplitres(argv, argc); });
+    auto cleanup = defer([argc, argv]() { sdsfreesplitres(argv, argc); });
 
     /* Check if the argument list is empty and return ASAP. */
     if (argc == 0) {
@@ -632,7 +633,7 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
     bool endWithSpace = buflen && isspace(buf[buflen - 1]);
 
     for (int i = 0; commands[i].name != nullptr; ++i) {
-        if (dsn::utils::iequals(argv[0], commands[i].name)) {
+        if (utils::iequals(argv[0], commands[i].name)) {
             *color = 90;
             *bold = 0;
             sds hint = sdsnew(commands[i].option_usage);
@@ -658,22 +659,20 @@ static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
 {
     s_global_context.current_cluster_name = cluster_name;
     std::string server_list =
-        dsn_config_get_value_string(pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
+        dsn_config_get_value_string(PEGASUS_CLUSTER_SECTION_NAME.c_str(),
                                     s_global_context.current_cluster_name.c_str(),
                                     "",
                                     "");
 
-    dsn::replication::replica_helper::load_meta_servers(
-        s_global_context.meta_list,
-        pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
-        cluster_name.c_str());
+    replication::replica_helper::load_meta_servers(
+        s_global_context.meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name.c_str());
     s_global_context.ddl_client =
-        std::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
+        std::make_unique<replication::replication_ddl_client>(s_global_context.meta_list);
 
     // get real cluster name from zk
     std::string name;
-    ::dsn::error_code err = s_global_context.ddl_client->cluster_name(1000, name);
-    if (err == dsn::ERR_OK) {
+    error_code err = s_global_context.ddl_client->cluster_name(1000, name);
+    if (err == ERR_OK) {
         cluster_name = name;
     }
     std::cout << "The cluster name is: " << cluster_name << std::endl;
@@ -688,7 +687,7 @@ void initialize(int argc, char **argv)
     std::cout << std::endl;
 
     std::string config_file = argc > 1 ? argv[1] : "config.ini";
-    if (!pegasus::pegasus_client_factory::initialize(config_file.c_str())) {
+    if (!pegasus_client_factory::initialize(config_file.c_str())) {
         std::cout << "ERROR: init pegasus failed: " << config_file << std::endl;
         dsn_exit(-1);
     } else {
@@ -712,7 +711,7 @@ void run()
     while (true) {
         int arg_count = 0;
         sds *args = scanfCommand(&arg_count);
-        auto cleanup = dsn::defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
+        auto cleanup = defer([args, arg_count] { sdsfreesplitres(args, arg_count); });
 
         if (args == nullptr) {
             printf("Invalid argument(s)\n");
@@ -735,9 +734,11 @@ void run()
     }
 }
 
+} // namespace pegasus
+
 int main(int argc, char **argv)
 {
-    initialize(argc, argv);
-    run();
+    pegasus::initialize(argc, argv);
+    pegasus::run();
     return 0;
 }

@@ -43,7 +43,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "dummy_balancer.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
@@ -65,7 +65,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 typedef std::shared_ptr<configuration_update_request> cur_ptr;
@@ -73,7 +73,7 @@ typedef std::shared_ptr<configuration_update_request> cur_ptr;
 // apply request in request.type to request.config
 static void apply_update_request(/*in-out*/ configuration_update_request &update_req)
 {
-    dsn::partition_configuration &pc = update_req.config;
+    partition_configuration &pc = update_req.config;
     pc.ballot++;
 
     switch (update_req.type) {
@@ -106,10 +106,10 @@ static void apply_update_request(/*in-out*/ configuration_update_request &update
     }
 }
 
-static auto default_filter = [](const dsn::rpc_address &target, dsn::message_ex *request) {
-    dsn::message_ex *recv_request = create_corresponding_receive(request);
+static auto default_filter = [](const rpc_address &target, message_ex *request) {
+    message_ex *recv_request = create_corresponding_receive(request);
     cur_ptr update_req = std::make_shared<configuration_update_request>();
-    ::dsn::unmarshall(recv_request, *update_req);
+    unmarshall(recv_request, *update_req);
     destroy_message(recv_request);
     apply_update_request(*update_req);
     return update_req;
@@ -122,15 +122,16 @@ public:
     void cure();
     void from_proposal_test();
 
-    void call_update_configuration(
-        meta_service *svc, std::shared_ptr<dsn::replication::configuration_update_request> &request)
+    void
+    call_update_configuration(meta_service *svc,
+                              std::shared_ptr<replication::configuration_update_request> &request)
     {
-        dsn::message_ex *fake_request =
-            dsn::message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
-        ::dsn::marshall(fake_request, *request);
+        message_ex *fake_request =
+            message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
+        marshall(fake_request, *request);
         fake_request->add_ref();
 
-        dsn::tasking::enqueue(
+        tasking::enqueue(
             LPC_META_STATE_HIGH,
             nullptr,
             std::bind(
@@ -139,18 +140,18 @@ public:
     }
 };
 
-class message_filter : public dsn::replication::meta_service
+class message_filter : public replication::meta_service
 {
 public:
-    typedef std::function<cur_ptr(const dsn::rpc_address &target, dsn::message_ex *request)> filter;
+    typedef std::function<cur_ptr(const rpc_address &target, message_ex *request)> filter;
     message_filter(meta_partition_guardian_test *app) : meta_service(), _app(app) {}
     void set_filter(const filter &f) { _filter = f; }
-    virtual void reply_message(dsn::message_ex *request, dsn::message_ex *response) override
+    virtual void reply_message(message_ex *request, message_ex *response) override
     {
         destroy_message(response);
     }
 
-    virtual void send_message(const dsn::rpc_address &target, dsn::message_ex *request) override
+    virtual void send_message(const rpc_address &target, message_ex *request) override
     {
         // we expect this is a configuration_update_request proposal
         cur_ptr update_request = _filter(target, request);
@@ -168,23 +169,23 @@ private:
 
 void meta_partition_guardian_test::cure_test()
 {
-    dsn::error_code ec;
-    dsn::task_ptr t;
+    error_code ec;
+    task_ptr t;
     std::shared_ptr<message_filter> svc(new message_filter(this));
-    svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(svc.get()));
+    svc->_failure_detector.reset(new replication::meta_server_failure_detector(svc.get()));
     bool proposal_sent;
-    dsn::rpc_address last_addr;
+    rpc_address last_addr;
 
     ec = svc->remote_storage_initialize();
-    ASSERT_EQ(ec, dsn::ERR_OK);
+    ASSERT_EQ(ec, ERR_OK);
     svc->_partition_guardian.reset(new partition_guardian(svc.get()));
     svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *state = svc->_state.get();
     state->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
-    dsn::app_info info;
+    app_info info;
     info.is_stateful = true;
-    info.status = dsn::app_status::AS_CREATING;
+    info.status = app_status::AS_CREATING;
     info.app_id = 1;
     info.app_name = "simple_kv.instance0";
     info.app_type = "simple_kv";
@@ -196,11 +197,11 @@ void meta_partition_guardian_test::cure_test()
     ASSERT_TRUE(state->spin_wait_staging(20));
     svc->_started = true;
 
-    std::vector<dsn::rpc_address> nodes;
+    std::vector<rpc_address> nodes;
     generate_node_list(nodes, 4, 4);
 
-    dsn::partition_configuration &pc = app->partitions[0];
-    config_context &cc = *get_config_context(state->_all_apps, dsn::gpid(1, 0));
+    partition_configuration &pc = app->partitions[0];
+    config_context &cc = *get_config_context(state->_all_apps, gpid(1, 0));
 
 #define PROPOSAL_FLAG_CHECK                                                                        \
     ASSERT_TRUE(proposal_sent);                                                                    \
@@ -219,10 +220,10 @@ void meta_partition_guardian_test::cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
@@ -234,18 +235,18 @@ void meta_partition_guardian_test::cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(config_type::CT_UPGRADE_TO_PRIMARY, update_req->type);
@@ -259,10 +260,10 @@ void meta_partition_guardian_test::cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK([&] { return pc.primary == last_addr; });
@@ -279,10 +280,10 @@ void meta_partition_guardian_test::cure_test()
     proposal_sent = false;
 
     // check partitions, then inject a event that node[0] is dead
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
@@ -295,18 +296,18 @@ void meta_partition_guardian_test::cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
@@ -320,10 +321,10 @@ void meta_partition_guardian_test::cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK([&] { return !pc.primary.is_invalid() && pc.primary != last_addr; });
@@ -340,10 +341,10 @@ void meta_partition_guardian_test::cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
@@ -355,18 +356,18 @@ void meta_partition_guardian_test::cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
@@ -379,10 +380,10 @@ void meta_partition_guardian_test::cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK([&] { return pc.secondaries.size() == 2 && is_secondary(pc, last_addr); });
@@ -399,10 +400,10 @@ void meta_partition_guardian_test::cure_test()
     proposal_sent = false;
 
     // check partitions, then inject another update_request
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
@@ -420,10 +421,10 @@ void meta_partition_guardian_test::cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK([&] { return pc.secondaries.size() == 2; });
@@ -440,10 +441,10 @@ void meta_partition_guardian_test::cure_test()
     proposal_sent = false;
 
     // check partitions, then inject the nodes[2] dead
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
@@ -456,18 +457,18 @@ void meta_partition_guardian_test::cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
 
     // check partitions again
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
@@ -482,10 +483,10 @@ void meta_partition_guardian_test::cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK([&] { return pc.secondaries.size() == 2 && is_secondary(pc, last_addr); });
@@ -502,10 +503,10 @@ void meta_partition_guardian_test::cure_test()
     proposal_sent = false;
 
     // check partitions, then ignore the proposal
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
@@ -518,10 +519,10 @@ void meta_partition_guardian_test::cure_test()
         return nullptr;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK([&] { return pc.primary == nodes[1]; });
@@ -535,10 +536,10 @@ void meta_partition_guardian_test::cure_test()
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
 
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ASSIGN_PRIMARY);
@@ -558,10 +559,10 @@ void meta_partition_guardian_test::cure_test()
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
     };
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
     CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
@@ -572,10 +573,10 @@ void meta_partition_guardian_test::cure_test()
     cc.dropped = {dropped_replica{nodes[0], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
                   dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1}};
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
     CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
@@ -588,10 +589,10 @@ void meta_partition_guardian_test::cure_test()
                   dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 1, 1, 1},
                   dropped_replica{nodes[2], 500, -1, -1, -1}};
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
     CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
@@ -600,10 +601,10 @@ void meta_partition_guardian_test::cure_test()
     std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica, and "
                  "nodes[2]'s info have updated"
               << std::endl;
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ASSIGN_PRIMARY);
@@ -621,10 +622,10 @@ void meta_partition_guardian_test::cure_test()
                   dropped_replica{nodes[2], 500, -1, -1, -1}};
     pc.last_committed_decree = 0;
     get_node_state(state->_nodes, nodes[2], false)->set_replicas_collect_flag(true);
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
 
     t->wait();
     PROPOSAL_FLAG_CHECK;
@@ -644,10 +645,10 @@ void meta_partition_guardian_test::cure_test()
     pc.secondaries.clear();
     pc.last_drops = {nodes[0], nodes[1], nodes[2]};
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
     CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
@@ -661,10 +662,10 @@ void meta_partition_guardian_test::cure_test()
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 0, 1, 1},
     };
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
     CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
@@ -677,10 +678,10 @@ void meta_partition_guardian_test::cure_test()
         dropped_replica{nodes[2], dropped_replica::INVALID_TIMESTAMP, 1, 15, 15},
     };
     pc.last_committed_decree = 30;
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
     CONDITION_CHECK([&] { return pc.primary.is_invalid(); });
@@ -694,10 +695,10 @@ void meta_partition_guardian_test::cure_test()
         dropped_replica{nodes[1], dropped_replica::INVALID_TIMESTAMP, 4, 3, 4},
     };
     pc.last_committed_decree = 2;
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ASSIGN_PRIMARY);
@@ -710,20 +711,20 @@ void meta_partition_guardian_test::cure_test()
         return update_req;
     });
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK([&] { return pc.primary == nodes[1]; });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, only one primary" << std::endl;
-    svc->set_filter([&](const dsn::rpc_address &target, dsn::message_ex *req) -> cur_ptr {
-        dsn::message_ex *recv_request = create_corresponding_receive(req);
+    svc->set_filter([&](const rpc_address &target, message_ex *req) -> cur_ptr {
+        message_ex *recv_request = create_corresponding_receive(req);
         cur_ptr update_req = std::make_shared<configuration_update_request>();
-        ::dsn::unmarshall(recv_request, *update_req);
+        unmarshall(recv_request, *update_req);
         destroy_message(recv_request);
 
         EXPECT_EQ(update_req->type, config_type::CT_ASSIGN_PRIMARY);
@@ -744,10 +745,10 @@ void meta_partition_guardian_test::cure_test()
     state->initialize_node_state();
     svc->set_node_state({nodes[0], nodes[1], nodes[2]}, true);
 
-    t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                              nullptr,
-                              std::bind(&server_state::check_all_partitions, state),
-                              server_state::sStateHash);
+    t = tasking::enqueue(LPC_META_STATE_NORMAL,
+                         nullptr,
+                         std::bind(&server_state::check_all_partitions, state),
+                         server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
     CONDITION_CHECK([&] { return pc.primary == nodes[0]; });
@@ -771,7 +772,7 @@ static void check_nodes_loads(node_mapper &nodes)
 
 void meta_partition_guardian_test::cure()
 {
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
     generate_node_list(node_list, 20, 100);
 
     app_mapper app;
@@ -779,10 +780,10 @@ void meta_partition_guardian_test::cure()
     meta_service svc;
     partition_guardian guardian(&svc);
 
-    dsn::app_info info;
+    app_info info;
     info.app_id = 1;
     info.is_stateful = true;
-    info.status = dsn::app_status::AS_AVAILABLE;
+    info.status = app_status::AS_AVAILABLE;
     info.app_name = "test";
     info.app_type = "test";
     info.max_replica_count = 3;
@@ -801,7 +802,7 @@ void meta_partition_guardian_test::cure()
         all_partitions_healthy = true;
 
         for (int i = 0; i != the_app->partition_count; ++i) {
-            dsn::gpid &pid = the_app->partitions[i].pid;
+            gpid &pid = the_app->partitions[i].pid;
             status = guardian.cure({&app, &nodes}, pid, action);
             if (status != pc_status::healthy) {
                 all_partitions_healthy = false;
@@ -823,7 +824,7 @@ void meta_partition_guardian_test::cure()
 
 void meta_partition_guardian_test::from_proposal_test()
 {
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
     generate_node_list(node_list, 3, 3);
 
     app_mapper app;
@@ -832,10 +833,10 @@ void meta_partition_guardian_test::from_proposal_test()
 
     partition_guardian guardian(&svc);
 
-    dsn::app_info info;
+    app_info info;
     info.app_id = 1;
     info.is_stateful = true;
-    info.status = dsn::app_status::AS_AVAILABLE;
+    info.status = app_status::AS_AVAILABLE;
     info.app_name = "test";
     info.app_type = "test";
     info.max_replica_count = 3;
@@ -843,16 +844,16 @@ void meta_partition_guardian_test::from_proposal_test()
     std::shared_ptr<app_state> the_app = app_state::create(info);
 
     app.emplace(the_app->app_id, the_app);
-    for (const dsn::rpc_address &addr : node_list) {
+    for (const rpc_address &addr : node_list) {
         get_node_state(nodes, addr, true)->set_alive(true);
     }
 
     meta_view mv{&app, &nodes};
-    dsn::gpid p(1, 0);
+    gpid p(1, 0);
     configuration_proposal_action cpa;
     configuration_proposal_action cpa2;
 
-    dsn::partition_configuration &pc = *get_config(app, p);
+    partition_configuration &pc = *get_config(app, p);
     config_context &cc = *get_config_context(app, p);
 
     std::cerr << "Case 1: test no proposals in config_context" << std::endl;
@@ -860,15 +861,13 @@ void meta_partition_guardian_test::from_proposal_test()
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 2: test invalid proposal: invalid target" << std::endl;
-    cpa2 =
-        new_proposal_action(dsn::rpc_address(), node_list[0], config_type::CT_UPGRADE_TO_PRIMARY);
+    cpa2 = new_proposal_action(rpc_address(), node_list[0], config_type::CT_UPGRADE_TO_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 3: test invalid proposal: invalid node" << std::endl;
-    cpa2 =
-        new_proposal_action(node_list[0], dsn::rpc_address(), config_type::CT_UPGRADE_TO_PRIMARY);
+    cpa2 = new_proposal_action(node_list[0], rpc_address(), config_type::CT_UPGRADE_TO_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
@@ -943,4 +942,4 @@ void meta_partition_guardian_test::from_proposal_test()
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

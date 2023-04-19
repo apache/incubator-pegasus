@@ -45,7 +45,7 @@
 #include "utils/threadpool_code.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 DSN_DEFINE_int32(tools.simulator,
@@ -72,4 +72,4 @@ sim_env_provider::sim_env_provider(env_provider *inner_provider) : env_provider(
 }
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

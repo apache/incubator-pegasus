@@ -23,7 +23,7 @@
 
 #include "utils/TokenBucket.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 using DynamicTokenBucket = folly::BasicDynamicTokenBucket<std::chrono::steady_clock>;
@@ -97,4 +97,4 @@ public:
 };
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

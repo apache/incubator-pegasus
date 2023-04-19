@@ -25,25 +25,25 @@
 #include <string>
 #include <vector>
 
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class replication_ddl_client;
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 class pegasus_client;
 
 namespace server {
 
-using ::dsn::replication::replication_ddl_client;
+using replication::replication_ddl_client;
 
 class result_writer;
 
@@ -69,24 +69,24 @@ private:
     void on_minute_report();
 
 private:
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
     std::string _cluster_name;
     // for writing detect result
     std::unique_ptr<result_writer> _result_writer;
     // client to access server.
     pegasus_client *_client;
     std::shared_ptr<replication_ddl_client> _ddl_client;
-    std::vector<dsn::rpc_address> _meta_list;
-    ::dsn::utils::ex_lock_nr _alert_lock;
+    std::vector<rpc_address> _meta_list;
+    utils::ex_lock_nr _alert_lock;
     // for record partition fail times.
     std::vector<std::shared_ptr<std::atomic<int32_t>>> _fail_count;
     // for detect.
     std::vector<std::string> _hash_keys;
-    ::dsn::task_ptr _detect_timer;
-    std::vector<::dsn::task_ptr> _detect_tasks;
+    task_ptr _detect_timer;
+    std::vector<task_ptr> _detect_tasks;
     int32_t _app_id;
     int32_t _partition_count;
-    std::vector<::dsn::partition_configuration> partitions;
+    std::vector<partition_configuration> partitions;
 
     std::string _send_alert_email_cmd;
     std::string _send_availability_info_email_cmd;
@@ -98,19 +98,19 @@ private:
     std::atomic<int64_t> _recent_hour_fail_times;
     std::atomic<int64_t> _recent_minute_detect_times;
     std::atomic<int64_t> _recent_minute_fail_times;
-    ::dsn::task_ptr _report_task;
+    task_ptr _report_task;
     std::string _old_day;
     std::string _old_hour;
     std::string _old_minute;
-    ::dsn::perf_counter_wrapper _pfc_detect_times_day;
-    ::dsn::perf_counter_wrapper _pfc_fail_times_day;
-    ::dsn::perf_counter_wrapper _pfc_available_day;
-    ::dsn::perf_counter_wrapper _pfc_detect_times_hour;
-    ::dsn::perf_counter_wrapper _pfc_fail_times_hour;
-    ::dsn::perf_counter_wrapper _pfc_available_hour;
-    ::dsn::perf_counter_wrapper _pfc_detect_times_minute;
-    ::dsn::perf_counter_wrapper _pfc_fail_times_minute;
-    ::dsn::perf_counter_wrapper _pfc_available_minute;
+    perf_counter_wrapper _pfc_detect_times_day;
+    perf_counter_wrapper _pfc_fail_times_day;
+    perf_counter_wrapper _pfc_available_day;
+    perf_counter_wrapper _pfc_detect_times_hour;
+    perf_counter_wrapper _pfc_fail_times_hour;
+    perf_counter_wrapper _pfc_available_hour;
+    perf_counter_wrapper _pfc_detect_times_minute;
+    perf_counter_wrapper _pfc_fail_times_minute;
+    perf_counter_wrapper _pfc_available_minute;
 };
 } // namespace server
 } // namespace pegasus

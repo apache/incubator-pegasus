@@ -61,7 +61,7 @@
 #include "utils/thread_access_checker.h"
 
 DEFINE_TASK_CODE(LPC_TEST_CLIENTLET, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
-using namespace dsn;
+using namespace pegasus;
 
 int global_value;
 class tracker_class
@@ -69,8 +69,8 @@ class tracker_class
 public:
     std::string str;
     int number;
-    dsn::task_tracker _tracker;
-    dsn::thread_access_checker _checker;
+    task_tracker _tracker;
+    thread_access_checker _checker;
 
 public:
     tracker_class() : str("before called"), number(0), _tracker(1) { global_value = 0; }
@@ -165,10 +165,10 @@ TEST(async_call, rpc_call)
     delete tc;
 }
 
-class simple_task : public dsn::raw_task
+class simple_task : public raw_task
 {
 public:
-    simple_task(dsn::task_code code, const task_handler &h) : dsn::raw_task(code, h, 0, nullptr)
+    simple_task(task_code code, const task_handler &h) : raw_task(code, h, 0, nullptr)
     {
         LOG_INFO("simple task {} created", fmt::ptr(this));
         allocate_count++;
@@ -181,17 +181,16 @@ public:
     static std::atomic_int allocate_count;
 };
 
-class simple_task_container : public dsn::ref_counter
+class simple_task_container : public ref_counter
 {
 public:
-    dsn::task_ptr t;
+    task_ptr t;
 };
 
-class simple_rpc_response_task : public dsn::rpc_response_task
+class simple_rpc_response_task : public rpc_response_task
 {
 public:
-    simple_rpc_response_task(dsn::message_ex *m, const rpc_response_handler &h)
-        : dsn::rpc_response_task(m, h)
+    simple_rpc_response_task(message_ex *m, const rpc_response_handler &h) : rpc_response_task(m, h)
     {
         LOG_INFO("simple rpc response task({}) created", fmt::ptr(this));
         allocate_count++;
@@ -227,30 +226,30 @@ TEST(async_call, task_destructor)
     }
     ASSERT_TRUE(spin_wait([&]() { return simple_task::allocate_count.load() == 0; }, 10));
 
-    dsn::ref_ptr<dsn::message_ex> req = message_ex::create_request(TEST_CODE);
+    ref_ptr<message_ex> req = message_ex::create_request(TEST_CODE);
     {
-        dsn::rpc_response_task_ptr t(new simple_rpc_response_task(req.get(), nullptr));
-        t->enqueue(dsn::ERR_OK, nullptr);
+        rpc_response_task_ptr t(new simple_rpc_response_task(req.get(), nullptr));
+        t->enqueue(ERR_OK, nullptr);
         t->wait();
     }
     ASSERT_TRUE(
         spin_wait([&]() { return simple_rpc_response_task::allocate_count.load() == 0; }, 10));
 
     {
-        dsn::rpc_response_task_ptr t(new simple_rpc_response_task(req.get(), nullptr));
-        t->replace_callback([t](dsn::error_code, dsn::message_ex *, dsn::message_ex *) {
+        rpc_response_task_ptr t(new simple_rpc_response_task(req.get(), nullptr));
+        t->replace_callback([t](error_code, message_ex *, message_ex *) {
             // ref_ptr out of callback + ref_ptr in callback + ref_added_in_enqueue
             ASSERT_EQ(3, t->get_count());
         });
 
-        t->enqueue(dsn::ERR_OK, nullptr);
+        t->enqueue(ERR_OK, nullptr);
         t->wait();
     }
     ASSERT_TRUE(
         spin_wait([&]() { return simple_rpc_response_task::allocate_count.load() == 0; }, 10));
 
     {
-        dsn::ref_ptr<simple_task_container> c(new simple_task_container());
+        ref_ptr<simple_task_container> c(new simple_task_container());
         c->t =
             new simple_task(LPC_TEST_CLIENTLET, [c]() { LOG_INFO("cycle link reference test"); });
 
@@ -260,7 +259,7 @@ TEST(async_call, task_destructor)
     ASSERT_TRUE(spin_wait([&]() { return simple_task::allocate_count.load() == 0; }, 10));
 
     {
-        dsn::ref_ptr<simple_task_container> c(new simple_task_container());
+        ref_ptr<simple_task_container> c(new simple_task_container());
         c->t =
             new simple_task(LPC_TEST_CLIENTLET, [c]() { LOG_INFO("cycle link reference test"); });
 

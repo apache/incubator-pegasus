@@ -27,7 +27,7 @@
 #include "utils/errors.h"
 #include "utils/flags.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 DSN_DEFINE_int32(flag_test, test_int32, 5, "");
@@ -356,4 +356,4 @@ TEST(flag_test, get_config)
             FLAGS_get_flag_string + R"("})" + "\n");
 }
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

@@ -25,7 +25,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/flags.h"
 
-namespace dsn {
+namespace pegasus {
 class partition_configuration;
 
 namespace replication {
@@ -97,4 +97,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

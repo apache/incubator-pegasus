@@ -42,8 +42,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
 
-using namespace dsn;
-using namespace dsn::dist;
+namespace pegasus {
+namespace dist {
 
 DEFINE_TASK_CODE(META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT);
 
@@ -97,7 +97,7 @@ void provider_basic_test(const service_creator_func &service_creator,
     }
     // set & get data
     {
-        dsn::binary_writer writer;
+        binary_writer writer;
         writer.write(0xdeadbeef);
         service
             ->create_node(
@@ -106,15 +106,15 @@ void provider_basic_test(const service_creator_func &service_creator,
         service
             ->get_data("/1",
                        META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
-                       [](error_code ec, const dsn::blob &value) {
+                       [](error_code ec, const blob &value) {
                            expect_ok(ec);
-                           dsn::binary_reader reader(value);
+                           binary_reader reader(value);
                            int read_value = 0;
                            reader.read(read_value);
                            CHECK_EQ(read_value, 0xdeadbeef);
                        })
             ->wait();
-        writer = dsn::binary_writer();
+        writer = binary_writer();
         writer.write(0xbeefdead);
         service
             ->set_data(
@@ -123,9 +123,9 @@ void provider_basic_test(const service_creator_func &service_creator,
         service
             ->get_data("/1",
                        META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
-                       [](error_code ec, const dsn::blob &value) {
+                       [](error_code ec, const blob &value) {
                            expect_ok(ec);
-                           dsn::binary_reader reader(value);
+                           binary_reader reader(value);
                            int read_value = 0;
                            reader.read(read_value);
                            CHECK_EQ(read_value, 0xbeefdead);
@@ -138,11 +138,11 @@ void provider_basic_test(const service_creator_func &service_creator,
             ->wait();
     }
 
-    typedef dsn::dist::meta_state_service::transaction_entries TEntries;
+    typedef dist::meta_state_service::transaction_entries TEntries;
     // transaction op
     {
         // basic
-        dsn::binary_writer writer;
+        binary_writer writer;
         writer.write(0xdeadbeef);
         std::shared_ptr<TEntries> entries = service->new_transaction_entries(5);
         entries->create_node("/2");
@@ -230,7 +230,7 @@ void provider_basic_test(const service_creator_func &service_creator,
 }
 
 void recursively_create_node_callback(meta_state_service *service,
-                                      dsn::task_tracker *tracker,
+                                      task_tracker *tracker,
                                       const std::string &root,
                                       int current_layer,
                                       error_code ec)
@@ -258,7 +258,7 @@ void provider_recursively_create_delete_test(const service_creator_func &creator
                                              const service_deleter_func &deleter)
 {
     meta_state_service *service = creator();
-    dsn::task_tracker tracker;
+    task_tracker tracker;
 
     service
         ->delete_node("/r",
@@ -309,3 +309,5 @@ TEST(meta_state_service, zookeeper)
     provider_basic_test(zookeeper_service_creator, zookeeper_service_deleter);
     provider_recursively_create_delete_test(zookeeper_service_creator, zookeeper_service_deleter);
 }
+} // namespace dist
+} // namespace pegasus

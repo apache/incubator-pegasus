@@ -23,7 +23,7 @@
 #include "utils/errors.h"
 #include "utils/flags.h"
 
-namespace dsn {
+namespace pegasus {
 void list_all_configs(const http_request &req, http_response &resp)
 {
     if (!req.query_args.empty()) {
@@ -55,4 +55,4 @@ void get_config(const http_request &req, http_response &resp)
     }
     resp.status_code = http_status_code::ok;
 }
-} // namespace dsn
+} // namespace pegasus

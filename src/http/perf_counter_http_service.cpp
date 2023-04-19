@@ -27,7 +27,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/output_utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 void get_perf_counter_handler(const http_request &req, http_response &resp)
 {
@@ -45,7 +45,7 @@ void get_perf_counter_handler(const http_request &req, http_response &resp)
     perf_counter_ptr perf_counter = perf_counters::instance().get_counter(perf_counter_name);
 
     // insert perf counter info into table printer
-    dsn::utils::table_printer tp;
+    utils::table_printer tp;
     if (perf_counter) {
         tp.add_row_name_and_data("name", perf_counter_name);
         if (COUNTER_TYPE_NUMBER_PERCENTILES == perf_counter->type()) {
@@ -59,8 +59,8 @@ void get_perf_counter_handler(const http_request &req, http_response &resp)
     }
 
     std::ostringstream out;
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
-} // namespace dsn
+} // namespace pegasus

@@ -21,9 +21,9 @@
 
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 extern error_s run_kinit();
 extern const std::string &get_username();
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

@@ -27,7 +27,8 @@
 #include "utils/config_api.h"
 #include "utils/configuration.h"
 
-dsn::configuration g_config;
+namespace pegasus {
+configuration g_config;
 
 bool dsn_config_load(const char *file, const char *arguments)
 {
@@ -103,3 +104,4 @@ void dsn_config_set(const char *section, const char *key, const char *value, con
 {
     g_config.set(section, key, value, dsptr);
 }
+} // namespace pegasus

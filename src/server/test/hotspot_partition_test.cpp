@@ -46,14 +46,14 @@ class hotspot_partition_test : public pegasus_server_test_base
 public:
     hotspot_partition_test() : calculator("TEST", 8, nullptr)
     {
-        dsn::fail::setup();
-        dsn::fail::cfg("send_detect_hotkey_request", "return()");
+        fail::setup();
+        fail::cfg("send_detect_hotkey_request", "return()");
         FLAGS_enable_detect_hotkey = true;
     };
     ~hotspot_partition_test()
     {
         FLAGS_enable_detect_hotkey = false;
-        dsn::fail::teardown();
+        fail::teardown();
     }
 
     hotspot_partition_calculator calculator;
@@ -87,7 +87,7 @@ public:
     }
 
     std::array<uint32_t, 2>
-    get_calculator_total_hotspot_cnt(const std::array<dsn::perf_counter_wrapper, 2> &cnts)
+    get_calculator_total_hotspot_cnt(const std::array<perf_counter_wrapper, 2> &cnts)
     {
         std::array<uint32_t, 2> result;
         result[READ_HOTSPOT_DATA] = cnts[READ_HOTSPOT_DATA].get()->get_value();

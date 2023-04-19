@@ -33,11 +33,11 @@
 /// Deprecate this when we have our compiler version updated to gcc-5
 /// (https://en.cppreference.com/w/cpp/compiler_support).
 
-namespace dsn {
+namespace pegasus {
 
 /// Example:
 ///
-///   using namespace dsn::literals::chrono_literals;
+///   using namespace pegasus::literals::chrono_literals;
 ///
 ///   template <typename F>
 ///   void schedule(F &&f, std::chrono::milliseconds delay_ms = 0_ms);
@@ -75,4 +75,4 @@ constexpr std::chrono::nanoseconds operator"" _ns(unsigned long long v)
 
 } // inline namespace chrono_literals
 } // inline namespace literals
-} // namespace dsn
+} // namespace pegasus

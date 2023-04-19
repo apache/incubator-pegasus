@@ -32,7 +32,7 @@
 #include "utils.h"
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 
 binary_reader::binary_reader(const blob &bb) { init(bb); }
 binary_reader::binary_reader(blob &&bb) { init(std::move(bb)); }
@@ -69,18 +69,18 @@ int binary_reader::read(/*out*/ std::string &s)
     }
 }
 
-int binary_reader::read(blob &blob)
+int binary_reader::read(blob &bb)
 {
     int len;
     if (0 == read(len))
         return 0;
 
-    return read(blob, len);
+    return read(bb, len);
 }
 
-int binary_reader::read(blob &blob, int len)
+int binary_reader::read(blob &bb, int len)
 {
-    auto res = inner_read(blob, len);
+    auto res = inner_read(bb, len);
     if (dsn_unlikely(res < 0)) {
         assert(false);
     }
@@ -96,16 +96,16 @@ int binary_reader::read(char *buffer, int sz)
     return res;
 }
 
-int binary_reader::inner_read(blob &blob, int len)
+int binary_reader::inner_read(blob &bb, int len)
 {
     if (len <= get_remaining_size()) {
-        blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
+        bb = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
 
         // optimization: zero-copy
-        if (!blob.buffer_ptr()) {
-            std::shared_ptr<char> buffer(::dsn::utils::make_shared_array<char>(len));
-            memcpy(buffer.get(), blob.data(), blob.length());
-            blob = ::dsn::blob(buffer, 0, blob.length());
+        if (!bb.buffer_ptr()) {
+            std::shared_ptr<char> buffer(utils::make_shared_array<char>(len));
+            memcpy(buffer.get(), bb.data(), bb.length());
+            bb = blob(buffer, 0, bb.length());
         }
 
         _ptr += len;
@@ -127,4 +127,4 @@ int binary_reader::inner_read(char *buffer, int sz)
         return -1;
     }
 }
-} // namespace dsn
+} // namespace pegasus

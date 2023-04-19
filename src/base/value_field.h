@@ -53,9 +53,9 @@ struct time_tag_field : public value_field
 
 struct user_data_field : public value_field
 {
-    explicit user_data_field(dsn::string_view data) : user_data(data) {}
+    explicit user_data_field(string_view data) : user_data(data) {}
     value_field_type type() { return value_field_type::USER_DATA; }
 
-    dsn::string_view user_data;
+    string_view user_data;
 };
 } // namespace pegasus

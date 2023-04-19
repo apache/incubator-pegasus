@@ -110,21 +110,21 @@ geo_client::geo_client(const char *config_file,
     _geo_data_client = pegasus_client_factory::get_client(cluster_name, geo_app_name);
     CHECK_NOTNULL(_geo_data_client, "init pegasus _geo_data_client failed");
 
-    dsn::error_s s = _codec.set_latlng_indices(FLAGS_latitude_index, FLAGS_longitude_index);
+    error_s s = _codec.set_latlng_indices(FLAGS_latitude_index, FLAGS_longitude_index);
     CHECK_OK(s, "set_latlng_indices({}, {}) failed", FLAGS_latitude_index, FLAGS_longitude_index);
 }
 
-dsn::error_s geo_client::set_max_level(int level)
+error_s geo_client::set_max_level(int level)
 {
     if (level <= FLAGS_min_level) {
-        return dsn::FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
-                            "level({}) must be larger than FLAGS_min_level({})",
-                            level,
-                            FLAGS_min_level);
+        return FMT_ERR(ERR_INVALID_PARAMETERS,
+                       "level({}) must be larger than FLAGS_min_level({})",
+                       level,
+                       FLAGS_min_level);
     }
 
     FLAGS_max_level = level;
-    return dsn::error_s::ok();
+    return error_s::ok();
 }
 
 int geo_client::set(const std::string &hash_key,
@@ -135,7 +135,7 @@ int geo_client::set(const std::string &hash_key,
                     pegasus_client::internal_info *info)
 {
     int ret = PERR_OK;
-    dsn::utils::notify_event set_completed;
+    utils::notify_event set_completed;
     auto async_set_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
         if (ec_ != PERR_OK) {
             LOG_ERROR("set data failed. hash_key={}, sort_key={}, error={}",
@@ -232,7 +232,7 @@ int geo_client::get(const std::string &hash_key,
                     int timeout_ms)
 {
     int ret = PERR_OK;
-    dsn::utils::notify_event get_completed;
+    utils::notify_event get_completed;
     auto get_latlng_callback = [&](int ec_, int id_, double lat_degrees_, double lng_degrees_) {
         if (ec_ == PERR_OK) {
             lat_degrees = lat_degrees_;
@@ -287,7 +287,7 @@ int geo_client::del(const std::string &hash_key,
                     pegasus_client::internal_info *info)
 {
     int ret = PERR_OK;
-    dsn::utils::notify_event del_completed;
+    utils::notify_event del_completed;
     auto async_del_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
         if (ec_ != PERR_OK) {
             LOG_ERROR("del data failed. hash_key={}, sort_key={}, error={}",
@@ -387,7 +387,7 @@ int geo_client::set_geo_data(const std::string &hash_key,
                              int ttl_seconds)
 {
     int ret = PERR_OK;
-    dsn::utils::notify_event set_completed;
+    utils::notify_event set_completed;
     auto async_set_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
         if (ec_ != PERR_OK) {
             ret = ec_;
@@ -437,7 +437,7 @@ int geo_client::search_radial(double lat_degrees,
         LOG_ERROR("latlng is invalid. lat_degrees={}, lng_degrees={}", lat_degrees, lng_degrees);
         return PERR_GEO_INVALID_LATLNG_ERROR;
     }
-    dsn::utils::notify_event search_completed;
+    utils::notify_event search_completed;
     async_search_radial(latlng,
                         radius_m,
                         count,
@@ -480,7 +480,7 @@ int geo_client::search_radial(const std::string &hash_key,
                               std::list<SearchResult> &result)
 {
     int ret = PERR_OK;
-    dsn::utils::notify_event search_completed;
+    utils::notify_event search_completed;
     async_search_radial(hash_key,
                         sort_key,
                         radius_m,
@@ -739,7 +739,7 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
     geo_hash_key = parent_cell_id.ToString(); // [0,5]{1}/[0,3]{FLAGS_min_level}
 
     // generate sort key
-    dsn::blob sort_key_postfix;
+    blob sort_key_postfix;
     pegasus_generate_key(sort_key_postfix, hash_key, sort_key);
     geo_sort_key = leaf_cell_id.ToString().substr(geo_hash_key.length()) + ":" +
                    sort_key_postfix.to_string(); // [0,3]{30-FLAGS_min_level}:combine_keys
@@ -758,7 +758,7 @@ bool geo_client::restore_origin_keys(const std::string &geo_sort_key,
     }
 
     auto origin_keys_len = static_cast<unsigned int>(geo_sort_key.length() - cid_prefix_len);
-    pegasus_restore_key(dsn::blob(geo_sort_key.c_str(), cid_prefix_len, origin_keys_len),
+    pegasus_restore_key(blob(geo_sort_key.c_str(), cid_prefix_len, origin_keys_len),
                         origin_hash_key,
                         origin_sort_key);
 
@@ -950,7 +950,7 @@ int geo_client::distance(const std::string &hash_key1,
                          double &distance)
 {
     int ret = PERR_OK;
-    dsn::utils::notify_event get_completed;
+    utils::notify_event get_completed;
     auto async_calculate_callback = [&](int ec_, double &&distance_) {
         if (ec_ != PERR_OK) {
             LOG_ERROR(

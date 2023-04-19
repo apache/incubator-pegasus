@@ -29,11 +29,11 @@
 #include "test/function_test/utils/test_util.h"
 #include "test_util/test_util.h"
 
-using namespace ::pegasus;
+using internal_info = pegasus::pegasus_client::internal_info;
 
-typedef pegasus_client::internal_info internal_info;
+namespace pegasus {
 
-class integration_test : public test_util
+class integration_test : public ::pegasus::test_util
 {
 };
 
@@ -201,3 +201,4 @@ TEST_F(integration_test, read_corrupt_db)
     ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root(
         "curl 'localhost:34801/updateConfig?inject_read_error_for_test=0'"));
 }
+} // namespace pegasus

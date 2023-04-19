@@ -27,7 +27,7 @@
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 /// Move the content inside message `m` into a blob.
@@ -38,10 +38,10 @@ inline blob move_message_to_blob(message_ex *m)
 }
 
 /// Convert a blob into a message for reading(unmarshalling).
-/// This function is identical with dsn::message_ex::create_received_request,
+/// This function is identical with message_ex::create_received_request,
 /// however it passes a blob to ensure ownership safety instead of
 /// passing simply a constant view.
-/// MUST released manually later using dsn::message_ex::release_ref.
+/// MUST released manually later using message_ex::release_ref.
 extern message_ex *
 from_blob_to_received_msg(task_code rpc_code,
                           const blob &bb,
@@ -77,4 +77,4 @@ inline void from_blob_to_thrift(const blob &data, T &thrift_obj)
     unmarshall_thrift_binary(reader, thrift_obj);
 }
 
-} // namespace dsn
+} // namespace pegasus

@@ -46,6 +46,10 @@
 #include "utils/errors.h"
 #include "utils/output_utils.h"
 
+using pegasus::replication::bulk_load_control_type;
+using pegasus::replication::bulk_load_status;
+
+namespace pegasus {
 bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
@@ -109,10 +113,10 @@ bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
 
     auto err_resp = sc->ddl_client->start_bulk_load(
         app_name, cluster_name, file_provider_type, remote_root_path, ingest_behind);
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     std::string hint_msg;
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
         hint_msg = err_resp.get_value().hint_msg;
     }
     if (!err.is_ok()) {
@@ -128,10 +132,9 @@ bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
 bool control_bulk_load_helper(command_executor *e,
                               shell_context *sc,
                               arguments args,
-                              dsn::replication::bulk_load_control_type::type type)
+                              bulk_load_control_type::type type)
 {
-    if (type != dsn::replication::bulk_load_control_type::BLC_PAUSE &&
-        type != dsn::replication::bulk_load_control_type::BLC_RESTART) {
+    if (type != bulk_load_control_type::BLC_PAUSE && type != bulk_load_control_type::BLC_RESTART) {
         return false;
     }
 
@@ -160,14 +163,13 @@ bool control_bulk_load_helper(command_executor *e,
     }
 
     auto err_resp = sc->ddl_client->control_bulk_load(app_name, type);
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     std::string hint_msg;
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
         hint_msg = err_resp.get_value().hint_msg;
     }
-    std::string type_str =
-        type == dsn::replication::bulk_load_control_type::BLC_PAUSE ? "pause" : "restart";
+    std::string type_str = type == bulk_load_control_type::BLC_PAUSE ? "pause" : "restart";
     if (!err.is_ok()) {
         fmt::print(
             stderr, "{} bulk load failed, error={} [hint:\"{}\"]\n", type_str, err, hint_msg);
@@ -180,14 +182,12 @@ bool control_bulk_load_helper(command_executor *e,
 
 bool pause_bulk_load(command_executor *e, shell_context *sc, arguments args)
 {
-    return control_bulk_load_helper(
-        e, sc, args, dsn::replication::bulk_load_control_type::BLC_PAUSE);
+    return control_bulk_load_helper(e, sc, args, bulk_load_control_type::BLC_PAUSE);
 }
 
 bool restart_bulk_load(command_executor *e, shell_context *sc, arguments args)
 {
-    return control_bulk_load_helper(
-        e, sc, args, dsn::replication::bulk_load_control_type::BLC_RESTART);
+    return control_bulk_load_helper(e, sc, args, bulk_load_control_type::BLC_RESTART);
 }
 
 bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args)
@@ -221,19 +221,18 @@ bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    auto type = forced ? dsn::replication::bulk_load_control_type::BLC_FORCE_CANCEL
-                       : dsn::replication::bulk_load_control_type::BLC_CANCEL;
+    auto type =
+        forced ? bulk_load_control_type::BLC_FORCE_CANCEL : bulk_load_control_type::BLC_CANCEL;
     auto err_resp = sc->ddl_client->control_bulk_load(app_name, type);
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     std::string hint_msg;
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
         hint_msg = err_resp.get_value().hint_msg;
     }
     if (!err.is_ok()) {
         fmt::print(stderr, "cancel bulk load failed, error={} [hint:\"{}\"]\n", err, hint_msg);
-        if (err.code() == dsn::ERR_INVALID_STATE &&
-            type == dsn::replication::bulk_load_control_type::BLC_CANCEL) {
+        if (err.code() == ERR_INVALID_STATE && type == bulk_load_control_type::BLC_CANCEL) {
             fmt::print(stderr, "you can force cancel bulk load by using \"-f\"\n");
         }
     } else {
@@ -247,11 +246,11 @@ bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args)
 template <typename T>
 static std::string get_short_status(T status)
 {
-    static_assert(std::is_same<T, dsn::replication::bulk_load_status::type>::value ||
-                      std::is_same<T, dsn::replication::ingestion_status::type>::value,
+    static_assert(std::is_same<T, bulk_load_status::type>::value ||
+                      std::is_same<T, replication::ingestion_status::type>::value,
                   "the given type is not bulk_load_status or ingestion_status");
 
-    std::string str = dsn::enum_to_string(status);
+    std::string str = enum_to_string(status);
     auto index = str.find_last_of(":");
     return str.substr(index + 1);
 }
@@ -295,7 +294,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     }
 
     auto err_resp = sc->ddl_client->query_bulk_load(app_name);
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     if (!err.is_ok()) {
         fmt::print(stderr, "query bulk load failed, error={}\n", err);
         return true;
@@ -304,7 +303,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
 
     std::string hint_msg;
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
         hint_msg = resp.hint_msg;
     }
     if (!err.is_ok()) {
@@ -316,12 +315,12 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     if (pidx < -1 || pidx >= partition_count) {
         fmt::print(stderr,
                    "query bulk load failed, error={} [hint:\"invalid partition index\"]\n",
-                   dsn::ERR_INVALID_PARAMETERS);
+                   ERR_INVALID_PARAMETERS);
         return true;
     }
 
     // print query result
-    dsn::utils::multi_table_printer mtp;
+    utils::multi_table_printer mtp;
 
     bool all_partitions = (pidx == -1);
     bool print_ingestion_progress = (resp.app_status == bulk_load_status::BLS_INGESTING);
@@ -347,7 +346,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
         bool print_cleanup_flag = (resp.app_status == bulk_load_status::BLS_CANCELED ||
                                    resp.app_status == bulk_load_status::BLS_FAILED ||
                                    resp.app_status == bulk_load_status::BLS_SUCCEED);
-        dsn::utils::table_printer tp_all("all partitions");
+        utils::table_printer tp_all("all partitions");
         tp_all.add_title("partition_index");
         tp_all.add_column("partition_status");
         if (print_download_progress) {
@@ -393,7 +392,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
                                    pstatus == bulk_load_status::BLS_FAILED);
             bool p_pause_flag = (pstatus == bulk_load_status::BLS_PAUSING);
 
-            dsn::utils::table_printer tp_single("single partition");
+            utils::table_printer tp_single("single partition");
             tp_single.add_title("partition_index");
             tp_single.add_column("node_address");
             if (p_prgress) {
@@ -430,7 +429,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
         }
     }
 
-    dsn::utils::table_printer tp_summary("summary");
+    utils::table_printer tp_summary("summary");
     if (!all_partitions) {
         tp_summary.add_row_name_and_data("partition_bulk_load_status",
                                          get_short_status(resp.partitions_status[pidx]));
@@ -476,10 +475,10 @@ bool clear_bulk_load(command_executor *e, shell_context *sc, arguments args)
     }
 
     auto err_resp = sc->ddl_client->clear_bulk_load(app_name);
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     std::string hint_msg;
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
         hint_msg = err_resp.get_value().hint_msg;
     }
     if (!err.is_ok()) {
@@ -490,3 +489,4 @@ bool clear_bulk_load(command_executor *e, shell_context *sc, arguments args)
 
     return true;
 }
+} // namespace pegasus

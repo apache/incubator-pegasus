@@ -26,14 +26,14 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_bulk_load_ingestion_context.h"
 #include "meta/meta_data.h"
 #include "meta_test_base.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class node_context_test : public meta_test_base
@@ -396,4 +396,4 @@ TEST_F(ingestion_context_test, operation_test)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

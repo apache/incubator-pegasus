@@ -38,7 +38,7 @@ DSN_DEFINE_int32(pegasus.collector,
                  90,
                  "the ttl of the CU data, 0 if no ttl");
 
-DEFINE_TASK_CODE(LPC_WRITE_RESULT, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_WRITE_RESULT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 result_writer::result_writer(pegasus_client *client) : _client(client) {}
 
@@ -58,12 +58,11 @@ void result_writer::set_result(const std::string &hash_key,
                             value,
                             _client->get_error_string(err),
                             new_try_count);
-                ::dsn::tasking::enqueue(
-                    LPC_WRITE_RESULT,
-                    &_tracker,
-                    [=]() { set_result(hash_key, sort_key, value, new_try_count); },
-                    0,
-                    std::chrono::minutes(1));
+                tasking::enqueue(LPC_WRITE_RESULT,
+                                 &_tracker,
+                                 [=]() { set_result(hash_key, sort_key, value, new_try_count); },
+                                 0,
+                                 std::chrono::minutes(1));
             } else {
                 LOG_ERROR("set_result fail, hash_key = {}, sort_key = {}, value = {}, error = "
                           "{}, left_try_count = {}, do not try again",

@@ -52,7 +52,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class command_deregister;
 class disk_file;
 namespace utils {
@@ -96,12 +96,12 @@ public:
     struct file_wrapper;
     struct user_request;
 
-    typedef ::dsn::ref_ptr<user_request> user_request_ptr;
-    typedef ::dsn::ref_ptr<file_context> file_context_ptr;
-    typedef ::dsn::ref_ptr<copy_request_ex> copy_request_ex_ptr;
-    typedef ::dsn::ref_ptr<file_wrapper> file_wrapper_ptr;
+    typedef ref_ptr<user_request> user_request_ptr;
+    typedef ref_ptr<file_context> file_context_ptr;
+    typedef ref_ptr<copy_request_ex> copy_request_ex_ptr;
+    typedef ref_ptr<file_wrapper> file_wrapper_ptr;
 
-    struct file_wrapper : public ::dsn::ref_counter
+    struct file_wrapper : public ref_counter
     {
         disk_file *file_handle;
 
@@ -115,7 +115,7 @@ public:
         }
     };
 
-    struct copy_request_ex : public ::dsn::ref_counter
+    struct copy_request_ex : public ref_counter
     {
         file_context_ptr file_ctx; // reference to the owner
         int index;
@@ -123,8 +123,8 @@ public:
         uint32_t size;
         bool is_last;
         copy_response response;
-        ::dsn::task_ptr remote_copy_task;
-        ::dsn::task_ptr local_write_task;
+        task_ptr remote_copy_task;
+        task_ptr local_write_task;
         bool is_ready_for_write;
         bool is_valid;
         int retry_count;
@@ -143,7 +143,7 @@ public:
         }
     };
 
-    struct file_context : public ::dsn::ref_counter
+    struct file_context : public ref_counter
     {
         user_request_ptr user_req; // reference to the owner
 
@@ -166,14 +166,14 @@ public:
         }
     };
 
-    struct user_request : public ::dsn::ref_counter
+    struct user_request : public ref_counter
     {
         zlock user_req_lock;
 
         bool high_priority;
         int low_queue_index;
         get_file_size_request file_size_req;
-        ::dsn::ref_ptr<aio_task> nfs_task;
+        ref_ptr<aio_task> nfs_task;
         std::atomic<int> finished_files;
         std::atomic<int> concurrent_copy_count;
         bool is_finished;
@@ -275,14 +275,13 @@ public:
     void begin_remote_copy(std::shared_ptr<remote_copy_request> &rci, aio_task *nfs_task);
 
 private:
-    void end_get_file_size(::dsn::error_code err,
-                           const ::dsn::service::get_file_size_response &resp,
+    void end_get_file_size(error_code err,
+                           const service::get_file_size_response &resp,
                            const user_request_ptr &ureq);
 
     void continue_copy();
 
-    void
-    end_copy(::dsn::error_code err, const copy_response &resp, const copy_request_ex_ptr &reqc);
+    void end_copy(error_code err, const copy_response &resp, const copy_request_ex_ptr &reqc);
 
     void continue_write();
 
@@ -293,8 +292,7 @@ private:
     void register_cli_commands();
 
 private:
-    std::unique_ptr<dsn::utils::token_buckets>
-        _copy_token_buckets; // rate limiter of copy from remote
+    std::unique_ptr<utils::token_buckets> _copy_token_buckets; // rate limiter of copy from remote
 
     std::atomic<int> _concurrent_copy_request_count; // record concurrent request count, limited
                                                      // by max_concurrent_remote_copy_requests.
@@ -318,7 +316,7 @@ private:
 
     std::unique_ptr<command_deregister> _nfs_max_copy_rate_megabytes_cmd;
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 } // namespace service
-} // namespace dsn
+} // namespace pegasus

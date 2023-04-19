@@ -24,13 +24,13 @@
  * THE SOFTWARE.
  */
 
-include "../../idl/dsn.thrift"
+include "../../idl/pegasus.thrift"
 
-namespace cpp dsn.service
+namespace cpp pegasus.service
 
 struct copy_request
 {
-    1: dsn.rpc_address source;
+    1: pegasus.rpc_address source;
     2: string source_dir;
     3: string dst_dir;
     4: string file_name;
@@ -39,27 +39,27 @@ struct copy_request
     7: bool is_last;
     8: bool overwrite;
     9: optional string source_disk_tag;
-    10: optional dsn.gpid pid;
+    10: optional pegasus.gpid pid;
 }
 
 struct copy_response
 {
-    1: dsn.error_code error;
-    2: dsn.blob file_content;
+    1: pegasus.error_code error;
+    2: pegasus.blob file_content;
     3: i64 offset;
     4: i32 size;
 }
 
 struct get_file_size_request
 {
-    1: dsn.rpc_address source;
+    1: pegasus.rpc_address source;
     2: string dst_dir;
     3: list<string> file_list;
     4: string source_dir;
     5: bool overwrite;
     6: optional string source_disk_tag;
     7: optional string dest_disk_tag;
-    8: optional dsn.gpid pid;
+    8: optional pegasus.gpid pid;
 }
 
 struct get_file_size_response

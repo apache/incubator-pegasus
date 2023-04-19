@@ -35,7 +35,7 @@
 #include "runtime/task/task_tracker.h"
 #include "runtime/rpc/serialization.h"
 
-namespace dsn {
+namespace pegasus {
 
 inline void empty_rpc_handler(error_code, message_ex *, message_ex *) {}
 
@@ -108,7 +108,7 @@ inline timer_task_ptr enqueue_timer(task_code evt,
 
 namespace rpc {
 
-inline rpc_response_task_ptr create_rpc_response_task(dsn::message_ex *req,
+inline rpc_response_task_ptr create_rpc_response_task(message_ex *req,
                                                       task_tracker *tracker,
                                                       rpc_response_handler &&callback,
                                                       int reply_thread_hash = 0)
@@ -122,7 +122,7 @@ inline rpc_response_task_ptr create_rpc_response_task(dsn::message_ex *req,
 
 template <typename TCallback>
 typename std::enable_if<is_typed_rpc_callback<TCallback>::value, rpc_response_task_ptr>::type
-create_rpc_response_task(dsn::message_ex *req,
+create_rpc_response_task(message_ex *req,
                          task_tracker *tracker,
                          TCallback &&callback,
                          int reply_thread_hash = 0)
@@ -130,8 +130,8 @@ create_rpc_response_task(dsn::message_ex *req,
     return create_rpc_response_task(
         req,
         tracker,
-        [cb_fwd = std::move(callback)](
-            error_code err, dsn::message_ex * req, dsn::message_ex * resp) mutable {
+        [cb_fwd =
+             std::move(callback)](error_code err, message_ex * req, message_ex * resp) mutable {
             typename is_typed_rpc_callback<TCallback>::response_t response = {};
             if (err == ERR_OK) {
                 unmarshall(resp, response);
@@ -143,7 +143,7 @@ create_rpc_response_task(dsn::message_ex *req,
 
 template <typename TCallback>
 rpc_response_task_ptr call(rpc_address server,
-                           dsn::message_ex *request,
+                           message_ex *request,
                            task_tracker *tracker,
                            TCallback &&callback,
                            int reply_thread_hash = 0)
@@ -176,7 +176,7 @@ call(rpc_address server,
      uint64_t partition_hash = 0,
      int reply_thread_hash = 0)
 {
-    dsn::message_ex *msg = dsn::message_ex::create_request(
+    message_ex *msg = message_ex::create_request(
         code, static_cast<int>(timeout.count()), thread_hash, partition_hash);
     marshall(msg, std::forward<TRequest>(req));
     return call(server, msg, tracker, std::forward<TCallback>(callback), reply_thread_hash);
@@ -191,7 +191,7 @@ void call_one_way_typed(rpc_address server,
                                              /// thread_hash is computed from partition_hash
                         uint64_t partition_hash = 0)
 {
-    dsn::message_ex *msg = dsn::message_ex::create_request(code, 0, thread_hash, partition_hash);
+    message_ex *msg = message_ex::create_request(code, 0, thread_hash, partition_hash);
     marshall(msg, req);
     dsn_rpc_call_one_way(server, msg);
 }
@@ -227,4 +227,4 @@ call_wait(rpc_address server,
                                            partition_hash));
 }
 } // namespace rpc
-} // namespace dsn
+} // namespace pegasus

@@ -67,7 +67,7 @@
 #include "replica/duplication/load_from_private_log.h"
 #include "replica/mutation_log_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DEFINE_STORAGE_WRITE_RPC_CODE(RPC_RRDB_RRDB_PUT, ALLOW_BATCH, IS_IDEMPOTENT)
@@ -460,4 +460,4 @@ TEST_F(load_fail_mode_test, fail_skip_real_corrupted_file)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

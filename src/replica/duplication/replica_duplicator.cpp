@@ -29,7 +29,7 @@
 #include "common/duplication_common.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "duplication_pipeline.h"
 #include "load_from_private_log.h"
 #include "perf_counter/perf_counter.h"
@@ -42,7 +42,7 @@
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
@@ -258,4 +258,4 @@ uint64_t replica_duplicator::get_pending_mutations_count() const
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -23,20 +23,21 @@
 
 #include "rrdb/rrdb_types.h"
 
+using pegasus::apps::cas_check_type;
 namespace pegasus {
 
-inline std::string cas_check_type_to_string(dsn::apps::cas_check_type::type type)
+inline std::string cas_check_type_to_string(cas_check_type::type type)
 {
-    auto it = dsn::apps::_cas_check_type_VALUES_TO_NAMES.find(type);
-    if (it == dsn::apps::_cas_check_type_VALUES_TO_NAMES.end()) {
+    auto it = apps::_cas_check_type_VALUES_TO_NAMES.find(type);
+    if (it == apps::_cas_check_type_VALUES_TO_NAMES.end()) {
         return std::string("INVALID=") + std::to_string(int(type));
     }
     return it->second;
 }
 
-inline bool cas_is_check_operand_needed(dsn::apps::cas_check_type::type type)
+inline bool cas_is_check_operand_needed(cas_check_type::type type)
 {
-    return type >= dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE;
+    return type >= cas_check_type::CT_VALUE_MATCH_ANYWHERE;
 }
 
 } // namespace pegasus

@@ -40,17 +40,19 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+
+namespace pegasus {
 class blob;
 
 namespace replication {
 class replica;
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
 #define VALUE_NOT_EXIST "<<not-exist>>"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace test {
 
@@ -68,9 +70,9 @@ simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r
 void simple_kv_service_impl::reset_state() { _last_durable_decree = 0; }
 
 // RPC_SIMPLE_KV_READ
-void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply)
+void simple_kv_service_impl::on_read(const std::string &key, rpc_replier<std::string> &reply)
 {
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
 
     std::string value;
     auto it = _store.find(key);
@@ -84,18 +86,18 @@ void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<
 }
 
 // RPC_SIMPLE_KV_WRITE
-void simple_kv_service_impl::on_write(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
+void simple_kv_service_impl::on_write(const kv_pair &pr, rpc_replier<int32_t> &reply)
 {
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
     _store[pr.key] = pr.value;
 
     reply(0);
 }
 
 // RPC_SIMPLE_KV_APPEND
-void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
+void simple_kv_service_impl::on_append(const kv_pair &pr, rpc_replier<int32_t> &reply)
 {
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
     auto it = _store.find(pr.key);
     if (it != _store.end())
         it->second.append(pr.value);
@@ -105,29 +107,27 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
     reply(0);
 }
 
-::dsn::error_code simple_kv_service_impl::start(int argc, char **argv)
+error_code simple_kv_service_impl::start(int argc, char **argv)
 {
     if (s_simple_kv_open_fail) {
         return ERR_CORRUPTION;
     }
 
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
     recover();
     LOG_INFO("simple_kv_service_impl opened");
     return ERR_OK;
 }
 
-::dsn::error_code simple_kv_service_impl::stop(bool clear_state)
+error_code simple_kv_service_impl::stop(bool clear_state)
 {
     if (s_simple_kv_close_fail) {
         return ERR_CORRUPTION;
     }
 
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
     if (clear_state) {
-        CHECK(dsn::utils::filesystem::remove_path(data_dir()),
-              "Fail to delete directory {}",
-              data_dir());
+        CHECK(remove_path(data_dir()), "Fail to delete directory {}", data_dir());
         _store.clear();
         reset_state();
     }
@@ -138,7 +138,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
 // checkpoint related
 void simple_kv_service_impl::recover()
 {
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
 
     _store.clear();
 
@@ -147,11 +147,9 @@ void simple_kv_service_impl::recover()
 
     std::vector<std::string> sub_list;
     std::string path = data_dir();
-    CHECK(dsn::utils::filesystem::get_subfiles(path, sub_list, false),
-          "Fail to get subfiles in {}",
-          path);
+    CHECK(get_subfiles(path, sub_list, false), "Fail to get subfiles in {}", path);
     for (auto &fpath : sub_list) {
-        auto &&s = dsn::utils::filesystem::get_file_name(fpath);
+        auto &&s = get_file_name(fpath);
         if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
             continue;
 
@@ -172,7 +170,7 @@ void simple_kv_service_impl::recover()
 
 void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 {
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
 
     std::ifstream is(name.c_str(), std::ios::binary);
     if (!is.is_open())
@@ -206,9 +204,9 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     }
 }
 
-::dsn::error_code simple_kv_service_impl::sync_checkpoint()
+error_code simple_kv_service_impl::sync_checkpoint()
 {
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
 
     int64_t last_commit = last_committed_decree();
     if (last_commit == last_durable_decree()) {
@@ -250,15 +248,15 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     return ERR_OK;
 }
 
-::dsn::error_code simple_kv_service_impl::async_checkpoint(bool flush_memtable)
+error_code simple_kv_service_impl::async_checkpoint(bool flush_memtable)
 {
     return sync_checkpoint();
 }
 
 // helper routines to accelerate learning
-::dsn::error_code simple_kv_service_impl::get_checkpoint(int64_t learn_start,
-                                                         const dsn::blob &learn_request,
-                                                         /*out*/ learn_state &state)
+error_code simple_kv_service_impl::get_checkpoint(int64_t learn_start,
+                                                  const blob &learn_request,
+                                                  /*out*/ learn_state &state)
 {
     if (s_simple_kv_get_checkpoint_fail) {
         return ERR_CORRUPTION;
@@ -287,8 +285,8 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     }
 }
 
-::dsn::error_code simple_kv_service_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
-                                                                   const learn_state &state)
+error_code simple_kv_service_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
+                                                            const learn_state &state)
 {
     if (s_simple_kv_apply_checkpoint_fail) {
         return ERR_CORRUPTION;
@@ -305,7 +303,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(), state.to_decree_included);
         std::string lname(name);
 
-        if (!utils::filesystem::rename_path(state.files[0], lname)) {
+        if (!rename_path(state.files[0], lname)) {
             LOG_ERROR("simple_kv_service_impl copy checkpoint failed, rename path failed");
             return ERR_CHECKPOINT_FAILED;
         } else {

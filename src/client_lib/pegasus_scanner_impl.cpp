@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "base/pegasus_const.h"
-#include "common/gpid.h"
 #include "pegasus/client.h"
 #include "pegasus/error.h"
 #include "pegasus_client_impl.h"
@@ -42,17 +41,16 @@
 #include "utils/synchronize.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
-} // namespace dsn
+} // namespace pegasus
 
-using namespace ::dsn;
 using namespace pegasus;
 
 namespace pegasus {
 namespace client {
 
-pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrdb_client *client,
+pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(apps::rrdb_client *client,
                                                                 std::vector<uint64_t> &&hash,
                                                                 const scan_options &options,
                                                                 bool validate_partition_hash,
@@ -64,11 +62,11 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
     _options.stop_inclusive = false;
 }
 
-pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrdb_client *client,
+pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(apps::rrdb_client *client,
                                                                 std::vector<uint64_t> &&hash,
                                                                 const scan_options &options,
-                                                                const ::dsn::blob &start_key,
-                                                                const ::dsn::blob &stop_key,
+                                                                const blob &start_key,
+                                                                const blob &stop_key,
                                                                 bool validate_partition_hash,
                                                                 bool full_scan)
     : _client(client),
@@ -88,7 +86,7 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
 
 int pegasus_client_impl::pegasus_scanner_impl::next(int32_t &count, internal_info *info)
 {
-    ::dsn::utils::notify_event op_completed;
+    utils::notify_event op_completed;
     int ret = -1;
     auto callback = [&](int err,
                         std::string &&hash,
@@ -114,7 +112,7 @@ int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
                                                     std::string &value,
                                                     internal_info *info)
 {
-    ::dsn::utils::notify_event op_completed;
+    utils::notify_event op_completed;
     int ret = -1;
     auto callback = [&](int err,
                         std::string &&hash,
@@ -154,7 +152,7 @@ void pegasus_client_impl::pegasus_scanner_impl::async_next(async_scan_next_callb
 
 bool pegasus_client_impl::pegasus_scanner_impl::safe_destructible() const
 {
-    ::dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
     return _queue.empty();
 }
 
@@ -255,22 +253,22 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
 
 void pegasus_client_impl::pegasus_scanner_impl::_next_batch()
 {
-    ::dsn::apps::scan_request req;
+    apps::scan_request req;
     req.context_id = _context;
 
     CHECK(!_rpc_started, "");
     _rpc_started = true;
     _client->scan(req,
-                  [this](::dsn::error_code err,
-                         dsn::message_ex *req,
-                         dsn::message_ex *resp) mutable { _on_scan_response(err, req, resp); },
+                  [this](error_code err, message_ex *req, message_ex *resp) mutable {
+                      _on_scan_response(err, req, resp);
+                  },
                   std::chrono::milliseconds(_options.timeout_ms),
                   _hash);
 }
 
 void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
 {
-    ::dsn::apps::get_scanner_request req;
+    apps::get_scanner_request req;
     if (_kvs.empty()) {
         req.start_key = _start_key;
         req.start_inclusive = _options.start_inclusive;
@@ -281,12 +279,12 @@ void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
     req.stop_key = _stop_key;
     req.stop_inclusive = _options.stop_inclusive;
     req.batch_size = _options.batch_size;
-    req.hash_key_filter_type = (dsn::apps::filter_type::type)_options.hash_key_filter_type;
-    req.hash_key_filter_pattern = ::dsn::blob(
-        _options.hash_key_filter_pattern.data(), 0, _options.hash_key_filter_pattern.size());
-    req.sort_key_filter_type = (dsn::apps::filter_type::type)_options.sort_key_filter_type;
-    req.sort_key_filter_pattern = ::dsn::blob(
-        _options.sort_key_filter_pattern.data(), 0, _options.sort_key_filter_pattern.size());
+    req.hash_key_filter_type = (apps::filter_type::type)_options.hash_key_filter_type;
+    req.hash_key_filter_pattern =
+        blob(_options.hash_key_filter_pattern.data(), 0, _options.hash_key_filter_pattern.size());
+    req.sort_key_filter_type = (apps::filter_type::type)_options.sort_key_filter_type;
+    req.sort_key_filter_pattern =
+        blob(_options.sort_key_filter_pattern.data(), 0, _options.sort_key_filter_pattern.size());
     req.no_value = _options.no_value;
     req.__set_validate_partition_hash(_validate_partition_hash);
     req.__set_return_expire_ts(_options.return_expire_ts);
@@ -295,24 +293,23 @@ void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
 
     CHECK(!_rpc_started, "");
     _rpc_started = true;
-    _client->get_scanner(
-        req,
-        [this](::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) mutable {
-            _on_scan_response(err, req, resp);
-        },
-        std::chrono::milliseconds(_options.timeout_ms),
-        _hash);
+    _client->get_scanner(req,
+                         [this](error_code err, message_ex *req, message_ex *resp) mutable {
+                             _on_scan_response(err, req, resp);
+                         },
+                         std::chrono::milliseconds(_options.timeout_ms),
+                         _hash);
 }
 
-void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_code err,
-                                                                  dsn::message_ex *req,
-                                                                  dsn::message_ex *resp)
+void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(error_code err,
+                                                                  message_ex *req,
+                                                                  message_ex *resp)
 {
     CHECK(_rpc_started, "");
     _rpc_started = false;
-    ::dsn::apps::scan_response response;
+    apps::scan_response response;
     if (err == ERR_OK) {
-        ::dsn::unmarshall(resp, response);
+        unmarshall(resp, response);
         _info.app_id = response.app_id;
         _info.partition_index = response.partition_index;
         _info.decree = -1;
@@ -371,7 +368,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_split_reset()
 
 pegasus_client_impl::pegasus_scanner_impl::~pegasus_scanner_impl()
 {
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
 
     CHECK(!_rpc_started, "all scan-rpc should be completed here");
     CHECK(_queue.empty(), "queue should be empty");
@@ -405,7 +402,7 @@ void pegasus_client_impl::pegasus_scanner_impl_wrapper::async_next(
 }
 
 const char pegasus_client_impl::pegasus_scanner_impl::_holder[] = {'\x00', '\x00', '\xFF', '\xFF'};
-const ::dsn::blob pegasus_client_impl::pegasus_scanner_impl::_min = ::dsn::blob(_holder, 0, 2);
-const ::dsn::blob pegasus_client_impl::pegasus_scanner_impl::_max = ::dsn::blob(_holder, 2, 2);
+const blob pegasus_client_impl::pegasus_scanner_impl::_min = blob(_holder, 0, 2);
+const blob pegasus_client_impl::pegasus_scanner_impl::_max = blob(_holder, 2, 2);
 } // namespace client
 } // namespace pegasus

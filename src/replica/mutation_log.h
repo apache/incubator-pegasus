@@ -52,7 +52,7 @@
 #include "utils/errors.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class binary_writer;
 class perf_counter_wrapper;
 
@@ -75,18 +75,18 @@ public:
     // Always return true in the callback.
     typedef std::function<bool(int log_length, mutation_ptr &)> replay_callback;
 
-    typedef std::function<void(dsn::error_code err)> io_failure_callback;
+    typedef std::function<void(error_code err)> io_failure_callback;
 
 public:
     // append a log mutation
     // return value: nullptr for error
     // thread safe
-    virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn::task_code callback_code,
-                                   dsn::task_tracker *tracker,
-                                   aio_handler &&callback,
-                                   int hash = 0,
-                                   int64_t *pending_size = nullptr) = 0;
+    virtual task_ptr append(mutation_ptr &mu,
+                            task_code callback_code,
+                            task_tracker *tracker,
+                            aio_handler &&callback,
+                            int hash = 0,
+                            int64_t *pending_size = nullptr) = 0;
 
     // get learn state in memory, including pending and writing mutations
     // return true if some data is filled into writer
@@ -357,7 +357,7 @@ protected:
     int64_t _min_log_file_size_in_bytes;
     bool _force_flush;
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
 private:
     friend class mutation_log_test;
@@ -394,7 +394,7 @@ private:
                                      // used for limiting garbage collection of shared log, because
                                      // the ending of private log should be covered by shared log
 };
-typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
+typedef ref_ptr<mutation_log> mutation_log_ptr;
 
 class mutation_log_shared : public mutation_log
 {
@@ -403,7 +403,7 @@ public:
                         int32_t max_log_file_mb,
                         bool force_flush,
                         perf_counter_wrapper *write_size_counter = nullptr)
-        : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
+        : mutation_log(dir, max_log_file_mb, gpid(), nullptr),
           _is_writing(false),
           _force_flush(force_flush),
           _write_size_counter(write_size_counter)
@@ -416,12 +416,12 @@ public:
         _tracker.cancel_outstanding_tasks();
     }
 
-    virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn::task_code callback_code,
-                                   dsn::task_tracker *tracker,
-                                   aio_handler &&callback,
-                                   int hash = 0,
-                                   int64_t *pending_size = nullptr) override;
+    virtual task_ptr append(mutation_ptr &mu,
+                            task_code callback_code,
+                            task_tracker *tracker,
+                            aio_handler &&callback,
+                            int hash = 0,
+                            int64_t *pending_size = nullptr) override;
 
     virtual void flush() override;
     virtual void flush_once() override;
@@ -467,12 +467,12 @@ public:
         _tracker.cancel_outstanding_tasks();
     }
 
-    virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn::task_code callback_code,
-                                   dsn::task_tracker *tracker,
-                                   aio_handler &&callback,
-                                   int hash = 0,
-                                   int64_t *pending_size = nullptr) override;
+    virtual task_ptr append(mutation_ptr &mu,
+                            task_code callback_code,
+                            task_tracker *tracker,
+                            aio_handler &&callback,
+                            int hash = 0,
+                            int64_t *pending_size = nullptr) override;
 
     virtual bool get_learn_state_in_memory(decree start_decree,
                                            binary_writer &writer) const override;
@@ -520,4 +520,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -33,12 +33,12 @@
 #include <string>
 
 #include "common/gpid.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include "common/serialization_helper/pegasus.layer2_types.h"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/threadpool_code.h"
 
-using namespace dsn;
+using namespace pegasus;
 
 typedef rpc_holder<query_cfg_request, query_cfg_response> t_rpc;
 
@@ -68,10 +68,9 @@ TEST(rpc_holder, construct)
     {
         query_cfg_request request;
         request.app_name = "test";
-        dsn::message_ex *msg =
-            dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
-        dsn::marshall(msg, request);
-        dsn::message_ex *msg2 = msg->copy(true, true);
+        message_ex *msg = message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+        marshall(msg, request);
+        message_ex *msg2 = msg->copy(true, true);
 
         t_rpc rpc(msg2);
         ASSERT_TRUE(rpc.is_initialized());

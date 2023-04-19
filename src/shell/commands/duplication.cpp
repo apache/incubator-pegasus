@@ -43,9 +43,11 @@
 #include "utils/string_conv.h"
 #include "utils/time_utils.h"
 
-using dsn::replication::dupid_t;
-using dsn::replication::duplication_status;
+using pegasus::replication::dupid_t;
+using pegasus::replication::duplication_modify_response;
+using pegasus::replication::duplication_status;
 
+namespace pegasus {
 bool add_dup(command_executor *e, shell_context *sc, arguments args)
 {
     // add_dup <app_name> <remote_cluster_name> [-f|--freeze]
@@ -84,10 +86,10 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     bool is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
     auto err_resp =
         sc->ddl_client->add_dup(app_name, remote_cluster_name, is_duplicating_checkpoint);
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     std::string hint;
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
         hint = err_resp.get_value().hint;
     }
     if (!err.is_ok()) {
@@ -116,7 +118,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
 // print error if parsing failed
 bool string2dupid(const std::string &str, dupid_t *dup_id)
 {
-    bool ok = dsn::buf2int32(str, *dup_id);
+    bool ok = buf2int32(str, *dup_id);
     if (!ok) {
         fmt::print(stderr, "parsing {} as positive int failed: {}\n", str);
         return false;
@@ -149,9 +151,9 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
     bool detail = cmd[{"-d", "--detail"}];
 
     auto err_resp = sc->ddl_client->query_dup(app_name);
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
     }
     if (!err.is_ok()) {
         fmt::print(stderr,
@@ -165,7 +167,7 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
         const auto &resp = err_resp.get_value();
         fmt::print("duplications of app [{}] are listed as below:\n", app_name);
 
-        dsn::utils::table_printer printer;
+        utils::table_printer printer;
         printer.add_title("dup_id");
         printer.add_column("status");
         printer.add_column("remote cluster");
@@ -173,7 +175,7 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
 
         char create_time[25];
         for (auto info : resp.entry_list) {
-            dsn::utils::time_ms_to_date_time(info.create_ts, create_time, sizeof(create_time));
+            utils::time_ms_to_date_time(info.create_ts, create_time, sizeof(create_time));
 
             printer.add_row(info.dupid);
             printer.append_data(duplication_status_to_string(info.status));
@@ -187,15 +189,15 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-void handle_duplication_modify_response(
-    const std::string &operation, const dsn::error_with<duplication_modify_response> &err_resp)
+void handle_duplication_modify_response(const std::string &operation,
+                                        const error_with<duplication_modify_response> &err_resp)
 {
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
     }
     std::string hint;
-    if (err.code() == dsn::ERR_OBJECT_NOT_FOUND) {
+    if (err.code() == ERR_OBJECT_NOT_FOUND) {
         hint = " [duplication not found]";
     }
     if (err.is_ok()) {
@@ -260,7 +262,7 @@ bool pause_dup(command_executor *e, shell_context *sc, arguments args)
 bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args)
 {
     // set_dup_fail_mode <app_name> <dupid> <slow|skip>
-    using namespace dsn::replication;
+    using namespace replication;
 
     argh::parser cmd(args.argc, args.argv);
     if (cmd.pos_args().size() > 4) {
@@ -270,7 +272,7 @@ bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args)
     std::string app_name = cmd(1).str();
     std::string dupid_str = cmd(2).str();
     dupid_t dup_id;
-    if (!dsn::buf2int32(dupid_str, dup_id)) {
+    if (!buf2int32(dupid_str, dup_id)) {
         fmt::print(stderr, "invalid dup_id {}\n", dupid_str);
         return false;
     }
@@ -288,3 +290,4 @@ bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args)
     handle_duplication_modify_response(operation, err_resp);
     return true;
 }
+} // namespace pegasus

@@ -29,13 +29,13 @@
 #include <memory>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class meta_service;
 
@@ -130,7 +130,7 @@ void newly_partitions::newly_remove_partition(int32_t app_id)
     --total_partitions;
 }
 
-newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::rpc_address &addr)
+newly_partitions *get_newly_partitions(node_mapper &mapper, const rpc_address &addr)
 {
     node_state *ns = get_node_state(mapper, addr, false);
     if (ns == nullptr)
@@ -195,8 +195,8 @@ void server_load_balancer::apply_balancer(meta_view view, const migration_list &
         for (auto &pairs : ml) {
             register_proposals(view, *pairs.second, resp);
             // TODO(yingchun): use CHECK_EQ instead
-            if (resp.err != dsn::ERR_OK) {
-                const dsn::gpid &pid = pairs.first;
+            if (resp.err != ERR_OK) {
+                const gpid &pid = pairs.first;
                 CHECK(false,
                       "apply balancer for gpid({}.{}) failed",
                       pid.get_app_id(),
@@ -206,4 +206,4 @@ void server_load_balancer::apply_balancer(meta_view view, const migration_list &
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

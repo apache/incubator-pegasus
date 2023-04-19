@@ -29,11 +29,11 @@
 #include "perf_counter.h"
 #include "perf_counters.h"
 
-namespace dsn {
+namespace pegasus {
 
 //
 // perf_counter_wrapper is a wrapper class for perf-counter operations, users should use this class
-// instead of the dsn::perf_counter where a performance counter is needed.
+// instead of the perf_counter where a performance counter is needed.
 //
 // for example:
 // class A{
@@ -48,7 +48,7 @@ namespace dsn {
 // };
 //
 // user should call init_global_counter/init_app_counter to initialize the counter.
-// all the initialized counters are stored in the singleton dsn::perf_counters,
+// all the initialized counters are stored in the singleton perf_counters,
 // users can collect all counters of the process and intergrate it with monitor system.
 //
 class perf_counter_wrapper
@@ -70,7 +70,7 @@ public:
     void clear()
     {
         if (nullptr != _counter) {
-            dsn::perf_counters::instance().remove_counter(_counter->full_name());
+            perf_counters::instance().remove_counter(_counter->full_name());
             _counter = nullptr;
         }
     }
@@ -82,8 +82,8 @@ public:
                           dsn_perf_counter_type_t type,
                           const char *dsptr)
     {
-        dsn::perf_counter_ptr c =
-            dsn::perf_counters::instance().get_app_counter(section, name, type, dsptr, true);
+        perf_counter_ptr c =
+            perf_counters::instance().get_app_counter(section, name, type, dsptr, true);
         clear();
         _counter = c.get();
     }
@@ -95,17 +95,17 @@ public:
                              dsn_perf_counter_type_t type,
                              const char *dsptr)
     {
-        dsn::perf_counter_ptr c = dsn::perf_counters::instance().get_global_counter(
-            app, section, name, type, dsptr, true);
+        perf_counter_ptr c =
+            perf_counters::instance().get_global_counter(app, section, name, type, dsptr, true);
         clear();
         _counter = c.get();
     }
 
-    dsn::perf_counter *get() const { return _counter; }
-    dsn::perf_counter *operator->() const { return _counter; }
+    perf_counter *get() const { return _counter; }
+    perf_counter *operator->() const { return _counter; }
 
 private:
     // use raw pointer to make the class object small, so it can be accessed quickly
-    dsn::perf_counter *_counter;
+    perf_counter *_counter;
 };
 }

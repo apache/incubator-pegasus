@@ -30,7 +30,7 @@
 // IWYU pragma: no_include <algorithm>
 // IWYU pragma: no_include <iterator>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 /*extern*/ void time_ms_to_string(uint64_t ts_ms, char *str)
@@ -54,4 +54,4 @@ namespace utils {
 }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

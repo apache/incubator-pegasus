@@ -38,7 +38,7 @@
 #include "utils/errors.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 TEST(fmt_logging, basic)
@@ -53,4 +53,4 @@ TEST(fmt_logging, basic)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

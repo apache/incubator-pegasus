@@ -27,7 +27,7 @@
 #include <cstdio>
 #include "utils/crc.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 template <typename uintxx_t, uintxx_t uPoly>
@@ -442,11 +442,11 @@ uint64_t crc64::_crc_table[sizeof(crc64::_crc_table) / sizeof(crc64::_crc_table[
 }
 }
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 uint32_t crc32_calc(const void *ptr, size_t size, uint32_t init_crc)
 {
-    return dsn::utils::crc32::compute(ptr, size, init_crc);
+    return utils::crc32::compute(ptr, size, init_crc);
 }
 
 uint32_t crc32_concat(uint32_t xy_init,
@@ -457,13 +457,13 @@ uint32_t crc32_concat(uint32_t xy_init,
                       uint32_t y_final,
                       size_t y_size)
 {
-    return dsn::utils::crc32::concatenate(
+    return utils::crc32::concatenate(
         0, x_init, x_final, (uint64_t)x_size, y_init, y_final, (uint64_t)y_size);
 }
 
 uint64_t crc64_calc(const void *ptr, size_t size, uint64_t init_crc)
 {
-    return dsn::utils::crc64::compute(ptr, size, init_crc);
+    return utils::crc64::compute(ptr, size, init_crc);
 }
 
 uint64_t crc64_concat(uint32_t xy_init,
@@ -474,7 +474,7 @@ uint64_t crc64_concat(uint32_t xy_init,
                       uint64_t y_final,
                       size_t y_size)
 {
-    return ::dsn::utils::crc64::concatenate(
+    return utils::crc64::concatenate(
         0, x_init, x_final, (uint64_t)x_size, y_init, y_final, (uint64_t)y_size);
 }
 }

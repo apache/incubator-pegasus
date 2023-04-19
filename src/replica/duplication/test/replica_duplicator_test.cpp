@@ -41,16 +41,16 @@
 #include "utils/errors.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace apps {
 
 // for loading PUT mutations from log file.
-DEFINE_TASK_CODE_RPC(RPC_RRDB_RRDB_PUT, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT);
+DEFINE_TASK_CODE_RPC(RPC_RRDB_RRDB_PUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
 
 } // namespace apps
-} // namespace dsn
+} // namespace pegasus
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_duplicator_test : public duplication_test_base
@@ -181,4 +181,4 @@ TEST_F(replica_duplicator_test, prapre_dup)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

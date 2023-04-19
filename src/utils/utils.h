@@ -36,9 +36,9 @@
 #include <string>
 #include <utility>
 
-namespace dsn {
+namespace pegasus {
 class rpc_address;
-} // namespace dsn
+} // namespace pegasus
 
 #define TIME_MS_MAX 0xffffffff
 
@@ -62,7 +62,7 @@ struct CompileAssert
 
 #define COMPILE_ASSERT(expr, msg) static const CompileAssert msg[bool(expr) ? 1 : -1]
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 template <typename T>
@@ -102,7 +102,7 @@ bool list_hostname_from_ip_port(const char *ip_port_list, std::string *hostname_
 
 // valid_ipv4_rpc_address return TRUE && hostname_result=hostname:port | invalid_ipv4 -> return
 // FALSE
-bool hostname(const dsn::rpc_address &address, std::string *hostname_result);
+bool hostname(const rpc_address &address, std::string *hostname_result);
 
 // valid_ip_network_order -> return TRUE && hostname_result=hostname	|
 // invalid_ip_network_order -> return FALSE
@@ -131,4 +131,4 @@ std::set<T> get_intersection(const std::set<T> &set1, const std::set<T> &set2)
     return intersection;
 }
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

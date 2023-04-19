@@ -30,7 +30,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 DSN_DEFINE_bool(replication,
@@ -75,17 +75,17 @@ perf_counter_ptr get_trace_counter(const std::string &name)
     }
 
     auto perf_counter =
-        dsn::perf_counters::instance().get_app_counter(FLAGS_latency_tracer_counter_name_prefix,
-                                                       name.c_str(),
-                                                       COUNTER_TYPE_NUMBER_PERCENTILES,
-                                                       name.c_str(),
-                                                       true);
+        perf_counters::instance().get_app_counter(FLAGS_latency_tracer_counter_name_prefix,
+                                                  name.c_str(),
+                                                  COUNTER_TYPE_NUMBER_PERCENTILES,
+                                                  name.c_str(),
+                                                  true);
 
     counters_trace_latency.emplace(name, perf_counter);
     return perf_counter;
 }
 
-bool is_enable_trace(const dsn::task_code &code)
+bool is_enable_trace(const task_code &code)
 {
     if (!FLAGS_enable_latency_tracer) {
         return false;
@@ -95,7 +95,7 @@ bool is_enable_trace(const dsn::task_code &code)
         return true;
     }
 
-    std::string code_name(dsn::task_code(code).to_string());
+    std::string code_name(task_code(code).to_string());
     {
         utils::auto_read_lock read(task_code_lock);
         auto iter = task_codes.find(code_name);
@@ -121,7 +121,7 @@ bool is_enable_trace(const dsn::task_code &code)
 latency_tracer::latency_tracer(bool is_sub,
                                std::string name,
                                uint64_t threshold,
-                               const dsn::task_code &code)
+                               const task_code &code)
     : _is_sub(is_sub),
       _name(std::move(name)),
       _description("default"),
@@ -176,7 +176,7 @@ void latency_tracer::add_sub_tracer(const std::string &name)
         return;
     }
 
-    auto sub_tracer = std::make_shared<dsn::utils::latency_tracer>(true, name, 0);
+    auto sub_tracer = std::make_shared<utils::latency_tracer>(true, name, 0);
     sub_tracer->set_parent_point_name(_last_stage);
     sub_tracer->set_description(_description);
     utils::auto_write_lock write(_sub_lock);
@@ -227,7 +227,7 @@ void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
         traces.append(fmt::format("\t{}[TRACE:[{}.{}]{}]{}\n",
                                   header_format,
                                   _description,
-                                  dsn::task_code(_task_code).to_string(),
+                                  task_code(_task_code).to_string(),
                                   _name,
                                   header_format));
         uint64_t previous_point_ts = _points.begin()->first;
@@ -290,4 +290,4 @@ void latency_tracer::report_trace_point(const std::string &name, uint64_t span)
 }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

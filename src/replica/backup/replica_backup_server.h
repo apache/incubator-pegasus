@@ -19,7 +19,7 @@
 
 #include "common/backup_common.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class backup_clear_request;
@@ -41,4 +41,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

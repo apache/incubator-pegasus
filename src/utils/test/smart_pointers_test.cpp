@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-using namespace dsn;
+using namespace pegasus;
 
 TEST(MakeUniqueTest, Basic)
 {

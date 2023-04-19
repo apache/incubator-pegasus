@@ -36,10 +36,8 @@
 #include "test/function_test/utils/test_util.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/utils.h"
 
-using namespace ::dsn;
-using namespace ::pegasus;
+using namespace pegasus;
 
 class ttl_test : public test_util
 {
@@ -50,7 +48,7 @@ public:
         ASSERT_NO_FATAL_FAILURE(set_default_ttl_secs(0));
     }
 
-    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
+    void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
 
     void set_default_ttl_secs(int32_t ttl)
     {

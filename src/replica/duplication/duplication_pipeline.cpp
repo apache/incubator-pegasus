@@ -21,7 +21,7 @@
 #include <functional>
 #include <utility>
 
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "load_from_private_log.h"
 #include "perf_counter/perf_counter.h"
 #include "replica/duplication/replica_duplicator.h"
@@ -32,7 +32,7 @@
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 class string_view;
 
 namespace replication {
@@ -126,4 +126,4 @@ ship_mutation::ship_mutation(replica_duplicator *duplicator)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

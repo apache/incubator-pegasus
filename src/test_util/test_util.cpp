@@ -42,7 +42,7 @@ void AssertEventually(const std::function<void(void)> &f, int timeout_sec, WaitB
         // like to retry.
         bool old_break_on_failure = testing::FLAGS_gtest_break_on_failure;
         bool old_throw_on_failure = testing::FLAGS_gtest_throw_on_failure;
-        auto c = dsn::defer([old_break_on_failure, old_throw_on_failure]() {
+        auto c = defer([old_break_on_failure, old_throw_on_failure]() {
             testing::FLAGS_gtest_break_on_failure = old_break_on_failure;
             testing::FLAGS_gtest_throw_on_failure = old_throw_on_failure;
         });

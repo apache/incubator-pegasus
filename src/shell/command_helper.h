@@ -53,7 +53,7 @@
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
 
-using namespace dsn::replication;
+namespace pegasus {
 
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
@@ -63,7 +63,7 @@ using namespace dsn::replication;
 #define PEGASUS_BUILD_TYPE STR(DSN_BUILD_TYPE)
 #endif
 
-DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 enum scan_data_operator
 {
@@ -97,7 +97,7 @@ public:
 
     void push(std::string &&hash_key, std::string &&sort_key, long row_size)
     {
-        dsn::utils::auto_lock<dsn::utils::ex_lock_nr> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (_heap.size() < _count) {
             _heap.emplace(std::move(hash_key), std::move(sort_key), row_size);
         } else {
@@ -114,7 +114,7 @@ public:
 private:
     int _count;
     top_heap _heap;
-    dsn::utils::ex_lock_nr _lock;
+    utils::ex_lock_nr _lock;
 };
 
 enum class histogram_type
@@ -134,13 +134,13 @@ struct scan_data_context
     bool no_overwrite; // if set true, then use check_and_set() instead of set()
                        // when inserting data to destination table for copy_data,
                        // to not overwrite old data if it aleady exist.
-    pegasus::pegasus_client::filter_type sort_key_filter_type;
+    pegasus_client::filter_type sort_key_filter_type;
     std::string sort_key_filter_pattern;
-    pegasus::pegasus_client::filter_type value_filter_type;
+    pegasus_client::filter_type value_filter_type;
     std::string value_filter_pattern;
-    pegasus::pegasus_client::pegasus_scanner_wrapper scanner;
-    pegasus::pegasus_client *client;
-    pegasus::geo::geo_client *geoclient;
+    pegasus_client::pegasus_scanner_wrapper scanner;
+    pegasus_client *client;
+    geo::geo_client *geoclient;
     std::atomic_bool *error_occurred;
     std::atomic_long split_rows;
     std::atomic_long split_request_count;
@@ -156,15 +156,15 @@ struct scan_data_context
     long data_count;
     uint32_t multi_ttl_seconds;
     std::unordered_map<std::string, std::map<std::string, std::string>> multi_kvs;
-    dsn::utils::semaphore sema;
+    utils::semaphore sema;
 
     scan_data_context(scan_data_operator op_,
                       int split_id_,
                       int max_batch_count_,
                       int timeout_ms_,
-                      pegasus::pegasus_client::pegasus_scanner_wrapper scanner_,
-                      pegasus::pegasus_client *client_,
-                      pegasus::geo::geo_client *geoclient_,
+                      pegasus_client::pegasus_scanner_wrapper scanner_,
+                      pegasus_client *client_,
+                      geo::geo_client *geoclient_,
                       std::atomic_bool *error_occurred_,
                       int max_multi_set_concurrency = 20,
                       bool stat_size_ = false,
@@ -176,8 +176,8 @@ struct scan_data_context
           max_batch_count(max_batch_count_),
           timeout_ms(timeout_ms_),
           no_overwrite(false),
-          sort_key_filter_type(pegasus::pegasus_client::FT_NO_FILTER),
-          value_filter_type(pegasus::pegasus_client::FT_NO_FILTER),
+          sort_key_filter_type(pegasus_client::FT_NO_FILTER),
+          value_filter_type(pegasus_client::FT_NO_FILTER),
           scanner(scanner_),
           client(client_),
           geoclient(geoclient_),
@@ -199,12 +199,12 @@ struct scan_data_context
         // when split_request_count = 1
         CHECK_GT(max_batch_count, 1);
     }
-    void set_sort_key_filter(pegasus::pegasus_client::filter_type type, const std::string &pattern)
+    void set_sort_key_filter(pegasus_client::filter_type type, const std::string &pattern)
     {
         sort_key_filter_type = type;
         sort_key_filter_pattern = pattern;
     }
-    void set_value_filter(pegasus::pegasus_client::filter_type type, const std::string &pattern)
+    void set_value_filter(pegasus_client::filter_type type, const std::string &pattern)
     {
         value_filter_type = type;
         value_filter_pattern = pattern;
@@ -220,43 +220,40 @@ inline void update_atomic_max(std::atomic_long &max, long value)
         }
     }
 }
-inline pegasus::pegasus_client::filter_type parse_filter_type(const std::string &name,
-                                                              bool include_exact)
+inline pegasus_client::filter_type parse_filter_type(const std::string &name, bool include_exact)
 {
     if (include_exact && name == "exact")
-        return pegasus::pegasus_client::FT_MATCH_EXACT;
+        return pegasus_client::FT_MATCH_EXACT;
     else
-        return (pegasus::pegasus_client::filter_type)type_from_string(
-            dsn::apps::_filter_type_VALUES_TO_NAMES,
-            std::string("ft_match_") + name,
-            ::dsn::apps::filter_type::FT_NO_FILTER);
+        return (pegasus_client::filter_type)type_from_string(apps::_filter_type_VALUES_TO_NAMES,
+                                                             std::string("ft_match_") + name,
+                                                             apps::filter_type::FT_NO_FILTER);
 }
 // return true if the data is valid for the filter
-inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
+inline bool validate_filter(pegasus_client::filter_type filter_type,
                             const std::string &filter_pattern,
                             const std::string &value)
 {
     switch (filter_type) {
-    case pegasus::pegasus_client::FT_NO_FILTER:
+    case pegasus_client::FT_NO_FILTER:
         return true;
-    case pegasus::pegasus_client::FT_MATCH_EXACT:
+    case pegasus_client::FT_MATCH_EXACT:
         return filter_pattern == value;
-    case pegasus::pegasus_client::FT_MATCH_ANYWHERE:
-    case pegasus::pegasus_client::FT_MATCH_PREFIX:
-    case pegasus::pegasus_client::FT_MATCH_POSTFIX: {
+    case pegasus_client::FT_MATCH_ANYWHERE:
+    case pegasus_client::FT_MATCH_PREFIX:
+    case pegasus_client::FT_MATCH_POSTFIX: {
         if (filter_pattern.length() == 0)
             return true;
         if (value.length() < filter_pattern.length())
             return false;
-        if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
-            return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
-        } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
-            return dsn::utils::mequals(
-                value.data(), filter_pattern.data(), filter_pattern.length());
-        } else { // filter_type == pegasus::pegasus_client::FT_MATCH_POSTFIX
-            return dsn::utils::mequals(value.data() + value.length() - filter_pattern.length(),
-                                       filter_pattern.data(),
-                                       filter_pattern.length());
+        if (filter_type == pegasus_client::FT_MATCH_ANYWHERE) {
+            return string_view(value).find(filter_pattern) != string_view::npos;
+        } else if (filter_type == pegasus_client::FT_MATCH_PREFIX) {
+            return utils::mequals(value.data(), filter_pattern.data(), filter_pattern.length());
+        } else { // filter_type == pegasus_client::FT_MATCH_POSTFIX
+            return utils::mequals(value.data() + value.length() - filter_pattern.length(),
+                                  filter_pattern.data(),
+                                  filter_pattern.length());
         }
     }
     default:
@@ -270,7 +267,7 @@ validate_filter(scan_data_context *context, const std::string &sort_key, const s
 {
     // for sort key, we only need to check MATCH_EXACT, because it is not supported
     // on the server side, but MATCH_PREFIX is already satisified.
-    if (context->sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT &&
+    if (context->sort_key_filter_type == pegasus_client::FT_MATCH_EXACT &&
         sort_key.length() > context->sort_key_filter_pattern.length())
         return false;
     return validate_filter(context->value_filter_type, context->value_filter_pattern, value);
@@ -278,8 +275,8 @@ validate_filter(scan_data_context *context, const std::string &sort_key, const s
 
 inline int compute_ttl_seconds(uint32_t expire_ts_seconds, bool &ts_expired)
 {
-    auto epoch_now = pegasus::utils::epoch_now();
-    ts_expired = pegasus::check_if_ts_expired(epoch_now, expire_ts_seconds);
+    auto epoch_now = utils::epoch_now();
+    ts_expired = check_if_ts_expired(epoch_now, expire_ts_seconds);
     if (expire_ts_seconds > 0 && !ts_expired) {
         return static_cast<int>(expire_ts_seconds - epoch_now);
     }
@@ -295,8 +292,8 @@ inline void batch_execute_multi_set(scan_data_context *context)
         context->client->async_multi_set(
             kv.first,
             kv.second,
-            [context, multi_size](int err, pegasus::pegasus_client::internal_info &&info) {
-                if (err != pegasus::PERR_OK) {
+            [context, multi_size](int err, pegasus_client::internal_info &&info) {
+                if (err != PERR_OK) {
                     if (!context->split_completed.exchange(true)) {
                         fprintf(stderr,
                                 "ERROR: split[%d] async_multi_set set failed: %s\n",
@@ -323,10 +320,10 @@ inline void scan_multi_data_next(scan_data_context *context)
                                                std::string &&hash_key,
                                                std::string &&sort_key,
                                                std::string &&value,
-                                               pegasus::pegasus_client::internal_info &&info,
+                                               pegasus_client::internal_info &&info,
                                                uint32_t expire_ts_seconds,
                                                uint32_t kv_count) {
-            if (ret == pegasus::PERR_OK) {
+            if (ret == PERR_OK) {
                 if (validate_filter(context, sort_key, value)) {
                     bool ts_expired = false;
                     int ttl_seconds = 0;
@@ -337,9 +334,9 @@ inline void scan_multi_data_next(scan_data_context *context)
                             // wait for satisfied with max_multi_set_concurrency
                             context->sema.wait();
 
-                            auto callback = [context](
-                                int err, pegasus::pegasus_client::internal_info &&info) {
-                                if (err != pegasus::PERR_OK) {
+                            auto callback = [context](int err,
+                                                      pegasus_client::internal_info &&info) {
+                                if (err != PERR_OK) {
                                     if (!context->split_completed.exchange(true)) {
                                         fprintf(stderr,
                                                 "ERROR: split[%d] async check and set failed: %s\n",
@@ -378,7 +375,7 @@ inline void scan_multi_data_next(scan_data_context *context)
                     }
                 }
                 scan_multi_data_next(context);
-            } else if (ret == pegasus::PERR_SCAN_COMPLETE) {
+            } else if (ret == PERR_SCAN_COMPLETE) {
                 batch_execute_multi_set(context);
                 context->split_completed.store(true);
             } else {
@@ -403,10 +400,10 @@ inline void scan_data_next(scan_data_context *context)
                                                std::string &&hash_key,
                                                std::string &&sort_key,
                                                std::string &&value,
-                                               pegasus::pegasus_client::internal_info &&info,
+                                               pegasus_client::internal_info &&info,
                                                uint32_t expire_ts_seconds,
                                                int32_t kv_count) {
-            if (ret == pegasus::PERR_OK) {
+            if (ret == PERR_OK) {
                 if (kv_count != -1 || validate_filter(context, sort_key, value)) {
                     bool ts_expired = false;
                     int ttl_seconds = 0;
@@ -419,9 +416,9 @@ inline void scan_data_next(scan_data_context *context)
                         } else if (context->no_overwrite) {
                             auto callback = [context](
                                 int err,
-                                pegasus::pegasus_client::check_and_set_results &&results,
-                                pegasus::pegasus_client::internal_info &&info) {
-                                if (err != pegasus::PERR_OK) {
+                                pegasus_client::check_and_set_results &&results,
+                                pegasus_client::internal_info &&info) {
+                                if (err != PERR_OK) {
                                     if (!context->split_completed.exchange(true)) {
                                         fprintf(stderr,
                                                 "ERROR: split[%d] async check and set failed: %s\n",
@@ -439,12 +436,12 @@ inline void scan_data_next(scan_data_context *context)
                                 // to prevent that split_request_count becomes 0 in the middle.
                                 context->split_request_count--;
                             };
-                            pegasus::pegasus_client::check_and_set_options options;
+                            pegasus_client::check_and_set_options options;
                             options.set_value_ttl_seconds = ttl_seconds;
                             context->client->async_check_and_set(
                                 hash_key,
                                 sort_key,
-                                pegasus::pegasus_client::cas_check_type::CT_VALUE_NOT_EXIST,
+                                pegasus_client::cas_check_type::CT_VALUE_NOT_EXIST,
                                 "",
                                 sort_key,
                                 value,
@@ -452,24 +449,24 @@ inline void scan_data_next(scan_data_context *context)
                                 std::move(callback),
                                 context->timeout_ms);
                         } else {
-                            auto callback =
-                                [context](int err, pegasus::pegasus_client::internal_info &&info) {
-                                    if (err != pegasus::PERR_OK) {
-                                        if (!context->split_completed.exchange(true)) {
-                                            fprintf(stderr,
-                                                    "ERROR: split[%d] async set failed: %s\n",
-                                                    context->split_id,
-                                                    context->client->get_error_string(err));
-                                            context->error_occurred->store(true);
-                                        }
-                                    } else {
-                                        context->split_rows++;
-                                        scan_data_next(context);
+                            auto callback = [context](int err,
+                                                      pegasus_client::internal_info &&info) {
+                                if (err != PERR_OK) {
+                                    if (!context->split_completed.exchange(true)) {
+                                        fprintf(stderr,
+                                                "ERROR: split[%d] async set failed: %s\n",
+                                                context->split_id,
+                                                context->client->get_error_string(err));
+                                        context->error_occurred->store(true);
                                     }
-                                    // should put "split_request_count--" at end of the scope,
-                                    // to prevent that split_request_count becomes 0 in the middle.
-                                    context->split_request_count--;
-                                };
+                                } else {
+                                    context->split_rows++;
+                                    scan_data_next(context);
+                                }
+                                // should put "split_request_count--" at end of the scope,
+                                // to prevent that split_request_count becomes 0 in the middle.
+                                context->split_request_count--;
+                            };
                             context->client->async_set(hash_key,
                                                        sort_key,
                                                        value,
@@ -483,8 +480,8 @@ inline void scan_data_next(scan_data_context *context)
                         context->client->async_del(
                             hash_key,
                             sort_key,
-                            [context](int err, pegasus::pegasus_client::internal_info &&info) {
-                                if (err != pegasus::PERR_OK) {
+                            [context](int err, pegasus_client::internal_info &&info) {
+                                if (err != PERR_OK) {
                                     if (!context->split_completed.exchange(true)) {
                                         fprintf(stderr,
                                                 "ERROR: split[%d] async del failed: %s\n",
@@ -551,8 +548,8 @@ inline void scan_data_next(scan_data_context *context)
                                 hash_key,
                                 sort_key,
                                 value,
-                                [context](int err, pegasus::pegasus_client::internal_info &&info) {
-                                    if (err != pegasus::PERR_OK) {
+                                [context](int err, pegasus_client::internal_info &&info) {
+                                    if (err != PERR_OK) {
                                         if (!context->split_completed.exchange(true)) {
                                             fprintf(stderr,
                                                     "ERROR: split[%d] async set failed: %s\n",
@@ -579,7 +576,7 @@ inline void scan_data_next(scan_data_context *context)
                 } else {
                     scan_data_next(context);
                 }
-            } else if (ret == pegasus::PERR_SCAN_COMPLETE) {
+            } else if (ret == PERR_SCAN_COMPLETE) {
                 context->split_completed.store(true);
             } else {
                 if (!context->split_completed.exchange(true)) {
@@ -605,8 +602,8 @@ inline void scan_data_next(scan_data_context *context)
 struct node_desc
 {
     std::string desc;
-    dsn::rpc_address address;
-    node_desc(const std::string &s, const dsn::rpc_address &n) : desc(s), address(n) {}
+    rpc_address address;
+    node_desc(const std::string &s, const rpc_address &n) : desc(s), address(n) {}
 };
 // type: all | replica-server | meta-server
 inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<node_desc> &nodes)
@@ -618,10 +615,9 @@ inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<n
     }
 
     if (type == "all" || type == "replica-server") {
-        std::map<dsn::rpc_address, dsn::replication::node_status::type> rs_nodes;
-        ::dsn::error_code err =
-            sc->ddl_client->list_nodes(dsn::replication::node_status::NS_ALIVE, rs_nodes);
-        if (err != ::dsn::ERR_OK) {
+        std::map<rpc_address, replication::node_status::type> rs_nodes;
+        error_code err = sc->ddl_client->list_nodes(replication::node_status::NS_ALIVE, rs_nodes);
+        if (err != ERR_OK) {
             fprintf(stderr, "ERROR: list node failed: %s\n", err.to_string());
             return false;
         }
@@ -640,12 +636,12 @@ call_remote_command(shell_context *sc,
                     const std::vector<std::string> &arguments)
 {
     std::vector<std::pair<bool, std::string>> results;
-    std::vector<dsn::task_ptr> tasks;
+    std::vector<task_ptr> tasks;
     tasks.resize(nodes.size());
     results.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
-        auto callback = [&results, i](::dsn::error_code err, const std::string &resp) {
-            if (err == ::dsn::ERR_OK) {
+        auto callback = [&results, i](error_code err, const std::string &resp) {
+            if (err == ERR_OK) {
                 results[i].first = true;
                 results[i].second = resp;
             } else {
@@ -653,7 +649,7 @@ call_remote_command(shell_context *sc,
                 results[i].second = err.to_string();
             }
         };
-        tasks[i] = dsn::dist::cmd::async_call_remote(
+        tasks[i] = dist::cmd::async_call_remote(
             nodes[i].address, cmd, arguments, callback, std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
@@ -986,12 +982,11 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
     return true;
 }
 
-inline bool get_apps_and_nodes(shell_context *sc,
-                               std::vector<::dsn::app_info> &apps,
-                               std::vector<node_desc> &nodes)
+inline bool
+get_apps_and_nodes(shell_context *sc, std::vector<app_info> &apps, std::vector<node_desc> &nodes)
 {
-    dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
-    if (err != dsn::ERR_OK) {
+    error_code err = sc->ddl_client->list_apps(app_status::AS_AVAILABLE, apps);
+    if (err != ERR_OK) {
         LOG_ERROR("list apps failed, error = {}", err);
         return false;
     }
@@ -1004,15 +999,15 @@ inline bool get_apps_and_nodes(shell_context *sc,
 
 inline bool
 get_app_partitions(shell_context *sc,
-                   const std::vector<::dsn::app_info> &apps,
-                   std::map<int32_t, std::vector<dsn::partition_configuration>> &app_partitions)
+                   const std::vector<app_info> &apps,
+                   std::map<int32_t, std::vector<partition_configuration>> &app_partitions)
 {
-    for (const ::dsn::app_info &app : apps) {
+    for (const app_info &app : apps) {
         int32_t app_id = 0;
         int32_t partition_count = 0;
-        dsn::error_code err = sc->ddl_client->list_app(
+        error_code err = sc->ddl_client->list_app(
             app.app_name, app_id, partition_count, app_partitions[app.app_id]);
-        if (err != ::dsn::ERR_OK) {
+        if (err != ERR_OK) {
             LOG_ERROR("list app {} failed, error = {}", app.app_name, err);
             return false;
         }
@@ -1022,16 +1017,16 @@ get_app_partitions(shell_context *sc,
     return true;
 }
 
-inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
+inline bool decode_node_perf_counter_info(const rpc_address &node_addr,
                                           const std::pair<bool, std::string> &result,
-                                          dsn::perf_counter_info &info)
+                                          perf_counter_info &info)
 {
     if (!result.first) {
         LOG_ERROR("query perf counter info from node {} failed", node_addr);
         return false;
     }
-    dsn::blob bb(result.second.data(), 0, result.second.size());
-    if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+    blob bb(result.second.data(), 0, result.second.size());
+    if (!json::json_forwarder<perf_counter_info>::decode(bb, info)) {
         LOG_ERROR(
             "decode perf counter info from node {} failed, result = {}", node_addr, result.second);
         return false;
@@ -1050,7 +1045,7 @@ inline bool get_app_partition_stat(shell_context *sc,
                                    std::map<std::string, std::vector<row_data>> &rows)
 {
     // get apps and nodes
-    std::vector<::dsn::app_info> apps;
+    std::vector<app_info> apps;
     std::vector<node_desc> nodes;
     if (!get_apps_and_nodes(sc, apps, nodes)) {
         return false;
@@ -1059,14 +1054,14 @@ inline bool get_app_partition_stat(shell_context *sc,
     // get the relationship between app_id and app_name
     std::map<int32_t, std::string> app_id_name;
     std::map<std::string, int32_t> app_name_id;
-    for (::dsn::app_info &app : apps) {
+    for (app_info &app : apps) {
         app_id_name[app.app_id] = app.app_name;
         app_name_id[app.app_name] = app.app_id;
         rows[app.app_name].resize(app.partition_count);
     }
 
     // get app_id --> partitions
-    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
+    std::map<int32_t, std::vector<partition_configuration>> app_partitions;
     if (!get_app_partitions(sc, apps, app_partitions)) {
         return false;
     }
@@ -1077,12 +1072,12 @@ inline bool get_app_partition_stat(shell_context *sc,
 
     for (int i = 0; i < nodes.size(); ++i) {
         // decode info of perf-counters on node i
-        dsn::perf_counter_info info;
+        perf_counter_info info;
         if (!decode_node_perf_counter_info(nodes[i].address, results[i], info)) {
             return false;
         }
 
-        for (dsn::perf_counter_metric &m : info.counters) {
+        for (perf_counter_metric &m : info.counters) {
             // get app_id/partition_id/counter_name/app_name from the name of perf-counter
             int32_t app_id_x, partition_index_x;
             std::string counter_name;
@@ -1118,20 +1113,20 @@ inline bool get_app_partition_stat(shell_context *sc,
 inline bool
 get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_data> &rows)
 {
-    std::vector<::dsn::app_info> apps;
+    std::vector<app_info> apps;
     std::vector<node_desc> nodes;
     if (!get_apps_and_nodes(sc, apps, nodes))
         return false;
 
-    ::dsn::app_info *app_info = nullptr;
+    app_info *cur_app_info = nullptr;
     if (!app_name.empty()) {
         for (auto &app : apps) {
             if (app.app_name == app_name) {
-                app_info = &app;
+                cur_app_info = &app;
                 break;
             }
         }
-        if (app_info == nullptr) {
+        if (cur_app_info == nullptr) {
             LOG_ERROR("app {} not found", app_name);
             return false;
         }
@@ -1142,21 +1137,21 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
     if (app_name.empty()) {
         sprintf(tmp, ".*@.*");
     } else {
-        sprintf(tmp, ".*@%d\\..*", app_info->app_id);
+        sprintf(tmp, ".*@%d\\..*", cur_app_info->app_id);
     }
     arguments.emplace_back(tmp);
     std::vector<std::pair<bool, std::string>> results =
         call_remote_command(sc, nodes, "perf-counters", arguments);
 
     if (app_name.empty()) {
-        std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
+        std::map<int32_t, std::vector<partition_configuration>> app_partitions;
         if (!get_app_partitions(sc, apps, app_partitions))
             return false;
 
         rows.resize(app_partitions.size());
         int idx = 0;
         std::map<int32_t, int> app_row_idx; // app_id --> row_idx
-        for (::dsn::app_info &app : apps) {
+        for (app_info &app : apps) {
             rows[idx].row_name = app.app_name;
             rows[idx].app_id = app.app_id;
             rows[idx].partition_count = app.partition_count;
@@ -1165,11 +1160,11 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         }
 
         for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            dsn::perf_counter_info info;
+            rpc_address node_addr = nodes[i].address;
+            perf_counter_info info;
             if (!decode_node_perf_counter_info(node_addr, results[i], info))
                 return false;
-            for (dsn::perf_counter_metric &m : info.counters) {
+            for (perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
                 if (!parse_app_pegasus_perf_counter_name(
@@ -1179,34 +1174,33 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 auto find = app_partitions.find(app_id_x);
                 if (find == app_partitions.end())
                     continue;
-                dsn::partition_configuration &pc = find->second[partition_index_x];
+                partition_configuration &pc = find->second[partition_index_x];
                 if (pc.primary != node_addr)
                     continue;
                 update_app_pegasus_perf_counter(rows[app_row_idx[app_id_x]], counter_name, m.value);
             }
         }
     } else {
-        rows.resize(app_info->partition_count);
-        for (int i = 0; i < app_info->partition_count; i++)
+        rows.resize(cur_app_info->partition_count);
+        for (int i = 0; i < cur_app_info->partition_count; i++)
             rows[i].row_name = std::to_string(i);
         int32_t app_id = 0;
         int32_t partition_count = 0;
-        std::vector<dsn::partition_configuration> partitions;
-        dsn::error_code err =
-            sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
-        if (err != ::dsn::ERR_OK) {
+        std::vector<partition_configuration> partitions;
+        error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
+        if (err != ERR_OK) {
             LOG_ERROR("list app {} failed, error = {}", app_name, err);
             return false;
         }
-        CHECK_EQ(app_id, app_info->app_id);
-        CHECK_EQ(partition_count, app_info->partition_count);
+        CHECK_EQ(app_id, cur_app_info->app_id);
+        CHECK_EQ(partition_count, cur_app_info->partition_count);
 
         for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            dsn::perf_counter_info info;
+            rpc_address node_addr = nodes[i].address;
+            perf_counter_info info;
             if (!decode_node_perf_counter_info(node_addr, results[i], info))
                 return false;
-            for (dsn::perf_counter_metric &m : info.counters) {
+            for (perf_counter_metric &m : info.counters) {
                 int32_t app_id_x, partition_index_x;
                 std::string counter_name;
                 bool parse_ret = parse_app_pegasus_perf_counter_name(
@@ -1241,8 +1235,8 @@ struct node_capacity_unit_stat
         }
         std::stringstream out;
         rapidjson::OStreamWrapper wrapper(out);
-        dsn::json::JsonWriter writer(wrapper);
-        dsn::json::json_encode(writer, values);
+        json::JsonWriter writer(wrapper);
+        json::json_encode(writer, values);
         return out.str();
     }
 };
@@ -1261,15 +1255,15 @@ inline bool get_capacity_unit_stat(shell_context *sc,
 
     nodes_stat.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
-        dsn::perf_counter_info info;
+        rpc_address node_addr = nodes[i].address;
+        perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
             LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
         nodes_stat[i].node_address = node_addr.to_string();
-        for (dsn::perf_counter_metric &m : info.counters) {
+        for (perf_counter_metric &m : info.counters) {
             int32_t app_id, pidx;
             std::string counter_name;
             bool r = parse_app_pegasus_perf_counter_name(m.name, app_id, pidx, counter_name);
@@ -1295,22 +1289,22 @@ struct app_storage_size_stat
     {
         std::stringstream out;
         rapidjson::OStreamWrapper wrapper(out);
-        dsn::json::JsonWriter writer(wrapper);
-        dsn::json::json_encode(writer, st_value_by_app);
+        json::JsonWriter writer(wrapper);
+        json::json_encode(writer, st_value_by_app);
         return out.str();
     }
 };
 
 inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_stat)
 {
-    std::vector<::dsn::app_info> apps;
+    std::vector<app_info> apps;
     std::vector<node_desc> nodes;
     if (!get_apps_and_nodes(sc, apps, nodes)) {
         LOG_ERROR("get apps and nodes failed");
         return false;
     }
 
-    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
+    std::map<int32_t, std::vector<partition_configuration>> app_partitions;
     if (!get_app_partitions(sc, apps, app_partitions)) {
         LOG_ERROR("get app partitions failed");
         return false;
@@ -1328,13 +1322,13 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         sc, nodes, "perf-counters-by-prefix", {"replica*app.pegasus*disk.storage.sst(MB)"});
 
     for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
-        dsn::perf_counter_info info;
+        rpc_address node_addr = nodes[i].address;
+        perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
             LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
             continue;
         }
-        for (dsn::perf_counter_metric &m : info.counters) {
+        for (perf_counter_metric &m : info.counters) {
             int32_t app_id_x, partition_index_x;
             std::string counter_name;
             bool parse_ret = parse_app_pegasus_perf_counter_name(
@@ -1345,7 +1339,7 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             auto find = app_partitions.find(app_id_x);
             if (find == app_partitions.end()) // app id not found
                 continue;
-            dsn::partition_configuration &pc = find->second[partition_index_x];
+            partition_configuration &pc = find->second[partition_index_x];
             if (pc.primary != node_addr) // not primary replica
                 continue;
             if (pc.partition_flags != 0) // already calculated
@@ -1361,18 +1355,18 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
     }
 
     char buf[20];
-    dsn::utils::time_ms_to_date_time(dsn_now_ms(), buf, sizeof(buf));
+    utils::time_ms_to_date_time(dsn_now_ms(), buf, sizeof(buf));
     st_stat.timestamp = buf;
     return true;
 }
 
-inline configuration_proposal_action new_proposal_action(const dsn::rpc_address &target,
-                                                         const dsn::rpc_address &node,
-                                                         config_type::type type)
+inline replication::configuration_proposal_action new_proposal_action(
+    const rpc_address &target, const rpc_address &node, replication::config_type::type type)
 {
-    configuration_proposal_action act;
+    replication::configuration_proposal_action act;
     act.__set_target(target);
     act.__set_node(node);
     act.__set_type(type);
     return act;
 }
+} // namespace pegasus

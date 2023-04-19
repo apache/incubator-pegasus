@@ -25,7 +25,7 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 throttling_controller::throttling_controller()
@@ -179,4 +179,4 @@ throttling_controller::throttling_type throttling_controller::control(
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

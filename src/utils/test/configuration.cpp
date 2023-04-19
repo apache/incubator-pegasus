@@ -38,9 +38,8 @@
 #include <vector>
 
 #include "utils/configuration.h"
-#include "utils/string_view.h"
 
-using namespace ::dsn;
+namespace pegasus {
 
 TEST(configuration, load)
 {
@@ -320,3 +319,4 @@ TEST(configuration, dump)
     ASSERT_EQ(std::string("exsit2"),
               std::string(c->get_string_value("not-exsit", "not-exsit", "", "")));
 }
+} // namespace pegasus

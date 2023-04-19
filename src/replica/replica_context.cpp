@@ -45,7 +45,7 @@
 #include "replica_stub.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 void primary_context::cleanup(bool clean_pending_mutations)
@@ -138,7 +138,7 @@ void primary_context::get_replica_config(partition_status::type st,
     config.learner_signature = learner_signature;
 }
 
-bool primary_context::check_exist(::dsn::rpc_address node, partition_status::type st)
+bool primary_context::check_exist(rpc_address node, partition_status::type st)
 {
     switch (st) {
     case partition_status::PS_PRIMARY:
@@ -285,4 +285,4 @@ bool partition_split_context::is_cleaned() const
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -32,7 +32,7 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace log_utils {
 
@@ -98,4 +98,4 @@ error_s check_log_files_continuity(const std::map<int, log_file_ptr> &logs)
 
 } // namespace log_utils
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

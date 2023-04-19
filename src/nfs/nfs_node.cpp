@@ -32,12 +32,12 @@
 #include "nfs_node_simple.h"
 #include "utils/autoref_ptr.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
 
 std::unique_ptr<nfs_node> nfs_node::create()
 {
-    return std::make_unique<dsn::service::nfs_node_simple>();
+    return std::make_unique<service::nfs_node_simple>();
 }
 
 aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,
@@ -45,7 +45,7 @@ aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,
                                              const std::string &source_dir,
                                              const std::string &dest_disk_tag,
                                              const std::string &dest_dir,
-                                             const dsn::gpid &pid,
+                                             const gpid &pid,
                                              bool overwrite,
                                              bool high_priority,
                                              task_code callback_code,
@@ -74,7 +74,7 @@ aio_task_ptr nfs_node::copy_remote_files(const rpc_address &remote,
                                          const std::vector<std::string> &files,
                                          const std::string &dest_disk_tag,
                                          const std::string &dest_dir,
-                                         const dsn::gpid &pid,
+                                         const gpid &pid,
                                          bool overwrite,
                                          bool high_priority,
                                          task_code callback_code,
@@ -82,7 +82,7 @@ aio_task_ptr nfs_node::copy_remote_files(const rpc_address &remote,
                                          aio_handler &&callback,
                                          int hash)
 {
-    auto cb = dsn::file::create_aio_task(callback_code, tracker, std::move(callback), hash);
+    auto cb = file::create_aio_task(callback_code, tracker, std::move(callback), hash);
 
     std::shared_ptr<remote_copy_request> rci = std::make_shared<remote_copy_request>();
     rci->source = remote;
@@ -105,7 +105,7 @@ aio_task_ptr nfs_node::copy_remote_files(std::shared_ptr<remote_copy_request> &r
                                          aio_handler &&callback,
                                          int hash)
 {
-    auto cb = dsn::file::create_aio_task(callback_code, tracker, std::move(callback), hash);
+    auto cb = file::create_aio_task(callback_code, tracker, std::move(callback), hash);
     call(request, cb);
     return cb;
 }

@@ -41,7 +41,7 @@
 #include "common/json_helper.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 
 class test_entity
 {
@@ -153,10 +153,10 @@ TEST(json_helper, encode_and_decode)
     // ensures that `entity` doesn't equal to the default value of `decoded_entity`
     entity.field = 5;
 
-    blob encoded_entity = dsn::json::json_forwarder<test_entity>::encode(entity);
+    blob encoded_entity = json::json_forwarder<test_entity>::encode(entity);
 
     test_entity decoded_entity;
-    dsn::json::json_forwarder<test_entity>::decode(encoded_entity, decoded_entity);
+    json::json_forwarder<test_entity>::decode(encoded_entity, decoded_entity);
 
     ASSERT_EQ(entity, decoded_entity);
 }
@@ -172,9 +172,9 @@ TEST(json_helper, simple_type_encode_decode)
     t1_out.d = -0.0;
     t1_out.s = "";
 
-    dsn::blob bb = dsn::json::json_forwarder<struct_type1>::encode(t1_in);
+    blob bb = json::json_forwarder<struct_type1>::encode(t1_in);
     t1_in.s = "";
-    ASSERT_TRUE(dsn::json::json_forwarder<struct_type1>::decode(bb, t1_out));
+    ASSERT_TRUE(json::json_forwarder<struct_type1>::decode(bb, t1_out));
 
     ASSERT_EQ(t1_in.b, t1_out.b);
     ASSERT_EQ(t1_in.d, t1_out.d);
@@ -184,14 +184,14 @@ TEST(json_helper, simple_type_encode_decode)
     t1_in.d = 99.999;
     t1_in.s = "";
 
-    bb = dsn::json::json_forwarder<struct_type1>::encode(t1_in);
-    ASSERT_TRUE(dsn::json::json_forwarder<struct_type1>::decode(bb, t1_out));
+    bb = json::json_forwarder<struct_type1>::encode(t1_in);
+    ASSERT_TRUE(json::json_forwarder<struct_type1>::decode(bb, t1_out));
 
     ASSERT_EQ(t1_in, t1_out);
 
     t1_in.s = "string with escape: \\\\, \\\"";
-    bb = dsn::json::json_forwarder<struct_type1>::encode(t1_in);
-    ASSERT_TRUE(dsn::json::json_forwarder<struct_type1>::decode(bb, t1_out));
+    bb = json::json_forwarder<struct_type1>::encode(t1_in);
+    ASSERT_TRUE(json::json_forwarder<struct_type1>::decode(bb, t1_out));
     std::cout << bb.data() << std::endl;
     ASSERT_EQ(t1_in.s, t1_out.s);
 }
@@ -209,8 +209,8 @@ TEST(json_helper, int_type_encode_decode)
     t_out.i32 = 0;
     t_out.i64 = 0;
 
-    dsn::blob bb = dsn::json::json_forwarder<struct_type2>::encode(t_in);
-    ASSERT_TRUE(dsn::json::json_forwarder<struct_type2>::decode(bb, t_out));
+    blob bb = json::json_forwarder<struct_type2>::encode(t_in);
+    ASSERT_TRUE(json::json_forwarder<struct_type2>::decode(bb, t_out));
 
     ASSERT_EQ(t_in, t_out);
 
@@ -219,8 +219,8 @@ TEST(json_helper, int_type_encode_decode)
     t_in.i32 = 0x7fffffff;
     t_in.i64 = 0x7fffffffffffffff;
 
-    bb = dsn::json::json_forwarder<struct_type2>::encode(t_in);
-    ASSERT_TRUE(dsn::json::json_forwarder<struct_type2>::decode(bb, t_out));
+    bb = json::json_forwarder<struct_type2>::encode(t_in);
+    ASSERT_TRUE(json::json_forwarder<struct_type2>::decode(bb, t_out));
 
     ASSERT_EQ(t_in, t_out);
 }
@@ -240,8 +240,8 @@ TEST(json_helper, int_overflow_underflow)
     struct_type2 t;
 
     for (int i = 0; i < 8; ++i) {
-        dsn::blob bb(abnormal_targets[i], 0, strlen(abnormal_targets[i]));
-        bool result = dsn::json::json_forwarder<struct_type2>::decode(bb, t);
+        blob bb(abnormal_targets[i], 0, strlen(abnormal_targets[i]));
+        bool result = json::json_forwarder<struct_type2>::decode(bb, t);
         ASSERT_FALSE(result);
     }
 
@@ -261,8 +261,8 @@ TEST(json_helper, int_overflow_underflow)
     normal_results[1].i64 = 0x7fffffffffffffff;
 
     for (int i = 0; i < 2; ++i) {
-        dsn::blob bb(normal_targets[i], 0, strlen(normal_targets[i]));
-        bool result = dsn::json::json_forwarder<struct_type2>::decode(bb, t);
+        blob bb(normal_targets[i], 0, strlen(normal_targets[i]));
+        bool result = json::json_forwarder<struct_type2>::decode(bb, t);
         ASSERT_TRUE(result);
 
         ASSERT_EQ(normal_results[i], t);
@@ -277,13 +277,13 @@ TEST(json_helper, uint_encode_decode)
     t_in.u32 = 0xffffffff;
     t_in.u64 = 0xffffffffffffffff;
 
-    dsn::blob bb = dsn::json::json_forwarder<struct_type3>::encode(t_in);
+    blob bb = json::json_forwarder<struct_type3>::encode(t_in);
 
     t_out.u8 = 0;
     t_out.u16 = 0;
     t_out.u32 = 0;
     t_out.u64 = 0;
-    dsn::json::json_forwarder<struct_type3>::decode(bb, t_out);
+    json::json_forwarder<struct_type3>::decode(bb, t_out);
 
     ASSERT_EQ(t_in, t_out);
 }
@@ -303,8 +303,8 @@ TEST(json_helper, uint_overflow_underflow)
 
     struct_type3 t;
     for (int i = 0; i < 8; ++i) {
-        dsn::blob bb(abnormal_cases[i], 0, strlen(abnormal_cases[i]));
-        bool ans = dsn::json::json_forwarder<struct_type3>::decode(bb, t);
+        blob bb(abnormal_cases[i], 0, strlen(abnormal_cases[i]));
+        bool ans = json::json_forwarder<struct_type3>::decode(bb, t);
         ASSERT_FALSE(ans);
     }
 
@@ -325,8 +325,8 @@ TEST(json_helper, uint_overflow_underflow)
     normal_results[1].u64 = 0;
 
     for (int i = 0; i < 2; ++i) {
-        dsn::blob bb(normal_cases[i], 0, strlen(normal_cases[i]));
-        bool result = dsn::json::json_forwarder<struct_type3>::decode(bb, t);
+        blob bb(normal_cases[i], 0, strlen(normal_cases[i]));
+        bool result = json::json_forwarder<struct_type3>::decode(bb, t);
         ASSERT_TRUE(result);
 
         ASSERT_EQ(normal_results[i], t);
@@ -343,10 +343,10 @@ TEST(json_helper, nested_type_encode_decode)
     nt.t4_umap = {{123, 0.23333354}, {-123, 99.99999}};
     nt.t5_set = {1, 3, 5, 7, 9};
 
-    dsn::blob bb = dsn::json::json_forwarder<decltype(nt)>::encode(nt);
+    blob bb = json::json_forwarder<decltype(nt)>::encode(nt);
 
     nested_type nt2;
-    dsn::json::json_forwarder<decltype(nt)>::decode(bb, nt2);
+    json::json_forwarder<decltype(nt)>::decode(bb, nt2);
 
     ASSERT_EQ(nt, nt2);
 }
@@ -368,8 +368,8 @@ TEST(json_helper, decode_invalid_json)
 
     older_struct o;
     for (int i = 0; json[i]; ++i) {
-        dsn::blob in(json[i], 0, strlen(json[i]));
-        ASSERT_FALSE(dsn::json::json_forwarder<older_struct>::decode(in, o));
+        blob in(json[i], 0, strlen(json[i]));
+        ASSERT_FALSE(json::json_forwarder<older_struct>::decode(in, o));
     }
 }
 
@@ -391,8 +391,8 @@ TEST(json_helper, type_mismatch)
     };
     bool expected1[] = {false, false, false, false, false, true, true, true, true, true};
     for (int i = 0; type_mismatch1[i]; ++i) {
-        dsn::blob bb(type_mismatch1[i], 0, strlen(type_mismatch1[i]));
-        bool result = dsn::json::json_forwarder<struct_type1>::decode(bb, t1);
+        blob bb(type_mismatch1[i], 0, strlen(type_mismatch1[i]));
+        bool result = json::json_forwarder<struct_type1>::decode(bb, t1);
         ASSERT_EQ(expected1[i], result) << "case " << i << " failed: " << type_mismatch1[i];
     }
 
@@ -407,8 +407,8 @@ TEST(json_helper, type_mismatch)
     };
     bool expected[] = {false, false, false, false, true};
     for (int i = 0; int_mismatch[i]; ++i) {
-        dsn::blob bb(int_mismatch[i], 0, strlen(int_mismatch[i]));
-        bool result = dsn::json::json_forwarder<struct_type2>::decode(bb, t2);
+        blob bb(int_mismatch[i], 0, strlen(int_mismatch[i]));
+        bool result = json::json_forwarder<struct_type2>::decode(bb, t2);
         ASSERT_EQ(expected[i], result) << "case " << i << " failed";
     }
 
@@ -423,8 +423,8 @@ TEST(json_helper, type_mismatch)
     };
     bool expected_uint[] = {false, false, false, false, true};
     for (int i = 0; uint_mismatch[i]; ++i) {
-        dsn::blob bb(uint_mismatch[i], 0, strlen(uint_mismatch[i]));
-        bool result = dsn::json::json_forwarder<struct_type3>::decode(bb, t3);
+        blob bb(uint_mismatch[i], 0, strlen(uint_mismatch[i]));
+        bool result = json::json_forwarder<struct_type3>::decode(bb, t3);
         ASSERT_EQ(expected_uint[i], result);
     }
 
@@ -460,8 +460,8 @@ TEST(json_helper, type_mismatch)
     };
     bool expected_nt[] = {false, false, false, false, false, false, false, false, true};
     for (int i = 0; nt_mismatch[i]; ++i) {
-        dsn::blob bb(nt_mismatch[i], 0, strlen(nt_mismatch[i]));
-        bool result = dsn::json::json_forwarder<nested_type>::decode(bb, nt);
+        blob bb(nt_mismatch[i], 0, strlen(nt_mismatch[i]));
+        bool result = json::json_forwarder<nested_type>::decode(bb, nt);
         ASSERT_EQ(expected_nt[i], result) << "case " << i << " failed";
     }
 }
@@ -479,12 +479,12 @@ TEST(json_helper, upgrade_downgrade)
     n.c = {{"aa", "bb"}, {"cc", "dd"}};
     n.d = {1, 3, 4};
     n.e = {{1, 4}, {2, 3}};
-    blob bb = dsn::json::json_forwarder<newer_struct>::encode(n);
+    blob bb = json::json_forwarder<newer_struct>::encode(n);
 
     older_struct o;
     o.a = -1;
     o.b = "xixi";
-    bool result = dsn::json::json_forwarder<older_struct>::decode(bb, o);
+    bool result = json::json_forwarder<older_struct>::decode(bb, o);
     ASSERT_TRUE(result);
 
     ASSERT_EQ(n.a, o.a);
@@ -496,8 +496,8 @@ TEST(json_helper, upgrade_downgrade)
 
     // older version of json can be decoded by newer version of struct
     newer_struct n2;
-    blob bb2 = dsn::json::json_forwarder<older_struct>::encode(o);
-    result = dsn::json::json_forwarder<newer_struct>::decode(bb2, n2);
+    blob bb2 = json::json_forwarder<older_struct>::encode(o);
+    result = json::json_forwarder<newer_struct>::decode(bb2, n2);
     ASSERT_TRUE(result);
 
     ASSERT_EQ(n2.a, o.a);
@@ -508,4 +508,4 @@ TEST(json_helper, upgrade_downgrade)
     ASSERT_EQ(n2.c, o.c);
 }
 
-} // namespace dsn
+} // namespace pegasus

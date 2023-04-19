@@ -29,9 +29,9 @@ namespace pegasus {
 namespace server {
 compaction_operation::~compaction_operation() = default;
 
-bool compaction_operation::all_rules_match(dsn::string_view hash_key,
-                                           dsn::string_view sort_key,
-                                           dsn::string_view existing_value) const
+bool compaction_operation::all_rules_match(string_view hash_key,
+                                           string_view sort_key,
+                                           string_view existing_value) const
 {
     if (rules.empty()) {
         return false;
@@ -54,9 +54,9 @@ delete_key::delete_key(filter_rules &&rules, uint32_t data_version)
 
 delete_key::delete_key(uint32_t data_version) : compaction_operation(data_version) {}
 
-bool delete_key::filter(dsn::string_view hash_key,
-                        dsn::string_view sort_key,
-                        dsn::string_view existing_value,
+bool delete_key::filter(string_view hash_key,
+                        string_view sort_key,
+                        string_view existing_value,
                         std::string *new_value,
                         bool *value_changed) const
 {
@@ -73,9 +73,9 @@ update_ttl::update_ttl(filter_rules &&rules, uint32_t data_version)
 
 update_ttl::update_ttl(uint32_t data_version) : compaction_operation(data_version) {}
 
-bool update_ttl::filter(dsn::string_view hash_key,
-                        dsn::string_view sort_key,
-                        dsn::string_view existing_value,
+bool update_ttl::filter(string_view hash_key,
+                        string_view sort_key,
+                        string_view existing_value,
                         std::string *new_value,
                         bool *value_changed) const
 {
@@ -98,7 +98,7 @@ bool update_ttl::filter(dsn::string_view hash_key,
     }
     case update_ttl_op_type::UTOT_TIMESTAMP:
         // make it's seconds since 2016.01.01-00:00:00 GMT
-        new_ts = value - pegasus::utils::epoch_begin;
+        new_ts = value - utils::epoch_begin;
         break;
     default:
         LOG_INFO("invalid update ttl operation type");
@@ -139,8 +139,8 @@ std::unique_ptr<compaction_filter_rule> create_compaction_filter_rule(filter_rul
                                                                       const std::string &params,
                                                                       uint32_t data_version)
 {
-    auto rule = dsn::utils::factory_store<compaction_filter_rule>::create(
-        enum_to_string(type), dsn::PROVIDER_TYPE_MAIN, params, data_version);
+    auto rule = utils::factory_store<compaction_filter_rule>::create(
+        enum_to_string(type), PROVIDER_TYPE_MAIN, params, data_version);
     return std::unique_ptr<compaction_filter_rule>(rule);
 }
 
@@ -162,8 +162,8 @@ compaction_operations create_compaction_operations(const std::string &json, uint
 {
     compaction_operations res;
     internal::json_helper compaction;
-    if (!dsn::json::json_forwarder<internal::json_helper>::decode(
-            dsn::blob::create_from_bytes(json.data(), json.size()), compaction)) {
+    if (!json::json_forwarder<internal::json_helper>::decode(
+            blob::create_from_bytes(json.data(), json.size()), compaction)) {
         LOG_INFO("invalid user specified compaction format");
         return res;
     }
@@ -174,8 +174,8 @@ compaction_operations create_compaction_operations(const std::string &json, uint
             continue;
         }
 
-        compaction_operation *operation = dsn::utils::factory_store<compaction_operation>::create(
-            enum_to_string(op.type), dsn::PROVIDER_TYPE_MAIN, op.params, data_version);
+        compaction_operation *operation = utils::factory_store<compaction_operation>::create(
+            enum_to_string(op.type), PROVIDER_TYPE_MAIN, op.params, data_version);
         if (operation != nullptr) {
             operation->set_rules(std::move(rules));
             res.emplace_back(std::shared_ptr<compaction_operation>(operation));

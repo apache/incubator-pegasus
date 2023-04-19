@@ -39,9 +39,9 @@
 #include "utils/flags.h"
 #include "utils/rand.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
@@ -50,7 +50,7 @@ DSN_DECLARE_uint32(hotkey_buckets_num);
 
 static std::string generate_hash_key_by_random(bool is_hotkey, int probability = 100)
 {
-    if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
+    if (is_hotkey && (rand::next_u32(100) < probability)) {
         return "ThisisahotkeyThisisahotkey";
     }
     static const std::string chars("abcdefghijklmnopqrstuvwxyz"
@@ -60,7 +60,7 @@ static std::string generate_hash_key_by_random(bool is_hotkey, int probability =
                                    "`~-_=+[{]{\\|;:'\",<.>/? ");
     std::string result;
     for (int i = 0; i < 20; i++) {
-        result += chars[dsn::rand::next_u32(chars.size())];
+        result += chars[rand::next_u32(chars.size())];
     }
     return result;
 }
@@ -69,7 +69,7 @@ TEST(hotkey_collector_public_func_test, get_bucket_id_test)
 {
     int bucket_id = -1;
     for (int i = 0; i < 1000000; i++) {
-        bucket_id = get_bucket_id(dsn::blob::create_from_bytes(generate_hash_key_by_random(false)),
+        bucket_id = get_bucket_id(blob::create_from_bytes(generate_hash_key_by_random(false)),
                                   FLAGS_hotkey_buckets_num);
         ASSERT_GE(bucket_id, 0);
         ASSERT_LT(bucket_id, FLAGS_hotkey_buckets_num);
@@ -118,7 +118,7 @@ public:
         return true;
     }
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 
 TEST_F(coarse_collector_test, coarse_collector)
@@ -126,9 +126,8 @@ TEST_F(coarse_collector_test, coarse_collector)
     detect_hotkey_result result;
 
     for (int i = 0; i < 1000; i++) {
-        dsn::tasking::enqueue(LPC_WRITE, &_tracker, [&] {
-            dsn::blob hash_key =
-                dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
+        tasking::enqueue(LPC_WRITE, &_tracker, [&] {
+            blob hash_key = blob::create_from_bytes(generate_hash_key_by_random(true, 80));
             coarse_collector.capture_data(hash_key, 1);
         });
     }
@@ -142,8 +141,8 @@ TEST_F(coarse_collector_test, coarse_collector)
 
     for (int i = 0; i < 1000; i++) {
 
-        dsn::tasking::enqueue(LPC_WRITE, &_tracker, [&] {
-            dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(false));
+        tasking::enqueue(LPC_WRITE, &_tracker, [&] {
+            blob hash_key = blob::create_from_bytes(generate_hash_key_by_random(false));
             coarse_collector.capture_data(hash_key, 1);
         });
     }
@@ -166,14 +165,14 @@ public:
     int now_queue_size()
     {
         int queue_size = 0;
-        std::pair<dsn::blob, uint64_t> key_weight_pair;
+        std::pair<blob, uint64_t> key_weight_pair;
         while (fine_collector._capture_key_queue.try_dequeue(key_weight_pair)) {
             queue_size++;
         };
         return queue_size;
     }
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 
 TEST_F(fine_collector_test, fine_collector)
@@ -181,9 +180,8 @@ TEST_F(fine_collector_test, fine_collector)
     detect_hotkey_result result;
 
     for (int i = 0; i < 1000; i++) {
-        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
-            dsn::blob hash_key =
-                dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
+        tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
+            blob hash_key = blob::create_from_bytes(generate_hash_key_by_random(true, 80));
             fine_collector.capture_data(hash_key, 1);
         });
     }
@@ -198,8 +196,8 @@ TEST_F(fine_collector_test, fine_collector)
 
     result.hot_hash_key = "";
     for (int i = 0; i < 1000; i++) {
-        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
-            dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(false));
+        tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
+            blob hash_key = blob::create_from_bytes(generate_hash_key_by_random(false));
             fine_collector.capture_data(hash_key, 1);
         });
     }
@@ -208,9 +206,8 @@ TEST_F(fine_collector_test, fine_collector)
     ASSERT_TRUE(result.hot_hash_key.empty());
 
     for (int i = 0; i < 5000; i++) {
-        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
-            dsn::blob hash_key =
-                dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
+        tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
+            blob hash_key = blob::create_from_bytes(generate_hash_key_by_random(true, 80));
             fine_collector.capture_data(hash_key, 1);
         });
     }
@@ -223,71 +220,69 @@ class hotkey_collector_test : public pegasus_server_test_base
 public:
     hotkey_collector_test() { start(); }
 
-    std::shared_ptr<pegasus::server::hotkey_collector> get_read_collector()
+    std::shared_ptr<server::hotkey_collector> get_read_collector()
     {
         return _server->_read_hotkey_collector;
     }
-    std::shared_ptr<pegasus::server::hotkey_collector> get_write_collector()
+    std::shared_ptr<server::hotkey_collector> get_write_collector()
     {
         return _server->_write_hotkey_collector;
     }
-    dsn::replication::hotkey_type::type
-    get_collector_type(std::shared_ptr<pegasus::server::hotkey_collector> c)
+    replication::hotkey_type::type get_collector_type(std::shared_ptr<server::hotkey_collector> c)
     {
         return c->_hotkey_type;
     }
-    hotkey_collector_state get_collector_stat(std::shared_ptr<pegasus::server::hotkey_collector> c)
+    hotkey_collector_state get_collector_stat(std::shared_ptr<server::hotkey_collector> c)
     {
         return c->_state;
     }
 
-    detect_hotkey_result *get_result(std::shared_ptr<pegasus::server::hotkey_collector> c)
+    detect_hotkey_result *get_result(std::shared_ptr<server::hotkey_collector> c)
     {
         return &c->_result;
     }
 
-    void on_detect_hotkey(const dsn::replication::detect_hotkey_request &req,
-                          dsn::replication::detect_hotkey_response &resp)
+    void on_detect_hotkey(const replication::detect_hotkey_request &req,
+                          replication::detect_hotkey_response &resp)
     {
         _server->on_detect_hotkey(req, resp);
     }
 
     get_rpc generate_get_rpc(std::string hash_key)
     {
-        dsn::blob raw_key;
+        blob raw_key;
         pegasus_generate_key(raw_key, hash_key, std::string("sortkey"));
-        get_rpc rpc(std::make_unique<dsn::blob>(raw_key), dsn::apps::RPC_RRDB_RRDB_GET);
+        get_rpc rpc(std::make_unique<blob>(raw_key), apps::RPC_RRDB_RRDB_GET);
         return rpc;
     }
 
-    dsn::apps::update_request generate_set_req(std::string hash_key)
+    apps::update_request generate_set_req(std::string hash_key)
     {
-        dsn::apps::update_request req;
-        dsn::blob raw_key;
+        apps::update_request req;
+        blob raw_key;
         pegasus_generate_key(raw_key, hash_key, std::string("sortkey"));
         req.key = raw_key;
         req.value.assign(hash_key.c_str(), 0, hash_key.length());
         return req;
     }
 
-    dsn::replication::detect_hotkey_request
-    generate_control_rpc(dsn::replication::hotkey_type::type type,
-                         dsn::replication::detect_action::type action)
+    replication::detect_hotkey_request generate_control_rpc(replication::hotkey_type::type type,
+                                                            replication::detect_action::type action)
     {
-        dsn::replication::detect_hotkey_request req;
+        replication::detect_hotkey_request req;
         req.type = type;
         req.action = action;
-        req.pid = dsn::gpid(0, 2);
+        req.pid = gpid(0, 2);
         return req;
     }
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 
 TEST_F(hotkey_collector_test, hotkey_type)
 {
-    ASSERT_EQ(get_collector_type(get_read_collector()), dsn::replication::hotkey_type::READ);
-    ASSERT_EQ(get_collector_type(get_write_collector()), dsn::replication::hotkey_type::WRITE);
+    ASSERT_EQ(get_collector_type(get_read_collector()), replication::hotkey_type::READ);
+    ASSERT_EQ(get_collector_type(get_write_collector()), replication::hotkey_type::WRITE);
 }
 
 TEST_F(hotkey_collector_test, state_transform)
@@ -295,15 +290,15 @@ TEST_F(hotkey_collector_test, state_transform)
     auto collector = get_read_collector();
     ASSERT_EQ(get_collector_stat(collector), hotkey_collector_state::STOPPED);
 
-    dsn::replication::detect_hotkey_response resp;
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
-                                          dsn::replication::detect_action::START),
-                     resp);
-    ASSERT_EQ(resp.err, dsn::ERR_OK);
+    replication::detect_hotkey_response resp;
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::READ, replication::detect_action::START),
+        resp);
+    ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(get_collector_stat(collector), hotkey_collector_state::COARSE_DETECTING);
 
     for (int i = 0; i < 100; i++) {
-        dsn::tasking::enqueue(LPC_WRITE, &_tracker, [&] {
+        tasking::enqueue(LPC_WRITE, &_tracker, [&] {
             _server->on_get(generate_get_rpc(generate_hash_key_by_random(true, 80)));
         });
     }
@@ -312,7 +307,7 @@ TEST_F(hotkey_collector_test, state_transform)
     ASSERT_EQ(get_collector_stat(collector), hotkey_collector_state::FINE_DETECTING);
 
     for (int i = 0; i < 100; i++) {
-        dsn::tasking::enqueue(LPC_WRITE, &_tracker, [&] {
+        tasking::enqueue(LPC_WRITE, &_tracker, [&] {
             _server->on_get(generate_get_rpc(generate_hash_key_by_random(true, 80)));
         });
     }
@@ -324,54 +319,54 @@ TEST_F(hotkey_collector_test, state_transform)
     ASSERT_TRUE(result->if_find_result);
     ASSERT_EQ(result->hot_hash_key, "ThisisahotkeyThisisahotkey");
 
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
-                                          dsn::replication::detect_action::QUERY),
-                     resp);
-    ASSERT_EQ(resp.err, dsn::ERR_OK);
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::READ, replication::detect_action::QUERY),
+        resp);
+    ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(resp.hotkey_result, "ThisisahotkeyThisisahotkey");
 
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
-                                          dsn::replication::detect_action::STOP),
-                     resp);
-    ASSERT_EQ(resp.err, dsn::ERR_OK);
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::READ, replication::detect_action::STOP),
+        resp);
+    ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(get_collector_stat(collector), hotkey_collector_state::STOPPED);
 
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
-                                          dsn::replication::detect_action::START),
-                     resp);
-    ASSERT_EQ(resp.err, dsn::ERR_OK);
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::READ, replication::detect_action::START),
+        resp);
+    ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(get_collector_stat(collector), hotkey_collector_state::COARSE_DETECTING);
 
     for (int i = 0; i < 1000; i++) {
-        dsn::tasking::enqueue(LPC_WRITE, &_tracker, [&] {
+        tasking::enqueue(LPC_WRITE, &_tracker, [&] {
             _server->on_get(generate_get_rpc(generate_hash_key_by_random(false)));
         });
     }
     collector->analyse_data();
     ASSERT_EQ(get_collector_stat(collector), hotkey_collector_state::COARSE_DETECTING);
 
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
-                                          dsn::replication::detect_action::STOP),
-                     resp);
-    ASSERT_EQ(resp.err, dsn::ERR_OK);
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::READ, replication::detect_action::STOP),
+        resp);
+    ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(get_collector_stat(collector), hotkey_collector_state::STOPPED);
     _tracker.wait_outstanding_tasks();
 }
 
 TEST_F(hotkey_collector_test, data_completeness)
 {
-    dsn::replication::detect_hotkey_response resp;
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
-                                          dsn::replication::detect_action::START),
-                     resp);
-    ASSERT_EQ(resp.err, dsn::ERR_OK);
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::WRITE,
-                                          dsn::replication::detect_action::START),
-                     resp);
-    ASSERT_EQ(resp.err, dsn::ERR_OK);
+    replication::detect_hotkey_response resp;
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::READ, replication::detect_action::START),
+        resp);
+    ASSERT_EQ(resp.err, ERR_OK);
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::WRITE, replication::detect_action::START),
+        resp);
+    ASSERT_EQ(resp.err, ERR_OK);
 
     const uint16_t WRITE_REQUEST_COUNT = 1000;
-    dsn::message_ex *writes[WRITE_REQUEST_COUNT];
+    message_ex *writes[WRITE_REQUEST_COUNT];
     for (int i = 0; i < WRITE_REQUEST_COUNT; i++) {
         writes[i] = create_put_request(generate_set_req(std::to_string(i)));
     }
@@ -384,13 +379,13 @@ TEST_F(hotkey_collector_test, data_completeness)
         ASSERT_EQ(value, std::to_string(i));
     }
 
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
-                                          dsn::replication::detect_action::STOP),
-                     resp);
-    ASSERT_EQ(resp.err, dsn::ERR_OK);
-    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::WRITE,
-                                          dsn::replication::detect_action::STOP),
-                     resp);
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::READ, replication::detect_action::STOP),
+        resp);
+    ASSERT_EQ(resp.err, ERR_OK);
+    on_detect_hotkey(
+        generate_control_rpc(replication::hotkey_type::WRITE, replication::detect_action::STOP),
+        resp);
 }
 
 } // namespace server

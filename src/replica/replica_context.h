@@ -37,7 +37,7 @@
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
 #include "runtime/api_layer1.h"
@@ -46,7 +46,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica;
@@ -54,12 +54,12 @@ class replica;
 struct remote_learner_state
 {
     int64_t signature;
-    ::dsn::task_ptr timeout_task;
+    task_ptr timeout_task;
     decree prepare_start_decree;
     std::string last_learn_log_file;
 };
 
-typedef std::unordered_map<::dsn::rpc_address, remote_learner_state> learner_map;
+typedef std::unordered_map<rpc_address, remote_learner_state> learner_map;
 
 #define CLEANUP_TASK(task_, force)                                                                 \
     {                                                                                              \
@@ -103,8 +103,8 @@ public:
     void get_replica_config(partition_status::type status,
                             /*out*/ replica_configuration &config,
                             uint64_t learner_signature = invalid_signature);
-    bool check_exist(::dsn::rpc_address node, partition_status::type status);
-    partition_status::type get_node_status(::dsn::rpc_address addr) const;
+    bool check_exist(rpc_address node, partition_status::type status);
+    partition_status::type get_node_status(rpc_address addr) const;
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
 
@@ -128,7 +128,7 @@ public:
     mutation_queue write_queue;
 
     // group check
-    dsn::task_ptr group_check_task; // the repeated group check task of LPC_GROUP_CHECK
+    task_ptr group_check_task; // the repeated group check task of LPC_GROUP_CHECK
     // calls broadcast_group_check() to check all replicas separately
     // created in replica::init_group_check()
     // cancelled in cleanup() when status changed from PRIMARY to others
@@ -136,20 +136,20 @@ public:
                                             // each replica
 
     // reconfiguration task of RPC_CM_UPDATE_PARTITION_CONFIGURATION
-    dsn::task_ptr reconfiguration_task;
+    task_ptr reconfiguration_task;
 
     // when read lastest update, all prepared decrees must be firstly committed
     // (possibly true on old primary) before opening read service
     decree last_prepare_decree_on_new_primary;
 
     // copy checkpoint from secondaries ptr
-    dsn::task_ptr checkpoint_task;
+    task_ptr checkpoint_task;
 
     uint64_t last_prepare_ts_ms;
 
     // Used for partition split
     // child addresses who has been caught up with its parent
-    std::unordered_set<dsn::rpc_address> caught_up_children;
+    std::unordered_set<rpc_address> caught_up_children;
 
     // Used for partition split
     // whether parent's write request should be sent to child synchronously
@@ -165,7 +165,7 @@ public:
 
     // Used for partition split
     // primary parent register child on meta_server task
-    dsn::task_ptr register_child_task;
+    task_ptr register_child_task;
 
     // Used partition split
     // secondary replica address who has paused or canceled split
@@ -174,7 +174,7 @@ public:
     // Used for partition split
     // primary parent query child on meta_server task
     // Called by `trigger_primary_parent_split`
-    dsn::task_ptr query_child_task;
+    task_ptr query_child_task;
 
     // Used for bulk load
     // group bulk_load response tasks of RPC_GROUP_BULK_LOAD for each secondary replica
@@ -198,9 +198,9 @@ public:
 
 public:
     bool checkpoint_is_running;
-    ::dsn::task_ptr checkpoint_task;
-    ::dsn::task_ptr checkpoint_completed_task;
-    ::dsn::task_ptr catchup_with_private_log_task;
+    task_ptr checkpoint_task;
+    task_ptr checkpoint_completed_task;
+    task_ptr catchup_with_private_log_task;
 };
 
 class potential_secondary_context
@@ -243,12 +243,12 @@ public:
     // It indicates the minimum decree under `learn/` dir.
     decree first_learn_start_decree{invalid_decree};
 
-    ::dsn::task_ptr delay_learning_task;
-    ::dsn::task_ptr learning_task;
-    ::dsn::task_ptr learn_remote_files_task;
-    ::dsn::task_ptr learn_remote_files_completed_task;
-    ::dsn::task_ptr catchup_with_private_log_task;
-    ::dsn::task_ptr completion_notify_task;
+    task_ptr delay_learning_task;
+    task_ptr learning_task;
+    task_ptr learn_remote_files_task;
+    task_ptr learn_remote_files_completed_task;
+    task_ptr catchup_with_private_log_task;
+    task_ptr completion_notify_task;
 };
 
 class partition_split_context
@@ -291,10 +291,10 @@ public:
 
 //---------------inline impl----------------------------------------------------------------
 
-inline partition_status::type primary_context::get_node_status(::dsn::rpc_address addr) const
+inline partition_status::type primary_context::get_node_status(rpc_address addr) const
 {
     auto it = statuses.find(addr);
     return it != statuses.end() ? it->second : partition_status::PS_INACTIVE;
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

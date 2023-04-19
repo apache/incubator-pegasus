@@ -50,7 +50,7 @@
 #include <vector>
 #include <string>
 
-namespace dsn {
+namespace pegasus {
 /*!
 @addtogroup app-model
 @{
@@ -91,7 +91,7 @@ public:
     // version_http_service.
     virtual error_code start(const std::vector<std::string> &args) { return ERR_OK; }
     virtual error_code stop(bool cleanup = false) { return ERR_OK; }
-    virtual void on_intercepted_request(gpid pid, bool is_write, dsn::message_ex *msg)
+    virtual void on_intercepted_request(gpid pid, bool is_write, message_ex *msg)
     {
         CHECK(false, "not supported");
     }
@@ -109,4 +109,4 @@ protected:
 };
 
 /*@}*/
-} // namespace dsn
+} // namespace pegasus

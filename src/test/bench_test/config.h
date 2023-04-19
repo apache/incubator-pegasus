@@ -30,7 +30,7 @@ class Env;
 namespace pegasus {
 namespace test {
 /** Thread safety singleton */
-struct config : public dsn::utils::singleton<config>
+struct config : public utils::singleton<config>
 {
     // Comma-separated list of operations to run
     std::string benchmarks;
@@ -41,7 +41,7 @@ private:
     config();
     ~config() = default;
 
-    friend class dsn::utils::singleton<config>;
+    friend class utils::singleton<config>;
 };
 } // namespace test
 } // namespace pegasus

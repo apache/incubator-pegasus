@@ -47,14 +47,16 @@
 #include "utils/synchronize.h"
 #include "utils/zlocks.h"
 
+namespace pegasus {
+
 TEST(tools_simulator, dsn_semaphore)
 {
-    if (dsn::task::get_current_worker() == nullptr)
+    if (task::get_current_worker() == nullptr)
         return;
-    if (dsn::service_engine::instance().spec().semaphore_factory_name !=
-        "dsn::tools::sim_semaphore_provider")
+    if (service_engine::instance().spec().semaphore_factory_name !=
+        "pegasus::tools::sim_semaphore_provider")
         return;
-    dsn::zsemaphore s(2);
+    zsemaphore s(2);
     s.wait();
     ASSERT_TRUE(s.wait(10));
     ASSERT_FALSE(s.wait(0));
@@ -64,13 +66,13 @@ TEST(tools_simulator, dsn_semaphore)
 
 TEST(tools_simulator, dsn_lock_nr)
 {
-    if (dsn::task::get_current_worker() == nullptr)
+    if (task::get_current_worker() == nullptr)
         return;
-    if (dsn::service_engine::instance().spec().lock_nr_factory_name !=
-        "dsn::tools::sim_lock_nr_provider")
+    if (service_engine::instance().spec().lock_nr_factory_name !=
+        "pegasus::tools::sim_lock_nr_provider")
         return;
 
-    dsn::tools::sim_lock_nr_provider *s = new dsn::tools::sim_lock_nr_provider(nullptr);
+    tools::sim_lock_nr_provider *s = new tools::sim_lock_nr_provider(nullptr);
     s->lock();
     s->unlock();
     EXPECT_TRUE(s->try_lock());
@@ -80,12 +82,12 @@ TEST(tools_simulator, dsn_lock_nr)
 
 TEST(tools_simulator, dsn_lock)
 {
-    if (dsn::task::get_current_worker() == nullptr)
+    if (task::get_current_worker() == nullptr)
         return;
-    if (dsn::service_engine::instance().spec().lock_factory_name != "dsn::tools::sim_lock_provider")
+    if (service_engine::instance().spec().lock_factory_name != "pegasus::tools::sim_lock_provider")
         return;
 
-    dsn::tools::sim_lock_provider *s = new dsn::tools::sim_lock_provider(nullptr);
+    tools::sim_lock_provider *s = new tools::sim_lock_provider(nullptr);
     s->lock();
     EXPECT_TRUE(s->try_lock());
     s->unlock();
@@ -93,27 +95,25 @@ TEST(tools_simulator, dsn_lock)
     delete s;
 }
 
-namespace dsn {
-namespace test {
 typedef std::function<void()> system_callback;
-}
-}
+
 TEST(tools_simulator, scheduler)
 {
-    if (dsn::task::get_current_worker() == nullptr)
+    if (task::get_current_worker() == nullptr)
         return;
-    if (dsn::service_engine::instance().spec().tool != "simulator")
+    if (service_engine::instance().spec().tool != "simulator")
         return;
 
-    dsn::tools::sim_worker_state *s =
-        dsn::tools::scheduler::task_worker_ext::get(dsn::task::get_current_worker());
-    dsn::utils::notify_event *evt = new dsn::utils::notify_event();
-    dsn::test::system_callback callback = [evt, s](void) {
+    tools::sim_worker_state *s = tools::scheduler::task_worker_ext::get(task::get_current_worker());
+    utils::notify_event *evt = new utils::notify_event();
+    system_callback callback = [evt, s](void) {
         evt->notify();
         s->is_continuation_ready = true;
         return;
     };
-    dsn::tools::scheduler::instance().add_system_event(100, callback);
-    dsn::tools::scheduler::instance().wait_schedule(true, false);
+    tools::scheduler::instance().add_system_event(100, callback);
+    tools::scheduler::instance().wait_schedule(true, false);
     evt->wait();
 }
+
+} // namespace pegasus

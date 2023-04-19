@@ -81,7 +81,7 @@ fault_injection_enabled = false
 
 </PRE>
 */
-namespace dsn {
+namespace pegasus {
 struct service_spec;
 
 namespace tools {

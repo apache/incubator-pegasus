@@ -51,7 +51,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 class distributed_lock_service_simple : public distributed_lock_service
 {
@@ -111,7 +111,7 @@ private:
     zlock _lock;
     locks _dlocks; // lock -> owner
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 }
 }

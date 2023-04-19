@@ -42,7 +42,7 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 
 native_linux_aio_provider::native_linux_aio_provider(disk_engine *disk) : aio_provider(disk) {}
 
@@ -80,7 +80,7 @@ error_code native_linux_aio_provider::flush(linux_fd_t fd)
 error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
                                             /*out*/ uint64_t *processed_bytes)
 {
-    dsn::error_code resp = ERR_OK;
+    error_code resp = ERR_OK;
     uint64_t buffer_offset = 0;
     do {
         // ret is the written data size
@@ -175,4 +175,4 @@ error_code native_linux_aio_provider::aio_internal(aio_task *aio_tsk)
     return err;
 }
 
-} // namespace dsn
+} // namespace pegasus

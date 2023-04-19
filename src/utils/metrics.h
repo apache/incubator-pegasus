@@ -57,7 +57,6 @@ namespace system {
 class error_code;
 } // namespace system
 } // namespace boost
-
 // A metric library (for details pls see https://github.com/apache/incubator-pegasus/issues/922)
 // inspired by Kudu metrics (https://github.com/apache/kudu/blob/master/src/kudu/util/metrics.h).
 //
@@ -79,7 +78,7 @@ class error_code;
 // Define an entity type at the top of your .cpp file (not within any namespace):
 // METRIC_DEFINE_gauge_int64(my_entity,
 //                           my_gauge_name,
-//                           dsn::metric_unit::kMilliSeconds,
+//                           pegasus::metric_unit::kMilliSeconds,
 //                           "the description for my gauge");
 //
 // To use the metric prototype, declare it at the top of any .h/.cpp file (not within any
@@ -90,13 +89,13 @@ class error_code;
 // metric_instance = METRIC_my_gauge_name.instantiate(entity_instance, ...);
 
 // Convenient macros are provided to define entity types and metric prototypes.
-#define METRIC_DEFINE_entity(name) ::dsn::metric_entity_prototype METRIC_ENTITY_##name(#name)
+#define METRIC_DEFINE_entity(name) ::pegasus::metric_entity_prototype METRIC_ENTITY_##name(#name)
 #define METRIC_DEFINE_gauge_int64(entity_type, name, unit, desc, ...)                              \
-    ::dsn::gauge_prototype<int64_t> METRIC_##name(                                                 \
-        {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
+    ::pegasus::gauge_prototype<int64_t> METRIC_##name(                                             \
+        {#entity_type, pegasus::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_gauge_double(entity_type, name, unit, desc, ...)                             \
-    ::dsn::gauge_prototype<double> METRIC_##name(                                                  \
-        {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
+    ::pegasus::gauge_prototype<double> METRIC_##name(                                              \
+        {#entity_type, pegasus::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 // There are 2 kinds of counters:
 // - `counter` is the general type of counter that is implemented by striped_long_adder, which can
 //   achieve high performance while consuming less memory if it's not updated very frequently.
@@ -104,44 +103,44 @@ class error_code;
 //   higher performance while consuming more memory if it's updated very frequently.
 // See also include/dsn/utility/long_adder.h for details.
 #define METRIC_DEFINE_counter(entity_type, name, unit, desc, ...)                                  \
-    dsn::counter_prototype<dsn::striped_long_adder, false> METRIC_##name(                          \
-        {#entity_type, dsn::metric_type::kCounter, #name, unit, desc, ##__VA_ARGS__})
+    pegasus::counter_prototype<pegasus::striped_long_adder, false> METRIC_##name(                  \
+        {#entity_type, pegasus::metric_type::kCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_concurrent_counter(entity_type, name, unit, desc, ...)                       \
-    dsn::counter_prototype<dsn::concurrent_long_adder, false> METRIC_##name(                       \
-        {#entity_type, dsn::metric_type::kCounter, #name, unit, desc, ##__VA_ARGS__})
+    pegasus::counter_prototype<pegasus::concurrent_long_adder, false> METRIC_##name(               \
+        {#entity_type, pegasus::metric_type::kCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_volatile_counter(entity_type, name, unit, desc, ...)                         \
-    dsn::counter_prototype<dsn::striped_long_adder, true> METRIC_##name(                           \
-        {#entity_type, dsn::metric_type::kVolatileCounter, #name, unit, desc, ##__VA_ARGS__})
+    pegasus::counter_prototype<pegasus::striped_long_adder, true> METRIC_##name(                   \
+        {#entity_type, pegasus::metric_type::kVolatileCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_concurrent_volatile_counter(entity_type, name, unit, desc, ...)              \
-    dsn::counter_prototype<dsn::concurrent_long_adder, true> METRIC_##name(                        \
-        {#entity_type, dsn::metric_type::kVolatileCounter, #name, unit, desc, ##__VA_ARGS__})
+    pegasus::counter_prototype<pegasus::concurrent_long_adder, true> METRIC_##name(                \
+        {#entity_type, pegasus::metric_type::kVolatileCounter, #name, unit, desc, ##__VA_ARGS__})
 
 // The percentile supports both integral and floating types.
 #define METRIC_DEFINE_percentile_int64(entity_type, name, unit, desc, ...)                         \
-    dsn::percentile_prototype<int64_t> METRIC_##name(                                              \
-        {#entity_type, dsn::metric_type::kPercentile, #name, unit, desc, ##__VA_ARGS__})
+    pegasus::percentile_prototype<int64_t> METRIC_##name(                                          \
+        {#entity_type, pegasus::metric_type::kPercentile, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_percentile_double(entity_type, name, unit, desc, ...)                        \
-    dsn::floating_percentile_prototype<double> METRIC_##name(                                      \
-        {#entity_type, dsn::metric_type::kPercentile, #name, unit, desc, ##__VA_ARGS__})
+    pegasus::floating_percentile_prototype<double> METRIC_##name(                                  \
+        {#entity_type, pegasus::metric_type::kPercentile, #name, unit, desc, ##__VA_ARGS__})
 
 // The following macros act as forward declarations for entity types and metric prototypes.
-#define METRIC_DECLARE_entity(name) extern ::dsn::metric_entity_prototype METRIC_ENTITY_##name
-#define METRIC_DECLARE_gauge_int64(name) extern ::dsn::gauge_prototype<int64_t> METRIC_##name
-#define METRIC_DECLARE_gauge_double(name) extern ::dsn::gauge_prototype<double> METRIC_##name
+#define METRIC_DECLARE_entity(name) extern metric_entity_prototype METRIC_ENTITY_##name
+#define METRIC_DECLARE_gauge_int64(name) extern gauge_prototype<int64_t> METRIC_##name
+#define METRIC_DECLARE_gauge_double(name) extern gauge_prototype<double> METRIC_##name
 #define METRIC_DECLARE_counter(name)                                                               \
-    extern dsn::counter_prototype<dsn::striped_long_adder, false> METRIC_##name
+    extern pegasus::counter_prototype<pegasus::striped_long_adder, false> METRIC_##name
 #define METRIC_DECLARE_concurrent_counter(name)                                                    \
-    extern dsn::counter_prototype<dsn::concurrent_long_adder, false> METRIC_##name
+    extern pegasus::counter_prototype<pegasus::concurrent_long_adder, false> METRIC_##name
 #define METRIC_DECLARE_volatile_counter(name)                                                      \
-    extern dsn::counter_prototype<dsn::striped_long_adder, true> METRIC_##name
+    extern pegasus::counter_prototype<pegasus::striped_long_adder, true> METRIC_##name
 #define METRIC_DECLARE_concurrent_volatile_counter(name)                                           \
-    extern dsn::counter_prototype<dsn::concurrent_long_adder, true> METRIC_##name
+    extern pegasus::counter_prototype<pegasus::concurrent_long_adder, true> METRIC_##name
 #define METRIC_DECLARE_percentile_int64(name)                                                      \
-    extern dsn::percentile_prototype<int64_t> METRIC_##name
+    extern pegasus::percentile_prototype<int64_t> METRIC_##name
 #define METRIC_DECLARE_percentile_double(name)                                                     \
-    extern dsn::floating_percentile_prototype<double> METRIC_##name
+    extern pegasus::floating_percentile_prototype<double> METRIC_##name
 
-namespace dsn {
+namespace pegasus {
 class metric;                  // IWYU pragma: keep
 class metric_entity_prototype; // IWYU pragma: keep
 class metric_prototype;        // IWYU pragma: keep
@@ -149,7 +148,7 @@ struct metric_filters;         // IWYU pragma: keep
 
 using metric_ptr = ref_ptr<metric>;
 
-using metric_json_writer = dsn::json::PrettyJsonWriter;
+using metric_json_writer = pegasus::json::PrettyJsonWriter;
 
 const std::string kMetricEntityTypeField = "type";
 const std::string kMetricEntityIdField = "id";
@@ -1288,4 +1287,4 @@ template <typename T,
 using floating_percentile_prototype =
     metric_prototype_with<floating_percentile<T, NthElementFinder>>;
 
-} // namespace dsn
+} // namespace pegasus

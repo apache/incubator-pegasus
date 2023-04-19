@@ -39,11 +39,10 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/filesystem.h"
-#include "utils/utils.h"
 
-using namespace ::dsn;
-using namespace ::dsn::replication;
 using namespace pegasus;
+using namespace pegasus::replication;
+
 using std::map;
 using std::string;
 

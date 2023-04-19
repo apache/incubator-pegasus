@@ -20,7 +20,7 @@
 #include "utils/clock.h"
 #include "scheduler.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 class sim_clock : public utils::clock
@@ -34,4 +34,4 @@ public:
 };
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

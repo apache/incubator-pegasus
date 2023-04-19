@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <memory>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 class clock
@@ -43,4 +43,4 @@ private:
 };
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

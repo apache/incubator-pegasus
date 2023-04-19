@@ -24,7 +24,7 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 namespace uri {
 
 class uri_decoder_test : public testing::Test
@@ -92,5 +92,5 @@ TEST_F(uri_decoder_test, decode)
     }
 }
 
-} // namespace dsn
+} // namespace pegasus
 } // namespace uri

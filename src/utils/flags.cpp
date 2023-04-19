@@ -37,7 +37,7 @@
 #include "utils/singleton.h"
 #include "utils/string_conv.h"
 
-namespace dsn {
+namespace pegasus {
 
 enum value_type
 {
@@ -75,7 +75,7 @@ public:
 #define FLAG_DATA_UPDATE_CASE(type, type_enum, suffix)                                             \
     case type_enum: {                                                                              \
         type old_val = value<type>(), tmpval_##type_enum;                                          \
-        if (!dsn::buf2##suffix(val, tmpval_##type_enum)) {                                         \
+        if (!buf2##suffix(val, tmpval_##type_enum)) {                                              \
             return error_s::make(ERR_INVALID_PARAMETERS, fmt::format("{} is invalid", val));       \
         }                                                                                          \
         value<type>() = tmpval_##type_enum;                                                        \
@@ -401,4 +401,4 @@ flag_tagger::flag_tagger(const char *name, const flag_tag &tag)
 
 /*extern*/ std::string list_all_flags() { return flag_registry::instance().list_all_flags(); }
 
-} // namespace dsn
+} // namespace pegasus

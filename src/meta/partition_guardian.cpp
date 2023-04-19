@@ -36,7 +36,7 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_int32(meta_server, max_replicas_in_group, 4, "max replicas(alive & dead) in a group");
@@ -61,27 +61,26 @@ partition_guardian::partition_guardian(meta_service *svc) : _svc(svc)
         "choose primary fail count in the recent period");
 }
 
-pc_status partition_guardian::cure(meta_view view,
-                                   const dsn::gpid &gpid,
-                                   configuration_proposal_action &action)
+pc_status
+partition_guardian::cure(meta_view view, const gpid &pid, configuration_proposal_action &action)
 {
-    if (from_proposals(view, gpid, action))
+    if (from_proposals(view, pid, action))
         return pc_status::ill;
 
-    std::shared_ptr<app_state> &app = (*view.apps)[gpid.get_app_id()];
-    const partition_configuration &pc = *get_config(*(view.apps), gpid);
-    const proposal_actions &acts = get_config_context(*view.apps, gpid)->lb_actions;
+    std::shared_ptr<app_state> &app = (*view.apps)[pid.get_app_id()];
+    const partition_configuration &pc = *get_config(*(view.apps), pid);
+    const proposal_actions &acts = get_config_context(*view.apps, pid)->lb_actions;
 
     CHECK(app->is_stateful, "");
     CHECK(acts.empty(), "");
 
     pc_status status;
     if (pc.primary.is_invalid())
-        status = on_missing_primary(view, gpid);
+        status = on_missing_primary(view, pid);
     else if (static_cast<int>(pc.secondaries.size()) + 1 < pc.max_replica_count)
-        status = on_missing_secondary(view, gpid);
+        status = on_missing_secondary(view, pid);
     else if (static_cast<int>(pc.secondaries.size()) >= pc.max_replica_count)
-        status = on_redundant_secondary(view, gpid);
+        status = on_redundant_secondary(view, pid);
     else
         status = pc_status::healthy;
 
@@ -93,21 +92,21 @@ pc_status partition_guardian::cure(meta_view view,
 
 void partition_guardian::reconfig(meta_view view, const configuration_update_request &request)
 {
-    const dsn::gpid &gpid = request.config.pid;
-    if (!((*view.apps)[gpid.get_app_id()]->is_stateful)) {
+    const gpid &pid = request.config.pid;
+    if (!((*view.apps)[pid.get_app_id()]->is_stateful)) {
         return;
     }
 
-    config_context *cc = get_config_context(*(view.apps), gpid);
+    config_context *cc = get_config_context(*(view.apps), pid);
     if (!cc->lb_actions.empty()) {
         const configuration_proposal_action *current = cc->lb_actions.front();
         CHECK(current != nullptr && current->type != config_type::CT_INVALID,
               "invalid proposal for gpid({}.{})",
-              gpid.get_app_id(),
-              gpid.get_partition_index());
+              pid.get_app_id(),
+              pid.get_partition_index());
         // if the valid proposal is from cure
         if (!cc->lb_actions.is_from_balancer()) {
-            finish_cure_proposal(view, gpid, *current);
+            finish_cure_proposal(view, pid, *current);
         }
         cc->lb_actions.pop_front();
     }
@@ -139,11 +138,11 @@ void partition_guardian::reconfig(meta_view view, const configuration_update_req
 }
 
 bool partition_guardian::from_proposals(meta_view &view,
-                                        const dsn::gpid &gpid,
+                                        const gpid &pid,
                                         configuration_proposal_action &action)
 {
-    const partition_configuration &pc = *get_config(*(view.apps), gpid);
-    config_context &cc = *get_config_context(*(view.apps), gpid);
+    const partition_configuration &pc = *get_config(*(view.apps), pid);
+    config_context &cc = *get_config_context(*(view.apps), pid);
     bool is_action_valid;
 
     if (cc.lb_actions.empty()) {
@@ -209,27 +208,27 @@ invalid_action:
     ss << action;
     LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
              ss.str(),
-             gpid,
+             pid,
              reason);
     action.type = config_type::CT_INVALID;
 
     while (!cc.lb_actions.empty()) {
         configuration_proposal_action cpa = *cc.lb_actions.front();
         if (!cc.lb_actions.is_from_balancer()) {
-            finish_cure_proposal(view, gpid, cpa);
+            finish_cure_proposal(view, pid, cpa);
         }
         cc.lb_actions.pop_front();
     }
     return false;
 }
 
-pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpid &gpid)
+pc_status partition_guardian::on_missing_primary(meta_view &view, const gpid &pid)
 {
-    const partition_configuration &pc = *get_config(*(view.apps), gpid);
-    proposal_actions &acts = get_config_context(*view.apps, gpid)->lb_actions;
+    const partition_configuration &pc = *get_config(*(view.apps), pid);
+    proposal_actions &acts = get_config_context(*view.apps, pid)->lb_actions;
 
     char gpid_name[64];
-    snprintf(gpid_name, 64, "%d.%d", gpid.get_app_id(), gpid.get_partition_index());
+    snprintf(gpid_name, 64, "%d.%d", pid.get_app_id(), pid.get_partition_index());
 
     configuration_proposal_action action;
     pc_status result = pc_status::invalid;
@@ -250,7 +249,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             newly_partitions *np = newly_partitions_ext::get_inited(ns);
             if (action.node.is_invalid() ||
                 np->less_primaries(*get_newly_partitions(*(view.nodes), action.node),
-                                   gpid.get_app_id())) {
+                                   pid.get_app_id())) {
                 action.node = ns->addr();
             }
         }
@@ -263,7 +262,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         } else {
             action.type = config_type::CT_UPGRADE_TO_PRIMARY;
             newly_partitions *np = get_newly_partitions(*(view.nodes), action.node);
-            np->newly_add_primary(gpid.get_app_id(), true);
+            np->newly_add_primary(pid.get_app_id(), true);
 
             action.target = action.node;
             result = pc_status::ill;
@@ -272,7 +271,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
     // if nothing in the last_drops, it means that this is a newly created partition, so let's
     // just find a node and assign primary for it.
     else if (pc.last_drops.empty()) {
-        dsn::rpc_address min_primary_server;
+        rpc_address min_primary_server;
         newly_partitions *min_primary_server_np = nullptr;
 
         for (auto &pairs : *view.nodes) {
@@ -282,7 +281,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             newly_partitions *np = newly_partitions_ext::get_inited(&ns);
             // find a node which has minimal primaries
             if (min_primary_server_np == nullptr ||
-                np->less_primaries(*min_primary_server_np, gpid.get_app_id())) {
+                np->less_primaries(*min_primary_server_np, pid.get_app_id())) {
                 min_primary_server = ns.addr();
                 min_primary_server_np = np;
             }
@@ -292,7 +291,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             action.node = min_primary_server;
             action.target = action.node;
             action.type = config_type::CT_ASSIGN_PRIMARY;
-            min_primary_server_np->newly_add_primary(gpid.get_app_id(), false);
+            min_primary_server_np->newly_add_primary(pid.get_app_id(), false);
         }
 
         result = pc_status::ill;
@@ -306,12 +305,12 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         // shared/private-log data only write to OS-cache.
         // so the last removed replica can't act as primary directly.
         std::string reason;
-        config_context &cc = *get_config_context(*view.apps, gpid);
+        config_context &cc = *get_config_context(*view.apps, pid);
         action.node.set_invalid();
         for (int i = 0; i < cc.dropped.size(); ++i) {
             const dropped_replica &dr = cc.dropped[i];
             char time_buf[30] = {0};
-            ::dsn::utils::time_ms_to_string(dr.time, time_buf);
+            utils::time_ms_to_string(dr.time, time_buf);
             LOG_INFO("{}: config_context.dropped[{}]: "
                      "node({}), time({})[{}], ballot({}), "
                      "commit_decree({}), prepare_decree({})",
@@ -346,7 +345,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                         pc.last_drops.back());
             action.node = pc.last_drops.back();
         } else {
-            std::vector<dsn::rpc_address> nodes(pc.last_drops.end() - 2, pc.last_drops.end());
+            std::vector<rpc_address> nodes(pc.last_drops.end() - 2, pc.last_drops.end());
             std::vector<dropped_replica> collected_info(2);
             bool ready = true;
 
@@ -447,7 +446,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             action.type = config_type::CT_ASSIGN_PRIMARY;
 
             get_newly_partitions(*view.nodes, action.node)
-                ->newly_add_primary(gpid.get_app_id(), false);
+                ->newly_add_primary(pid.get_app_id(), false);
         } else {
             LOG_WARNING("{}: don't select any node for security reason, administrator can select "
                         "a proper one by shell",
@@ -488,10 +487,10 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
     return result;
 }
 
-pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::gpid &gpid)
+pc_status partition_guardian::on_missing_secondary(meta_view &view, const gpid &pid)
 {
-    partition_configuration &pc = *get_config(*(view.apps), gpid);
-    config_context &cc = *get_config_context(*(view.apps), gpid);
+    partition_configuration &pc = *get_config(*(view.apps), pid);
+    config_context &cc = *get_config_context(*(view.apps), pid);
 
     configuration_proposal_action action;
     bool is_emergency = false;
@@ -503,24 +502,24 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         // when max_replica_count == 2, even if there is only 1 replica alive now, we will still
         // wait for '_replica_assign_delay_ms_for_dropouts' before recover the second replica.
         is_emergency = true;
-        LOG_INFO("gpid({}): is emergency due to too few replicas", gpid);
+        LOG_INFO("gpid({}): is emergency due to too few replicas", pid);
     } else if (cc.dropped.empty()) {
         is_emergency = true;
-        LOG_INFO("gpid({}): is emergency due to no dropped candidate", gpid);
+        LOG_INFO("gpid({}): is emergency due to no dropped candidate", pid);
     } else if (has_milliseconds_expired(cc.dropped.back().time +
                                         _replica_assign_delay_ms_for_dropouts)) {
         is_emergency = true;
         char time_buf[30] = {0};
-        ::dsn::utils::time_ms_to_string(cc.dropped.back().time, time_buf);
+        utils::time_ms_to_string(cc.dropped.back().time, time_buf);
         LOG_INFO("gpid({}): is emergency due to lose secondary for a long time, "
                  "last_dropped_node({}), drop_time({}), delay_ms({})",
-                 gpid,
+                 pid,
                  cc.dropped.back().node,
                  time_buf,
                  _replica_assign_delay_ms_for_dropouts);
     } else if (in_black_list(cc.dropped.back().node)) {
         LOG_INFO("gpid({}) is emergency due to recent dropped({}) is in black list",
-                 gpid,
+                 pid,
                  cc.dropped.back().node);
         is_emergency = true;
     }
@@ -535,13 +534,13 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         }
         LOG_INFO(
             "gpid({}): try to choose node in dropped list, dropped_list({}), prefered_dropped({})",
-            gpid,
+            pid,
             oss.str(),
             cc.prefered_dropped);
         if (cc.prefered_dropped < 0 || cc.prefered_dropped >= (int)cc.dropped.size()) {
             LOG_INFO("gpid({}): prefered_dropped({}) is invalid according to drop_list(size {}), "
                      "reset it to {} (drop_list.size - 1)",
-                     gpid,
+                     pid,
                      cc.prefered_dropped,
                      cc.dropped.size(),
                      cc.dropped.size() - 1);
@@ -553,7 +552,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
             if (is_node_alive(*view.nodes, server.node)) {
                 LOG_INFO("gpid({}): node({}) at cc.dropped[{}] is alive now, choose it, "
                          "and forward prefered_dropped from {} to {}",
-                         gpid,
+                         pid,
                          server.node,
                          cc.prefered_dropped,
                          cc.prefered_dropped,
@@ -564,7 +563,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
             } else {
                 LOG_INFO("gpid({}): node({}) at cc.dropped[{}] is not alive now, "
                          "changed prefered_dropped from {} to {}",
-                         gpid,
+                         pid,
                          server.node,
                          cc.prefered_dropped,
                          cc.prefered_dropped,
@@ -576,7 +575,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         if (action.node.is_invalid() || in_black_list(action.node)) {
             if (!action.node.is_invalid()) {
                 LOG_INFO("gpid({}) refuse to use selected node({}) as it is in black list",
-                         gpid,
+                         pid,
                          action.node);
             }
             newly_partitions *min_server_np = nullptr;
@@ -586,7 +585,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
                     continue;
                 newly_partitions *np = newly_partitions_ext::get_inited(&ns);
                 if (min_server_np == nullptr ||
-                    np->less_partitions(*min_server_np, gpid.get_app_id())) {
+                    np->less_partitions(*min_server_np, pid.get_app_id())) {
                     action.node = ns.addr();
                     min_server_np = np;
                 }
@@ -595,12 +594,12 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
             if (!action.node.is_invalid()) {
                 LOG_INFO("gpid({}): can't find valid node in dropped list to add as secondary, "
                          "choose new node({}) with minimal partitions serving",
-                         gpid,
+                         pid,
                          action.node);
             } else {
                 LOG_INFO("gpid({}): can't find valid node in dropped list to add as secondary, "
                          "but also we can't find a new node to add as secondary",
-                         gpid);
+                         pid);
             }
         }
     } else {
@@ -616,12 +615,12 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         if (!action.node.is_invalid()) {
             LOG_INFO("gpid({}): choose node({}) as secondary coz it is last_dropped_node and is "
                      "alive now",
-                     gpid,
+                     pid,
                      server.node);
         } else {
             LOG_INFO("gpid({}): can't add secondary coz last_dropped_node({}) is not alive now, "
                      "ignore this as not in emergency",
-                     gpid,
+                     pid,
                      server.node);
         }
     }
@@ -632,7 +631,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
 
         newly_partitions *np = get_newly_partitions(*(view.nodes), action.node);
         CHECK_NOTNULL(np, "");
-        np->newly_add_partition(gpid.get_app_id());
+        np->newly_add_partition(pid.get_app_id());
 
         cc.lb_actions.assign_cure_proposal(action);
     }
@@ -640,7 +639,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
     return pc_status::ill;
 }
 
-pc_status partition_guardian::on_redundant_secondary(meta_view &view, const dsn::gpid &gpid)
+pc_status partition_guardian::on_redundant_secondary(meta_view &view, const gpid &gpid)
 {
     const node_mapper &nodes = *(view.nodes);
     const partition_configuration &pc = *get_config(*(view.apps), gpid);
@@ -665,7 +664,7 @@ pc_status partition_guardian::on_redundant_secondary(meta_view &view, const dsn:
 }
 
 void partition_guardian::finish_cure_proposal(meta_view &view,
-                                              const dsn::gpid &gpid,
+                                              const gpid &pid,
                                               const configuration_proposal_action &act)
 {
     newly_partitions *np = get_newly_partitions(*(view.nodes), act.node);
@@ -675,12 +674,12 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
                  act.node);
     } else {
         if (act.type == config_type::CT_ASSIGN_PRIMARY) {
-            np->newly_remove_primary(gpid.get_app_id(), false);
+            np->newly_remove_primary(pid.get_app_id(), false);
         } else if (act.type == config_type::CT_UPGRADE_TO_PRIMARY) {
-            np->newly_remove_primary(gpid.get_app_id(), true);
+            np->newly_remove_primary(pid.get_app_id(), true);
         } else if (act.type == config_type::CT_UPGRADE_TO_SECONDARY ||
                    act.type == config_type::CT_ADD_SECONDARY) {
-            np->newly_remove_partition(gpid.get_app_id());
+            np->newly_remove_partition(pid.get_app_id());
         }
     }
 }
@@ -688,13 +687,13 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
 void partition_guardian::register_ctrl_commands()
 {
     // TODO(yingchun): update _replica_assign_delay_ms_for_dropouts by http
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(command_manager::instance().register_command(
         {"meta.lb.assign_delay_ms"},
         "lb.assign_delay_ms [num | DEFAULT]",
         "control the replica_assign_delay_ms_for_dropouts config",
         [this](const std::vector<std::string> &args) { return ctrl_assign_delay_ms(args); }));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(command_manager::instance().register_command(
         {"meta.lb.assign_secondary_black_list"},
         "lb.assign_secondary_black_list [<ip:port,ip:port,ip:port>|clear]",
         "control the assign secondary black list",
@@ -713,7 +712,7 @@ std::string partition_guardian::ctrl_assign_delay_ms(const std::vector<std::stri
             _replica_assign_delay_ms_for_dropouts = FLAGS_replica_assign_delay_ms_for_dropouts;
         } else {
             int32_t v = 0;
-            if (!dsn::buf2int32(args[0], v) || v <= 0) {
+            if (!buf2int32(args[0], v) || v <= 0) {
                 result = std::string("ERR: invalid arguments");
             } else {
                 _replica_assign_delay_ms_for_dropouts = v;
@@ -729,7 +728,7 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
     std::string invalid_arguments("invalid arguments");
     std::stringstream oss;
     if (args.empty()) {
-        dsn::zauto_read_lock l(_black_list_lock);
+        zauto_read_lock l(_black_list_lock);
         oss << "get ok: ";
         for (auto iter = _assign_secondary_black_list.begin();
              iter != _assign_secondary_black_list.end();
@@ -745,21 +744,21 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
         return invalid_arguments;
     }
 
-    dsn::zauto_write_lock l(_black_list_lock);
+    zauto_write_lock l(_black_list_lock);
     if (args[0] == "clear") {
         _assign_secondary_black_list.clear();
         return "clear ok";
     }
 
     std::vector<std::string> ip_ports;
-    dsn::utils::split_args(args[0].c_str(), ip_ports, ',');
+    utils::split_args(args[0].c_str(), ip_ports, ',');
     if (args.size() == 0) {
         return invalid_arguments;
     }
 
-    std::set<dsn::rpc_address> addr_list;
+    std::set<rpc_address> addr_list;
     for (const std::string &s : ip_ports) {
-        dsn::rpc_address addr;
+        rpc_address addr;
         if (!addr.from_string_ipv4(s.c_str())) {
             return invalid_arguments;
         }
@@ -792,4 +791,4 @@ void partition_guardian::get_ddd_partitions(const gpid &pid,
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

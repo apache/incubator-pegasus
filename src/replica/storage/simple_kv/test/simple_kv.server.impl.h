@@ -36,7 +36,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 template <typename TResponse>
 class rpc_replier;
@@ -50,7 +50,7 @@ class kv_pair;
 
 namespace test {
 
-using namespace dsn::replication::application;
+using namespace replication::application;
 
 class simple_kv_service_impl : public application::simple_kv_service
 {
@@ -71,37 +71,37 @@ public:
     simple_kv_service_impl(replica *r);
 
     // RPC_SIMPLE_KV_READ
-    virtual void on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply);
+    virtual void on_read(const std::string &key, rpc_replier<std::string> &reply);
     // RPC_SIMPLE_KV_WRITE
-    virtual void on_write(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply);
+    virtual void on_write(const kv_pair &pr, rpc_replier<int32_t> &reply);
     // RPC_SIMPLE_KV_APPEND
-    virtual void on_append(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply);
+    virtual void on_append(const kv_pair &pr, rpc_replier<int32_t> &reply);
 
-    virtual ::dsn::error_code start(int argc, char **argv) override;
+    virtual error_code start(int argc, char **argv) override;
 
-    virtual ::dsn::error_code stop(bool cleanup = false) override;
+    virtual error_code stop(bool cleanup = false) override;
 
     virtual int64_t last_durable_decree() const override { return _last_durable_decree; }
 
-    virtual ::dsn::error_code sync_checkpoint() override;
+    virtual error_code sync_checkpoint() override;
 
-    virtual ::dsn::error_code prepare_get_checkpoint(blob &learn_req) { return dsn::ERR_OK; }
+    virtual error_code prepare_get_checkpoint(blob &learn_req) { return ERR_OK; }
 
-    virtual ::dsn::error_code async_checkpoint(bool flush_memtable) override;
+    virtual error_code async_checkpoint(bool flush_memtable) override;
 
-    virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                                     int64_t *last_decree,
-                                                     bool flush_memtable = false) override
+    virtual error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
+                                              int64_t *last_decree,
+                                              bool flush_memtable = false) override
     {
         return ERR_NOT_IMPLEMENTED;
     }
 
-    virtual ::dsn::error_code get_checkpoint(int64_t learn_start,
-                                             const dsn::blob &learn_request,
-                                             /*out*/ learn_state &state) override;
+    virtual error_code get_checkpoint(int64_t learn_start,
+                                      const blob &learn_request,
+                                      /*out*/ learn_state &state) override;
 
-    virtual ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
-                                                       const learn_state &state) override;
+    virtual error_code storage_apply_checkpoint(chkpt_apply_mode mode,
+                                                const learn_state &state) override;
 
     std::string query_compact_state() const override { return ""; }
 
@@ -111,9 +111,9 @@ public:
 
     virtual uint32_t query_data_version() const override { return 0; }
 
-    virtual ::dsn::replication::manual_compaction_status::type query_compact_status() const override
+    virtual replication::manual_compaction_status::type query_compact_status() const override
     {
-        return dsn::replication::manual_compaction_status::IDLE;
+        return replication::manual_compaction_status::IDLE;
     }
 
 private:
@@ -126,7 +126,7 @@ private:
 private:
     typedef std::map<std::string, std::string> simple_kv;
     simple_kv _store;
-    ::dsn::zlock _lock;
+    zlock _lock;
 
     int64_t _last_durable_decree;
 };

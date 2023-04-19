@@ -32,8 +32,8 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/lockp.std.h"
 
-using namespace dsn;
-using namespace dsn::tools;
+using namespace pegasus;
+using namespace pegasus::tools;
 
 TEST(tools_common, std_lock_provider)
 {

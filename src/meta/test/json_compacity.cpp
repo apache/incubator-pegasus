@@ -37,18 +37,18 @@
 #include <vector>
 
 #include "common/json_helper.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_backup_service.h"
 #include "meta_service_test_app.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 void meta_service_test_app::json_compacity()
 {
-    dsn::app_info info;
+    app_info info;
     info.app_id = 1;
     info.app_name = "test";
     info.app_type = "test";
@@ -56,14 +56,14 @@ void meta_service_test_app::json_compacity()
     info.is_stateful = true;
     info.max_replica_count = 3;
     info.partition_count = 32;
-    info.status = dsn::app_status::AS_AVAILABLE;
+    info.status = app_status::AS_AVAILABLE;
 
-    dsn::app_info info2;
+    app_info info2;
 
     // 1. encoded data can be decoded
-    dsn::blob bb = dsn::json::json_forwarder<dsn::app_info>::encode(info);
+    blob bb = json::json_forwarder<app_info>::encode(info);
     std::cout << bb.data() << std::endl;
-    ASSERT_TRUE(dsn::json::json_forwarder<dsn::app_info>::decode(bb, info2));
+    ASSERT_TRUE(json::json_forwarder<app_info>::decode(bb, info2));
     ASSERT_EQ(info2, info);
 
     // 2. old version of json can be decoded to new struct
@@ -71,7 +71,7 @@ void meta_service_test_app::json_compacity()
                        "\"app_type\":\"pegasus\",\"app_name\":\"temp\","
                        "\"app_id\":1,\"partition_count\":16,\"envs\":{},"
                        "\"is_stateful\":1,\"max_replica_count\":3}";
-    dsn::json::json_forwarder<dsn::app_info>::decode(dsn::blob(json, 0, strlen(json)), info2);
+    json::json_forwarder<app_info>::decode(blob(json, 0, strlen(json)), info2);
     ASSERT_EQ(info2.app_name, "temp");
     ASSERT_EQ(info2.max_replica_count, 3);
 
@@ -80,7 +80,7 @@ void meta_service_test_app::json_compacity()
     const char *json2 = "{\"status\":\"app_status::AS_AVAILABLE\","
                         "\"app_type\":\"pegasus\",\"app_name\":\"temp\","
                         "\"app_id\":1,\"partition_count\":16,\"envs\":{}}";
-    dsn::json::json_forwarder<dsn::app_info>::decode(dsn::blob(json2, 0, strlen(json2)), info2);
+    json::json_forwarder<app_info>::decode(blob(json2, 0, strlen(json2)), info2);
     ASSERT_EQ(info2.app_name, "temp");
     ASSERT_EQ(info2.app_type, "pegasus");
     ASSERT_EQ(info2.partition_count, 16);
@@ -89,9 +89,8 @@ void meta_service_test_app::json_compacity()
     const char *json3 = "{\"pid\":\"1.1\",\"ballot\":234,\"max_replica_count\":3,"
                         "\"primary\":\"invalid address\",\"secondaries\":[\"127.0.0.1:6\"],"
                         "\"last_drops\":[],\"last_committed_decree\":157}";
-    dsn::partition_configuration pc;
-    dsn::json::json_forwarder<dsn::partition_configuration>::decode(
-        dsn::blob(json3, 0, strlen(json3)), pc);
+    partition_configuration pc;
+    json::json_forwarder<partition_configuration>::decode(blob(json3, 0, strlen(json3)), pc);
     ASSERT_EQ(234, pc.ballot);
     ASSERT_TRUE(pc.primary.is_invalid());
     ASSERT_EQ(1, pc.secondaries.size());
@@ -103,8 +102,8 @@ void meta_service_test_app::json_compacity()
     const char *json4 = "{\"pid\":\"1.1\",\"ballot\":234,\"max_replica_count\":3,"
                         "\"primary\":\"invalid address\",\"secondaries\":[\"127.0.0.1:6\","
                         "\"last_drops\":[],\"last_committed_decree\":157}";
-    dsn::blob in(json4, 0, strlen(json4));
-    bool result = dsn::json::json_forwarder<dsn::partition_configuration>::decode(in, pc);
+    blob in(json4, 0, strlen(json4));
+    bool result = json::json_forwarder<partition_configuration>::decode(in, pc);
     ASSERT_FALSE(result);
 
     // 6 app_name with ':'
@@ -112,8 +111,7 @@ void meta_service_test_app::json_compacity()
                         "\"app_type\":\"pegasus\",\"app_name\":\"CL769:test\","
                         "\"app_id\":1,\"partition_count\":16,\"envs\":{},"
                         "\"is_stateful\":1,\"max_replica_count\":3}";
-    result =
-        dsn::json::json_forwarder<dsn::app_info>::decode(dsn::blob(json6, 0, strlen(json6)), info2);
+    result = json::json_forwarder<app_info>::decode(blob(json6, 0, strlen(json6)), info2);
     ASSERT_TRUE(result);
     ASSERT_EQ(info2.app_name, "CL769:test");
     ASSERT_EQ(info2.max_replica_count, 3);
@@ -127,9 +125,8 @@ void meta_service_test_app::json_compacity()
                         "\"aaaa\",\"21\":\"aaaa\",\"22\":\"aaaa\",\"23\":\"aaaa\",\"24\":\"aaaa\"},"
                         "\"backup_interval_seconds\":86400,\"backup_history_count_to_keep\":3,\"is_"
                         "disable\":0,\"start_time\":{\"hour\":0,\"minute\":30}}";
-    dsn::replication::policy p;
-    result = dsn::json::json_forwarder<dsn::replication::policy>::decode(
-        dsn::blob(json7, 0, strlen(json7)), p);
+    replication::policy p;
+    result = json::json_forwarder<replication::policy>::decode(blob(json7, 0, strlen(json7)), p);
     ASSERT_TRUE(result);
     ASSERT_EQ("every_day", p.policy_name);
     ASSERT_EQ("simple", p.backup_provider_type);
@@ -158,9 +155,9 @@ void meta_service_test_app::json_compacity()
         "\"aaaa\",\"17\":\"aaaa\",\"18\":\"aaaa\",\"19\":\"aaaa\",\"21\":\"aaaa\",\"22\":\"aaaa\","
         "\"23\":"
         "\"aaaa\",\"24\":\"aaaa\"},\"info_status\":1}";
-    dsn::replication::backup_info binfo;
-    result = dsn::json::json_forwarder<dsn::replication::backup_info>::decode(
-        dsn::blob(json8, 0, strlen(json8)), binfo);
+    replication::backup_info binfo;
+    result = json::json_forwarder<replication::backup_info>::decode(blob(json8, 0, strlen(json8)),
+                                                                    binfo);
     ASSERT_TRUE(result);
     ASSERT_EQ(1528216470578, binfo.backup_id);
     ASSERT_EQ(1528216470578, binfo.start_time_ms);
@@ -171,4 +168,4 @@ void meta_service_test_app::json_compacity()
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

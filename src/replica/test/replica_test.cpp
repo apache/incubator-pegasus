@@ -35,7 +35,7 @@
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "http/http_server.h"
 #include "metadata_types.h"
 #include "perf_counter/perf_counter.h"
@@ -62,7 +62,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 namespace replication {
 DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_string(cold_backup_root);
@@ -172,13 +173,12 @@ public:
         ASSERT_EQ(ERR_OK, resp.err);
 
         // test checkpoint files have been uploaded successfully.
-        std::string backup_root =
-            dsn::utils::filesystem::path_combine(user_specified_path, FLAGS_cold_backup_root);
+        std::string backup_root = path_combine(user_specified_path, FLAGS_cold_backup_root);
         std::string current_chkpt_file =
             cold_backup::get_current_chkpt_file(backup_root, req.app_name, req.pid, req.backup_id);
-        ASSERT_TRUE(dsn::utils::filesystem::file_exists(current_chkpt_file));
+        ASSERT_TRUE(file_exists(current_chkpt_file));
         int64_t size = 0;
-        dsn::utils::filesystem::file_size(current_chkpt_file, size);
+        file_size(current_chkpt_file, size);
         ASSERT_LT(0, size);
     }
 
@@ -225,11 +225,10 @@ public:
         _mock_replica->update_app_max_replica_count(target_max_replica_count);
         _app_info.max_replica_count = target_max_replica_count;
 
-        dsn::app_info info;
+        app_info info;
         replica_app_info replica_info(&info);
 
-        auto path = dsn::utils::filesystem::path_combine(_mock_replica->_dir,
-                                                         dsn::replication::replica::kAppInfo);
+        auto path = path_combine(_mock_replica->_dir, replica::kAppInfo);
         std::cout << "the path of .app-info file is " << path << std::endl;
 
         // load new max_replica_count from file
@@ -250,8 +249,8 @@ public:
     }
 
 public:
-    dsn::app_info _app_info;
-    dsn::gpid pid;
+    app_info _app_info;
+    gpid pid;
     mock_replica_ptr _mock_replica;
 
 private:
@@ -263,11 +262,11 @@ private:
 TEST_F(replica_test, write_size_limited)
 {
     int count = 100;
-    struct dsn::message_header header;
+    struct message_header header;
     header.body_length = 10000000;
 
-    auto write_request = dsn::message_ex::create_request(RPC_TEST);
-    auto cleanup = dsn::defer([=]() { delete write_request; });
+    auto write_request = message_ex::create_request(RPC_TEST);
+    auto cleanup = defer([=]() { delete write_request; });
     write_request->header = &header;
     std::unique_ptr<tools::sim_network_provider> sim_net(
         new tools::sim_network_provider(nullptr, nullptr));
@@ -283,9 +282,9 @@ TEST_F(replica_test, write_size_limited)
 TEST_F(replica_test, backup_request_qps)
 {
     // create backup request
-    struct dsn::message_header header;
+    struct message_header header;
     header.context.u.is_backup_request = true;
-    message_ptr backup_request = dsn::message_ex::create_request(task_code());
+    message_ptr backup_request = message_ex::create_request(task_code());
     backup_request->header = &header;
     std::unique_ptr<tools::sim_network_provider> sim_net(
         new tools::sim_network_provider(nullptr, nullptr));
@@ -473,12 +472,12 @@ TEST_F(replica_test, test_clear_on_failure)
     replica *rep =
         stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
-    dsn::utils::filesystem::create_directory(path);
+    create_directory(path);
     ASSERT_TRUE(has_gpid(pid));
 
     stub->clear_on_failure(rep, path, pid);
 
-    ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
+    ASSERT_FALSE(path_exists(path));
     ASSERT_FALSE(has_gpid(pid));
 }
 
@@ -490,17 +489,17 @@ TEST_F(replica_test, test_auto_trash)
     replica *rep =
         stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
-    dsn::utils::filesystem::create_directory(path);
+    create_directory(path);
     ASSERT_TRUE(has_gpid(pid));
 
     rep->handle_local_failure(ERR_RDB_CORRUPTION);
     stub->wait_closing_replicas_finished();
 
-    ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
+    ASSERT_FALSE(path_exists(path));
     dir_node *dn = stub->get_fs_manager()->get_dir_node(path);
     ASSERT_NE(dn, nullptr);
     std::vector<std::string> subs;
-    ASSERT_TRUE(dsn::utils::filesystem::get_subdirectories(dn->full_dir, subs, false));
+    ASSERT_TRUE(get_subdirectories(dn->full_dir, subs, false));
     bool found = false;
     const int ts_length = 16;
     size_t err_pos = path.size() + ts_length + 1; // Add 1 for dot in path.
@@ -510,7 +509,7 @@ TEST_F(replica_test, test_auto_trash)
         }
         uint64_t ts = 0;
         if (sub.find(path) == 0 && sub.find(kFolderSuffixErr) == err_pos &&
-            dsn::buf2uint64(sub.substr(path.size() + 1, ts_length), ts)) {
+            buf2uint64(sub.substr(path.size() + 1, ts_length), ts)) {
             found = true;
             break;
         }
@@ -541,4 +540,4 @@ TEST_F(replica_test, update_deny_client_test)
 TEST_F(replica_test, test_update_app_max_replica_count) { test_update_app_max_replica_count(); }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

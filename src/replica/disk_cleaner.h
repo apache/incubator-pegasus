@@ -24,7 +24,7 @@
 #include "utils/errors.h"
 #include "utils/flags.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 DSN_DECLARE_uint64(gc_disk_error_replica_interval_seconds);
 DSN_DECLARE_uint64(gc_disk_garbage_replica_interval_seconds);
@@ -74,4 +74,4 @@ inline bool is_data_dir_invalid(const std::string &dir)
 
 void move_to_err_path(const std::string &path, const std::string &log_prefix);
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

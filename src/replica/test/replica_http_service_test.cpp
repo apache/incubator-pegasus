@@ -36,7 +36,7 @@
 using std::map;
 using std::string;
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 DSN_DECLARE_bool(duplication_enabled);
 DSN_DECLARE_bool(fd_disabled);
@@ -124,4 +124,4 @@ TEST_F(replica_http_service_test, update_config_handler)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

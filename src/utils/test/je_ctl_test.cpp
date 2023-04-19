@@ -21,7 +21,7 @@
 
 #include <gtest/gtest.h>
 
-namespace dsn {
+namespace pegasus {
 
 namespace {
 
@@ -103,6 +103,6 @@ TEST(je_ctl_test, dump_detailed_stats)
     ASSERT_NE(stats.find("extents:"), std::string::npos);
 }
 
-} // namespace dsn
+} // namespace pegasus
 
 #endif // DSN_USE_JEMALLOC

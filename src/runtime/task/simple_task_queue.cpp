@@ -46,7 +46,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
+namespace pegasus {
 class service_node;
 class task_worker_pool;
 
@@ -127,4 +127,4 @@ task *simple_task_queue::dequeue(/*inout*/ int &batch_size)
 }
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

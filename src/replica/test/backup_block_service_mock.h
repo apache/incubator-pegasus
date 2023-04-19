@@ -30,21 +30,24 @@
 #include "block_service/test/block_service_mock.h"
 #include "common/backup_common.h"
 
-using namespace ::dsn;
-using namespace ::dsn::dist::block_service;
-using namespace ::dsn::replication;
+using namespace pegasus::dist::block_service;
+using namespace pegasus::replication;
+using namespace pegasus::utils::filesystem;
 
+namespace pegasus {
+namespace replication {
 extern ref_ptr<block_file_mock> current_chkpt_file;
 extern ref_ptr<block_file_mock> backup_metadata_file;
 extern ref_ptr<block_file_mock> regular_file;
+} // namespace replication
 
 class backup_block_service_mock : public block_service_mock
 {
 public:
-    virtual dsn::task_ptr create_file(const create_file_request &req,
-                                      dsn::task_code code,
-                                      const create_file_callback &cb,
-                                      dsn::task_tracker *tracker = nullptr)
+    virtual task_ptr create_file(const create_file_request &req,
+                                 task_code code,
+                                 const create_file_callback &cb,
+                                 task_tracker *tracker = nullptr)
     {
         create_file_response resp;
         if (enable_create_file_fail) {
@@ -56,7 +59,7 @@ public:
                 resp.file_handle =
                     new block_file_mock(req.file_name, it->second.first, it->second.second);
             } else {
-                std::string filename = ::dsn::utils::filesystem::get_file_name(req.file_name);
+                std::string filename = get_file_name(req.file_name);
                 if (filename == cold_backup_constant::CURRENT_CHECKPOINT) {
                     resp.file_handle = current_chkpt_file;
                     std::cout << "current_ckpt_file is selected..." << std::endl;
@@ -74,3 +77,4 @@ public:
         return task_ptr();
     }
 };
+} // namespace pegasus

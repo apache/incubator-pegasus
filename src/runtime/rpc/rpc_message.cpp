@@ -40,12 +40,9 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
-#include "utils/singleton.h"
 #include "utils/utils.h"
 
-using namespace dsn::utils;
-
-namespace dsn {
+namespace pegasus {
 // init common for all per-node providers
 DSN_DEFINE_uint32(core,
                   local_hash,
@@ -58,7 +55,7 @@ std::atomic<uint64_t> message_ex::_id(0);
 
 message_ex::message_ex()
     : header(nullptr),
-      local_rpc_code(::dsn::TASK_CODE_INVALID),
+      local_rpc_code(TASK_CODE_INVALID),
       hdr_format(NET_HDR_INVALID),
       send_retry_count(0),
       _rw_index(-1),
@@ -96,12 +93,12 @@ message_ex::~message_ex()
 
 error_code message_ex::error()
 {
-    dsn::error_code code;
+    error_code code;
     auto binary_hash = header->server.error_code.local_hash;
     if (binary_hash != 0 && binary_hash == FLAGS_local_hash) {
-        code = dsn::error_code(header->server.error_code.local_code);
+        code = error_code(header->server.error_code.local_code);
     } else {
-        code = error_code::try_get(header->server.error_name, dsn::ERR_UNKNOWN);
+        code = error_code::try_get(header->server.error_name, ERR_UNKNOWN);
         header->server.error_code.local_hash = FLAGS_local_hash;
         header->server.error_code.local_code = code;
     }
@@ -110,15 +107,15 @@ error_code message_ex::error()
 
 task_code message_ex::rpc_code()
 {
-    if (local_rpc_code != ::dsn::TASK_CODE_INVALID) {
+    if (local_rpc_code != TASK_CODE_INVALID) {
         return local_rpc_code;
     }
 
     auto binary_hash = header->rpc_code.local_hash;
     if (binary_hash != 0 && binary_hash == FLAGS_local_hash) {
-        local_rpc_code = dsn::task_code(header->rpc_code.local_code);
+        local_rpc_code = task_code(header->rpc_code.local_code);
     } else {
-        local_rpc_code = dsn::task_code::try_get(header->rpc_name, ::dsn::TASK_CODE_INVALID);
+        local_rpc_code = task_code::try_get(header->rpc_name, TASK_CODE_INVALID);
         header->rpc_code.local_hash = FLAGS_local_hash;
         header->rpc_code.local_code = local_rpc_code.code();
     }
@@ -138,15 +135,15 @@ message_ex *message_ex::create_receive_message(const blob &data)
     return msg;
 }
 
-message_ex *message_ex::create_received_request(dsn::task_code code,
+message_ex *message_ex::create_received_request(task_code code,
                                                 dsn_msg_serialize_format format,
                                                 void *buffer,
                                                 int size,
                                                 int thread_hash,
                                                 uint64_t partition_hash)
 {
-    ::dsn::blob bb((const char *)buffer, 0, size);
-    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
+    blob bb((const char *)buffer, 0, size);
+    auto msg = message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = code;
     const char *name = code.to_string();
     strncpy(msg->header->rpc_name, name, sizeof(msg->header->rpc_name) - 1);
@@ -244,8 +241,8 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
         msg->header = header; // header is within the buffer
         msg->buffers = buffers;
     } else {
-        int total_length = body_size() + sizeof(dsn::message_header);
-        std::shared_ptr<char> recv_buffer(dsn::utils::make_shared_array<char>(total_length));
+        int total_length = body_size() + sizeof(message_header);
+        std::shared_ptr<char> recv_buffer(utils::make_shared_array<char>(total_length));
         char *ptr = recv_buffer.get();
         int i = 0;
 
@@ -254,14 +251,14 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
             ptr += sizeof(message_header);
         }
 
-        for (dsn::blob &bb : buffers) {
+        for (blob &bb : buffers) {
             memcpy(ptr, bb.data(), bb.length());
             i += bb.length();
             ptr += bb.length();
         }
         CHECK_EQ_MSG(i, total_length, "rpc_name = {}", msg->header->rpc_name);
 
-        auto data = dsn::blob(recv_buffer, total_length);
+        auto data = blob(recv_buffer, total_length);
 
         msg->header = (message_header *)data.data();
         if (msg->_is_read)
@@ -291,7 +288,7 @@ message_ex *message_ex::copy_and_prepare_send(bool clone_content)
     return copy;
 }
 
-message_ex *message_ex::create_request(dsn::task_code rpc_code,
+message_ex *message_ex::create_request(task_code rpc_code,
                                        int timeout_milliseconds,
                                        int thread_hash,
                                        uint64_t partition_hash)
@@ -384,14 +381,14 @@ message_ex *message_ex::create_response()
 void message_ex::prepare_buffer_header()
 {
     size_t header_size = sizeof(message_header);
-    auto ptr(dsn::utils::make_shared_array<char>(header_size));
+    auto ptr(utils::make_shared_array<char>(header_size));
 
     // here we should call placement new,
     // so the gpid & rpc_address can be initialized
     new (ptr.get())(message_header);
     this->header = (message_header *)ptr.get();
 
-    ::dsn::blob buffer(std::move(ptr), header_size);
+    blob buffer(std::move(ptr), header_size);
     this->buffers.push_back(buffer);
     this->_rw_index = 0;
     this->_rw_offset = header_size;
@@ -415,7 +412,7 @@ void message_ex::write_next(void **ptr, size_t *size, size_t min_size)
     *ptr = ptr_data.get();
     this->_rw_committed = false;
 
-    ::dsn::blob buffer(ptr_data, min_size);
+    blob buffer(ptr_data, min_size);
     this->_rw_index++;
     this->_rw_offset = 0;
     this->buffers.push_back(buffer);
@@ -522,4 +519,4 @@ void *message_ex::rw_ptr(size_t offset_begin)
     return nullptr;
 }
 
-} // end namespace dsn
+} // end namespace pegasus

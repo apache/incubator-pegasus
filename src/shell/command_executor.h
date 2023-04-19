@@ -27,14 +27,15 @@
 
 #include "sds/sds.h"
 
+namespace pegasus {
 struct command_executor;
 struct shell_context
 {
     std::string current_cluster_name;
     std::string current_app_name;
-    std::vector<dsn::rpc_address> meta_list;
-    std::unique_ptr<dsn::replication::replication_ddl_client> ddl_client;
-    pegasus::pegasus_client *pg_client;
+    std::vector<rpc_address> meta_list;
+    std::unique_ptr<replication::replication_ddl_client> ddl_client;
+    pegasus_client *pg_client;
     bool escape_all;
     int timeout_ms;
     shell_context() : pg_client(nullptr), escape_all(false), timeout_ms(5000) {}
@@ -55,3 +56,4 @@ struct command_executor
     const char *option_usage;
     executor exec;
 };
+} // namespace pegasus

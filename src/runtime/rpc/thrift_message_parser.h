@@ -35,7 +35,7 @@
 #include "runtime/task/task_spec.h"
 #include "utils/customizable_id.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 struct request_meta_v0
@@ -133,4 +133,4 @@ private:
     std::unique_ptr<request_meta_v0> _meta_v0;
 };
 
-} // namespace dsn
+} // namespace pegasus

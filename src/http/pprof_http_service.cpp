@@ -49,7 +49,7 @@
 #include "utils/strings.h"
 #include "utils/timer.h"
 
-namespace dsn {
+namespace pegasus {
 
 //                            //
 // == ip:port/pprof/symbol == //
@@ -353,7 +353,7 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
     const auto iter = req.query_args.find(SECOND);
     if (iter != req.query_args.end()) {
         const auto seconds_str = iter->second;
-        dsn::internal::buf2unsigned(seconds_str, seconds);
+        internal::buf2unsigned(seconds_str, seconds);
     }
 
     std::stringstream profile_name_prefix;
@@ -511,6 +511,6 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
     _in_pprof_action.store(false);
 }
 
-} // namespace dsn
+} // namespace pegasus
 
 #endif // DSN_ENABLE_GPERF

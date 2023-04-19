@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 #if defined(__GLIBC__) || defined(OS_NACL)
 #define USE_HISTORICAL_STRERRO_R 1

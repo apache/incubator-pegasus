@@ -29,7 +29,8 @@
 #include "utils/process_utils.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
+using pegasus::utils::table_printer;
+namespace pegasus {
 
 /*extern*/ void get_help_handler(const http_request &req, http_response &resp)
 {
@@ -47,11 +48,11 @@ namespace dsn {
 /*extern*/ void get_version_handler(const http_request &req, http_response &resp)
 {
     std::ostringstream out;
-    dsn::utils::table_printer tp;
+    table_printer tp;
 
     tp.add_row_name_and_data("Version", app_version.version);
     tp.add_row_name_and_data("GitCommit", app_version.git_commit);
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
@@ -60,11 +61,11 @@ namespace dsn {
 /*extern*/ void get_recent_start_time_handler(const http_request &req, http_response &resp)
 {
     char start_time[100];
-    dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), start_time, 100);
+    utils::time_ms_to_date_time(utils::process_start_millis(), start_time, 100);
     std::ostringstream out;
-    dsn::utils::table_printer tp;
+    table_printer tp;
     tp.add_row_name_and_data("RecentStartTime", start_time);
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    tp.output(out, table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
@@ -108,4 +109,4 @@ namespace dsn {
         .with_help("list all configs");
 }
 
-} // namespace dsn
+} // namespace pegasus

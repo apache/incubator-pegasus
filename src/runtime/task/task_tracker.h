@@ -33,7 +33,7 @@
 #include "utils/process_utils.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 //
 // many task requires a certain context to be executed
 // trackable_task helps manaing the context automatically
@@ -168,7 +168,7 @@ public:
 private:
     friend class trackable_task;
     const int _task_bucket_count;
-    ::dsn::utils::ex_lock_nr_spin *_outstanding_tasks_lock;
+    utils::ex_lock_nr_spin *_outstanding_tasks_lock;
     dlink *_outstanding_tasks;
     bool _all_tasks_success{false};
 };
@@ -182,10 +182,9 @@ inline void trackable_task::set_tracker(task_tracker *owner, task *tsk)
     _deleting_owner.store(OWNER_DELETE_NOT_LOCKED, std::memory_order_release);
 
     if (nullptr != _owner) {
-        _dl_bucket_id =
-            static_cast<int>(::dsn::utils::get_current_tid() % _owner->_task_bucket_count);
+        _dl_bucket_id = static_cast<int>(utils::get_current_tid() % _owner->_task_bucket_count);
         {
-            utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(
+            utils::auto_lock<utils::ex_lock_nr_spin> l(
                 _owner->_outstanding_tasks_lock[_dl_bucket_id]);
             _dl.insert_after(&_owner->_outstanding_tasks[_dl_bucket_id]);
         }
@@ -219,8 +218,7 @@ inline trackable_task::owner_delete_state trackable_task::owner_delete_prepare()
 inline void trackable_task::owner_delete_commit()
 {
     {
-        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(
-            _owner->_outstanding_tasks_lock[_dl_bucket_id]);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_owner->_outstanding_tasks_lock[_dl_bucket_id]);
         _dl.remove();
     }
 

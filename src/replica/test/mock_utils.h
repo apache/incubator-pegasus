@@ -35,7 +35,7 @@
 #include "replica/replica_stub.h"
 #include "replica/backup/cold_backup_context.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DECLARE_int32(log_private_file_size_mb);
@@ -55,8 +55,8 @@ public:
     }
     error_code prepare_get_checkpoint(blob &) override { return ERR_NOT_IMPLEMENTED; }
     error_code get_checkpoint(int64_t learn_start,
-                              const dsn::blob &learn_request,
-                              dsn::replication::learn_state &state) override
+                              const blob &learn_request,
+                              replication::learn_state &state) override
     {
         state.to_decree_included = last_durable_decree();
         return ERR_OK;
@@ -229,7 +229,7 @@ public:
 private:
     decree _max_gced_decree{invalid_decree - 1};
 };
-typedef dsn::ref_ptr<mock_replica> mock_replica_ptr;
+typedef ref_ptr<mock_replica> mock_replica_ptr;
 
 inline std::unique_ptr<mock_replica> create_mock_replica(replica_stub *stub,
                                                          int appid = 1,
@@ -369,22 +369,22 @@ public:
 
     void set_file_size(int size) { _end_offset = _start_offset + size; }
 };
-typedef dsn::ref_ptr<mock_log_file> mock_log_file_ptr;
+typedef ref_ptr<mock_log_file> mock_log_file_ptr;
 
 class mock_mutation_log_private : public mutation_log_private
 {
 public:
-    mock_mutation_log_private(dsn::gpid pid, dsn::replication::replica *r)
+    mock_mutation_log_private(gpid pid, replication::replica *r)
         : mutation_log_private("", 10, pid, r)
     {
     }
 
-    dsn::task_ptr append(dsn::replication::mutation_ptr &mu,
-                         dsn::task_code callback_code,
-                         dsn::task_tracker *tracker,
-                         dsn::aio_handler &&callback,
-                         int hash = 0,
-                         int64_t *pending_size = nullptr) override
+    task_ptr append(replication::mutation_ptr &mu,
+                    task_code callback_code,
+                    task_tracker *tracker,
+                    aio_handler &&callback,
+                    int hash = 0,
+                    int64_t *pending_size = nullptr) override
     {
         _mu_list.push_back(mu);
         return nullptr;
@@ -408,27 +408,27 @@ public:
                              replay_callback callback,
                              /*out*/ int64_t &end_offset)
     {
-        return dsn::ERR_OK;
+        return ERR_OK;
     }
 
-    void add_log_file(dsn::replication::log_file_ptr lf) { _log_files[lf->index()] = lf; }
+    void add_log_file(replication::log_file_ptr lf) { _log_files[lf->index()] = lf; }
 
 private:
-    std::vector<dsn::replication::mutation_ptr> _mu_list;
+    std::vector<replication::mutation_ptr> _mu_list;
 };
-typedef dsn::ref_ptr<mock_mutation_log_private> mock_mutation_log_private_ptr;
+typedef ref_ptr<mock_mutation_log_private> mock_mutation_log_private_ptr;
 
 class mock_mutation_log_shared : public mutation_log_shared
 {
 public:
     mock_mutation_log_shared(const std::string &dir) : mutation_log_shared(dir, 1000, false) {}
 
-    ::dsn::task_ptr append(mutation_ptr &mu,
-                           dsn::task_code callback_code,
-                           dsn::task_tracker *tracker,
-                           aio_handler &&callback,
-                           int hash = 0,
-                           int64_t *pending_size = nullptr)
+    task_ptr append(mutation_ptr &mu,
+                    task_code callback_code,
+                    task_tracker *tracker,
+                    aio_handler &&callback,
+                    int hash = 0,
+                    int64_t *pending_size = nullptr)
     {
         _mu_list.push_back(mu);
         return nullptr;
@@ -438,9 +438,9 @@ public:
     void flush_once() {}
 
 private:
-    std::vector<dsn::replication::mutation_ptr> _mu_list;
+    std::vector<replication::mutation_ptr> _mu_list;
 };
-typedef dsn::ref_ptr<mock_mutation_log_shared> mock_mutation_log_shared_ptr;
+typedef ref_ptr<mock_mutation_log_shared> mock_mutation_log_shared_ptr;
 
 struct mock_mutation_duplicator : public mutation_duplicator
 {
@@ -454,4 +454,4 @@ struct mock_mutation_duplicator : public mutation_duplicator
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

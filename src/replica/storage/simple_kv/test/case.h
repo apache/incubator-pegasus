@@ -49,7 +49,7 @@
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class aio_task;
 class message_ex;
 class rpc_request_task;
@@ -419,13 +419,13 @@ public:
     void get_write_params(int &id, std::string &key, std::string &value, int &timeout_ms) const;
     void get_read_params(int &id, std::string &key, int &timeout_ms) const;
     void get_replica_config_params(rpc_address &receiver,
-                                   dsn::replication::config_type::type &type,
+                                   replication::config_type::type &type,
                                    rpc_address &node) const;
-    bool check_write_result(int id, ::dsn::error_code err, int32_t resp);
-    bool check_read_result(int id, ::dsn::error_code err, const std::string &resp);
+    bool check_write_result(int id, error_code err, int32_t resp);
+    bool check_read_result(int id, error_code err, const std::string &resp);
 
-    dsn::replication::config_type::type parse_config_command(const std::string &command_str) const;
-    std::string config_command_to_string(dsn::replication::config_type::type cfg_command) const;
+    replication::config_type::type parse_config_command(const std::string &command_str) const;
+    std::string config_command_to_string(replication::config_type::type cfg_command) const;
 
 private:
     client_type _type;
@@ -433,16 +433,16 @@ private:
     std::string _key;
     std::string _value;
     int _timeout;
-    dsn::error_code _err;
+    error_code _err;
     int _write_resp;
     std::string _read_resp;
 
     rpc_address _config_receiver;
-    dsn::replication::config_type::type _config_type;
+    replication::config_type::type _config_type;
     rpc_address _config_node;
 };
 
-class test_case : public dsn::utils::singleton<test_case>
+class test_case : public utils::singleton<test_case>
 {
 public:
     static bool s_inited;
@@ -468,11 +468,11 @@ public:
     void notify_check_client();
     bool check_client_write(int &id, std::string &key, std::string &value, int &timeout_ms);
     bool check_replica_config(rpc_address &receiver,
-                              dsn::replication::config_type::type &type,
+                              replication::config_type::type &type,
                               rpc_address &node);
     bool check_client_read(int &id, std::string &key, int &timeout_ms);
-    void on_end_write(int id, ::dsn::error_code err, int32_t resp);
-    void on_end_read(int id, ::dsn::error_code err, const std::string &resp);
+    void on_end_write(int id, error_code err, int32_t resp);
+    void on_end_read(int id, error_code err, const std::string &resp);
 
     // checker
     void on_check();
@@ -500,7 +500,7 @@ private:
     std::vector<case_line *> _case_lines;
     size_t _next;
     int _null_loop_count;
-    dsn::zsemaphore _client_sema;
+    zsemaphore _client_sema;
 };
 }
 }

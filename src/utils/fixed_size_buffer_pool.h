@@ -34,7 +34,7 @@
 /// unless when it's declared as thread local.
 ///
 /// \see dsn_address_to_string
-/// \see dsn::gpid::to_string
+/// \see pegasus::gpid::to_string
 ///
 template <unsigned int PoolCapacity, unsigned int ChunkSize>
 class fixed_size_buffer_pool

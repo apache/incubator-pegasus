@@ -46,11 +46,11 @@
 #include "utils/token_buckets.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class disk_file;
 
 namespace service {
-class nfs_service_impl : public ::dsn::serverlet<nfs_service_impl>
+class nfs_service_impl : public serverlet<nfs_service_impl>
 {
 public:
     nfs_service_impl();
@@ -75,10 +75,10 @@ public:
     }
 
     // RPC_NFS_V2_NFS_COPY
-    virtual void on_copy(const copy_request &request, ::dsn::rpc_replier<copy_response> &reply);
+    virtual void on_copy(const copy_request &request, rpc_replier<copy_response> &reply);
     // RPC_NFS_V2_NFS_GET_FILE_SIZE
     virtual void on_get_file_size(const get_file_size_request &request,
-                                  ::dsn::rpc_replier<get_file_size_response> &reply);
+                                  rpc_replier<get_file_size_response> &reply);
 
 private:
     struct callback_para
@@ -132,17 +132,16 @@ private:
     std::unordered_map<std::string, std::shared_ptr<file_handle_info_on_server>>
         _handles_map; // cache file handles
 
-    ::dsn::task_ptr _file_close_timer;
+    task_ptr _file_close_timer;
 
-    std::unique_ptr<dsn::utils::token_buckets>
-        _send_token_buckets; // rate limiter of send to remote
+    std::unique_ptr<utils::token_buckets> _send_token_buckets; // rate limiter of send to remote
 
     perf_counter_wrapper _recent_copy_data_size;
     perf_counter_wrapper _recent_copy_fail_count;
 
     std::unique_ptr<command_deregister> _nfs_max_send_rate_megabytes_cmd;
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 } // namespace service
-} // namespace dsn
+} // namespace pegasus

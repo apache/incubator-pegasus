@@ -55,18 +55,18 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
 
 namespace dist {
 typedef std::function<void(error_code ec, const blob &val)> err_value_callback;
 typedef future_task<error_code, blob> err_value_future;
-typedef dsn::ref_ptr<err_value_future> err_value_future_ptr;
+typedef ref_ptr<err_value_future> err_value_future_ptr;
 
 typedef std::function<void(error_code ec, const std::vector<std::string> &ret_strv)>
     err_stringv_callback;
 typedef future_task<error_code, std::vector<std::string>> err_stringv_future;
-typedef dsn::ref_ptr<err_stringv_future> err_stringv_future_ptr;
+typedef ref_ptr<err_stringv_future> err_stringv_future_ptr;
 
 class meta_state_service
 {
@@ -119,7 +119,7 @@ public:
     virtual task_ptr submit_transaction(const std::shared_ptr<transaction_entries> &entries,
                                         task_code cb_code,
                                         const err_callback &cb_transaction,
-                                        dsn::task_tracker *tracker = nullptr) = 0;
+                                        task_tracker *tracker = nullptr) = 0;
 
     /*
      * create a dir node
@@ -133,7 +133,7 @@ public:
                                  task_code cb_code,
                                  const err_callback &cb_create,
                                  const blob &value = blob(),
-                                 dsn::task_tracker *tracker = nullptr) = 0;
+                                 task_tracker *tracker = nullptr) = 0;
     /*
      * delete a dir, the directory may be empty or not
      * node: the dir name with full path
@@ -146,7 +146,7 @@ public:
                                  bool recursively_delete,
                                  task_code cb_code,
                                  const err_callback &cb_delete,
-                                 dsn::task_tracker *tracker = nullptr) = 0;
+                                 task_tracker *tracker = nullptr) = 0;
     /*
      * check if the node dir exists
      * node: the dir name with full path
@@ -156,7 +156,7 @@ public:
     virtual task_ptr node_exist(const std::string &node,
                                 task_code cb_code,
                                 const err_callback &cb_exist,
-                                dsn::task_tracker *tracker = nullptr) = 0;
+                                task_tracker *tracker = nullptr) = 0;
     /*
      * get the data in node
      * node: dir name with full path
@@ -168,7 +168,7 @@ public:
     virtual task_ptr get_data(const std::string &node,
                               task_code cb_code,
                               const err_value_callback &cb_get_data,
-                              dsn::task_tracker *tracker = nullptr) = 0;
+                              task_tracker *tracker = nullptr) = 0;
     /*
      * set the data of the node
      * node: dir name with full path
@@ -180,7 +180,7 @@ public:
                               const blob &value,
                               task_code cb_code,
                               const err_callback &cb_set_data,
-                              dsn::task_tracker *tracker = nullptr) = 0;
+                              task_tracker *tracker = nullptr) = 0;
     /*
      * get all childrens of a node
      * node: dir name with full path
@@ -190,7 +190,7 @@ public:
     virtual task_ptr get_children(const std::string &node,
                                   task_code cb_code,
                                   const err_stringv_callback &cb_get_children,
-                                  dsn::task_tracker *tracker = nullptr) = 0;
+                                  task_tracker *tracker = nullptr) = 0;
 };
 }
 }

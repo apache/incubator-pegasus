@@ -25,9 +25,10 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 
+namespace pegasus {
 bool validate_ip(shell_context *sc,
                  const std::string &ip_str,
-                 dsn::rpc_address &target_address,
+                 rpc_address &target_address,
                  std::string &err_info)
 {
     if (!target_address.from_string_ipv4(ip_str.c_str())) {
@@ -35,9 +36,9 @@ bool validate_ip(shell_context *sc,
         return false;
     }
 
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
-    auto error = sc->ddl_client->list_nodes(dsn::replication::node_status::NS_INVALID, nodes);
-    if (error != dsn::ERR_OK) {
+    std::map<rpc_address, replication::node_status::type> nodes;
+    auto error = sc->ddl_client->list_nodes(replication::node_status::NS_INVALID, nodes);
+    if (error != ERR_OK) {
         err_info = fmt::format("list nodes failed, error={}", error.to_string());
         return false;
     }
@@ -82,3 +83,4 @@ bool confirm_unsafe_command(const std::string &action)
     fmt::print(stdout, "too many failed attempts, we will stop !\n");
     return false;
 }
+} // namespace pegasus

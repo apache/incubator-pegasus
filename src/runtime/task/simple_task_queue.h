@@ -35,7 +35,7 @@
 #include "runtime/task/timer_service.h"
 #include "utils/priority_queue.h"
 
-namespace dsn {
+namespace pegasus {
 class service_node;
 class task;
 class task_worker_pool;
@@ -77,4 +77,4 @@ private:
 };
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

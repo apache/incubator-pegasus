@@ -40,7 +40,7 @@
 #include "utils/string_view.h"
 
 using namespace ::apache::thrift::transport;
-namespace dsn {
+namespace pegasus {
 
 class binary_reader_transport : public TVirtualTransport<binary_reader_transport>
 {
@@ -624,9 +624,8 @@ inline void unmarshall_thrift_internal(T &val, ::apache::thrift::protocol::TProt
 template <typename T>
 inline void marshall_thrift_binary(binary_writer &writer, const T &val)
 {
-    ::dsn::binary_writer_transport trans(writer);
-    boost::shared_ptr<::dsn::binary_writer_transport> transport(
-        &trans, [](::dsn::binary_writer_transport *) {});
+    binary_writer_transport trans(writer);
+    boost::shared_ptr<binary_writer_transport> transport(&trans, [](binary_writer_transport *) {});
     ::apache::thrift::protocol::TBinaryProtocol proto(transport);
     marshall_thrift_internal(val, &proto);
     proto.getTransport()->flush();
@@ -635,9 +634,8 @@ inline void marshall_thrift_binary(binary_writer &writer, const T &val)
 template <typename T>
 inline void marshall_thrift_json(binary_writer &writer, const T &val)
 {
-    ::dsn::binary_writer_transport trans(writer);
-    boost::shared_ptr<::dsn::binary_writer_transport> transport(
-        &trans, [](::dsn::binary_writer_transport *) {});
+    binary_writer_transport trans(writer);
+    boost::shared_ptr<binary_writer_transport> transport(&trans, [](binary_writer_transport *) {});
     ::apache::thrift::protocol::TJSONProtocol proto(transport);
     marshall_thrift_internal(val, &proto);
     proto.getTransport()->flush();
@@ -646,9 +644,8 @@ inline void marshall_thrift_json(binary_writer &writer, const T &val)
 template <typename T>
 inline void unmarshall_thrift_binary(binary_reader &reader, T &val)
 {
-    ::dsn::binary_reader_transport trans(reader);
-    boost::shared_ptr<::dsn::binary_reader_transport> transport(
-        &trans, [](::dsn::binary_reader_transport *) {});
+    binary_reader_transport trans(reader);
+    boost::shared_ptr<binary_reader_transport> transport(&trans, [](binary_reader_transport *) {});
     ::apache::thrift::protocol::TBinaryProtocol proto(transport);
     unmarshall_thrift_internal(val, &proto);
 }
@@ -656,10 +653,9 @@ inline void unmarshall_thrift_binary(binary_reader &reader, T &val)
 template <typename T>
 inline void unmarshall_thrift_json(binary_reader &reader, T &val)
 {
-    ::dsn::binary_reader_transport trans(reader);
-    boost::shared_ptr<::dsn::binary_reader_transport> transport(
-        &trans, [](::dsn::binary_reader_transport *) {});
+    binary_reader_transport trans(reader);
+    boost::shared_ptr<binary_reader_transport> transport(&trans, [](binary_reader_transport *) {});
     ::apache::thrift::protocol::TJSONProtocol proto(transport);
     unmarshall_thrift_internal(val, &proto);
 }
-} // namespace dsn
+} // namespace pegasus

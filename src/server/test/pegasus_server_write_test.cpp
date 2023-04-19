@@ -42,9 +42,9 @@
 #include "utils/fail_point.h"
 #include "utils/rand.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
@@ -62,35 +62,35 @@ public:
 
     void test_batch_writes()
     {
-        dsn::fail::setup();
+        fail::setup();
 
-        dsn::fail::cfg("db_write_batch_put", "10%return()");
-        dsn::fail::cfg("db_write_batch_remove", "10%return()");
-        dsn::fail::cfg("db_write", "10%return()");
+        fail::cfg("db_write_batch_put", "10%return()");
+        fail::cfg("db_write_batch_remove", "10%return()");
+        fail::cfg("db_write", "10%return()");
 
         for (int decree = 1; decree <= 1000; decree++) {
             RPC_MOCKING(put_rpc) RPC_MOCKING(remove_rpc)
             {
-                dsn::blob key;
+                blob key;
                 pegasus_generate_key(key, std::string("hash"), std::string("sort"));
-                dsn::apps::update_request req;
+                apps::update_request req;
                 req.key = key;
                 req.value.assign("value", 0, 5);
 
-                int put_rpc_cnt = dsn::rand::next_u32(1, 10);
-                int remove_rpc_cnt = dsn::rand::next_u32(1, 10);
+                int put_rpc_cnt = rand::next_u32(1, 10);
+                int remove_rpc_cnt = rand::next_u32(1, 10);
                 int total_rpc_cnt = put_rpc_cnt + remove_rpc_cnt;
                 /**
                  * writes[0] ~ writes[total_rpc_cnt-1] will be released by their corresponding
                  * rpc_holders, which created in on_batched_write_requests. So we don't need to
                  * release them here
                  **/
-                dsn::message_ex *writes[total_rpc_cnt];
+                message_ex *writes[total_rpc_cnt];
                 for (int i = 0; i < put_rpc_cnt; i++) {
-                    writes[i] = pegasus::create_put_request(req);
+                    writes[i] = create_put_request(req);
                 }
                 for (int i = put_rpc_cnt; i < total_rpc_cnt; i++) {
-                    writes[i] = pegasus::create_remove_request(key);
+                    writes[i] = create_remove_request(key);
                 }
 
                 int err =
@@ -126,10 +126,10 @@ public:
             }
         }
 
-        dsn::fail::teardown();
+        fail::teardown();
     }
 
-    void verify_response(const dsn::apps::update_response &response, int err, int64_t decree)
+    void verify_response(const apps::update_response &response, int err, int64_t decree)
     {
         ASSERT_EQ(response.error, err);
         ASSERT_EQ(response.app_id, _gpid.get_app_id());

@@ -41,7 +41,7 @@
 #include <cstring>
 #include <cassert>
 
-namespace dsn {
+namespace pegasus {
 /*!
 @addtogroup tool-api-providers
 @{
@@ -239,4 +239,4 @@ extension_deletor object_extension_helper<TExtension, TExtensibleObject>::s_dele
 template <typename TExtension, typename TExtensibleObject>
 extension_creator object_extension_helper<TExtension, TExtensibleObject>::s_creator = nullptr;
 /*@}*/
-} // end namespace dsn
+} // end namespace pegasus

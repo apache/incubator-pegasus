@@ -33,7 +33,7 @@
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/network.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 class rpc_address;
 
@@ -46,7 +46,7 @@ class asio_rpc_session : public rpc_session
 {
 public:
     asio_rpc_session(asio_network_provider &net,
-                     ::dsn::rpc_address remote_addr,
+                     rpc_address remote_addr,
                      std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
                      message_parser_ptr &parser,
                      bool is_client);
@@ -76,4 +76,4 @@ private:
 };
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

@@ -41,7 +41,7 @@
 #include "utils/string_view.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 
 const rpc_address rpc_address::s_invalid_address;
 
@@ -249,4 +249,4 @@ rpc_address::rpc_address(const struct sockaddr_in &addr)
     _addr.v4.port = ntohs(addr.sin_port);
 }
 
-} // namespace dsn
+} // namespace pegasus

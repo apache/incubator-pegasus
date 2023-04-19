@@ -32,11 +32,11 @@
 #include "task.h"
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 
 task_tracker::task_tracker(int task_bucket_count) : _task_bucket_count(task_bucket_count)
 {
-    _outstanding_tasks_lock = new ::dsn::utils::ex_lock_nr_spin[_task_bucket_count];
+    _outstanding_tasks_lock = new utils::ex_lock_nr_spin[_task_bucket_count];
     _outstanding_tasks = new dlink[_task_bucket_count];
 }
 
@@ -58,7 +58,7 @@ struct tls_tracker_hack
     bool under_simulation()
     {
         if (magic != 0xdeadbeef) {
-            is_simulator = (dsn::tools::get_current_tool()->name() == "simulator");
+            is_simulator = (tools::get_current_tool()->name() == "simulator");
             magic = 0xdeadbeef;
         }
         return is_simulator;
@@ -75,7 +75,7 @@ void task_tracker::wait_outstanding_tasks()
             trackable_task *tcm;
 
             {
-                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
                 auto n = _outstanding_tasks[i].next();
                 if (n != &_outstanding_tasks[i]) {
                     tcm = CONTAINING_RECORD(n, trackable_task, _dl);
@@ -117,7 +117,7 @@ void task_tracker::cancel_outstanding_tasks()
             trackable_task *tcm;
 
             {
-                utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+                utils::auto_lock<utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
                 auto n = _outstanding_tasks[i].next();
                 if (n != &_outstanding_tasks[i]) {
                     tcm = CONTAINING_RECORD(n, trackable_task, _dl);
@@ -152,7 +152,7 @@ int task_tracker::cancel_but_not_wait_outstanding_tasks()
 {
     int not_finished = 0;
     for (int i = 0; i < _task_bucket_count; i++) {
-        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_outstanding_tasks_lock[i]);
         auto n = _outstanding_tasks[i].next();
         if (n != &_outstanding_tasks[i]) {
             trackable_task *tcm = CONTAINING_RECORD(n, trackable_task, _dl);

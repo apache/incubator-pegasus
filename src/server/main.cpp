@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 
-#include "backup_types.h"
 #include "compaction_operation.h"
 #include "info_collector_app.h"
 #include "meta/meta_service_app.h"
@@ -35,12 +34,13 @@
 #include "pegasus_service_app.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
+#include "server/compaction_filter_rule.h"
+#include "utils/autoref_ptr.h"
 #include "utils/command_manager.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
-#include "utils/utils.h"
 
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
@@ -63,17 +63,17 @@ static char const rcsid[] =
 
 const char *pegasus_server_rcsid() { return rcsid; }
 
-using namespace dsn;
-using namespace dsn::replication;
+using namespace pegasus;
+using namespace pegasus::server;
 
 void dsn_app_registration_pegasus()
 {
-    dsn::service::meta_service_app::register_components();
-    service_app::register_factory<pegasus::server::pegasus_meta_service_app>("meta");
-    service_app::register_factory<pegasus::server::pegasus_replication_service_app>("replica");
-    service_app::register_factory<pegasus::server::info_collector_app>("collector");
-    pegasus::server::pegasus_server_impl::register_service();
-    pegasus::server::register_compaction_operations();
+    service::meta_service_app::register_components();
+    service_app::register_factory<pegasus_meta_service_app>("meta");
+    service_app::register_factory<pegasus_replication_service_app>("replica");
+    service_app::register_factory<info_collector_app>("collector");
+    pegasus_server_impl::register_service();
+    register_compaction_operations();
 }
 
 int main(int argc, char **argv)
@@ -92,13 +92,13 @@ int main(int argc, char **argv)
     dsn_app_registration_pegasus();
 
     std::unique_ptr<command_deregister> server_info_cmd =
-        dsn::command_manager::instance().register_command(
+        command_manager::instance().register_command(
             {"server-info"},
             "server-info - query server information",
             "server-info",
             [](const std::vector<std::string> &args) {
                 char str[100];
-                ::dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), str, 100);
+                utils::time_ms_to_date_time(utils::process_start_millis(), str, 100);
                 std::ostringstream oss;
                 oss << "Pegasus Server " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
                     << PEGASUS_BUILD_TYPE << ", Started at " << str;

@@ -19,7 +19,7 @@
 
 #include "security_types.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 
 // TODO(wutao): rename to negotiation_status_to_string
@@ -53,6 +53,6 @@ inline const char *enum_to_string(negotiation_status::type s)
     }
 }
 
-DEFINE_TASK_CODE_RPC(RPC_NEGOTIATION, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_NEGOTIATION, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

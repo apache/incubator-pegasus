@@ -24,7 +24,7 @@
 #include "access_type.h"
 #include "common/json_helper.h"
 
-namespace dsn {
+namespace pegasus {
 namespace ranger {
 
 // Ranger policy data structure
@@ -72,4 +72,4 @@ struct ranger_resource_policy
 };
 
 } // namespace ranger
-} // namespace dsn
+} // namespace pegasus

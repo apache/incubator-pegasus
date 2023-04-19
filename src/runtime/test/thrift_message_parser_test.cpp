@@ -43,7 +43,7 @@
 #include "utils/endians.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 
 DEFINE_TASK_CODE_RPC(RPC_TEST_THRIFT_MESSAGE_PARSER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
@@ -106,7 +106,7 @@ public:
                 ASSERT_EQ(msg->hdr_format, NET_HDR_THRIFT);
 
                 ASSERT_EQ(msg->header->body_length, body_length);
-                ASSERT_EQ(msg->header->gpid, gpid(1, 28));
+                ASSERT_EQ(msg->header->gpid_, gpid(1, 28));
                 ASSERT_EQ(msg->header->hdr_type, THRIFT_HDR_SIG);
                 ASSERT_EQ(msg->header->hdr_length, sizeof(message_header));
                 ASSERT_EQ(msg->header->hdr_crc32, CRC_INVALID);
@@ -172,9 +172,9 @@ public:
         meta.__set_client_partition_hash(5000000000);
 
         binary_writer meta_writer(1024);
-        ::dsn::binary_writer_transport trans(meta_writer);
-        boost::shared_ptr<::dsn::binary_writer_transport> transport(
-            &trans, [](::dsn::binary_writer_transport *) {});
+        binary_writer_transport trans(meta_writer);
+        boost::shared_ptr<binary_writer_transport> transport(&trans,
+                                                             [](binary_writer_transport *) {});
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         meta.write(&proto);
 
@@ -205,7 +205,7 @@ public:
                 ASSERT_EQ(msg->hdr_format, NET_HDR_THRIFT);
 
                 ASSERT_EQ(msg->header->body_length, body_length);
-                ASSERT_EQ(msg->header->gpid, gpid(1, 28));
+                ASSERT_EQ(msg->header->gpid_, gpid(1, 28));
                 ASSERT_EQ(msg->header->hdr_type, THRIFT_HDR_SIG);
                 ASSERT_EQ(msg->header->hdr_length, sizeof(message_header));
                 ASSERT_EQ(msg->header->hdr_crc32, CRC_INVALID);
@@ -449,4 +449,4 @@ TEST_F(thrift_message_parser_test, get_message_on_large_writes_pileup_v1)
         reader, apache::thrift::protocol::T_CALL, true, true, 10));
 }
 
-} // namespace dsn
+} // namespace pegasus

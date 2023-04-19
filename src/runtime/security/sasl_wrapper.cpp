@@ -25,7 +25,7 @@
 #include "utils/fail_point.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 const char *sasl_err_desc(int status, sasl_conn_t *conn)
 {
@@ -44,7 +44,7 @@ sasl_wrapper::~sasl_wrapper()
 
 error_s sasl_wrapper::retrieve_username(std::string &output)
 {
-    FAIL_POINT_INJECT_F("sasl_wrapper_retrieve_username", [](dsn::string_view str) {
+    FAIL_POINT_INJECT_F("sasl_wrapper_retrieve_username", [](string_view str) {
         error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
         return error_s::make(err);
     });
@@ -97,4 +97,4 @@ std::unique_ptr<sasl_wrapper> create_sasl_wrapper(bool is_client)
     }
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

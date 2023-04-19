@@ -26,7 +26,7 @@
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 std::vector<duplication_confirm_entry>
@@ -179,4 +179,4 @@ replica_duplicator_manager::get_dup_states() const
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

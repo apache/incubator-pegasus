@@ -26,9 +26,9 @@
 
 class S2LatLng;
 
-namespace dsn {
+namespace pegasus {
 class error_s;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace geo {
@@ -46,7 +46,7 @@ public:
 
     // Set latitude and longitude indices in string type value, indices are the ones
     // when the string type value split into list by '|'.
-    dsn::error_s set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index);
+    error_s set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index);
 
 private:
     // Latitude index and longitude index in sorted order.

@@ -41,7 +41,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
+namespace pegasus {
 
 task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)
     : _pool(pool), _queue_length(0)
@@ -114,4 +114,4 @@ void task_queue::enqueue_internal(task *task)
     tls_dsn.last_worker_queue_size = increase_count();
     enqueue(task);
 }
-} // namespace dsn
+} // namespace pegasus

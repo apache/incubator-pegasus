@@ -31,7 +31,7 @@
 #include "utils/errors.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class duplication_progress
@@ -123,7 +123,7 @@ public:
 
     // Holds its own tracker, so that other tasks
     // won't be effected when this duplication is removed.
-    dsn::task_tracker *tracker() { return &_tracker; }
+    pegasus::task_tracker *tracker() { return &_tracker; }
 
     std::string to_string() const;
 
@@ -155,7 +155,7 @@ private:
 
     replica *_replica;
     replica_stub *_stub;
-    dsn::task_tracker _tracker;
+    pegasus::task_tracker _tracker;
 
     decree _start_point_decree = invalid_decree;
     duplication_status::type _status{duplication_status::DS_INIT};
@@ -174,4 +174,4 @@ private:
 typedef std::unique_ptr<replica_duplicator> replica_duplicator_u_ptr;
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

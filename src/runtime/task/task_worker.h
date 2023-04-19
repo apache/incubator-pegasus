@@ -45,7 +45,7 @@
 #include "utils/synchronize.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
+namespace pegasus {
 class task_queue;
 class task_worker_pool;
 

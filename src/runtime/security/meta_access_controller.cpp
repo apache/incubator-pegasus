@@ -28,7 +28,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 DSN_DEFINE_string(security,
                   meta_acl_rpc_allow_list,
@@ -128,4 +128,4 @@ void meta_access_controller::register_allowed_rpc_code_list(
 }
 
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

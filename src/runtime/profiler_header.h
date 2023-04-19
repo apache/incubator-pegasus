@@ -28,7 +28,7 @@
 #include <iomanip>
 #include "perf_counter/perf_counter_wrapper.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 enum perf_counter_ptr_type
@@ -89,4 +89,4 @@ struct task_spec_profiler
     }
 };
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

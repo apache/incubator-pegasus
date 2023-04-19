@@ -31,7 +31,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "common/serialization_helper/thrift_helper.h"
 
-namespace dsn {
+namespace pegasus {
 namespace serialization {
 
 template <typename T>
@@ -81,24 +81,24 @@ inline void unmarshall(binary_reader &reader, ThriftType &value, dsn_msg_seriali
 }
 
 template <typename T>
-inline void marshall(dsn::message_ex *msg, const T &val)
+inline void marshall(message_ex *msg, const T &val)
 {
-    ::dsn::rpc_write_stream writer(msg);
+    rpc_write_stream writer(msg);
     marshall(writer, val, (dsn_msg_serialize_format)msg->header->context.u.serialize_format);
 }
 
 template <typename T>
-inline void marshall(dsn::message_ex *msg, const T &val, dsn_msg_serialize_format fmt)
+inline void marshall(message_ex *msg, const T &val, dsn_msg_serialize_format fmt)
 {
-    ::dsn::rpc_write_stream writer(msg);
+    rpc_write_stream writer(msg);
     marshall(writer, val, fmt);
 }
 
 template <typename T>
-inline void unmarshall(dsn::message_ex *msg, /*out*/ T &val)
+inline void unmarshall(message_ex *msg, /*out*/ T &val)
 {
-    ::dsn::rpc_read_stream reader(msg);
+    rpc_read_stream reader(msg);
     unmarshall(reader, val, (dsn_msg_serialize_format)msg->header->context.u.serialize_format);
 }
 
-} // namespace dsn
+} // namespace pegasus

@@ -25,7 +25,7 @@
 #include "utils/endians.h"
 #include "utils/string_view.h"
 
-using namespace dsn;
+using namespace pegasus;
 
 TEST(endian, conversion)
 {

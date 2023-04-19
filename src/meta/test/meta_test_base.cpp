@@ -51,7 +51,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
@@ -126,7 +126,7 @@ void meta_test_base::set_node_live_percentage_threshold_for_update(uint64_t perc
 
 std::vector<rpc_address> meta_test_base::get_alive_nodes() const
 {
-    std::vector<dsn::rpc_address> nodes;
+    std::vector<rpc_address> nodes;
 
     zauto_read_lock l(_ss->_lock);
 
@@ -142,10 +142,10 @@ std::vector<rpc_address> meta_test_base::get_alive_nodes() const
 std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_count)
 {
     if (min_node_count < 1) {
-        return std::vector<dsn::rpc_address>();
+        return std::vector<rpc_address>();
     }
 
-    std::vector<dsn::rpc_address> nodes(get_alive_nodes());
+    std::vector<rpc_address> nodes(get_alive_nodes());
     if (!nodes.empty()) {
         auto node_count = static_cast<int>(nodes.size());
         CHECK_GE_MSG(node_count,
@@ -169,7 +169,7 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
 
     while (true) {
         {
-            std::vector<dsn::rpc_address> alive_nodes(get_alive_nodes());
+            std::vector<rpc_address> alive_nodes(get_alive_nodes());
             if (static_cast<int>(alive_nodes.size()) >= min_node_count) {
                 break;
             }
@@ -257,4 +257,4 @@ meta_split_service &meta_test_base::split_svc() { return *(_ms->_split_svc); }
 bulk_load_service &meta_test_base::bulk_svc() { return *(_ms->_bulk_load_svc); }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -27,6 +27,7 @@
 
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
+#include "pegasus_value_schema.h"
 #include "rrdb/rrdb_types.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service.h"
@@ -55,18 +56,18 @@ public:
         _rocksdb_wrapper = _write_impl->_rocksdb_wrapper.get();
     }
 
-    int db_get(dsn::string_view raw_key, db_get_context *get_ctx)
+    int db_get(string_view raw_key, db_get_context *get_ctx)
     {
         return _rocksdb_wrapper->get(raw_key, get_ctx);
     }
 
-    void single_set(dsn::blob raw_key, dsn::blob user_value)
+    void single_set(blob raw_key, blob user_value)
     {
-        dsn::apps::update_request put;
+        apps::update_request put;
         put.key = raw_key;
         put.value = user_value;
         db_write_context write_ctx;
-        dsn::apps::update_response put_resp;
+        apps::update_response put_resp;
         _write_impl->batch_put(write_ctx, put, put_resp);
         ASSERT_EQ(_write_impl->batch_commit(0), 0);
     }
@@ -78,12 +79,11 @@ public:
     void SetUp() override
     {
         pegasus_write_service_impl_test::SetUp();
-        pegasus::pegasus_generate_key(
-            req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
+        pegasus_generate_key(req.key, string_view("hash_key"), string_view("sort_key"));
     }
 
-    dsn::apps::incr_request req;
-    dsn::apps::incr_response resp;
+    apps::incr_request req;
+    apps::incr_response resp;
 };
 
 TEST_F(incr_test, incr_on_absent_record)
@@ -118,14 +118,14 @@ TEST_F(incr_test, negative_incr_and_zero_incr)
 
 TEST_F(incr_test, invalid_incr)
 {
-    single_set(req.key, dsn::blob::create_from_bytes("abc"));
+    single_set(req.key, blob::create_from_bytes("abc"));
 
     req.increment = 10;
     _write_impl->incr(1, req, resp);
     ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
     ASSERT_EQ(resp.new_value, 0);
 
-    single_set(req.key, dsn::blob::create_from_bytes("100"));
+    single_set(req.key, blob::create_from_bytes("100"));
 
     req.increment = std::numeric_limits<int64_t>::max();
     _write_impl->incr(1, req, resp);
@@ -135,28 +135,28 @@ TEST_F(incr_test, invalid_incr)
 
 TEST_F(incr_test, fail_on_get)
 {
-    dsn::fail::setup();
-    dsn::fail::cfg("db_get", "100%1*return()");
+    fail::setup();
+    fail::cfg("db_get", "100%1*return()");
     // when db_get failed, incr should return an error.
 
     req.increment = 10;
     _write_impl->incr(1, req, resp);
     ASSERT_EQ(resp.error, FAIL_DB_GET);
 
-    dsn::fail::teardown();
+    fail::teardown();
 }
 
 TEST_F(incr_test, fail_on_put)
 {
-    dsn::fail::setup();
-    dsn::fail::cfg("db_write_batch_put", "100%1*return()");
+    fail::setup();
+    fail::cfg("db_write_batch_put", "100%1*return()");
     // when rocksdb put failed, incr should return an error.
 
     req.increment = 10;
     _write_impl->incr(1, req, resp);
     ASSERT_EQ(resp.error, FAIL_DB_WRITE_BATCH_PUT);
 
-    dsn::fail::teardown();
+    fail::teardown();
 }
 
 TEST_F(incr_test, incr_on_expire_record)

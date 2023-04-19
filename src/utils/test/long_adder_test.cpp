@@ -31,7 +31,7 @@
 #include "runtime/api_layer1.h"
 #include "utils/long_adder.h"
 
-namespace dsn {
+namespace pegasus {
 
 template <typename T>
 struct type_parse_traits;
@@ -267,4 +267,4 @@ TEST(long_adder_test, concurrent_cases)
     run_concurrent_cases<striped_long_adder, concurrent_long_adder>();
 }
 
-} // namespace dsn
+} // namespace pegasus

@@ -31,7 +31,7 @@
 #include "block_service/local/local_service.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -91,4 +91,4 @@ TEST(local_service, load_metadata)
 
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

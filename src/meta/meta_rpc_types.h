@@ -26,7 +26,7 @@
 #include "replica_admin_types.h"
 #include "runtime/rpc/rpc_holder.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
@@ -71,4 +71,4 @@ typedef rpc_holder<configuration_rename_app_request, configuration_rename_app_re
     configuration_rename_app_rpc;
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

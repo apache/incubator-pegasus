@@ -29,7 +29,8 @@
 #include "common/replication_common.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 namespace replication {
 
 TEST(replication_common, get_data_dir_test)
@@ -96,7 +97,7 @@ TEST(replication_common, get_black_list_test)
         replication_options::get_data_dirs_in_black_list(test.fname, black_list);
         ASSERT_EQ(!black_list.empty(), test.has_black_list);
     }
-    utils::filesystem::remove_file_name(fname);
+    remove_file_name(fname);
 }
 
 TEST(replication_common, check_in_black_list_test)
@@ -126,4 +127,4 @@ TEST(replication_common, check_in_black_list_test)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

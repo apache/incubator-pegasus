@@ -48,7 +48,7 @@ typedef enum dsn_host_type_t {
     HOST_TYPE_GROUP = 2,
 } dsn_host_type_t;
 
-namespace dsn {
+namespace pegasus {
 
 class rpc_group_address;
 
@@ -206,14 +206,14 @@ private:
     } _addr{.value = 0};
 };
 
-} // namespace dsn
+} // namespace pegasus
 
 namespace std {
 
 template <>
-struct hash<::dsn::rpc_address>
+struct hash<::pegasus::rpc_address>
 {
-    size_t operator()(const ::dsn::rpc_address &ep) const
+    size_t operator()(const ::pegasus::rpc_address &ep) const
     {
         switch (ep.type()) {
         case HOST_TYPE_IPV4:

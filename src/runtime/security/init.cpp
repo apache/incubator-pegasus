@@ -24,7 +24,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 DSN_DECLARE_string(krb5_config);
 DSN_DECLARE_string(krb5_keytab);
@@ -88,4 +88,4 @@ bool init_for_zookeeper_client()
     return true;
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

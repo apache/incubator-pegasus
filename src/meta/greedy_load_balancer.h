@@ -43,7 +43,7 @@
 #include "perf_counter/perf_counter_wrapper.h"
 #include "server_load_balancer.h"
 
-namespace dsn {
+namespace pegasus {
 class command_deregister;
 class rpc_address;
 
@@ -108,4 +108,4 @@ new_proposal_action(const rpc_address &target, const rpc_address &node, config_t
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -39,29 +39,26 @@
 #include "utils/blob.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class binary_writer;
-
 namespace apps {
 class rrdb_client;
-}
-}
-
-class proxy_test;
+} // namespace apps
+} // namespace pegasus
 
 namespace pegasus {
 namespace proxy {
-
+class proxy_test;
 // http://redis.io/topics/protocol
 class redis_parser : public proxy_session
 {
 protected:
-    friend class ::proxy_test;
+    friend class pegasus::proxy::proxy_test;
 
     struct redis_base_type
     {
         virtual ~redis_base_type() = default;
-        virtual void marshalling(::dsn::binary_writer &write_stream) const = 0;
+        virtual void marshalling(binary_writer &write_stream) const = 0;
     };
     struct redis_integer : public redis_base_type
     {
@@ -69,7 +66,7 @@ protected:
 
         explicit redis_integer(int64_t v = 0) : value(v) {}
 
-        void marshalling(::dsn::binary_writer &write_stream) const final;
+        void marshalling(binary_writer &write_stream) const final;
     };
     // represent both redis simple string and error
     struct redis_simple_string : public redis_base_type
@@ -79,22 +76,22 @@ protected:
 
         redis_simple_string(bool err, std::string &&msg) : is_error(err), message(std::move(msg)) {}
 
-        void marshalling(::dsn::binary_writer &write_stream) const final;
+        void marshalling(binary_writer &write_stream) const final;
     };
     struct redis_bulk_string : public redis_base_type
     {
         int length = -1; // max length is 512 MB
-        ::dsn::blob data;
+        blob data;
 
         redis_bulk_string() = default;
         redis_bulk_string(std::string str)
         {
-            data = ::dsn::blob::create_from_bytes(std::move(str));
+            data = blob::create_from_bytes(std::move(str));
             length = data.length();
         }
-        explicit redis_bulk_string(const ::dsn::blob &bb) : length(bb.length()), data(bb) {}
+        explicit redis_bulk_string(const blob &bb) : length(bb.length()), data(bb) {}
 
-        void marshalling(::dsn::binary_writer &write_stream) const final;
+        void marshalling(binary_writer &write_stream) const final;
     };
     struct redis_array : public redis_base_type
     {
@@ -107,7 +104,7 @@ protected:
             array.resize(size);
         }
 
-        void marshalling(::dsn::binary_writer &write_stream) const final;
+        void marshalling(binary_writer &write_stream) const final;
     };
 
     struct redis_request
@@ -123,18 +120,18 @@ protected:
     struct message_entry
     {
         redis_request request;
-        std::atomic<dsn::message_ex *> response;
+        std::atomic<message_ex *> response;
         int64_t sequence_id = 0;
     };
 
-    bool parse(dsn::message_ex *msg) override;
+    bool parse(message_ex *msg) override;
 
     // this is virtual only because we can override and test other modules
     virtual void handle_command(std::unique_ptr<message_entry> &&entry);
 
 private:
     // queue for pipeline the response
-    dsn::zlock response_lock;
+    zlock response_lock;
     std::deque<std::unique_ptr<message_entry>> pending_response;
 
     enum parser_status
@@ -154,7 +151,7 @@ private:
     std::string _current_size;
 
     // data stream content
-    std::queue<dsn::message_ex *> _recv_buffers;
+    std::queue<message_ex *> _recv_buffers;
     size_t _total_length;
     char *_current_buffer;
     size_t _current_buffer_length;
@@ -162,12 +159,12 @@ private:
     // ]
 
     // for rrdb
-    std::unique_ptr<::dsn::apps::rrdb_client> client;
+    std::unique_ptr<apps::rrdb_client> client;
     std::unique_ptr<geo::geo_client> _geo_client;
 
 protected:
     // function for data stream
-    void append_message(dsn::message_ex *msg);
+    void append_message(message_ex *msg);
     void prepare_current_buffer();
     char peek();
     bool eat(char c);
@@ -229,18 +226,18 @@ protected:
 
     // function for pipeline reply
     void enqueue_pending_response(std::unique_ptr<message_entry> &&entry);
-    void fetch_and_dequeue_messages(std::vector<dsn::message_ex *> &msgs, bool only_ready_ones);
+    void fetch_and_dequeue_messages(std::vector<message_ex *> &msgs, bool only_ready_ones);
     void clear_reply_queue();
     void reply_all_ready();
 
     template <typename T>
     void reply_message(message_entry &entry, const T &value)
     {
-        dsn::message_ex *resp = create_response();
+        message_ex *resp = create_response();
         // release in reply_all_ready or reset
         resp->add_ref();
 
-        dsn::rpc_write_stream s(resp);
+        rpc_write_stream s(resp);
         value.marshalling(s);
         s.commit_buffer();
 
@@ -263,7 +260,7 @@ protected:
     static const char LF;
 
 public:
-    redis_parser(proxy_stub *op, dsn::message_ex *first_msg);
+    redis_parser(proxy_stub *op, message_ex *first_msg);
     ~redis_parser() override;
 };
 }

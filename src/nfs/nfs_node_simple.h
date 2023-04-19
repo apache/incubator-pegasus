@@ -37,7 +37,7 @@
 #include "runtime/tool_api.h"
 #include "nfs/nfs_node.h"
 
-namespace dsn {
+namespace pegasus {
 namespace service {
 
 class nfs_service_impl;
@@ -56,12 +56,11 @@ public:
 
     error_code stop() override;
 
-    void on_copy(const ::dsn::service::copy_request &request,
-                 ::dsn::rpc_replier<::dsn::service::copy_response> &reply) override;
+    void on_copy(const service::copy_request &request,
+                 rpc_replier<service::copy_response> &reply) override;
 
-    void
-    on_get_file_size(const ::dsn::service::get_file_size_request &request,
-                     ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply) override;
+    void on_get_file_size(const service::get_file_size_request &request,
+                          rpc_replier<service::get_file_size_response> &reply) override;
 
     void register_async_rpc_handler_for_test() override;
 
@@ -70,4 +69,4 @@ private:
     nfs_client_impl *_client;
 };
 } // namespace service
-} // namespace dsn
+} // namespace pegasus

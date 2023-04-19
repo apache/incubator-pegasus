@@ -30,7 +30,7 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 
 DSN_DEFINE_uint64(metrics,
                   entity_retirement_delay_ms,
@@ -113,29 +113,30 @@ void metric_entity::encode_id(metric_json_writer &writer) const
 
 namespace {
 
-void encode_attrs(dsn::metric_json_writer &writer, const dsn::metric_entity::attr_map &attrs)
+void encode_attrs(pegasus::metric_json_writer &writer,
+                  const pegasus::metric_entity::attr_map &attrs)
 {
     // Empty attributes are allowed and will just be encoded as {}.
 
-    writer.Key(dsn::kMetricEntityAttrsField.c_str());
+    writer.Key(pegasus::kMetricEntityAttrsField.c_str());
 
     writer.StartObject();
     for (const auto &attr : attrs) {
         writer.Key(attr.first.c_str());
-        dsn::json::json_encode(writer, attr.second);
+        pegasus::json::json_encode(writer, attr.second);
     }
     writer.EndObject();
 }
 
-void encode_metrics(dsn::metric_json_writer &writer,
-                    const dsn::metric_entity::metric_map &metrics,
-                    const dsn::metric_filters &filters)
+void encode_metrics(pegasus::metric_json_writer &writer,
+                    const pegasus::metric_entity::metric_map &metrics,
+                    const pegasus::metric_filters &filters)
 {
     // We shouldn't reach here if no metric is chosen, thus just mark an assertion.
     CHECK(!metrics.empty(),
           "this entity should not be encoded into the response since no metric is chosen");
 
-    writer.Key(dsn::kMetricEntityMetricsField.c_str());
+    writer.Key(pegasus::kMetricEntityMetricsField.c_str());
 
     writer.StartArray();
     for (const auto &m : metrics) {
@@ -246,11 +247,11 @@ void parse_as(const std::string &field_value, Container &container)
     utils::split_args(field_value.c_str(), container, ',');
 }
 
-inline void encode_error(dsn::metric_json_writer &writer, const char *error_message)
+inline void encode_error(pegasus::metric_json_writer &writer, const char *error_message)
 {
     writer.StartObject();
     writer.Key("error_message");
-    dsn::json::json_encode(writer, error_message);
+    pegasus::json::json_encode(writer, error_message);
     writer.EndObject();
 }
 
@@ -260,16 +261,17 @@ inline std::string encode_error_as_json(const char *error_message)
         [error_message](metric_json_writer &writer) { encode_error(writer, error_message); });
 }
 
-dsn::metric_filters::metric_fields_type get_brief_metric_fields()
+pegasus::metric_filters::metric_fields_type get_brief_metric_fields()
 {
-    dsn::metric_filters::metric_fields_type fields = {kMetricNameField, kMetricSingleValueField};
+    pegasus::metric_filters::metric_fields_type fields = {kMetricNameField,
+                                                          kMetricSingleValueField};
     for (const auto &kth : kAllKthPercentiles) {
         fields.insert(kth.name);
     }
     return fields;
 }
 
-const dsn::metric_filters::metric_fields_type kBriefMetricFields = get_brief_metric_fields();
+const pegasus::metric_filters::metric_fields_type kBriefMetricFields = get_brief_metric_fields();
 
 } // anonymous namespace
 
@@ -641,4 +643,4 @@ void metric_timer::on_timer(const boost::system::error_code &ec)
 #undef TRY_PROCESS_TIMER_CLOSING
 }
 
-} // namespace dsn
+} // namespace pegasus

@@ -34,7 +34,7 @@
 
 #include "runtime/app_model.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class duplication_info_test : public testing::Test
@@ -310,4 +310,4 @@ TEST_F(duplication_info_test, is_valid)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

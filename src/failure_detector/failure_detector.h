@@ -79,7 +79,7 @@
 #include "utils/threadpool_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class command_deregister;
 template <typename TResponse>
 class rpc_replier;
@@ -98,12 +98,12 @@ public:
     virtual ~failure_detector_callback() {}
 
     // worker side
-    virtual void on_master_disconnected(const std::vector<::dsn::rpc_address> &nodes) = 0;
-    virtual void on_master_connected(::dsn::rpc_address node) = 0;
+    virtual void on_master_disconnected(const std::vector<rpc_address> &nodes) = 0;
+    virtual void on_master_connected(rpc_address node) = 0;
 
     // master side
-    virtual void on_worker_disconnected(const std::vector<::dsn::rpc_address> &nodes) = 0;
-    virtual void on_worker_connected(::dsn::rpc_address node) = 0;
+    virtual void on_worker_disconnected(const std::vector<rpc_address> &nodes) = 0;
+    virtual void on_worker_connected(rpc_address node) = 0;
 };
 
 class failure_detector : public failure_detector_service,
@@ -114,9 +114,9 @@ public:
     failure_detector();
     virtual ~failure_detector();
 
-    virtual void on_ping(const beacon_msg &beacon, ::dsn::rpc_replier<beacon_ack> &reply);
+    virtual void on_ping(const beacon_msg &beacon, rpc_replier<beacon_ack> &reply);
 
-    virtual void end_ping(::dsn::error_code err, const beacon_ack &ack, void *context);
+    virtual void end_ping(error_code err, const beacon_ack &ack, void *context);
 
     virtual void register_ctrl_commands();
 
@@ -133,30 +133,30 @@ public:
     uint32_t get_lease_ms() const { return _lease_milliseconds; }
     uint32_t get_grace_ms() const { return _grace_milliseconds; }
 
-    void register_master(::dsn::rpc_address target);
+    void register_master(rpc_address target);
 
-    bool switch_master(::dsn::rpc_address from, ::dsn::rpc_address to, uint32_t delay_milliseconds);
+    bool switch_master(rpc_address from, rpc_address to, uint32_t delay_milliseconds);
 
-    bool unregister_master(::dsn::rpc_address node);
+    bool unregister_master(rpc_address node);
 
-    virtual bool is_master_connected(::dsn::rpc_address node) const;
+    virtual bool is_master_connected(rpc_address node) const;
 
     // ATTENTION: be very careful to set is_connected to false as
     // workers are always considered *connected* initially which is ok even when workers think
     // master is disconnected
     // Considering workers *disconnected* initially is *dangerous* coz it may violate the invariance
     // when workers think they are online
-    void register_worker(::dsn::rpc_address node, bool is_connected = true);
+    void register_worker(rpc_address node, bool is_connected = true);
 
-    bool unregister_worker(::dsn::rpc_address node);
+    bool unregister_worker(rpc_address node);
 
     void clear_workers();
 
-    virtual bool is_worker_connected(::dsn::rpc_address node) const;
+    virtual bool is_worker_connected(rpc_address node) const;
 
-    void add_allow_list(::dsn::rpc_address node);
+    void add_allow_list(rpc_address node);
 
-    bool remove_from_allow_list(::dsn::rpc_address node);
+    bool remove_from_allow_list(rpc_address node);
 
     void set_allow_list(const std::vector<std::string> &replica_addrs);
 
@@ -170,11 +170,11 @@ protected:
     void on_ping_internal(const beacon_msg &beacon, /*out*/ beacon_ack &ack);
 
     // return false when the ack is not applicable
-    bool end_ping_internal(::dsn::error_code err, const beacon_ack &ack);
+    bool end_ping_internal(error_code err, const beacon_ack &ack);
 
     bool is_time_greater_than(uint64_t ts, uint64_t base);
 
-    void report(::dsn::rpc_address node, bool is_master, bool is_connected);
+    void report(rpc_address node, bool is_master, bool is_connected);
 
 private:
     void check_all_records();
@@ -183,7 +183,7 @@ private:
     class master_record
     {
     public:
-        ::dsn::rpc_address node;
+        rpc_address node;
         uint64_t last_send_time_for_beacon_with_ack;
         bool is_alive;
         bool rejected;
@@ -191,7 +191,7 @@ private:
 
         // masters are always considered *disconnected* initially which is ok even when master
         // thinks workers are connected
-        master_record(::dsn::rpc_address n, uint64_t last_send_time_for_beacon_with_ack_)
+        master_record(rpc_address n, uint64_t last_send_time_for_beacon_with_ack_)
         {
             node = n;
             last_send_time_for_beacon_with_ack = last_send_time_for_beacon_with_ack_;
@@ -203,13 +203,13 @@ private:
     class worker_record
     {
     public:
-        ::dsn::rpc_address node;
+        rpc_address node;
         uint64_t last_beacon_recv_time;
         bool is_alive;
 
         // workers are always considered *connected* initially which is ok even when workers think
         // master is disconnected
-        worker_record(::dsn::rpc_address node, uint64_t last_beacon_recv_time)
+        worker_record(rpc_address node, uint64_t last_beacon_recv_time)
         {
             this->node = node;
             this->last_beacon_recv_time = last_beacon_recv_time;
@@ -218,11 +218,11 @@ private:
     };
 
 private:
-    typedef std::unordered_map<::dsn::rpc_address, master_record> master_map;
-    typedef std::unordered_map<::dsn::rpc_address, worker_record> worker_map;
+    typedef std::unordered_map<rpc_address, master_record> master_map;
+    typedef std::unordered_map<rpc_address, worker_record> worker_map;
 
     // allow list are set on machine name (port can vary)
-    typedef std::unordered_set<::dsn::rpc_address> allow_list;
+    typedef std::unordered_set<rpc_address> allow_list;
 
     master_map _masters;
     worker_map _workers;
@@ -233,7 +233,7 @@ private:
     uint32_t _lease_milliseconds;
     uint32_t _grace_milliseconds;
     bool _is_started;
-    ::dsn::task_ptr _check_task;
+    task_ptr _check_task;
 
     bool _use_allow_list;
     allow_list _allow_list;
@@ -244,10 +244,10 @@ private:
 
 protected:
     mutable zlock _lock;
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
     // subClass can rewrite these method.
-    virtual void send_beacon(::dsn::rpc_address node, uint64_t time);
+    virtual void send_beacon(rpc_address node, uint64_t time);
 };
 }
 } // end namespace

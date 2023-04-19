@@ -68,7 +68,7 @@ enum class perf_counter_sink_t
     INVALID
 };
 
-class pegasus_counter_reporter : public dsn::utils::singleton<pegasus_counter_reporter>
+class pegasus_counter_reporter : public utils::singleton<pegasus_counter_reporter>
 {
 public:
     void start();
@@ -94,7 +94,7 @@ private:
     void on_report_timer(std::shared_ptr<boost::asio::deadline_timer> timer,
                          const boost::system::error_code &ec);
 
-    mutable ::dsn::utils::rw_lock_nr _lock;
+    mutable utils::rw_lock_nr _lock;
     std::string _local_host;
     uint16_t _local_port;
     std::string _app_name;
@@ -113,7 +113,7 @@ private:
     std::unique_ptr<prometheus::Exposer> _exposer;
     std::map<std::string, prometheus::Family<prometheus::Gauge> *> _gauge_family_map;
 
-    friend class dsn::utils::singleton<pegasus_counter_reporter>;
+    friend class utils::singleton<pegasus_counter_reporter>;
 };
 } // namespace server
 } // namespace pegasus
