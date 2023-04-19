@@ -39,6 +39,7 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"
+#include "utils/metrics.h"
 #include "utils/ports.h"
 
 namespace dsn {
@@ -312,6 +313,9 @@ protected:
     replica_init_info _info;
 
     explicit replication_app_base(replication::replica *replica);
+
+private:
+    METRIC_VAR_DECLARE_counter(committed_requests);
 };
 
 } // namespace replication
