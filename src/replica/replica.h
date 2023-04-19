@@ -287,11 +287,6 @@ public:
 
     replica_follower *get_replica_follower() const { return _replica_follower.get(); };
 
-    //
-    // Statistics
-    //
-    void update_commit_qps(int count);
-
     // routine for get extra envs from replica
     const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }
 
