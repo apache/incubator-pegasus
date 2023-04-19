@@ -221,8 +221,6 @@ public:
 
     int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
 
-    int64_t last_flushed_decree() const override;
-
     void update_app_envs(const std::map<std::string, std::string> &envs) override;
 
     void query_app_envs(/*out*/ std::map<std::string, std::string> &envs) override;

@@ -439,8 +439,6 @@ mutation_ptr replica::new_mutation(decree decree)
 
 decree replica::last_durable_decree() const { return _app->last_durable_decree(); }
 
-decree replica::last_flushed_decree() const { return _app->last_flushed_decree(); }
-
 decree replica::last_prepared_decree() const
 {
     ballot lastBallot = 0;
