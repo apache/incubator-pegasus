@@ -229,7 +229,6 @@ public:
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
     decree last_prepared_decree() const;
     decree last_durable_decree() const;
-    decree last_flushed_decree() const;
     const std::string &dir() const { return _dir; }
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
     const char *name() const { return replica_name(); }
