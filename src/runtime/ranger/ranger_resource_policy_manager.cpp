@@ -298,8 +298,8 @@ void ranger_resource_policy_manager::parse_policies_from_json(const rapidjson::V
 dsn::error_code ranger_resource_policy_manager::update_policies_from_ranger_service()
 {
     std::string ranger_policies;
-    ERR_LOG_AND_RETURN_NOT_OK(pull_policies_from_ranger_service(&ranger_policies),
-                              "Pull Ranger policies failed.");
+    LOG_AND_RETURN_NOT_OK(
+        ERROR, pull_policies_from_ranger_service(&ranger_policies), "Pull Ranger policies failed.");
     LOG_DEBUG("Pull Ranger policies success.");
 
     auto err_code = load_policies_from_json(ranger_policies);
@@ -308,10 +308,11 @@ dsn::error_code ranger_resource_policy_manager::update_policies_from_ranger_serv
         // For the newly created table, its app envs must be empty. This needs to be executed
         // periodically to update the table's app envs, regardless of whether the Ranger policy is
         // updated or not.
-        ERR_LOG_AND_RETURN_NOT_OK(sync_policies_to_app_envs(), "Sync policies to app envs failed.");
+        LOG_AND_RETURN_NOT_OK(
+            ERROR, sync_policies_to_app_envs(), "Sync policies to app envs failed.");
         return dsn::ERR_OK;
     }
-    ERR_LOG_AND_RETURN_NOT_OK(err_code, "Parse Ranger policies failed.");
+    LOG_AND_RETURN_NOT_OK(ERROR, err_code, "Parse Ranger policies failed.");
 
     start_to_dump_and_sync_policies();
 
@@ -579,7 +580,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
     dsn::replication::configuration_list_apps_request list_req;
     list_req.status = dsn::app_status::AS_AVAILABLE;
     _meta_svc->get_server_state()->list_apps(list_req, list_resp);
-    ERR_LOG_AND_RETURN_NOT_OK(list_resp.err, "list_apps failed.");
+    LOG_AND_RETURN_NOT_OK(ERROR, list_resp.err, "list_apps failed.");
     for (const auto &app : list_resp.infos) {
         std::string database_name = get_database_name_from_app_name(app.app_name);
         // Use "*" for table name of invalid Ranger rules to match datdabase resources.
@@ -609,7 +610,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
                 dsn::replication::update_app_env_rpc rpc(std::move(req),
                                                          LPC_USE_RANGER_ACCESS_CONTROL);
                 _meta_svc->get_server_state()->set_app_envs(rpc);
-                ERR_LOG_AND_RETURN_NOT_OK(rpc.response().err, "set_app_envs failed.");
+                LOG_AND_RETURN_NOT_OK(ERROR, rpc.response().err, "set_app_envs failed.");
                 break;
             }
         }
@@ -620,7 +621,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
 
             dsn::replication::update_app_env_rpc rpc(std::move(req), LPC_USE_RANGER_ACCESS_CONTROL);
             _meta_svc->get_server_state()->del_app_envs(rpc);
-            ERR_LOG_AND_RETURN_NOT_OK(rpc.response().err, "del_app_envs failed.");
+            LOG_AND_RETURN_NOT_OK(ERROR, rpc.response().err, "del_app_envs failed.");
         }
     }
 
