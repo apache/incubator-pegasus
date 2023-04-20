@@ -27,11 +27,11 @@ set(MY_PROJ_LIBS
     dsn_runtime
     dsn_utils
     gtest
-    gtest_main
-    )
+)
 
 set(MY_BINPLACES
     "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/config.ini"
 )
 
 dsn_add_test()

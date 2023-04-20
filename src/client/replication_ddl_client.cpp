@@ -1516,9 +1516,11 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
               &_tracker,
               [this, attempt_count, busy_attempt_count, callback](
                   error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-#ifdef PEGASUS_UNIT_TEST
-                  err = get_mock_error();
-#endif
+
+                  FAIL_POINT_INJECT_NOT_RETURN_F(
+                      "ddl_client_request_meta",
+                      [&err, this](dsn::string_view str) { err = pop_mock_error(); });
+
                   end_meta_request(
                       callback, attempt_count, busy_attempt_count, err, request, response);
               });

@@ -15,12 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <gtest/gtest.h>
+#include <vector>
 
 #include "client/replication_ddl_client.h"
 #include "common/replication.codes.h"
 #include "meta_admin_types.h"
 #include "utils/flags.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
@@ -32,9 +36,12 @@ TEST(DDLClientTest, RetryEndMetaRequest)
 {
     struct test_case
     {
-        std::vector<error_code> mock_errors;
+        std::vector<dsn::error_code> mock_errors;
     } tests[] = {
-        {{ERR_TIMEOUT, ERR_BUSY_CREATING, ERR_BUSY_CREATING, ERR_BUSY_CREATING}},
+        {{dsn::ERR_TIMEOUT,
+          dsn::ERR_BUSY_CREATING,
+          dsn::ERR_BUSY_CREATING,
+          dsn::ERR_BUSY_CREATING}},
     };
 
     auto reserved_ddl_client_max_attempt_count = FLAGS_ddl_client_max_attempt_count;
@@ -46,12 +53,17 @@ TEST(DDLClientTest, RetryEndMetaRequest)
     std::vector<rpc_address> meta_list = {{"127.0.0.1", 34601}};
     auto req = std::make_shared<configuration_create_app_request>();
     for (const auto &test : tests) {
+        fail::setup();
+        fail::cfg("ddl_client_request_meta", "void()");
+
         auto ddl_client = std::make_unique<replication_ddl_client>(meta_list);
-        auto resp_task =
-            ddl_client->request_meta<configuration_create_app_request>(RPC_CM_CREATE_APP, req);
+        ddl_client->set_mock_errors(test.mock_errors);
+        auto resp_task = ddl_client->request_meta<configuration_create_app_request>(RPC_TEST, req);
         resp_task->wait();
 
         EXPECT_TRUE(ddl_client->_mock_errors.empty());
+
+        fail::teardown();
     }
 
     FLAGS_ddl_client_retry_interval_ms = reserved_ddl_client_retry_interval_ms;

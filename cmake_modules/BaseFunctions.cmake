@@ -173,7 +173,6 @@ endfunction(dsn_add_object)
 
 function(dsn_add_test)
   if(${BUILD_TEST})
-    add_definitions(-DPEGASUS_UNIT_TEST)
     add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
     set(MY_EXECUTABLE_IS_TEST TRUE)
     dsn_add_executable()
