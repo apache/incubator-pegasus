@@ -26,7 +26,6 @@
 #include <string>
 
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/group_address.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {

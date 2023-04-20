@@ -17,10 +17,11 @@
  * under the License.
  */
 
-#include <gtest/gtest.h>
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
 #include <string>
+#include <vector>
 
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
