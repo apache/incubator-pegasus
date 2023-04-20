@@ -72,6 +72,7 @@
 #include "replica_disk_migrator.h"
 #include "replica_stub.h"
 #include "runtime/api_layer1.h"
+#include "runtime/ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/security/access_controller.h"
@@ -1310,14 +1311,19 @@ void replica_stub::on_group_check(group_check_rpc rpc)
 
 void replica_stub::on_learn(dsn::message_ex *msg)
 {
+    learn_response response;
     learn_request request;
     ::dsn::unmarshall(msg, request);
 
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
+        if (!rep->access_controller_allowed(msg, ranger::access_type::kWrite)) {
+            response.err = ERR_ACL_DENY;
+            reply(msg, response);
+            return;
+        }
         rep->on_learn(msg, request);
     } else {
-        learn_response response;
         response.err = ERR_OBJECT_NOT_FOUND;
         reply(msg, response);
     }
