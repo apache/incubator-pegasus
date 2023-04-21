@@ -61,7 +61,7 @@ public:
     void set_leader(host_port hp);
     bool remove(host_port hp) WARN_UNUSED_RESULT;
     bool contains(host_port hp) const WARN_UNUSED_RESULT;
-    int count();
+    int count() const;
 
     const std::vector<host_port> &members() const { return _members; }
     host_port random_member() const
