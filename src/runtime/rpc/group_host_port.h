@@ -163,13 +163,12 @@ inline void rpc_group_host_port::leader_forward()
 
 inline void rpc_group_host_port::set_leader(host_port hp)
 {
+    CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
     alw_t l(_lock);
     if (hp.is_invalid()) {
         _leader_index = kInvalidIndex;
         return;
     }
-
-    CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
     for (int i = 0; i < _members.size(); i++) {
         if (_members[i] == hp) {
             _leader_index = i;
