@@ -196,4 +196,8 @@ TEST_F(integration_test, read_corrupt_db)
 
     // All replica servers in this cluster are healthy.
     ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 60);
+
+    // Recover the injected read error for RS-1.
+    ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root(
+        "curl 'localhost:34801/updateConfig?inject_read_error_for_test=0'"));
 }
