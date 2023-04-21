@@ -30,13 +30,11 @@
 #include <string.h>
 #include <algorithm>
 #include <cctype>
-#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <set>
-#include <thread>
 
 #include "backup_types.h"
 #include "common//duplication_common.h"
@@ -52,7 +50,6 @@
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/group_address.h"
 #include "utils/error_code.h"
-#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
 #include "utils/time_utils.h"
@@ -62,6 +59,8 @@ DSN_DEFINE_uint32(ddl_client,
                   ddl_client_max_attempt_count,
                   3,
                   "The max count that attempt for failed requests to meta server.");
+DSN_DEFINE_validator(ddl_client_max_attempt_count,
+                     [](uint32_t value) -> bool { return value > 0; });
 
 DSN_DEFINE_uint32(ddl_client,
                   ddl_client_retry_interval_ms,
@@ -193,8 +192,9 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     req->options.envs = envs;
     req->options.is_stateful = !is_stateless;
 
-    auto resp_task = request_meta<configuration_create_app_request>(RPC_CM_CREATE_APP, req);
-    resp_task->wait();
+    dsn::replication::configuration_create_app_response resp;
+    auto resp_task = request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
+
     if (resp_task->error() != dsn::ERR_OK) {
         std::cout << "create app " << app_name
                   << " failed: [create] call server error: " << resp_task->error().to_string()
@@ -202,8 +202,6 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
         return resp_task->error();
     }
 
-    dsn::replication::configuration_create_app_response resp;
-    ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != dsn::ERR_OK) {
         std::cout << "create app " << app_name
                   << " failed: [create] received server error: " << resp.err.to_string()
@@ -1447,82 +1445,49 @@ bool replication_ddl_client::valid_app_char(int c)
 
 namespace {
 
-inline bool is_busy(const dsn::error_code &err)
-{
-    return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
-}
-
-bool need_retry(uint32_t attempt_count, uint32_t busy_attempt_count, const dsn::error_code &err)
+bool need_retry(uint32_t attempt_count, const dsn::error_code &err)
 {
     // For successful request, no need to retry.
     if (err == dsn::ERR_OK) {
         return false;
     }
 
-    // The request, albeit failed, has not reached the max attempt count. Thus just do retry.
-    if (attempt_count < FLAGS_ddl_client_max_attempt_count) {
-        return true;
-    }
-
-    // Do NOT retry, since it has reached FLAGS_ddl_client_max_attempt_count and the error that
-    // led to fail of the last attempt is not busy error.
-    if (!is_busy(err)) {
-        return false;
-    }
-
-    // Though it has reached FLAGS_ddl_client_max_attempt_count, retry is still allowed as long
-    // as the busy attempt count has not reached FLAGS_ddl_client_max_attempt_count.
-    return busy_attempt_count < FLAGS_ddl_client_max_attempt_count;
+    // As long as the max attempt count has not been reached, just do retry;
+    // otherwise, do not attempt again.
+    return attempt_count < FLAGS_ddl_client_max_attempt_count;
 }
-
-bool should_sleep_before_retry(const dsn::error_code &err) { return is_busy(err); }
 
 } // anonymous namespace
 
 void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callback,
                                               uint32_t attempt_count,
-                                              uint32_t busy_attempt_count,
                                               const error_code &err,
                                               dsn::message_ex *request,
                                               dsn::message_ex *resp)
 {
-    ++attempt_count;
-    if (is_busy(err)) {
-        ++busy_attempt_count;
-    }
+    LOG_INFO(
+        "send request to meta server: rpc_code={}, err={}, attempt_count={}, max_attempt_count={}",
+        request->local_rpc_code,
+        err,
+        attempt_count,
+        FLAGS_ddl_client_max_attempt_count);
 
-    LOG_INFO("attempt {}: attempt_count={}, busy_attempt_count={}, max_replica_count={}, err={}",
-             request->local_rpc_code,
-             attempt_count,
-             busy_attempt_count,
-             FLAGS_ddl_client_max_attempt_count,
-             err);
-
-    if (!need_retry(attempt_count, busy_attempt_count, err)) {
+    if (!need_retry(attempt_count, err)) {
         callback->enqueue(err, (message_ex *)resp);
         return;
-    }
-
-    if (should_sleep_before_retry(err)) {
-        LOG_WARNING("sleep {} milliseconds before launch another attempt for {}: err={}",
-                    FLAGS_ddl_client_retry_interval_ms,
-                    request->local_rpc_code,
-                    err);
-        std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_ddl_client_retry_interval_ms));
     }
 
     rpc::call(_meta_server,
               request,
               &_tracker,
-              [this, attempt_count, busy_attempt_count, callback](
+              [this, attempt_count, callback](
                   error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
 
                   FAIL_POINT_INJECT_NOT_RETURN_F(
                       "ddl_client_request_meta",
                       [&err, this](dsn::string_view str) { err = pop_mock_error(); });
 
-                  end_meta_request(
-                      callback, attempt_count, busy_attempt_count, err, request, response);
+                  end_meta_request(callback, attempt_count + 1, err, request, response);
               });
 }
 

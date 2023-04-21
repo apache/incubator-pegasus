@@ -15,16 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <deque>
+#include <memory>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
 #include "common/replication.codes.h"
 #include "meta_admin_types.h"
-#include "utils/flags.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
@@ -34,11 +40,15 @@ namespace replication {
 
 TEST(DDLClientTest, RetryEndMetaRequest)
 {
+    // Test cases:
+    // - return ERR_OK for the first attempt
     struct test_case
     {
         std::vector<dsn::error_code> mock_errors;
     } tests[] = {
+        {{dsn::ERR_OK, dsn::ERR_OK}},
         {{dsn::ERR_TIMEOUT,
+          dsn::ERR_OK,
           dsn::ERR_BUSY_CREATING,
           dsn::ERR_BUSY_CREATING,
           dsn::ERR_BUSY_CREATING}},
@@ -58,9 +68,9 @@ TEST(DDLClientTest, RetryEndMetaRequest)
 
         auto ddl_client = std::make_unique<replication_ddl_client>(meta_list);
         ddl_client->set_mock_errors(test.mock_errors);
-        auto resp_task = ddl_client->request_meta<configuration_create_app_request>(RPC_TEST, req);
-        resp_task->wait();
 
+        configuration_create_app_response resp;
+        auto resp_task = ddl_client->request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
         EXPECT_TRUE(ddl_client->_mock_errors.empty());
 
         fail::teardown();

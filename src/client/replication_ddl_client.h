@@ -26,12 +26,14 @@
 
 #pragma once
 
-#include <deque>
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
+#include <chrono>
+#include <deque>
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -53,7 +55,12 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+
+DSN_DECLARE_uint32(ddl_client_max_attempt_count);
+DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
 
 namespace dsn {
 class gpid;
@@ -262,22 +269,21 @@ private:
 
     void end_meta_request(const rpc_response_task_ptr &callback,
                           uint32_t attempt_count,
-                          uint32_t busy_attempt_count,
                           const error_code &err,
                           dsn::message_ex *request,
                           dsn::message_ex *resp);
 
     template <typename TRequest>
-    rpc_response_task_ptr request_meta(dsn::task_code code,
+    rpc_response_task_ptr request_meta(const dsn::task_code &code,
                                        std::shared_ptr<TRequest> &req,
                                        int timeout_milliseconds = 0,
                                        int reply_thread_hash = 0)
     {
         dsn::message_ex *msg = dsn::message_ex::create_request(code, timeout_milliseconds);
-        ::dsn::marshall(msg, *req);
+        dsn::marshall(msg, *req);
 
-        rpc_response_task_ptr task = ::dsn::rpc::create_rpc_response_task(
-            msg, nullptr, empty_rpc_handler, reply_thread_hash);
+        rpc_response_task_ptr task =
+            dsn::rpc::create_rpc_response_task(msg, nullptr, empty_rpc_handler, reply_thread_hash);
         rpc::call(_meta_server,
                   msg,
                   &_tracker,
@@ -288,9 +294,65 @@ private:
                           "ddl_client_request_meta",
                           [&err, this](dsn::string_view str) { err = pop_mock_error(); });
 
-                      end_meta_request(std::move(task), 0, 0, err, request, response);
+                      end_meta_request(std::move(task), 1, err, request, response);
                   });
         return task;
+    }
+
+    static inline bool is_busy(const dsn::error_code &err)
+    {
+        return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
+    }
+
+    template <typename TRequest, typename TResponse>
+    rpc_response_task_ptr request_meta_and_wait_response(const dsn::task_code &code,
+                                                         std::shared_ptr<TRequest> &req,
+                                                         TResponse &resp,
+                                                         int timeout_milliseconds = 0,
+                                                         int reply_thread_hash = 0)
+    {
+        rpc_response_task_ptr resp_task;
+        for (uint32_t i = 1; i <= FLAGS_ddl_client_max_attempt_count; ++i) {
+            resp_task = request_meta(code, req, timeout_milliseconds, reply_thread_hash);
+            resp_task->wait();
+
+            // Failed to send request to meta server. The possible reason might be:
+            // * cannot connect to meta server (such as ERR_NETWORK_FAILURE);
+            // * do not receive any response from meta server (such as ERR_TIMEOUT)
+            if (resp_task->error() != dsn::ERR_OK) {
+                return resp_task;
+            }
+
+            // Received the response from meta server successfully. Deserialize the response.
+            dsn::unmarshall(resp_task->get_response(), resp);
+            LOG_INFO("received response from meta server: rpc_code={}, err={}, attempt_count={}, "
+                     "max_attempt_count={}",
+                     code,
+                     resp.err,
+                     i,
+                     FLAGS_ddl_client_max_attempt_count);
+
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "ddl_client_request_meta",
+                [&resp, this](dsn::string_view str) { resp.err = pop_mock_error(); });
+
+            // Once `err` field in the received response is ERR_OK or some non-busy error, do not
+            // attempt again.
+            if (resp.err == dsn::ERR_OK || !is_busy(resp.err)) {
+                return resp_task;
+            }
+
+            // Would not sleep for the last attempt.
+            if (i < FLAGS_ddl_client_max_attempt_count) {
+                LOG_WARNING("sleep {} milliseconds before launch another attempt for {}: err={}",
+                            FLAGS_ddl_client_retry_interval_ms,
+                            code,
+                            resp.err);
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(FLAGS_ddl_client_retry_interval_ms));
+            }
+        }
+        return resp_task;
     }
 
     /// Send request to meta server synchronously.
@@ -355,6 +417,7 @@ private:
     dsn::task_tracker _tracker;
     uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.
 
+    // Used only for unit tests.
     FRIEND_TEST(DDLClientTest, RetryEndMetaRequest);
     void set_mock_errors(const std::vector<dsn::error_code> &mock_errors)
     {
