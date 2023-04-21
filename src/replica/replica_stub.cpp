@@ -110,6 +110,21 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kReplicas,
                           "The number of closing replicas");
 
+METRIC_DEFINE_gauge_int64(server,
+                          learning_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of learning replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          learning_replicas_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration among all learning replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          learning_replicas_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration among all learning replicas");
+
 namespace dsn {
 namespace replication {
 
@@ -215,7 +230,8 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _is_running(false),
       METRIC_VAR_INIT_server(total_replicas),
       METRIC_VAR_INIT_server(opening_replicas),
-      METRIC_VAR_INIT_server(closing_replicas)
+      METRIC_VAR_INIT_server(closing_replicas),
+      METRIC_VAR_INIT_server(learning_replicas),
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
@@ -233,10 +249,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    _counter_replicas_learning_count.init_app_counter("eon.replica_stub",
-                                                      "replicas.learning.count",
-                                                      COUNTER_TYPE_NUMBER,
-                                                      "current learning count");
     _counter_replicas_learning_max_duration_time_ms.init_app_counter(
         "eon.replica_stub",
         "replicas.learning.max.duration.time(ms)",
@@ -1972,8 +1984,8 @@ void replica_stub::on_gc()
         }
     }
 
-    _counter_replicas_learning_count->set(learning_count);
-    _counter_replicas_learning_max_duration_time_ms->set(learning_max_duration_time_ms);
+    METRIC_VAR_SET(learning_replicas, learning_count);
+    METRIC_VAR_SET(learning_replicas_max_duration_ms, learning_max_duration_time_ms);
     _counter_replicas_learning_max_copy_file_size->set(learning_max_copy_file_size);
     _counter_cold_backup_running_count->set(cold_backup_running_count);
     _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
