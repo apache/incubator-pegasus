@@ -66,6 +66,7 @@ TEST_F(integration_test, write_corrupt_db)
                 corruption_count++;
                 break;
             } else if (ret == PERR_TIMEOUT) {
+                corruption_count++;
                 // If RS-1 crashed before (learn failed when write storage engine but get
                 // kCorruption), a new write operation on the primary replica it ever held will
                 // cause timeout.
@@ -95,11 +96,13 @@ TEST_F(integration_test, write_corrupt_db)
         ASSERT_EQ(value, got_value);
     }
 
-    EXPECT_GT(ok_count, 0);
-    EXPECT_GT(corruption_count, 0);
+    ASSERT_GT(ok_count, 0);
+    ASSERT_GT(corruption_count, 0);
     std::cout << "ok_count: " << ok_count << ", corruption_count: " << corruption_count
               << std::endl;
 
+    // Make effort to get a trustable alive replica server count.
+    WAIT_IN_TIME([&] { return get_alive_replica_server_count() != 3; }, 30);
     // Now only 2 RSs left, or RS-1 has no leader replicas.
     ASSERT_IN_TIME(
         [&] {

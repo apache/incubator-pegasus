@@ -45,12 +45,12 @@ global_env::global_env()
 void global_env::get_dirs()
 {
     std::string output1;
-    ASSERT_NO_FATAL_FAILURE(run_cmd(
+    ASSERT_NO_FATAL_FAILURE(run_cmd_no_error(
         "ps aux | grep '/meta1/pegasus_server' | grep -v grep | awk '{print $2}'", &output1));
 
     // get the dir of a process in onebox, say: $PEGASUS/onebox/meta1
     std::string output2;
-    ASSERT_NO_FATAL_FAILURE(run_cmd("readlink /proc/" + output1 + "/cwd", &output2));
+    ASSERT_NO_FATAL_FAILURE(run_cmd_no_error("readlink /proc/" + output1 + "/cwd", &output2));
 
     _pegasus_root = dirname(dirname((char *)output2.c_str()));
     std::cout << "Pegasus project root: " << _pegasus_root << std::endl;

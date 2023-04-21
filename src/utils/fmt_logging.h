@@ -254,6 +254,7 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #define CHECK_LE_PREFIX(var1, var2) CHECK_LE_PREFIX_MSG(var1, var2, "")
 #define CHECK_GT_PREFIX(var1, var2) CHECK_GT_PREFIX_MSG(var1, var2, "")
 #define CHECK_LT_PREFIX(var1, var2) CHECK_LT_PREFIX_MSG(var1, var2, "")
+#define CHECK_OK_PREFIX(x) CHECK_EQ_PREFIX_MSG(x, ::dsn::ERR_OK, "")
 
 // Return the given status if condition is not true.
 #define LOG_AND_RETURN_NOT_TRUE(level, s, err, ...)                                                \
