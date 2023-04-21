@@ -176,6 +176,7 @@ TEST_F(integration_test, read_corrupt_db)
                 corruption_count++;
                 break;
             } else if (ret == PERR_TIMEOUT) {
+                corruption_count++;
                 // If RS-1 crashed before (encounter a read kCorruption error from storage engine),
                 // a new read operation on the primary replica it ever held will cause timeout.
                 // Force to fetch the latest route table.
@@ -188,8 +189,8 @@ TEST_F(integration_test, read_corrupt_db)
         } while (true);
     }
 
-    EXPECT_GT(ok_count, 0);
-    EXPECT_GT(corruption_count, 0);
+    ASSERT_GT(ok_count, 0);
+    ASSERT_GT(corruption_count, 0);
     std::cout << "ok_count: " << ok_count << ", corruption_count: " << corruption_count
               << std::endl;
 
