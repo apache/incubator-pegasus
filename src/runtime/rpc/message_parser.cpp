@@ -33,12 +33,22 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "message_parser_manager.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+#include "runtime/rpc/message_parser.h"
+#include "runtime/task/task_spec.h"
+#include "utils/blob.h"
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
 
 namespace dsn {
 
@@ -112,12 +122,11 @@ std::string header_type::debug_string() const
 {
     auto it = s_fmt_map.find(sig);
     if (it != s_fmt_map.end()) {
-        if (it->second != type) {
-            dassert(false,
-                    "signature %08x is already registerd for header type %s",
-                    sig,
-                    type.to_string());
-        }
+        CHECK_EQ_MSG(it->second,
+                     type,
+                     "signature {:#010x} is already registerd for header type {}",
+                     sig,
+                     type);
     } else {
         s_fmt_map.emplace(sig, type);
     }
@@ -161,12 +170,11 @@ char *message_reader::read_buffer_ptr(unsigned int read_next)
             _buffer_occupied = rb.length();
         }
 
-        dassert(read_next + _buffer_occupied <= _buffer.length(),
-                "%u(%u + %u) VS %u",
-                read_next + _buffer_occupied,
-                read_next,
-                _buffer_occupied,
-                _buffer.length());
+        CHECK_LE_MSG(read_next + _buffer_occupied,
+                     _buffer.length(),
+                     "read_next: {}, _buffer_occupied: {}",
+                     read_next,
+                     _buffer_occupied);
     }
 
     return (char *)(_buffer.data() + _buffer_occupied);

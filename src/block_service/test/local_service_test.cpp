@@ -17,11 +17,19 @@
  * under the License.
  */
 
+#include <boost/filesystem/operations.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
+#include <nlohmann/detail/json_ref.hpp>
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <fstream>
+#include <initializer_list>
+#include <vector>
 
 #include "block_service/local/local_service.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace dist {

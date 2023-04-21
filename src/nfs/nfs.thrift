@@ -39,6 +39,7 @@ struct copy_request
     7: bool is_last;
     8: bool overwrite;
     9: optional string source_disk_tag;
+    10: optional dsn.gpid pid;
 }
 
 struct copy_response
@@ -58,6 +59,7 @@ struct get_file_size_request
     5: bool overwrite;
     6: optional string source_disk_tag;
     7: optional string dest_disk_tag;
+    8: optional dsn.gpid pid;
 }
 
 struct get_file_size_response

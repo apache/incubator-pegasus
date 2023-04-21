@@ -24,36 +24,40 @@
  * THE SOFTWARE.
  */
 
-#include <iostream>
-#include <thread>
-#include <sstream>
-
-#include "utils/utils.h"
 #include "utils/command_manager.h"
+
+#include <stdlib.h>
+#include <algorithm>
+#include <chrono>
+#include <limits>
+#include <sstream> // IWYU pragma: keep
+#include <thread>
+#include <utility>
+
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 
-dsn_handle_t command_manager::register_command(const std::vector<std::string> &commands,
-                                               const std::string &help_one_line,
-                                               const std::string &help_long,
-                                               command_handler handler)
+std::unique_ptr<command_deregister>
+command_manager::register_command(const std::vector<std::string> &commands,
+                                  const std::string &help_one_line,
+                                  const std::string &help_long,
+                                  command_handler handler)
 {
     utils::auto_write_lock l(_lock);
     bool is_valid_cmd = false;
-
     for (const std::string &cmd : commands) {
         if (!cmd.empty()) {
             is_valid_cmd = true;
-            auto it = _handlers.find(cmd);
-            dassert(it == _handlers.end(), "command '%s' already regisered", cmd.c_str());
+            CHECK(_handlers.find(cmd) == _handlers.end(), "command '{}' already regisered", cmd);
         }
     }
-    dassert(is_valid_cmd, "should not register empty command");
+    CHECK(is_valid_cmd, "should not register empty command");
 
     command_instance *c = new command_instance();
     c->commands = commands;
-    c->help_long = help_long;
     c->help_short = help_one_line;
+    c->help_long = help_long;
     c->handler = handler;
 
     for (const std::string &cmd : commands) {
@@ -61,13 +65,14 @@ dsn_handle_t command_manager::register_command(const std::vector<std::string> &c
             _handlers[cmd] = c;
         }
     }
-    return c;
+
+    return std::make_unique<command_deregister>(reinterpret_cast<uintptr_t>(c));
 }
 
-void command_manager::deregister_command(dsn_handle_t handle)
+void command_manager::deregister_command(uintptr_t handle)
 {
     auto c = reinterpret_cast<command_instance *>(handle);
-    dassert(c != nullptr, "cannot deregister a null handle");
+    CHECK_NOTNULL(c, "cannot deregister a null handle");
     utils::auto_write_lock l(_lock);
     for (const std::string &cmd : c->commands) {
         _handlers.erase(cmd);
@@ -97,34 +102,34 @@ bool command_manager::run_command(const std::string &cmd,
 
 command_manager::command_manager()
 {
-    register_command({"help", "h", "H", "Help"},
-                     "help|Help|h|H [command] - display help information",
-                     "",
-                     [this](const std::vector<std::string> &args) {
-                         std::stringstream ss;
+    _cmds.emplace_back(register_command({"help", "h", "H", "Help"},
+                                        "help|Help|h|H [command] - display help information",
+                                        "",
+                                        [this](const std::vector<std::string> &args) {
+                                            std::stringstream ss;
 
-                         if (args.size() == 0) {
-                             utils::auto_read_lock l(_lock);
-                             for (const auto &c : this->_handlers) {
-                                 ss << c.second->help_short << std::endl;
-                             }
-                         } else {
-                             utils::auto_read_lock l(_lock);
-                             auto it = _handlers.find(args[0]);
-                             if (it == _handlers.end())
-                                 ss << "cannot find command '" << args[0] << "'";
-                             else {
-                                 ss.width(6);
-                                 ss << std::left << it->first << ": " << it->second->help_short
-                                    << std::endl
-                                    << it->second->help_long << std::endl;
-                             }
-                         }
+                                            if (args.size() == 0) {
+                                                utils::auto_read_lock l(_lock);
+                                                for (const auto &c : this->_handlers) {
+                                                    ss << c.second->help_short << std::endl;
+                                                }
+                                            } else {
+                                                utils::auto_read_lock l(_lock);
+                                                auto it = _handlers.find(args[0]);
+                                                if (it == _handlers.end())
+                                                    ss << "cannot find command '" << args[0] << "'";
+                                                else {
+                                                    ss.width(6);
+                                                    ss << std::left << it->first << ": "
+                                                       << it->second->help_short << std::endl
+                                                       << it->second->help_long << std::endl;
+                                                }
+                                            }
 
-                         return ss.str();
-                     });
+                                            return ss.str();
+                                        }));
 
-    register_command(
+    _cmds.emplace_back(register_command(
         {"repeat", "r", "R", "Repeat"},
         "repeat|Repeat|r|R interval_seconds max_count command - execute command periodically",
         "repeat|Repeat|r|R interval_seconds max_count command - execute command every interval "
@@ -168,9 +173,16 @@ command_manager::command_manager()
             }
 
             return "repeat command completed";
-        });
+        }));
 }
 
-command_manager::~command_manager() { _handlers.clear(); }
+command_manager::~command_manager()
+{
+    _cmds.clear();
+    CHECK(_handlers.empty(),
+          "All commands must be deregistered before command_manager is destroyed, however {} is "
+          "still registered",
+          _handlers.begin()->first);
+}
 
 } // namespace dsn

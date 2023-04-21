@@ -19,8 +19,13 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <array>
+#include <memory>
+
 #include "pegasus_value_schema.h"
 #include "utils/singleton.h"
+#include "utils/string_view.h"
 
 namespace pegasus {
 

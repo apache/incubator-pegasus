@@ -37,6 +37,8 @@
 #include <thrift/TApplicationException.h>
 #include <type_traits>
 
+#include "utils/string_view.h"
+
 using namespace ::apache::thrift::transport;
 namespace dsn {
 
@@ -188,8 +190,8 @@ inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
     if (binary_proto != nullptr) {
         // the protocol is binary protocol
         auto r = iprot->readI64(reinterpret_cast<int64_t &>(_addr.value));
-        dassert(_addr.v4.type == HOST_TYPE_INVALID || _addr.v4.type == HOST_TYPE_IPV4,
-                "only invalid or ipv4 can be deserialized from binary");
+        CHECK(_addr.v4.type == HOST_TYPE_INVALID || _addr.v4.type == HOST_TYPE_IPV4,
+              "only invalid or ipv4 can be deserialized from binary");
         return r;
     } else {
         // the protocol is json protocol
@@ -247,8 +249,8 @@ inline uint32_t rpc_address::write(apache::thrift::protocol::TProtocol *oprot) c
         dynamic_cast<apache::thrift::protocol::TBinaryProtocol *>(oprot);
     if (binary_proto != nullptr) {
         // the protocol is binary protocol
-        dassert(_addr.v4.type == HOST_TYPE_INVALID || _addr.v4.type == HOST_TYPE_IPV4,
-                "only invalid or ipv4 can be serialized to binary");
+        CHECK(_addr.v4.type == HOST_TYPE_INVALID || _addr.v4.type == HOST_TYPE_IPV4,
+              "only invalid or ipv4 can be serialized to binary");
         return oprot->writeI64((int64_t)_addr.value);
     } else {
         // the protocol is json protocol

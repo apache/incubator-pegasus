@@ -17,8 +17,9 @@
 
 #include <ostream>
 
-#include "blob.h"
-#include "memutil.h"
+#include "utils/blob.h"
+#include "utils/memutil.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -76,10 +77,11 @@ const char *memmatch(const char *phaystack, size_t haylen, const char *pneedle, 
     // A static cast is used here to work around the fact that memchr returns
     // a void* on Posix-compliant systems and const void* on Windows.
     while ((match = static_cast<const char *>(memchr(phaystack, pneedle[0], hayend - phaystack)))) {
-        if (memcmp(match, pneedle, neelen) == 0)
+        if (utils::mequals(match, pneedle, neelen)) {
             return match;
-        else
+        } else {
             phaystack = match + 1;
+        }
     }
     return nullptr;
 }

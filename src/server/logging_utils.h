@@ -23,15 +23,7 @@
 
 /// Utilities for logging the operation on rocksdb.
 
-#define derror_rocksdb(op, error, ...)                                                             \
-    derror_f("{}: rocksdb {} failed: error = {} [{}]",                                             \
-             replica_name(),                                                                       \
-             op,                                                                                   \
-             error,                                                                                \
-             fmt::format(__VA_ARGS__))
+#define LOG_ERROR_ROCKSDB(op, error, ...)                                                          \
+    LOG_ERROR_PREFIX("rocksdb {} failed: error = {} [{}]", op, error, fmt::format(__VA_ARGS__))
 
-#define ddebug_rocksdb(op, ...)                                                                    \
-    ddebug_f("{}: rocksdb {}: [{}]", replica_name(), op, fmt::format(__VA_ARGS__))
-
-#define dwarn_rocksdb(op, ...)                                                                     \
-    dwarn_f("{}: rocksdb {}: [{}]", replica_name(), op, fmt::format(__VA_ARGS__))
+#define LOG_INFO_ROCKSDB(op, ...) LOG_INFO_PREFIX("rocksdb {}: [{}]", op, fmt::format(__VA_ARGS__))

@@ -33,17 +33,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <thread>
-
-#include "utils/singleton_store.h"
-#include "utils/filesystem.h"
-#include "utils/config_api.h"
-#include "utils/flags.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
+#include <utility>
 
 #include "runtime/global_config.h"
-#include "runtime/task/task_spec.h"
-#include "runtime/rpc/network.h"
 #include "runtime/service_app.h"
+#include "runtime/task/task_spec.h"
+#include "utils/config_api.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -326,7 +328,7 @@ bool service_spec::init_app_specs()
             all_section_names.push_back("apps.mimic");
         } else {
             auto type = dsn_config_get_value_string("apps.mimic", "type", "", "");
-            if (strcmp(type, mimic_app_role_name) != 0) {
+            if (!utils::equals(type, mimic_app_role_name)) {
                 printf("invalid config value '%s' for [apps.mimic] type", type);
                 return false;
             }
@@ -365,7 +367,7 @@ bool service_spec::init_app_specs()
 
                 // add app
                 app_specs.push_back(app);
-                dassert((int)app_specs.size() == app.id, "incorrect app id");
+                CHECK_EQ(app_specs.size(), app.id);
 
                 // for next instance
                 app.ports.clear();

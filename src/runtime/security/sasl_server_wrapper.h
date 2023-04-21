@@ -17,9 +17,14 @@
 
 #pragma once
 
+#include <string>
+
 #include "sasl_wrapper.h"
+#include "utils/errors.h"
 
 namespace dsn {
+class blob;
+
 namespace security {
 class sasl_server_wrapper : public sasl_wrapper
 {

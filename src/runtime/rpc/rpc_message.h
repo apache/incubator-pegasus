@@ -35,21 +35,27 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
 #include <atomic>
-#include "utils/ports.h"
-#include "utils/extensible_object.h"
-#include "utils/dlib.h"
-#include "utils/blob.h"
-#include "utils/link.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include <vector>
+
 #include "common/gpid.h"
-#include "utils/rpc_address.h"
-#include "runtime/global_config.h"
+#include "rpc_address.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/extensible_object.h"
+#include "utils/link.h"
+
+#define DSN_MAX_TASK_CODE_NAME_LENGTH 48
+#define DSN_MAX_ERROR_CODE_NAME_LENGTH 48
 
 namespace dsn {
 class rpc_session;
+
 typedef dsn::ref_ptr<rpc_session> rpc_session_ptr;
 
 struct fast_code
@@ -149,78 +155,78 @@ public:
 
 public:
     // message_ex(blob bb, bool parse_hdr = true); // read
-    DSN_API ~message_ex();
+    ~message_ex();
 
     //
     // utility routines
     //
-    DSN_API error_code error();
-    DSN_API task_code rpc_code();
+    error_code error();
+    task_code rpc_code();
     static uint64_t new_id() { return ++_id; }
     static unsigned int get_body_length(char *hdr) { return ((message_header *)hdr)->body_length; }
 
     //
     // routines for create messages
     //
-    DSN_API static message_ex *create_receive_message(const blob &data);
-    DSN_API static message_ex *create_request(dsn::task_code rpc_code,
-                                              int timeout_milliseconds = 0,
-                                              int thread_hash = 0,
-                                              uint64_t partition_hash = 0);
+    static message_ex *create_receive_message(const blob &data);
+    static message_ex *create_request(dsn::task_code rpc_code,
+                                      int timeout_milliseconds = 0,
+                                      int thread_hash = 0,
+                                      uint64_t partition_hash = 0);
 
-    DSN_API static message_ex *create_received_request(dsn::task_code rpc_code,
-                                                       dsn_msg_serialize_format format,
-                                                       void *buffer,
-                                                       int size,
-                                                       int thread_hash = 0,
-                                                       uint64_t partition_hash = 0);
+    static message_ex *create_received_request(dsn::task_code rpc_code,
+                                               dsn_msg_serialize_format format,
+                                               void *buffer,
+                                               int size,
+                                               int thread_hash = 0,
+                                               uint64_t partition_hash = 0);
 
     /// This method is only used for receiving request.
     /// The returned message:
     ///   - msg->buffers[0] = message_header
     ///   - msg->buffers[1] = data
     /// NOTE: the reference counter of returned message_ex is not added in this function
-    DSN_API static message_ex *create_receive_message_with_standalone_header(const blob &data);
+    static message_ex *create_receive_message_with_standalone_header(const blob &data);
 
     /// copy message without client information, it will not reply
     /// The returned message:
     ///   - msg->buffers[0] = message_header
     ///   - msg->buffers[1] = data
-    DSN_API static message_ex *copy_message_no_reply(const message_ex &old_msg);
+    static message_ex *copy_message_no_reply(const message_ex &old_msg);
 
     /// The returned message:
     ///   - msg->buffers[0] = message_header
     ///   - msg->_is_read = false
     ///   - msg->_rw_index = 0
     ///   - msg->_rw_offset = 48 (size of message_header)
-    DSN_API message_ex *create_response();
+    message_ex *create_response();
 
-    DSN_API message_ex *copy(bool clone_content, bool copy_for_receive);
-    DSN_API message_ex *copy_and_prepare_send(bool clone_content);
+    message_ex *copy(bool clone_content, bool copy_for_receive);
+    message_ex *copy_and_prepare_send(bool clone_content);
 
     //
     // routines for buffer management
     //
-    DSN_API void write_next(void **ptr, size_t *size, size_t min_size);
-    DSN_API void write_commit(size_t size);
-    DSN_API bool read_next(void **ptr, size_t *size);
+    void write_next(void **ptr, size_t *size, size_t min_size);
+    void write_commit(size_t size);
+    bool read_next(void **ptr, size_t *size);
     bool read_next(blob &data);
-    DSN_API void read_commit(size_t size);
+    void read_commit(size_t size);
     size_t body_size() { return (size_t)header->body_length; }
-    DSN_API void *rw_ptr(size_t offset_begin);
+    void *rw_ptr(size_t offset_begin);
 
     // rpc_read_stream can read a msg many times by restore()
     // rpc_read_stream stream1(msg)
     // msg->restore_read()
     // rpc_read_stream stream2(msg)
-    DSN_API void restore_read();
+    void restore_read();
 
     bool is_backup_request() const { return header->context.u.is_backup_request; }
 
 private:
-    DSN_API message_ex();
-    DSN_API void prepare_buffer_header();
-    DSN_API void release_buffer_header();
+    message_ex();
+    void prepare_buffer_header();
+    void release_buffer_header();
 
 private:
     static std::atomic<uint64_t> _id;
@@ -231,9 +237,6 @@ private:
     int _rw_offset;     // current buffer offset
     bool _rw_committed; // mark if it is in middle state of reading/writing
     bool _is_read;      // is for read(recv) or write(send)
-
-public:
-    static uint32_t s_local_hash; // used by fast_rpc_name
 };
 typedef dsn::ref_ptr<message_ex> message_ptr;
 

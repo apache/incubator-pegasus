@@ -35,7 +35,6 @@
 
 #pragma once
 
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
@@ -45,7 +44,7 @@
 #include "utils/threadpool_code.h"
 #include "runtime/task/task_code.h"
 #include "common/gpid.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "common/gpid.h"
 #include "utils/factory_store.h"
 #include <vector>
@@ -94,7 +93,7 @@ public:
     virtual error_code stop(bool cleanup = false) { return ERR_OK; }
     virtual void on_intercepted_request(gpid pid, bool is_write, dsn::message_ex *msg)
     {
-        dassert(false, "not supported");
+        CHECK(false, "not supported");
     }
 
     bool is_started() const { return _started; }

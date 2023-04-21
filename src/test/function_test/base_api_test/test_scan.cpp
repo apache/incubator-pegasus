@@ -17,25 +17,37 @@
  * under the License.
  */
 
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <map>
-#include <iostream>
-
-#include "client/replication_ddl_client.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include <unistd.h>
-#include "include/pegasus/client.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <string.h>
+#include <time.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
 #include "base/pegasus_const.h"
 #include "base/pegasus_utils.h"
-#include "test/function_test/utils/utils.h"
+#include "client/replication_ddl_client.h"
+#include "include/pegasus/client.h"
+#include "meta_admin_types.h"
+#include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
+#include "test/function_test/utils/utils.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
+#include "utils/synchronize.h"
 
 using namespace ::pegasus;
 
@@ -138,7 +150,7 @@ public:
         }
         // 1000 + 5000 + 5000 kvs
 
-        ddebug_f("Database filled with kv count {}.", i);
+        LOG_INFO("Database filled with kv count {}.", i);
     }
 
 protected:
@@ -176,7 +188,7 @@ TEST_F(scan_test, OVERALL_COUNT_ONLY)
                                            << client_->get_error_string(ret);
         delete scanner;
     }
-    ddebug_f("scan count {}", i);
+    LOG_INFO("scan count {}", i);
     int base_data_count = 0;
     for (auto &m : expect_kvs_) {
         base_data_count += m.second.size();

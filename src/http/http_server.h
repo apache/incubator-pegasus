@@ -19,10 +19,17 @@
 
 #pragma once
 
+#include <functional>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 
@@ -38,6 +45,7 @@ enum http_method
 };
 
 class message_ex;
+
 struct http_request
 {
     static error_with<http_request> parse(dsn::message_ex *m);
@@ -100,7 +108,31 @@ public:
 
     virtual std::string path() const = 0;
 
-    void register_handler(std::string path, http_callback cb, std::string help);
+    void register_handler(std::string sub_path, http_callback cb, std::string help);
+};
+
+class http_server_base : public http_service
+{
+public:
+    explicit http_server_base()
+    {
+        static std::once_flag flag;
+        std::call_once(flag, [&]() {
+            register_handler("updateConfig",
+                             std::bind(&http_server_base::update_config_handler,
+                                       this,
+                                       std::placeholders::_1,
+                                       std::placeholders::_2),
+                             "ip:port/updateConfig?<key>=<value>");
+        });
+    }
+
+    std::string path() const override { return ""; }
+
+protected:
+    void update_config_handler(const http_request &req, http_response &resp);
+
+    virtual void update_config(const std::string &name) {}
 };
 
 // Example:
@@ -128,4 +160,5 @@ inline bool is_http_message(dsn::task_code code)
 {
     return code == RPC_HTTP_SERVICE || code == RPC_HTTP_SERVICE_ACK;
 }
+
 } // namespace dsn

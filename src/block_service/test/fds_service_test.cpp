@@ -17,21 +17,39 @@
 
 #include "block_service/fds/fds_service.h"
 
+#include <errno.h>
 #include <fcntl.h>
-
-#include <array>
-#include <fstream>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <algorithm>
+#include <fstream> // IWYU pragma: keep
+#include <iostream>
 #include <memory>
 
 #include "block_service/block_service.h"
-#include "utils/fmt_logging.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/enum_helper.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
 #include "utils/rand.h"
+#include "utils/safe_strerror_posix.h"
+#include "utils/strings.h"
+#include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
 using namespace dsn;
 using namespace dsn::dist::block_service;
+
+DSN_DEFINE_uint64(fds_concurrent_test, min_size, 64, "");
+DSN_DEFINE_uint64(fds_concurrent_test, max_size, 64, "");
 
 static std::string example_server_address = "<server-address>";
 // please modify the the paras below to enable fds_service_test, default fds_service_test will be
@@ -64,7 +82,7 @@ static void file_eq_compare(const std::string &fname1, const std::string &fname2
         int up_to_bytes = length < (l - i) ? length : (l - i);
         ifile1.read(buf1, up_to_bytes);
         ifile2.read(buf2, up_to_bytes);
-        ASSERT_TRUE(memcmp(buf1, buf2, up_to_bytes) == 0);
+        ASSERT_TRUE(dsn::utils::mequals(buf1, buf2, up_to_bytes));
     }
 }
 
@@ -102,7 +120,7 @@ void FDSClientTest::SetUp()
         fclose(fp);
 
         std::stringstream ss;
-        dcheck_eq(utils::pipe_execute((std::string("md5sum ") + f1.filename).c_str(), ss), 0);
+        CHECK_EQ(utils::pipe_execute((std::string("md5sum ") + f1.filename).c_str(), ss), 0);
         ss >> f1.md5;
         // well, the string of each line in _test_file is 32
         f1.length = 32 * lines;
@@ -118,7 +136,7 @@ void FDSClientTest::SetUp()
         fclose(fp);
 
         std::stringstream ss;
-        dcheck_eq(utils::pipe_execute((std::string("md5sum ") + f2.filename).c_str(), ss), 0);
+        CHECK_EQ(utils::pipe_execute((std::string("md5sum ") + f2.filename).c_str(), ss), 0);
         ss >> f2.md5;
         // well, the string of each line in _test_file is 32
         f2.length = 32 * lines;
@@ -506,7 +524,7 @@ TEST_F(FDSClientTest, test_basic_operation)
 
         ASSERT_EQ(dsn::ERR_OK, r_resp.err);
         ASSERT_EQ(length, r_resp.buffer.length());
-        ASSERT_EQ(0, memcmp(r_resp.buffer.data(), test_buffer, length));
+        ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer, length));
 
         // partitial read
         cf_resp.file_handle
@@ -518,7 +536,7 @@ TEST_F(FDSClientTest, test_basic_operation)
 
         ASSERT_EQ(dsn::ERR_OK, r_resp.err);
         ASSERT_EQ(10, r_resp.buffer.length());
-        ASSERT_EQ(0, memcmp(r_resp.buffer.data(), test_buffer + 5, 10));
+        ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer + 5, 10));
     }
 
     // then test remove path
@@ -634,8 +652,8 @@ TEST_F(FDSClientTest, test_basic_operation)
 static void
 generate_file(const char *filename, unsigned long long file_size, char *block, unsigned block_size)
 {
-    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-    ASSERT_TRUE(fd > 0) << strerror(errno) << std::endl;
+    int fd = ::open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+    ASSERT_GT(fd, 0) << utils::safe_strerror(errno);
     for (unsigned long long i = 0; i < file_size;) {
         int batch_size = (file_size - i);
         if (batch_size > block_size)
@@ -645,9 +663,11 @@ generate_file(const char *filename, unsigned long long file_size, char *block, u
         for (int j = 0; j < batch_size; ++j) {
             block[j] = (char)rand::next_u32(0, 255);
         }
-        write(fd, block, batch_size);
+        ASSERT_EQ(batch_size, ::write(fd, block, batch_size))
+            << "write file " << filename << " failed, err = " << utils::safe_strerror(errno);
     }
-    close(fd);
+    ASSERT_EQ(0, ::close(fd)) << "close file " << filename
+                              << " failed, err = " << utils::safe_strerror(errno);
 }
 
 TEST_F(FDSClientTest, test_concurrent_upload_download)
@@ -668,9 +688,8 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
 
     _service->initialize(init_str);
 
-    int total_files = dsn_config_get_value_uint64("fds_concurrent_test", "total_files", 64, "");
-    unsigned long min_size = dsn_config_get_value_uint64("fds_concurrent_test", "min_size", 64, "");
-    unsigned long max_size = dsn_config_get_value_uint64("fds_concurrent_test", "min_size", 64, "");
+    DSN_DEFINE_int32(fds_concurrent_test, total_files, 64, "");
+    int total_files = FLAGS_total_files;
 
     std::vector<std::string> filenames;
     filenames.reserve(total_files);
@@ -682,7 +701,7 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
     for (int i = 0; i < total_files; ++i) {
         char index[64];
         snprintf(index, 64, "%04d", i);
-        unsigned long random_size = rand::next_u64(min_size, max_size);
+        unsigned long random_size = rand::next_u64(FLAGS_min_size, FLAGS_max_size);
         std::string filename = "randomfile" + std::string(index);
         filenames.push_back(filename);
         filesize.push_back(random_size);

@@ -33,11 +33,16 @@
  */
 #pragma once
 
-#include "utils/thread_access_checker.h"
-#include "utils/distributed_lock_service.h"
+#include <stdint.h>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "lock_types.h"
+#include "runtime/task/future_types.h"
+#include "utils/autoref_ptr.h"
+#include "utils/distributed_lock_service.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace dist {

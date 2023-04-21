@@ -33,6 +33,9 @@
 /// A fail point implementation in C++.
 /// This lib is ported from https://github.com/pingcap/fail-rs.
 
+#include <string>
+
+#include "utils/ports.h"
 #include "utils/string_view.h"
 
 /// The only entry to define a fail point with `return` function: lambda function must be

@@ -17,8 +17,12 @@
 
 #include "builtin_counters.h"
 
-#include "utils/utils.h"
-#include "utils/api_utilities.h"
+#include <stdint.h>
+
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
 
 namespace dsn {
 
@@ -47,6 +51,7 @@ void builtin_counters::update_counters()
     uint64_t memused_res = (uint64_t)resident_set / 1024;
     _memused_virt->set(memused_virt);
     _memused_res->set(memused_res);
-    ddebug("memused_virt = %" PRIu64 " MB, memused_res = %" PRIu64 "MB", memused_virt, memused_res);
+    LOG_INFO("memused_virt = {} MB, memused_res = {} MB", memused_virt, memused_res);
 }
-}
+
+} // namespace dsn

@@ -17,13 +17,16 @@
 
 #include "utils/alloc.h"
 
+// The check for the definition of CACHELINE_SIZE has to be put after including "utils/alloc.h",
+// where CACHELINE_SIZE is defined in "utils/ports.h".
+#ifdef CACHELINE_SIZE
+
 #include <cstdlib>
 
+#include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 
 namespace dsn {
-
-#ifdef CACHELINE_SIZE
 
 /* extern */ void *cacheline_aligned_alloc(size_t size)
 {
@@ -42,13 +45,13 @@ namespace dsn {
     // [ENOMEM]
     //     There is insufficient memory available with the requested alignment.
     // Thus making an assertion here is enough.
-    dassert_f(err == 0, "error calling posix_memalign: {}", utils::safe_strerror(err).c_str());
+    CHECK_EQ_MSG(err, 0, "error calling posix_memalign: {}", utils::safe_strerror(err));
 
     return buffer;
 }
 
 /* extern */ void cacheline_aligned_free(void *mem_block) { free(mem_block); }
 
-#endif
-
 } // namespace dsn
+
+#endif // CACHELINE_SIZE

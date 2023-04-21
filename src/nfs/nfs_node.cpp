@@ -24,17 +24,20 @@
  * THE SOFTWARE.
  */
 
-#include "utils/smart_pointers.h"
-#include "runtime/task/async_calls.h"
-#include "nfs/nfs_node.h"
+#include <algorithm>
+#include <utility>
 
+#include "aio/file_io.h"
+#include "nfs/nfs_node.h"
 #include "nfs_node_simple.h"
+#include "utils/autoref_ptr.h"
 
 namespace dsn {
+class task_tracker;
 
 std::unique_ptr<nfs_node> nfs_node::create()
 {
-    return dsn::make_unique<dsn::service::nfs_node_simple>();
+    return std::make_unique<dsn::service::nfs_node_simple>();
 }
 
 aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,
@@ -42,6 +45,7 @@ aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,
                                              const std::string &source_dir,
                                              const std::string &dest_disk_tag,
                                              const std::string &dest_dir,
+                                             const dsn::gpid &pid,
                                              bool overwrite,
                                              bool high_priority,
                                              task_code callback_code,
@@ -55,6 +59,7 @@ aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,
                              {},
                              dest_disk_tag,
                              dest_dir,
+                             pid,
                              overwrite,
                              high_priority,
                              callback_code,
@@ -69,6 +74,7 @@ aio_task_ptr nfs_node::copy_remote_files(const rpc_address &remote,
                                          const std::vector<std::string> &files,
                                          const std::string &dest_disk_tag,
                                          const std::string &dest_dir,
+                                         const dsn::gpid &pid,
                                          bool overwrite,
                                          bool high_priority,
                                          task_code callback_code,
@@ -85,6 +91,7 @@ aio_task_ptr nfs_node::copy_remote_files(const rpc_address &remote,
     rci->files = files;
     rci->dest_disk_tag = dest_disk_tag;
     rci->dest_dir = dest_dir;
+    rci->pid = pid;
     rci->overwrite = overwrite;
     rci->high_priority = high_priority;
     call(rci, cb);

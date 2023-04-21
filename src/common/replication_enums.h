@@ -27,6 +27,11 @@
 #pragma once
 
 #include "utils/enum_helper.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "metadata_types.h"
+#include "consensus_types.h"
+#include "meta_admin_types.h"
+#include "replica_admin_types.h"
 
 namespace dsn {
 ENUM_BEGIN2(app_status::type, app_status, app_status::AS_INVALID)

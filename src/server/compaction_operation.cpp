@@ -17,9 +17,13 @@
  * under the License.
  */
 
+#include <cstdint>
+
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
 #include "compaction_operation.h"
+#include "server/compaction_filter_rule.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace server {
@@ -97,7 +101,7 @@ bool update_ttl::filter(dsn::string_view hash_key,
         new_ts = value - pegasus::utils::epoch_begin;
         break;
     default:
-        ddebug("invalid update ttl operation type");
+        LOG_INFO("invalid update ttl operation type");
         return false;
     }
 
@@ -160,7 +164,7 @@ compaction_operations create_compaction_operations(const std::string &json, uint
     internal::json_helper compaction;
     if (!dsn::json::json_forwarder<internal::json_helper>::decode(
             dsn::blob::create_from_bytes(json.data(), json.size()), compaction)) {
-        ddebug("invalid user specified compaction format");
+        LOG_INFO("invalid user specified compaction format");
         return res;
     }
 

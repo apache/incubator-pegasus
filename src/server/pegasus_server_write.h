@@ -19,26 +19,40 @@
 
 #pragma once
 
-#include "replica/replica_base.h"
+#include <stdint.h>
+#include <functional>
+#include <map>
+#include <memory>
+#include <vector>
 
 #include "base/pegasus_rpc_types.h"
 #include "pegasus_write_service.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/replica_base.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/task/task_code.h"
+
+namespace dsn {
+class blob;
+class message_ex;
+} // namespace dsn
 
 namespace pegasus {
 namespace server {
+class pegasus_server_impl;
 
 /// This class implements the interface of `pegasus_sever_impl::on_batched_write_requests`.
 class pegasus_server_write : public dsn::replication::replica_base
 {
 public:
-    pegasus_server_write(pegasus_server_impl *server, bool verbose_log);
+    pegasus_server_write(pegasus_server_impl *server);
 
     /// \return error code returned by rocksdb, i.e rocksdb::Status::code.
     /// **NOTE**
     /// Error returned is regarded as the failure of replica, thus will trigger
     /// cluster membership changes. Make sure no error is returned because of
     /// invalid user argument.
-    /// As long as the returned error is 0, the operation is guaranteed to be
+    /// As long as the returned error is rocksdb::Status::kOk, the operation is guaranteed to be
     /// successfully applied into rocksdb, which means an empty_put will be called
     /// even if there's no write.
     int on_batched_write_requests(dsn::message_ex **requests,
@@ -84,8 +98,6 @@ private:
 
     db_write_context _write_ctx;
     int64_t _decree;
-
-    const bool _verbose_log;
 
     typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
     non_batch_writes_map _non_batch_write_handlers;

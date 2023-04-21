@@ -19,12 +19,12 @@
 
 #pragma once
 
-#include <rocksdb/slice_transform.h>
 #include <rocksdb/slice.h>
+#include <rocksdb/slice_transform.h>
+#include <stdint.h>
 
-#include "utils/api_utilities.h"
-#include "utils/blob.h"
 #include "utils/endians.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace server {
@@ -48,8 +48,8 @@ public:
 
         // hash_key_len is in big endian
         uint16_t hash_key_len = dsn::endian::ntoh(*(uint16_t *)(src.data()));
-        dassert(src.size() >= 2 + hash_key_len,
-                "key length must be no less than (2 + hash_key_len)");
+        CHECK_GE_MSG(
+            src.size(), 2 + hash_key_len, "key length must be no less than (2 + hash_key_len)");
         return rocksdb::Slice(src.data(), 2 + hash_key_len);
     }
 

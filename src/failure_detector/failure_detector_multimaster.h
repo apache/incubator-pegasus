@@ -26,12 +26,21 @@
 
 #pragma once
 
-#include "runtime/rpc/group_address.h"
-#include "utils/zlocks.h"
-#include "failure_detector/failure_detector.h"
 #include <functional>
+#include <vector>
+
+#include "failure_detector/failure_detector.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class error_code;
+namespace fd {
+class beacon_ack;
+} // namespace fd
+
 namespace dist {
 
 class slave_failure_detector_with_multimaster : public dsn::fd::failure_detector
@@ -51,11 +60,11 @@ public:
     // server side
     void on_worker_disconnected(const std::vector<::dsn::rpc_address> &nodes) override
     {
-        dassert(false, "invalid execution flow");
+        CHECK(false, "invalid execution flow");
     }
     void on_worker_connected(::dsn::rpc_address node) override
     {
-        dassert(false, "invalid execution flow");
+        CHECK(false, "invalid execution flow");
     }
 
     ::dsn::rpc_address current_server_contact() const;

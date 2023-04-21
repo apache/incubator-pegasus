@@ -15,16 +15,48 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fmt_logging.h"
-#include "common/replica_envs.h"
-#include "utils/fail_point.h"
+#include <string.h>
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
-#include "meta_test_base.h"
-#include "meta_service_test_app.h"
+#include "bulk_load_types.h"
+#include "common/bulk_load_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
+#include "meta/meta_options.h"
 #include "meta/meta_server_failure_detector.h"
+#include "meta/meta_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
+#include "meta_service_test_app.h"
+#include "meta_test_base.h"
+#include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -37,7 +69,7 @@ public:
 
     start_bulk_load_response start_bulk_load(const std::string &app_name)
     {
-        auto request = dsn::make_unique<start_bulk_load_request>();
+        auto request = std::make_unique<start_bulk_load_request>();
         request->app_name = app_name;
         request->cluster_name = CLUSTER;
         request->file_provider_type = PROVIDER;
@@ -80,7 +112,7 @@ public:
     {
         bulk_svc()._app_bulk_load_info[app_id].status = app_status;
 
-        auto request = dsn::make_unique<control_bulk_load_request>();
+        auto request = std::make_unique<control_bulk_load_request>();
         request->app_name = APP_NAME;
         request->type = type;
 
@@ -92,7 +124,7 @@ public:
 
     error_code query_bulk_load(const std::string &app_name)
     {
-        auto request = dsn::make_unique<query_bulk_load_request>();
+        auto request = std::make_unique<query_bulk_load_request>();
         request->app_name = app_name;
 
         query_bulk_load_rpc rpc(std::move(request), RPC_CM_QUERY_BULK_LOAD_STATUS);
@@ -106,7 +138,7 @@ public:
     {
         bulk_svc()._app_bulk_load_info[app_id].status = app_status;
 
-        auto request = dsn::make_unique<clear_bulk_load_state_request>();
+        auto request = std::make_unique<clear_bulk_load_state_request>();
         request->app_name = app_name;
 
         clear_bulk_load_rpc rpc(std::move(request), RPC_CM_CLEAR_BULK_LOAD);
@@ -134,7 +166,7 @@ public:
 
     void mock_partition_bulk_load(const std::string &app_name, const gpid &pid)
     {
-        ddebug_f("mock function, app({}), pid({})", app_name, pid);
+        LOG_INFO("mock function, app({}), pid({})", app_name, pid);
     }
 
     gpid before_check_partition_status(bulk_load_status::type status)
@@ -313,7 +345,7 @@ public:
         _ms.reset(meta_svc);
 
         // initialize bulk load service
-        _ms->_bulk_load_svc = make_unique<bulk_load_service>(
+        _ms->_bulk_load_svc = std::make_unique<bulk_load_service>(
             _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
         mock_bulk_load_on_remote_storage(
             app_id_set, app_bulk_load_info_map, partition_bulk_load_info_map);
@@ -373,7 +405,7 @@ public:
             std::move(app_path),
             std::move(value),
             [this, app_path, &ainfo, &partition_bulk_load_info_map]() {
-                ddebug_f("create app({}) app_id={} bulk load dir({}), bulk_load_status={}",
+                LOG_INFO("create app({}) app_id={} bulk load dir({}), bulk_load_status={}",
                          ainfo.app_name,
                          ainfo.app_id,
                          app_path,
@@ -392,7 +424,7 @@ public:
         blob value = json::json_forwarder<partition_bulk_load_info>::encode(pinfo);
         _ms->get_meta_storage()->create_node(
             std::move(partition_path), std::move(value), [partition_path, pid, &pinfo]() {
-                ddebug_f("create partition[{}] bulk load dir({}), bulk_load_status={}",
+                LOG_INFO("create partition[{}] bulk load dir({}), bulk_load_status={}",
                          pid,
                          partition_path,
                          dsn::enum_to_string(pinfo.status));
@@ -407,7 +439,7 @@ public:
 
         _ms->get_meta_storage()->create_node(
             std::move(path), blob(lock_state, 0, strlen(lock_state)), [this]() {
-                ddebug_f("create app root {}", _app_root);
+                LOG_INFO("create app root {}", _app_root);
             });
         wait_all();
 
@@ -416,7 +448,7 @@ public:
             _app_root + "/" + boost::lexical_cast<std::string>(info.app_id),
             std::move(value),
             [this, &info]() {
-                ddebug_f("create app({}) app_id={}, dir succeed", info.app_name, info.app_id);
+                LOG_INFO("create app({}) app_id={}, dir succeed", info.app_name, info.app_id);
                 for (int i = 0; i < info.partition_count; ++i) {
                     partition_configuration config;
                     config.max_replica_count = 3;
@@ -428,7 +460,7 @@ public:
                             boost::lexical_cast<std::string>(i),
                         std::move(v),
                         [info, i]() {
-                            ddebug_f("create app({}), partition({}.{}) dir succeed",
+                            LOG_INFO("create app({}), partition({}.{}) dir succeed",
                                      info.app_name,
                                      info.app_id,
                                      i);

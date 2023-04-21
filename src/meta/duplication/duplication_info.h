@@ -17,28 +17,31 @@
 
 #pragma once
 
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
-#include "common/replication_other_types.h"
+#include <fmt/core.h>
+#include <algorithm>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "common//duplication_common.h"
 #include "common/json_helper.h"
-#include "utils/zlocks.h"
+#include "common/replication_other_types.h"
+#include "duplication_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-
-#include <utility>
-#include <fmt/format.h>
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
 
 class app_state;
-
 class duplication_info;
+
 using duplication_info_s_ptr = std::shared_ptr<duplication_info>;
 
 /// This class is thread-safe.
@@ -62,7 +65,8 @@ public:
           follower_cluster_name(std::move(follower_cluster_name)),
           follower_cluster_metas(std::move(follower_cluster_metas)),
           store_path(std::move(meta_store_path)),
-          create_timestamp_ms(create_now_ms)
+          create_timestamp_ms(create_now_ms),
+          prefix_for_log(fmt::format("a{}d{}", app_id, id))
     {
         for (int i = 0; i < partition_count; i++) {
             _progress[i] = {};
@@ -74,10 +78,10 @@ public:
         if (is_duplicating_checkpoint) {
             return alter_status(duplication_status::DS_PREPARE);
         }
-        dwarn_f("you now create duplication[{}[{}.{}]] without duplicating checkpoint",
-                id,
-                follower_cluster_name,
-                app_name);
+        LOG_WARNING("you now create duplication[{}[{}.{}]] without duplicating checkpoint",
+                    id,
+                    follower_cluster_name,
+                    app_name);
         return alter_status(duplication_status::DS_LOG);
     }
 
@@ -168,7 +172,7 @@ public:
                             return item.second.checkpoint_prepared;
                         });
         if (!completed) {
-            dwarn_f("replica checkpoint still running: {}/{}", prepared, _progress.size());
+            LOG_WARNING("replica checkpoint still running: {}/{}", prepared, _progress.size());
         }
         return completed;
     }
@@ -184,6 +188,8 @@ public:
 
     // To json encoded string.
     std::string to_string() const;
+
+    const char *log_prefix() const { return prefix_for_log.c_str(); }
 
 private:
     friend class duplication_info_test;
@@ -237,6 +243,7 @@ public:
     const std::vector<rpc_address> follower_cluster_metas;
     const std::string store_path; // store path on meta service = get_duplication_path(app, dupid)
     const uint64_t create_timestamp_ms{0}; // the time when this dup is created.
+    const std::string prefix_for_log;
 };
 
 extern void json_encode(dsn::json::JsonWriter &out, const duplication_status::type &s);
@@ -246,18 +253,6 @@ extern bool json_decode(const dsn::json::JsonObject &in, duplication_status::typ
 extern void json_encode(dsn::json::JsonWriter &out, const duplication_fail_mode::type &s);
 
 extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::type &s);
-
-// Macros for writing log message prefixed by appid and dupid.
-#define ddebug_dup(_dup_, ...)                                                                     \
-    ddebug_f("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
-#define dwarn_dup(_dup_, ...)                                                                      \
-    dwarn_f("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
-#define derror_dup(_dup_, ...)                                                                     \
-    derror_f("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
-#define dfatal_dup(_dup_, ...)                                                                     \
-    dfatal_f("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
-#define dassert_dup(_pred_, _dup_, ...)                                                            \
-    dassert_f(_pred_, "[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 
 } // namespace replication
 } // namespace dsn

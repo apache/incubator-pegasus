@@ -28,9 +28,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "utils/fail_point_impl.h"
-
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+
+#include "utils/fail_point.h"
+#include "utils/fail_point_impl.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace fail {

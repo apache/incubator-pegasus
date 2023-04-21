@@ -47,6 +47,9 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
+    PocoCrypto
+    PocoUtil
+    PocoXML
     hashtable
     )
 

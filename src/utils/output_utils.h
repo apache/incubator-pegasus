@@ -17,20 +17,21 @@
 
 #pragma once
 
-#include <cmath>
+// IWYU pragma: no_include <bits/std_abs.h>
+#include <rapidjson/ostreamwrapper.h>
+#include <stdlib.h>
+#include <cmath> // IWYU pragma: keep
 #include <iomanip>
-#include <iostream>
-#include <sstream>
+// IWYU pragma: no_include <new>
+#include <sstream> // IWYU pragma: keep
 #include <string>
+#include <utility>
 #include <vector>
-
-#include "common/json_helper.h"
 
 namespace dsn {
 namespace utils {
 
 class table_printer;
-class multi_table_printer;
 
 // Keep the same code style with dsn/cpp/json_helper.h
 template <typename Writer>

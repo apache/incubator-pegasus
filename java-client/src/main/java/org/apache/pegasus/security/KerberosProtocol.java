@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -33,6 +34,7 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pegasus.operator.negotiation_operator;
 import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.slf4j.Logger;
@@ -53,7 +55,17 @@ class KerberosProtocol implements AuthProtocol {
   private String keyTab;
   private String principal;
   final int CHECK_TGT_INTEVAL_SECONDS = 10;
-  final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+  final ScheduledExecutorService service =
+      Executors.newSingleThreadScheduledExecutor(
+          new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+              Thread t = new Thread(r);
+              t.setDaemon(true);
+              t.setName("TGT renew for pegasus");
+              return t;
+            }
+          });
 
   KerberosProtocol(String serviceName, String serviceFqdn, String keyTab, String principal)
       throws IllegalArgumentException {
@@ -161,19 +173,23 @@ class KerberosProtocol implements AuthProtocol {
       @Override
       public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
         Map<String, String> options = new HashMap<>();
-        // TGT is obtained from the ticket cache.
-        options.put("useTicketCache", "true");
-        // get the principal's key from the the keytab
-        options.put("useKeyTab", "true");
-        // renew the TGT
-        options.put("renewTGT", "true");
-        // keytab or the principal's key to be stored in the Subject's private credentials.
-        options.put("storeKey", "true");
-        // the file name of the keytab to get principal's secret key.
-        options.put("keyTab", keyTab);
+        if (StringUtils.isBlank(keyTab)) {
+          // TGT is obtained from the ticket cache.
+          options.put("useTicketCache", "true");
+          // renew the TGT
+          options.put("renewTGT", "true");
+        } else {
+          // get the principal's key from the the keytab
+          options.put("useKeyTab", "true");
+          // keytab or the principal's key to be stored in the Subject's private credentials.
+          options.put("storeKey", "true");
+          // the file name of the keytab to get principal's secret key.
+          options.put("keyTab", keyTab);
+        }
         // the name of the principal that should be used
         options.put("principal", principal);
-
+        // try to debug kerberos
+        options.put("debug", System.getProperty("sun.security.krb5.debug", "false"));
         return new AppConfigurationEntry[] {
           new AppConfigurationEntry(
               "com.sun.security.auth.module.Krb5LoginModule",

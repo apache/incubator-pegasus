@@ -19,7 +19,18 @@
 
 #include "pegasus_client_factory_impl.h"
 
+#include <stdio.h>
+#include <utility>
+
+#include "client_lib/pegasus_client_impl.h"
+#include "runtime/app_model.h"
+#include "runtime/tool_api.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
+
 namespace pegasus {
+class pegasus_client;
+
 namespace client {
 
 std::unordered_map<std::string, pegasus_client_factory_impl::app_to_client_map>
@@ -30,10 +41,10 @@ bool pegasus_client_factory_impl::initialize(const char *config_file)
 {
     bool is_initialized = ::dsn::tools::is_engine_ready();
     if (config_file == nullptr) {
-        dassert(is_initialized, "rdsn engine not started, please specify a valid config file");
+        CHECK(is_initialized, "rdsn engine not started, please specify a valid config file");
     } else {
         if (is_initialized) {
-            dwarn("rdsn engine already started, ignore the config file '%s'", config_file);
+            LOG_WARNING("rdsn engine already started, ignore the config file '{}'", config_file);
         } else {
             // use config file to run
             char exe[] = "client";
@@ -52,11 +63,11 @@ pegasus_client *pegasus_client_factory_impl::get_client(const char *cluster_name
                                                         const char *app_name)
 {
     if (cluster_name == nullptr || cluster_name[0] == '\0') {
-        derror("invalid parameter 'cluster_name'");
+        LOG_ERROR("invalid parameter 'cluster_name'");
         return nullptr;
     }
     if (app_name == nullptr || app_name[0] == '\0') {
-        derror("invalid parameter 'app_name'");
+        LOG_ERROR("invalid parameter 'app_name'");
         return nullptr;
     }
 

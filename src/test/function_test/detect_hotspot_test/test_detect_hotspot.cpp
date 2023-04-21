@@ -17,22 +17,26 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
 #include "client/replication_ddl_client.h"
-#include "utils/filesystem.h"
-
+#include "common/gpid.h"
 #include "include/pegasus/client.h"
 #include "include/pegasus/error.h"
-
-#include "base/pegasus_const.h"
-#include "test/function_test/utils/utils.h"
+#include "replica_admin_types.h"
+#include "runtime/api_layer1.h"
 #include "test/function_test/utils/test_util.h"
+#include "test/function_test/utils/utils.h"
+#include "utils/error_code.h"
+#include "utils/utils.h"
 
 using namespace ::dsn;
 using namespace pegasus;

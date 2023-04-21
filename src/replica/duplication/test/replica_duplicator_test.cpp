@@ -15,12 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/filesystem.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
 
-#include "replica/mutation_log_utils.h"
-#include "replica/duplication/load_from_private_log.h"
-#include "replica/duplication/duplication_pipeline.h"
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
 #include "duplication_test_base.h"
+#include "duplication_types.h"
+#include "metadata_types.h"
+#include "replica/duplication/duplication_pipeline.h"
+#include "replica/duplication/mutation_duplicator.h"
+#include "replica/duplication/replica_duplicator.h"
+#include "replica/mutation_log.h"
+#include "replica/test/mock_utils.h"
+#include "runtime/pipeline.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace apps {
@@ -65,7 +84,7 @@ public:
         dup_ent.status = status;
         dup_ent.progress[_replica->get_gpid().get_partition_index()] = confirmed_decree;
 
-        auto duplicator = make_unique<replica_duplicator>(dup_ent, _replica.get());
+        auto duplicator = std::make_unique<replica_duplicator>(dup_ent, _replica.get());
         ASSERT_EQ(duplicator->id(), dupid);
         ASSERT_EQ(duplicator->remote_cluster_name(), remote);
         ASSERT_EQ(duplicator->_status, status);

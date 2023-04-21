@@ -26,8 +26,15 @@
 
 #include "prepare_list.h"
 
-#include "utils/latency_tracer.h"
+#include <memory>
+#include <utility>
+
+#include "common/replication_enums.h"
+#include "consensus_types.h"
+#include "replica/mutation_cache.h"
+#include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
+#include "utils/latency_tracer.h"
 
 namespace dsn {
 namespace replication {
@@ -74,10 +81,9 @@ error_code prepare_list::prepare(mutation_ptr &mu,
                                  bool secondary_commit)
 {
     decree d = mu->data.header.decree;
-    dcheck_gt_replica(d, last_committed_decree());
+    CHECK_GT_PREFIX(d, last_committed_decree());
 
     ADD_POINT(mu->_tracer);
-    error_code err;
     switch (status) {
     case partition_status::PS_PRIMARY:
         // pop committed mutations if buffer is full or pop_all_committed_mutations = true
@@ -98,26 +104,25 @@ error_code prepare_list::prepare(mutation_ptr &mu,
                last_committed_decree() > min_decree()) {
             pop_min();
         }
-        err = mutation_cache::put(mu);
-        dassert_replica(err == ERR_OK, "mutation_cache::put failed, err = {}", err);
-        return err;
+        CHECK_EQ_PREFIX_MSG(mutation_cache::put(mu), ERR_OK, "mutation_cache::put failed");
+        return ERR_OK;
 
     //// delayed commit - only when capacity is an issue
     // case partition_status::PS_POTENTIAL_SECONDARY:
     //    while (true)
     //    {
-    //        err = mutation_cache::put(mu);
+    //        error_code err = mutation_cache::put(mu);
     //        if (err == ERR_CAPACITY_EXCEEDED)
     //        {
-    //            dassert(mu->data.header.last_committed_decree >= min_decree(), "");
+    //            CHECK_GE(mu->data.header.last_committed_decree, min_decree());
     //            commit (min_decree(), true);
     //            pop_min();
     //        }
     //        else
     //            break;
     //    }
-    //    dassert (err == ERR_OK, "");
-    //    return err;
+    //    CHECK_EQ(err, ERR_OK);
+    //    return ERR_OK;
 
     case partition_status::PS_INACTIVE: // only possible during init
         if (mu->data.header.last_committed_decree > max_decree()) {
@@ -130,13 +135,12 @@ error_code prepare_list::prepare(mutation_ptr &mu,
         while (d - min_decree() >= capacity() && last_committed_decree() > min_decree()) {
             pop_min();
         }
-        err = mutation_cache::put(mu);
-        dassert_replica(err == ERR_OK, "mutation_cache::put failed, err = {}", err);
-        return err;
+        CHECK_EQ_PREFIX_MSG(mutation_cache::put(mu), ERR_OK, "mutation_cache::put failed");
+        return ERR_OK;
 
     default:
-        dassert(false, "invalid partition_status, status = %s", enum_to_string(status));
-        return dsn::ERR_OK;
+        CHECK(false, "invalid partition_status, status = {}", enum_to_string(status));
+        return ERR_OK;
     }
 }
 
@@ -154,9 +158,9 @@ void prepare_list::commit(decree d, commit_type ct)
         for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++) {
             mutation_ptr mu = get_mutation_by_decree(d0);
 
-            dassert_replica(
+            CHECK_PREFIX_MSG(
                 mu != nullptr && mu->is_logged(), "mutation {} is missing in prepare list", d0);
-            dcheck_ge_replica(mu->data.header.ballot, last_bt);
+            CHECK_GE_PREFIX(mu->data.header.ballot, last_bt);
 
             _last_committed_decree++;
             last_bt = mu->data.header.ballot;
@@ -196,7 +200,7 @@ void prepare_list::commit(decree d, commit_type ct)
         return;
     }
     default:
-        dassert(false, "invalid commit type %d", (int)ct);
+        CHECK(false, "invalid commit type {}", ct);
     }
 
     return;

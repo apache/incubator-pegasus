@@ -16,13 +16,31 @@
 // under the License.
 
 #include "replica_duplicator.h"
-#include "load_from_private_log.h"
-#include "duplication_pipeline.h"
-#include "replica/replica_stub.h"
 
-#include "replica/replication_app_base.h"
-#include "utils/fmt_logging.h"
+#include <rapidjson/document.h>
+#include <rapidjson/encodings.h>
+#include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <algorithm>
+#include <cstdint>
+#include <map>
+#include <utility>
+
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "duplication_pipeline.h"
+#include "load_from_private_log.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/mutation_log.h"
+#include "replica/replica.h"
+#include "replica/replica_stub.h"
+#include "runtime/task/async_calls.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -45,10 +63,10 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
-    ddebug_replica("initialize replica_duplicator[{}] [dupid:{}, meta_confirmed_decree:{}]",
-                   duplication_status_to_string(_status),
-                   id(),
-                   it->second);
+    LOG_INFO_PREFIX("initialize replica_duplicator[{}] [dupid:{}, meta_confirmed_decree:{}]",
+                    duplication_status_to_string(_status),
+                    id(),
+                    it->second);
     thread_pool(LPC_REPLICATION_LOW).task_tracker(tracker()).thread_hash(get_gpid().thread_hash());
 
     if (_status == duplication_status::DS_PREPARE) {
@@ -60,11 +78,11 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
 void replica_duplicator::prepare_dup()
 {
-    ddebug_replica("start prepare checkpoint to catch up with latest durable decree: "
-                   "start_point_decree({}) < last_durable_decree({}) = {}",
-                   _start_point_decree,
-                   _replica->last_durable_decree(),
-                   _start_point_decree < _replica->last_durable_decree());
+    LOG_INFO_PREFIX("start prepare checkpoint to catch up with latest durable decree: "
+                    "start_point_decree({}) < last_durable_decree({}) = {}",
+                    _start_point_decree,
+                    _replica->last_durable_decree(),
+                    _start_point_decree < _replica->last_durable_decree());
 
     tasking::enqueue(
         LPC_REPLICATION_COMMON,
@@ -75,17 +93,17 @@ void replica_duplicator::prepare_dup()
 
 void replica_duplicator::start_dup_log()
 {
-    ddebug_replica("starting duplication {} [last_decree: {}, confirmed_decree: {}]",
-                   to_string(),
-                   _progress.last_decree,
-                   _progress.confirmed_decree);
+    LOG_INFO_PREFIX("starting duplication {} [last_decree: {}, confirmed_decree: {}]",
+                    to_string(),
+                    _progress.last_decree,
+                    _progress.confirmed_decree);
 
     /// ===== pipeline declaration ===== ///
 
     // load -> ship -> load
-    _ship = make_unique<ship_mutation>(this);
-    _load_private = make_unique<load_from_private_log>(_replica, this);
-    _load = make_unique<load_mutation>(this, _replica, _load_private.get());
+    _ship = std::make_unique<ship_mutation>(this);
+    _load_private = std::make_unique<load_from_private_log>(_replica, this);
+    _load = std::make_unique<load_mutation>(this, _replica, _load_private.get());
 
     from(*_load).link(*_ship).link(*_load);
     fork(*_load_private, LPC_REPLICATION_LONG_LOW, 0).link(*_ship);
@@ -95,7 +113,7 @@ void replica_duplicator::start_dup_log()
 
 void replica_duplicator::pause_dup_log()
 {
-    ddebug_replica("pausing duplication: {}", to_string());
+    LOG_INFO_PREFIX("pausing duplication: {}", to_string());
 
     pause();
     cancel_all();
@@ -104,7 +122,7 @@ void replica_duplicator::pause_dup_log()
     _ship.reset();
     _load_private.reset();
 
-    ddebug_replica("duplication paused: {}", to_string());
+    LOG_INFO_PREFIX("duplication paused: {}", to_string());
 }
 
 std::string replica_duplicator::to_string() const
@@ -131,8 +149,8 @@ std::string replica_duplicator::to_string() const
 void replica_duplicator::update_status_if_needed(duplication_status::type next_status)
 {
     if (is_duplication_status_invalid(next_status)) {
-        derror_replica("unexpected duplication status ({})",
-                       duplication_status_to_string(next_status));
+        LOG_ERROR_PREFIX("unexpected duplication status ({})",
+                         duplication_status_to_string(next_status));
         return;
     }
 
@@ -142,7 +160,7 @@ void replica_duplicator::update_status_if_needed(duplication_status::type next_s
         return;
     }
 
-    ddebug_replica(
+    LOG_INFO_PREFIX(
         "update duplication status: {}=>{}[start_point={}, last_commit={}, last_durable={}]",
         duplication_status_to_string(_status),
         duplication_status_to_string(next_status),
@@ -177,7 +195,7 @@ replica_duplicator::~replica_duplicator()
 {
     pause();
     cancel_all();
-    ddebug_replica("closing duplication {}", to_string());
+    LOG_INFO_PREFIX("closing duplication {}", to_string());
 }
 
 error_s replica_duplicator::update_progress(const duplication_progress &p)
@@ -215,13 +233,14 @@ void replica_duplicator::verify_start_decree(decree start_decree)
     decree confirmed_decree = progress().confirmed_decree;
     decree last_decree = progress().last_decree;
     decree max_gced_decree = get_max_gced_decree();
-    dassert_f(max_gced_decree < start_decree,
-              "the logs haven't yet duplicated were accidentally truncated "
-              "[max_gced_decree: {}, start_decree: {}, confirmed_decree: {}, last_decree: {}]",
-              max_gced_decree,
-              start_decree,
-              confirmed_decree,
-              last_decree);
+    CHECK_LT_MSG(max_gced_decree,
+                 start_decree,
+                 "the logs haven't yet duplicated were accidentally truncated "
+                 "[max_gced_decree: {}, start_decree: {}, confirmed_decree: {}, last_decree: {}]",
+                 max_gced_decree,
+                 start_decree,
+                 confirmed_decree,
+                 last_decree);
 }
 
 decree replica_duplicator::get_max_gced_decree() const

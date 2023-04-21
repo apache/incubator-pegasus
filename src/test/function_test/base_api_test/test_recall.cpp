@@ -17,27 +17,25 @@
  * under the License.
  */
 
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <climits>
-#include <map>
 #include <boost/lexical_cast.hpp>
-
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include <unistd.h>
-#include "include/pegasus/client.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
+#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-
-#include "base/pegasus_const.h"
-#include "test/function_test/utils/utils.h"
+#include "include/pegasus/client.h"
+#include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
+#include "test/function_test/utils/utils.h"
+#include "utils/error_code.h"
 
 using namespace dsn::replication;
 using namespace pegasus;

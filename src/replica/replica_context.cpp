@@ -33,15 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "utils/filesystem.h"
-#include "utils/utils.h"
+#include <algorithm>
+#include <atomic>
+#include <vector>
 
-#include "replica_context.h"
-#include "replica.h"
-#include "replica_stub.h"
+#include "bulk_load_types.h"
+#include "common/replication_enums.h"
 #include "mutation.h"
-#include "mutation_log.h"
-#include "block_service/block_service_manager.h"
+#include "replica.h"
+#include "replica_context.h"
+#include "replica_stub.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {
@@ -147,7 +149,7 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status::typ
     case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
     default:
-        dassert(false, "invalid partition_status, status = %s", enum_to_string(st));
+        CHECK(false, "invalid partition_status, status = {}", enum_to_string(st));
         return false;
     }
 }
@@ -182,7 +184,7 @@ bool primary_context::secondary_disk_space_insufficient() const
 {
     for (const auto &kv : secondary_disk_status) {
         if (kv.second == disk_status::SPACE_INSUFFICIENT) {
-            ddebug_f("partition[{}] secondary[{}] disk space is insufficient",
+            LOG_INFO("partition[{}] secondary[{}] disk space is insufficient",
                      membership.pid,
                      kv.first.to_string());
             return true;

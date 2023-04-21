@@ -26,12 +26,32 @@
 
 #pragma once
 
-#include "log_block.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <atomic>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
+#include "aio/aio_task.h"
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
+#include "runtime/api_task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
+class binary_reader;
+class binary_writer;
+class blob;
+class disk_file;
+class task_tracker;
+
 namespace replication {
+class log_appender;
+class log_block;
 
 // each log file has a log_file_header stored at the beginning of the first block's data content
 struct log_file_header
@@ -66,6 +86,7 @@ struct replica_log_info
 typedef std::unordered_map<gpid, replica_log_info> replica_log_info_map;
 
 class log_file;
+
 typedef dsn::ref_ptr<log_file> log_file_ptr;
 
 //
@@ -196,6 +217,7 @@ private:
     std::atomic<int64_t>
         _end_offset; // end offset in the global space: end_offset = start_offset + file_size
     class file_streamer;
+
     std::unique_ptr<file_streamer> _stream;
     disk_file *_handle;        // file handle
     const bool _is_read;       // if opened for read or write

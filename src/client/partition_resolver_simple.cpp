@@ -24,11 +24,26 @@
  * THE SOFTWARE.
  */
 
-#include "utils/fmt_logging.h"
-#include "utils/utils.h"
-#include "utils/rand.h"
-#include "runtime/task/async_calls.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
 #include "partition_resolver_simple.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/rand.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {
@@ -83,13 +98,13 @@ void partition_resolver_simple::on_access_failure(int partition_index, error_cod
 
     zauto_write_lock l(_config_lock);
     if (err == ERR_PARENT_PARTITION_MISUSED) {
-        ddebug_f("clear all partition configuration cache due to access failure {} at {}.{}",
+        LOG_INFO("clear all partition configuration cache due to access failure {} at {}.{}",
                  err,
                  _app_id,
                  partition_index);
         _app_partition_count = -1;
     } else {
-        ddebug_f("clear partition configuration cache {}.{} due to access failure {}",
+        LOG_INFO("clear partition configuration cache {}.{} due to access failure {}",
                  _app_id,
                  partition_index,
                  err);
@@ -105,7 +120,7 @@ partition_resolver_simple::~partition_resolver_simple()
 
 void partition_resolver_simple::clear_all_pending_requests()
 {
-    dinfo("%s.client: clear all pending tasks", _app_name.c_str());
+    LOG_DEBUG_PREFIX("clear all pending tasks");
     zauto_lock l(_requests_lock);
     // clear _pending_requests
     for (auto &pc : _pending_requests) {
@@ -230,17 +245,14 @@ DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
 
 task_ptr partition_resolver_simple::query_config(int partition_index, int timeout_ms)
 {
-    dinfo("%s.client: start query config, gpid = %d.%d, timeout_ms = %d",
-          _app_name.c_str(),
-          _app_id,
-          partition_index,
-          timeout_ms);
+    LOG_DEBUG_PREFIX(
+        "start query config, gpid = {}.{}, timeout_ms = {}", _app_id, partition_index, timeout_ms);
     task_spec *sp = task_spec::get(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     if (timeout_ms >= sp->rpc_timeout_milliseconds)
         timeout_ms = 0;
     auto msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, timeout_ms);
 
-    configuration_query_by_index_request req;
+    query_cfg_request req;
     req.app_name = _app_name;
     if (partition_index != -1) {
         req.partition_indices.push_back(partition_index);
@@ -264,24 +276,25 @@ void partition_resolver_simple::query_config_reply(error_code err,
     auto client_err = ERR_OK;
 
     if (err == ERR_OK) {
-        configuration_query_by_index_response resp;
+        query_cfg_response resp;
         unmarshall(response, resp);
         if (resp.err == ERR_OK) {
             zauto_write_lock l(_config_lock);
 
             if (_app_id != -1 && _app_id != resp.app_id) {
-                dwarn_f("app id is changed (mostly the app was removed and created with the same "
-                        "name), local Vs remote: {} vs {} ",
-                        _app_id,
-                        resp.app_id);
+                LOG_WARNING(
+                    "app id is changed (mostly the app was removed and created with the same "
+                    "name), local vs remote: {} vs {} ",
+                    _app_id,
+                    resp.app_id);
             }
             if (_app_partition_count != -1 && _app_partition_count != resp.partition_count &&
                 _app_partition_count * 2 != resp.partition_count &&
                 _app_partition_count != resp.partition_count * 2) {
-                dwarn_f("partition count is changed (mostly the app was removed and created with "
-                        "the same name), local Vs remote: %u vs %u ",
-                        _app_partition_count,
-                        resp.partition_count);
+                LOG_WARNING("partition count is changed (mostly the app was removed and created "
+                            "with the same name), local vs remote: {} vs {} ",
+                            _app_partition_count,
+                            resp.partition_count);
             }
             _app_id = resp.app_id;
             _app_partition_count = resp.partition_count;
@@ -290,13 +303,10 @@ void partition_resolver_simple::query_config_reply(error_code err,
             for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it) {
                 auto &new_config = *it;
 
-                dinfo("%s.client: query config reply, gpid = %d.%d, ballot = %" PRId64
-                      ", primary = %s",
-                      _app_name.c_str(),
-                      new_config.pid.get_app_id(),
-                      new_config.pid.get_partition_index(),
-                      new_config.ballot,
-                      new_config.primary.to_string());
+                LOG_DEBUG_PREFIX("query config reply, gpid = {}, ballot = {}, primary = {}",
+                                 new_config.pid,
+                                 new_config.ballot,
+                                 new_config.primary);
 
                 auto it2 = _config_cache.find(new_config.pid.get_partition_index());
                 if (it2 == _config_cache.end()) {
@@ -315,28 +325,19 @@ void partition_resolver_simple::query_config_reply(error_code err,
                 }
             }
         } else if (resp.err == ERR_OBJECT_NOT_FOUND) {
-            derror("%s.client: query config reply, gpid = %d.%d, err = %s",
-                   _app_name.c_str(),
-                   _app_id,
-                   partition_index,
-                   resp.err.to_string());
+            LOG_ERROR_PREFIX(
+                "query config reply, gpid = {}.{}, err = {}", _app_id, partition_index, resp.err);
 
             client_err = ERR_APP_NOT_EXIST;
         } else {
-            derror("%s.client: query config reply, gpid = %d.%d, err = %s",
-                   _app_name.c_str(),
-                   _app_id,
-                   partition_index,
-                   resp.err.to_string());
+            LOG_ERROR_PREFIX(
+                "query config reply, gpid = {}.{}, err = {}", _app_id, partition_index, resp.err);
 
             client_err = resp.err;
         }
     } else {
-        derror("%s.client: query config reply, gpid = %d.%d, err = %s",
-               _app_name.c_str(),
-               _app_id,
-               partition_index,
-               err.to_string());
+        LOG_ERROR_PREFIX(
+            "query config reply, gpid = {}.{}, err = {}", _app_id, partition_index, err);
     }
 
     // get specific or all partition update
@@ -370,7 +371,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
         if (!reqs2.empty()) {
             if (_app_partition_count != -1) {
                 for (auto &req : reqs2) {
-                    dcheck_eq(req->partition_index, -1);
+                    CHECK_EQ(req->partition_index, -1);
                     req->partition_index =
                         get_partition_index(_app_partition_count, req->partition_hash);
                 }

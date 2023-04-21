@@ -28,8 +28,13 @@ Python 3.8+
 
 pypegasus can be installed via pip as follows:
 
-`git clone https://github.com/apache/incubator-pegasus`
-`cd inclubator-pegasus/python-client && python3 setup.py install`
+```
+git clone https://github.com/apache/incubator-pegasus
+cd inclubator-pegasus/python-client
+thrift --gen py -out . ../idl/rrdb.thrift
+thrift --gen py -out . ../idl/dsn.layer2.thrift
+python3 setup.py install
+```
 
 Usage
 -----

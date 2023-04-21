@@ -26,15 +26,31 @@
 
 #pragma once
 
-#include "utils/synchronize.h"
-#include "runtime/task/task.h"
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "network.h"
-#include "runtime/global_config.h"
+#include "runtime/api_task.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 
-class service_node;
 class rpc_engine;
+class service_node;
+struct network_server_config;
+struct service_app_spec;
 
 #define MAX_CLIENT_PORT 1023
 
@@ -206,7 +222,7 @@ rpc_engine::call_address(rpc_address addr, message_ex *request, const rpc_respon
         call_group(addr, request, call);
         break;
     default:
-        dassert(false, "invalid target address type %d", (int)request->server_address.type());
+        CHECK(false, "invalid target address type {}", request->server_address.type());
         break;
     }
 }

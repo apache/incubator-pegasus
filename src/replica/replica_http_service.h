@@ -15,14 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "http/http_server.h"
+#include <functional>
+#include <string>
 
-#include "replica_stub.h"
+#include "http/http_server.h"
+#include "metadata_types.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
+class replica_stub;
 
-class replica_http_service : public http_service
+class replica_http_service : public http_server_base
 {
 public:
     explicit replica_http_service(replica_stub *stub) : _stub(stub)
@@ -65,12 +69,16 @@ public:
         case manual_compaction_status::FINISHED:
             return "finished";
         default:
-            dassert(false, "invalid status({})", status);
+            CHECK(false, "invalid status({})", status);
             __builtin_unreachable();
         }
     }
 
 private:
+    friend class replica_http_service_test;
+
+    void update_config(const std::string &name) override;
+
     replica_stub *_stub;
 };
 

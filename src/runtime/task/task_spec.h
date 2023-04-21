@@ -35,24 +35,25 @@
 
 #pragma once
 
-#include "utils/utils.h"
-#include "utils/config_helper.h"
-#include "utils/enum_helper.h"
-#include "utils/customizable_id.h"
-#include "utils/join_point.h"
-#include "utils/extensible_object.h"
-#include "utils/exp_delay.h"
-#include "utils/dlib.h"
-#include "perf_counter/perf_counter.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
+#include <stdint.h>
+#include <set>
+#include <string>
+#include <vector>
+
 #include "runtime/task/task_code.h"
-#include "common/gpid.h"
 #include "utils/api_utilities.h"
+#include "utils/config_api.h"
+#include "utils/config_helper.h"
+#include "utils/customizable_id.h"
+#include "utils/enum_helper.h"
+#include "utils/exp_delay.h"
+#include "utils/extensible_object.h"
+#include "utils/join_point.h"
+#include "utils/threadpool_code.h"
 
 ENUM_BEGIN(dsn_log_level_t, LOG_LEVEL_INVALID)
-ENUM_REG(LOG_LEVEL_INFORMATION)
 ENUM_REG(LOG_LEVEL_DEBUG)
+ENUM_REG(LOG_LEVEL_INFO)
 ENUM_REG(LOG_LEVEL_WARNING)
 ENUM_REG(LOG_LEVEL_ERROR)
 ENUM_REG(LOG_LEVEL_FATAL)
@@ -133,31 +134,30 @@ DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_TCP)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
 
-class task;
-class task_queue;
 class aio_task;
+class message_ex;
 class rpc_request_task;
 class rpc_response_task;
-class message_ex;
+class task;
 
 std::set<dsn::task_code> &get_storage_rpc_req_codes();
 
 class task_spec : public extensible_object<task_spec, 4>
 {
 public:
-    DSN_API static task_spec *get(int ec);
-    DSN_API static void register_task_code(dsn::task_code code,
+    static task_spec *get(int ec);
+    static void register_task_code(dsn::task_code code,
+                                   dsn_task_type_t type,
+                                   dsn_task_priority_t pri,
+                                   dsn::threadpool_code pool);
+
+    static void register_storage_task_code(dsn::task_code code,
                                            dsn_task_type_t type,
                                            dsn_task_priority_t pri,
-                                           dsn::threadpool_code pool);
-
-    DSN_API static void register_storage_task_code(dsn::task_code code,
-                                                   dsn_task_type_t type,
-                                                   dsn_task_priority_t pri,
-                                                   dsn::threadpool_code pool,
-                                                   bool is_write_operation,
-                                                   bool allow_batch,
-                                                   bool is_idempotent);
+                                           dsn::threadpool_code pool,
+                                           bool is_write_operation,
+                                           bool allow_batch,
+                                           bool is_idempotent);
 
 public:
     // not configurable [
@@ -231,15 +231,15 @@ public:
     /*@}*/
 
 public:
-    DSN_API task_spec(int code,
-                      const char *name,
-                      dsn_task_type_t type,
-                      dsn_task_priority_t pri,
-                      dsn::threadpool_code pool);
+    task_spec(int code,
+              const char *name,
+              dsn_task_type_t type,
+              dsn_task_priority_t pri,
+              dsn::threadpool_code pool);
 
 public:
-    DSN_API static bool init();
-    DSN_API void init_profiling(bool profile);
+    static bool init();
+    void init_profiling(bool profile);
 };
 
 CONFIG_BEGIN(task_spec)

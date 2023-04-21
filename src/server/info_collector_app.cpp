@@ -18,36 +18,25 @@
  */
 
 #include "info_collector_app.h"
+
+#include "http/http_server.h"
 #include "reporter/pegasus_counter_reporter.h"
-
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
-#include "common/replication_other_types.h"
-
-#include <iostream>
-#include <fstream>
-#include <iomanip>
+#include "server/available_detector.h"
+#include "server/info_collector.h"
+#include "utils/error_code.h"
 
 namespace pegasus {
 namespace server {
 
+class collector_http_service : public ::dsn::http_server_base
+{
+};
+
 info_collector_app::info_collector_app(const dsn::service_app_info *info)
     : service_app(info), _updater_started(false)
 {
+    register_http_service(new collector_http_service());
     dsn::start_http_server();
 }
 

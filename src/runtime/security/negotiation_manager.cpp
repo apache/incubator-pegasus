@@ -16,15 +16,27 @@
 // under the License.
 
 #include "negotiation_manager.h"
-#include "negotiation_utils.h"
-#include "server_negotiation.h"
-#include "client_negotiation.h"
 
-#include "utils/flags.h"
-#include "utils/zlocks.h"
+#include <utility>
+
+#include "client_negotiation.h"
 #include "failure_detector/fd.code.definition.h"
-#include "utils/fmt_logging.h"
+#include "fmt/core.h"
 #include "http/http_server.h"
+#include "negotiation_utils.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
+#include "security_types.h"
+#include "server_negotiation.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/ports.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace security {
@@ -56,8 +68,8 @@ void negotiation_manager::open_service()
 
 void negotiation_manager::on_negotiation_request(negotiation_rpc rpc)
 {
-    dassert(!rpc.dsn_request()->io_session->is_client(),
-            "only server session receives negotiation request");
+    CHECK(!rpc.dsn_request()->io_session->is_client(),
+          "only server session receives negotiation request");
 
     // reply SASL_AUTH_DISABLE if auth is not enable
     if (!security::FLAGS_enable_auth) {
@@ -74,8 +86,8 @@ void negotiation_manager::on_negotiation_request(negotiation_rpc rpc)
 
 void negotiation_manager::on_negotiation_response(error_code err, negotiation_rpc rpc)
 {
-    dassert(rpc.dsn_request()->io_session->is_client(),
-            "only client session receives negotiation response");
+    CHECK(rpc.dsn_request()->io_session->is_client(),
+          "only client session receives negotiation response");
 
     std::shared_ptr<negotiation> nego = get_negotiation(rpc);
     if (nullptr != nego) {
@@ -132,7 +144,7 @@ std::shared_ptr<negotiation> negotiation_manager::get_negotiation(negotiation_rp
     utils::auto_read_lock l(_lock);
     auto it = _negotiations.find(rpc.dsn_request()->io_session);
     if (it == _negotiations.end()) {
-        ddebug_f("negotiation was removed for msg: {}, {}",
+        LOG_INFO("negotiation was removed for msg: {}, {}",
                  rpc.dsn_request()->rpc_code().to_string(),
                  rpc.remote_address().to_string());
         return nullptr;

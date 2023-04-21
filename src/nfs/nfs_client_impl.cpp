@@ -26,23 +26,32 @@
 
 #include "nfs_client_impl.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fcntl.h>
+#include <mutex>
 
-#include <queue>
-
-#include "utils/filesystem.h"
+#include "nfs/nfs_code_definition.h"
+#include "nfs/nfs_node.h"
+#include "perf_counter/perf_counter.h"
+#include "utils/blob.h"
 #include "utils/command_manager.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/string_conv.h"
+#include "utils/token_buckets.h"
 
 namespace dsn {
 namespace service {
 static uint32_t current_max_copy_rate_megabytes = 0;
 
-DSN_DEFINE_uint32("nfs",
+DSN_DEFINE_uint32(nfs,
                   nfs_copy_block_bytes,
                   4 * 1024 * 1024,
                   "max block size (bytes) for each network copy");
 DSN_DEFINE_uint32(
-    "nfs",
+    nfs,
     max_copy_rate_megabytes_per_disk,
     0,
     "max rate per disk of copying from remote node(MB/s), zero means disable rate limiter");
@@ -54,34 +63,31 @@ DSN_DEFINE_group_validator(max_copy_rate_megabytes_per_disk, [](std::string &mes
            (FLAGS_max_copy_rate_megabytes_per_disk << 20) > FLAGS_nfs_copy_block_bytes;
 });
 
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs,
                  max_concurrent_remote_copy_requests,
                  50,
                  "max concurrent remote copy to the same server on nfs client");
-DSN_DEFINE_int32("nfs", max_concurrent_local_writes, 50, "max local file writes on nfs client");
-DSN_DEFINE_int32("nfs", max_buffered_local_writes, 500, "max buffered file writes on nfs client");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs, max_concurrent_local_writes, 50, "max local file writes on nfs client");
+DSN_DEFINE_int32(nfs, max_buffered_local_writes, 500, "max buffered file writes on nfs client");
+DSN_DEFINE_int32(nfs,
                  high_priority_speed_rate,
                  2,
                  "the copy speed rate of high priority comparing with low priority on nfs client");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs,
                  file_close_expire_time_ms,
                  60 * 1000,
                  "max idle time for an opening file on nfs server");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs,
                  file_close_timer_interval_ms_on_server,
                  30 * 1000,
                  "time interval for checking whether cached file handles need to be closed");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs,
                  max_file_copy_request_count_per_file,
                  2,
                  "maximum concurrent remote copy requests for the same file on nfs client"
                  "to limit each file copy speed");
-DSN_DEFINE_int32("nfs",
-                 max_retry_count_per_copy_request,
-                 2,
-                 "maximum retry count when copy failed");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs, max_retry_count_per_copy_request, 2, "maximum retry count when copy failed");
+DSN_DEFINE_int32(nfs,
                  rpc_timeout_ms,
                  1e5, // 100s
                  "rpc timeout in milliseconds for nfs copy, "
@@ -118,11 +124,7 @@ nfs_client_impl::nfs_client_impl()
     register_cli_commands();
 }
 
-nfs_client_impl::~nfs_client_impl()
-{
-    _tracker.cancel_outstanding_tasks();
-    UNREGISTER_VALID_HANDLER(_nfs_max_copy_rate_megabytes_cmd);
-}
+nfs_client_impl::~nfs_client_impl() { _tracker.cancel_outstanding_tasks(); }
 
 void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rci,
                                         aio_task *nfs_task)
@@ -136,6 +138,7 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
     req->file_size_req.overwrite = rci->overwrite;
     req->file_size_req.__set_source_disk_tag(rci->source_disk_tag);
     req->file_size_req.__set_dest_disk_tag(rci->dest_disk_tag);
+    req->file_size_req.__set_pid(rci->pid);
     req->nfs_task = nfs_task;
     req->is_finished = false;
 
@@ -152,20 +155,20 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
                                         const user_request_ptr &ureq)
 {
     if (err != ::dsn::ERR_OK) {
-        derror("{nfs_service} remote get file size failed, source = %s, dir = %s, err = %s",
-               ureq->file_size_req.source.to_string(),
-               ureq->file_size_req.source_dir.c_str(),
-               err.to_string());
+        LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
+                  ureq->file_size_req.source,
+                  ureq->file_size_req.source_dir,
+                  err);
         ureq->nfs_task->enqueue(err, 0);
         return;
     }
 
     err = dsn::error_code(resp.error);
     if (err != ::dsn::ERR_OK) {
-        derror("{nfs_service} remote get file size failed, source = %s, dir = %s, err = %s",
-               ureq->file_size_req.source.to_string(),
-               ureq->file_size_req.source_dir.c_str(),
-               err.to_string());
+        LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
+                  ureq->file_size_req.source,
+                  ureq->file_size_req.source_dir,
+                  err);
         ureq->nfs_task->enqueue(err, 0);
         return;
     }
@@ -199,7 +202,8 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
             req_offset += req_size;
             size -= req_size;
             if (size <= 0) {
-                dassert(size == 0, "last request must read exactly the remaing size of the file");
+                CHECK_EQ_MSG(
+                    size, 0, "last request must read exactly the remaing size of the file");
                 break;
             }
 
@@ -291,6 +295,7 @@ void nfs_client_impl::continue_copy()
                 copy_req.overwrite = ureq->file_size_req.overwrite;
                 copy_req.is_last = req->is_last;
                 copy_req.__set_source_disk_tag(ureq->file_size_req.source_disk_tag);
+                copy_req.__set_pid(ureq->file_size_req.pid);
                 req->remote_copy_task =
                     async_nfs_copy(copy_req,
                                    [=](error_code err, copy_response &&resp) {
@@ -338,13 +343,13 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
 
         if (!fc->user_req->is_finished) {
             if (reqc->retry_count > 0) {
-                dwarn("{nfs_service} remote copy failed, source = %s, dir = %s, file = %s, "
-                      "err = %s, retry_count = %d",
-                      fc->user_req->file_size_req.source.to_string(),
-                      fc->user_req->file_size_req.source_dir.c_str(),
-                      fc->file_name.c_str(),
-                      err.to_string(),
-                      reqc->retry_count);
+                LOG_WARNING("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
+                            "err = {}, retry_count = {}",
+                            fc->user_req->file_size_req.source,
+                            fc->user_req->file_size_req.source_dir,
+                            fc->file_name,
+                            err,
+                            reqc->retry_count);
 
                 // retry copy
                 reqc->retry_count--;
@@ -356,13 +361,13 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
                 else
                     _copy_requests_low.push_retry(reqc);
             } else {
-                derror("{nfs_service} remote copy failed, source = %s, dir = %s, file = %s, "
-                       "err = %s, retry_count = %d",
-                       fc->user_req->file_size_req.source.to_string(),
-                       fc->user_req->file_size_req.source_dir.c_str(),
-                       fc->file_name.c_str(),
-                       err.to_string(),
-                       reqc->retry_count);
+                LOG_ERROR("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
+                          "err = {}, retry_count = {}",
+                          fc->user_req->file_size_req.source,
+                          fc->user_req->file_size_req.source_dir,
+                          fc->file_name,
+                          err,
+                          reqc->retry_count);
 
                 handle_completion(fc->user_req, err);
             }
@@ -449,9 +454,7 @@ void nfs_client_impl::continue_write()
     std::string file_path =
         dsn::utils::filesystem::path_combine(fc->user_req->file_size_req.dst_dir, fc->file_name);
     std::string path = dsn::utils::filesystem::remove_file_name(file_path.c_str());
-    if (!dsn::utils::filesystem::create_directory(path)) {
-        dassert(false, "create directory %s failed", path.c_str());
-    }
+    CHECK(dsn::utils::filesystem::create_directory(path), "create directory {} failed", path);
 
     if (!fc->file_holder->file_handle) {
         // double check
@@ -464,7 +467,7 @@ void nfs_client_impl::continue_write()
 
     if (!fc->file_holder->file_handle) {
         --_concurrent_local_write_count;
-        derror("open file %s failed", file_path.c_str());
+        LOG_ERROR("open file {} failed", file_path);
         handle_completion(fc->user_req, ERR_FILE_OPERATION_FAILED);
     } else {
         zauto_lock l(reqc->lock);
@@ -505,10 +508,10 @@ void nfs_client_impl::end_write(error_code err, size_t sz, const copy_request_ex
     if (err != ERR_OK) {
         _recent_write_fail_count->increment();
 
-        derror("{nfs_service} local write failed, dir = %s, file = %s, err = %s",
-               fc->user_req->file_size_req.dst_dir.c_str(),
-               fc->file_name.c_str(),
-               err.to_string());
+        LOG_ERROR("[nfs_service] local write failed, dir = {}, file = {}, err = {}",
+                  fc->user_req->file_size_req.dst_dir,
+                  fc->file_name,
+                  err);
         completed = true;
     } else {
         _recent_write_data_size->add(sz);

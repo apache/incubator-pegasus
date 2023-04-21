@@ -21,10 +21,11 @@ set -e
 LOCAL_HOSTNAME=`hostname -f`
 PID=$$
 ROOT=`pwd`
-export BUILD_DIR=$ROOT/src/builder
+export BUILD_ROOT_DIR=${ROOT}/build
+export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
-export LD_LIBRARY_PATH=$BUILD_DIR/output/lib:$THIRDPARTY_ROOT/output/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 
 function usage()
 {
@@ -91,6 +92,7 @@ function usage_build()
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
     echo "   --test                whether to build test binaries"
+    echo "   --iwyu                specify the binary path of 'include-what-you-use' when build with IWYU"
 }
 
 function exit_if_fail() {
@@ -119,6 +121,7 @@ function run_build()
     ROCKSDB_PORTABLE=OFF
     USE_JEMALLOC=OFF
     BUILD_TEST=OFF
+    IWYU=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -182,6 +185,10 @@ function run_build()
                 ;;
             --test)
                 BUILD_TEST=ON
+                ;;
+            --iwyu)
+                IWYU="$2"
+                shift
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -247,47 +254,64 @@ function run_build()
     fi
 
     echo "INFO: start build Pegasus..."
-    BUILD_DIR="${ROOT}/src/${BUILD_TYPE}_${SANITIZER}_builder"
+    BUILD_DIR="${BUILD_ROOT_DIR}/${BUILD_TYPE}_${SANITIZER}"
+    BUILD_DIR=${BUILD_DIR%_*}
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
+        rm -f ${ROOT}/src/base/rrdb_types.cpp
+        rm -f ${ROOT}/src/include/rrdb/rrdb_types.h
+        rm -f ${ROOT}/src/common/serialization_helper/dsn.layer2_types.h
+        rm -f ${ROOT}/src/runtime/dsn.layer2_types.cpp
+        rm -f ${ROOT}/src/include/pegasus/git_commit.h
     fi
 
     pushd ${ROOT}
-    echo "Gen thrift"
-    # TODO(yingchun): should be optimized
-    python3 $ROOT/scripts/compile_thrift.py
-    sh ${ROOT}/scripts/recompile_thrift.sh
+    if [ ! -f "${ROOT}/src/common/serialization_helper/dsn.layer2_types.h" ]; then
+        echo "Gen thrift"
+        # TODO(yingchun): should be optimized
+        python3 $ROOT/scripts/compile_thrift.py
+        sh ${ROOT}/scripts/recompile_thrift.sh
+    fi
 
     if [ ! -d "$BUILD_DIR" ]; then
         mkdir -p $BUILD_DIR
 
         echo "Running cmake Pegasus..."
         pushd $BUILD_DIR
+        if [ ! -z "${IWYU}" ]; then
+            CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=${IWYU}"
+        fi
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
-        cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
+        cmake ${ROOT} -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
         exit_if_fail $?
     fi
 
-    echo "Gen git_commit.h ..."
-    pushd "$ROOT/src"
-    PEGASUS_GIT_COMMIT="non-git-repo"
-    if git rev-parse HEAD; then # this is a git repo
-        PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
-    fi
-    echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
     GIT_COMMIT_FILE=$ROOT/src/include/pegasus/git_commit.h
-    echo "Generating $GIT_COMMIT_FILE..."
-    echo "#pragma once" >$GIT_COMMIT_FILE
-    echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+    if [ ! -f "${GIT_COMMIT_FILE}" ]; then
+        echo "Gen git_commit.h ..."
+        pushd "$ROOT/src"
+        PEGASUS_GIT_COMMIT="non-git-repo"
+        if git rev-parse HEAD; then # this is a git repo
+            PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
+        fi
+        echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
+        echo "Generating $GIT_COMMIT_FILE..."
+        echo "#pragma once" >$GIT_COMMIT_FILE
+        echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+    fi
 
     # rebuild link
-    rm -f ${ROOT}/src/builder
-    ln -s ${BUILD_DIR} ${ROOT}/src/builder
+    rm -f ${BUILD_LATEST_DIR}
+    ln -s ${BUILD_DIR} ${BUILD_LATEST_DIR}
 
     echo "[$(date)] Building Pegasus ..."
     pushd $BUILD_DIR
-    make install $MAKE_OPTIONS
+    if [ ! -z "${IWYU}" ]; then
+        make $MAKE_OPTIONS 2> iwyu.out
+    else
+        make install $MAKE_OPTIONS
+    fi
     exit_if_fail $?
 
     echo "Build finish time: `date`"
@@ -380,7 +404,6 @@ function run_test()
         mkdir -p $REPORT_DIR
     fi
 
-    BUILD_DIR=$ROOT/src/builder
     if [ "$test_modules" == "" ]; then
         test_modules=$(IFS=,; echo "${all_tests[*]}")
     fi
@@ -428,12 +451,12 @@ function run_test()
                 exit 1
             fi
             # TODO(yingchun): remove it?
-            sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  $ROOT/src/builder/src/server/test/config.ini
+            sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  ${BUILD_LATEST_DIR}/src/server/test/config.ini
         else
             run_stop_zk
             run_start_zk
         fi
-        pushd $ROOT/src/builder/bin/$module
+        pushd ${BUILD_LATEST_DIR}/bin/$module
         REPORT_DIR=$REPORT_DIR TEST_BIN=$module ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
@@ -459,8 +482,8 @@ function run_test()
         mkdir -p "$ROOT/gcov_report"
 
         echo "Running gcovr to produce HTML code coverage report."
-        $BUILD_DIR
-        gcovr --html --html-details -r $ROOT --object-directory=$BUILD_DIR \
+        $BUILD_LATEST_DIR
+        gcovr --html --html-details -r $ROOT --object-directory=$BUILD_LATEST_DIR \
               -o $GCOV_DIR/index.html
         if [ $? -ne 0 ]; then
             exit 1
@@ -491,13 +514,6 @@ function run_start_zk()
     type nc >/dev/null 2>&1 || { echo >&2 "start zk failed, need install netcat command..."; exit 1;}
 
     INSTALL_DIR=`pwd`/.zk_install
-    if [ ! -d "${INSTALL_DIR}/zookeeper-bin" ]; then
-        if [ -d "zookeeper-bin" ]; then
-            # this zookeeper-bin must have been got from github action workflows, thus just
-            # move it to ${INSTALL_DIR} to prevent from downloading
-            mv zookeeper-bin ${INSTALL_DIR}/
-        fi
-    fi
     PORT=22181
     while [[ $# > 0 ]]; do
         key="$1"
@@ -523,6 +539,23 @@ function run_start_zk()
         esac
         shift
     done
+
+    if [ ! -d "${INSTALL_DIR}/zookeeper-bin" ]; then
+        echo "zookeeper-bin cannot be found under ${INSTALL_DIR}, thus try to find an existing one"
+
+        if [ -d "zookeeper-bin" ]; then
+            echo "zookeeper-bin is found under current work dir `pwd`, just use this one"
+
+            if ! mkdir -p "${INSTALL_DIR}"; then
+                echo "ERROR: mkdir ${INSTALL_DIR} failed"
+                exit 1
+            fi
+
+            # this zookeeper-bin must have been got from github action workflows, thus just
+            # move it to ${INSTALL_DIR} to prevent from downloading
+            mv zookeeper-bin ${INSTALL_DIR}/
+        fi
+    fi
 
     INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
 }
@@ -621,7 +654,7 @@ function usage_start_onebox()
     echo "   -w|--wait_healthy"
     echo "                     wait cluster to become healthy, default not wait"
     echo "   -s|--server_path <str>"
-    echo "                     server binary path, default is ${BUILD_DIR}/output/bin/pegasus_server"
+    echo "                     server binary path, default is ${BUILD_LATEST_DIR}/output/bin/pegasus_server"
     echo "   --config_path"
     echo "                     specify the config template path, default is ./src/server/config.min.ini in non-production env"
     echo "                                                                  ./src/server/config.ini in production env"
@@ -639,7 +672,7 @@ function run_start_onebox()
     APP_NAME=temp
     PARTITION_COUNT=8
     WAIT_HEALTHY=false
-    SERVER_PATH=${BUILD_DIR}/output/bin/pegasus_server
+    SERVER_PATH=${BUILD_LATEST_DIR}/output/bin/pegasus_server
     CONFIG_FILE=""
     USE_PRODUCT_CONFIG=false
     OPTS=""
@@ -1257,7 +1290,7 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
 
     # start verifier
     mkdir -p onebox/verifier && cd onebox/verifier
-    ln -s -f ${BUILD_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
+    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
     echo "$PWD/pegasus_kill_test config.ini verifier &>/dev/null &"
     $PWD/pegasus_kill_test config.ini verifier &>/dev/null &
@@ -1268,7 +1301,7 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
 
     #start killer
     mkdir -p onebox/killer && cd onebox/killer
-    ln -s -f ${BUILD_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
+    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
     echo "$PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &"
     $PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &
@@ -1389,6 +1422,8 @@ function usage_bench()
     echo "                             fillrandom_pegasus       --pegasus write N random values with random keys list"
     echo "                             readrandom_pegasus       --pegasus read N times with random keys list"
     echo "                             deleterandom_pegasus     --pegasus delete N entries with random keys list"
+    echo "                             multisetrandom_pegasus   --pegasus write N random values with multi_count hash keys list"
+    echo "                             multigetrandom_pegasus   --pegasus read N random keys with multi_count hash list"
     echo "                             Comma-separated list of operations is going to run in the specified order."
     echo "                             default is 'fillrandom_pegasus,readrandom_pegasus,deleterandom_pegasus'"
     echo "   --num <num>               number of key/value pairs, default is 10000"
@@ -1400,6 +1435,7 @@ function usage_bench()
     echo "   --value_size <num>        value size in bytes, default is 100"
     echo "   --timeout <num>           timeout in milliseconds, default is 1000"
     echo "   --seed <num>              seed base for random number generator, When 0 it is specified as 1000. default is 1000"
+    echo "   --multi_count <num>       values count of the same hashkey, used by multi_set/multi_get, default is 100"
 }
 
 function fill_bench_config() {
@@ -1413,6 +1449,7 @@ function fill_bench_config() {
     sed -i "s/@VALUE_SIZE@/$VALUE_SIZE/g" ./config-bench.ini
     sed -i "s/@TIMEOUT_MS@/$TIMEOUT_MS/g" ./config-bench.ini
     sed -i "s/@SEED@/$SEED/g" ./config-bench.ini
+    sed -i "s/@MULTI_COUNT@/$MULTI_COUNT/g" ./config-bench.ini
 }
 
 function run_bench()
@@ -1427,6 +1464,7 @@ function run_bench()
     VALUE_SIZE=100
     TIMEOUT_MS=1000
     SEED=1000
+    MULTI_COUNT=100
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -1474,6 +1512,10 @@ function run_bench()
                 SEED="$2"
                 shift
                 ;;
+            --multi_count)
+                MULTI_COUNT="$2"
+                shift
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -1484,9 +1526,9 @@ function run_bench()
         shift
     done
     cd ${ROOT}
-    cp ${BUILD_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
+    cp ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
     fill_bench_config
-    ln -s -f ${BUILD_DIR}/output/bin/pegasus_bench/pegasus_bench
+    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/pegasus_bench
     ./pegasus_bench ./config-bench.ini
     rm -f ./config-bench.ini
 }
@@ -1613,11 +1655,14 @@ function run_shell()
     fi
 
     cd ${ROOT}
-    ln -s -f ${BUILD_DIR}/output/bin/pegasus_shell/pegasus_shell
+    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell
     ./pegasus_shell ${CONFIG} $CLUSTER_NAME
     # because pegasus shell will catch 'Ctrl-C' signal, so the following commands will be executed
     # even user inputs 'Ctrl-C', so that the temporary config file will be cleared when exit shell.
-    rm -f ${CONFIG}
+    # however, if it is the specified config file, do not delete it.
+    if [ ${CONFIG_SPECIFIED} -eq 0 ]; then
+        rm -f ${CONFIG}
+    fi
 }
 
 #####################
@@ -1628,6 +1673,7 @@ function usage_migrate_node()
     echo "Options for subcommand 'migrate_node':"
     echo "   -h|--help            print the help info"
     echo "   -c|--cluster <str>   cluster meta lists"
+    echo "   -f|--config <str>    shell config path"
     echo "   -n|--node <str>      the node to migrate primary replicas out, should be ip:port"
     echo "   -a|--app <str>       the app to migrate primary replicas out, if not set, means migrate all apps"
     echo "   -t|--type <str>      type: test or run, default is test"
@@ -1636,6 +1682,7 @@ function usage_migrate_node()
 function run_migrate_node()
 {
     CLUSTER=""
+    CONFIG=""
     NODE=""
     APP="*"
     TYPE="test"
@@ -1648,6 +1695,10 @@ function run_migrate_node()
                 ;;
             -c|--cluster)
                 CLUSTER="$2"
+                shift
+                ;;
+            -f|--config)
+                CONFIG="$2"
                 shift
                 ;;
             -n|--node)
@@ -1672,7 +1723,7 @@ function run_migrate_node()
         shift
     done
 
-    if [ "$CLUSTER" == "" ]; then
+    if [ "$CLUSTER" == "" -a "$CONFIG" == "" ]; then
         echo "ERROR: no cluster specified"
         echo
         usage_migrate_node
@@ -1693,14 +1744,22 @@ function run_migrate_node()
         exit 1
     fi
 
-    echo "CLUSTER=$CLUSTER"
+    if [ "$CLUSTER" != "" ]; then
+        echo "CLUSTER=$CLUSTER"
+    else
+        echo "CONFIG=$CONFIG"
+    fi
     echo "NODE=$NODE"
     echo "APP=$APP"
     echo "TYPE=$TYPE"
     echo
     cd ${ROOT}
     echo "------------------------------"
-    ./scripts/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
+    if [ "$CLUSTER" != "" ]; then
+        ./scripts/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
+    else
+        ./scripts/migrate_node.sh $CONFIG $NODE "$APP" $TYPE -f
+    fi
     echo "------------------------------"
     echo
     if [ "$TYPE" == "test" ]; then
@@ -1722,6 +1781,7 @@ function usage_downgrade_node()
     echo "Options for subcommand 'downgrade_node':"
     echo "   -h|--help            print the help info"
     echo "   -c|--cluster <str>   cluster meta lists"
+    echo "   -f|--config <str>    config file path" 
     echo "   -n|--node <str>      the node to downgrade replicas, should be ip:port"
     echo "   -a|--app <str>       the app to downgrade replicas, if not set, means downgrade all apps"
     echo "   -t|--type <str>      type: test or run, default is test"
@@ -1730,6 +1790,7 @@ function usage_downgrade_node()
 function run_downgrade_node()
 {
     CLUSTER=""
+    CONFIG=""
     NODE=""
     APP="*"
     TYPE="test"
@@ -1742,6 +1803,10 @@ function run_downgrade_node()
                 ;;
             -c|--cluster)
                 CLUSTER="$2"
+                shift
+                ;;
+            -f|--config)
+                CONFIG="$2"
                 shift
                 ;;
             -n|--node)
@@ -1766,7 +1831,7 @@ function run_downgrade_node()
         shift
     done
 
-    if [ "$CLUSTER" == "" ]; then
+    if [ "$CLUSTER" == "" -a "$CONFIG" == "" ]; then
         echo "ERROR: no cluster specified"
         echo
         usage_downgrade_node
@@ -1787,14 +1852,22 @@ function run_downgrade_node()
         exit 1
     fi
 
-    echo "CLUSTER=$CLUSTER"
+    if [ "$CLUSTER" != "" ]; then
+        echo "CLUSTER=$CLUSTER"
+    else
+        echo "CONFIG=$CONFIG"
+    fi
     echo "NODE=$NODE"
     echo "APP=$APP"
     echo "TYPE=$TYPE"
     echo
     cd ${ROOT}
     echo "------------------------------"
-    ./scripts/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
+    if [ "$CLUSTER" != "" ]; then
+        ./scripts/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
+    else
+        ./scripts/downgrade_node.sh $CONFIG $NODE "$APP" $TYPE -f
+    fi
     echo "------------------------------"
     echo
     if [ "$TYPE" == "test" ]; then

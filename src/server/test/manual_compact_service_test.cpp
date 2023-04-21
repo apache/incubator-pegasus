@@ -17,13 +17,28 @@
  * under the License.
  */
 
-#include "utils/time_utils.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <rocksdb/options.h>
+#include <stdint.h>
+#include <atomic>
+#include <map>
+#include <memory>
+#include <string>
 
+#include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
+#include "runtime/api_layer1.h"
 #include "server/pegasus_manual_compact_service.h"
+#include "utils/flags.h"
+#include "utils/strings.h"
+#include "utils/time_utils.h"
 
 namespace pegasus {
 namespace server {
+
+DSN_DECLARE_int32(manual_compact_min_interval_seconds);
 
 class manual_compact_service_test : public pegasus_server_test_base
 {
@@ -35,7 +50,7 @@ public:
     manual_compact_service_test()
     {
         start();
-        manual_compact_svc = dsn::make_unique<pegasus_manual_compact_service>(_server.get());
+        manual_compact_svc = std::make_unique<pegasus_manual_compact_service>(_server.get());
     }
 
     void set_compact_time(int64_t ts)
@@ -92,11 +107,6 @@ public:
         manual_compact_svc->_manual_compact_last_finish_time_ms.store(finish);
         manual_compact_svc->_manual_compact_last_time_used_ms.store(finish - start);
         manual_compact_svc->_manual_compact_enqueue_time_ms.store(0);
-    }
-
-    void set_manual_compact_interval(int sec)
-    {
-        manual_compact_svc->_manual_compact_min_interval_seconds = sec;
     }
 };
 
@@ -275,7 +285,7 @@ TEST_F(manual_compact_service_test, extract_manual_compact_opts)
 
 TEST_F(manual_compact_service_test, check_manual_compact_state_0_interval)
 {
-    set_manual_compact_interval(0);
+    FLAGS_manual_compact_min_interval_seconds = 0;
 
     uint64_t first_time = 1500000000;
     set_mock_now(first_time);
@@ -291,7 +301,7 @@ TEST_F(manual_compact_service_test, check_manual_compact_state_0_interval)
 
 TEST_F(manual_compact_service_test, check_manual_compact_state_1h_interval)
 {
-    set_manual_compact_interval(3600);
+    FLAGS_manual_compact_min_interval_seconds = 3600;
 
     uint64_t first_time = 1500000000;
     set_mock_now(first_time);

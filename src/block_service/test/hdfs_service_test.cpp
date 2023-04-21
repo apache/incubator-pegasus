@@ -15,15 +15,34 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <algorithm>
+#include <cstdint>
+#include <fstream>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "block_service/block_service.h"
+#include "block_service/hdfs/hdfs_service.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/enum_helper.h"
+#include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
-#include "utils/rand.h"
-#include <fstream>
-#include <gtest/gtest.h>
-#include <memory>
-
-#include "block_service/hdfs/hdfs_service.h"
+#include "utils/strings.h"
+#include "utils/threadpool_code.h"
 
 using namespace dsn;
 using namespace dsn::dist::block_service;
@@ -32,14 +51,14 @@ static std::string example_name_node = "<hdfs_name_none>";
 static std::string example_backup_path = "<hdfs_path>";
 // Please modify following paras in 'config-test.ini' to enable hdfs_service_test,
 // or hdfs_service_test will be skipped and return true.
-DSN_DEFINE_string("hdfs_test", test_name_node, "<hdfs_name_none>", "hdfs name node");
-DSN_DEFINE_string("hdfs_test",
+DSN_DEFINE_string(hdfs_test, test_name_node, "<hdfs_name_none>", "hdfs name node");
+DSN_DEFINE_string(hdfs_test,
                   test_backup_path,
                   "<hdfs_path>",
                   "path for uploading and downloading test files");
 
-DSN_DEFINE_uint32("hdfs_test", num_test_file_lines, 4096, "number of lines in test file");
-DSN_DEFINE_uint32("hdfs_test",
+DSN_DEFINE_uint32(hdfs_test, num_test_file_lines, 4096, "number of lines in test file");
+DSN_DEFINE_uint32(hdfs_test,
                   num_total_files_for_hdfs_concurrent_test,
                   64,
                   "number of total files for hdfs concurrent test");
@@ -219,7 +238,7 @@ TEST_F(HDFSClientTest, test_basic_operation)
         ->wait();
     ASSERT_EQ(dsn::ERR_OK, r_resp.err);
     ASSERT_EQ(length, r_resp.buffer.length());
-    ASSERT_EQ(0, memcmp(r_resp.buffer.data(), test_buffer, length));
+    ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer, length));
 
     // test partitial read.
     cf_resp.file_handle
@@ -230,7 +249,7 @@ TEST_F(HDFSClientTest, test_basic_operation)
         ->wait();
     ASSERT_EQ(dsn::ERR_OK, r_resp.err);
     ASSERT_EQ(10, r_resp.buffer.length());
-    ASSERT_EQ(0, memcmp(r_resp.buffer.data(), test_buffer + 5, 10));
+    ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer + 5, 10));
 
     // clean up local test files.
     utils::filesystem::remove_path(local_test_file);

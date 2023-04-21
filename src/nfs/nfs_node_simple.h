@@ -50,11 +50,20 @@ public:
 
     virtual ~nfs_node_simple();
 
-    virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) override;
+    void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) override;
 
-    virtual ::dsn::error_code start() override;
+    error_code start() override;
 
-    virtual error_code stop() override;
+    error_code stop() override;
+
+    void on_copy(const ::dsn::service::copy_request &request,
+                 ::dsn::rpc_replier<::dsn::service::copy_response> &reply) override;
+
+    void
+    on_get_file_size(const ::dsn::service::get_file_size_request &request,
+                     ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply) override;
+
+    void register_async_rpc_handler_for_test() override;
 
 private:
     nfs_service_impl *_server;

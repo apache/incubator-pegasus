@@ -24,39 +24,60 @@
  * THE SOFTWARE.
  */
 
-#include "simple_logger.h"
+#include "utils/simple_logger.h"
+
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <stdint.h>
+#include <algorithm>
+#include <functional>
+#include <memory>
 #include <sstream>
+#include <vector>
+
+#include "runtime/api_layer1.h"
+#include "runtime/task/task_spec.h"
+#include "utils/command_manager.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/strings.h"
 #include "utils/time_utils.h"
-#include <fmt/format.h>
+
+DSN_DECLARE_string(logging_start_level);
 
 namespace dsn {
 namespace tools {
 
-DSN_DEFINE_bool("tools.simple_logger", fast_flush, false, "whether to flush immediately");
-
-DSN_DEFINE_bool("tools.simple_logger",
+DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "whether to flush immediately");
+DSN_DEFINE_bool(tools.simple_logger,
                 short_header,
                 true,
                 "whether to use short header (excluding file/function etc.)");
 
-DSN_DEFINE_uint64("tools.simple_logger",
+DSN_DEFINE_uint64(tools.simple_logger,
                   max_number_of_log_files_on_disk,
                   20,
                   "max number of log files reserved on disk, older logs are auto deleted");
 
-DSN_DEFINE_string("tools.simple_logger",
+DSN_DEFINE_string(tools.simple_logger,
                   stderr_start_level,
                   "LOG_LEVEL_WARNING",
                   "copy log messages at or above this level to stderr in addition to logfiles");
 DSN_DEFINE_validator(stderr_start_level, [](const char *level) -> bool {
-    return strcmp(level, "LOG_LEVEL_INVALID") != 0;
+    return !utils::equals(level, "LOG_LEVEL_INVALID");
 });
 
 static void print_header(FILE *fp, dsn_log_level_t log_level)
 {
-    static char s_level_char[] = "IDWEF";
+    // The leading character of each log lines, corresponding to the log level
+    // D: Debug
+    // I: Info
+    // W: Warning
+    // E: Error
+    // F: Fatal
+    static char s_level_char[] = "DIWEF";
 
     uint64_t ts = dsn_now_ns();
     std::string time_str;
@@ -72,19 +93,7 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
                log_prefixed_message_func().c_str());
 }
 
-screen_logger::screen_logger(bool short_header) : logging_provider("./")
-{
-    _short_header = short_header;
-}
-
-screen_logger::screen_logger(const char *log_dir) : logging_provider(log_dir)
-{
-    _short_header =
-        dsn_config_get_value_bool("tools.screen_logger",
-                                  "short_header",
-                                  true,
-                                  "whether to use short header (excluding file/function etc.)");
-}
+screen_logger::screen_logger(bool short_header) { _short_header = short_header; }
 
 screen_logger::~screen_logger(void) {}
 
@@ -107,7 +116,7 @@ void screen_logger::dsn_logv(const char *file,
 
 void screen_logger::flush() { ::fflush(stdout); }
 
-simple_logger::simple_logger(const char *log_dir) : logging_provider(log_dir)
+simple_logger::simple_logger(const char *log_dir)
 {
     _log_dir = std::string(log_dir);
     // we assume all valid entries are positive
@@ -119,9 +128,9 @@ simple_logger::simple_logger(const char *log_dir) : logging_provider(log_dir)
 
     // check existing log files
     std::vector<std::string> sub_list;
-    if (!dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false)) {
-        dassert(false, "Fail to get subfiles in %s.", _log_dir.c_str());
-    }
+    CHECK(dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false),
+          "Fail to get subfiles in {}",
+          _log_dir);
     for (auto &fpath : sub_list) {
         auto &&name = dsn::utils::filesystem::get_file_name(fpath);
         if (name.length() <= 8 || name.substr(0, 4) != "log.")
@@ -145,6 +154,36 @@ simple_logger::simple_logger(const char *log_dir) : logging_provider(log_dir)
         ++_index;
 
     create_log_file();
+
+    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
+        {"flush-log"},
+        "flush-log - flush log to stderr or log file",
+        "flush-log",
+        [this](const std::vector<std::string> &args) {
+            this->flush();
+            return "Flush done.";
+        }));
+
+    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
+        {"reset-log-start-level"},
+        "reset-log-start-level - reset the log start level",
+        "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
+        [](const std::vector<std::string> &args) {
+            dsn_log_level_t start_level;
+            if (args.size() == 0) {
+                start_level =
+                    enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
+            } else {
+                std::string level_str = "LOG_LEVEL_" + args[0];
+                start_level =
+                    enum_from_string(level_str.c_str(), dsn_log_level_t::LOG_LEVEL_INVALID);
+                if (start_level == dsn_log_level_t::LOG_LEVEL_INVALID) {
+                    return "ERROR: invalid level '" + args[0] + "'";
+                }
+            }
+            dsn_log_set_start_level(start_level);
+            return std::string("OK, current level is ") + enum_to_string(start_level);
+        }));
 }
 
 void simple_logger::create_log_file()

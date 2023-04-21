@@ -43,26 +43,21 @@
 
 #pragma once
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "utils/error_code.h"
-#include "runtime/task/future_types.h"
-#include <string>
 #include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "runtime/task/future_types.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class task_tracker;
+
 namespace dist {
 typedef std::function<void(error_code ec, const blob &val)> err_value_callback;
 typedef future_task<error_code, blob> err_value_future;

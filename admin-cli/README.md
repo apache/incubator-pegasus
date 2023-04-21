@@ -18,8 +18,6 @@ under the License.
 -->
 # admin-cli
 
-[![Golang Lint and Unit Test](https://github.com/apache/incubator-pegasus/actions/workflows/lint_and_test_admin-cli.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/lint_and_test_admin-cli.yml)
-
 The command-line tool for the administration of Pegasus.
 
 Thanks to the portability of Go, we have provided binaries of admin-cli for multiple platforms. This is a tremendous advantage

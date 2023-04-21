@@ -17,13 +17,31 @@
 
 #include "server/hotkey_collector.h"
 
-#include "utils/rand.h"
-#include "utils/flags.h"
-#include "utils/defer.h"
-#include "runtime/task/task_tracker.h"
-#include "server/test/message_utils.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <chrono>
+#include <thread>
+
 #include "base/pegasus_key_schema.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
 #include "pegasus_server_test_base.h"
+#include "rrdb/rrdb.code.definition.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_tracker.h"
+#include "server/hotkey_collector_state.h"
+#include "server/pegasus_read_service.h"
+#include "server/test/message_utils.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/rand.h"
+
+namespace dsn {
+class message_ex;
+} // namespace dsn
 
 namespace pegasus {
 namespace server {
@@ -238,7 +256,7 @@ public:
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, std::string("sortkey"));
-        get_rpc rpc(dsn::make_unique<dsn::blob>(raw_key), dsn::apps::RPC_RRDB_RRDB_GET);
+        get_rpc rpc(std::make_unique<dsn::blob>(raw_key), dsn::apps::RPC_RRDB_RRDB_GET);
         return rpc;
     }
 

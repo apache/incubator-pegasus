@@ -23,7 +23,7 @@
 #include "runtime/task/task_tracker.h"
 #include "runtime/task/async_calls.h"
 #include "utils/chrono_literals.h"
-#include "utils/apply.h"
+#include "utils/absl/utility/utility.h"
 
 namespace dsn {
 namespace pipeline {
@@ -108,7 +108,7 @@ struct result
     //
     void step_down_next_stage(Args &&... args)
     {
-        dassert(__func != nullptr, "no next stage is linked");
+        CHECK_NOTNULL(__func, "no next stage is linked");
         __func(std::make_tuple(std::forward<Args>(args)...));
     }
 
@@ -163,8 +163,8 @@ struct base : environment
         // that it is applied successfully. After verification we make next insert.
         //
         // ```
-        //      _insert = dsn::make_unique<insert_data>(...);
-        //      _verify = dsn::make_unique<verify_data>(...);
+        //      _insert = std::make_unique<insert_data>(...);
+        //      _verify = std::make_unique<verify_data>(...);
         //      link(*_insert).link(*_verify).link(*_insert);
         // ```
         //
@@ -183,8 +183,8 @@ struct base : environment
             if (next.__pipeline != nullptr) {
                 this_stage->__func = [next_ptr = &next](ArgsTupleType && args) mutable
                 {
-                    dsn::apply(&NextStage::async,
-                               std::tuple_cat(std::make_tuple(next_ptr), std::move(args)));
+                    absl::apply(&NextStage::async,
+                                std::tuple_cat(std::make_tuple(next_ptr), std::move(args)));
                 };
             } else {
                 next.__conf = this_stage->__conf;
@@ -194,8 +194,8 @@ struct base : environment
                     if (next_ptr->paused()) {
                         return;
                     }
-                    dsn::apply(&NextStage::run,
-                               std::tuple_cat(std::make_tuple(next_ptr), std::move(args)));
+                    absl::apply(&NextStage::run,
+                                std::tuple_cat(std::make_tuple(next_ptr), std::move(args)));
                 };
             }
             return node<NextStage>(&next);
@@ -249,7 +249,7 @@ struct when : environment
             if (paused()) {
                 return;
             }
-            dsn::apply(&when<Args...>::run, std::move(args));
+            absl::apply(&when<Args...>::run, std::move(args));
         },
                  delay_ms);
     }
@@ -264,7 +264,7 @@ struct when : environment
 
 inline void base::run_pipeline()
 {
-    dassert(__conf.tracker != nullptr, "must configure task tracker");
+    CHECK_NOTNULL(__conf.tracker, "must configure task tracker");
 
     _paused.store(false, std::memory_order_release);
 

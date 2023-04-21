@@ -20,37 +20,38 @@
 #pragma once
 
 #include <getopt.h>
-#include <thread>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <queue>
+#include <thread>
+
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
-#include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/env.h>
+#include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/statistics.h>
-#include "common/json_helper.h"
-#include "remote_cmd/remote_command.h"
-#include "client/replication_ddl_client.h"
-#include "tools/mutation_log_tool.h"
-#include "perf_counter/perf_counter_utils.h"
-#include "utils/string_view.h"
-#include "utils/synchronize.h"
-#include "utils/time_utils.h"
 
+#include <geo/lib/geo_client.h>
+#include <pegasus/error.h>
+#include <pegasus/git_commit.h>
+#include <pegasus/version.h>
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>
-#include <pegasus/version.h>
-#include <pegasus/git_commit.h>
-#include <pegasus/error.h>
-#include <geo/lib/geo_client.h>
 
 #include "base/pegasus_key_schema.h"
-#include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
-
+#include "base/pegasus_value_schema.h"
+#include "client/replication_ddl_client.h"
 #include "command_executor.h"
 #include "command_utils.h"
+#include "common/json_helper.h"
+#include "perf_counter/perf_counter_utils.h"
+#include "remote_cmd/remote_command.h"
+#include "tools/mutation_log_tool.h"
+#include "utils/string_view.h"
+#include "utils/strings.h"
+#include "utils/synchronize.h"
+#include "utils/time_utils.h"
 
 using namespace dsn::replication;
 
@@ -196,7 +197,7 @@ struct scan_data_context
     {
         // max_batch_count should > 1 because scan may be terminated
         // when split_request_count = 1
-        dassert(max_batch_count > 1, "");
+        CHECK_GT(max_batch_count, 1);
     }
     void set_sort_key_filter(pegasus::pegasus_client::filter_type type, const std::string &pattern)
     {
@@ -250,15 +251,16 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
         if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
             return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
         } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
-            return ::memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0;
+            return dsn::utils::mequals(
+                value.data(), filter_pattern.data(), filter_pattern.length());
         } else { // filter_type == pegasus::pegasus_client::FT_MATCH_POSTFIX
-            return ::memcmp(value.data() + value.length() - filter_pattern.length(),
-                            filter_pattern.data(),
-                            filter_pattern.length()) == 0;
+            return dsn::utils::mequals(value.data() + value.length() - filter_pattern.length(),
+                                       filter_pattern.data(),
+                                       filter_pattern.length());
         }
     }
     default:
-        dassert(false, "unsupported filter type: %d", filter_type);
+        LOG_FATAL("unsupported filter type: {}", filter_type);
     }
     return false;
 }
@@ -571,7 +573,7 @@ inline void scan_data_next(scan_data_context *context)
                         }
                         break;
                     default:
-                        dassert(false, "op = %d", context->op);
+                        LOG_FATAL("op = {}", context->op);
                         break;
                     }
                 } else {
@@ -990,11 +992,11 @@ inline bool get_apps_and_nodes(shell_context *sc,
 {
     dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
     if (err != dsn::ERR_OK) {
-        derror("list apps failed, error = %s", err.to_string());
+        LOG_ERROR("list apps failed, error = {}", err);
         return false;
     }
     if (!fill_nodes(sc, "replica-server", nodes)) {
-        derror("get replica server node list failed");
+        LOG_ERROR("get replica server node list failed");
         return false;
     }
     return true;
@@ -1011,14 +1013,11 @@ get_app_partitions(shell_context *sc,
         dsn::error_code err = sc->ddl_client->list_app(
             app.app_name, app_id, partition_count, app_partitions[app.app_id]);
         if (err != ::dsn::ERR_OK) {
-            derror("list app %s failed, error = %s", app.app_name.c_str(), err.to_string());
+            LOG_ERROR("list app {} failed, error = {}", app.app_name, err);
             return false;
         }
-        dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);
-        dassert(partition_count == app.partition_count,
-                "%d VS %d",
-                partition_count,
-                app.partition_count);
+        CHECK_EQ(app_id, app.app_id);
+        CHECK_EQ(partition_count, app.partition_count);
     }
     return true;
 }
@@ -1028,20 +1027,19 @@ inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
                                           dsn::perf_counter_info &info)
 {
     if (!result.first) {
-        derror("query perf counter info from node %s failed", node_addr.to_string());
+        LOG_ERROR("query perf counter info from node {} failed", node_addr);
         return false;
     }
     dsn::blob bb(result.second.data(), 0, result.second.size());
     if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-        derror("decode perf counter info from node %s failed, result = %s",
-               node_addr.to_string(),
-               result.second.c_str());
+        LOG_ERROR(
+            "decode perf counter info from node {} failed, result = {}", node_addr, result.second);
         return false;
     }
     if (info.result != "OK") {
-        derror("query perf counter info from node %s returns error, error = %s",
-               node_addr.to_string(),
-               info.result.c_str());
+        LOG_ERROR("query perf counter info from node {} returns error, error = {}",
+                  node_addr,
+                  info.result);
         return false;
     }
     return true;
@@ -1134,7 +1132,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             }
         }
         if (app_info == nullptr) {
-            derror("app %s not found", app_name.c_str());
+            LOG_ERROR("app {} not found", app_name);
             return false;
         }
     }
@@ -1197,14 +1195,11 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         dsn::error_code err =
             sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
         if (err != ::dsn::ERR_OK) {
-            derror("list app %s failed, error = %s", app_name.c_str(), err.to_string());
+            LOG_ERROR("list app {} failed, error = {}", app_name, err);
             return false;
         }
-        dassert(app_id == app_info->app_id, "%d VS %d", app_id, app_info->app_id);
-        dassert(partition_count == app_info->partition_count,
-                "%d VS %d",
-                partition_count,
-                app_info->partition_count);
+        CHECK_EQ(app_id, app_info->app_id);
+        CHECK_EQ(partition_count, app_info->partition_count);
 
         for (int i = 0; i < nodes.size(); ++i) {
             dsn::rpc_address node_addr = nodes[i].address;
@@ -1216,9 +1211,9 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 std::string counter_name;
                 bool parse_ret = parse_app_pegasus_perf_counter_name(
                     m.name, app_id_x, partition_index_x, counter_name);
-                dassert(parse_ret, "name = %s", m.name.c_str());
-                dassert(app_id_x == app_id, "name = %s", m.name.c_str());
-                dassert(partition_index_x < partition_count, "name = %s", m.name.c_str());
+                CHECK(parse_ret, "name = {}", m.name);
+                CHECK_EQ_MSG(app_id_x, app_id, "name = {}", m.name);
+                CHECK_LT_MSG(partition_index_x, partition_count, "name = {}", m.name);
                 if (partitions[partition_index_x].primary != node_addr)
                     continue;
                 update_app_pegasus_perf_counter(rows[partition_index_x], counter_name, m.value);
@@ -1257,7 +1252,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
 {
     std::vector<node_desc> nodes;
     if (!fill_nodes(sc, "replica-server", nodes)) {
-        derror("get replica server node list failed");
+        LOG_ERROR("get replica server node list failed");
         return false;
     }
 
@@ -1269,8 +1264,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            dwarn("decode perf counter from node(%s) failed, just ignore it",
-                  node_addr.to_string());
+            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
@@ -1279,7 +1273,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             int32_t app_id, pidx;
             std::string counter_name;
             bool r = parse_app_pegasus_perf_counter_name(m.name, app_id, pidx, counter_name);
-            dassert(r, "name = %s", m.name.c_str());
+            CHECK(r, "name = {}", m.name);
             if (counter_name == "recent.read.cu") {
                 nodes_stat[i].cu_value_by_app[app_id].first += (int64_t)m.value;
             } else if (counter_name == "recent.write.cu") {
@@ -1312,13 +1306,13 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
     std::vector<::dsn::app_info> apps;
     std::vector<node_desc> nodes;
     if (!get_apps_and_nodes(sc, apps, nodes)) {
-        derror("get apps and nodes failed");
+        LOG_ERROR("get apps and nodes failed");
         return false;
     }
 
     std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
     if (!get_app_partitions(sc, apps, app_partitions)) {
-        derror("get app partitions failed");
+        LOG_ERROR("get app partitions failed");
         return false;
     }
     for (auto &kv : app_partitions) {
@@ -1337,8 +1331,7 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            dwarn("decode perf counter from node(%s) failed, just ignore it",
-                  node_addr.to_string());
+            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
             continue;
         }
         for (dsn::perf_counter_metric &m : info.counters) {
@@ -1346,7 +1339,7 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             std::string counter_name;
             bool parse_ret = parse_app_pegasus_perf_counter_name(
                 m.name, app_id_x, partition_index_x, counter_name);
-            dassert(parse_ret, "name = %s", m.name.c_str());
+            CHECK(parse_ret, "name = {}", m.name);
             if (counter_name != "disk.storage.sst(MB)")
                 continue;
             auto find = app_partitions.find(app_id_x);

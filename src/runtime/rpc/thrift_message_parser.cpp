@@ -26,19 +26,28 @@
 
 #include "thrift_message_parser.h"
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+#include <string.h>
+#include <algorithm>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "boost/smart_ptr/shared_ptr.hpp"
+#include "common/gpid.h"
 #include "common/serialization_helper/thrift_helper.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
-#include "runtime/message_utils.h"
-#include "utils/fmt_logging.h"
-#include "utils/ports.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "thrift/protocol/TBinaryProtocol.h"
+#include "thrift/protocol/TBinaryProtocol.tcc"
+#include "thrift/protocol/TProtocol.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 #include "utils/crc.h"
 #include "utils/endians.h"
-#include "runtime/rpc/rpc_message.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -114,7 +123,7 @@ static message_ex *create_message_from_request_blob(const blob &body_data)
         dsn_hdr->context.u.is_request = 1;
     }
     if (dsn_hdr->context.u.is_request != 1) {
-        derror("invalid message type: %d", mtype);
+        LOG_ERROR("invalid message type: {}", mtype);
         delete msg;
         /// set set rpc_read_stream::_msg to nullptr,
         /// to avoid the dstor to call read_commit of _msg, which is deleted here.
@@ -150,8 +159,8 @@ bool thrift_message_parser::parse_request_header(message_reader *reader, int &re
 
     // The first 4 bytes is "THFT"
     data_input input(buf);
-    if (memcmp(buf.data(), "THFT", 4) != 0) {
-        derror("hdr_type mismatch %s", message_parser::get_debug_string(buf.data()).c_str());
+    if (!utils::mequals(buf.data(), "THFT", 4)) {
+        LOG_ERROR("hdr_type mismatch {}", message_parser::get_debug_string(buf.data()));
         read_next = -1;
         return false;
     }
@@ -167,7 +176,7 @@ bool thrift_message_parser::parse_request_header(message_reader *reader, int &re
 
         uint32_t hdr_length = input.read_u32();
         if (hdr_length != HEADER_LENGTH_V0) {
-            derror("hdr_length should be %u, but %u", HEADER_LENGTH_V0, hdr_length);
+            LOG_ERROR("hdr_length should be {}, but {}", HEADER_LENGTH_V0, hdr_length);
             read_next = -1;
             return false;
         }
@@ -184,7 +193,7 @@ bool thrift_message_parser::parse_request_header(message_reader *reader, int &re
         _v1_specific_vars->_body_length = input.read_u32();
         reader->consume_buffer(HEADER_LENGTH_V1);
     } else {
-        derror("invalid hdr_version %d", _header_version);
+        LOG_ERROR("invalid hdr_version {}", _header_version);
         read_next = -1;
         return false;
     }
@@ -218,7 +227,7 @@ message_ex *thrift_message_parser::parse_request_body_v0(message_reader *reader,
                      : HEADER_LENGTH_V0 - reader->_buffer_occupied);
 
     msg->header->body_length = _meta_v0->body_length;
-    dcheck_eq(msg->header->body_length, msg->buffers[1].size());
+    CHECK_EQ(msg->header->body_length, msg->buffers[1].size());
     msg->header->gpid.set_app_id(_meta_v0->app_id);
     msg->header->gpid.set_partition_index(_meta_v0->partition_index);
     msg->header->client.timeout_ms = _meta_v0->client_timeout;
@@ -267,7 +276,7 @@ message_ex *thrift_message_parser::parse_request_body_v1(message_reader *reader,
                      : HEADER_LENGTH_V1 - reader->_buffer_occupied);
 
     msg->header->body_length = _v1_specific_vars->_body_length;
-    dcheck_eq(msg->header->body_length, msg->buffers[1].size());
+    CHECK_EQ(msg->header->body_length, msg->buffers[1].size());
     msg->header->gpid.set_app_id(_v1_specific_vars->_meta_v1->app_id);
     msg->header->gpid.set_partition_index(_v1_specific_vars->_meta_v1->partition_index);
     msg->header->client.timeout_ms = _v1_specific_vars->_meta_v1->client_timeout;
@@ -296,7 +305,7 @@ message_ex *thrift_message_parser::get_message_on_receive(message_reader *reader
     case 1:
         return parse_request_body_v1(reader, read_next);
     default:
-        dassert_f(false, "invalid header version: {}", _header_version);
+        CHECK(false, "invalid header version: {}", _header_version);
     }
 
     return nullptr;
@@ -318,9 +327,9 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     auto &header = msg->header;
     auto &buffers = msg->buffers;
 
-    dassert(!header->context.u.is_request, "only support send response");
-    dassert(header->server.error_name[0], "error name should be set");
-    dassert(!buffers.empty(), "buffers can not be empty");
+    CHECK(!header->context.u.is_request, "only support send response");
+    CHECK(header->server.error_name[0], "error name should be set");
+    CHECK(!buffers.empty(), "buffers can not be empty");
 
     // write thrift response header and thrift message begin
     binary_writer header_writer;
@@ -354,11 +363,11 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     int dsn_buf_count = 0;
     while (dsn_size > 0 && dsn_buf_count < buffers.size()) {
         blob &buf = buffers[dsn_buf_count];
-        dassert(dsn_size >= buf.length(), "%u VS %u", dsn_size, buf.length());
+        CHECK_GE(dsn_size, buf.length());
         dsn_size -= buf.length();
         ++dsn_buf_count;
     }
-    dassert(dsn_size == 0, "dsn_size = %u", dsn_size);
+    CHECK_EQ(dsn_size, 0);
 
     // put header_bb and end_bb at the end
     buffers.resize(dsn_buf_count);
@@ -379,7 +388,7 @@ int thrift_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf
     int dsn_buf_count = 0;
     while (dsn_size > 0 && dsn_buf_count < msg_buffers.size()) {
         blob &buf = msg_buffers[dsn_buf_count];
-        dassert(dsn_size >= buf.length(), "%u VS %u", dsn_size, buf.length());
+        CHECK_GE(dsn_size, buf.length());
         dsn_size -= buf.length();
         ++dsn_buf_count;
 
@@ -392,8 +401,8 @@ int thrift_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf
         offset = 0;
         ++i;
     }
-    dassert(dsn_size == 0, "dsn_size = %u", dsn_size);
-    dassert(dsn_buf_count + 2 == msg_buffers.size(), "must have 2 more blob at the end");
+    CHECK_EQ(dsn_size, 0);
+    CHECK_EQ_MSG(dsn_buf_count + 2, msg_buffers.size(), "must have 2 more blob at the end");
 
     // set header
     blob &header_bb = msg_buffers[dsn_buf_count];

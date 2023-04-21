@@ -17,19 +17,27 @@
  * under the License.
  */
 
-#include "geo/lib/geo_client.h"
-
-#include <iostream>
-
-#include <s2/s2testing.h>
-#include <s2/s2cell.h>
-#include <rocksdb/statistics.h>
+#include <pegasus/error.h>
 #include <rocksdb/env.h>
+#include <rocksdb/statistics.h>
+#include <s2/s1angle.h>
+#include <s2/s2latlng.h>
+#include <s2/s2latlng_rect.h>
+#include <s2/s2testing.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
+#include <atomic>
+#include <iostream>
+#include <list>
+#include <memory>
+#include <string>
 
-#include "utils/fmt_logging.h"
+#include "geo/lib/geo_client.h"
+#include "geo/lib/latlng_codec.h"
 #include "utils/errors.h"
-#include "utils/strings.h"
+#include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
+#include "utils/synchronize.h"
 
 static const int data_count = 10000;
 
@@ -86,7 +94,7 @@ int main(int argc, char **argv)
             std::string value;
             S2LatLng latlng(S2Testing::SamplePoint(rect));
             bool ok = codec.encode_to_value(latlng.lat().degrees(), latlng.lng().degrees(), value);
-            dassert_f(ok, "");
+            CHECK(ok, "");
             int ret = my_geo.set(std::to_string(i), "", value, 1000);
             if (ret != pegasus::PERR_OK) {
                 std::cerr << "set data failed. error=" << ret << std::endl;

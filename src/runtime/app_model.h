@@ -28,8 +28,6 @@
 
 #pragma once
 
-#include "common/api_common.h"
-
 /*!
  mimic an app as if the following execution in the current thread are
  executed in the target app's threads.
@@ -48,7 +46,7 @@
  in configuration file. See more details at \ref enable_default_app_mimic.
 
  */
-extern DSN_API bool dsn_mimic_app(const char *app_role, int index);
+extern bool dsn_mimic_app(const char *app_role, int index);
 
 /*!
  start the system with given configuration
@@ -58,7 +56,7 @@ extern DSN_API bool dsn_mimic_app(const char *app_role, int index);
 
  \return true if it succeeds, false if it fails.
  */
-extern DSN_API bool dsn_run_config(const char *config, bool is_server DEFAULT(false));
+extern bool dsn_run_config(const char *config, bool is_server = false);
 
 /*!
  start the system with given arguments
@@ -82,7 +80,7 @@ extern DSN_API bool dsn_run_config(const char *config, bool is_server DEFAULT(fa
 
  Note the argc, argv folllows the C main convention that argv[0] is the executable name.
  */
-extern DSN_API void dsn_run(int argc, char **argv, bool is_server DEFAULT(false));
+extern void dsn_run(int argc, char **argv, bool is_server = false);
 
 /*!
  exit the process with the given exit code
@@ -92,4 +90,4 @@ extern DSN_API void dsn_run(int argc, char **argv, bool is_server DEFAULT(false)
  rDSN runtime does not provide elegant exit routines. Thereafter, developers call dsn_exit
  to exit the current process to avoid exceptions happending during normal exit.
  */
-NORETURN extern DSN_API void dsn_exit(int code);
+[[noreturn]] extern void dsn_exit(int code);

@@ -33,19 +33,55 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+// IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
-#include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
-#include "replica_stub.h"
+#include <fmt/format.h>
+#include <stdint.h>
+#include <algorithm>
+#include <chrono>
+#include <ios>
+#include <map>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "bulk_load/replica_bulk_loader.h"
-#include "runtime/security/access_controller.h"
-#include "split/replica_split_manager.h"
-#include "utils/fmt_logging.h"
-#include "replica/replication_app_base.h"
-#include "utils/fail_point.h"
-#include "utils/string_conv.h"
+#include "common/gpid.h"
 #include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
+#include "failure_detector/failure_detector_multimaster.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
+#include "mutation.h"
+#include "replica.h"
+#include "replica/prepare_list.h"
+#include "replica/replica_context.h"
+#include "replica/replication_app_base.h"
+#include "replica_stub.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/security/access_controller.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "split/replica_split_manager.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/string_view.h"
+#include "utils/strings.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
@@ -67,21 +103,17 @@ void replica::on_config_proposal(configuration_update_request &proposal)
 {
     _checker.only_one_thread_access();
 
-    ddebug("%s: process config proposal %s for %s",
-           name(),
-           enum_to_string(proposal.type),
-           proposal.node.to_string());
+    LOG_INFO_PREFIX(
+        "process config proposal {} for {}", enum_to_string(proposal.type), proposal.node);
 
     if (proposal.config.ballot < get_ballot()) {
-        dwarn("%s: on_config_proposal out-dated, %" PRId64 " vs %" PRId64,
-              name(),
-              proposal.config.ballot,
-              get_ballot());
+        LOG_WARNING_PREFIX(
+            "on_config_proposal out-dated, {} vs {}", proposal.config.ballot, get_ballot());
         return;
     }
 
     if (_primary_states.reconfiguration_task != nullptr) {
-        dinfo("%s: reconfiguration on the way, skip the incoming proposal", name());
+        LOG_DEBUG_PREFIX("reconfiguration on the way, skip the incoming proposal");
         return;
     }
 
@@ -112,30 +144,25 @@ void replica::on_config_proposal(configuration_update_request &proposal)
         remove(proposal);
         break;
     default:
-        dassert(false, "invalid config_type, type = %s", enum_to_string(proposal.type));
+        CHECK(false, "invalid config_type, type = {}", enum_to_string(proposal.type));
     }
 }
 
 void replica::assign_primary(configuration_update_request &proposal)
 {
-    dassert(proposal.node == _stub->_primary_address,
-            "%s VS %s",
-            proposal.node.to_string(),
-            _stub->_primary_address_str);
+    CHECK_EQ(proposal.node, _stub->_primary_address);
 
     if (status() == partition_status::PS_PRIMARY) {
-        dwarn("%s: invalid assgin primary proposal as the node is in %s",
-              name(),
-              enum_to_string(status()));
+        LOG_WARNING_PREFIX("invalid assgin primary proposal as the node is in {}",
+                           enum_to_string(status()));
         return;
     }
 
     if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY &&
         (status() != partition_status::PS_SECONDARY || _secondary_states.checkpoint_is_running) &&
         status() != partition_status::PS_PARTITION_SPLIT) {
-        dwarn(
-            "%s: invalid upgrade to primary proposal as the node is in %s or during checkpointing",
-            name(),
+        LOG_WARNING_PREFIX(
+            "invalid upgrade to primary proposal as the node is in {} or during checkpointing",
             enum_to_string(status()));
 
         // TODO: tell meta server so new primary is built more quickly
@@ -152,60 +179,42 @@ void replica::assign_primary(configuration_update_request &proposal)
 void replica::add_potential_secondary(configuration_update_request &proposal)
 {
     if (status() != partition_status::PS_PRIMARY) {
-        dwarn("%s: ignore add secondary proposal for invalid state, state = %s",
-              name(),
-              enum_to_string(status()));
+        LOG_WARNING_PREFIX("ignore add secondary proposal for invalid state, state = {}",
+                           enum_to_string(status()));
         return;
     }
 
-    dassert(proposal.config.ballot == get_ballot(),
-            "invalid ballot, %" PRId64 " VS %" PRId64 "",
-            proposal.config.ballot,
-            get_ballot());
-    dassert(proposal.config.pid == _primary_states.membership.pid,
-            "(%d.%d) VS (%d.%d)",
-            proposal.config.pid.get_app_id(),
-            proposal.config.pid.get_partition_index(),
-            _primary_states.membership.pid.get_app_id(),
-            _primary_states.membership.pid.get_partition_index());
-    dassert(proposal.config.primary == _primary_states.membership.primary,
-            "%s VS %s",
-            proposal.config.primary.to_string(),
-            _primary_states.membership.primary.to_string());
-    dassert(proposal.config.secondaries == _primary_states.membership.secondaries,
-            "count(%d) VS count(%d)",
-            (int)proposal.config.secondaries.size(),
-            (int)_primary_states.membership.secondaries.size());
-    dassert(!_primary_states.check_exist(proposal.node, partition_status::PS_PRIMARY),
-            "node = %s",
-            proposal.node.to_string());
-    dassert(!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY),
-            "node = %s",
-            proposal.node.to_string());
+    CHECK_EQ(proposal.config.ballot, get_ballot());
+    CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
+    CHECK_EQ(proposal.config.primary, _primary_states.membership.primary);
+    CHECK(proposal.config.secondaries == _primary_states.membership.secondaries, "");
+    CHECK(!_primary_states.check_exist(proposal.node, partition_status::PS_PRIMARY),
+          "node = {}",
+          proposal.node);
+    CHECK(!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY),
+          "node = {}",
+          proposal.node);
 
     int potential_secondaries_count =
         _primary_states.membership.secondaries.size() + _primary_states.learners.size();
     if (potential_secondaries_count >= _primary_states.membership.max_replica_count - 1) {
         if (proposal.type == config_type::CT_ADD_SECONDARY) {
             if (_primary_states.learners.find(proposal.node) == _primary_states.learners.end()) {
-                ddebug("%s: already have enough secondaries or potential secondaries, ignore new "
-                       "potential secondary proposal",
-                       name());
+                LOG_INFO_PREFIX(
+                    "already have enough secondaries or potential secondaries, ignore new "
+                    "potential secondary proposal");
                 return;
             }
         } else if (proposal.type == config_type::CT_ADD_SECONDARY_FOR_LB) {
             if (potential_secondaries_count >= _primary_states.membership.max_replica_count) {
-                ddebug("%s: only allow one extra (potential) secondary, ingnore new potential "
-                       "secondary proposal",
-                       name());
+                LOG_INFO_PREFIX("only allow one extra (potential) secondary, ingnore new potential "
+                                "secondary proposal");
                 return;
             } else {
-                ddebug("%s: add a new secondary(%s) for future load balancer",
-                       name(),
-                       proposal.node.to_string());
+                LOG_INFO_PREFIX("add a new secondary({}) for future load balancer", proposal.node);
             }
         } else {
-            dassert(false, "invalid config_type, type = %s", enum_to_string(proposal.type));
+            CHECK(false, "invalid config_type, type = {}", enum_to_string(proposal.type));
         }
     }
 
@@ -229,10 +238,9 @@ void replica::add_potential_secondary(configuration_update_request &proposal)
         partition_status::PS_POTENTIAL_SECONDARY, request.config, state.signature);
     request.last_committed_decree = last_committed_decree();
 
-    ddebug("%s: call one way %s to start learning with signature [%016" PRIx64 "]",
-           name(),
-           proposal.node.to_string(),
-           state.signature);
+    LOG_INFO_PREFIX("call one way {} to start learning with signature [{:#018x}]",
+                    proposal.node,
+                    state.signature);
 
     rpc::call_one_way_typed(
         proposal.node, RPC_LEARN_ADD_LEARNER, request, get_gpid().thread_hash());
@@ -240,7 +248,7 @@ void replica::add_potential_secondary(configuration_update_request &proposal)
 
 void replica::upgrade_to_secondary_on_primary(::dsn::rpc_address node)
 {
-    ddebug("%s: upgrade potential secondary %s to secondary", name(), node.to_string());
+    LOG_INFO_PREFIX("upgrade potential secondary {} to secondary", node);
 
     partition_configuration newConfig = _primary_states.membership;
 
@@ -255,21 +263,10 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request &pr
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert(proposal.config.pid == _primary_states.membership.pid,
-            "(%d.%d) VS (%d.%d)",
-            proposal.config.pid.get_app_id(),
-            proposal.config.pid.get_partition_index(),
-            _primary_states.membership.pid.get_app_id(),
-            _primary_states.membership.pid.get_partition_index());
-    dassert(proposal.config.primary == _primary_states.membership.primary,
-            "%s VS %s",
-            proposal.config.primary.to_string(),
-            _primary_states.membership.primary.to_string());
-    dassert(proposal.config.secondaries == _primary_states.membership.secondaries, "");
-    dassert(proposal.node == proposal.config.primary,
-            "%s VS %s",
-            proposal.node.to_string(),
-            proposal.config.primary.to_string());
+    CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
+    CHECK_EQ(proposal.config.primary, _primary_states.membership.primary);
+    CHECK(proposal.config.secondaries == _primary_states.membership.secondaries, "");
+    CHECK_EQ(proposal.node, proposal.config.primary);
 
     proposal.config.primary.set_invalid();
     proposal.config.secondaries.push_back(proposal.node);
@@ -283,23 +280,16 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert(proposal.config.pid == _primary_states.membership.pid,
-            "(%d.%d) VS (%d.%d)",
-            proposal.config.pid.get_app_id(),
-            proposal.config.pid.get_partition_index(),
-            _primary_states.membership.pid.get_app_id(),
-            _primary_states.membership.pid.get_partition_index());
-    dassert(proposal.config.primary == _primary_states.membership.primary,
-            "%s VS %s",
-            proposal.config.primary.to_string(),
-            _primary_states.membership.primary.to_string());
-    dassert(proposal.config.secondaries == _primary_states.membership.secondaries, "");
+    CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
+    CHECK_EQ(proposal.config.primary, _primary_states.membership.primary);
+    CHECK(proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
     if (proposal.node == proposal.config.primary) {
         proposal.config.primary.set_invalid();
     } else {
-        auto rt = replica_helper::remove_node(proposal.node, proposal.config.secondaries);
-        dassert(rt, "remove node failed, node = %s", proposal.node.to_string());
+        CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries),
+              "remove node failed, node = {}",
+              proposal.node);
     }
 
     update_configuration_on_meta_server(
@@ -311,31 +301,21 @@ void replica::remove(configuration_update_request &proposal)
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    dassert(proposal.config.pid == _primary_states.membership.pid,
-            "(%d.%d) VS (%d.%d)",
-            proposal.config.pid.get_app_id(),
-            proposal.config.pid.get_partition_index(),
-            _primary_states.membership.pid.get_app_id(),
-            _primary_states.membership.pid.get_partition_index());
-    dassert(proposal.config.primary == _primary_states.membership.primary,
-            "%s VS %s",
-            proposal.config.primary.to_string(),
-            _primary_states.membership.primary.to_string());
-    dassert(proposal.config.secondaries == _primary_states.membership.secondaries, "");
+    CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
+    CHECK_EQ(proposal.config.primary, _primary_states.membership.primary);
+    CHECK(proposal.config.secondaries == _primary_states.membership.secondaries, "");
 
     auto st = _primary_states.get_node_status(proposal.node);
 
     switch (st) {
     case partition_status::PS_PRIMARY:
-        dassert(proposal.config.primary == proposal.node,
-                "%s VS %s",
-                proposal.config.primary.to_string(),
-                proposal.node.to_string());
+        CHECK_EQ(proposal.config.primary, proposal.node);
         proposal.config.primary.set_invalid();
         break;
     case partition_status::PS_SECONDARY: {
-        auto rt = replica_helper::remove_node(proposal.node, proposal.config.secondaries);
-        dassert(rt, "remove_node failed, node = %s", proposal.node.to_string());
+        CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries),
+              "remove_node failed, node = {}",
+              proposal.node);
     } break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         break;
@@ -363,16 +343,14 @@ void replica::on_remove(const replica_configuration &request)
     // - here we ignore the lately arrived remove request, which is proper
     //
     if (request.ballot == get_ballot() && partition_status::PS_POTENTIAL_SECONDARY == status()) {
-        dwarn("this implies that a config proposal request (e.g. add secondary) "
-              "with the same ballot arrived before this remove request, "
-              "current status is %s",
-              enum_to_string(status()));
+        LOG_WARNING("this implies that a config proposal request (e.g. add secondary) "
+                    "with the same ballot arrived before this remove request, "
+                    "current status is {}",
+                    enum_to_string(status()));
         return;
     }
 
-    dassert(request.status == partition_status::PS_INACTIVE,
-            "invalid partition_status, status = %s",
-            enum_to_string(request.status));
+    CHECK_EQ(request.status, partition_status::PS_INACTIVE);
     update_local_configuration(request);
 }
 
@@ -383,27 +361,19 @@ void replica::update_configuration_on_meta_server(config_type::type type,
     // type should never be `CT_REGISTER_CHILD`
     // if this happens, it means serious mistake happened during partition split
     // assert here to stop split and avoid splitting wrong
-    if (type == config_type::CT_REGISTER_CHILD) {
-        dassert_replica(false, "invalid config_type, type = {}", enum_to_string(type));
-    }
+    CHECK_NE_PREFIX(type, config_type::CT_REGISTER_CHILD);
 
     newConfig.last_committed_decree = last_committed_decree();
 
     if (type == config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT) {
-        dassert(status() == partition_status::PS_INACTIVE && _inactive_is_transient &&
-                    _is_initializing,
-                "");
-        dassert(
-            newConfig.primary == node, "%s VS %s", newConfig.primary.to_string(), node.to_string());
+        CHECK(status() == partition_status::PS_INACTIVE && _inactive_is_transient &&
+                  _is_initializing,
+              "");
+        CHECK_EQ(newConfig.primary, node);
     } else if (type != config_type::CT_ASSIGN_PRIMARY &&
                type != config_type::CT_UPGRADE_TO_PRIMARY) {
-        dassert(status() == partition_status::PS_PRIMARY,
-                "partition status must be primary, status = %s",
-                enum_to_string(status()));
-        dassert(newConfig.ballot == _primary_states.membership.ballot,
-                "invalid ballot, %" PRId64 " VS %" PRId64 "",
-                newConfig.ballot,
-                _primary_states.membership.ballot);
+        CHECK_EQ(status(), partition_status::PS_PRIMARY);
+        CHECK_EQ(newConfig.ballot, _primary_states.membership.ballot);
     }
 
     // disable 2pc during reconfiguration
@@ -428,12 +398,11 @@ void replica::update_configuration_on_meta_server(config_type::type type,
         _primary_states.reconfiguration_task->cancel(true);
     }
 
-    ddebug("%s: send update configuration request to meta server, ballot = %" PRId64
-           ", type = %s, node = %s",
-           name(),
-           request->config.ballot,
-           enum_to_string(request->type),
-           request->node.to_string());
+    LOG_INFO_PREFIX(
+        "send update configuration request to meta server, ballot = {}, type = {}, node = {}",
+        request->config.ballot,
+        enum_to_string(request->type),
+        request->node);
 
     rpc_address target(_stub->_failure_detector->get_servers());
     _primary_states.reconfiguration_task =
@@ -466,10 +435,8 @@ void replica::on_update_configuration_on_meta_server_reply(
     }
 
     if (err != ERR_OK) {
-        ddebug("%s: update configuration reply with err %s, request ballot %" PRId64,
-               name(),
-               err.to_string(),
-               req->config.ballot);
+        LOG_INFO_PREFIX(
+            "update configuration reply with err {}, request ballot {}", err, req->config.ballot);
 
         if (err != ERR_INVALID_VERSION) {
             // when the rpc call timeout, we would delay to do the recall
@@ -498,14 +465,13 @@ void replica::on_update_configuration_on_meta_server_reply(
         }
     }
 
-    ddebug("%s: update configuration %s, reply with err %s, ballot %" PRId64
-           ", local ballot %" PRId64 ", local status %s",
-           name(),
-           enum_to_string(req->type),
-           resp.err.to_string(),
-           resp.config.ballot,
-           get_ballot(),
-           enum_to_string(status()));
+    LOG_INFO_PREFIX(
+        "update configuration {}, reply with err {}, ballot {}, local ballot {}, local status {}",
+        enum_to_string(req->type),
+        resp.err,
+        resp.config.ballot,
+        get_ballot(),
+        enum_to_string(status()));
 
     if (resp.config.ballot < get_ballot()) {
         _primary_states.reconfiguration_task = nullptr;
@@ -514,17 +480,9 @@ void replica::on_update_configuration_on_meta_server_reply(
 
     // post-update work items?
     if (resp.err == ERR_OK) {
-        dassert(req->config.pid == resp.config.pid,
-                "(%d.%d) VS (%d.%d)",
-                req->config.pid.get_app_id(),
-                req->config.pid.get_partition_index(),
-                resp.config.pid.get_app_id(),
-                resp.config.pid.get_partition_index());
-        dassert(req->config.primary == resp.config.primary,
-                "%s VS %s",
-                req->config.primary.to_string(),
-                resp.config.primary.to_string());
-        dassert(req->config.secondaries == resp.config.secondaries, "");
+        CHECK_EQ(req->config.pid, resp.config.pid);
+        CHECK_EQ(req->config.primary, resp.config.primary);
+        CHECK(req->config.secondaries == resp.config.secondaries, "");
 
         switch (req->type) {
         case config_type::CT_UPGRADE_TO_PRIMARY:
@@ -546,11 +504,11 @@ void replica::on_update_configuration_on_meta_server_reply(
             }
             break;
         case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
-            dassert(_is_initializing, "");
+            CHECK(_is_initializing, "");
             _is_initializing = false;
             break;
         default:
-            dassert(false, "invalid config_type, type = %s", enum_to_string(req->type));
+            CHECK(false, "invalid config_type, type = {}", enum_to_string(req->type));
         }
     }
 
@@ -575,6 +533,8 @@ void replica::update_app_envs_internal(const std::map<std::string, std::string> 
 
     update_ac_allowed_users(envs);
 
+    update_ac_ranger_policies(envs);
+
     update_allow_ingest_behind(envs);
 
     update_deny_client(envs);
@@ -586,11 +546,11 @@ void replica::update_bool_envs(const std::map<std::string, std::string> &envs,
 {
     bool new_value = false;
     if (!get_bool_envs(envs, name, new_value)) {
-        dwarn_replica("invalid value of env {}", name);
+        LOG_WARNING_PREFIX("invalid value of env {}", name);
         return;
     }
     if (new_value != value) {
-        ddebug_replica("switch env[{}] from {} to {}", name, value, new_value);
+        LOG_INFO_PREFIX("switch env[{}] from {} to {}", name, value, new_value);
         value = new_value;
     }
 }
@@ -603,7 +563,15 @@ void replica::update_ac_allowed_users(const std::map<std::string, std::string> &
         allowed_users = iter->second;
     }
 
-    _access_controller->update(allowed_users);
+    _access_controller->update_allowed_users(allowed_users);
+}
+
+void replica::update_ac_ranger_policies(const std::map<std::string, std::string> &envs)
+{
+    auto iter = envs.find(replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES);
+    if (iter != envs.end()) {
+        _access_controller->update_ranger_policies(iter->second);
+    }
 }
 
 void replica::update_allow_ingest_behind(const std::map<std::string, std::string> &envs)
@@ -618,10 +586,10 @@ void replica::update_allow_ingest_behind(const std::map<std::string, std::string
         if (store_app_info(info) != ERR_OK) {
             return;
         }
-        ddebug_replica("switch env[{}] from {} to {}",
-                       replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND,
-                       _allow_ingest_behind,
-                       new_value);
+        LOG_INFO_PREFIX("switch env[{}] from {} to {}",
+                        replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND,
+                        _allow_ingest_behind,
+                        new_value);
         _allow_ingest_behind = new_value;
     }
 }
@@ -636,7 +604,7 @@ void replica::update_deny_client(const std::map<std::string, std::string> &envs)
 
     std::vector<std::string> sub_sargs;
     utils::split_args(env_iter->second.c_str(), sub_sargs, '*', true);
-    dcheck_eq_replica(sub_sargs.size(), 2);
+    CHECK_EQ_PREFIX(sub_sargs.size(), 2);
 
     _deny_client.reconfig = (sub_sargs[0] == "reconfig");
     _deny_client.read = (sub_sargs[1] == "read" || sub_sargs[1] == "all");
@@ -652,10 +620,7 @@ void replica::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
 
 bool replica::update_configuration(const partition_configuration &config)
 {
-    dassert(config.ballot >= get_ballot(),
-            "invalid ballot, %" PRId64 " VS %" PRId64 "",
-            config.ballot,
-            get_ballot());
+    CHECK_GE(config.ballot, get_ballot());
 
     replica_configuration rconfig;
     replica_helper::get_replica_config(config, _stub->_primary_address, rconfig);
@@ -701,66 +666,59 @@ bool replica::update_local_configuration(const replica_configuration &config,
     FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](dsn::string_view) -> bool {
         auto old_status = status();
         _config = config;
-        ddebug_replica(
+        LOG_INFO_PREFIX(
             "update status from {} to {}", enum_to_string(old_status), enum_to_string(status()));
         return true;
     });
 
-    dassert(config.ballot > get_ballot() || (same_ballot && config.ballot == get_ballot()),
-            "invalid ballot, %" PRId64 " VS %" PRId64 "",
-            config.ballot,
-            get_ballot());
-    dassert(config.pid == get_gpid(),
-            "(%d.%d) VS (%d.%d)",
-            config.pid.get_app_id(),
-            config.pid.get_partition_index(),
-            get_gpid().get_app_id(),
-            get_gpid().get_partition_index());
+    CHECK(config.ballot > get_ballot() || (same_ballot && config.ballot == get_ballot()),
+          "invalid ballot, {} VS {}",
+          config.ballot,
+          get_ballot());
+    CHECK_EQ(config.pid, get_gpid());
 
     partition_status::type old_status = status();
     ballot old_ballot = get_ballot();
 
-    // skip unncessary configuration change
-    if (old_status == config.status && old_ballot == config.ballot)
+    // skip unnecessary configuration change
+    if (old_status == config.status && old_ballot == config.ballot) {
         return true;
+    }
 
     // skip invalid change
     // but do not disable transitions to partition_status::PS_ERROR as errors
-    // must be handled immmediately
+    // must be handled immediately
     switch (old_status) {
     case partition_status::PS_ERROR: {
-        dwarn("%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed",
-              name(),
-              enum_to_string(old_status),
-              old_ballot,
-              enum_to_string(config.status),
-              config.ballot);
+        LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed",
+                           enum_to_string(old_status),
+                           old_ballot,
+                           enum_to_string(config.status),
+                           config.ballot);
         return false;
     } break;
     case partition_status::PS_INACTIVE:
         if ((config.status == partition_status::PS_PRIMARY ||
              config.status == partition_status::PS_SECONDARY) &&
             !_inactive_is_transient) {
-            dwarn("%s: status change from %s @ %" PRId64 " to %s @ %" PRId64
-                  " is not allowed when inactive state is not transient",
-                  name(),
-                  enum_to_string(old_status),
-                  old_ballot,
-                  enum_to_string(config.status),
-                  config.ballot);
+            LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed when "
+                               "inactive state is not transient",
+                               enum_to_string(old_status),
+                               old_ballot,
+                               enum_to_string(config.status),
+                               config.ballot);
             return false;
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         if (config.status == partition_status::PS_INACTIVE) {
             if (!_potential_secondary_states.cleanup(false)) {
-                dwarn("%s: status change from %s @ %" PRId64 " to %s @ %" PRId64
-                      " is not allowed coz learning remote state is still running",
-                      name(),
-                      enum_to_string(old_status),
-                      old_ballot,
-                      enum_to_string(config.status),
-                      config.ballot);
+                LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed coz "
+                                   "learning remote state is still running",
+                                   enum_to_string(old_status),
+                                   old_ballot,
+                                   enum_to_string(config.status),
+                                   config.ballot);
                 return false;
             }
         }
@@ -780,25 +738,24 @@ bool replica::update_local_configuration(const replica_configuration &config,
                 else
                     native_handle = nullptr;
 
-                dwarn("%s: status change from %s @ %" PRId64 " to %s @ %" PRId64
-                      " is not allowed coz checkpointing %p is still running",
-                      name(),
-                      enum_to_string(old_status),
-                      old_ballot,
-                      enum_to_string(config.status),
-                      config.ballot,
-                      native_handle);
+                LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed coz "
+                                   "checkpointing {} is still running",
+                                   enum_to_string(old_status),
+                                   old_ballot,
+                                   enum_to_string(config.status),
+                                   config.ballot,
+                                   fmt::ptr(native_handle));
                 return false;
             }
         }
         break;
     case partition_status::PS_PARTITION_SPLIT:
         if (config.status == partition_status::PS_INACTIVE) {
-            dwarn_replica("status change from {} @ {} to {} @ {} is not allowed",
-                          enum_to_string(old_status),
-                          old_ballot,
-                          enum_to_string(config.status),
-                          config.ballot);
+            LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed",
+                               enum_to_string(old_status),
+                               old_ballot,
+                               enum_to_string(config.status),
+                               config.ballot);
             return false;
         }
         break;
@@ -806,31 +763,22 @@ bool replica::update_local_configuration(const replica_configuration &config,
         break;
     }
 
-    bool r = false;
-    uint64_t oldTs = _last_config_change_time_ms;
+    uint64_t old_ts = _last_config_change_time_ms;
     _config = config;
     // we should durable the new ballot to prevent the inconsistent state
     if (_config.ballot > old_ballot) {
         dsn::error_code result = _app->update_init_info_ballot_and_decree(this);
         if (result == dsn::ERR_OK) {
-            ddebug("%s: update ballot to init file from %" PRId64 " to %" PRId64 " OK",
-                   name(),
-                   old_ballot,
-                   _config.ballot);
+            LOG_INFO_PREFIX(
+                "update ballot to init file from {} to {} OK", old_ballot, _config.ballot);
         } else {
-            dwarn("%s: update ballot to init file from %" PRId64 " to %" PRId64 " %s",
-                  name(),
-                  old_ballot,
-                  _config.ballot,
-                  result.to_string());
+            LOG_WARNING_PREFIX(
+                "update ballot to init file from {} to {} {}", old_ballot, _config.ballot, result);
         }
         _split_mgr->parent_cleanup_split_context();
     }
     _last_config_change_time_ms = dsn_now_ms();
-    dassert(max_prepared_decree() >= last_committed_decree(),
-            "%" PRId64 " VS %" PRId64 "",
-            max_prepared_decree(),
-            last_committed_decree());
+    CHECK_GE(max_prepared_decree(), last_committed_decree());
 
     _bulk_loader->clear_bulk_load_states_if_needed(old_status, config.status);
 
@@ -877,10 +825,10 @@ bool replica::update_local_configuration(const replica_configuration &config,
             clear_cold_backup_state();
             break;
         case partition_status::PS_POTENTIAL_SECONDARY:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
             break;
         default:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
         }
         break;
     case partition_status::PS_SECONDARY:
@@ -913,20 +861,20 @@ bool replica::update_local_configuration(const replica_configuration &config,
             // _secondary_states.cleanup(true); => do it in close as it may block
             break;
         default:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         switch (config.status) {
         case partition_status::PS_PRIMARY:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
             break;
         case partition_status::PS_SECONDARY:
             _prepare_list->truncate(_app->last_committed_decree());
 
             // using force cleanup now as all tasks must be done already
-            r = _potential_secondary_states.cleanup(true);
-            dassert(r, "%s: potential secondary context cleanup failed", name());
+            CHECK_PREFIX_MSG(_potential_secondary_states.cleanup(true),
+                             "potential secondary context cleanup failed");
 
             check_state_completeness();
             break;
@@ -938,11 +886,11 @@ bool replica::update_local_configuration(const replica_configuration &config,
             _prepare_list->reset(_app->last_committed_decree());
             _potential_secondary_states.cleanup(false);
             // => do this in close as it may block
-            // r = _potential_secondary_states.cleanup(true);
-            // dassert(r, "%s: potential secondary context cleanup failed", name());
+            // CHECK_PREFIX_MSG(_potential_secondary_states.cleanup(true),
+            //                  "potential secondary context cleanup failed");
             break;
         default:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
         }
         break;
     case partition_status::PS_PARTITION_SPLIT:
@@ -956,7 +904,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
             _split_states.cleanup(true);
             break;
         case partition_status::PS_POTENTIAL_SECONDARY:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
             break;
         case partition_status::PS_INACTIVE:
             break;
@@ -964,7 +912,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
             _split_states.cleanup(false);
             break;
         default:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
         }
         break;
     case partition_status::PS_INACTIVE:
@@ -975,13 +923,13 @@ bool replica::update_local_configuration(const replica_configuration &config,
         }
         switch (config.status) {
         case partition_status::PS_PRIMARY:
-            dassert(_inactive_is_transient, "must be in transient state for being primary next");
+            CHECK(_inactive_is_transient, "must be in transient state for being primary next");
             _inactive_is_transient = false;
             init_group_check();
             replay_prepare_list();
             break;
         case partition_status::PS_SECONDARY:
-            dassert(_inactive_is_transient, "must be in transient state for being secondary next");
+            CHECK(_inactive_is_transient, "must be in transient state for being secondary next");
             _inactive_is_transient = false;
             break;
         case partition_status::PS_POTENTIAL_SECONDARY:
@@ -1003,46 +951,45 @@ bool replica::update_local_configuration(const replica_configuration &config,
             _inactive_is_transient = false;
             break;
         default:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
         }
         break;
     case partition_status::PS_ERROR:
         switch (config.status) {
         case partition_status::PS_PRIMARY:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
             break;
         case partition_status::PS_SECONDARY:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
             break;
         case partition_status::PS_POTENTIAL_SECONDARY:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
             break;
         case partition_status::PS_INACTIVE:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
             break;
         case partition_status::PS_ERROR:
             break;
         default:
-            dassert(false, "invalid execution path");
+            CHECK(false, "invalid execution path");
         }
         break;
     default:
-        dassert(false, "invalid execution path");
+        CHECK(false, "invalid execution path");
     }
 
-    ddebug("%s: status change %s @ %" PRId64 " => %s @ %" PRId64 ", pre(%" PRId64 ", %" PRId64
-           "), app(%" PRId64 ", %" PRId64 "), duration = %" PRIu64 " ms, %s",
-           name(),
-           enum_to_string(old_status),
-           old_ballot,
-           enum_to_string(status()),
-           get_ballot(),
-           _prepare_list->max_decree(),
-           _prepare_list->last_committed_decree(),
-           _app->last_committed_decree(),
-           _app->last_durable_decree(),
-           _last_config_change_time_ms - oldTs,
-           boost::lexical_cast<std::string>(_config).c_str());
+    LOG_INFO_PREFIX(
+        "status change {} @ {} => {} @ {}, pre({}, {}), app({}, {}), duration = {} ms, {}",
+        enum_to_string(old_status),
+        old_ballot,
+        enum_to_string(status()),
+        get_ballot(),
+        _prepare_list->max_decree(),
+        _prepare_list->last_committed_decree(),
+        _app->last_committed_decree(),
+        _app->last_durable_decree(),
+        _last_config_change_time_ms - old_ts,
+        boost::lexical_cast<std::string>(_config));
 
     if (status() != old_status) {
         bool is_closing =
@@ -1051,7 +998,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
         _stub->notify_replica_state_update(config, is_closing);
 
         if (is_closing) {
-            ddebug("%s: being close ...", name());
+            LOG_INFO_PREFIX("being close ...");
             _stub->begin_close_replica(this);
             return false;
         }
@@ -1084,8 +1031,9 @@ bool replica::update_local_configuration(const replica_configuration &config,
 
 bool replica::update_local_configuration_with_no_ballot_change(partition_status::type s)
 {
-    if (status() == s)
+    if (status() == s) {
         return false;
+    }
 
     auto config = _config;
     config.status = s;
@@ -1097,12 +1045,13 @@ void replica::on_config_sync(const app_info &info,
                              const partition_configuration &config,
                              split_status::type meta_split_status)
 {
-    dinfo_replica("configuration sync");
+    LOG_DEBUG_PREFIX("configuration sync");
     // no outdated update
     if (config.ballot < get_ballot())
         return;
 
     update_app_max_replica_count(info.max_replica_count);
+    update_app_name(info.app_name);
     update_app_envs(info.envs);
     _is_duplication_master = info.duplicating;
 
@@ -1132,15 +1081,32 @@ void replica::on_config_sync(const app_info &info,
                 ||
                 config.primary.is_invalid() // primary is dead (otherwise let primary remove this)
                 ) {
-                ddebug("%s: downgrade myself as inactive is not transient, remote_config(%s)",
-                       name(),
-                       boost::lexical_cast<std::string>(config).c_str());
+                LOG_INFO_PREFIX("downgrade myself as inactive is not transient, remote_config({})",
+                                boost::lexical_cast<std::string>(config));
                 _stub->remove_replica_on_meta_server(_app_info, config);
             } else {
-                ddebug("%s: state is non-transient inactive, waiting primary to remove me", name());
+                LOG_INFO_PREFIX("state is non-transient inactive, waiting primary to remove me");
             }
         }
     }
+}
+
+void replica::update_app_name(const std::string &app_name)
+{
+    if (app_name == _app_info.app_name) {
+        return;
+    }
+
+    auto old_app_name = _app_info.app_name;
+    _app_info.app_name = app_name;
+
+    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+                        ERR_OK,
+                        "store_app_info for app_name failed: "
+                        "app_name={}, app_id={}, old_app_name={}",
+                        _app_info.app_name,
+                        _app_info.app_id,
+                        old_app_name);
 }
 
 void replica::update_app_max_replica_count(int32_t max_replica_count)
@@ -1152,15 +1118,14 @@ void replica::update_app_max_replica_count(int32_t max_replica_count)
     auto old_max_replica_count = _app_info.max_replica_count;
     _app_info.max_replica_count = max_replica_count;
 
-    auto ec = store_app_info(_app_info);
-    dassert_replica(ec == ERR_OK,
-                    "store_app_info for max_replica_count failed: error_code={}, app_name={}, "
-                    "app_id={}, old_max_replica_count={}, new_max_replica_count={}",
-                    ec.to_string(),
-                    _app_info.app_name,
-                    _app_info.app_id,
-                    old_max_replica_count,
-                    _app_info.max_replica_count);
+    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+                        ERR_OK,
+                        "store_app_info for max_replica_count failed: app_name={}, "
+                        "app_id={}, old_max_replica_count={}, new_max_replica_count={}",
+                        _app_info.app_name,
+                        _app_info.app_id,
+                        old_max_replica_count,
+                        _app_info.max_replica_count);
 }
 
 void replica::replay_prepare_list()
@@ -1168,29 +1133,22 @@ void replica::replay_prepare_list()
     decree start = last_committed_decree() + 1;
     decree end = _prepare_list->max_decree();
 
-    ddebug("%s: replay prepare list from %" PRId64 " to %" PRId64 ", ballot = %" PRId64,
-           name(),
-           start,
-           end,
-           get_ballot());
+    LOG_INFO_PREFIX("replay prepare list from {} to {}, ballot = {}", start, end, get_ballot());
 
     for (decree decree = start; decree <= end; decree++) {
         mutation_ptr old = _prepare_list->get_mutation_by_decree(decree);
         mutation_ptr mu = new_mutation(decree);
 
         if (old != nullptr) {
-            dinfo("copy mutation from mutation_tid=%" PRIu64 " to mutation_tid=%" PRIu64,
-                  old->tid(),
-                  mu->tid());
+            LOG_DEBUG_PREFIX(
+                "copy mutation from mutation_tid={} to mutation_tid={}", old->tid(), mu->tid());
             mu->copy_from(old);
         } else {
             mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
 
-            ddebug("%s: emit empty mutation %s with mutation_tid=%" PRIu64
-                   " when replay prepare list",
-                   name(),
-                   mu->name(),
-                   mu->tid());
+            LOG_INFO_PREFIX("emit empty mutation {} with mutation_tid={} when replay prepare list",
+                            mu->name(),
+                            mu->tid());
         }
 
         init_prepare(mu, true);

@@ -17,7 +17,15 @@
  * under the License.
  */
 
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <string>
+
+#include "shell/command_executor.h"
 #include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 
 bool use_app_as_current(command_executor *e, shell_context *sc, arguments args)
 {
@@ -44,11 +52,11 @@ bool process_escape_all(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "Current escape_all: %s.\n", sc->escape_all ? "true" : "false");
         return true;
     } else if (args.argc == 2) {
-        if (strcmp(args.argv[1], "true") == 0) {
+        if (dsn::utils::iequals(args.argv[1], "true")) {
             sc->escape_all = true;
             fprintf(stderr, "OK\n");
             return true;
-        } else if (strcmp(args.argv[1], "false") == 0) {
+        } else if (dsn::utils::iequals(args.argv[1], "false")) {
             sc->escape_all = false;
             fprintf(stderr, "OK\n");
             return true;

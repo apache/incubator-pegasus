@@ -17,11 +17,14 @@
 
 #pragma once
 
-#include <string>
+#include <cstddef>
 #include <cstdint>
+// IWYU pragma: no_include <experimental/string_view>
 #include <functional>
-#include "errors.h"
+#include <string>
+
 #include "enum_helper.h"
+#include "errors.h"
 #include "utils.h"
 
 enum class flag_tag
@@ -45,7 +48,7 @@ struct hash<flag_tag>
 } // namespace std
 
 // Example:
-//    DSN_DEFINE_string("core", filename, "my_file.txt", "The file to read");
+//    DSN_DEFINE_string(core, filename, "my_file.txt", "The file to read");
 //    DSN_DEFINE_validator(filename, [](const char *fname){ return is_file(fname); });
 //    auto fptr = file::open(FLAGS_filename, O_RDONLY | O_BINARY, 0);
 
@@ -61,7 +64,7 @@ struct hash<flag_tag>
 
 #define DSN_DEFINE_VARIABLE(type, section, name, default_value, desc)                              \
     type FLAGS_##name = default_value;                                                             \
-    static dsn::flag_registerer FLAGS_REG_##name(section, #name, desc, &FLAGS_##name)
+    static dsn::flag_registerer FLAGS_REG_##name(#section, #name, desc, &FLAGS_##name)
 
 #define DSN_DEFINE_int32(section, name, val, desc)                                                 \
     DSN_DEFINE_VARIABLE(int32_t, section, name, val, desc)
@@ -120,6 +123,11 @@ struct hash<flag_tag>
 #define DSN_TAG_VARIABLE(name, tag)                                                                \
     COMPILE_ASSERT(sizeof(decltype(FLAGS_##name)), exist_##name##_##tag);                          \
     static dsn::flag_tagger FLAGS_TAGGER_##name##_##tag(#name, flag_tag::tag)
+
+#define UPDATE_CONFIG(fn, flag, name)                                                              \
+    if (name == #flag) {                                                                           \
+        fn(FLAGS_##flag);                                                                          \
+    }
 
 namespace dsn {
 

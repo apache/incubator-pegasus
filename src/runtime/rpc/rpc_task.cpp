@@ -24,8 +24,23 @@
  * THE SOFTWARE.
  */
 
-#include "runtime/task/task_engine.h"
+#include <functional>
+#include <list>
+#include <utility>
+
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/service_engine.h"
 #include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 
@@ -35,10 +50,11 @@ rpc_request_task::rpc_request_task(message_ex *request, rpc_request_handler &&h,
       _handler(std::move(h)),
       _enqueue_ts_ns(0)
 {
-    dbg_dassert(
-        TASK_TYPE_RPC_REQUEST == spec().type,
-        "%s is not a RPC_REQUEST task, please use DEFINE_TASK_CODE_RPC to define the task code",
-        spec().name.c_str());
+    DCHECK_EQ_MSG(
+        TASK_TYPE_RPC_REQUEST,
+        spec().type,
+        "{} is not a RPC_REQUEST task, please use DEFINE_TASK_CODE_RPC to define the task code",
+        spec().name);
     _request->add_ref(); // released in dctor
 }
 
@@ -76,10 +92,11 @@ rpc_response_task::rpc_response_task(message_ex *request,
 
     set_error_code(ERR_IO_PENDING);
 
-    dbg_dassert(TASK_TYPE_RPC_RESPONSE == spec().type,
-                "%s is not of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the "
-                "request task code",
-                spec().name.c_str());
+    DCHECK_EQ_MSG(TASK_TYPE_RPC_RESPONSE,
+                  spec().type,
+                  "{} is not of RPC_RESPONSE type, please use DEFINE_TASK_CODE_RPC to define the "
+                  "request task code",
+                  spec().name);
 
     _request = request;
     _response = nullptr;

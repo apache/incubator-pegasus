@@ -26,9 +26,14 @@
 
 #pragma once
 
+#include <stdint.h>
+
+#include "aio/aio_task.h"
 #include "aio_provider.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class disk_engine;
 
 class native_linux_aio_provider : public aio_provider
 {
@@ -36,9 +41,9 @@ public:
     explicit native_linux_aio_provider(disk_engine *disk);
     ~native_linux_aio_provider() override;
 
-    dsn_handle_t open(const char *file_name, int flag, int pmode) override;
-    error_code close(dsn_handle_t fh) override;
-    error_code flush(dsn_handle_t fh) override;
+    linux_fd_t open(const char *file_name, int flag, int pmode) override;
+    error_code close(linux_fd_t fd) override;
+    error_code flush(linux_fd_t fd) override;
     error_code write(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) override;
     error_code read(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) override;
 

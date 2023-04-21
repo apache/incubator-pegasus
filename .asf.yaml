@@ -61,6 +61,11 @@ github:
         required_approving_review_count: 2
       required_signatures: false
       required_linear_history: true
+  collaborators:
+    - GehaFearless
+    - padmejin
+    - shalk
+    - WHBANG
 
 notifications:
   commits: commits@pegasus.apache.org

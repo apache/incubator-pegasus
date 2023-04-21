@@ -24,12 +24,33 @@
  * THE SOFTWARE.
  */
 
-#include "runtime/task/async_calls.h"
-#include "utils/filesystem.h"
-#include "utils/smart_pointers.h"
-#include "utils/fail_point.h"
-
+#include <alloca.h>
+#include <fcntl.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <string.h>
+#include <list>
+#include <memory>
+#include <string>
+
+#include "aio/aio_task.h"
+#include "aio/file_io.h"
+#include "runtime/task/task_code.h"
+#include "runtime/tool_api.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/strings.h"
+#include "utils/threadpool_code.h"
+
+namespace dsn {
+class disk_file;
+} // namespace dsn
 
 using namespace ::dsn;
 
@@ -121,7 +142,7 @@ TEST(core, aio)
 
         t->wait();
         EXPECT_TRUE(t->get_transferred_size() == (size_t)len);
-        EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
+        EXPECT_TRUE(dsn::utils::mequals(buffer, buffer2, len));
     }
 
     err = file::close(fp);
@@ -153,8 +174,8 @@ TEST(core, operation_failed)
     auto fp = file::open("tmp_test_file", O_WRONLY, 0600);
     EXPECT_TRUE(fp == nullptr);
 
-    auto err = dsn::make_unique<dsn::error_code>();
-    auto count = dsn::make_unique<size_t>();
+    auto err = std::make_unique<dsn::error_code>();
+    auto count = std::make_unique<size_t>();
     auto io_callback = [&err, &count](::dsn::error_code e, size_t n) {
         *err = e;
         *count = n;
@@ -178,16 +199,16 @@ TEST(core, operation_failed)
     t = ::dsn::file::read(fp2, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == strlen(str));
-    EXPECT_TRUE(strncmp(buffer, str, 10) == 0);
+    EXPECT_TRUE(dsn::utils::equals(buffer, str, 10));
 
     t = ::dsn::file::read(fp2, buffer, 5, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == 5);
-    EXPECT_TRUE(strncmp(buffer, str, 5) == 0);
+    EXPECT_TRUE(dsn::utils::equals(buffer, str, 5));
 
     t = ::dsn::file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
-    ddebug("error code: %s", err->to_string());
+    LOG_INFO("error code: {}", *err);
     file::close(fp);
     file::close(fp2);
     fail::teardown();

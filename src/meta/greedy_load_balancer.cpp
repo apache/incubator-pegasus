@@ -24,31 +24,43 @@
  * THE SOFTWARE.
  */
 
-#include <iostream>
-#include <queue>
-#include "utils/command_manager.h"
-#include "utils/math.h"
-#include "utils/utils.h"
-#include "utils/fmt_logging.h"
-#include "utils/fail_point.h"
-#include "greedy_load_balancer.h"
-#include "meta_data.h"
-#include "meta_admin_types.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <string.h>
+#include <cstdint>
+#include <map>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+
 #include "app_balance_policy.h"
 #include "cluster_balance_policy.h"
+#include "greedy_load_balancer.h"
+#include "meta/load_balance_policy.h"
+#include "meta/server_load_balancer.h"
+#include "meta_admin_types.h"
+#include "meta_data.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/command_manager.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/math.h"
 
 namespace dsn {
+class gpid;
+
 namespace replication {
-DSN_DEFINE_bool("meta_server", balance_cluster, false, "whether to enable cluster balancer");
+class meta_service;
+
+DSN_DEFINE_bool(meta_server, balance_cluster, false, "whether to enable cluster balancer");
 DSN_TAG_VARIABLE(balance_cluster, FT_MUTABLE);
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
-greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
-    : server_load_balancer(_svc), _get_balance_operation_count(nullptr)
+greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : server_load_balancer(_svc)
 {
-    _app_balance_policy = dsn::make_unique<app_balance_policy>(_svc);
-    _cluster_balance_policy = dsn::make_unique<cluster_balance_policy>(_svc);
+    _app_balance_policy = std::make_unique<app_balance_policy>(_svc);
+    _cluster_balance_policy = std::make_unique<cluster_balance_policy>(_svc);
 
     ::memset(t_operation_counters, 0, sizeof(t_operation_counters));
 
@@ -74,7 +86,7 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
         "copy secondary count by balancer in the recent period");
 }
 
-greedy_load_balancer::~greedy_load_balancer() { unregister_ctrl_commands(); }
+greedy_load_balancer::~greedy_load_balancer() {}
 
 void greedy_load_balancer::register_ctrl_commands()
 {
@@ -83,11 +95,6 @@ void greedy_load_balancer::register_ctrl_commands()
         "meta.lb.get_balance_operation_count [total | move_pri | copy_pri | copy_sec | detail]",
         "get balance operation count",
         [this](const std::vector<std::string> &args) { return get_balance_operation_count(args); });
-}
-
-void greedy_load_balancer::unregister_ctrl_commands()
-{
-    UNREGISTER_VALID_HANDLER(_get_balance_operation_count);
 }
 
 std::string greedy_load_balancer::get_balance_operation_count(const std::vector<std::string> &args)
@@ -160,10 +167,7 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
     return ns.for_each_partition([this, n](const dsn::gpid &pid) {
         config_context &cc = *get_config_context(*(t_global_view->apps), pid);
         if (cc.find_from_serving(n) == cc.serving.end()) {
-            ddebug("meta server hasn't collected gpid(%d.%d)'s info of %s",
-                   pid.get_app_id(),
-                   pid.get_partition_index(),
-                   n.to_string());
+            LOG_INFO("meta server hasn't collected gpid({})'s info of {}", pid, n);
             return false;
         }
         return true;
@@ -172,8 +176,8 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 
 void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 {
-    dassert(t_alive_nodes >= FLAGS_min_live_node_count_for_unfreeze,
-            "too few nodes will be freezed");
+    CHECK_GE_MSG(
+        t_alive_nodes, FLAGS_min_live_node_count_for_unfreeze, "too few nodes will be freezed");
 
     for (auto &kv : *(t_global_view->nodes)) {
         node_state &ns = kv.second;
@@ -195,7 +199,7 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 
 bool greedy_load_balancer::balance(meta_view view, migration_list &list)
 {
-    ddebug("balancer round");
+    LOG_INFO("balancer round");
     list.clear();
 
     t_alive_nodes = view.nodes->size();
@@ -209,7 +213,7 @@ bool greedy_load_balancer::balance(meta_view view, migration_list &list)
 
 bool greedy_load_balancer::check(meta_view view, migration_list &list)
 {
-    ddebug("balance checker round");
+    LOG_INFO("balance checker round");
     list.clear();
 
     t_alive_nodes = view.nodes->size();
@@ -240,7 +244,7 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
             counters[COPY_SEC_COUNT]++;
             break;
         default:
-            dassert(false, "");
+            CHECK(false, "");
         }
     }
     ::memcpy(t_operation_counters, counters, sizeof(counters));

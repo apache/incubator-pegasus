@@ -31,6 +31,7 @@ set(MY_PROJ_LIBS
     pegasus_base
     dsn.replication.tool
     dsn_replica_server
+    dsn_meta_server
     dsn_replication_common
     dsn_client
     dsn_utils
@@ -45,6 +46,9 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
+    PocoCrypto
+    PocoUtil
+    PocoXML
     pegasus_geo_lib
     RocksDB::rocksdb
     s2

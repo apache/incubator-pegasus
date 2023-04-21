@@ -24,29 +24,53 @@
  * THE SOFTWARE.
  */
 
-#include "meta/meta_server_failure_detector.h"
-#include "meta/meta_options.h"
-#include "replica/replica_stub.h"
-
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "common/api_common.h"
-#include "runtime/api_task.h"
+#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "failure_detector/failure_detector.h"
+#include "failure_detector/failure_detector_multimaster.h"
+#include "fd_types.h"
+#include "meta/meta_options.h"
+#include "meta/meta_server_failure_detector.h"
+#include "replica/replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include <vector>
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/enum_helper.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
+#include "utils/zlocks.h"
+
+DSN_DECLARE_int32(max_succssive_unstable_restart);
 
 using namespace dsn;
 using namespace dsn::fd;
+
+DSN_DECLARE_uint64(stable_rs_min_running_seconds);
 
 #define MPORT_START 30001
 #define WPORT 40001
@@ -69,7 +93,7 @@ protected:
         if (_send_ping_switch)
             failure_detector::send_beacon(node, time);
         else {
-            dinfo("ignore send beacon, to node[%s], time[%" PRId64 "]", node.to_string(), time);
+            LOG_DEBUG("ignore send beacon, to node[{}], time[{}]", node, time);
         }
     }
 
@@ -119,10 +143,10 @@ public:
         if (_response_ping_switch)
             meta_server_failure_detector::on_ping(beacon, reply);
         else {
-            dinfo("ignore on ping, beacon msg, time[%" PRId64 "], from[%s], to[%s]",
-                  beacon.time,
-                  beacon.from_addr.to_string(),
-                  beacon.to_addr.to_string());
+            LOG_DEBUG("ignore on ping, beacon msg, time[{}], from[{}], to[{}]",
+                      beacon.time,
+                      beacon.from_addr,
+                      beacon.to_addr);
         }
     }
 
@@ -181,9 +205,9 @@ public:
 
     void on_master_config(const config_master_message &request, bool &response)
     {
-        dinfo("master config: request:%s, type:%s",
-              request.master.to_string(),
-              request.is_register ? "reg" : "unreg");
+        LOG_DEBUG("master config, request: {}, type: {}",
+                  request.master,
+                  request.is_register ? "reg" : "unreg");
         if (request.is_register)
             _worker_fd->register_master(request.master);
         else
@@ -203,8 +227,8 @@ public:
 
     error_code start(const std::vector<std::string> &args) override
     {
-        _opts.stable_rs_min_running_seconds = 10;
-        _opts.max_succssive_unstable_restart = 10;
+        FLAGS_stable_rs_min_running_seconds = 10;
+        FLAGS_max_succssive_unstable_restart = 10;
 
         _master_fd = new master_fd_test();
         _master_fd->set_options(&_opts);
@@ -221,7 +245,7 @@ public:
         }
 
         _master_fd->start(1, 1, 9, 10, use_allow_list);
-        dinfo("%s", _master_fd->get_allow_list(std::vector<std::string>{}).c_str());
+        LOG_DEBUG("{}", _master_fd->get_allow_list({}));
         ++started_apps;
 
         return ERR_OK;
@@ -264,11 +288,11 @@ bool get_worker_and_master(test_worker *&worker, std::vector<test_master *> &mas
     worker = nullptr;
 
     for (int i = 0; i != apps.size(); ++i) {
-        if (strcmp(apps[i]->info().type.c_str(), "worker") == 0) {
+        if (apps[i]->info().type == "worker") {
             if (worker != nullptr)
                 return false;
             worker = reinterpret_cast<test_worker *>(apps[i]);
-        } else if (strcmp(apps[i]->info().type.c_str(), "master") == 0) {
+        } else if (apps[i]->info().type == "master") {
             int index = apps[i]->info().index - 1;
             if (index >= masters.size() || masters[index] != nullptr)
                 return false;
@@ -329,7 +353,7 @@ void clear(test_worker *worker, std::vector<test_master *> masters)
 
 void finish(test_worker *worker, test_master *master, int master_index)
 {
-    dwarn("start to finish");
+    LOG_WARNING("start to finish");
     std::atomic_int wait_count;
     wait_count.store(2);
     worker->fd()->when_disconnected(
@@ -508,7 +532,7 @@ TEST(fd, old_master_died)
 
     worker->fd()->when_disconnected([](const std::vector<rpc_address> &masters_list) {
         ASSERT_EQ(masters_list.size(), 1);
-        dinfo("disconnect from master: %s", masters_list[0].to_string());
+        LOG_DEBUG("disconnect from master: {}", masters_list[0]);
     });
 
     /*first let's stop the old master*/
@@ -619,8 +643,8 @@ TEST(fd, update_stability)
     fd->toggle_response_ping(true);
 
     replication::fd_suboptions opts;
-    opts.stable_rs_min_running_seconds = 5;
-    opts.max_succssive_unstable_restart = 2;
+    FLAGS_stable_rs_min_running_seconds = 5;
+    FLAGS_max_succssive_unstable_restart = 2;
     fd->set_options(&opts);
 
     replication::meta_server_failure_detector::stability_map *smap =

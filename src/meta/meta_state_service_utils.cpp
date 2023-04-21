@@ -15,36 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/pipeline.h"
-#include "utils/fmt_logging.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
+#include <memory>
+#include <utility>
 
 #include "meta_state_service_utils.h"
 #include "meta_state_service_utils_impl.h"
+#include "utils/blob.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
+class task_tracker;
+namespace dist {
+class meta_state_service;
+} // namespace dist
+
 namespace replication {
 namespace mss {
 
 meta_storage::meta_storage(dist::meta_state_service *remote_storage, task_tracker *tracker)
     : _remote(remote_storage), _tracker(tracker)
 {
-    dassert(tracker != nullptr, "must set task tracker");
+    CHECK_NOTNULL(tracker, "must set task tracker");
 }
 
 meta_storage::~meta_storage() = default;
@@ -53,7 +44,7 @@ void meta_storage::create_node_recursively(std::queue<std::string> &&nodes,
                                            blob &&value,
                                            std::function<void()> &&cb)
 {
-    dassert(!nodes.empty(), "");
+    CHECK(!nodes.empty(), "");
 
     on_create_recursively op;
     op.initialize(this);

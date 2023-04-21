@@ -15,21 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "client/replication_ddl_client.h"
-#include "utils/filesystem.h"
-
-#include "include/pegasus/client.h"
-#include "include/pegasus/error.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "base/pegasus_const.h"
+#include "bulk_load_types.h"
+#include "client/replication_ddl_client.h"
+#include "include/pegasus/client.h"
+#include "include/pegasus/error.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
 #include "test/function_test/utils/test_util.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/filesystem.h"
+#include "utils/utils.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;

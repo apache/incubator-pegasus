@@ -35,8 +35,11 @@
 
 #pragma once
 
-#include <queue>
+#include <stdint.h>
 #include <cassert>
+#include <queue>
+#include <string>
+
 #include "utils/synchronize.h"
 
 namespace dsn {

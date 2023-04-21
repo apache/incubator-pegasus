@@ -24,13 +24,30 @@
  * THE SOFTWARE.
  */
 
-#include "utils/fmt_logging.h"
+#include "runtime/task/task_engine.h"
+
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <limits.h>
+#include <algorithm>
+#include <mutex>
+#include <ostream>
+
+#include "fmt/core.h"
+#include "runtime/global_config.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
+#include "runtime/task/timer_service.h"
 #include "utils/command_manager.h"
-#include <fmt/format.h>
+#include "utils/factory_store.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/string_conv.h"
+#include "utils/threadpool_code.h"
 
-#include "task_engine.h"
-
-using namespace dsn::utils;
+using dsn::utils::factory_store;
 
 namespace dsn {
 
@@ -89,7 +106,7 @@ void task_worker_pool::start()
         wk->start();
     }
 
-    ddebug_f(
+    LOG_INFO(
         "[{}]: thread pool [{}] started, pool_code = {}, worker_count = {}, worker_share_core = "
         "{}, partitioned = {}, ...",
         _node->full_name(),
@@ -115,13 +132,13 @@ void task_worker_pool::stop()
         wk->stop();
     }
     _is_running = false;
-    ddebug_f("[{}]: thread pool {} stopped", _node->full_name(), _spec.name);
+    LOG_INFO("[{}]: thread pool {} stopped", _node->full_name(), _spec.name);
 }
 
 void task_worker_pool::add_timer(task *t)
 {
-    dassert(t->delay_milliseconds() > 0,
-            "task delayed should be dispatched to timer service first");
+    CHECK_GT_MSG(
+        t->delay_milliseconds(), 0, "task delayed should be dispatched to timer service first");
 
     unsigned int idx = (_spec.partitioned
                             ? static_cast<unsigned int>(t->hash()) %
@@ -132,15 +149,15 @@ void task_worker_pool::add_timer(task *t)
 
 void task_worker_pool::enqueue(task *t)
 {
-    dassert(t->spec().pool_code == spec().pool_code || t->spec().type == TASK_TYPE_RPC_RESPONSE,
-            "Invalid thread pool used");
-    dassert(t->delay_milliseconds() == 0,
-            "task delayed should be dispatched to timer service first");
+    CHECK(t->spec().pool_code == spec().pool_code || t->spec().type == TASK_TYPE_RPC_RESPONSE,
+          "Invalid thread pool used");
+    CHECK_EQ_MSG(
+        t->delay_milliseconds(), 0, "task delayed should be dispatched to timer service first");
 
-    dassert(_is_running,
-            "worker pool %s must be started before enqueue task %s",
-            spec().name.c_str(),
-            t->spec().name.c_str());
+    CHECK(_is_running,
+          "worker pool {} must be started before enqueue task {}",
+          spec().name,
+          t->spec().name);
     unsigned int idx =
         (_spec.partitioned
              ? static_cast<unsigned int>(t->hash()) % static_cast<unsigned int>(_queues.size())
@@ -239,7 +256,7 @@ void task_engine::start()
             pl->start();
     }
     _is_running = true;
-    ddebug_f("[{}]: task engine started", _node->full_name());
+    LOG_INFO("[{}]: task engine started", _node->full_name());
 }
 
 void task_engine::stop()
@@ -253,7 +270,7 @@ void task_engine::stop()
             pl->stop();
     }
     _is_running = false;
-    ddebug_f("[{}]: task engine stopped", _node->full_name());
+    LOG_INFO("[{}]: task engine stopped", _node->full_name());
 }
 
 volatile int *task_engine::get_task_queue_virtual_length_ptr(dsn::task_code code, int hash)

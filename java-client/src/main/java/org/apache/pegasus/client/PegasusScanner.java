@@ -217,7 +217,7 @@ public class PegasusScanner implements PegasusScannerInterface {
     request.sort_key_filter_type = filter_type.findByValue(options.sortKeyFilterType.getValue());
     request.sort_key_filter_pattern =
         (options.sortKeyFilterPattern == null ? null : new blob(options.sortKeyFilterPattern));
-    request.need_check_hash = needCheckHash;
+    request.validate_partition_hash = needCheckHash;
     request.full_scan = fullScan;
 
     rrdb_get_scanner_operator op =

@@ -26,21 +26,25 @@
 
 #include "task.h"
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/zlocks.h"
-#include "utils/utils.h"
-#include "utils/synchronize.h"
-#include "utils/rand.h"
-#include "runtime/node_scoper.h"
-#include "utils/fmt_logging.h"
+#include <string.h>
 
-#include "task_engine.h"
+#include "runtime/api_task.h"
+#include "runtime/app_model.h"
+#include "runtime/global_config.h"
+#include "runtime/node_scoper.h"
 #include "runtime/service_engine.h"
-#include "runtime/rpc/rpc_engine.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_tracker.h"
+#include "runtime/task/task_worker.h"
+#include "task_engine.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/rand.h"
+#include "utils/synchronize.h"
+#include "utils/threadpool_code.h"
+#include "utils/threadpool_spec.h"
+#include "utils/utils.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 __thread struct __tls_dsn__ tls_dsn;
@@ -57,10 +61,10 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
         tls_dsn.node_id = node->id();
 
         if (worker != nullptr) {
-            dassert(worker->pool()->node() == node,
-                    "worker not belonging to the given node: %s vs %s",
-                    worker->pool()->node()->full_name(),
-                    node->full_name());
+            CHECK(worker->pool()->node() == node,
+                  "worker not belonging to the given node: {} vs {}",
+                  worker->pool()->node()->full_name(),
+                  node->full_name());
         }
 
         tls_dsn.node = node;
@@ -87,21 +91,18 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
 
 /*static*/ void task::on_tls_dsn_not_set()
 {
-    if (service_engine::instance().spec().enable_default_app_mimic) {
-        dsn_mimic_app("mimic", 1);
-    } else {
-        dassert(false,
-                "rDSN context is not initialized properly, to be fixed as follows:\n"
-                "(1). the current thread does NOT belongs to any rDSN service node, please invoke "
-                "dsn_mimic_app first,\n"
-                "     or, you can enable [core] enable_default_app_mimic = true in your config "
-                "file so mimic_app can be omitted\n"
-                "(2). the current thread belongs to a rDSN service node, and you are writing "
-                "providers for rDSN, please use\n"
-                "     task::set_tls_dsn_context(...) at the beginning of your new thread in your "
-                "providers;\n"
-                "(3). this should not happen, please help fire an issue so we we can investigate");
-    }
+    CHECK(service_engine::instance().spec().enable_default_app_mimic,
+          "rDSN context is not initialized properly, to be fixed as follows:\n"
+          "(1). the current thread does NOT belongs to any rDSN service node, please invoke "
+          "dsn_mimic_app first,\n"
+          "     or, you can enable [core] enable_default_app_mimic = true in your config "
+          "file so mimic_app can be omitted\n"
+          "(2). the current thread belongs to a rDSN service node, and you are writing "
+          "providers for rDSN, please use\n"
+          "     task::set_tls_dsn_context(...) at the beginning of your new thread in your "
+          "providers;\n"
+          "(3). this should not happen, please help fire an issue so we we can investigate");
+    dsn_mimic_app("mimic", 1);
 }
 
 task::task(dsn::task_code code, int hash, service_node *node)
@@ -118,9 +119,9 @@ task::task(dsn::task_code code, int hash, service_node *node)
         _node = node;
     } else {
         auto p = get_current_node();
-        dassert(p != nullptr,
-                "tasks without explicit service node "
-                "can only be created inside threads which is attached to specific node");
+        CHECK_NOTNULL(p,
+                      "tasks without explicit service node "
+                      "can only be created inside threads which is attached to specific node");
         _node = p;
     }
 
@@ -161,7 +162,8 @@ void task::exec_internal()
 
     if (_state.compare_exchange_strong(
             READY_STATE, TASK_STATE_RUNNING, std::memory_order_relaxed)) {
-        dassert(tls_dsn.magic == 0xdeadbeef, "thread is not inited with task::set_tls_dsn_context");
+        CHECK_EQ_MSG(
+            tls_dsn.magic, 0xdeadbeef, "thread is not inited with task::set_tls_dsn_context");
 
         task *parent_task = tls_dsn.current_task;
         tls_dsn.current_task = this;
@@ -254,11 +256,11 @@ static void check_wait_task(task *waitee)
         task::get_current_worker()->pool_spec().worker_count > 1)
         return;
 
-    dwarn("task %s waits for another task %s sharing the same thread pool "
-          "- will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool "
-          "is partitioned)",
-          task::get_current_task()->spec().code.to_string(),
-          waitee->spec().code.to_string());
+    LOG_WARNING("task {} waits for another task {} sharing the same thread pool "
+                "- will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool "
+                "is partitioned)",
+                task::get_current_task()->code(),
+                waitee->code());
 }
 
 bool task::wait_on_cancel()
@@ -269,7 +271,7 @@ bool task::wait_on_cancel()
 
 bool task::wait(int timeout_milliseconds)
 {
-    dassert(this != task::get_current_task(), "task cannot wait itself");
+    CHECK(this != task::get_current_task(), "task cannot wait itself");
 
     auto cs = state();
 
@@ -324,9 +326,8 @@ bool task::cancel(bool wait_until_finished, /*out*/ bool *finished /*= nullptr*/
                 finish = true;
             } else if (wait_until_finished) {
                 _wait_for_cancel = true;
-                bool r = wait_on_cancel();
-                dassert(
-                    r,
+                CHECK(
+                    wait_on_cancel(),
                     "wait failed, it is only possible when task runs for more than 0x0fffffff ms");
 
                 succ = false;
@@ -371,10 +372,11 @@ const char *task::get_current_node_name()
 
 void task::enqueue()
 {
-    dassert(_node != nullptr, "service node unknown for this task");
-    dassert(_spec->type != TASK_TYPE_RPC_RESPONSE,
-            "tasks with TASK_TYPE_RPC_RESPONSE type use task::enqueue(caller_pool()) instead");
-    dassert(_error != ERR_IO_PENDING, "task is waiting for IO, can not be enqueue");
+    CHECK_NOTNULL(_node, "service node unknown for this task");
+    CHECK_NE_MSG(_spec->type,
+                 TASK_TYPE_RPC_RESPONSE,
+                 "tasks with TASK_TYPE_RPC_RESPONSE type use task::enqueue(caller_pool()) instead");
+    CHECK_NE_MSG(_error, ERR_IO_PENDING, "task is waiting for IO, can not be enqueue");
 
     auto pool = node()->computation()->get_pool(spec().pool_code);
     enqueue(pool);
@@ -384,14 +386,14 @@ void task::enqueue(task_worker_pool *pool)
 {
     this->add_ref(); // released in exec_internal (even when cancelled)
 
-    dassert(pool != nullptr,
-            "pool %s not ready, and there are usually two cases: "
-            "(1). thread pool not designatd in '[%s] pools'; "
-            "(2). the caller is executed in io threads "
-            "which is forbidden unless you explicitly set [task.%s].allow_inline = true",
-            _spec->pool_code.to_string(),
-            _node->spec().config_section.c_str(),
-            _spec->name.c_str());
+    CHECK_NOTNULL(pool,
+                  "pool {} not ready, and there are usually two cases: "
+                  "(1). thread pool not designatd in '[{}] pools'; "
+                  "(2). the caller is executed in io threads "
+                  "which is forbidden unless you explicitly set [task.{}].allow_inline = true",
+                  _spec->pool_code,
+                  _node->spec().config_section,
+                  _spec->name);
 
     if (spec().type == TASK_TYPE_COMPUTE) {
         spec().on_task_enqueue.execute(get_current_task(), this);
@@ -405,7 +407,7 @@ void task::enqueue(task_worker_pool *pool)
 
     // fast execution
     if (_is_null) {
-        dassert(_node == task::get_current_node(), "");
+        CHECK(_node == task::get_current_node(), "");
         exec_internal();
         return;
     }
@@ -436,30 +438,34 @@ const std::vector<task_worker *> &get_threadpool_threads_info(threadpool_code co
 }
 
 timer_task::timer_task(
-    task_code code, const task_handler &cb, int interval_milliseconds, int hash, service_node *node)
-    : task(code, hash, node), _interval_milliseconds(interval_milliseconds), _cb(cb)
+    task_code code, const task_handler &cb, int interval_ms, int hash, service_node *node)
+    : task(code, hash, node), _interval_ms(interval_ms), _cb(cb)
 {
-    dassert(
-        TASK_TYPE_COMPUTE == spec().type,
-        "%s is not a computation type task, please use DEFINE_TASK_CODE to define the task code",
-        spec().name.c_str());
+    DCHECK_GE(_interval_ms, 0);
+    CHECK_EQ_MSG(
+        TASK_TYPE_COMPUTE,
+        spec().type,
+        "{} is not a computation type task, please use DEFINE_TASK_CODE to define the task code",
+        spec().name);
 }
 
 timer_task::timer_task(
-    task_code code, task_handler &&cb, int interval_milliseconds, int hash, service_node *node)
-    : task(code, hash, node), _interval_milliseconds(interval_milliseconds), _cb(std::move(cb))
+    task_code code, task_handler &&cb, int interval_ms, int hash, service_node *node)
+    : task(code, hash, node), _interval_ms(interval_ms), _cb(std::move(cb))
 {
-    dassert(
-        TASK_TYPE_COMPUTE == spec().type,
-        "%s is not a computation type task, please use DEFINE_TASK_CODE to define the task code",
-        spec().name.c_str());
+    DCHECK_GE(_interval_ms, 0);
+    CHECK_EQ_MSG(
+        TASK_TYPE_COMPUTE,
+        spec().type,
+        "{} is not a computation type task, please use DEFINE_TASK_CODE to define the task code",
+        spec().name);
 }
 
 void timer_task::enqueue()
 {
     // enable timer randomization to avoid lots of timers execution simultaneously
     if (delay_milliseconds() == 0 && spec().randomize_timer_delay_if_zero) {
-        set_delay(rand::next_u32(0, _interval_milliseconds));
+        set_delay(rand::next_u32(0, _interval_ms));
     }
 
     return task::enqueue();
@@ -471,12 +477,19 @@ void timer_task::exec()
         _cb();
     }
     // valid interval, we reset task state to READY
-    if (dsn_likely(_interval_milliseconds > 0)) {
-        dassert(set_retry(true),
-                "timer task set retry failed, with state = %s",
-                enum_to_string(state()));
-        set_delay(_interval_milliseconds);
+    if (dsn_likely(_interval_ms > 0)) {
+        CHECK(set_retry(true),
+              "timer task set retry failed, with state = {}",
+              enum_to_string(state()));
+        set_delay(_interval_ms);
     }
+}
+
+void timer_task::update_interval(int interval_ms)
+{
+    // Not allowed to set to 0 for periodical task.
+    CHECK_GE(interval_ms, 0);
+    _interval_ms = interval_ms;
 }
 
 } // namespace dsn

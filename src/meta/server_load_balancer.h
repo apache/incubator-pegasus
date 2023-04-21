@@ -36,33 +36,24 @@
 
 #pragma once
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "utils/zlocks.h"
-#include "utils/command_manager.h"
-#include "utils/error_code.h"
-#include <string>
+#include <cstdint>
 #include <functional>
-#include <memory>
-#include <algorithm>
-#include <set>
+#include <map>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "meta_data.h"
-#include "meta_service.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/extensible_object.h"
 
 namespace dsn {
 namespace replication {
+class configuration_balancer_request;
+class configuration_balancer_response;
+class meta_service;
+
 /// server load balancer extensions for node_state
 /// record the newly assigned but not finished replicas for each node, to make the assigning
 /// process more balanced.
@@ -172,11 +163,6 @@ public:
     // server_load_balancer before you call this function again
     //
     virtual void register_ctrl_commands() {}
-
-    //
-    // Try to unregister cli-commands
-    //
-    virtual void unregister_ctrl_commands() {}
 
     //
     // Get balancer proposal counts

@@ -15,14 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "include/pegasus/client.h"
-#include <boost/lexical_cast.hpp>
+#include <stdint.h>
+#include <stdlib.h>
+#include <chrono>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
+#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-
-#include "base/pegasus_const.h"
+#include "common/gpid.h"
+#include "include/pegasus/client.h"
+#include "metadata_types.h"
+#include "partition_split_types.h"
+#include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
+#include "test_util/test_util.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 
 using namespace dsn;
 using namespace dsn::replication;
@@ -211,23 +228,30 @@ public:
 
 TEST_F(partition_split_test, split_with_write)
 {
-    // write data during partition split
-    do {
-        ASSERT_NO_FATAL_FAILURE(write_data_during_split());
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    } while (!is_split_finished());
-    std::cout << "Partition split succeed" << std::endl;
+    ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
+        [&] {
+            // write data during partition split
+            // TODO(yingchun): better to write data background continuously
+            ASSERT_NO_FATAL_FAILURE(write_data_during_split());
+            ASSERT_TRUE(is_split_finished());
+        },
+        300);
 
+    std::cout << "Partition split succeed" << std::endl;
     ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
 }
 
 TEST_F(partition_split_test, split_with_read)
 {
-    // read data during partition split
-    do {
-        ASSERT_NO_FATAL_FAILURE(read_data_during_split());
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    } while (!is_split_finished());
+    ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
+        [&] {
+            // read data during partition split
+            // TODO(yingchun): better to read data background continuously
+            ASSERT_NO_FATAL_FAILURE(read_data_during_split());
+            ASSERT_TRUE(is_split_finished());
+        },
+        300);
+
     std::cout << "Partition split succeed" << std::endl;
     ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
 }
@@ -235,11 +259,14 @@ TEST_F(partition_split_test, split_with_read)
 TEST_F(partition_split_test, split_with_scan)
 {
     int32_t count = 0;
-    do {
-        ASSERT_NO_FATAL_FAILURE(hash_scan_during_split(count));
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        ++count;
-    } while (!is_split_finished());
+    ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
+        [&] {
+            // TODO(yingchun): better to scan data background continuously
+            ASSERT_NO_FATAL_FAILURE(hash_scan_during_split(count++));
+            ASSERT_TRUE(is_split_finished());
+        },
+        300);
+
     std::cout << "Partition split succeed" << std::endl;
     ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
     std::this_thread::sleep_for(std::chrono::seconds(30));
@@ -249,29 +276,32 @@ TEST_F(partition_split_test, split_with_scan)
 TEST_F(partition_split_test, pause_split)
 {
     bool already_pause = false, already_restart = false;
-    int32_t target_partition = 2, count = 30;
-    do {
-        ASSERT_NO_FATAL_FAILURE(write_data_during_split());
-        // pause target partition split
-        if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
-            ASSERT_EQ(ERR_OK, control_partition_split(split_control_type::PAUSE, target_partition));
-            std::cout << "Table(" << app_name_ << ") pause partition[" << target_partition
-                      << "] split succeed" << std::endl;
-            already_pause = true;
-        }
-        // restart target partition split
-        if (!already_restart && count_during_split_ >= count &&
-            check_partition_split_status(target_partition, split_status::PAUSED)) {
-            ASSERT_EQ(ERR_OK,
-                      control_partition_split(split_control_type::RESTART, target_partition));
-            std::cout << "Table(" << app_name_ << ") restart split partition[" << target_partition
-                      << "] succeed" << std::endl;
-            already_restart = true;
-        }
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    } while (!is_split_finished());
-    std::cout << "Partition split succeed" << std::endl;
+    const int32_t target_partition = 2, count = 30;
+    ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
+        [&] {
+            ASSERT_NO_FATAL_FAILURE(write_data_during_split());
+            // pause target partition split
+            if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
+                ASSERT_EQ(ERR_OK,
+                          control_partition_split(split_control_type::PAUSE, target_partition));
+                std::cout << "Table(" << app_name_ << ") pause partition[" << target_partition
+                          << "] split succeed" << std::endl;
+                already_pause = true;
+            }
+            // restart target partition split
+            if (!already_restart && count_during_split_ >= count &&
+                check_partition_split_status(target_partition, split_status::PAUSED)) {
+                ASSERT_EQ(ERR_OK,
+                          control_partition_split(split_control_type::RESTART, target_partition));
+                std::cout << "Table(" << app_name_ << ") restart split partition["
+                          << target_partition << "] succeed" << std::endl;
+                already_restart = true;
+            }
+            ASSERT_TRUE(is_split_finished());
+        },
+        300);
 
+    std::cout << "Partition split succeed" << std::endl;
     ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
 }
 
@@ -279,27 +309,31 @@ TEST_F(partition_split_test, cancel_split)
 {
     // pause partition split
     bool already_pause = false;
-    do {
-        ASSERT_NO_FATAL_FAILURE(write_data_during_split());
-        // pause all partition split
-        if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
-            ASSERT_EQ(ERR_OK, control_partition_split(split_control_type::PAUSE, -1));
-            std::cout << "Table(" << app_name_ << ") pause all partitions split succeed"
-                      << std::endl;
-            already_pause = true;
-        }
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    } while (!check_partition_split_status(-1, split_status::PAUSED));
+    ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
+        [&] {
+            ASSERT_NO_FATAL_FAILURE(write_data_during_split());
+            // pause all partition split
+            if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
+                ASSERT_EQ(ERR_OK, control_partition_split(split_control_type::PAUSE, -1));
+                std::cout << "Table(" << app_name_ << ") pause all partitions split succeed"
+                          << std::endl;
+                already_pause = true;
+            }
+            ASSERT_TRUE(check_partition_split_status(-1, split_status::PAUSED));
+        },
+        300);
 
     // cancel partition split
     ASSERT_EQ(ERR_OK, control_partition_split(split_control_type::CANCEL, -1, partition_count_));
     std::cout << "Table(" << app_name_ << ") cancel partitions split succeed" << std::endl;
     // write data during cancel partition split
-    do {
-        ASSERT_NO_FATAL_FAILURE(write_data_during_split());
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    } while (!is_split_finished());
-    std::cout << "Partition split succeed" << std::endl;
+    ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
+        [&] {
+            ASSERT_NO_FATAL_FAILURE(write_data_during_split());
+            ASSERT_TRUE(is_split_finished());
+        },
+        300);
 
+    std::cout << "Partition split succeed" << std::endl;
     ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
 }

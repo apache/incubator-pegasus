@@ -26,27 +26,62 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include <stddef.h>
+#include <iostream>
 #include <list>
 #include <map>
+#include <string>
 #include <unordered_set>
-#include <iostream>
+#include <vector>
 
 namespace dsn {
 namespace utils {
 
-void split_args(const char *args,
-                /*out*/ std::vector<std::string> &sargs,
-                char splitter = ' ',
+inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
+
+// Decide whether two C strings are equal, even if one of them is NULL.
+// The second function is similar except it compares the only first (at most) n bytes
+// of both strings.
+bool equals(const char *lhs, const char *rhs);
+bool equals(const char *lhs, const char *rhs, size_t n);
+
+// Decide whether two C strings are equal, ignoring the case of the characters,
+// even if one of them is NULL.
+// The second function is similar except it compares the only first (at most) n bytes
+// of both strings.
+bool iequals(const char *lhs, const char *rhs);
+bool iequals(const char *lhs, const char *rhs, size_t n);
+
+// Decide whether two strings one of which is C string are equal, ignoring the
+// case of the characters, even if the C string is NULL.
+bool iequals(const std::string &lhs, const char *rhs);
+bool iequals(const std::string &lhs, const char *rhs, size_t n);
+bool iequals(const char *lhs, const std::string &rhs);
+bool iequals(const char *lhs, const std::string &rhs, size_t n);
+
+// Decide whether the first n bytes of two memory areas are equal, even if one of them is NULL.
+bool mequals(const void *lhs, const void *rhs, size_t n);
+
+// Split the `input` string by the only character `separator` into tokens. Leading and trailing
+// spaces of each token will be stripped. Once the token is empty, or become empty after
+// stripping, an empty string will be added into `output` if `keep_place_holder` is enabled.
+//
+// There are several overloaded `split_args` functions in the following all of which are the
+// same except that the split tokens are collected to the different containers.
+void split_args(const char *input,
+                std::vector<std::string> &output,
+                char separator = ' ',
                 bool keep_place_holder = false);
 
-void split_args(const char *args,
-                /*out*/ std::unordered_set<std::string> &sargs,
-                char splitter = ' ',
+void split_args(const char *input,
+                std::list<std::string> &output,
+                char separator = ' ',
                 bool keep_place_holder = false);
 
-void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter = ' ');
+void split_args(const char *input,
+                std::unordered_set<std::string> &output,
+                char separator = ' ',
+                bool keep_place_holder = false);
 
 // kv_map sample (when item_splitter = ',' and kv_splitter = ':'):
 //   k1:v1,k2:v2,k3:v3
@@ -81,5 +116,9 @@ char *trim_string(char *s);
 
 // calculate the md5 checksum of buffer
 std::string string_md5(const char *buffer, unsigned int length);
+
+// splits the "input" string by the only character "separator" to get the string prefix.
+// if there is no prefix or the first character is "separator", it will return "".
+std::string find_string_prefix(const std::string &input, char separator);
 } // namespace utils
 } // namespace dsn

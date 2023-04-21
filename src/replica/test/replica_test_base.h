@@ -42,7 +42,7 @@ namespace replication {
 class replica_stub_test_base : public ::testing::Test
 {
 public:
-    replica_stub_test_base() { stub = make_unique<mock_replica_stub>(); }
+    replica_stub_test_base() { stub = std::make_unique<mock_replica_stub>(); }
 
     ~replica_stub_test_base() { stub.reset(); }
 

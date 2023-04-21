@@ -15,15 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "shell/commands.h"
-#include "shell/argh.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <iosfwd>
+#include <memory>
+#include <set>
+#include <string>
+
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
 #include "replica_admin_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "shell/argh.h"
+#include "shell/command_executor.h"
+#include "shell/command_utils.h"
+#include "shell/commands.h"
+#include "utils/error_code.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 
 bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
                              const std::string &hotkey_action,
@@ -32,9 +43,9 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
                              int partition_index,
                              std::string &err_info)
 {
-    if (!strcasecmp(hotkey_type.c_str(), "read")) {
+    if (dsn::utils::iequals(hotkey_type, "read")) {
         req.type = dsn::replication::hotkey_type::type::READ;
-    } else if (!strcasecmp(hotkey_type.c_str(), "write")) {
+    } else if (dsn::utils::iequals(hotkey_type, "write")) {
         req.type = dsn::replication::hotkey_type::type::WRITE;
     } else {
         err_info = fmt::format("\"{}\" is an invalid hotkey type (should be 'read' or 'write')\n",
@@ -42,11 +53,11 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
         return false;
     }
 
-    if (!strcasecmp(hotkey_action.c_str(), "start")) {
+    if (dsn::utils::iequals(hotkey_action, "start")) {
         req.action = dsn::replication::detect_action::START;
-    } else if (!strcasecmp(hotkey_action.c_str(), "stop")) {
+    } else if (dsn::utils::iequals(hotkey_action, "stop")) {
         req.action = dsn::replication::detect_action::STOP;
-    } else if (!strcasecmp(hotkey_action.c_str(), "query")) {
+    } else if (dsn::utils::iequals(hotkey_action, "query")) {
         req.action = dsn::replication::detect_action::QUERY;
     } else {
         err_info =

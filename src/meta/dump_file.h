@@ -24,24 +24,13 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     A simple dump file implementation for meta server, which can be used to dump meta's
- * server-state
- *
- * Revision history:
- *     2015-12-10, Weijie Sun(sunweijie at xiaomi.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #pragma once
 
 #include "utils/safe_strerror_posix.h"
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
 #include "utils/api_utilities.h"
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
@@ -54,7 +43,8 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "utils/fmt_logging.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/crc.h"
 #include <cstdio>
 #include <cerrno>
@@ -63,7 +53,7 @@
 #define log_error_and_return(buffer, length)                                                       \
     do {                                                                                           \
         ::dsn::utils::safe_strerror_r(errno, buffer, length);                                      \
-        derror("append file failed, reason(%s)", buffer);                                          \
+        LOG_ERROR("append file failed, reason({})", buffer);                                       \
         return -1;                                                                                 \
     } while (0)
 
@@ -97,7 +87,7 @@ public:
     {
         static __thread char msg_buffer[128];
 
-        dassert(_is_write, "call append when open file with read mode");
+        CHECK(_is_write, "call append when open file with read mode");
 
         block_header hdr = {data_length, 0};
         hdr.crc32 = dsn::utils::crc32_calc(data, data_length, _crc);
@@ -122,7 +112,7 @@ public:
     int read_next_buffer(/*out*/ dsn::blob &output)
     {
         static __thread char msg_buffer[128];
-        dassert(!_is_write, "call read next buffer when open file with write mode");
+        CHECK(!_is_write, "call read next buffer when open file with write mode");
 
         block_header hdr;
         size_t len = fread(&hdr, sizeof(hdr), 1, _file_handle);
@@ -141,8 +131,8 @@ public:
             size_t cnt = fread(raw_mem + len, 1, hdr.length - len, _file_handle);
             if (len + cnt < hdr.length) {
                 if (feof(_file_handle)) {
-                    derror("unexpected file end, start offset of this block (%u)",
-                           ftell(_file_handle) - len - sizeof(hdr));
+                    LOG_ERROR("unexpected file end, start offset of this block ({})",
+                              ftell(_file_handle) - len - sizeof(hdr));
                     return -1;
                 } else if (errno != EINTR) {
                     log_error_and_return(msg_buffer, 128);
@@ -152,9 +142,9 @@ public:
         }
         _crc = dsn::utils::crc32_calc(raw_mem, len, _crc);
         if (_crc != hdr.crc32) {
-            derror("file %s data error, block offset(%ld)",
-                   _filename.c_str(),
-                   ftell(_file_handle) - hdr.length - sizeof(hdr));
+            LOG_ERROR("file {} data error, block offset({})",
+                      _filename,
+                      ftell(_file_handle) - hdr.length - sizeof(hdr));
             return -1;
         }
 

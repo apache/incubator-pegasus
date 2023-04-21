@@ -35,25 +35,22 @@
 
 #pragma once
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include <stdint.h>
+#include <algorithm>
+#include <iosfwd>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
 #include "common/replication_other_types.h"
-#include "common/replication.codes.h"
-#include "common/replication_common.h"
+#include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
 
 namespace dsn {
+class partition_configuration;
+
 namespace replication {
 namespace test {
 
@@ -98,6 +95,10 @@ struct replica_id
     bool operator!=(const replica_id &o) const { return !(*this == o); }
     std::string to_string() const;
     bool from_string(const std::string &str);
+    friend std::ostream &operator<<(std::ostream &os, const replica_id &rid)
+    {
+        return os << rid.to_string();
+    }
 };
 
 struct replica_state
@@ -169,6 +170,11 @@ struct state_snapshot
     std::string to_string() const;
     bool from_string(const std::string &str);
     std::string diff_string(const state_snapshot &other) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const state_snapshot &ss)
+    {
+        return os << ss.to_string();
+    }
 };
 
 struct parti_config
@@ -198,6 +204,11 @@ struct parti_config
     std::string to_string() const;
     bool from_string(const std::string &str);
     void convert_from(const partition_configuration &c);
+
+    friend std::ostream &operator<<(std::ostream &os, const parti_config &pc)
+    {
+        return os << pc.to_string();
+    }
 };
 }
 }

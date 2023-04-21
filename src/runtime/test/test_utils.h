@@ -35,7 +35,6 @@
 
 #pragma once
 
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
@@ -48,7 +47,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_worker.h"
 #include <gtest/gtest.h>
@@ -103,22 +102,22 @@ public:
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
             if (next_addr.port() != TEST_PORT_END) {
                 next_addr.assign_ipv4(next_addr.ip(), next_addr.port() + 1);
-                ddebug("test_client_server, talk_to_others: %s", next_addr.to_string());
+                LOG_INFO("test_client_server, talk_to_others: {}", next_addr);
                 dsn_rpc_forward(message, next_addr);
             } else {
-                ddebug("test_client_server, talk_to_me: %s", next_addr.to_string());
+                LOG_INFO("test_client_server, talk_to_me: {}", next_addr);
                 reply(message, next_addr.to_std_string());
             }
         } else if (command == "expect_no_reply") {
             if (dsn::service_app::primary_address().port() == TEST_PORT_END) {
-                ddebug("test_client_server, talk_with_reply: %s",
-                       dsn::service_app::primary_address().to_std_string().c_str());
+                LOG_INFO("test_client_server, talk_with_reply: {}",
+                         dsn::service_app::primary_address());
                 reply(message, dsn::service_app::primary_address().to_std_string());
             }
         } else if (command.substr(0, 5) == "echo ") {
             reply(message, command.substr(5));
         } else {
-            derror("unknown command");
+            LOG_ERROR("unknown command");
         }
     }
 

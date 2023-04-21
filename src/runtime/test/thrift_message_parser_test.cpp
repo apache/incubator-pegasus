@@ -15,13 +15,33 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <boost/smart_ptr/shared_ptr.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <string.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/protocol/TBinaryProtocol.tcc>
+#include <thrift/protocol/TProtocol.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "common/gpid.h"
+#include "common/serialization_helper/thrift_helper.h"
+#include "request_meta_types.h"
+#include "runtime/rpc/message_parser.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "runtime/rpc/thrift_message_parser.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
 #include "utils/crc.h"
 #include "utils/endians.h"
-#include "common/serialization_helper/thrift_helper.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
-
-#include "runtime/rpc/thrift_message_parser.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 

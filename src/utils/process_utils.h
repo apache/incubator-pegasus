@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <iostream>
 
 #include "utils/ports.h"

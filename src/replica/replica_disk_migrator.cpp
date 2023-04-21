@@ -17,14 +17,29 @@
  * under the License.
  */
 
-#include "replica/replica_stub.h"
-#include "replica_disk_migrator.h"
-
 #include <boost/algorithm/string/replace.hpp>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <iosfwd>
+#include <memory>
+#include <vector>
+
+#include "common/fs_manager.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "metadata_types.h"
+#include "replica/replica.h"
+#include "replica/replica_stub.h"
+#include "replica/replication_app_base.h"
+#include "replica_disk_migrator.h"
+#include "runtime/task/async_calls.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "replica/replication_app_base.h"
-#include "utils/fail_point.h"
+#include "utils/string_view.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
@@ -50,7 +65,7 @@ void replica_disk_migrator::on_migrate_replica(replica_disk_migrate_rpc rpc)
             }
 
             _status = disk_migration_status::MOVING;
-            ddebug_replica(
+            LOG_INFO_PREFIX(
                 "received replica disk migrate request(origin={}, target={}), update status "
                 "from {}=>{}",
                 rpc.request().origin_disk,
@@ -78,10 +93,10 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
     if (status() != disk_migration_status::IDLE) {
         std::string err_msg =
             fmt::format("Existed migrate task({}) is running", enum_to_string(status()));
-        derror_replica("received replica disk migrate request(origin={}, target={}), err = {}",
-                       req.origin_disk,
-                       req.target_disk,
-                       err_msg);
+        LOG_ERROR_PREFIX("received replica disk migrate request(origin={}, target={}), err = {}",
+                         req.origin_disk,
+                         req.target_disk,
+                         err_msg);
         resp.err = ERR_BUSY;
         resp.__set_hint(err_msg);
         return false;
@@ -90,10 +105,10 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
     if (_replica->status() != partition_status::type::PS_SECONDARY) {
         std::string err_msg =
             fmt::format("Invalid partition status({})", enum_to_string(_replica->status()));
-        derror_replica("received replica disk migrate request(origin={}, target={}), err = {}",
-                       req.origin_disk,
-                       req.target_disk,
-                       err_msg);
+        LOG_ERROR_PREFIX("received replica disk migrate request(origin={}, target={}), err = {}",
+                         req.origin_disk,
+                         req.target_disk,
+                         err_msg);
         resp.err = ERR_INVALID_STATE;
         resp.__set_hint(err_msg);
         return false;
@@ -102,10 +117,10 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
     if (req.origin_disk == req.target_disk) {
         std::string err_msg = fmt::format(
             "Invalid disk tag(origin({}) equal target({}))", req.origin_disk, req.target_disk);
-        derror_replica("received replica disk migrate request(origin={}, target={}), err = {}",
-                       req.origin_disk,
-                       req.target_disk,
-                       err_msg);
+        LOG_ERROR_PREFIX("received replica disk migrate request(origin={}, target={}), err = {}",
+                         req.origin_disk,
+                         req.target_disk,
+                         err_msg);
         resp.err = ERR_INVALID_PARAMETERS;
         resp.__set_hint(err_msg);
         return false;
@@ -122,7 +137,7 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
                     fmt::format("Invalid replica(replica({}) doesn't exist on origin disk({}))",
                                 req.pid,
                                 req.origin_disk);
-                derror_replica(
+                LOG_ERROR_PREFIX(
                     "received replica disk migrate request(origin={}, target={}), err = {}",
                     req.origin_disk,
                     req.target_disk,
@@ -140,7 +155,7 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
                     fmt::format("Invalid replica(replica({}) has existed on target disk({}))",
                                 req.pid,
                                 req.target_disk);
-                derror_replica(
+                LOG_ERROR_PREFIX(
                     "received replica disk migrate request(origin={}, target={}), err = {}",
                     req.origin_disk,
                     req.target_disk,
@@ -155,10 +170,10 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
     if (!valid_origin_disk || !valid_target_disk) {
         std::string invalid_disk_tag = !valid_origin_disk ? req.origin_disk : req.target_disk;
         std::string err_msg = fmt::format("Invalid disk tag({} doesn't exist)", invalid_disk_tag);
-        derror_replica("received replica disk migrate request(origin={}, target={}), err = {}",
-                       req.origin_disk,
-                       req.target_disk,
-                       err_msg);
+        LOG_ERROR_PREFIX("received replica disk migrate request(origin={}, target={}), err = {}",
+                         req.origin_disk,
+                         req.target_disk,
+                         err_msg);
         resp.err = ERR_OBJECT_NOT_FOUND;
         resp.__set_hint(err_msg);
         return false;
@@ -171,22 +186,23 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
 // THREAD_POOL_REPLICATION_LONG
 void replica_disk_migrator::migrate_replica(const replica_disk_migrate_request &req)
 {
-    dassert_replica(status() == disk_migration_status::MOVING,
-                    "disk migration(origin={}, target={}), err = Invalid migration status({})",
-                    req.origin_disk,
-                    req.target_disk,
-                    enum_to_string(status()));
+    CHECK_EQ_PREFIX_MSG(status(),
+                        disk_migration_status::MOVING,
+                        "disk migration(origin={}, target={}), err = Invalid migration status({})",
+                        req.origin_disk,
+                        req.target_disk,
+                        enum_to_string(status()));
 
     if (init_target_dir(req) && migrate_replica_checkpoint(req) && migrate_replica_app_info(req)) {
         _status = disk_migration_status::MOVED;
-        ddebug_replica("disk migration(origin={}, target={}) copy data complete, update status "
-                       "from {}=>{}, ready to "
-                       "close origin replica({})",
-                       req.origin_disk,
-                       req.target_disk,
-                       enum_to_string(disk_migration_status::MOVING),
-                       enum_to_string(status()),
-                       _replica->dir());
+        LOG_INFO_PREFIX("disk migration(origin={}, target={}) copy data complete, update status "
+                        "from {}=>{}, ready to "
+                        "close origin replica({})",
+                        req.origin_disk,
+                        req.target_disk,
+                        enum_to_string(disk_migration_status::MOVING),
+                        enum_to_string(status()),
+                        _replica->dir());
 
         close_current_replica(req);
     }
@@ -204,7 +220,7 @@ bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &
     // using origin dir to init new dir
     boost::replace_first(replica_dir, req.origin_disk, req.target_disk);
     if (utils::filesystem::directory_exists(replica_dir)) {
-        derror_replica("migration target replica dir({}) has existed", replica_dir);
+        LOG_ERROR_PREFIX("migration target replica dir({}) has existed", replica_dir);
         reset_status();
         return false;
     }
@@ -213,11 +229,12 @@ bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &
     // /root/target_disk_tag/gpid.app_type in replica_disk_migrator::update_replica_dir finally
     _target_replica_dir = fmt::format("{}{}", replica_dir, kReplicaDirTempSuffix);
     if (utils::filesystem::directory_exists(_target_replica_dir)) {
-        dwarn_replica("disk migration(origin={}, target={}) target replica dir({}) has existed, "
-                      "delete it now",
-                      req.origin_disk,
-                      req.target_disk,
-                      _target_replica_dir);
+        LOG_WARNING_PREFIX(
+            "disk migration(origin={}, target={}) target replica dir({}) has existed, "
+            "delete it now",
+            req.origin_disk,
+            req.target_disk,
+            _target_replica_dir);
         utils::filesystem::remove_path(_target_replica_dir);
     }
 
@@ -225,7 +242,7 @@ bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &
     //  /root/target/gpid.app_type/data/rdb in replica_disk_migrator::update_replica_dir finally
     _target_data_dir = utils::filesystem::path_combine(_target_replica_dir, kDataDirFolder);
     if (!utils::filesystem::create_directory(_target_data_dir)) {
-        derror_replica(
+        LOG_ERROR_PREFIX(
             "disk migration(origin={}, target={}) create target temp data dir({}) failed",
             req.origin_disk,
             req.target_disk,
@@ -247,10 +264,10 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
 
     const auto &sync_checkpoint_err = _replica->get_app()->sync_checkpoint();
     if (sync_checkpoint_err != ERR_OK) {
-        derror_replica("disk migration(origin={}, target={}) sync_checkpoint failed({})",
-                       req.origin_disk,
-                       req.target_disk,
-                       sync_checkpoint_err.to_string());
+        LOG_ERROR_PREFIX("disk migration(origin={}, target={}) sync_checkpoint failed({})",
+                         req.origin_disk,
+                         req.target_disk,
+                         sync_checkpoint_err.to_string());
         reset_status();
         return false;
     }
@@ -258,13 +275,13 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
     const auto &copy_checkpoint_err =
         _replica->get_app()->copy_checkpoint_to_dir(_target_data_dir.c_str(), 0 /*last_decree*/);
     if (copy_checkpoint_err != ERR_OK) {
-        derror_replica("disk migration(origin={}, target={}) copy checkpoint to dir({}) "
-                       "failed(error={}), the dir({}) will be deleted",
-                       req.origin_disk,
-                       req.target_disk,
-                       _target_data_dir,
-                       copy_checkpoint_err.to_string(),
-                       _target_replica_dir);
+        LOG_ERROR_PREFIX("disk migration(origin={}, target={}) copy checkpoint to dir({}) "
+                         "failed(error={}), the dir({}) will be deleted",
+                         req.origin_disk,
+                         req.target_disk,
+                         _target_data_dir,
+                         copy_checkpoint_err.to_string(),
+                         _target_replica_dir);
         reset_status();
         utils::filesystem::remove_path(_target_replica_dir);
         return false;
@@ -283,10 +300,10 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
     replica_init_info init_info = _replica->get_app()->init_info();
     const auto &store_init_info_err = init_info.store(_target_replica_dir);
     if (store_init_info_err != ERR_OK) {
-        derror_replica("disk migration(origin={}, target={}) stores app init info failed({})",
-                       req.origin_disk,
-                       req.target_disk,
-                       store_init_info_err.to_string());
+        LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app init info failed({})",
+                         req.origin_disk,
+                         req.target_disk,
+                         store_init_info_err.to_string());
         reset_status();
         return false;
     }
@@ -295,10 +312,10 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
         _replica->_app_info,
         utils::filesystem::path_combine(_target_replica_dir, replica::kAppInfo));
     if (store_info_err != ERR_OK) {
-        derror_replica("disk migration(origin={}, target={}) stores app info failed({})",
-                       req.origin_disk,
-                       req.target_disk,
-                       store_info_err.to_string());
+        LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app info failed({})",
+                         req.origin_disk,
+                         req.target_disk,
+                         store_info_err.to_string());
         reset_status();
         return false;
     }
@@ -310,10 +327,11 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
 dsn::task_ptr replica_disk_migrator::close_current_replica(const replica_disk_migrate_request &req)
 {
     if (_replica->status() != partition_status::type::PS_SECONDARY) {
-        derror_replica("migrate request(origin={}, target={}), err = Invalid partition status({})",
-                       req.origin_disk,
-                       req.target_disk,
-                       enum_to_string(_replica->status()));
+        LOG_ERROR_PREFIX(
+            "migrate request(origin={}, target={}), err = Invalid partition status({})",
+            req.origin_disk,
+            req.target_disk,
+            enum_to_string(_replica->status()));
         reset_status();
         utils::filesystem::remove_path(_target_replica_dir);
         return nullptr;
@@ -350,12 +368,12 @@ void replica_disk_migrator::update_replica_dir()
     _replica->get_replica_stub()->on_disk_stat();
 
     _status = disk_migration_status::CLOSED;
-    ddebug_replica("disk replica migration move data from origin dir({}) to new dir({}) "
-                   "succeed, update status from {}=>{}",
-                   _replica->dir(),
-                   _target_replica_dir,
-                   enum_to_string(disk_migration_status::MOVED),
-                   enum_to_string(status()));
+    LOG_INFO_PREFIX("disk replica migration move data from origin dir({}) to new dir({}) "
+                    "succeed, update status from {}=>{}",
+                    _replica->dir(),
+                    _target_replica_dir,
+                    enum_to_string(disk_migration_status::MOVED),
+                    enum_to_string(status()));
 }
 } // namespace replication
 } // namespace dsn

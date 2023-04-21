@@ -26,9 +26,13 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
-#include <thread>
+#include <stdarg.h>
 #include <cstdio>
+#include <string>
+
+#include "utils/api_utilities.h"
+#include "utils/logging_provider.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace tools {
@@ -39,9 +43,8 @@ namespace tools {
 class screen_logger : public logging_provider
 {
 public:
-    screen_logger(bool short_header);
-    screen_logger(const char *log_dir);
-    virtual ~screen_logger(void);
+    explicit screen_logger(bool short_header);
+    ~screen_logger() override;
 
     virtual void dsn_logv(const char *file,
                           const char *function,
@@ -71,22 +74,22 @@ class simple_logger : public logging_provider
 {
 public:
     simple_logger(const char *log_dir);
-    virtual ~simple_logger(void);
+    ~simple_logger() override;
 
-    virtual void dsn_logv(const char *file,
-                          const char *function,
-                          const int line,
-                          dsn_log_level_t log_level,
-                          const char *fmt,
-                          va_list args);
+    void dsn_logv(const char *file,
+                  const char *function,
+                  const int line,
+                  dsn_log_level_t log_level,
+                  const char *fmt,
+                  va_list args) override;
 
-    virtual void dsn_log(const char *file,
-                         const char *function,
-                         const int line,
-                         dsn_log_level_t log_level,
-                         const char *str);
+    void dsn_log(const char *file,
+                 const char *function,
+                 const int line,
+                 dsn_log_level_t log_level,
+                 const char *str) override;
 
-    virtual void flush();
+    void flush() override;
 
 private:
     void create_log_file();
@@ -101,5 +104,5 @@ private:
     int _lines;
     dsn_log_level_t _stderr_start_level;
 };
-}
-}
+} // namespace tools
+} // namespace dsn

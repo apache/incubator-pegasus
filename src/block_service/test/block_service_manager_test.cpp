@@ -15,14 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "block_service_mock.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <cstdint>
+#include <fstream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "block_service/block_service_manager.h"
 #include "block_service/local/local_service.h"
-
-#include <fstream>
-
+#include "block_service_mock.h"
+#include "metadata_types.h"
+#include "utils/error_code.h"
 #include "utils/filesystem.h"
-#include <gtest/gtest.h>
 
 namespace dsn {
 namespace dist {
@@ -33,7 +41,7 @@ class block_service_manager_test : public ::testing::Test
 public:
     block_service_manager_test()
     {
-        _fs = make_unique<block_service_mock>();
+        _fs = std::make_unique<block_service_mock>();
         utils::filesystem::create_directory(LOCAL_DIR);
     }
 
@@ -80,7 +88,7 @@ public:
 TEST_F(block_service_manager_test, do_download_remote_file_not_exist)
 {
     utils::filesystem::remove_path(LOCAL_DIR);
-    auto fs = make_unique<local_service>();
+    auto fs = std::make_unique<local_service>();
     fs->initialize({LOCAL_DIR});
     uint64_t download_size = 0;
     error_code err = _block_service_manager.download_file(

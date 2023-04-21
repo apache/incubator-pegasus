@@ -19,12 +19,17 @@
 
 #pragma once
 
-#include <rocksdb/db.h>
+#include <rocksdb/options.h>
+#include <stdint.h>
+#include <string>
+
 #include "replica/replica_base.h"
+#include "utils/error_code.h"
 
-#include <rrdb/rrdb_types.h>
-
-#include "pegasus_server_impl.h"
+namespace rocksdb {
+class ColumnFamilyHandle;
+class DB;
+} // namespace rocksdb
 
 namespace pegasus {
 namespace server {
@@ -40,11 +45,11 @@ class meta_store : public dsn::replication::replica_base
 public:
     meta_store(pegasus_server_impl *server, rocksdb::DB *db, rocksdb::ColumnFamilyHandle *meta_cf);
 
-    uint64_t get_last_flushed_decree() const;
+    dsn::error_code get_last_flushed_decree(uint64_t *decree) const;
     uint64_t get_decree_from_readonly_db(rocksdb::DB *db,
                                          rocksdb::ColumnFamilyHandle *meta_cf) const;
-    uint32_t get_data_version() const;
-    uint64_t get_last_manual_compact_finish_time() const;
+    dsn::error_code get_data_version(uint32_t *version) const;
+    dsn::error_code get_last_manual_compact_finish_time(uint64_t *ts) const;
     std::string get_usage_scenario() const;
 
     void set_last_flushed_decree(uint64_t decree) const;

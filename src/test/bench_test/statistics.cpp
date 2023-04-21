@@ -17,16 +17,26 @@
  * under the License.
  */
 
+#include <fmt/core.h>
+#include <rocksdb/env.h>
+#include <rocksdb/statistics.h>
+#include <stdio.h>
+#include <algorithm>
 #include <unordered_map>
-#include "utils/fmt_logging.h"
 
-#include "statistics.h"
 #include "config.h"
+#include "statistics.h"
+#include "test/bench_test/utils.h"
 
 namespace pegasus {
 namespace test {
 std::unordered_map<operation_type, std::string, std::hash<unsigned char>> operation_type_string = {
-    {kUnknown, "unKnown"}, {kRead, "read"}, {kWrite, "write"}, {kDelete, "delete"}};
+    {kUnknown, "unKnown"},
+    {kRead, "read"},
+    {kWrite, "write"},
+    {kDelete, "delete"},
+    {kMultiSet, "multiSet"},
+    {kMultiGet, "multiGet"}};
 
 statistics::statistics(std::shared_ptr<rocksdb::Statistics> hist_stats)
 {

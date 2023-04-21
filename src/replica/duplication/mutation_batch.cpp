@@ -15,11 +15,30 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/fmt_logging.h"
-#include "runtime/message_utils.h"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <functional>
+#include <iosfwd>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
-#include "replica_duplicator.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "consensus_types.h"
+#include "metadata_types.h"
 #include "mutation_batch.h"
+#include "perf_counter/perf_counter.h"
+#include "replica_duplicator.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/smart_pointers.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -42,9 +61,7 @@ void mutation_buffer::commit(decree d, commit_type ct)
     if (d <= last_committed_decree())
         return;
 
-    if (ct != COMMIT_TO_DECREE_HARD) {
-        dassert_replica(false, "invalid commit type {}", (int)ct);
-    }
+    CHECK_EQ_PREFIX(ct, COMMIT_TO_DECREE_HARD);
 
     ballot last_bt = 0;
     for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++) {
@@ -59,17 +76,18 @@ void mutation_buffer::commit(decree d, commit_type ct)
         //                |                                |
         //             n+m(m>1)            n+k(k>=m)
         //
-        // just derror but not dassert if mutation loss or other problem, it's different from base
-        // class implement. And from the error and perf-counter, we can choose restart duplication
+        // just LOG_ERROR but not CHECK if mutation loss or other problem, it's different from
+        // base class implement. And from the error and perf-counter, we can choose restart
+        // duplication
         // or ignore the loss.
         if (next_committed_mutation == nullptr || !next_committed_mutation->is_logged()) {
-            derror_replica("mutation[{}] is lost in prepare_list: "
-                           "prepare_last_committed_decree={}, prepare_min_decree={}, "
-                           "prepare_max_decree={}",
-                           d0,
-                           last_committed_decree(),
-                           min_decree(),
-                           max_decree());
+            LOG_ERROR_PREFIX("mutation[{}] is lost in prepare_list: "
+                             "prepare_last_committed_decree={}, prepare_min_decree={}, "
+                             "prepare_max_decree={}",
+                             d0,
+                             last_committed_decree(),
+                             min_decree(),
+                             max_decree());
             _counter_dulication_mutation_loss_count->set(min_decree() - last_committed_decree());
             // if next_commit_mutation loss, let last_commit_decree catch up  with min_decree, and
             // the next loop will commit from min_decree
@@ -77,7 +95,7 @@ void mutation_buffer::commit(decree d, commit_type ct)
             return;
         }
 
-        dcheck_ge_replica(next_committed_mutation->data.header.ballot, last_bt);
+        CHECK_GE_PREFIX(next_committed_mutation->data.header.ballot, last_bt);
         _last_committed_decree++;
         last_bt = next_committed_mutation->data.header.ballot;
         _committer(next_committed_mutation);

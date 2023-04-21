@@ -19,43 +19,63 @@
 
 #include "pegasus_counter_reporter.h"
 
-#include <regex>
-#include <ios>
-#include <iomanip>
-#include <iostream>
+#include <alloca.h>
+#include <boost/asio.hpp> // IWYU pragma: keep
+#include <boost/asio/basic_deadline_timer.hpp>
+#include <boost/asio/detail/impl/epoll_reactor.hpp>
+#include <boost/asio/detail/impl/timer_queue_ptime.ipp>
+#include <boost/date_time/posix_time/posix_time_duration.hpp>
+#include <boost/system/error_code.hpp>
+#include <event2/buffer.h>
+#include <event2/event.h>
+#include <fmt/core.h>
+#include <prometheus/detail/gauge_builder.h>
+#include <prometheus/exposer.h>
+#include <prometheus/family.h>
+#include <prometheus/gauge.h>
+#include <prometheus/registry.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <chrono>
+#include <algorithm>
+#include <functional>
+#include <iomanip>
+#include <ios>
+#include <iostream>
+#include <list>
 #include <map>
 #include <memory>
+#include <new>
 #include <string>
-#include <event2/event.h>
-#include <event2/buffer.h>
-#include <event2/http.h>
-#include <event2/keyvalq_struct.h>
-
-#include "runtime/service_app.h"
-#include "common/common.h"
-#include "utils/fmt_logging.h"
-#include "utils/flags.h"
+#include <type_traits>
+#include <utility>
 
 #include "base/pegasus_utils.h"
+#include "common/common.h"
 #include "pegasus_io_service.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counters.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/service_app.h"
+#include "utils/api_utilities.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
-using namespace ::dsn;
-
-DSN_DEFINE_uint64("pegasus.server",
+DSN_DEFINE_uint64(pegasus.server,
                   perf_counter_update_interval_seconds,
                   10,
                   "perf_counter_update_interval_seconds");
-DSN_DEFINE_bool("pegasus.server", perf_counter_enable_logging, true, "perf_counter_enable_logging");
+DSN_DEFINE_bool(pegasus.server, perf_counter_enable_logging, true, "perf_counter_enable_logging");
 
-DSN_DEFINE_string("pegasus.server", perf_counter_sink, "", "perf_counter_sink");
+DSN_DEFINE_string(pegasus.server, perf_counter_sink, "", "perf_counter_sink");
 
-DSN_DEFINE_uint64("pegasus.server", prometheus_port, 9091, "prometheus exposer port");
+DSN_DEFINE_uint64(pegasus.server, prometheus_port, 9091, "prometheus exposer port");
 
-DSN_DEFINE_string("pegasus.server", falcon_host, "127.0.0.1", "falcon agent host");
-DSN_DEFINE_uint64("pegasus.server", falcon_port, 1988, "falcon agent port");
-DSN_DEFINE_string("pegasus.server", falcon_path, "/v1/push", "falcon agent http path");
+DSN_DEFINE_string(pegasus.server, falcon_host, "127.0.0.1", "falcon agent host");
+DSN_DEFINE_uint64(pegasus.server, falcon_port, 1988, "falcon agent port");
+DSN_DEFINE_string(pegasus.server, falcon_path, "/v1/push", "falcon agent http path");
 
 namespace pegasus {
 namespace server {
@@ -84,9 +104,9 @@ static void libevent_log(int severity, const char *msg)
 {
     dsn_log_level_t level;
     if (severity == EVENT_LOG_DEBUG)
-        level = LOG_LEVEL_INFORMATION;
-    else if (severity == EVENT_LOG_MSG)
         level = LOG_LEVEL_DEBUG;
+    else if (severity == EVENT_LOG_MSG)
+        level = LOG_LEVEL_INFO;
     else if (severity == EVENT_LOG_WARN)
         level = LOG_LEVEL_WARNING;
     else
@@ -105,10 +125,10 @@ void pegasus_counter_reporter::prometheus_initialize()
 {
     _registry = std::make_shared<prometheus::Registry>();
     _exposer =
-        dsn::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", FLAGS_prometheus_port));
+        std::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", FLAGS_prometheus_port));
     _exposer->RegisterCollectable(_registry);
 
-    ddebug_f("prometheus exposer [0.0.0.0:{}] started", FLAGS_prometheus_port);
+    LOG_INFO("prometheus exposer [0.0.0.0:{}] started", FLAGS_prometheus_port);
 }
 
 void pegasus_counter_reporter::falcon_initialize()
@@ -118,9 +138,8 @@ void pegasus_counter_reporter::falcon_initialize()
     _falcon_metric.tags = fmt::format(
         "service=pegasus,cluster={},job={},port={}", _cluster_name, _app_name, _local_port);
 
-    ddebug("falcon initialize: endpoint(%s), tag(%s)",
-           _falcon_metric.endpoint.c_str(),
-           _falcon_metric.tags.c_str());
+    LOG_INFO(
+        "falcon initialize: endpoint({}), tag({})", _falcon_metric.endpoint, _falcon_metric.tags);
 }
 
 void pegasus_counter_reporter::start()
@@ -129,7 +148,7 @@ void pegasus_counter_reporter::start()
     if (_report_timer != nullptr)
         return;
 
-    rpc_address addr(dsn_primary_address());
+    dsn::rpc_address addr(dsn_primary_address());
     char buf[1000];
     pegasus::utils::addr2host(addr, buf, 1000);
     _local_host = buf;
@@ -141,9 +160,9 @@ void pegasus_counter_reporter::start()
 
     _last_report_time_ms = dsn_now_ms();
 
-    if (strcmp("prometheus", FLAGS_perf_counter_sink) == 0) {
+    if (dsn::utils::iequals("prometheus", FLAGS_perf_counter_sink)) {
         _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
-    } else if (strcmp("falcon", FLAGS_perf_counter_sink) == 0) {
+    } else if (dsn::utils::iequals("falcon", FLAGS_perf_counter_sink)) {
         _perf_counter_sink = perf_counter_sink_t::FALCON;
     } else {
         _perf_counter_sink = perf_counter_sink_t::INVALID;
@@ -179,7 +198,7 @@ void pegasus_counter_reporter::stop()
 void pegasus_counter_reporter::update_counters_to_falcon(const std::string &result,
                                                          int64_t timestamp)
 {
-    ddebug("update counters to falcon with timestamp = %" PRId64, timestamp);
+    LOG_INFO("update counters to falcon with timestamp = {}", timestamp);
     http_post_request(FLAGS_falcon_host,
                       FLAGS_falcon_port,
                       FLAGS_falcon_path,
@@ -192,18 +211,18 @@ void pegasus_counter_reporter::update()
     uint64_t now = dsn_now_ms();
     int64_t timestamp = now / 1000;
 
-    perf_counters::instance().take_snapshot();
+    dsn::perf_counters::instance().take_snapshot();
 
     if (FLAGS_perf_counter_enable_logging) {
         std::stringstream oss;
         oss << "logging perf counter(name, type, value):" << std::endl;
         oss << std::fixed << std::setprecision(2);
-        perf_counters::instance().iterate_snapshot(
+        dsn::perf_counters::instance().iterate_snapshot(
             [&oss](const dsn::perf_counters::counter_snapshot &cs) {
                 oss << "[" << cs.name << ", " << dsn_counter_type_to_string(cs.type) << ", "
                     << cs.value << "]" << std::endl;
             });
-        ddebug("%s", oss.str().c_str());
+        LOG_INFO("{}", oss.str());
     }
 
     if (perf_counter_sink_t::FALCON == _perf_counter_sink) {
@@ -213,7 +232,7 @@ void pegasus_counter_reporter::update()
         bool first_append = true;
         _falcon_metric.timestamp = timestamp;
 
-        perf_counters::instance().iterate_snapshot(
+        dsn::perf_counters::instance().iterate_snapshot(
             [&oss, &first_append, this](const dsn::perf_counters::counter_snapshot &cs) {
                 _falcon_metric.metric = cs.name;
                 _falcon_metric.value = cs.value;
@@ -230,7 +249,7 @@ void pegasus_counter_reporter::update()
 
     if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
         const std::string hostname = get_hostname();
-        perf_counters::instance().iterate_snapshot([&hostname, this](
+        dsn::perf_counters::instance().iterate_snapshot([&hostname, this](
             const dsn::perf_counters::counter_snapshot &cs) {
             std::string metrics_name = cs.name;
 
@@ -246,7 +265,7 @@ void pegasus_counter_reporter::update()
             if (lv.size() > 1) {
                 std::list<std::string> lv1;
                 ::dsn::utils::split_args(lv.back().c_str(), lv1, '.');
-                dcheck_le(lv1.size(), 3);
+                CHECK_LE(lv1.size(), 3);
                 int i = 0;
                 for (auto &v : lv1) {
                     app[i] = v;
@@ -292,7 +311,7 @@ void pegasus_counter_reporter::update()
         });
     }
 
-    ddebug("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
+    LOG_INFO("update now_ms({}), last_report_time_ms({})", now, _last_report_time_ms);
     _last_report_time_ms = now;
 }
 
@@ -302,7 +321,7 @@ void pegasus_counter_reporter::http_post_request(const std::string &host,
                                                  const std::string &contentType,
                                                  const std::string &data)
 {
-    dinfo("start update_request, %s", data.c_str());
+    LOG_DEBUG("start update_request: {}", data);
     struct event_base *base = event_base_new();
     struct evhttp_connection *conn = evhttp_connection_base_new(base, nullptr, host.c_str(), port);
     struct evhttp_request *req =
@@ -325,21 +344,21 @@ void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, voi
 {
     struct event_base *event = (struct event_base *)arg;
     if (req == nullptr) {
-        derror("http post request failed: unknown reason");
+        LOG_ERROR("http post request failed: unknown reason");
     } else if (req->response_code == 0) {
-        derror("http post request failed: connection refused");
+        LOG_ERROR("http post request failed: connection refused");
     } else if (req->response_code == HTTP_OK) {
-        dinfo("http post request succeed");
+        LOG_DEBUG("http post request succeed");
     } else {
         struct evbuffer *buf = evhttp_request_get_input_buffer(req);
         size_t len = evbuffer_get_length(buf);
         char *tmp = (char *)alloca(len + 1);
         memcpy(tmp, evbuffer_pullup(buf, -1), len);
         tmp[len] = '\0';
-        derror("http post request failed: code = %u, code_line = %s, input_buffer = %s",
-               req->response_code,
-               req->response_code_line,
-               tmp);
+        LOG_ERROR("http post request failed: code = {}, code_line = {}, input_buffer = {}",
+                  req->response_code,
+                  req->response_code_line,
+                  tmp);
     }
     event_base_loopexit(event, 0);
 }
@@ -355,7 +374,7 @@ void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::dead
         timer->async_wait(std::bind(
             &pegasus_counter_reporter::on_report_timer, this, timer, std::placeholders::_1));
     } else if (boost::system::errc::operation_canceled != ec) {
-        dassert(false, "pegasus report timer error!!!");
+        CHECK(false, "pegasus report timer error!!!");
     }
 }
 } // namespace server

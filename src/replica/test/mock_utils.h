@@ -38,6 +38,8 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_int32(log_private_file_size_mb);
+
 class mock_replication_app_base : public replication_app_base
 {
 public:
@@ -118,7 +120,7 @@ public:
                  bool is_duplication_follower = false)
         : replica(stub, gpid, app, dir, need_restore, is_duplication_follower)
     {
-        _app = make_unique<replication::mock_replication_app_base>(this);
+        _app = std::make_unique<replication::mock_replication_app_base>(this);
     }
 
     void register_service()
@@ -139,11 +141,11 @@ public:
         utils::filesystem::remove_path(log_dir);
 
         _private_log =
-            new mutation_log_private(log_dir, _options->log_private_file_size_mb, get_gpid(), this);
+            new mutation_log_private(log_dir, FLAGS_log_private_file_size_mb, get_gpid(), this);
 
         error_code err =
-            _private_log->open(nullptr, [this](error_code err) { dcheck_eq_replica(err, ERR_OK); });
-        dcheck_eq_replica(err, ERR_OK);
+            _private_log->open(nullptr, [this](error_code err) { CHECK_EQ_PREFIX(err, ERR_OK); });
+        CHECK_EQ_PREFIX(err, ERR_OK);
     }
 
     void init_private_log(mutation_log_ptr log) { _private_log = std::move(log); }
@@ -204,9 +206,9 @@ public:
     void generate_backup_checkpoint(cold_backup_context_ptr backup_context) override
     {
         if (backup_context->status() != ColdBackupCheckpointing) {
-            ddebug("%s: ignore generating backup checkpoint because backup_status = %s",
-                   backup_context->name,
-                   cold_backup_status_to_string(backup_context->status()));
+            LOG_INFO("{}: ignore generating backup checkpoint because backup_status = {}",
+                     backup_context->name,
+                     cold_backup_status_to_string(backup_context->status()));
             backup_context->ignore_checkpoint();
             return;
         }
@@ -239,7 +241,7 @@ inline std::unique_ptr<mock_replica> create_mock_replica(replica_stub *stub,
     app_info.app_type = "replica";
     app_info.app_name = "temp";
 
-    return make_unique<mock_replica>(stub, gpid, app_info, dir);
+    return std::make_unique<mock_replica>(stub, gpid, app_info, dir);
 }
 
 class mock_replica_stub : public replica_stub
@@ -311,10 +313,11 @@ public:
         config.pid = pid;
         config.status = status;
 
-        auto data_dirs = std::vector<std::string>{"./"};
-        auto data_dirs_tag = std::vector<std::string>{"tag"};
-        initialize_fs_manager(data_dirs, data_dirs_tag);
-        auto *rep = new mock_replica(this, pid, info, "./", need_restore, is_duplication_follower);
+        // TODO(yingchun): should refactor to move to cstor or initializer.
+        initialize_fs_manager({"./"}, {"tag"});
+        std::string dir = get_replica_dir("test", pid);
+        auto *rep =
+            new mock_replica(this, pid, info, dir.c_str(), need_restore, is_duplication_follower);
         rep->set_replica_config(config);
         return rep;
     }

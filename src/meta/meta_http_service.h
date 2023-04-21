@@ -17,8 +17,12 @@
 
 #pragma once
 
-#include <algorithm>
+#include <stdint.h>
+#include <functional>
+#include <string>
+#include <vector>
 
+#include "bulk_load_types.h"
 #include "common/json_helper.h"
 #include "http/http_server.h"
 
@@ -52,7 +56,8 @@ struct usage_scenario_info
 };
 
 class meta_service;
-class meta_http_service : public http_service
+
+class meta_http_service : public http_server_base
 {
 public:
     explicit meta_http_service(meta_service *s) : _service(s)

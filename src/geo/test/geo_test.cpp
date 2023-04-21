@@ -17,22 +17,43 @@
  * under the License.
  */
 
-#include "geo/lib/geo_client.h"
-#include <gtest/gtest.h>
-#include <s2/s2cap.h>
-#include <s2/s2testing.h>
-#include <s2/s2earth.h>
-#include <s2/s2cell.h>
-#include "utils/strings.h"
-#include "utils/string_conv.h"
 #include <base/pegasus_key_schema.h>
-#include "utils/fmt_logging.h"
-#include "common/replication_other_types.h"
-#include "client/replication_ddl_client.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <math.h>
+#include <pegasus/error.h>
+#include <s2/s1angle.h>
+#include <s2/s2cap.h>
+#include <s2/s2cell.h>
+#include <s2/s2cell_id.h>
+#include <s2/s2earth.h>
+#include <s2/s2latlng.h>
+#include <s2/s2testing.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
+#include <list>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "base/pegasus_const.h"
+#include "client/replication_ddl_client.h"
+#include "common/replication_other_types.h"
+#include "geo/lib/geo_client.h"
+#include "pegasus/client.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace pegasus {
 namespace geo {
+
+DSN_DECLARE_int32(min_level);
 
 class geo_client_test : public ::testing::Test
 {
@@ -42,17 +63,15 @@ public:
         std::vector<dsn::rpc_address> meta_list;
         bool ok = dsn::replication::replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "onebox");
-        dassert_f(ok, "load_meta_servers failed");
+        CHECK(ok, "load_meta_servers failed");
         auto ddl_client = new dsn::replication::replication_ddl_client(meta_list);
         dsn::error_code error = ddl_client->create_app("temp_geo", "pegasus", 4, 3, {}, false);
-        dcheck_eq(dsn::ERR_OK, error);
+        CHECK_EQ(dsn::ERR_OK, error);
         _geo_client.reset(new pegasus::geo::geo_client("config.ini", "onebox", "temp", "temp_geo"));
     }
 
     pegasus_client *common_data_client() { return _geo_client->_common_data_client; }
     pegasus::geo::geo_client *geo_client() { return _geo_client.get(); }
-
-    int min_level() { return _geo_client->_min_level; }
 
     bool generate_geo_keys(const std::string &hash_key,
                            const std::string &sort_key,
@@ -405,7 +424,7 @@ TEST_F(geo_client_test, generate_and_restore_geo_keys)
 
     ASSERT_TRUE(
         generate_geo_keys(test_hash_key, test_sort_key, test_value, geo_hash_key, geo_sort_key));
-    ASSERT_EQ(min_level() + 2, geo_hash_key.length());
+    ASSERT_EQ(FLAGS_min_level + 2, geo_hash_key.length());
     ASSERT_EQ(leaf_cell_id.substr(0, geo_hash_key.length()), geo_hash_key);
     ASSERT_EQ(leaf_cell_id.substr(geo_hash_key.length()),
               geo_sort_key.substr(0, leaf_cell_id.length() - geo_hash_key.length()));

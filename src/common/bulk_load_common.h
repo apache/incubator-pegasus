@@ -17,11 +17,23 @@
 
 #pragma once
 
-#include "bulk_load_types.h"
+#include <stdint.h>
+#include <string>
+
 #include "runtime/rpc/rpc_holder.h"
 
 namespace dsn {
 namespace replication {
+class bulk_load_request;
+class bulk_load_response;
+class clear_bulk_load_state_request;
+class clear_bulk_load_state_response;
+class control_bulk_load_request;
+class control_bulk_load_response;
+class query_bulk_load_request;
+class query_bulk_load_response;
+class start_bulk_load_request;
+class start_bulk_load_response;
 
 typedef rpc_holder<start_bulk_load_request, start_bulk_load_response> start_bulk_load_rpc;
 typedef rpc_holder<bulk_load_request, bulk_load_response> bulk_load_rpc;

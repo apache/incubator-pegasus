@@ -15,14 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/json_helper.h"
-#include "utils/filesystem.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 
+#include "backup_types.h"
 #include "common/backup_common.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_backup_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
 #include "meta/server_state.h"
 #include "meta_test_base.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
@@ -49,7 +66,7 @@ public:
     start_backup_app_response start_backup(int64_t app_id,
                                            const std::string user_specified_path = "")
     {
-        auto request = dsn::make_unique<start_backup_app_request>();
+        auto request = std::make_unique<start_backup_app_request>();
         request->app_id = app_id;
         request->backup_provider_type = _provider;
         if (!user_specified_path.empty()) {

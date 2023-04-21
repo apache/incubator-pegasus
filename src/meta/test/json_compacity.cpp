@@ -24,32 +24,24 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <string.h>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-
-#include "meta/meta_service.h"
-#include "meta/server_state.h"
+#include "common/json_helper.h"
+#include "dsn.layer2_types.h"
 #include "meta/meta_backup_service.h"
 #include "meta_service_test_app.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
 
 namespace dsn {
 namespace replication {
@@ -103,7 +95,7 @@ void meta_service_test_app::json_compacity()
     ASSERT_EQ(234, pc.ballot);
     ASSERT_TRUE(pc.primary.is_invalid());
     ASSERT_EQ(1, pc.secondaries.size());
-    ASSERT_EQ(0, strcmp(pc.secondaries[0].to_string(), "127.0.0.1:6"));
+    ASSERT_STREQ("127.0.0.1:6", pc.secondaries[0].to_string());
     ASSERT_EQ(157, pc.last_committed_decree);
     ASSERT_EQ(0, pc.partition_flags);
 

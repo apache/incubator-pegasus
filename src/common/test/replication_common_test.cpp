@@ -17,12 +17,17 @@
  * under the License.
  */
 
-#include <fstream>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-
-#include "utils/filesystem.h"
+#include <stdint.h>
+#include <algorithm>
+#include <fstream>
+#include <string>
+#include <vector>
 
 #include "common/replication_common.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {

@@ -17,7 +17,29 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <bits/getopt_core.h>
+#include <getopt.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
+#include "meta_admin_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "shell/command_executor.h"
+#include "shell/command_helper.h"
+#include "shell/command_utils.h"
 #include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "utils/api_utilities.h"
+#include "utils/error_code.h"
 
 bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
 {

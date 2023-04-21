@@ -28,11 +28,26 @@
 #include <sys/prctl.h>
 #endif // defined(__linux__)
 
-#include <sstream>
-#include "utils/process_utils.h"
-#include "utils/smart_pointers.h"
+#include <errno.h>
+#include <pthread.h>
+#include <sched.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <algorithm>
+#include <chrono>
+#include <functional>
+#include <list>
 
-#include "task_engine.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/task_worker.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/ports.h"
+#include "utils/process_utils.h"
+#include "utils/safe_strerror_posix.h"
 
 namespace dsn {
 
@@ -74,7 +89,7 @@ void task_worker::start()
 
     _is_running = true;
 
-    _thread = make_unique<std::thread>(std::bind(&task_worker::run_internal, this));
+    _thread = std::make_unique<std::thread>(std::bind(&task_worker::run_internal, this));
 
     _started.wait();
 }
@@ -103,7 +118,8 @@ void task_worker::set_name(const char *name)
 #endif // defined(__linux__)
     // We expect EPERM failures in sandboxed processes, just ignore those.
     if (err < 0 && errno != EPERM) {
-        dwarn("Fail to set pthread name. err = %d", err);
+        LOG_WARNING(
+            "Fail to set pthread name: err = {}, msg = {}", err, utils::safe_strerror(errno));
     }
 }
 
@@ -128,20 +144,24 @@ void task_worker::set_priority(worker_priority_t pri)
         succ = false;
     }
     if (!succ) {
-        dwarn("You may need priviledge to set thread priority. errno = %d", errno);
+        LOG_WARNING("You may need priviledge to set thread priority: errno = {}, msg = {}",
+                    errno,
+                    utils::safe_strerror(errno));
     }
 }
 
 void task_worker::set_affinity(uint64_t affinity)
 {
 #if defined(__linux__)
-    dassert(affinity > 0, "affinity cannot be 0.");
+    CHECK_GT(affinity, 0);
 
     int nr_cpu = static_cast<int>(std::thread::hardware_concurrency());
     if (nr_cpu < 64) {
-        dassert(affinity <= (((uint64_t)1 << nr_cpu) - 1),
-                "There are %d cpus in total, while setting thread affinity to a nonexistent one.",
-                nr_cpu);
+        CHECK_LE_MSG(
+            affinity,
+            (((uint64_t)1 << nr_cpu) - 1),
+            "There are {} cpus in total, while setting thread affinity to a nonexistent one.",
+            nr_cpu);
     }
 
     int err = 0;
@@ -157,7 +177,8 @@ void task_worker::set_affinity(uint64_t affinity)
     err = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
 
     if (err != 0) {
-        dwarn("Fail to set thread affinity. err = %d", err);
+        LOG_WARNING(
+            "Fail to set thread affinity: err = {}, msg = {}", err, utils::safe_strerror(errno));
     }
 #endif // defined(__linux__)
 }
@@ -181,8 +202,8 @@ void task_worker::run_internal()
     } else {
         uint64_t current_mask = pool_spec().worker_affinity_mask;
         if (0 == current_mask) {
-            derror("mask for %s is set to 0x0, mostly due to that #core > 64, set to 64 now",
-                   pool_spec().name.c_str());
+            LOG_ERROR("mask for {} is set to 0x0, mostly due to that #core > 64, set to 64 now",
+                      pool_spec().name);
 
             current_mask = ~((uint64_t)0);
         }
@@ -229,10 +250,7 @@ void task_worker::loop()
         }
 
 #ifndef NDEBUG
-        dassert(count == batch_size,
-                "returned task count and batch size do not match: %d vs %d",
-                count,
-                batch_size);
+        CHECK_EQ_MSG(count, batch_size, "returned task count and batch size do not match");
 #endif
 
         _processed_task_count += batch_size;

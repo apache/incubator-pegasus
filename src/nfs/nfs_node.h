@@ -26,14 +26,27 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
-#include "utils/utils.h"
-#include "utils/binary_reader.h"
-#include "utils/binary_writer.h"
+#include <string>
+#include <vector>
+
 #include "aio/aio_task.h"
+#include "common/gpid.h"
+#include "runtime/api_task.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class task_tracker;
+namespace service {
+class copy_request;
+class copy_response;
+class get_file_size_request;
+class get_file_size_response;
+} // namespace service
+template <typename TResponse>
+class rpc_replier;
 
 struct remote_copy_request
 {
@@ -45,6 +58,7 @@ struct remote_copy_request
     std::string dest_dir;
     bool overwrite;
     bool high_priority;
+    dsn::gpid pid;
 };
 
 class nfs_node
@@ -58,6 +72,7 @@ public:
                                        const std::string &source_dir,
                                        const std::string &dest_disk_tag,
                                        const std::string &dest_dir,
+                                       const dsn::gpid &pid,
                                        bool overwrite,
                                        bool high_priority,
                                        task_code callback_code,
@@ -70,6 +85,7 @@ public:
                                    const std::vector<std::string> &files, // empty for all
                                    const std::string &dest_disk_tag,
                                    const std::string &dest_dir,
+                                   const dsn::gpid &pid,
                                    bool overwrite,
                                    bool high_priority,
                                    task_code callback_code,
@@ -87,6 +103,12 @@ public:
     virtual ~nfs_node() {}
     virtual error_code start() = 0;
     virtual error_code stop() = 0;
+    virtual void on_copy(const ::dsn::service::copy_request &request,
+                         ::dsn::rpc_replier<::dsn::service::copy_response> &reply) = 0;
+    virtual void
+    on_get_file_size(const ::dsn::service::get_file_size_request &request,
+                     ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply) = 0;
+    virtual void register_async_rpc_handler_for_test() = 0;
 
 protected:
     virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) = 0;

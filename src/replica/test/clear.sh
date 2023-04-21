@@ -17,4 +17,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-rm -rf core.* data/ log.* replica.* tag* test* test_cluster/
+rm -rf *.err core.* data/ log.* replica.* tag* test* test_cluster/

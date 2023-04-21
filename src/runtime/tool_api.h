@@ -50,18 +50,26 @@ Component providers define the interface for the local components (e.g., network
 
 #pragma once
 
-// providers
-#include "utils/factory_store.h"
-#include "runtime/task/task_queue.h"
-#include "runtime/task/task_worker.h"
-#include "runtime/rpc/network.h"
+#include <stddef.h>
+#include <string>
+#include <vector>
+
 #include "runtime/env_provider.h"
 #include "runtime/rpc/message_parser.h"
-#include "utils/logging_provider.h"
+#include "runtime/rpc/network.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
 #include "runtime/task/timer_service.h"
-#include "utils/sys_exit_hook.h"
+// providers
+#include "utils/factory_store.h"
+#include "utils/join_point.h"
+#include "utils/logging_provider.h" // IWYU pragma: keep
 
 namespace dsn {
+class service_node;
+struct service_spec;
+
 namespace tools {
 
 /*!
@@ -73,7 +81,7 @@ class tool_base
 public:
     virtual ~tool_base() {}
 
-    DSN_API explicit tool_base(const char *name);
+    explicit tool_base(const char *name);
 
     const std::string &name() const { return _name; }
 
@@ -93,7 +101,7 @@ public:
     typedef toollet *(*factory)(const char *);
 
 public:
-    DSN_API toollet(const char *name);
+    toollet(const char *name);
 
     virtual void install(service_spec &spec) = 0;
 };
@@ -110,7 +118,7 @@ public:
     typedef tool_app *(*factory)(const char *);
 
 public:
-    DSN_API tool_app(const char *name);
+    tool_app(const char *name);
 
     virtual void install(service_spec &spec) = 0;
 
@@ -119,38 +127,41 @@ public:
     virtual void run() { start_all_apps(); }
 
 public:
-    DSN_API virtual void start_all_apps();
-    DSN_API virtual void stop_all_apps(bool cleanup);
+    virtual void start_all_apps();
+    virtual void stop_all_apps(bool cleanup);
 
-    DSN_API static const service_spec &get_service_spec();
+    static const service_spec &get_service_spec();
 };
 
 namespace internal_use_only {
-DSN_API bool
-register_component_provider(const char *name, timer_service::factory f, ::dsn::provider_type type);
-DSN_API bool
-register_component_provider(const char *name, task_queue::factory f, ::dsn::provider_type type);
-DSN_API bool
-register_component_provider(const char *name, task_worker::factory f, ::dsn::provider_type type);
-DSN_API bool
-register_component_provider(const char *name, network::factory f, ::dsn::provider_type type);
-DSN_API bool
-register_component_provider(const char *name, env_provider::factory f, ::dsn::provider_type type);
-DSN_API bool register_component_provider(network_header_format fmt,
-                                         const std::vector<const char *> &signatures,
-                                         message_parser::factory f,
-                                         size_t sz);
-DSN_API bool register_toollet(const char *name, toollet::factory f, ::dsn::provider_type type);
-DSN_API bool register_tool(const char *name, tool_app::factory f, ::dsn::provider_type type);
-DSN_API toollet *get_toollet(const char *name, ::dsn::provider_type type);
+bool register_component_provider(const char *name,
+                                 timer_service::factory f,
+                                 ::dsn::provider_type type);
+bool register_component_provider(const char *name,
+                                 task_queue::factory f,
+                                 ::dsn::provider_type type);
+bool register_component_provider(const char *name,
+                                 task_worker::factory f,
+                                 ::dsn::provider_type type);
+bool register_component_provider(const char *name, network::factory f, ::dsn::provider_type type);
+bool register_component_provider(const char *name,
+                                 env_provider::factory f,
+                                 ::dsn::provider_type type);
+bool register_component_provider(network_header_format fmt,
+                                 const std::vector<const char *> &signatures,
+                                 message_parser::factory f,
+                                 size_t sz);
+bool register_toollet(const char *name, toollet::factory f, ::dsn::provider_type type);
+bool register_tool(const char *name, tool_app::factory f, ::dsn::provider_type type);
+toollet *get_toollet(const char *name, ::dsn::provider_type type);
 } // namespace internal_use_only
 
 /*!
 @addtogroup tool-api-hooks
 @{
 */
-DSN_API extern join_point<void> sys_init_before_app_created;
-DSN_API extern join_point<void> sys_init_after_app_created;
+extern join_point<void> sys_init_before_app_created;
+extern join_point<void> sys_init_after_app_created;
 /*@}*/
 
 template <typename T>
@@ -193,10 +204,10 @@ T *get_toollet(const char *name)
 {
     return (T *)internal_use_only::get_toollet(name, ::dsn::PROVIDER_TYPE_MAIN);
 }
-DSN_API tool_app *get_current_tool();
-DSN_API const service_spec &spec();
-DSN_API const char *get_service_node_name(service_node *node);
-DSN_API bool is_engine_ready();
+tool_app *get_current_tool();
+const service_spec &spec();
+const char *get_service_node_name(service_node *node);
+bool is_engine_ready();
 
 /*
  @}

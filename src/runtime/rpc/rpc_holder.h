@@ -17,30 +17,32 @@
 
 #pragma once
 
-#include "common/api_common.h"
-#include "runtime/api_layer1.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_tracker.h"
-#include "utils/smart_pointers.h"
-#include "utils/chrono_literals.h"
+#include <stdint.h>
+#include <algorithm>
+#include <chrono>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "client/partition_resolver.h"
+#include "dsn.layer2_types.h"
+#include "rpc_address.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/function_traits.h"
+#include "utils/ports.h"
 
 namespace dsn {
+class task_tracker;
 
 using literals::chrono_literals::operator"" _ms;
 
@@ -57,7 +59,7 @@ using literals::chrono_literals::operator"" _ms;
 //
 //   void write() {
 //       ....
-//       auto request = make_unique<write_request>();
+//       auto request = std::make_unique<write_request>();
 //       request->data = "abc";
 //       request->timestamp = 12;
 //       write_rpc rpc(std::move(request), RPC_WRITE);
@@ -111,31 +113,31 @@ public:
 
     const TRequest &request() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return *(_i->thrift_request);
     }
 
     TRequest *mutable_request() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return _i->thrift_request.get();
     }
 
     TResponse &response() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return _i->thrift_response;
     }
 
     dsn::error_code &error() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return _i->rpc_error;
     }
 
     message_ex *dsn_request() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return _i->dsn_request;
     }
 
@@ -240,10 +242,10 @@ public:
     using mail_box_u_ptr = std::unique_ptr<mail_box_t>;
     static void enable_mocking()
     {
-        dassert(_mail_box == nullptr && _forward_mail_box == nullptr,
-                "remember to call clear_mocking_env after testing");
-        _mail_box = make_unique<mail_box_t>();
-        _forward_mail_box = make_unique<mail_box_t>();
+        CHECK(_mail_box == nullptr && _forward_mail_box == nullptr,
+              "remember to call clear_mocking_env after testing");
+        _mail_box = std::make_unique<mail_box_t>();
+        _forward_mail_box = std::make_unique<mail_box_t>();
     }
 
     // Only use this function when testing.
@@ -257,13 +259,13 @@ public:
 
     static mail_box_t &mail_box()
     {
-        dassert(_mail_box != nullptr, "call this function only when you are in mock mode");
+        CHECK(_mail_box, "call this function only when you are in mock mode");
         return *_mail_box.get();
     }
 
     static mail_box_t &forward_mail_box()
     {
-        dassert(_forward_mail_box != nullptr, "call this function only when you are in mock mode");
+        CHECK(_forward_mail_box, "call this function only when you are in mock mode");
         return *_forward_mail_box.get();
     }
 
@@ -275,7 +277,7 @@ private:
     struct internal
     {
         explicit internal(message_ex *req)
-            : dsn_request(req), thrift_request(make_unique<TRequest>()), auto_reply(false)
+            : dsn_request(req), thrift_request(std::make_unique<TRequest>()), auto_reply(false)
         {
             // we must hold one reference for the request, or rdsn will delete it after
             // the rpc call ends.
@@ -290,7 +292,7 @@ private:
                  int thread_hash)
             : thrift_request(std::move(req)), auto_reply(false)
         {
-            dassert(thrift_request != nullptr, "req should not be null");
+            CHECK(thrift_request, "req should not be null");
 
             dsn_request = message_ex::create_request(
                 code, static_cast<int>(timeout.count()), thread_hash, partition_hash);

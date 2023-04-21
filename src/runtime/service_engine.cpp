@@ -25,16 +25,27 @@
  */
 
 #include "service_engine.h"
-#include "runtime/task/task_engine.h"
-#include "runtime/rpc/rpc_engine.h"
 
-#include "utils/fmt_logging.h"
-#include "utils/filesystem.h"
-#include "utils/smart_pointers.h"
-#include "runtime/env_provider.h"
-#include "utils/command_manager.h"
-#include "runtime/tool_api.h"
+#include <stdlib.h>
+#include <algorithm>
+#include <functional>
+#include <list>
+#include <unordered_map>
+#include <utility>
+
+#include "common/gpid.h"
 #include "runtime/node_scoper.h"
+#include "runtime/rpc/rpc_engine.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_spec.h"
+#include "utils/command_manager.h"
+#include "utils/factory_store.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/strings.h"
 
 using namespace dsn::utils;
 
@@ -57,7 +68,7 @@ bool service_node::rpc_unregister_handler(dsn::task_code rpc_code)
 error_code service_node::init_rpc_engine()
 {
     // init rpc engine
-    _rpc = make_unique<rpc_engine>(this);
+    _rpc = std::make_unique<rpc_engine>(this);
 
     // start rpc engine
     return _rpc->start(_app_spec);
@@ -65,7 +76,7 @@ error_code service_node::init_rpc_engine()
 
 dsn::error_code service_node::start_app()
 {
-    dassert(_entity.get(), "entity hasn't initialized");
+    CHECK(_entity, "entity hasn't initialized");
     _entity->set_address(rpc()->primary_address());
 
     std::vector<std::string> args;
@@ -80,7 +91,7 @@ dsn::error_code service_node::start_app()
 
 dsn::error_code service_node::stop_app(bool cleanup)
 {
-    dassert(_entity.get(), "entity hasn't initialized");
+    CHECK(_entity, "entity hasn't initialized");
     dsn::error_code res = _entity->stop(cleanup);
     if (res == dsn::ERR_OK) {
         _entity->set_started(false);
@@ -109,9 +120,9 @@ error_code service_node::start()
         dsn::utils::filesystem::create_directory(spec().data_dir);
 
     // init task engine
-    _computation = make_unique<task_engine>(this);
+    _computation = std::make_unique<task_engine>(this);
     _computation->create(_app_spec.pools);
-    dassert(!_computation->is_started(), "task engine must not be started at this point");
+    CHECK(!_computation->is_started(), "task engine must not be started at this point");
 
     // init rpc
     err = init_rpc_engine();
@@ -120,7 +131,7 @@ error_code service_node::start()
 
     // start task engine
     _computation->start();
-    dassert(_computation->is_started(), "task engine must be started at this point");
+    CHECK(_computation->is_started(), "task engine must be started at this point");
 
     // create service_app
     {
@@ -179,42 +190,22 @@ service_engine::service_engine()
 {
     _env = nullptr;
 
-    _get_runtime_info_cmd = dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"engine"},
         "engine - get engine internal information",
         "engine [app-id]",
-        &service_engine::get_runtime_info);
+        &service_engine::get_runtime_info));
 
-    _get_queue_info_cmd = dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"system.queue"},
         "system.queue - get queue internal information",
         "system.queue",
-        &service_engine::get_queue_info);
+        &service_engine::get_queue_info));
 }
 
-service_engine::~service_engine()
-{
-    _nodes_by_app_id.clear();
+service_engine::~service_engine() { _nodes_by_app_id.clear(); }
 
-    UNREGISTER_VALID_HANDLER(_get_runtime_info_cmd);
-    UNREGISTER_VALID_HANDLER(_get_queue_info_cmd);
-}
-
-void service_engine::init_before_toollets(const service_spec &spec)
-{
-    _spec = spec;
-
-    // init common for all per-node providers
-    message_ex::s_local_hash =
-        (uint32_t)dsn_config_get_value_uint64("core",
-                                              "local_hash",
-                                              0,
-                                              "a same hash value from two processes indicate the "
-                                              "rpc code are registered in the same order, "
-                                              "and therefore the mapping between rpc code string "
-                                              "and integer is the same, which we leverage "
-                                              "for fast rpc handler lookup optimization");
-}
+void service_engine::init_before_toollets(const service_spec &spec) { _spec = spec; }
 
 void service_engine::init_after_toollets()
 {
@@ -233,19 +224,19 @@ void service_engine::start_node(service_app_spec &app_spec)
             // union to existing node if any port is shared
             auto it = app_name_by_port.find(p);
             if (it != app_name_by_port.end()) {
-                dassert_f(false,
-                          "network port {} usage confliction for {} vs {}, "
-                          "please reconfig",
-                          p,
-                          it->second,
-                          app_spec.full_name);
+                CHECK(false,
+                      "network port {} usage confliction for {} vs {}, "
+                      "please reconfig",
+                      p,
+                      it->second,
+                      app_spec.full_name);
             }
             app_name_by_port.emplace(p, app_spec.full_name);
         }
 
         auto node = std::make_shared<service_node>(app_spec);
         error_code err = node->start();
-        dassert_f(err == ERR_OK, "service node start failed, err = {}", err.to_string());
+        CHECK_EQ_MSG(err, ERR_OK, "service node start failed");
 
         _nodes_by_app_id[node->id()] = node;
     }

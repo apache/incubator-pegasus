@@ -18,7 +18,7 @@
  */
 package org.apache.pegasus.security;
 
-import org.apache.commons.configuration2.Configuration;
+import java.util.Properties;
 
 /**
  * kerberos credential information
@@ -57,11 +57,11 @@ class KerberosCredential implements Credential {
   private String keyTab;
   private String principal;
 
-  KerberosCredential(Configuration config) {
-    this.serviceName = config.getString(PEGASUS_SERVICE_NAME_KEY, DEFAULT_SERVICE_NAME);
-    this.serviceFqdn = config.getString(PEGASUS_SERVICE_FQDN_KEY, DEFAULT_SERVICE_FQDN);
-    this.keyTab = config.getString(PEGASUS_KEYTAB_KEY, DEFAULT_KEYTAB);
-    this.principal = config.getString(PEGASUS_PRINCIPAL_KEY, DEFAULT_PRINCIPAL);
+  KerberosCredential(Properties config) {
+    this.serviceName = config.getProperty(PEGASUS_SERVICE_NAME_KEY, DEFAULT_SERVICE_NAME);
+    this.serviceFqdn = config.getProperty(PEGASUS_SERVICE_FQDN_KEY, DEFAULT_SERVICE_FQDN);
+    this.keyTab = config.getProperty(PEGASUS_KEYTAB_KEY, DEFAULT_KEYTAB);
+    this.principal = config.getProperty(PEGASUS_PRINCIPAL_KEY, DEFAULT_PRINCIPAL);
   }
 
   KerberosCredential(Builder builder) {

@@ -18,9 +18,21 @@
  */
 
 #include "pegasus_event_listener.h"
-#include "logging_utils.h"
 
-#include "utils/api_utilities.h"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <rocksdb/compaction_job_stats.h>
+#include <rocksdb/table_properties.h>
+#include <iosfwd>
+#include <string>
+
+#include "common/gpid.h"
+#include "perf_counter/perf_counter.h"
+#include "utils/fmt_logging.h"
+
+namespace rocksdb {
+class DB;
+} // namespace rocksdb
 
 namespace pegasus {
 namespace server {
@@ -96,10 +108,10 @@ void pegasus_event_listener::OnCompactionCompleted(rocksdb::DB *db,
 void pegasus_event_listener::OnStallConditionsChanged(const rocksdb::WriteStallInfo &info)
 {
     if (info.condition.cur == rocksdb::WriteStallCondition::kDelayed) {
-        derror_replica("rocksdb write delayed");
+        LOG_ERROR_PREFIX("rocksdb write delayed");
         _pfc_recent_write_change_delayed_count->increment();
     } else if (info.condition.cur == rocksdb::WriteStallCondition::kStopped) {
-        derror_replica("rocksdb write stopped");
+        LOG_ERROR_PREFIX("rocksdb write stopped");
         _pfc_recent_write_change_stopped_count->increment();
     }
 }

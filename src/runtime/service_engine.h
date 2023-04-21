@@ -35,28 +35,26 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
-#include "utils/ports.h"
-#include "utils/singleton.h"
-#include "utils/synchronize.h"
+#include "runtime/api_task.h"
 #include "runtime/global_config.h"
-#include "runtime/task/task.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
 #include "runtime/service_app.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
+#include "utils/singleton.h"
 
 namespace dsn {
 
-class task_engine;
-class rpc_engine;
 class env_provider;
-class nfs_node;
-class task_queue;
-class task_worker_pool;
-class timer_service;
+class message_ex;
+class rpc_engine;
+class rpc_request_task;
+class task_engine;
 
 //
 //
@@ -107,6 +105,8 @@ private:
     error_code init_rpc_engine();
 };
 
+class command_deregister;
+
 typedef std::map<int, std::shared_ptr<service_node>> service_nodes_by_app_id;
 class service_engine : public utils::singleton<service_engine>
 {
@@ -132,8 +132,7 @@ private:
     service_spec _spec;
     env_provider *_env;
 
-    dsn_handle_t _get_runtime_info_cmd;
-    dsn_handle_t _get_queue_info_cmd;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 
     bool _simulator;
 

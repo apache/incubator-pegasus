@@ -15,12 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "load_balance_policy.h"
-#include "greedy_load_balancer.h"
+#include "meta/load_balance_policy.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <limits.h>
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <mutex>
+#include <ostream>
+
+#include "dsn.layer2_types.h"
+#include "meta/greedy_load_balancer.h"
+#include "meta/meta_data.h"
+#include "meta_admin_types.h"
 #include "utils/command_manager.h"
-#include "utils/fmt_logging.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/string_view.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace replication {
@@ -41,7 +56,7 @@ void dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const
         load_string << kv.first << ": " << kv.second << std::endl;
     }
     load_string << ">>>>>>>>>>";
-    dinfo("%s", load_string.str().c_str());
+    LOG_DEBUG("{}", load_string.str());
 }
 
 bool calc_disk_load(node_mapper &nodes,
@@ -53,20 +68,15 @@ bool calc_disk_load(node_mapper &nodes,
 {
     load.clear();
     const node_state *ns = get_node_state(nodes, node, false);
-    dassert(ns != nullptr, "can't find node(%s) from node_state", node.to_string());
+    CHECK_NOTNULL(ns, "can't find node({}) from node_state", node.to_string());
 
     auto add_one_replica_to_disk_load = [&](const gpid &pid) {
-        dinfo("add gpid(%d.%d) to node(%s) disk load",
-              pid.get_app_id(),
-              pid.get_partition_index(),
-              node.to_string());
+        LOG_DEBUG("add gpid({}) to node({}) disk load", pid, node);
         const config_context &cc = *get_config_context(apps, pid);
         auto iter = cc.find_from_serving(node);
         if (iter == cc.serving.end()) {
-            dwarn("can't collect gpid(%d.%d)'s info from %s, which should be primary",
-                  pid.get_app_id(),
-                  pid.get_partition_index(),
-                  node.to_string());
+            LOG_WARNING(
+                "can't collect gpid({})'s info from {}, which should be primary", pid, node);
             return false;
         } else {
             load[iter->disk_tag]++;
@@ -95,9 +105,10 @@ get_node_loads(const std::shared_ptr<app_state> &app,
     for (auto iter = nodes.begin(); iter != nodes.end(); ++iter) {
         if (!calc_disk_load(
                 nodes, apps, app->app_id, iter->first, only_primary, node_loads[iter->first])) {
-            dwarn_f("stop the balancer as some replica infos aren't collected, node({}), app({})",
-                    iter->first.to_string(),
-                    app->get_logname());
+            LOG_WARNING(
+                "stop the balancer as some replica infos aren't collected, node({}), app({})",
+                iter->first.to_string(),
+                app->get_logname());
             return node_loads;
         }
     }
@@ -108,11 +119,7 @@ const std::string &get_disk_tag(const app_mapper &apps, const rpc_address &node,
 {
     const config_context &cc = *get_config_context(apps, pid);
     auto iter = cc.find_from_serving(node);
-    dassert(iter != cc.serving.end(),
-            "can't find disk tag of gpid(%d.%d) for %s",
-            pid.get_app_id(),
-            pid.get_partition_index(),
-            node.to_string());
+    CHECK(iter != cc.serving.end(), "can't find disk tag of gpid({}) for {}", pid, node);
     return iter->disk_tag;
 }
 
@@ -158,25 +165,33 @@ generate_balancer_request(const app_mapper &apps,
             new_proposal_action(pc.primary, from, config_type::CT_REMOVE));
         break;
     default:
-        dassert(false, "");
+        CHECK(false, "");
     }
-    ddebug("generate balancer: %d.%d %s from %s of disk_tag(%s) to %s",
-           pc.pid.get_app_id(),
-           pc.pid.get_partition_index(),
-           ans.c_str(),
-           from.to_string(),
-           get_disk_tag(apps, from, pc.pid).c_str(),
-           to.to_string());
+    LOG_INFO("generate balancer: {} {} from {} of disk_tag({}) to {}",
+             pc.pid,
+             ans,
+             from,
+             get_disk_tag(apps, from, pc.pid),
+             to);
     return std::make_shared<configuration_balancer_request>(std::move(result));
 }
 
 load_balance_policy::load_balance_policy(meta_service *svc)
     : _svc(svc), _ctrl_balancer_ignored_apps(nullptr)
 {
-    register_ctrl_commands();
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
+            {"meta.lb.ignored_app_list"},
+            "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
+            "get, set and clear balancer ignored_app_list",
+            [this](const std::vector<std::string> &args) {
+                return remote_command_balancer_ignored_app_ids(args);
+            });
+    });
 }
 
-load_balance_policy::~load_balance_policy() { unregister_ctrl_commands(); }
+load_balance_policy::~load_balance_policy() {}
 
 void load_balance_policy::init(const meta_view *global_view, migration_list *list)
 {
@@ -190,26 +205,27 @@ void load_balance_policy::init(const meta_view *global_view, migration_list *lis
 bool load_balance_policy::primary_balance(const std::shared_ptr<app_state> &app,
                                           bool only_move_primary)
 {
-    dassert(_alive_nodes >= FLAGS_min_live_node_count_for_unfreeze,
-            "too few alive nodes will lead to freeze");
-    ddebug_f("primary balancer for app({}:{})", app->app_name, app->app_id);
+    CHECK_GE_MSG(_alive_nodes,
+                 FLAGS_min_live_node_count_for_unfreeze,
+                 "too few alive nodes will lead to freeze");
+    LOG_INFO("primary balancer for app({}:{})", app->app_name, app->app_id);
 
     auto graph = ford_fulkerson::builder(app, *_global_view->nodes, address_id).build();
     if (nullptr == graph) {
-        dinfo_f("the primaries are balanced for app({}:{})", app->app_name, app->app_id);
+        LOG_DEBUG("the primaries are balanced for app({}:{})", app->app_name, app->app_id);
         return true;
     }
 
     auto path = graph->find_shortest_path();
     if (path != nullptr) {
-        dinfo_f("{} primaries are flew", path->_flow.back());
+        LOG_DEBUG("{} primaries are flew", path->_flow.back());
         return move_primary(std::move(path));
     } else {
-        ddebug_f("we can't make the server load more balanced by moving primaries to secondaries");
+        LOG_INFO("we can't make the server load more balanced by moving primaries to secondaries");
         if (!only_move_primary) {
             return copy_primary(app, graph->have_less_than_average());
         } else {
-            ddebug_f("stop to copy primary for app({}) coz it is disabled", app->get_logname());
+            LOG_INFO("stop to copy primary for app({}) coz it is disabled", app->get_logname());
             return true;
         }
     }
@@ -222,7 +238,7 @@ bool load_balance_policy::copy_primary(const std::shared_ptr<app_state> &app,
     const app_mapper &apps = *_global_view->apps;
     int replicas_low = app->partition_count / _alive_nodes;
 
-    std::unique_ptr<copy_replica_operation> operation = dsn::make_unique<copy_primary_operation>(
+    std::unique_ptr<copy_replica_operation> operation = std::make_unique<copy_primary_operation>(
         app, apps, nodes, address_vec, address_id, still_have_less_than_average, replicas_low);
     return operation->start(_migration_result);
 }
@@ -241,9 +257,9 @@ bool load_balance_policy::move_primary(std::unique_ptr<flow_path> path)
     int current = path->_prev.back();
     if (!calc_disk_load(
             nodes, apps, path->_app->app_id, address_vec[current], true, *current_load)) {
-        dwarn_f("stop move primary as some replica infos aren't collected, node({}), app({})",
-                address_vec[current].to_string(),
-                path->_app->get_logname());
+        LOG_WARNING("stop move primary as some replica infos aren't collected, node({}), app({})",
+                    address_vec[current].to_string(),
+                    path->_app->get_logname());
         return false;
     }
 
@@ -252,9 +268,10 @@ bool load_balance_policy::move_primary(std::unique_ptr<flow_path> path)
         rpc_address from = address_vec[path->_prev[current]];
         rpc_address to = address_vec[current];
         if (!calc_disk_load(nodes, apps, path->_app->app_id, from, true, *prev_load)) {
-            dwarn_f("stop move primary as some replica infos aren't collected, node({}), app({})",
-                    from.to_string(),
-                    path->_app->get_logname());
+            LOG_WARNING(
+                "stop move primary as some replica infos aren't collected, node({}), app({})",
+                from.to_string(),
+                path->_app->get_logname());
             return false;
         }
 
@@ -275,12 +292,13 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
 {
     std::list<dsn::gpid> potential_moving = calc_potential_moving(app, from, to);
     auto potential_moving_size = potential_moving.size();
-    dassert_f(plan_moving <= potential_moving_size,
-              "from({}) to({}) plan({}), can_move({})",
-              from.to_string(),
-              to.to_string(),
-              plan_moving,
-              potential_moving_size);
+    CHECK_LE_MSG(plan_moving,
+                 potential_moving_size,
+                 "from({}) to({}) plan({}), can_move({})",
+                 from,
+                 to,
+                 plan_moving,
+                 potential_moving_size);
 
     while (plan_moving-- > 0) {
         dsn::gpid selected = select_moving(potential_moving, prev_load, current_load, from, to);
@@ -290,7 +308,7 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
             selected,
             generate_balancer_request(
                 *_global_view->apps, pc, balance_type::MOVE_PRIMARY, from, to));
-        dassert_f(balancer_result.second, "gpid({}) already inserted as an action", selected);
+        CHECK(balancer_result.second, "gpid({}) already inserted as an action", selected);
 
         --(*prev_load)[get_disk_tag(*_global_view->apps, from, selected)];
         ++(*current_load)[get_disk_tag(*_global_view->apps, to, selected)];
@@ -330,10 +348,7 @@ dsn::gpid load_balance_policy::select_moving(std::list<dsn::gpid> &potential_mov
         }
     }
 
-    dassert_f(selected != potential_moving.end(),
-              "can't find gpid to move from({}) to({})",
-              from.to_string(),
-              to.to_string());
+    CHECK(selected != potential_moving.end(), "can't find gpid to move from({}) to({})", from, to);
     auto res = *selected;
     potential_moving.erase(selected);
     return res;
@@ -349,7 +364,7 @@ bool load_balance_policy::execute_balance(
     for (const auto &kv : apps) {
         const std::shared_ptr<app_state> &app = kv.second;
         if (is_ignored_app(kv.first)) {
-            ddebug_f("skip to do balance for the ignored app[{}]", app->get_logname());
+            LOG_INFO("skip to do balance for the ignored app[{}]", app->get_logname());
             continue;
         }
         if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading || app->splitting())
@@ -365,33 +380,14 @@ bool load_balance_policy::execute_balance(
         if (!balance_checker) {
             if (!_migration_result->empty()) {
                 if (balance_in_turn) {
-                    ddebug("stop to handle more apps after we found some actions for %s",
-                           app->get_logname());
+                    LOG_INFO("stop to handle more apps after we found some actions for {}",
+                             app->get_logname());
                     return false;
                 }
             }
         }
     }
     return true;
-}
-
-void load_balance_policy::register_ctrl_commands()
-{
-    static std::once_flag flag;
-    std::call_once(flag, [&]() {
-        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
-            {"meta.lb.ignored_app_list"},
-            "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
-            "get, set and clear balancer ignored_app_list",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_balancer_ignored_app_ids(args);
-            });
-    });
-}
-
-void load_balance_policy::unregister_ctrl_commands()
-{
-    UNREGISTER_VALID_HANDLER(_ctrl_balancer_ignored_apps);
 }
 
 std::string
@@ -476,8 +472,8 @@ void load_balance_policy::number_nodes(const node_mapper &nodes)
     address_id.clear();
     address_vec.resize(_alive_nodes + 2);
     for (auto iter = nodes.begin(); iter != nodes.end(); ++iter) {
-        dassert(!iter->first.is_invalid() && !iter->second.addr().is_invalid(), "invalid address");
-        dassert(iter->second.alive(), "dead node");
+        CHECK(!iter->first.is_invalid() && !iter->second.addr().is_invalid(), "invalid address");
+        CHECK(iter->second.alive(), "dead node");
 
         address_id[iter->first] = current_id;
         address_vec[current_id] = iter->first;
@@ -517,7 +513,7 @@ std::unique_ptr<flow_path> ford_fulkerson::find_shortest_path()
     }
 
     if (visit.back() && flow.back() != 0) {
-        return dsn::make_unique<struct flow_path>(_app, std::move(flow), std::move(prev));
+        return std::make_unique<struct flow_path>(_app, std::move(flow), std::move(prev));
     } else {
         return nullptr;
     }
@@ -551,9 +547,7 @@ void ford_fulkerson::update_decree(int node_id, const node_state &ns)
         const partition_configuration &pc = _app->partitions[pid.get_partition_index()];
         for (const auto &secondary : pc.secondaries) {
             auto i = _address_id.find(secondary);
-            dassert_f(i != _address_id.end(),
-                      "invalid secondary address, address = {}",
-                      secondary.to_string());
+            CHECK(i != _address_id.end(), "invalid secondary address, address = {}", secondary);
             _network[node_id][i->second]++;
         }
         return true;
@@ -735,9 +729,9 @@ gpid copy_replica_operation::select_partition(migration_list *result)
 
     int id_max = *_ordered_address_ids.rbegin();
     const node_state &ns = _nodes.find(_address_vec[id_max])->second;
-    dassert_f(partitions != nullptr && !partitions->empty(),
-              "max load({}) shouldn't empty",
-              ns.addr().to_string());
+    CHECK(partitions != nullptr && !partitions->empty(),
+          "max load({}) shouldn't empty",
+          ns.addr().to_string());
 
     return select_max_load_gpid(partitions, result);
 }
@@ -770,14 +764,14 @@ bool copy_primary_operation::can_continue()
 {
     int id_min = *_ordered_address_ids.begin();
     if (_have_lower_than_average && _partition_counts[id_min] >= _replicas_low) {
-        ddebug_f("{}: stop the copy due to primaries on all nodes will reach low later.",
+        LOG_INFO("{}: stop the copy due to primaries on all nodes will reach low later.",
                  _app->get_logname());
         return false;
     }
 
     int id_max = *_ordered_address_ids.rbegin();
     if (!_have_lower_than_average && _partition_counts[id_max] - _partition_counts[id_min] <= 1) {
-        ddebug_f("{}: stop the copy due to the primary will be balanced later.",
+        LOG_INFO("{}: stop the copy due to the primary will be balanced later.",
                  _app->get_logname());
         return false;
     }

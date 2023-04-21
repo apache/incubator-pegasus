@@ -26,9 +26,14 @@
 
 #pragma once
 
-#include "mutation_cache.h"
+#include <functional>
 
+#include "common/replication_other_types.h"
+#include "metadata_types.h"
+#include "mutation_cache.h"
+#include "replica/mutation.h"
 #include "replica/replica_base.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {
@@ -65,8 +70,9 @@ public:
     //
     // if pop_all_committed_mutations = true, pop all committed mutations, will only used during
     // bulk load ingestion
-    // if secondary_commit = true, and status is secondary or protential secondary, previous logs
+    // if secondary_commit = true, and status is secondary or potential secondary, previous logs
     // will be committed
+    // TODO(yingchun): should check return values for all callers by adding WARN_UNUSED_RESULT.
     error_code prepare(mutation_ptr &mu,
                        partition_status::type status,
                        bool pop_all_committed_mutations = false,

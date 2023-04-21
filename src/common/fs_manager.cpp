@@ -33,16 +33,26 @@
  */
 
 #include "fs_manager.h"
-#include "utils/utils.h"
-#include "utils/filesystem.h"
-#include <thread>
-#include "utils/fmt_logging.h"
+
+#include <stdio.h>
+#include <algorithm>
+#include <cmath>
+#include <utility>
+
+#include "common/gpid.h"
+#include "common/replication_enums.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_int32("replication",
+DSN_DEFINE_int32(replication,
                  disk_min_available_space_ratio,
                  10,
                  "if disk available space ratio "
@@ -89,7 +99,7 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
     FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) { return false; });
     dsn::utils::filesystem::disk_space_info info;
     if (!dsn::utils::filesystem::get_disk_space_info(full_dir, info)) {
-        derror_f("update disk space failed: dir = {}", full_dir);
+        LOG_ERROR("update disk space failed: dir = {}", full_dir);
         return false;
     }
     // update disk space info
@@ -99,7 +109,7 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
     if (!update_disk_status) {
-        ddebug_f("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
+        LOG_INFO("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
                  "available_ratio = {}%",
                  full_dir,
                  disk_capacity_mb,
@@ -114,7 +124,7 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
     if (old_status != new_status) {
         status = new_status;
     }
-    ddebug_f("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
+    LOG_INFO("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
              "available_ratio = {}%, disk_status = {}",
              full_dir,
              disk_capacity_mb,
@@ -150,8 +160,9 @@ fs_manager::fs_manager(bool for_test)
     }
 }
 
-dir_node *fs_manager::get_dir_node(const std::string &subdir)
+dir_node *fs_manager::get_dir_node(const std::string &subdir) const
 {
+    zauto_read_lock l(_lock);
     std::string norm_subdir;
     utils::filesystem::get_normalized_path(subdir, norm_subdir);
     for (auto &n : _dir_nodes) {
@@ -171,16 +182,13 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
                                        bool for_test)
 {
     // create all dir_nodes
-    dcheck_eq(data_dirs.size(), tags.size());
+    CHECK_EQ(data_dirs.size(), tags.size());
     for (unsigned i = 0; i < data_dirs.size(); ++i) {
         std::string norm_path;
         utils::filesystem::get_normalized_path(data_dirs[i], norm_path);
         dir_node *n = new dir_node(tags[i], norm_path);
         _dir_nodes.emplace_back(n);
-        ddebug("%s: mark data dir(%s) as tag(%s)",
-               dsn_primary_address().to_string(),
-               norm_path.c_str(),
-               tags[i].c_str());
+        LOG_INFO("{}: mark data dir({}) as tag({})", dsn_primary_address(), norm_path, tags[i]);
     }
     _available_data_dirs = data_dirs;
 
@@ -205,27 +213,17 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
 {
     dir_node *n = get_dir_node(pid_dir);
     if (nullptr == n) {
-        derror("%s: dir(%s) of gpid(%d.%d) haven't registered",
-               dsn_primary_address().to_string(),
-               pid_dir.c_str(),
-               pid.get_app_id(),
-               pid.get_partition_index());
+        LOG_ERROR(
+            "{}: dir({}) of gpid({}) haven't registered", dsn_primary_address(), pid_dir, pid);
     } else {
         zauto_write_lock l(_lock);
         std::set<dsn::gpid> &replicas_for_app = n->holding_replicas[pid.get_app_id()];
         auto result = replicas_for_app.emplace(pid);
         if (!result.second) {
-            dwarn("%s: gpid(%d.%d) already in the dir_node(%s)",
-                  dsn_primary_address().to_string(),
-                  pid.get_app_id(),
-                  pid.get_partition_index(),
-                  n->tag.c_str());
+            LOG_WARNING(
+                "{}: gpid({}) already in the dir_node({})", dsn_primary_address(), pid, n->tag);
         } else {
-            ddebug("%s: add gpid(%d.%d) to dir_node(%s)",
-                   dsn_primary_address().to_string(),
-                   pid.get_app_id(),
-                   pid.get_partition_index(),
-                   n->tag.c_str());
+            LOG_INFO("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, n->tag);
         }
     }
 }
@@ -243,11 +241,7 @@ void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ 
     unsigned least_total_replicas_count = 0;
 
     for (auto &n : _dir_nodes) {
-        dassert(!n->has(pid),
-                "gpid(%d.%d) already in dir_node(%s)",
-                pid.get_app_id(),
-                pid.get_partition_index(),
-                n->tag.c_str());
+        CHECK(!n->has(pid), "gpid({}) already in dir_node({})", pid, n->tag);
         unsigned app_replicas = n->replicas_count(pid.get_app_id());
         unsigned total_replicas = n->replicas_count();
 
@@ -262,12 +256,11 @@ void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ 
         }
     }
 
-    ddebug(
-        "%s: put pid(%d.%d) to dir(%s), which has %u replicas of current app, %u replicas totally",
-        dsn_primary_address().to_string(),
-        pid.get_app_id(),
-        pid.get_partition_index(),
-        selected->tag.c_str(),
+    LOG_INFO(
+        "{}: put pid({}) to dir({}), which has {} replicas of current app, {} replicas totally",
+        dsn_primary_address(),
+        pid,
+        selected->tag,
         least_app_replicas_count,
         least_total_replicas_count);
 
@@ -281,17 +274,13 @@ void fs_manager::remove_replica(const gpid &pid)
     unsigned remove_count = 0;
     for (auto &n : _dir_nodes) {
         unsigned r = n->remove(pid);
-        dassert(remove_count + r <= 1,
-                "gpid(%d.%d) found in dir(%s), which was removed before",
-                pid.get_app_id(),
-                pid.get_partition_index(),
-                n->tag.c_str());
+        CHECK_LE_MSG(remove_count + r,
+                     1,
+                     "gpid({}) found in dir({}), which was removed before",
+                     pid,
+                     n->tag);
         if (r != 0) {
-            ddebug("%s: remove gpid(%d.%d) from dir(%s)",
-                   dsn_primary_address().to_string(),
-                   pid.get_app_id(),
-                   pid.get_partition_index(),
-                   n->tag.c_str());
+            LOG_INFO("{}: remove gpid({}) from dir({})", dsn_primary_address(), pid, n->tag);
         }
         remove_count += r;
     }
@@ -322,7 +311,7 @@ void fs_manager::update_disk_stat(bool check_status_changed)
     _total_available_ratio = static_cast<int>(
         _total_capacity_mb == 0 ? 0 : std::round(_total_available_mb * 100.0 / _total_capacity_mb));
 
-    ddebug_f("update disk space succeed: disk_count = {}, total_capacity_mb = {}, "
+    LOG_INFO("update disk space succeed: disk_count = {}, total_capacity_mb = {}, "
              "total_available_mb = {}, total_available_ratio = {}%, min_available_ratio = {}%, "
              "max_available_ratio = {}%",
              _dir_nodes.size(),
@@ -346,7 +335,7 @@ void fs_manager::add_new_dir_node(const std::string &data_dir, const std::string
     dir_node *n = new dir_node(tag, norm_path);
     _dir_nodes.emplace_back(n);
     _available_data_dirs.emplace_back(data_dir);
-    ddebug_f("{}: mark data dir({}) as tag({})", dsn_primary_address().to_string(), norm_path, tag);
+    LOG_INFO("{}: mark data dir({}) as tag({})", dsn_primary_address().to_string(), norm_path, tag);
 }
 
 bool fs_manager::is_dir_node_available(const std::string &data_dir, const std::string &tag) const

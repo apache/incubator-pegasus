@@ -33,24 +33,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "runtime/tool_api.h"
-#include "runtime/task/task.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "utils/utils.h"
-#include "utils/synchronize.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <thread>
-#include "runtime/service_engine.h"
-#include "runtime/task/task_engine.sim.h"
+#include <functional>
+#include <string>
+
+#include "runtime/global_config.h"
 #include "runtime/scheduler.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_engine.sim.h"
+#include "utils/synchronize.h"
+#include "utils/zlocks.h"
 
 TEST(tools_simulator, dsn_semaphore)
 {

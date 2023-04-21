@@ -18,13 +18,26 @@
 #ifndef FDS_SERVICE_H
 #define FDS_SERVICE_H
 
+#include <stddef.h>
+#include <stdint.h>
+#include <chrono>
+#include <iosfwd>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "block_service/block_service.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
+#include "utils/TokenBucket.h"
+
+namespace dsn {
+class task_tracker;
+} // namespace dsn
 
 namespace folly {
-template <typename Clock>
-class BasicDynamicTokenBucket;
-
-using DynamicTokenBucket = BasicDynamicTokenBucket<std::chrono::steady_clock>;
+using DynamicTokenBucket = folly::BasicDynamicTokenBucket<std::chrono::steady_clock>;
 } // namespace folly
 
 namespace galaxy {

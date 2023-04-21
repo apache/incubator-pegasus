@@ -26,14 +26,18 @@
 
 #include "http_message_parser.h"
 
-#include "utils/fmt_logging.h"
-#include "utils/ports.h"
-#include "utils/crc.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/api_layer1.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <string.h>
+#include <utility>
+#include <vector>
+
 #include "http_server.h"
-#include <iomanip>
+#include "nodejs/http_parser.h"
+#include "runtime/rpc/rpc_message.h"
+#include "utils/blob.h"
+#include "utils/crc.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -98,7 +102,7 @@ http_message_parser::http_message_parser()
         [](http_parser *parser, const char *at, size_t length) -> int {
         http_message_parser *msg_parser = static_cast<parser_context *>(parser->data)->parser;
         msg_parser->_stage = HTTP_ON_HEADER_FIELD;
-        if (strncmp(at, "Content-Type", length) == 0) {
+        if (utils::equals(at, "Content-Type", length)) {
             msg_parser->_is_field_content_type = true;
         }
         return 0;
@@ -134,7 +138,7 @@ http_message_parser::http_message_parser()
             header->hdr_type = http_method::HTTP_METHOD_POST;
             header->context.u.is_request = 1;
         } else {
-            derror("invalid http type %d and method %d", parser->type, parser->method);
+            LOG_ERROR("invalid http type {} and method {}", parser->type, parser->method);
             return 1;
         }
         return 0;
@@ -177,9 +181,9 @@ message_ex *http_message_parser::get_message_on_receive(message_reader *reader,
         // error handling
         if (_parser.http_errno != HPE_OK) {
             auto err = HTTP_PARSER_ERRNO(&_parser);
-            derror("failed on stage %s [%s]",
-                   http_parser_stage_to_string(_stage),
-                   http_errno_description(err));
+            LOG_ERROR("failed on stage {} [{}]",
+                      http_parser_stage_to_string(_stage),
+                      http_errno_description(err));
 
             read_next = -1;
             return nullptr;
@@ -209,17 +213,17 @@ void http_message_parser::prepare_on_send(message_ex *msg)
     const message_header *header = msg->header;
     std::vector<blob> &buffers = msg->buffers;
 
-    dassert(!header->context.u.is_request, "send response only");
+    CHECK(!header->context.u.is_request, "send response only");
 
     unsigned int dsn_size = sizeof(message_header) + header->body_length;
     int dsn_buf_count = 0;
     while (dsn_size > 0 && dsn_buf_count < buffers.size()) {
         blob &buf = buffers[dsn_buf_count];
-        dassert(dsn_size >= buf.length(), "%u VS %u", dsn_size, buf.length());
+        CHECK_GE(dsn_size, buf.length());
         dsn_size -= buf.length();
         ++dsn_buf_count;
     }
-    dcheck_eq(dsn_size, 0);
+    CHECK_EQ(dsn_size, 0);
 
     buffers.resize(dsn_buf_count);
 }

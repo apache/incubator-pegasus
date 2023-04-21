@@ -32,13 +32,21 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #include "raw_message_parser.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "runtime/task/task_spec.h"
+
+#include <string.h>
+#include <atomic>
+#include <vector>
+
+#include "common/gpid.h"
 #include "network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/blob.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 
@@ -69,8 +77,8 @@ raw_message_parser::raw_message_parser()
     bool hooked = false;
     static std::atomic_bool s_handler_hooked(false);
     if (s_handler_hooked.compare_exchange_strong(hooked, true)) {
-        ddebug("join point on_rpc_session_disconnected registered to notify disconnect with "
-               "RPC_CALL_RAW_SESSION_DISCONNECT");
+        LOG_INFO("join point on_rpc_session_disconnected registered to notify disconnect with "
+                 "RPC_CALL_RAW_SESSION_DISCONNECT");
         rpc_session::on_rpc_session_disconnected.put_back(
             raw_message_parser::notify_rpc_session_disconnected,
             "notify disconnect with RPC_CALL_RAW_SESSION_DISCONNECT");

@@ -17,26 +17,47 @@
 
 #pragma once
 
-#include <cstdio>
-#include <sstream>
-#include <iomanip> // std::setfill, std::setw
-#include <functional>
-
-#include "block_service/block_service.h"
-#include "http/http_server.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include <gtest/gtest_prod.h>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <functional>
+#include <iomanip> // std::setfill, std::setw
+#include <map>
+#include <memory>
+#include <set>
+#include <sstream>
+#include <string>
+#include <vector>
 
-#include "backup_engine.h"
-#include "meta_data.h"
+#include "backup_types.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replication_other_types.h"
 #include "meta_rpc_types.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/api_utilities.h"
+#include "utils/error_code.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class message_ex;
+class rpc_address;
+namespace dist {
+namespace block_service {
+class block_filesystem;
+} // namespace block_service
+} // namespace dist
+
 namespace replication {
 
+class backup_engine;
+class backup_service;
 class meta_service;
 class server_state;
-class backup_service;
 
 struct backup_info_status
 {
@@ -91,6 +112,10 @@ struct backup_start_time
         ss << std::setw(2) << std::setfill('0') << std::to_string(hour) << ":" << std::setw(2)
            << std::setfill('0') << std::to_string(minute);
         return ss.str();
+    }
+    friend std::ostream &operator<<(std::ostream &os, const backup_start_time &t)
+    {
+        return os << t.to_string();
     }
     // NOTICE: this function will modify hour and minute, if time is invalid, this func will set
     // hour = 24, minute = 0

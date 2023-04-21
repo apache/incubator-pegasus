@@ -29,6 +29,7 @@
 #pragma once
 
 #include "log_file.h"
+#include "common/replication.codes.h"
 
 namespace dsn {
 namespace replication {
@@ -93,7 +94,7 @@ public:
         } else {
             _current_buffer->drain(writer);
             // we can now assign result since writer must have allocated a buffer.
-            dassert(writer.total_size() != 0, "writer.total_size = %d", writer.total_size());
+            CHECK_GT(writer.total_size(), 0);
             if (size > writer.total_size()) {
                 TRY(_next_buffer->wait_ongoing_task());
                 _next_buffer->consume(writer,
@@ -142,7 +143,7 @@ private:
 
     // buffer size, in bytes
     // TODO(wutao1): call it BLOCK_BYTES_SIZE
-    static constexpr size_t block_size_bytes = 1024 * 1024; // 1MB
+    static const size_t block_size_bytes;
     struct buffer_t
     {
         std::unique_ptr<char[]> _buffer; // with block_size
@@ -178,7 +179,7 @@ private:
                 _task->wait();
                 _have_ongoing_task = false;
                 _end += _task->get_transferred_size();
-                dassert(_end <= block_size_bytes, "invalid io_size.");
+                CHECK_LE_MSG(_end, block_size_bytes, "invalid io_size");
                 return _task->error();
             } else {
                 return ERR_OK;
@@ -191,6 +192,8 @@ private:
     size_t _file_dispatched_bytes;
     disk_file *_file_handle;
 };
+
+const size_t log_file::file_streamer::block_size_bytes = 1024 * 1024; // 1MB
 
 } // namespace replication
 } // namespace dsn

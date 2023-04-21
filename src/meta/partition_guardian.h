@@ -17,7 +17,22 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
+#include "meta_admin_types.h"
 #include "meta_data.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/command_manager.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
@@ -40,7 +55,6 @@ public:
     cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action);
     void reconfig(meta_view view, const configuration_update_request &request);
     void register_ctrl_commands();
-    void unregister_ctrl_commands();
     void get_ddd_partitions(const gpid &pid, std::vector<ddd_partition_info> &partitions);
     void clear_ddd_partitions()
     {
@@ -89,9 +103,8 @@ private:
     dsn::zrwlock_nr _black_list_lock; // [
     std::set<dsn::rpc_address> _assign_secondary_black_list;
     // ]
-    dsn_handle_t _ctrl_assign_secondary_black_list = nullptr;
 
-    dsn_handle_t _ctrl_assign_delay_ms = nullptr;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
     uint64_t _replica_assign_delay_ms_for_dropouts;
 
     friend class meta_partition_guardian_test;

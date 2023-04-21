@@ -25,14 +25,20 @@
  */
 
 #include "server_load_balancer.h"
-#include "utils/extensible_object.h"
-#include "utils/string_conv.h"
-#include "utils/command_manager.h"
-#include <boost/lexical_cast.hpp>
-#include "utils/time_utils.h"
+
+#include <memory>
+
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
+#include "meta_admin_types.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
+class meta_service;
+
 newly_partitions::newly_partitions() : newly_partitions(nullptr) {}
 
 newly_partitions::newly_partitions(node_state *ns)
@@ -97,13 +103,13 @@ void newly_partitions::newly_add_partition(int32_t app_id)
 void newly_partitions::newly_remove_primary(int32_t app_id, bool only_primary)
 {
     auto iter = primaries.find(app_id);
-    dassert(iter != primaries.end(), "invalid app_id, app_id = %d", app_id);
-    dassert(iter->second > 0, "invalid primary count, cnt = %d", iter->second);
+    CHECK(iter != primaries.end(), "invalid app_id, app_id = {}", app_id);
+    CHECK_GT_MSG(iter->second, 0, "invalid primary count");
     if (0 == (--iter->second)) {
         primaries.erase(iter);
     }
 
-    dassert(total_primaries > 0, "invalid total primaires = %d", total_primaries);
+    CHECK_GT_MSG(total_primaries, 0, "invalid total primaires");
     --total_primaries;
 
     if (!only_primary) {
@@ -114,13 +120,13 @@ void newly_partitions::newly_remove_primary(int32_t app_id, bool only_primary)
 void newly_partitions::newly_remove_partition(int32_t app_id)
 {
     auto iter = partitions.find(app_id);
-    dassert(iter != partitions.end(), "invalid app_id, app_id = %d", app_id);
-    dassert(iter->second > 0, "invalid partition count, cnt = %d", iter->second);
+    CHECK(iter != partitions.end(), "invalid app_id, app_id = {}", app_id);
+    CHECK_GT_MSG(iter->second, 0, "invalid partition count");
     if ((--iter->second) == 0) {
         partitions.erase(iter);
     }
 
-    dassert(total_partitions > 0, "invalid total partitions = ", total_partitions);
+    CHECK_GT(total_partitions, 0);
     --total_partitions;
 }
 
@@ -188,12 +194,13 @@ void server_load_balancer::apply_balancer(meta_view view, const migration_list &
         configuration_balancer_response resp;
         for (auto &pairs : ml) {
             register_proposals(view, *pairs.second, resp);
+            // TODO(yingchun): use CHECK_EQ instead
             if (resp.err != dsn::ERR_OK) {
                 const dsn::gpid &pid = pairs.first;
-                dassert(false,
-                        "apply balancer for gpid(%d.%d) failed",
-                        pid.get_app_id(),
-                        pid.get_partition_index());
+                CHECK(false,
+                      "apply balancer for gpid({}.{}) failed",
+                      pid.get_app_id(),
+                      pid.get_partition_index());
             }
         }
     }

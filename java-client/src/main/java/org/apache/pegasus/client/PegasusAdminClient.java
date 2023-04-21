@@ -69,7 +69,8 @@ public class PegasusAdminClient extends PegasusAbstractClient
       int partitionCount,
       int replicaCount,
       Map<String, String> envs,
-      long timeoutMs)
+      long timeoutMs,
+      boolean successIfExist)
       throws PException {
     if (partitionCount < 1) {
       throw new PException(
@@ -111,7 +112,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
     create_app_options options = new create_app_options();
     options.setPartition_count(partitionCount);
     options.setReplica_count(replicaCount);
-    options.setSuccess_if_exist(true);
+    options.setSuccess_if_exist(successIfExist);
     options.setApp_type(APP_TYPE);
     options.setEnvs(envs);
     options.setIs_stateful(true);
@@ -156,6 +157,17 @@ public class PegasusAdminClient extends PegasusAbstractClient
               "The newly created app:%s is not fully healthy now, but the interface duration expires 'timeoutMs', partitionCount: %d, replicaCount: %s.",
               appName, partitionCount, replicaCount));
     }
+  }
+
+  @Override
+  public void createApp(
+      String appName,
+      int partitionCount,
+      int replicaCount,
+      Map<String, String> envs,
+      long timeoutMs)
+      throws PException {
+    this.createApp(appName, partitionCount, replicaCount, envs, timeoutMs, true);
   }
 
   @Override

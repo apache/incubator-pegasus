@@ -17,7 +17,11 @@
 
 #include "utils/output_utils.h"
 
-#include "utils/api_utilities.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <memory>
+
+#include "common/json_helper.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace utils {
@@ -49,7 +53,7 @@ void json_encode(Writer &writer, const table_printer &tp)
             dsn::json::json_encode(writer, tp._matrix_data[row][1]); // row data
         }
     } else {
-        dassert(false, "Unknown mode");
+        CHECK(false, "Unknown mode");
     }
     if (!tp._name.empty()) {
         writer.EndObject();
@@ -59,7 +63,7 @@ void json_encode(Writer &writer, const table_printer &tp)
 void table_printer::add_title(const std::string &title, alignment align)
 {
     check_mode(data_mode::kMultiColumns);
-    dassert(_matrix_data.empty() && _max_col_width.empty(), "`add_title` must be called only once");
+    CHECK(_matrix_data.empty() && _max_col_width.empty(), "'add_title' must be called only once");
     _max_col_width.push_back(title.length());
     _align_left.push_back(align == alignment::kLeft);
     add_row(title);
@@ -68,7 +72,7 @@ void table_printer::add_title(const std::string &title, alignment align)
 void table_printer::add_column(const std::string &col_name, alignment align)
 {
     check_mode(data_mode::kMultiColumns);
-    dassert(_matrix_data.size() == 1, "`add_column` must be called before real data appendding");
+    CHECK_EQ_MSG(_matrix_data.size(), 1, "'add_column' must be called before real data appendding");
     _max_col_width.push_back(col_name.length());
     _align_left.push_back(align == alignment::kLeft);
     append_data(col_name);
@@ -103,7 +107,7 @@ void table_printer::output(std::ostream &out, output_format format) const
         output_in_json<dsn::json::PrettyJsonWriter>(out);
         break;
     default:
-        dassert(false, "Unknown format");
+        CHECK(false, "Unknown format");
     }
 }
 
@@ -117,7 +121,7 @@ void table_printer::output_in_tabular(std::ostream &out) const
     if (_mode == data_mode::kSingleColumn) {
         separator = ": ";
     } else {
-        dassert(_mode == data_mode::kMultiColumns, "Unknown mode");
+        CHECK(_mode == data_mode::kMultiColumns, "Unknown mode");
     }
 
     if (!_name.empty()) {
@@ -138,7 +142,7 @@ void table_printer::append_string_data(const std::string &data)
 {
     _matrix_data.rbegin()->emplace_back(data);
     int last_index = _matrix_data.rbegin()->size() - 1;
-    dassert(last_index <= _max_col_width.size(), "column data exceed");
+    CHECK_LE_MSG(last_index, _max_col_width.size(), "column data exceed");
 
     // update column max length
     int &cur_len = _max_col_width[last_index];
@@ -153,7 +157,7 @@ void table_printer::check_mode(data_mode mode)
         _mode = mode;
         return;
     }
-    dassert(_mode == mode, "");
+    CHECK(_mode == mode, "");
 }
 
 void multi_table_printer::add(table_printer &&tp) { _tps.emplace_back(std::move(tp)); }
@@ -172,7 +176,7 @@ void multi_table_printer::output(std::ostream &out,
         output_in_json<dsn::json::PrettyJsonWriter>(out);
         break;
     default:
-        dassert(false, "Unknown format");
+        CHECK(false, "Unknown format");
     }
 }
 

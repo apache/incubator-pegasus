@@ -17,27 +17,30 @@
  * under the License.
  */
 
+#include <pegasus/git_commit.h>
+#include <pegasus/version.h>
+#include <s2/third_party/absl/base/port.h>
+#include <unistd.h>
+#include <cstdio>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include "backup_types.h"
+#include "compaction_operation.h"
+#include "info_collector_app.h"
+#include "meta/meta_service_app.h"
 #include "pegasus_server_impl.h"
 #include "pegasus_service_app.h"
-#include "info_collector_app.h"
-#include "brief_stat.h"
-#include "compaction_operation.h"
-
-#include <pegasus/version.h>
-#include <pegasus/git_commit.h>
-
-#include "runtime/tool_api.h"
+#include "runtime/app_model.h"
+#include "runtime/service_app.h"
 #include "utils/command_manager.h"
-
-#include "replica/replication_service_app.h"
-#include "meta/meta_service_app.h"
-
-#include <cstdio>
-#include <cstring>
-#include <chrono>
-
-#include <sys/types.h>
-#include <unistd.h>
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/strings.h"
+#include "utils/time_utils.h"
+#include "utils/utils.h"
 
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
@@ -70,32 +73,14 @@ void dsn_app_registration_pegasus()
     service_app::register_factory<pegasus::server::pegasus_replication_service_app>("replica");
     service_app::register_factory<pegasus::server::info_collector_app>("collector");
     pegasus::server::pegasus_server_impl::register_service();
-
-    dsn::command_manager::instance().register_command(
-        {"server-info"},
-        "server-info - query server information",
-        "server-info",
-        [](const std::vector<std::string> &args) {
-            char str[100];
-            ::dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), str, 100);
-            std::ostringstream oss;
-            oss << "Pegasus Server " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
-                << PEGASUS_BUILD_TYPE << ", Started at " << str;
-            return oss.str();
-        });
-    dsn::command_manager::instance().register_command(
-        {"server-stat"},
-        "server-stat - query selected perf counters",
-        "server-stat",
-        [](const std::vector<std::string> &args) { return pegasus::get_brief_stat(); });
     pegasus::server::register_compaction_operations();
 }
 
 int main(int argc, char **argv)
 {
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "-version") == 0 ||
-            strcmp(argv[i], "--version") == 0) {
+        if (utils::equals(argv[i], "-v") || utils::equals(argv[i], "-version") ||
+            utils::equals(argv[i], "--version")) {
             printf("Pegasus Server %s (%s) %s\n",
                    PEGASUS_VERSION,
                    PEGASUS_GIT_COMMIT,
@@ -103,8 +88,23 @@ int main(int argc, char **argv)
             dsn_exit(0);
         }
     }
-    ddebug("pegasus server starting, pid(%d), version(%s)", (int)getpid(), pegasus_server_rcsid());
+    LOG_INFO("pegasus server starting, pid({}), version({})", getpid(), pegasus_server_rcsid());
     dsn_app_registration_pegasus();
+
+    std::unique_ptr<command_deregister> server_info_cmd =
+        dsn::command_manager::instance().register_command(
+            {"server-info"},
+            "server-info - query server information",
+            "server-info",
+            [](const std::vector<std::string> &args) {
+                char str[100];
+                ::dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), str, 100);
+                std::ostringstream oss;
+                oss << "Pegasus Server " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
+                    << PEGASUS_BUILD_TYPE << ", Started at " << str;
+                return oss.str();
+            });
+
     dsn_run(argc, argv, true);
 
     return 0;

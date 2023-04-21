@@ -16,19 +16,26 @@
 // under the License.
 
 #include <boost/algorithm/string/join.hpp>
-
-#include "utils/flags.h"
-#include "utils/config_api.h"
-#include "utils/singleton.h"
-#include "utils/errors.h"
-#include "utils/string_conv.h"
-#include "utils/join_point.h"
-#include "utils/api_utilities.h"
-#include <boost/optional/optional.hpp>
-#include "utils/fmt_logging.h"
-
+#include <fmt/core.h>
+#include <algorithm>
+#include <iosfwd>
+#include <iterator>
+#include <list>
 #include <map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "utils/config_api.h"
+#include "utils/enum_helper.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
 #include "utils/output_utils.h"
+#include "utils/singleton.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 
@@ -61,7 +68,7 @@ public:
     case type_enum:                                                                                \
         value<type>() = dsn_config_get_value_##suffix(_section, _name, value<type>(), _desc);      \
         if (_validator) {                                                                          \
-            dassert_f(_validator(), "validation failed: {}", _name);                               \
+            CHECK(_validator(), "validation failed: {}", _name);                                   \
         }                                                                                          \
         break
 
@@ -108,6 +115,8 @@ public:
           _name(name),
           _desc(desc)
     {
+        // For historical reason, check the 'section' parameter doesn't start with '"'.
+        CHECK_NE_MSG(*section, '"', "config section({}) should not start with '\"'", section);
     }
 
     error_s update(const std::string &val)
@@ -265,7 +274,7 @@ public:
     void add_validator(const char *name, validator_fn &validator)
     {
         auto it = _flags.find(name);
-        dassert(it != _flags.end(), "flag \"%s\" does not exist", name);
+        CHECK(it != _flags.end(), "flag '{}' does not exist", name);
         flag_data &flag = it->second;
         if (!flag.validator()) {
             flag.set_validator(validator);
@@ -274,9 +283,9 @@ public:
 
     void add_group_validator(const char *name, group_validator_fn &validator)
     {
-        auto it = _group_flag_validators.find(name);
-        dassert_f(
-            it == _group_flag_validators.end(), "duplicate group flag validator \"{}\"", name);
+        CHECK(_group_flag_validators.find(name) == _group_flag_validators.end(),
+              "duplicate group flag validator '{}'",
+              name);
         _group_flag_validators[name] = validator;
     }
 
@@ -289,14 +298,14 @@ public:
 
         std::string total_message;
         if (!run_group_validators(&total_message)) {
-            dassert_f(false, "{}", total_message);
+            CHECK(false, "{}", total_message);
         }
     }
 
     void add_tag(const char *name, const flag_tag &tag)
     {
         auto it = _flags.find(name);
-        dassert(it != _flags.end(), "flag \"%s\" does not exist", name);
+        CHECK(it != _flags.end(), "flag '{}' does not exist", name);
         it->second.add_tag(tag);
     }
 

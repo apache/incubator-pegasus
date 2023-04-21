@@ -50,8 +50,16 @@ template <typename Func>
 struct deferred_action
 {
     explicit deferred_action(Func &&func) noexcept : _func(std::move(func)) {}
-    ~deferred_action() { _func(); }
+    void cancel() { _cancelled = true; }
+    ~deferred_action()
+    {
+        if (!_cancelled) {
+            _func();
+        }
+    }
+
 private:
+    bool _cancelled = false;
     Func _func;
 };
 

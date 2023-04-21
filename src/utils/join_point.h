@@ -26,11 +26,14 @@
 
 #pragma once
 
-#include <list>
 #include <functional>
+#include <list>
 #include <string>
 #include <tuple>
-#include "utils/apply.h"
+#include <type_traits>
+#include <utility>
+
+#include "utils/absl/utility/utility.h"
 
 namespace dsn {
 
@@ -100,10 +103,10 @@ public:
     {
         R ret = default_return_value;
         for (auto &func : BaseType::_ret_advice_entries) {
-            ret = dsn::apply(func, std::make_tuple(std::forward<Args>(args)...));
+            ret = absl::apply(func, std::make_tuple(std::forward<Args>(args)...));
         }
         for (auto &func : BaseType::_advice_entries) {
-            dsn::apply(func, std::make_tuple(std::forward<Args>(args)...));
+            absl::apply(func, std::make_tuple(std::forward<Args>(args)...));
         }
         return ret;
     }
@@ -121,7 +124,7 @@ public:
     void execute(Args... args)
     {
         for (auto &func : BaseType::_advice_entries) {
-            dsn::apply(func, std::make_tuple(std::forward<Args>(args)...));
+            absl::apply(func, std::make_tuple(std::forward<Args>(args)...));
         }
     }
 };

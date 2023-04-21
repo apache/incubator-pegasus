@@ -17,7 +17,34 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <bits/getopt_core.h>
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <getopt.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "bulk_load_types.h"
+#include "client/replication_ddl_client.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task_spec.h"
+#include "shell/command_executor.h"
 #include "shell/commands.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/output_utils.h"
 
 bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
 {

@@ -17,11 +17,52 @@
  * under the License.
  */
 
-#include "shell/commands.h"
-#include "base/idl_utils.h"
+// IWYU pragma: no_include <bits/getopt_core.h>
+// TODO(yingchun): refactor this after libfmt upgraded
+#include <fmt/chrono.h> // IWYU pragma: keep
+// IWYU pragma: no_include <fmt/core.h>
+// IWYU pragma: no_include <fmt/format.h>
+#if FMT_VERSION < 60000
+#include <fmt/time.h> // IWYU pragma: keep
+#endif
+#include <fmt/printf.h> // IWYU pragma: keep
+// IWYU pragma: no_include <algorithm>
+// IWYU pragma: no_include <iterator>
+#include <getopt.h>
+#include <rocksdb/db.h>
+#include <rocksdb/options.h>
+#include <rocksdb/slice.h>
 #include <rocksdb/sst_dump_tool.h>
+#include <rocksdb/status.h>
 #include <rocksdb/utilities/ldb_cmd.h>
-#include <fmt/time.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <ctime>
+#include <functional>
+#include <iostream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "base/idl_utils.h"
+#include "common/replication.codes.h"
+#include "pegasus_key_schema.h"
+#include "pegasus_utils.h"
+#include "pegasus_value_schema.h"
+#include "rrdb/rrdb.code.definition.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/task_code.h"
+#include "shell/args.h"
+#include "shell/command_executor.h"
+#include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "tools/mutation_log_tool.h"
+#include "utils/blob.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 bool sst_dump(command_executor *e, shell_context *sc, arguments args)
 {
@@ -90,7 +131,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
             int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count) mutable {
             for (int i = 0; i < count; ++i) {
                 dsn::message_ex *request = requests[i];
-                dassert(request != nullptr, "");
+                CHECK_NOTNULL(request, "");
                 ::dsn::message_ex *msg = (::dsn::message_ex *)request;
                 if (msg->local_rpc_code == RPC_REPLICATION_WRITE_EMPTY) {
                     os << INDENT << "[EMPTY]" << std::endl;

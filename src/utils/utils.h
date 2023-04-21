@@ -26,11 +26,19 @@
 
 #pragma once
 
-#include <functional>
+#include <stddef.h>
+#include <stdint.h>
+#include <algorithm>
+#include <iterator>
+#include <map>
 #include <memory>
+#include <set>
+#include <string>
+#include <utility>
 
-#include "rpc_address.h"
-#include "string_view.h"
+namespace dsn {
+class rpc_address;
+} // namespace dsn
 
 #define TIME_MS_MAX 0xffffffff
 

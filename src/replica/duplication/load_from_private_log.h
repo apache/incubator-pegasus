@@ -18,16 +18,25 @@
 #pragma once
 
 #include <gtest/gtest_prod.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <chrono>
+#include <map>
 
+#include "common/replication_other_types.h"
 #include "mutation_batch.h"
-#include "runtime/pipeline.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
+#include "replica/log_file.h"
 #include "replica/mutation_log.h"
-#include "utils/errors.h"
+#include "replica/replica_base.h"
+#include "runtime/pipeline.h"
+#include "utils/chrono_literals.h"
 
 namespace dsn {
 namespace replication {
 
+class replica;
 class replica_duplicator;
 class replica_stub;
 

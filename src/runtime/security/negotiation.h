@@ -17,14 +17,18 @@
 
 #pragma once
 
-#include "security_types.h"
-#include "sasl_wrapper.h"
-
 #include <memory>
+#include <string>
+#include <utility>
+
+#include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "sasl_wrapper.h"
+#include "security_types.h"
+#include "utils/autoref_ptr.h"
 
 namespace dsn {
-class rpc_session;
 
 namespace security {
 typedef rpc_holder<negotiation_request, negotiation_response> negotiation_rpc;

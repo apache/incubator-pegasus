@@ -24,20 +24,34 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+#include <iostream>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
+#include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
 #include "meta/server_state.h"
-
+#include "meta_admin_types.h"
 #include "meta_service_test_app.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_string(cluster_root);
+DSN_DECLARE_string(meta_state_service_type);
 
 static const std::vector<std::string> keys = {"manual_compact.once.trigger_time",
                                               "manual_compact.once.target_level",
@@ -90,8 +104,8 @@ void meta_service_test_app::app_envs_basic_test()
     std::shared_ptr<meta_service> meta_svc = std::make_shared<meta_service>();
     meta_service *svc = meta_svc.get();
 
-    svc->_meta_opts.cluster_root = "/meta_test";
-    svc->_meta_opts.meta_state_service_type = "meta_state_service_simple";
+    FLAGS_cluster_root = "/meta_test";
+    FLAGS_meta_state_service_type = "meta_state_service_simple";
     svc->remote_storage_initialize();
 
     std::string apps_root = "/meta_test/apps";

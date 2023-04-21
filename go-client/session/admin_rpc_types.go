@@ -27,7 +27,7 @@ import (
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
-func (ms *metaSession) dropApp(ctx context.Context, req *admin.DropAppRequest) (*admin.DropAppResponse, error) {
+func (ms *metaSession) dropApp(ctx context.Context, req *admin.ConfigurationDropAppRequest) (*admin.ConfigurationDropAppResponse, error) {
 	arg := admin.NewAdminClientDropAppArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_DROP_APP")
@@ -39,20 +39,20 @@ func (ms *metaSession) dropApp(ctx context.Context, req *admin.DropAppRequest) (
 }
 
 // DropApp is auto-generated
-func (m *MetaManager) DropApp(ctx context.Context, req *admin.DropAppRequest) (*admin.DropAppResponse, error) {
+func (m *MetaManager) DropApp(ctx context.Context, req *admin.ConfigurationDropAppRequest) (*admin.ConfigurationDropAppResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.dropApp(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.DropAppResponse), fmt.Errorf("DropApp failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationDropAppResponse), fmt.Errorf("DropApp failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.DropAppResponse), nil
+		return resp.(*admin.ConfigurationDropAppResponse), nil
 	}
 	return nil, err
 }
 
-func (ms *metaSession) createApp(ctx context.Context, req *admin.CreateAppRequest) (*admin.CreateAppResponse, error) {
+func (ms *metaSession) createApp(ctx context.Context, req *admin.ConfigurationCreateAppRequest) (*admin.ConfigurationCreateAppResponse, error) {
 	arg := admin.NewAdminClientCreateAppArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CREATE_APP")
@@ -64,20 +64,20 @@ func (ms *metaSession) createApp(ctx context.Context, req *admin.CreateAppReques
 }
 
 // CreateApp is auto-generated
-func (m *MetaManager) CreateApp(ctx context.Context, req *admin.CreateAppRequest) (*admin.CreateAppResponse, error) {
+func (m *MetaManager) CreateApp(ctx context.Context, req *admin.ConfigurationCreateAppRequest) (*admin.ConfigurationCreateAppResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.createApp(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.CreateAppResponse), fmt.Errorf("CreateApp failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationCreateAppResponse), fmt.Errorf("CreateApp failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.CreateAppResponse), nil
+		return resp.(*admin.ConfigurationCreateAppResponse), nil
 	}
 	return nil, err
 }
 
-func (ms *metaSession) recallApp(ctx context.Context, req *admin.RecallAppRequest) (*admin.RecallAppResponse, error) {
+func (ms *metaSession) recallApp(ctx context.Context, req *admin.ConfigurationRecallAppRequest) (*admin.ConfigurationRecallAppResponse, error) {
 	arg := admin.NewAdminClientRecallAppArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_RECALL_APP")
@@ -89,20 +89,20 @@ func (ms *metaSession) recallApp(ctx context.Context, req *admin.RecallAppReques
 }
 
 // RecallApp is auto-generated
-func (m *MetaManager) RecallApp(ctx context.Context, req *admin.RecallAppRequest) (*admin.RecallAppResponse, error) {
+func (m *MetaManager) RecallApp(ctx context.Context, req *admin.ConfigurationRecallAppRequest) (*admin.ConfigurationRecallAppResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.recallApp(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.RecallAppResponse), fmt.Errorf("RecallApp failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationRecallAppResponse), fmt.Errorf("RecallApp failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.RecallAppResponse), nil
+		return resp.(*admin.ConfigurationRecallAppResponse), nil
 	}
 	return nil, err
 }
 
-func (ms *metaSession) listApps(ctx context.Context, req *admin.ListAppsRequest) (*admin.ListAppsResponse, error) {
+func (ms *metaSession) listApps(ctx context.Context, req *admin.ConfigurationListAppsRequest) (*admin.ConfigurationListAppsResponse, error) {
 	arg := admin.NewAdminClientListAppsArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_LIST_APPS")
@@ -114,15 +114,15 @@ func (ms *metaSession) listApps(ctx context.Context, req *admin.ListAppsRequest)
 }
 
 // ListApps is auto-generated
-func (m *MetaManager) ListApps(ctx context.Context, req *admin.ListAppsRequest) (*admin.ListAppsResponse, error) {
+func (m *MetaManager) ListApps(ctx context.Context, req *admin.ConfigurationListAppsRequest) (*admin.ConfigurationListAppsResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.listApps(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.ListAppsResponse), fmt.Errorf("ListApps failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationListAppsResponse), fmt.Errorf("ListApps failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.ListAppsResponse), nil
+		return resp.(*admin.ConfigurationListAppsResponse), nil
 	}
 	return nil, err
 }
@@ -227,7 +227,7 @@ func (m *MetaManager) QueryAppInfo(ctx context.Context, req *admin.QueryAppInfoR
 	return nil, err
 }
 
-func (ms *metaSession) updateAppEnv(ctx context.Context, req *admin.UpdateAppEnvRequest) (*admin.UpdateAppEnvResponse, error) {
+func (ms *metaSession) updateAppEnv(ctx context.Context, req *admin.ConfigurationUpdateAppEnvRequest) (*admin.ConfigurationUpdateAppEnvResponse, error) {
 	arg := admin.NewAdminClientUpdateAppEnvArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_UPDATE_APP_ENV")
@@ -239,20 +239,20 @@ func (ms *metaSession) updateAppEnv(ctx context.Context, req *admin.UpdateAppEnv
 }
 
 // UpdateAppEnv is auto-generated
-func (m *MetaManager) UpdateAppEnv(ctx context.Context, req *admin.UpdateAppEnvRequest) (*admin.UpdateAppEnvResponse, error) {
+func (m *MetaManager) UpdateAppEnv(ctx context.Context, req *admin.ConfigurationUpdateAppEnvRequest) (*admin.ConfigurationUpdateAppEnvResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.updateAppEnv(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.UpdateAppEnvResponse), fmt.Errorf("UpdateAppEnv failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationUpdateAppEnvResponse), fmt.Errorf("UpdateAppEnv failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.UpdateAppEnvResponse), nil
+		return resp.(*admin.ConfigurationUpdateAppEnvResponse), nil
 	}
 	return nil, err
 }
 
-func (ms *metaSession) listNodes(ctx context.Context, req *admin.ListNodesRequest) (*admin.ListNodesResponse, error) {
+func (ms *metaSession) listNodes(ctx context.Context, req *admin.ConfigurationListNodesRequest) (*admin.ConfigurationListNodesResponse, error) {
 	arg := admin.NewAdminClientListNodesArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_LIST_NODES")
@@ -264,20 +264,20 @@ func (ms *metaSession) listNodes(ctx context.Context, req *admin.ListNodesReques
 }
 
 // ListNodes is auto-generated
-func (m *MetaManager) ListNodes(ctx context.Context, req *admin.ListNodesRequest) (*admin.ListNodesResponse, error) {
+func (m *MetaManager) ListNodes(ctx context.Context, req *admin.ConfigurationListNodesRequest) (*admin.ConfigurationListNodesResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.listNodes(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.ListNodesResponse), fmt.Errorf("ListNodes failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationListNodesResponse), fmt.Errorf("ListNodes failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.ListNodesResponse), nil
+		return resp.(*admin.ConfigurationListNodesResponse), nil
 	}
 	return nil, err
 }
 
-func (ms *metaSession) queryClusterInfo(ctx context.Context, req *admin.ClusterInfoRequest) (*admin.ClusterInfoResponse, error) {
+func (ms *metaSession) queryClusterInfo(ctx context.Context, req *admin.ConfigurationClusterInfoRequest) (*admin.ConfigurationClusterInfoResponse, error) {
 	arg := admin.NewAdminClientQueryClusterInfoArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CLUSTER_INFO")
@@ -289,20 +289,20 @@ func (ms *metaSession) queryClusterInfo(ctx context.Context, req *admin.ClusterI
 }
 
 // QueryClusterInfo is auto-generated
-func (m *MetaManager) QueryClusterInfo(ctx context.Context, req *admin.ClusterInfoRequest) (*admin.ClusterInfoResponse, error) {
+func (m *MetaManager) QueryClusterInfo(ctx context.Context, req *admin.ConfigurationClusterInfoRequest) (*admin.ConfigurationClusterInfoResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.queryClusterInfo(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.ClusterInfoResponse), fmt.Errorf("QueryClusterInfo failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationClusterInfoResponse), fmt.Errorf("QueryClusterInfo failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.ClusterInfoResponse), nil
+		return resp.(*admin.ConfigurationClusterInfoResponse), nil
 	}
 	return nil, err
 }
 
-func (ms *metaSession) metaControl(ctx context.Context, req *admin.MetaControlRequest) (*admin.MetaControlResponse, error) {
+func (ms *metaSession) metaControl(ctx context.Context, req *admin.ConfigurationMetaControlRequest) (*admin.ConfigurationMetaControlResponse, error) {
 	arg := admin.NewAdminClientMetaControlArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_META")
@@ -314,20 +314,20 @@ func (ms *metaSession) metaControl(ctx context.Context, req *admin.MetaControlRe
 }
 
 // MetaControl is auto-generated
-func (m *MetaManager) MetaControl(ctx context.Context, req *admin.MetaControlRequest) (*admin.MetaControlResponse, error) {
+func (m *MetaManager) MetaControl(ctx context.Context, req *admin.ConfigurationMetaControlRequest) (*admin.ConfigurationMetaControlResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.metaControl(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.MetaControlResponse), fmt.Errorf("MetaControl failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationMetaControlResponse), fmt.Errorf("MetaControl failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.MetaControlResponse), nil
+		return resp.(*admin.ConfigurationMetaControlResponse), nil
 	}
 	return nil, err
 }
 
-func (ms *metaSession) queryBackupPolicy(ctx context.Context, req *admin.QueryBackupPolicyRequest) (*admin.QueryBackupPolicyResponse, error) {
+func (ms *metaSession) queryBackupPolicy(ctx context.Context, req *admin.ConfigurationQueryBackupPolicyRequest) (*admin.ConfigurationQueryBackupPolicyResponse, error) {
 	arg := admin.NewAdminClientQueryBackupPolicyArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_BACKUP_POLICY")
@@ -339,20 +339,20 @@ func (ms *metaSession) queryBackupPolicy(ctx context.Context, req *admin.QueryBa
 }
 
 // QueryBackupPolicy is auto-generated
-func (m *MetaManager) QueryBackupPolicy(ctx context.Context, req *admin.QueryBackupPolicyRequest) (*admin.QueryBackupPolicyResponse, error) {
+func (m *MetaManager) QueryBackupPolicy(ctx context.Context, req *admin.ConfigurationQueryBackupPolicyRequest) (*admin.ConfigurationQueryBackupPolicyResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.queryBackupPolicy(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.QueryBackupPolicyResponse), fmt.Errorf("QueryBackupPolicy failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationQueryBackupPolicyResponse), fmt.Errorf("QueryBackupPolicy failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.QueryBackupPolicyResponse), nil
+		return resp.(*admin.ConfigurationQueryBackupPolicyResponse), nil
 	}
 	return nil, err
 }
 
-func (ms *metaSession) balance(ctx context.Context, req *admin.BalanceRequest) (*admin.BalanceResponse, error) {
+func (ms *metaSession) balance(ctx context.Context, req *admin.ConfigurationBalancerRequest) (*admin.ConfigurationBalancerResponse, error) {
 	arg := admin.NewAdminClientBalanceArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_PROPOSE_BALANCER")
@@ -364,15 +364,15 @@ func (ms *metaSession) balance(ctx context.Context, req *admin.BalanceRequest) (
 }
 
 // Balance is auto-generated
-func (m *MetaManager) Balance(ctx context.Context, req *admin.BalanceRequest) (*admin.BalanceResponse, error) {
+func (m *MetaManager) Balance(ctx context.Context, req *admin.ConfigurationBalancerRequest) (*admin.ConfigurationBalancerResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.balance(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.BalanceResponse), fmt.Errorf("Balance failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationBalancerResponse), fmt.Errorf("Balance failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.BalanceResponse), nil
+		return resp.(*admin.ConfigurationBalancerResponse), nil
 	}
 	return nil, err
 }
@@ -427,7 +427,7 @@ func (m *MetaManager) QueryBackupStatus(ctx context.Context, req *admin.QueryBac
 	return nil, err
 }
 
-func (ms *metaSession) restoreApp(ctx context.Context, req *admin.RestoreAppRequest) (*admin.CreateAppResponse, error) {
+func (ms *metaSession) restoreApp(ctx context.Context, req *admin.ConfigurationRestoreRequest) (*admin.ConfigurationCreateAppResponse, error) {
 	arg := admin.NewAdminClientRestoreAppArgs()
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_START_RESTORE")
@@ -439,15 +439,15 @@ func (ms *metaSession) restoreApp(ctx context.Context, req *admin.RestoreAppRequ
 }
 
 // RestoreApp is auto-generated
-func (m *MetaManager) RestoreApp(ctx context.Context, req *admin.RestoreAppRequest) (*admin.CreateAppResponse, error) {
+func (m *MetaManager) RestoreApp(ctx context.Context, req *admin.ConfigurationRestoreRequest) (*admin.ConfigurationCreateAppResponse, error) {
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.restoreApp(rpcCtx, req)
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return resp.(*admin.CreateAppResponse), fmt.Errorf("RestoreApp failed: %s", resp.GetErr().String())
+			return resp.(*admin.ConfigurationCreateAppResponse), fmt.Errorf("RestoreApp failed: %s", resp.GetErr().String())
 		}
-		return resp.(*admin.CreateAppResponse), nil
+		return resp.(*admin.ConfigurationCreateAppResponse), nil
 	}
 	return nil, err
 }

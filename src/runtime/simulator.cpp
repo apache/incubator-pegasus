@@ -34,15 +34,27 @@
  */
 
 #include "runtime/simulator.h"
-#include "scheduler.h"
-#include "service_engine.h"
+
+#include <map>
 
 #include "env.sim.h"
+#include "runtime/global_config.h"
 #include "runtime/task/task_engine.sim.h"
+#include "runtime/task/task_spec.h"
+#include "scheduler.h"
+#include "service_engine.h"
 #include "sim_clock.h"
+#include "utils/clock.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/threadpool_spec.h"
+#include "utils/zlock_provider.h"
 
 namespace dsn {
 namespace tools {
+
+DSN_DECLARE_int32(random_seed);
 
 /*static*/
 void simulator::register_checker(const std::string &name, checker::factory f)
@@ -121,8 +133,7 @@ void simulator::install(service_spec &spec)
 
 void simulator::on_system_exit(sys_exit_type st)
 {
-    derror("system exits, you can replay this process using random seed %d",
-           sim_env_provider::seed());
+    LOG_INFO("system exits, you can replay this process using random seed {}", FLAGS_random_seed);
 }
 
 void simulator::run()

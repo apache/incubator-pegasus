@@ -35,10 +35,9 @@
 
 #pragma once
 
+#include <boost/asio/io_service.hpp>
 #include <thread>
 #include <vector>
-
-#include <boost/asio.hpp>
 
 #include "utils/singleton.h"
 

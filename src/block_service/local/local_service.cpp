@@ -15,20 +15,34 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/json_helper.h"
-#include "utils/fmt_logging.h"
-#include "runtime/task/task_tracker.h"
+#include <errno.h>
+#include <nlohmann/json.hpp>
+#include <algorithm>
+#include <fstream>
+#include <initializer_list>
+#include <memory>
+#include <set>
+#include <type_traits>
+#include <utility>
+
+#include "local_service.h"
+#include "nlohmann/detail/macro_scope.hpp"
+#include "nlohmann/json_fwd.hpp"
+#include "runtime/task/async_calls.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
-#include <memory>
-#include <nlohmann/json.hpp>
 
-#include "local_service.h"
+namespace dsn {
+class task_tracker;
+} // namespace dsn
 
 static const int max_length = 2048; // max data length read from file each time
 
@@ -53,7 +67,7 @@ bool file_metadata_from_json(std::ifstream &fin, file_metadata &fmeta) noexcept
         nlohmann::json::parse(data).get_to(fmeta);
         return true;
     } catch (nlohmann::json::exception &exp) {
-        dwarn_f("decode meta data from json failed: {} [{}]", exp.what(), data);
+        LOG_WARNING("decode meta data from json failed: {} [{}]", exp.what(), data);
         return false;
     }
 }
@@ -78,17 +92,16 @@ error_code local_service::initialize(const std::vector<std::string> &args)
         _root = args[0];
 
     if (_root.empty()) {
-        ddebug("initialize local block service succeed with empty root");
+        LOG_INFO("initialize local block service succeed with empty root");
     } else {
         if (::dsn::utils::filesystem::directory_exists(_root)) {
-            dwarn("old local block service root dir has already exist, path(%s)", _root.c_str());
+            LOG_WARNING("old local block service root dir has already exist, path({})", _root);
         } else {
-            if (!::dsn::utils::filesystem::create_directory(_root)) {
-                dassert(false, "local block service create directory(%s) fail", _root.c_str());
-                return ERR_FS_INTERNAL;
-            }
+            CHECK(::dsn::utils::filesystem::create_directory(_root),
+                  "local block service create directory({}) fail",
+                  _root);
         }
-        ddebug("local block service initialize succeed with root(%s)", _root.c_str());
+        LOG_INFO("local block service initialize succeed with root({})", _root);
     }
     return ERR_OK;
 }
@@ -110,14 +123,14 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
         resp.err = ERR_OK;
 
         if (::dsn::utils::filesystem::file_exists(dir_path)) {
-            ddebug("list_dir: invalid parameter(%s)", dir_path.c_str());
+            LOG_INFO("list_dir: invalid parameter({})", dir_path);
             resp.err = ERR_INVALID_PARAMETERS;
         } else if (!::dsn::utils::filesystem::directory_exists(dir_path)) {
-            ddebug("directory does not exist, dir = %s", dir_path.c_str());
+            LOG_INFO("directory does not exist, dir = {}", dir_path);
             resp.err = ERR_OBJECT_NOT_FOUND;
         } else {
             if (!::dsn::utils::filesystem::get_subfiles(dir_path, children, false)) {
-                derror("get files under directory: %s fail", dir_path.c_str());
+                LOG_ERROR("get files under directory: {} fail", dir_path);
                 resp.err = ERR_FS_INTERNAL;
                 children.clear();
             } else {
@@ -138,7 +151,7 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
 
             children.clear();
             if (!::dsn::utils::filesystem::get_subdirectories(dir_path, children, false)) {
-                derror("get subpaths under directory: %s fail", dir_path.c_str());
+                LOG_ERROR("get subpaths under directory: {} fail", dir_path);
                 resp.err = ERR_FS_INTERNAL;
                 children.clear();
             } else {
@@ -186,7 +199,7 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
         if (utils::filesystem::file_exists(file_path) &&
             utils::filesystem::file_exists(meta_file_path)) {
 
-            dinfo("file(%s) already exist", file_path.c_str());
+            LOG_DEBUG("file({}) already exist", file_path);
             resp.err = f->load_metadata();
         }
 
@@ -265,7 +278,8 @@ error_code local_file_object::load_metadata()
     std::string metadata_path = local_service::get_metafile(file_name());
     std::ifstream is(metadata_path, std::ios::in);
     if (!is.is_open()) {
-        dwarn("load meta data from %s failed, err = %s", utils::safe_strerror(errno).c_str());
+        LOG_WARNING(
+            "load meta data from {} failed, err = {}", metadata_path, utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
     auto cleanup = dsn::defer([&is]() { is.close(); });
@@ -290,9 +304,8 @@ error_code local_file_object::store_metadata()
     std::string metadata_path = local_service::get_metafile(file_name());
     std::ofstream os(metadata_path, std::ios::out | std::ios::trunc);
     if (!os.is_open()) {
-        dwarn("store to metadata file %s failed, err=%s",
-              metadata_path.c_str(),
-              utils::safe_strerror(errno).c_str());
+        LOG_WARNING(
+            "store to metadata file {} failed, err={}", metadata_path, utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
     auto cleanup = dsn::defer([&os]() { os.close(); });
@@ -332,7 +345,7 @@ dsn::task_ptr local_file_object::write(const write_request &req,
         }
 
         if (resp.err == ERR_OK) {
-            dinfo("start write file, file = %s", file_name().c_str());
+            LOG_DEBUG("start write file, file = {}", file_name());
 
             std::ofstream fout(file_name(), std::ifstream::out | std::ifstream::trunc);
             if (!fout.is_open()) {
@@ -376,7 +389,7 @@ dsn::task_ptr local_file_object::read(const read_request &req,
             resp.err = ERR_OBJECT_NOT_FOUND;
         } else {
             if ((resp.err = load_metadata()) != ERR_OK) {
-                dwarn("load meta data of %s failed", file_name().c_str());
+                LOG_WARNING("load meta data of {} failed", file_name());
             } else {
                 int64_t file_sz = _size;
                 int64_t total_sz = 0;
@@ -386,7 +399,7 @@ dsn::task_ptr local_file_object::read(const read_request &req,
                     total_sz = req.remote_length;
                 }
 
-                dinfo("read file(%s), size = %ld", file_name().c_str(), total_sz);
+                LOG_DEBUG("read file({}), size = {}", file_name(), total_sz);
                 std::string buf;
                 buf.resize(total_sz + 1);
                 std::ifstream fin(file_name(), std::ifstream::in);
@@ -423,25 +436,25 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
         resp.err = ERR_OK;
         std::ifstream fin(req.input_local_name, std::ios_base::in);
         if (!fin.is_open()) {
-            dwarn("open source file %s for read failed, err(%s)",
-                  req.input_local_name.c_str(),
-                  utils::safe_strerror(errno).c_str());
+            LOG_WARNING("open source file {} for read failed, err({})",
+                        req.input_local_name,
+                        utils::safe_strerror(errno));
             resp.err = ERR_FILE_OPERATION_FAILED;
         }
 
         utils::filesystem::create_file(file_name());
         std::ofstream fout(file_name(), std::ios_base::out | std::ios_base::trunc);
         if (!fout.is_open()) {
-            dwarn("open target file %s for write failed, err(%s)",
-                  file_name().c_str(),
-                  utils::safe_strerror(errno).c_str());
+            LOG_WARNING("open target file {} for write failed, err({})",
+                        file_name(),
+                        utils::safe_strerror(errno));
             resp.err = ERR_FS_INTERNAL;
         }
 
         if (resp.err == ERR_OK) {
-            dinfo("start to transfer from src_file(%s) to des_file(%s)",
-                  req.input_local_name.c_str(),
-                  file_name().c_str());
+            LOG_DEBUG("start to transfer from src_file({}) to dst_file({})",
+                      req.input_local_name,
+                      file_name());
             int64_t total_sz = 0;
             char buf[max_length] = {'\0'};
             while (!fin.eof()) {
@@ -449,7 +462,7 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
                 total_sz += fin.gcount();
                 fout.write(buf, fin.gcount());
             }
-            dinfo("finish upload file, file = %s, total_size = %d", file_name().c_str(), total_sz);
+            LOG_DEBUG("finish upload file, file = {}, total_size = {}", file_name(), total_sz);
             fout.close();
             fin.close();
 
@@ -493,9 +506,8 @@ dsn::task_ptr local_file_object::download(const download_request &req,
         resp.err = ERR_OK;
         std::string target_file = req.output_local_name;
         if (target_file.empty()) {
-            derror("download %s failed, because target name(%s) is invalid",
-                   file_name().c_str(),
-                   target_file.c_str());
+            LOG_ERROR(
+                "download {} failed, because target name({}) is invalid", file_name(), target_file);
             resp.err = ERR_INVALID_PARAMETERS;
         }
 
@@ -509,9 +521,9 @@ dsn::task_ptr local_file_object::download(const download_request &req,
         if (resp.err == ERR_OK) {
             std::ifstream fin(file_name(), std::ifstream::in);
             if (!fin.is_open()) {
-                derror("open block file(%s) failed, err(%s)",
-                       file_name().c_str(),
-                       utils::safe_strerror(errno).c_str());
+                LOG_ERROR("open block file({}) failed, err({})",
+                          file_name(),
+                          utils::safe_strerror(errno));
                 resp.err = ERR_FS_INTERNAL;
             }
 
@@ -519,16 +531,15 @@ dsn::task_ptr local_file_object::download(const download_request &req,
             if (!fout.is_open()) {
                 if (fin.is_open())
                     fin.close();
-                derror("open target file(%s) failed, err(%s)",
-                       target_file.c_str(),
-                       utils::safe_strerror(errno).c_str());
+                LOG_ERROR("open target file({}) failed, err({})",
+                          target_file,
+                          utils::safe_strerror(errno));
                 resp.err = ERR_FILE_OPERATION_FAILED;
             }
 
             if (resp.err == ERR_OK) {
-                dinfo("start to transfer, src_file(%s), des_file(%s)",
-                      file_name().c_str(),
-                      target_file.c_str());
+                LOG_DEBUG(
+                    "start to transfer, src_file({}), dst_file({})", file_name(), target_file);
                 int64_t total_sz = 0;
                 char buf[max_length] = {'\0'};
                 while (!fin.eof()) {
@@ -536,16 +547,16 @@ dsn::task_ptr local_file_object::download(const download_request &req,
                     total_sz += fin.gcount();
                     fout.write(buf, fin.gcount());
                 }
-                dinfo("finish download file(%s), total_size = %d", target_file.c_str(), total_sz);
+                LOG_DEBUG("finish download file({}), total_size = {}", target_file, total_sz);
                 fout.close();
                 fin.close();
                 resp.downloaded_size = static_cast<uint64_t>(total_sz);
 
                 _size = total_sz;
                 if ((resp.err = utils::filesystem::md5sum(target_file, _md5_value)) != ERR_OK) {
-                    dwarn("download %s failed when calculate the md5sum of %s",
-                          file_name().c_str(),
-                          target_file.c_str());
+                    LOG_WARNING("download {} failed when calculate the md5sum of {}",
+                                file_name(),
+                                target_file);
                 } else {
                     _has_meta_synced = true;
                     resp.file_md5 = _md5_value;

@@ -15,12 +15,41 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/fmt_logging.h"
-#include "utils/filesystem.h"
+#include <chrono>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "backup_types.h"
+#include "block_service/block_service.h"
+#include "block_service/block_service_manager.h"
 #include "common/backup_common.h"
-#include "common/replication_common.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/backup_engine.h"
+#include "meta/meta_backup_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_service.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
 #include "server_state.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
@@ -41,7 +70,7 @@ error_code backup_engine::init_backup(int32_t app_id)
         _backup_service->get_state()->lock_read(l);
         std::shared_ptr<app_state> app = _backup_service->get_state()->get_app(app_id);
         if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
-            derror_f("app {} is not available, couldn't do backup now.", app_id);
+            LOG_ERROR("app {} is not available, couldn't do backup now.", app_id);
             return ERR_INVALID_STATE;
         }
         app_name = app->app_name;
@@ -77,7 +106,7 @@ error_code backup_engine::set_backup_path(const std::string &path)
     if (_block_service && _block_service->is_root_path_set()) {
         return ERR_INVALID_PARAMETERS;
     }
-    ddebug_f("backup path is set to {}.", path);
+    LOG_INFO("backup path is set to {}.", path);
     _backup_path = path;
     return ERR_OK;
 }
@@ -100,12 +129,11 @@ error_code backup_engine::write_backup_file(const std::string &file_name,
                       })
         ->wait();
     if (err != dsn::ERR_OK) {
-        ddebug_f("create file {} failed", file_name);
+        LOG_INFO("create file {} failed", file_name);
         return err;
     }
-    dassert_f(remote_file != nullptr,
-              "create file {} succeed, but can't get handle",
-              create_file_req.file_name);
+    CHECK_NOTNULL(
+        remote_file, "create file {} succeed, but can't get handle", create_file_req.file_name);
     remote_file
         ->write(dist::block_service::write_request{write_buffer},
                 TASK_CODE_EXEC_INLINED,
@@ -122,7 +150,7 @@ error_code backup_engine::backup_app_meta()
         _backup_service->get_state()->lock_read(l);
         std::shared_ptr<app_state> app = _backup_service->get_state()->get_app(_cur_backup.app_id);
         if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
-            derror_f("app {} is not available, couldn't do backup now.", _cur_backup.app_id);
+            LOG_ERROR("app {} is not available, couldn't do backup now.", _cur_backup.app_id);
             return ERR_INVALID_STATE;
         }
         app_state tmp = *app;
@@ -147,7 +175,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
         _backup_service->get_state()->lock_read(l);
         std::shared_ptr<app_state> app = _backup_service->get_state()->get_app(pid.get_app_id());
         if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
-            derror_f("app {} is not available, couldn't do backup now.", pid.get_app_id());
+            LOG_ERROR("app {} is not available, couldn't do backup now.", pid.get_app_id());
 
             zauto_lock lock(_lock);
             _is_backup_failed = true;
@@ -157,9 +185,10 @@ void backup_engine::backup_app_partition(const gpid &pid)
     }
 
     if (partition_primary.is_invalid()) {
-        dwarn_f("backup_id({}): partition {} doesn't have a primary now, retry to backup it later.",
-                _cur_backup.backup_id,
-                pid.to_string());
+        LOG_WARNING(
+            "backup_id({}): partition {} doesn't have a primary now, retry to backup it later.",
+            _cur_backup.backup_id,
+            pid.to_string());
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this, pid]() { backup_app_partition(pid); },
@@ -180,7 +209,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
         req->__set_backup_path(_backup_path);
     }
 
-    ddebug_f("backup_id({}): send backup request to partition {}, target_addr = {}",
+    LOG_INFO("backup_id({}): send backup request to partition {}, target_addr = {}",
              _cur_backup.backup_id,
              pid.to_string(),
              partition_primary.to_string());
@@ -197,13 +226,13 @@ void backup_engine::backup_app_partition(const gpid &pid)
 inline void backup_engine::handle_replica_backup_failed(const backup_response &response,
                                                         const gpid pid)
 {
-    dcheck_eq(response.pid, pid);
-    dcheck_eq(response.backup_id, _cur_backup.backup_id);
+    CHECK_EQ(response.pid, pid);
+    CHECK_EQ(response.backup_id, _cur_backup.backup_id);
 
-    derror_f("backup_id({}): backup for partition {} failed, response.err: {}",
-             _cur_backup.backup_id,
-             pid.to_string(),
-             response.err.to_string());
+    LOG_ERROR("backup_id({}): backup for partition {} failed, response.err: {}",
+              _cur_backup.backup_id,
+              pid.to_string(),
+              response.err.to_string());
     zauto_lock l(_lock);
     // if one partition fail, the whole backup plan fail.
     _is_backup_failed = true;
@@ -246,19 +275,19 @@ void backup_engine::on_backup_reply(const error_code err,
     }
 
     if (rep_error != ERR_OK) {
-        derror_f("backup_id({}): backup request to server {} failed, error: {}, retry to "
-                 "send backup request.",
-                 _cur_backup.backup_id,
-                 primary.to_string(),
-                 rep_error.to_string());
+        LOG_ERROR("backup_id({}): backup request to server {} failed, error: {}, retry to "
+                  "send backup request.",
+                  _cur_backup.backup_id,
+                  primary.to_string(),
+                  rep_error.to_string());
         retry_backup(pid);
         return;
     };
 
     if (response.progress == cold_backup_constant::PROGRESS_FINISHED) {
-        dcheck_eq(response.pid, pid);
-        dcheck_eq(response.backup_id, _cur_backup.backup_id);
-        ddebug_f("backup_id({}): backup for partition {} completed.",
+        CHECK_EQ(response.pid, pid);
+        CHECK_EQ(response.backup_id, _cur_backup.backup_id);
+        LOG_INFO("backup_id({}): backup for partition {} completed.",
                  _cur_backup.backup_id,
                  pid.to_string());
         {
@@ -270,7 +299,7 @@ void backup_engine::on_backup_reply(const error_code err,
     }
 
     // backup is not finished, meta polling to send request
-    ddebug_f("backup_id({}): receive backup response for partition {} from server {}, now "
+    LOG_INFO("backup_id({}): receive backup response for partition {} from server {}, now "
              "progress {}, retry to send backup request.",
              _cur_backup.backup_id,
              pid.to_string(),
@@ -288,7 +317,7 @@ void backup_engine::write_backup_info()
     blob buf = dsn::json::json_forwarder<app_backup_info>::encode(_cur_backup);
     error_code err = write_backup_file(file_name, buf);
     if (err == ERR_FS_INTERNAL) {
-        derror_f(
+        LOG_ERROR(
             "backup_id({}): write backup info failed, error {}, do not try again for this error.",
             _cur_backup.backup_id,
             err.to_string());
@@ -297,7 +326,8 @@ void backup_engine::write_backup_info()
         return;
     }
     if (err != ERR_OK) {
-        dwarn_f("backup_id({}): write backup info failed, retry it later.", _cur_backup.backup_id);
+        LOG_WARNING("backup_id({}): write backup info failed, retry it later.",
+                    _cur_backup.backup_id);
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this]() { write_backup_info(); },
@@ -305,7 +335,7 @@ void backup_engine::write_backup_info()
                          std::chrono::seconds(1));
         return;
     }
-    ddebug_f("backup_id({}): successfully wrote backup info, backup for app {} completed.",
+    LOG_INFO("backup_id({}): successfully wrote backup info, backup for app {} completed.",
              _cur_backup.backup_id,
              _cur_backup.app_id);
     zauto_lock l(_lock);
@@ -331,10 +361,10 @@ error_code backup_engine::start()
 {
     error_code err = backup_app_meta();
     if (err != ERR_OK) {
-        derror_f("backup_id({}): backup meta data for app {} failed, error {}",
-                 _cur_backup.backup_id,
-                 _cur_backup.app_id,
-                 err.to_string());
+        LOG_ERROR("backup_id({}): backup meta data for app {} failed, error {}",
+                  _cur_backup.backup_id,
+                  _cur_backup.app_id,
+                  err.to_string());
         return err;
     }
     for (int i = 0; i < _backup_status.size(); ++i) {

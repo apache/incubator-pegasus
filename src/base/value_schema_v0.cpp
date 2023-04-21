@@ -19,8 +19,16 @@
 
 #include "value_schema_v0.h"
 
+#include <stdint.h>
+#include <string.h>
+#include <algorithm>
+#include <array>
+#include <utility>
+#include <vector>
+
+#include "utils/endians.h"
 #include "utils/fmt_logging.h"
-#include "utils/smart_pointers.h"
+#include "utils/ports.h"
 
 namespace pegasus {
 std::unique_ptr<value_field> value_schema_v0::extract_field(dsn::string_view value,
@@ -32,7 +40,7 @@ std::unique_ptr<value_field> value_schema_v0::extract_field(dsn::string_view val
         field = extract_timestamp(value);
         break;
     default:
-        dassert_f(false, "Unsupported field type: {}", type);
+        CHECK(false, "Unsupported field type: {}", type);
     }
     return field;
 }
@@ -51,7 +59,7 @@ void value_schema_v0::update_field(std::string &value, std::unique_ptr<value_fie
         update_expire_ts(value, std::move(field));
         break;
     default:
-        dassert_f(false, "Unsupported update field type: {}", type);
+        CHECK(false, "Unsupported update field type: {}", type);
     }
 }
 
@@ -62,7 +70,7 @@ rocksdb::SliceParts value_schema_v0::generate_value(const value_params &params)
     auto data_field =
         static_cast<user_data_field *>(params.fields[value_field_type::USER_DATA].get());
     if (dsn_unlikely(expire_ts_field == nullptr || data_field == nullptr)) {
-        dassert_f(false, "USER_DATA or EXPIRE_TIMESTAMP is not provided");
+        CHECK(false, "USER_DATA or EXPIRE_TIMESTAMP is not provided");
         return {nullptr, 0};
     }
 
@@ -81,12 +89,12 @@ rocksdb::SliceParts value_schema_v0::generate_value(const value_params &params)
 std::unique_ptr<value_field> value_schema_v0::extract_timestamp(dsn::string_view value)
 {
     uint32_t expire_ts = dsn::data_input(value).read_u32();
-    return dsn::make_unique<expire_timestamp_field>(expire_ts);
+    return std::make_unique<expire_timestamp_field>(expire_ts);
 }
 
 void value_schema_v0::update_expire_ts(std::string &value, std::unique_ptr<value_field> field)
 {
-    dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
+    CHECK_GE_MSG(value.length(), sizeof(uint32_t), "value must include 'expire_ts' header");
     auto expire_field = static_cast<expire_timestamp_field *>(field.get());
 
     auto new_expire_ts = dsn::endian::hton(expire_field->expire_ts);

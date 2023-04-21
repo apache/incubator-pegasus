@@ -24,17 +24,26 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/filesystem.h"
-#include "runtime/task/task.h"
-#include "runtime/task/async_calls.h"
+#include "aio/aio_task.h"
+#include "common/gpid.h"
 #include "nfs/nfs_node.h"
+#include "runtime/app_model.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task_code.h"
+#include "runtime/tool_api.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/threadpool_code.h"
 
 using namespace dsn;
 
@@ -49,6 +58,8 @@ TEST(nfs, basic)
 {
     std::unique_ptr<dsn::nfs_node> nfs(dsn::nfs_node::create());
     nfs->start();
+    nfs->register_async_rpc_handler_for_test();
+    dsn::gpid fake_pid = gpid(1, 0);
 
     utils::filesystem::remove_path("nfs_test_dir");
     utils::filesystem::remove_path("nfs_test_dir_copy");
@@ -73,6 +84,7 @@ TEST(nfs, basic)
                                                      files,
                                                      "default",
                                                      "nfs_test_dir",
+                                                     fake_pid,
                                                      false,
                                                      false,
                                                      LPC_AIO_TEST_NFS,
@@ -114,6 +126,7 @@ TEST(nfs, basic)
                                                      files,
                                                      "default",
                                                      "nfs_test_dir",
+                                                     fake_pid,
                                                      true,
                                                      false,
                                                      LPC_AIO_TEST_NFS,
@@ -144,6 +157,7 @@ TEST(nfs, basic)
                                                          "nfs_test_dir",
                                                          "default",
                                                          "nfs_test_dir_copy",
+                                                         fake_pid,
                                                          false,
                                                          false,
                                                          LPC_AIO_TEST_NFS,

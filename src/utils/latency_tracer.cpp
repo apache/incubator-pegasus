@@ -16,36 +16,36 @@
 // under the License.
 
 #include "utils/latency_tracer.h"
+
+#include <fmt/core.h>
+#include <cstdint>
+#include <iterator>
+#include <utility>
+
+#include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counters.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/fmt_logging.h"
+#include "utils/autoref_ptr.h"
 #include "utils/config_api.h"
 #include "utils/flags.h"
-
-#include <utility>
-#include "lockp.std.h"
-#include "shared_io_service.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace utils {
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 enable_latency_tracer,
                 false,
                 "whether enable the global latency tracer");
 DSN_TAG_VARIABLE(enable_latency_tracer, FT_MUTABLE);
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 enable_latency_tracer_report,
                 false,
                 "whether open the latency tracer report perf counter");
 DSN_TAG_VARIABLE(enable_latency_tracer_report, FT_MUTABLE);
 
-DSN_DEFINE_string("replication",
+DSN_DEFINE_string(replication,
                   latency_tracer_counter_name_prefix,
                   "trace_latency",
                   "perf counter common name prefix");
@@ -204,7 +204,7 @@ std::shared_ptr<latency_tracer> latency_tracer::sub_tracer(const std::string &na
     if (iter != _sub_tracers.end()) {
         return iter->second;
     }
-    dwarn_f("can't find the [{}] sub tracer of {}", name, _name);
+    LOG_WARNING("can't find the [{}] sub tracer of {}", name, _name);
     return nullptr;
 }
 
@@ -276,7 +276,7 @@ void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
     }
 
     if (!_is_sub && total_time_used >= _threshold) {
-        dwarn_f("TRACE:the traces as fallow:\n{}", traces);
+        LOG_WARNING("TRACE:the traces as fallow:\n{}", traces);
         return;
     }
 }

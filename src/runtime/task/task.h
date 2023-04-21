@@ -26,35 +26,39 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <atomic>
+#include <chrono>
 #include <functional>
+#include <list>
 #include <tuple>
-#include "utils/ports.h"
-#include "utils/extensible_object.h"
-#include "utils/utils.h"
-#include "utils/apply.h"
-#include "utils/binary_writer.h"
+#include <utility>
+#include <vector>
+
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
 #include "task_spec.h"
 #include "task_tracker.h"
-#include "runtime/rpc/rpc_message.h"
+#include "utils/absl/utility/utility.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
+#include "utils/extensible_object.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/ports.h"
+#include "utils/utils.h"
 
 namespace dsn {
 
+class env_provider;
+class rpc_engine;
+class service_node;
+class task;
 class task_worker;
 class task_worker_pool;
-class service_node;
-class task_engine;
-class task_queue;
-class rpc_engine;
-class disk_engine;
-class env_provider;
-class timer_service;
-class task;
+class threadpool_code;
 
 struct __tls_dsn__
 {
@@ -359,15 +363,18 @@ public:
     void exec() override;
     void enqueue() override;
 
+    void update_interval(int interval_ms);
+
 protected:
     void clear_non_trivial_on_task_end() override { _cb = nullptr; }
 
 private:
-    // ATTENTION: if _interval_milliseconds <= 0, then timer task will just be executed once;
-    // otherwise, timer task will be executed periodically(period = _interval_milliseconds)
-    int _interval_milliseconds;
+    // ATTENTION: if _interval_ms == 0, then timer task will just be executed once;
+    // otherwise, timer task will be executed periodically(period = _interval_ms)
+    int _interval_ms;
     task_handler _cb;
 };
+typedef dsn::ref_ptr<dsn::timer_task> timer_task_ptr;
 
 template <typename First, typename... Remaining>
 class future_task : public task
@@ -382,7 +389,7 @@ public:
         : task(code, hash, node), _cb(std::move(cb))
     {
     }
-    virtual void exec() override { dsn::apply(_cb, std::move(_values)); }
+    virtual void exec() override { absl::apply(_cb, std::move(_values)); }
 
     void enqueue_with(const First &t, const Remaining &... r, int delay_ms = 0)
     {
@@ -428,10 +435,10 @@ public:
                 _handler(_request);
             }
         } else {
-            dinfo("rpc_request_task(%s) from(%s) stop to execute due to timeout_ms(%d) exceed",
-                  spec().name.c_str(),
-                  _request->header->from_address.to_string(),
-                  _request->header->client.timeout_ms);
+            LOG_DEBUG("rpc_request_task({}) from({}) stop to execute due to timeout_ms({}) exceed",
+                      spec().name,
+                      _request->header->from_address,
+                      _request->header->client.timeout_ms);
             spec().on_rpc_task_dropped.execute(this);
         }
     }
@@ -498,9 +505,9 @@ public:
     void replace_callback(rpc_response_handler &&cb)
     {
         task_state cur_state = state();
-        dassert(cur_state == TASK_STATE_READY || cur_state == TASK_STATE_RUNNING,
-                "invalid task_state: %s",
-                enum_to_string(cur_state));
+        CHECK(cur_state == TASK_STATE_READY || cur_state == TASK_STATE_RUNNING,
+              "invalid task_state: {}",
+              enum_to_string(cur_state));
         _cb = std::move(cb);
     }
     void replace_callback(const rpc_response_handler &cb)

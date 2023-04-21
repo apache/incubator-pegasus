@@ -17,38 +17,44 @@
  * under the License.
  */
 
-#include "utils/flags.h"
-#include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
-#include "runtime/api_layer1.h"
-
 #include "disk_cleaner.h"
+
+#include <fmt/core.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <algorithm>
+
+#include "runtime/api_layer1.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
 
 DSN_DEFINE_uint64(
-    "replication",
+    replication,
     gc_disk_error_replica_interval_seconds,
     7 * 24 * 3600 /*7day*/,
     "Duration of error replica being removed, which is in a directory with '.err' suffixed");
 DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
 
 DSN_DEFINE_uint64(
-    "replication",
+    replication,
     gc_disk_garbage_replica_interval_seconds,
     24 * 3600 /*1day*/,
     "Duration of garbaged replica being removed, which is in a directory with '.gar' suffixed");
 DSN_TAG_VARIABLE(gc_disk_garbage_replica_interval_seconds, FT_MUTABLE);
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   gc_disk_migration_tmp_replica_interval_seconds,
                   24 * 3600 /*1day*/,
                   "Duration of disk-migration tmp replica being removed, which is in a directory "
                   "with '.tmp' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_tmp_replica_interval_seconds, FT_MUTABLE);
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   gc_disk_migration_origin_replica_interval_seconds,
                   7 * 24 * 3600 /*7day*/,
                   "Duration of disk-migration origin replica being removed, which is in a "
@@ -68,7 +74,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
     for (auto &dir : data_dirs) {
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
-            dwarn_f("gc_disk: failed to get subdirectories in {}", dir);
+            LOG_WARNING("gc_disk: failed to get subdirectories in {}", dir);
             return error_s::make(ERR_OBJECT_NOT_FOUND, "failed to get subdirectories");
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
@@ -82,7 +88,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
 
         time_t mt;
         if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
-            dwarn_f("gc_disk: failed to get last write time of {}", fpath);
+            LOG_WARNING("gc_disk: failed to get last write time of {}", fpath);
             continue;
         }
 
@@ -107,23 +113,34 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
 
         if (last_write_time + remove_interval_seconds <= current_time_ms / 1000) {
             if (!dsn::utils::filesystem::remove_path(fpath)) {
-                dwarn_f("gc_disk: failed to delete directory '{}', time_used_ms = {}",
-                        fpath,
-                        dsn_now_ms() - current_time_ms);
+                LOG_WARNING("gc_disk: failed to delete directory '{}', time_used_ms = {}",
+                            fpath,
+                            dsn_now_ms() - current_time_ms);
             } else {
-                dwarn_f("gc_disk: replica_dir_op succeed to delete directory '{}'"
-                        ", time_used_ms = {}",
-                        fpath,
-                        dsn_now_ms() - current_time_ms);
+                LOG_WARNING("gc_disk: replica_dir_op succeed to delete directory '{}'"
+                            ", time_used_ms = {}",
+                            fpath,
+                            dsn_now_ms() - current_time_ms);
                 report.remove_dir_count++;
             }
         } else {
-            ddebug_f("gc_disk: reserve directory '{}', wait_seconds = {}",
+            LOG_INFO("gc_disk: reserve directory '{}', wait_seconds = {}",
                      fpath,
                      last_write_time + remove_interval_seconds - current_time_ms / 1000);
         }
     }
     return error_s::ok();
+}
+
+void move_to_err_path(const std::string &path, const std::string &log_prefix)
+{
+    const std::string new_path = fmt::format("{}.{}{}", path, dsn_now_us(), kFolderSuffixErr);
+    CHECK(dsn::utils::filesystem::rename_path(path, new_path),
+          "{}: failed to move directory from '{}' to '{}'",
+          log_prefix,
+          path,
+          new_path);
+    LOG_WARNING("{}: succeed to move directory from '{}' to '{}'", log_prefix, path, new_path);
 }
 } // namespace replication
 } // namespace dsn

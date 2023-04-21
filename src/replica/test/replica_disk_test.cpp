@@ -17,11 +17,32 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fail_point.h"
+#include <unistd.h>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "replica_disk_test_base.h"
+#include "common/fs_manager.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "metadata_types.h"
 #include "replica/disk_cleaner.h"
+#include "replica/replica_stub.h"
+#include "replica/test/mock_utils.h"
+#include "replica_admin_types.h"
+#include "replica_disk_test_base.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -39,19 +60,19 @@ public:
     void generate_fake_rpc()
     {
         // create RPC_QUERY_DISK_INFO fake request
-        auto query_request = dsn::make_unique<query_disk_info_request>();
+        auto query_request = std::make_unique<query_disk_info_request>();
         fake_query_disk_rpc = query_disk_info_rpc(std::move(query_request), RPC_QUERY_DISK_INFO);
     }
 
     error_code send_add_new_disk_rpc(const std::string disk_str)
     {
-        auto add_disk_request = dsn::make_unique<add_new_disk_request>();
+        auto add_disk_request = std::make_unique<add_new_disk_request>();
         add_disk_request->disk_str = disk_str;
         auto rpc = add_new_disk_rpc(std::move(add_disk_request), RPC_QUERY_DISK_INFO);
         stub->on_add_new_disk(rpc);
         error_code err = rpc.response().err;
         if (err != ERR_OK) {
-            ddebug_f("error msg: {}", rpc.response().err_hint);
+            LOG_INFO("error msg: {}", rpc.response().err_hint);
         }
         return err;
     }

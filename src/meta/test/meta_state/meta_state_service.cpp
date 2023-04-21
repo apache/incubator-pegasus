@@ -25,14 +25,22 @@
  */
 
 #include "meta/meta_state_service.h"
-#include <boost/lexical_cast.hpp>
 
+#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <chrono>
 #include <thread>
 
 #include "meta/meta_state_service_simple.h"
 #include "meta/meta_state_service_zookeeper.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 
 using namespace dsn;
 using namespace dsn::dist;
@@ -62,9 +70,9 @@ void provider_basic_test(const service_creator_func &service_creator,
         service->get_children("/1",
                               META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
                               [](error_code ec, const std::vector<std::string> &children) {
-                                  dassert(ec == ERR_OK && children.size() == 1 &&
-                                              *children.begin() == "1",
-                                          "unexpected child");
+                                  CHECK(ec == ERR_OK && children.size() == 1 &&
+                                            *children.begin() == "1",
+                                        "unexpected child");
                               });
         service->node_exist("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)
@@ -103,7 +111,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                            dsn::binary_reader reader(value);
                            int read_value = 0;
                            reader.read(read_value);
-                           dassert(read_value == 0xdeadbeef, "get_value != create_value");
+                           CHECK_EQ(read_value, 0xdeadbeef);
                        })
             ->wait();
         writer = dsn::binary_writer();
@@ -120,7 +128,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                            dsn::binary_reader reader(value);
                            int read_value = 0;
                            reader.read(read_value);
-                           dassert(read_value == 0xbeefdead, "get_value != create_value");
+                           CHECK_EQ(read_value, 0xbeefdead);
                        })
             ->wait();
     }
@@ -256,7 +264,7 @@ void provider_recursively_create_delete_test(const service_creator_func &creator
         ->delete_node("/r",
                       true,
                       META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
-                      [](error_code ec) { ddebug("result: %s", ec.to_string()); })
+                      [](error_code ec) { LOG_INFO("result: {}", ec); })
         ->wait();
     service->create_node(
         "/r",

@@ -18,6 +18,12 @@
  */
 
 #include "value_schema_manager.h"
+
+#include <iterator>
+#include <utility>
+
+#include "utils/endians.h"
+#include "utils/fmt_logging.h"
 #include "value_schema_v0.h"
 #include "value_schema_v1.h"
 #include "value_schema_v2.h"
@@ -29,9 +35,9 @@ value_schema_manager::value_schema_manager()
      * If someone wants to add a new data version, he only need to implement the new value schema,
      * and register it here.
      */
-    register_schema(dsn::make_unique<value_schema_v0>());
-    register_schema(dsn::make_unique<value_schema_v1>());
-    register_schema(dsn::make_unique<value_schema_v2>());
+    register_schema(std::make_unique<value_schema_v0>());
+    register_schema(std::make_unique<value_schema_v1>());
+    register_schema(std::make_unique<value_schema_v2>());
 }
 
 void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)
@@ -56,9 +62,7 @@ value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_versi
         return schema;
     } else {
         auto schema = get_value_schema(meta_cf_data_version);
-        if (nullptr == schema) {
-            dassert_f(false, "data version({}) in meta cf is not supported", meta_cf_data_version);
-        }
+        CHECK_NOTNULL(schema, "data version({}) in meta cf is not supported", meta_cf_data_version);
         return schema;
     }
 }

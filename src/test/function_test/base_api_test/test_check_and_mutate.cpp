@@ -17,21 +17,14 @@
  * under the License.
  */
 
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <climits>
-#include <map>
-
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include <unistd.h>
-#include "include/pegasus/client.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <unistd.h>
+#include <string>
 
+#include "include/pegasus/client.h"
+#include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
 
 using namespace ::pegasus;

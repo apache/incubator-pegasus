@@ -15,11 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "replica/replica_http_service.h"
+
+#include <fmt/core.h>
 #include <nlohmann/json.hpp>
-#include <fmt/format.h>
-#include "utils/output_utils.h"
-#include "replica_http_service.h"
+#include <nlohmann/json_fwd.hpp>
+#include <stdint.h>
+#include <map>
+#include <memory>
+#include <unordered_map>
+#include <utility>
+
+#include "common/duplication_common.h"
+#include "common/gpid.h"
 #include "duplication/duplication_sync_timer.h"
+#include "http/http_server.h"
+#include "replica/replica_stub.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace replication {
@@ -27,7 +39,7 @@ namespace replication {
 void replica_http_service::query_duplication_handler(const http_request &req, http_response &resp)
 {
     if (!_stub->_duplication_sync_timer) {
-        resp.body = "duplication is not enabled [duplication_enabled=false]";
+        resp.body = "duplication is not enabled [FLAGS_duplication_enabled=false]";
         resp.status_code = http_status_code::not_found;
         return;
     }
@@ -151,6 +163,8 @@ void replica_http_service::query_manual_compaction_handler(const http_request &r
     resp.status_code = http_status_code::ok;
     resp.body = json.dump();
 }
+
+void replica_http_service::update_config(const std::string &name) { _stub->update_config(name); }
 
 } // namespace replication
 } // namespace dsn

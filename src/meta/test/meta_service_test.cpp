@@ -15,11 +15,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "meta_test_base.h"
-#include "meta/meta_service.h"
+#include <fmt/ostream.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <iosfwd>
+#include <memory>
+#include <vector>
 
-#include "utils/fail_point.h"
+#include "common/replication.codes.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_service.h"
+#include "meta_admin_types.h"
+#include "meta_test_base.h"
+#include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {
@@ -38,8 +55,7 @@ public:
             rpc_address leader;
             auto rpc = create_fake_rpc();
             rpc.dsn_request()->header->context.u.is_forward_supported = false;
-            bool res = _ms->check_status(rpc, &leader);
-            ASSERT_EQ(false, res);
+            ASSERT_FALSE(_ms->check_status_and_authz(rpc, &leader));
             ASSERT_EQ(ERR_FORWARD_TO_OTHERS, rpc.response().err);
             ASSERT_EQ(leader.to_std_string(), "1.2.3.4:10086");
             ASSERT_EQ(app_env_rpc::forward_mail_box().size(), 0);
@@ -49,8 +65,7 @@ public:
         RPC_MOCKING(app_env_rpc)
         {
             auto rpc = create_fake_rpc();
-            bool res = _ms->check_status(rpc);
-            ASSERT_EQ(false, res);
+            ASSERT_FALSE(_ms->check_status_and_authz(rpc));
             ASSERT_EQ(app_env_rpc::forward_mail_box().size(), 1);
             ASSERT_EQ(app_env_rpc::forward_mail_box()[0].remote_address().to_std_string(),
                       "1.2.3.4:10086");
@@ -68,8 +83,7 @@ public:
         {
             rpc_address leader;
             auto rpc = create_fake_rpc();
-            auto res = _ms->check_status(rpc, &leader);
-            ASSERT_EQ(true, res);
+            ASSERT_TRUE(_ms->check_status_and_authz(rpc, &leader));
             ASSERT_EQ(app_env_rpc::forward_mail_box().size(), 0);
         }
 

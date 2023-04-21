@@ -24,21 +24,37 @@
  * THE SOFTWARE.
  */
 
-#include "utils/ports.h"
-#include "utils/crc.h"
-#include "runtime/rpc/rpc_message.h"
-#include "network.h"
-#include "runtime/rpc/message_parser.h"
-#include <cctype>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <string.h>
+#include <algorithm>
+#include <list>
+#include <memory>
+#include <new>
+#include <string>
+#include <utility>
 
-#include "runtime/task/task_engine.h"
+#include "network.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "utils/crc.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/singleton.h"
+#include "utils/utils.h"
 
 using namespace dsn::utils;
 
 namespace dsn {
+// init common for all per-node providers
+DSN_DEFINE_uint32(core,
+                  local_hash,
+                  0,
+                  "a same hash value from two processes indicate the rpc codes are registered in "
+                  "the same order, and therefore the mapping between rpc code string and integer "
+                  "is the same, which we leverage for fast rpc handler lookup optimization");
 
 std::atomic<uint64_t> message_ex::_id(0);
-uint32_t message_ex::s_local_hash = 0;
 
 message_ex::message_ex()
     : header(nullptr),
@@ -74,7 +90,7 @@ message_ex::~message_ex()
 
     // release_header_buffer();
     if (!_is_read) {
-        dassert(_rw_committed, "message write is not committed");
+        CHECK(_rw_committed, "message write is not committed");
     }
 }
 
@@ -82,11 +98,11 @@ error_code message_ex::error()
 {
     dsn::error_code code;
     auto binary_hash = header->server.error_code.local_hash;
-    if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash) {
+    if (binary_hash != 0 && binary_hash == FLAGS_local_hash) {
         code = dsn::error_code(header->server.error_code.local_code);
     } else {
         code = error_code::try_get(header->server.error_name, dsn::ERR_UNKNOWN);
-        header->server.error_code.local_hash = ::dsn::message_ex::s_local_hash;
+        header->server.error_code.local_hash = FLAGS_local_hash;
         header->server.error_code.local_code = code;
     }
     return code;
@@ -99,11 +115,11 @@ task_code message_ex::rpc_code()
     }
 
     auto binary_hash = header->rpc_code.local_hash;
-    if (binary_hash != 0 && binary_hash == ::dsn::message_ex::s_local_hash) {
+    if (binary_hash != 0 && binary_hash == FLAGS_local_hash) {
         local_rpc_code = dsn::task_code(header->rpc_code.local_code);
     } else {
         local_rpc_code = dsn::task_code::try_get(header->rpc_name, ::dsn::TASK_CODE_INVALID);
-        header->rpc_code.local_hash = ::dsn::message_ex::s_local_hash;
+        header->rpc_code.local_hash = FLAGS_local_hash;
         header->rpc_code.local_code = local_rpc_code.code();
     }
 
@@ -119,7 +135,6 @@ message_ex *message_ex::create_receive_message(const blob &data)
     auto data2 = data.range((int)sizeof(message_header));
     msg->buffers.push_back(data2);
 
-    // dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
     return msg;
 }
 
@@ -190,7 +205,7 @@ message_ex *message_ex::copy_message_no_reply(const message_ex &old_msg)
 
 message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
 {
-    dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
+    CHECK(this->_rw_committed, "should not copy the message when read/write is not committed");
 
     // ATTENTION:
     // - if this message is a written message, set copied message's write pointer to the end,
@@ -244,8 +259,7 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
             i += bb.length();
             ptr += bb.length();
         }
-        dassert(
-            i == total_length, "%d VS %d, rpc_name = %s", i, total_length, msg->header->rpc_name);
+        CHECK_EQ_MSG(i, total_length, "rpc_name = {}", msg->header->rpc_name);
 
         auto data = dsn::blob(recv_buffer, total_length);
 
@@ -264,9 +278,9 @@ message_ex *message_ex::copy_and_prepare_send(bool clone_content)
 
     if (_is_read) {
         // the message_header is hidden ahead of the buffer, expose it to buffer
-        dassert(buffers.size() == 1, "there must be only one buffer for read msg");
-        dassert((char *)header + sizeof(message_header) == (char *)buffers[0].data(),
-                "header and content must be contigous");
+        CHECK_EQ_MSG(buffers.size(), 1, "there must be only one buffer for read msg");
+        CHECK((char *)header + sizeof(message_header) == (char *)buffers[0].data(),
+              "header and content must be contigous");
 
         copy->buffers[0] = copy->buffers[0].range(-(int)sizeof(message_header));
 
@@ -309,7 +323,7 @@ message_ex *message_ex::create_request(dsn::task_code rpc_code,
     strncpy(hdr.rpc_name, sp->name.c_str(), sizeof(hdr.rpc_name) - 1);
     hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
     hdr.rpc_code.local_code = (uint32_t)rpc_code;
-    hdr.rpc_code.local_hash = s_local_hash;
+    hdr.rpc_code.local_hash = FLAGS_local_hash;
 
     hdr.id = new_id();
 
@@ -350,7 +364,7 @@ message_ex *message_ex::create_response()
         strncpy(hdr.rpc_name, response_sp->name.c_str(), sizeof(hdr.rpc_name) - 1);
         hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
         hdr.rpc_code.local_code = msg->local_rpc_code;
-        hdr.rpc_code.local_hash = s_local_hash;
+        hdr.rpc_code.local_hash = FLAGS_local_hash;
 
         // join point
         request_sp->on_rpc_create_response.execute(this, msg);
@@ -361,7 +375,7 @@ message_ex *message_ex::create_response()
         strncpy(hdr.rpc_name, ack_rpc_name.c_str(), sizeof(hdr.rpc_name) - 1);
         hdr.rpc_name[sizeof(hdr.rpc_name) - 1] = '\0';
         hdr.rpc_code.local_code = TASK_CODE_INVALID;
-        hdr.rpc_code.local_hash = s_local_hash;
+        hdr.rpc_code.local_hash = FLAGS_local_hash;
     }
 
     return msg;
@@ -393,9 +407,9 @@ void message_ex::release_buffer_header()
 void message_ex::write_next(void **ptr, size_t *size, size_t min_size)
 {
     // printf("%p %s\n", this, __FUNCTION__);
-    dassert(!this->_is_read && this->_rw_committed,
-            "there are pending msg write not committed"
-            ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
+    CHECK(!this->_is_read && this->_rw_committed,
+          "there are pending msg write not committed"
+          ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
     auto ptr_data(utils::make_shared_array<char>(min_size));
     *size = min_size;
     *ptr = ptr_data.get();
@@ -406,16 +420,15 @@ void message_ex::write_next(void **ptr, size_t *size, size_t min_size)
     this->_rw_offset = 0;
     this->buffers.push_back(buffer);
 
-    dassert(this->_rw_index + 1 == (int)this->buffers.size(),
-            "message write buffer count is not right");
+    CHECK_EQ_MSG(_rw_index + 1, buffers.size(), "message write buffer count is not right");
 }
 
 void message_ex::write_commit(size_t size)
 {
     // printf("%p %s\n", this, __FUNCTION__);
-    dassert(!this->_rw_committed,
-            "there are no pending msg write to be committed"
-            ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
+    CHECK(!this->_rw_committed,
+          "there are no pending msg write to be committed"
+          ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
 
     this->_rw_offset += (int)size;
     *this->buffers.rbegin() = this->buffers.rbegin()->range(0, (int)this->_rw_offset);
@@ -426,9 +439,9 @@ void message_ex::write_commit(size_t size)
 bool message_ex::read_next(void **ptr, size_t *size)
 {
     // printf("%p %s %d\n", this, __FUNCTION__, utils::get_current_tid());
-    dassert(this->_is_read && this->_rw_committed,
-            "there are pending msg read not committed"
-            ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
+    CHECK(this->_is_read && this->_rw_committed,
+          "there are pending msg read not committed"
+          ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
 
     int idx = this->_rw_index;
     if (-1 == idx || this->_rw_offset == static_cast<int>(this->buffers[idx].length())) {
@@ -451,9 +464,9 @@ bool message_ex::read_next(void **ptr, size_t *size)
 bool message_ex::read_next(blob &data)
 {
     // printf("%p %s %d\n", this, __FUNCTION__, utils::get_current_tid());
-    dassert(this->_is_read && this->_rw_committed,
-            "there are pending msg read not committed"
-            ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
+    CHECK(this->_is_read && this->_rw_committed,
+          "there are pending msg read not committed"
+          ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
 
     int idx = this->_rw_index;
     if (-1 == idx || this->_rw_offset == static_cast<int>(this->buffers[idx].length())) {
@@ -474,11 +487,11 @@ bool message_ex::read_next(blob &data)
 void message_ex::read_commit(size_t size)
 {
     // printf("%p %s\n", this, __FUNCTION__);
-    dassert(!this->_rw_committed,
-            "there are no pending msg read to be committed"
-            ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
+    CHECK(!this->_rw_committed,
+          "there are no pending msg read to be committed"
+          ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
 
-    dassert(-1 != this->_rw_index, "no buffer in curent msg is under read");
+    CHECK_NE_MSG(-1, this->_rw_index, "no buffer in curent msg is under read");
     this->_rw_offset += (int)size;
     this->_rw_committed = true;
 }

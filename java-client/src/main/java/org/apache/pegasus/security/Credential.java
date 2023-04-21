@@ -18,14 +18,13 @@
  */
 package org.apache.pegasus.security;
 
-import org.apache.commons.configuration2.Configuration;
+import java.util.Properties;
 
 /** credential info for authentiation */
 public interface Credential {
   String KERBEROS_PROTOCOL_NAME = "kerberos";
 
-  static Credential create(String authProtocol, Configuration config)
-      throws IllegalArgumentException {
+  static Credential create(String authProtocol, Properties config) throws IllegalArgumentException {
     Credential credential;
     if (authProtocol.equals(KERBEROS_PROTOCOL_NAME)) {
       credential = new KerberosCredential(config);

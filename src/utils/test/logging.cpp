@@ -35,8 +35,10 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
-#include "utils/fmt_logging.h"
+#include <string>
+
 #include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
 
 TEST(core, logging)
 {
@@ -45,9 +47,9 @@ TEST(core, logging)
     dsn_logf(__FILENAME__,
              __FUNCTION__,
              __LINE__,
-             dsn_log_level_t::LOG_LEVEL_DEBUG,
+             dsn_log_level_t::LOG_LEVEL_INFO,
              "in TEST(core, logging)");
-    dsn_log(__FILENAME__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_DEBUG, "");
+    dsn_log(__FILENAME__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_INFO, "");
 }
 
 TEST(core, logging_big_log)
@@ -56,7 +58,7 @@ TEST(core, logging_big_log)
     dsn_logf(__FILENAME__,
              __FUNCTION__,
              __LINE__,
-             dsn_log_level_t::LOG_LEVEL_DEBUG,
+             dsn_log_level_t::LOG_LEVEL_INFO,
              "write big str %s",
              big_str.c_str());
 }
@@ -69,7 +71,7 @@ TEST(core, dlog_f)
         std::string str;
     } tests[] = {{dsn_log_level_t::LOG_LEVEL_DEBUG, "This is a test"},
                  {dsn_log_level_t::LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_INFORMATION, "\\x00%d\\x00\\x01%n/nm"},
+                 {dsn_log_level_t::LOG_LEVEL_INFO, "\\x00%d\\x00\\x01%n/nm"},
                  {dsn_log_level_t::LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
                  {dsn_log_level_t::LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
                  {dsn_log_level_t::LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};

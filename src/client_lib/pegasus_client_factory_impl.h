@@ -19,12 +19,18 @@
 
 #pragma once
 
-#include <pegasus/client.h>
-#include <pegasus/error.h>
-#include "pegasus_client_impl.h"
+#include <string>
+#include <unordered_map>
+
+namespace dsn {
+class zlock;
+} // namespace dsn
 
 namespace pegasus {
+class pegasus_client;
+
 namespace client {
+class pegasus_client_impl;
 
 class pegasus_client_factory_impl
 {

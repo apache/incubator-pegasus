@@ -40,19 +40,19 @@ then
     exit 1
 fi
 
-if [ ! -f ${BUILD_DIR}/output/bin/pegasus_shell/pegasus_shell ]
+if [ ! -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell ]
 then
-    echo "ERROR: ${BUILD_DIR}/output/bin/pegasus_shell/pegasus_shell not found"
+    echo "ERROR: ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell not found"
     exit 1
 fi
 
-if [ ! -f src/builder/CMakeCache.txt ]
+if [ ! -f ${BUILD_LATEST_DIR}/CMakeCache.txt ]
 then
-    echo "ERROR: src/builder/CMakeCache.txt not found"
+    echo "ERROR: ${BUILD_LATEST_DIR}/CMakeCache.txt not found"
     exit 1
 fi
 
-if egrep -i "CMAKE_BUILD_TYPE:STRING\=debug" src/builder/CMakeCache.txt;
+if egrep -i "CMAKE_BUILD_TYPE:STRING\=debug" ${BUILD_LATEST_DIR}/CMakeCache.txt;
 then
     build_type=debug
 else
@@ -114,15 +114,15 @@ mkdir -p ${pack}
 copy_file ./run.sh ${pack}/
 
 mkdir -p ${pack}/bin
-cp -v -r ${BUILD_DIR}/output/bin/pegasus_server ${pack}/bin/
-cp -v -r ${BUILD_DIR}/output/bin/pegasus_shell ${pack}/bin/
-cp -v -r ${BUILD_DIR}/output/bin/pegasus_bench ${pack}/bin/
-cp -v -r ${BUILD_DIR}/output/bin/pegasus_kill_test ${pack}/bin/
-cp -v -r ${BUILD_DIR}/output/bin/pegasus_rproxy ${pack}/bin/
-cp -v -r ${BUILD_DIR}/output/bin/pegasus_pressureclient ${pack}/bin/
+cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_server ${pack}/bin/
+cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_shell ${pack}/bin/
+cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_bench ${pack}/bin/
+cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_kill_test ${pack}/bin/
+cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_rproxy ${pack}/bin/
+cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_pressureclient ${pack}/bin/
 
 mkdir -p ${pack}/lib
-copy_file ${BUILD_DIR}/output/lib/*.so* ${pack}/lib/
+copy_file ${BUILD_LATEST_DIR}/output/lib/*.so* ${pack}/lib/
 copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/lib/
 
 if [ "$use_jemalloc" == "on" ]; then

@@ -15,16 +15,42 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common//duplication_common.h"
-#include "utils/fmt_logging.h"
-#include "common/common.h"
-#include "utils/chrono_literals.h"
-#include "utils/string_conv.h"
-#include "runtime/rpc/group_address.h"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <algorithm>
+#include <cstdint>
+#include <iosfwd>
+#include <queue>
+#include <type_traits>
 
+#include "common//duplication_common.h"
+#include "common/common.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "duplication_types.h"
 #include "meta/meta_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta_admin_types.h"
 #include "meta_duplication_service.h"
+#include "metadata_types.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/string_conv.h"
+#include "utils/string_view.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
@@ -35,7 +61,7 @@ using namespace literals::chrono_literals;
 void meta_duplication_service::query_duplication_info(const duplication_query_request &request,
                                                       duplication_query_response &response)
 {
-    ddebug_f("query duplication info for app: {}", request.app_name);
+    LOG_INFO("query duplication info for app: {}", request.app_name);
 
     response.err = ERR_OK;
     {
@@ -59,7 +85,7 @@ void meta_duplication_service::modify_duplication(duplication_modify_rpc rpc)
     const auto &request = rpc.request();
     auto &response = rpc.response();
 
-    ddebug_f("modify duplication({}) to [status={},fail_mode={}] for app({})",
+    LOG_INFO("modify duplication({}) to [status={},fail_mode={}] for app({})",
              request.dupid,
              request.__isset.status ? duplication_status_to_string(request.status) : "nil",
              request.__isset.fail_mode ? duplication_fail_mode_to_string(request.fail_mode) : "nil",
@@ -132,7 +158,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     const auto &request = rpc.request();
     auto &response = rpc.response();
 
-    ddebug_f("add duplication for app({}), remote cluster name is {}",
+    LOG_INFO("add duplication for app({}), remote cluster name is {}",
              request.app_name,
              request.remote_cluster_name);
 
@@ -190,7 +216,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
 {
     const auto err = dup->start(rpc.request().is_duplicating_checkpoint);
     if (dsn_unlikely(err != ERR_OK)) {
-        derror_f("start dup[{}({})] failed: err = {}", app->app_name, dup->id, err.to_string());
+        LOG_ERROR("start dup[{}({})] failed: err = {}", app->app_name, dup->id, err.to_string());
         return;
     }
     blob value = dup->to_json_blob();
@@ -198,10 +224,10 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
     _meta_svc->get_meta_storage()->create_node_recursively(
         std::move(nodes), std::move(value), [app, this, dup, rpc]() mutable {
-            ddebug_dup(dup,
-                       "add duplication successfully [app_name: {}, follower: {}]",
-                       app->app_name,
-                       dup->follower_cluster_name);
+            LOG_INFO("[{}] add duplication successfully [app_name: {}, follower: {}]",
+                     dup->log_prefix(),
+                     app->app_name,
+                     dup->follower_cluster_name);
 
             // The duplication starts only after it's been persisted.
             dup->persist_status();
@@ -251,7 +277,7 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
 
     node_state *ns = get_node_state(_state->_nodes, request.node, false);
     if (ns == nullptr) {
-        dwarn_f("node({}) is not found in meta server", request.node.to_string());
+        LOG_WARNING("node({}) is not found in meta server", request.node.to_string());
         response.err = ERR_OBJECT_NOT_FOUND;
         return;
     }
@@ -367,13 +393,13 @@ void meta_duplication_service::create_follower_app_for_duplication(
                                                         std::move(value),
                                                         [=]() { dup->persist_status(); });
             } else {
-                derror_f("created follower app[{}.{}] to trigger duplicate checkpoint failed: "
-                         "duplication_status = {}, create_err = {}, update_err = {}",
-                         dup->follower_cluster_name,
-                         dup->app_name,
-                         duplication_status_to_string(dup->status()),
-                         create_err.to_string(),
-                         update_err.to_string());
+                LOG_ERROR("created follower app[{}.{}] to trigger duplicate checkpoint failed: "
+                          "duplication_status = {}, create_err = {}, update_err = {}",
+                          dup->follower_cluster_name,
+                          dup->app_name,
+                          duplication_status_to_string(dup->status()),
+                          create_err.to_string(),
+                          update_err.to_string());
             }
         });
 }
@@ -385,7 +411,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
     meta_servers.assign_group(dup->follower_cluster_name.c_str());
     meta_servers.group_address()->add_list(dup->follower_cluster_metas);
 
-    configuration_query_by_index_request meta_config_request;
+    query_cfg_request meta_config_request;
     meta_config_request.app_name = dup->app_name;
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
@@ -393,7 +419,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
     rpc::call(meta_servers,
               msg,
               _meta_svc->tracker(),
-              [=](error_code err, configuration_query_by_index_response &&resp) mutable {
+              [=](error_code err, query_cfg_response &&resp) mutable {
                   FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](string_view s) -> void {
                       err = ERR_OK;
                       int count = dup->partition_count;
@@ -450,13 +476,14 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                                                               std::move(value),
                                                               [dup]() { dup->persist_status(); });
                   } else {
-                      derror_f("query follower app[{}.{}] replica configuration completed, result: "
-                               "duplication_status = {}, query_err = {}, update_err = {}",
-                               dup->follower_cluster_name,
-                               dup->app_name,
-                               duplication_status_to_string(dup->status()),
-                               query_err.to_string(),
-                               update_err);
+                      LOG_ERROR(
+                          "query follower app[{}.{}] replica configuration completed, result: "
+                          "duplication_status = {}, query_err = {}, update_err = {}",
+                          dup->follower_cluster_name,
+                          dup->app_name,
+                          duplication_status_to_string(dup->status()),
+                          query_err.to_string(),
+                          update_err);
                   }
               });
 }
@@ -532,7 +559,7 @@ meta_duplication_service::new_dup_from_init(const std::string &follower_cluster_
 // ThreadPool(WRITE): THREAD_POOL_META_STATE
 void meta_duplication_service::recover_from_meta_state()
 {
-    ddebug_f("recovering duplication states from meta storage");
+    LOG_INFO("recovering duplication states from meta storage");
 
     // /<app>/duplication/<dupid>/<partition_idx>
     //                       |         |-> confirmed_decree
@@ -556,8 +583,8 @@ void meta_duplication_service::recover_from_meta_state()
                     dupid_t dup_id;
                     if (!buf2int32(raw_dup_id, dup_id)) {
                         // unlikely
-                        derror_f("invalid duplication path: {}",
-                                 get_duplication_path(*app, raw_dup_id));
+                        LOG_ERROR("invalid duplication path: {}",
+                                  get_duplication_path(*app, raw_dup_id));
                         return;
                     }
                     do_restore_duplication(dup_id, app);
@@ -588,19 +615,20 @@ void meta_duplication_service::do_restore_duplication_progress(
 
                 int64_t confirmed_decree = invalid_decree;
                 if (!buf2int64(value, confirmed_decree)) {
-                    derror_dup(dup,
-                               "invalid confirmed_decree {} on partition_idx {}",
-                               value.to_string(),
-                               partition_idx);
+                    LOG_ERROR("[{}] invalid confirmed_decree {} on partition_idx {}",
+                              dup->log_prefix(),
+                              value.to_string(),
+                              partition_idx);
                     return; // fail fast
                 }
 
                 dup->init_progress(partition_idx, confirmed_decree);
 
-                ddebug_dup(dup,
-                           "initialize progress from metastore [partition_idx: {}, confirmed: {}]",
-                           partition_idx,
-                           confirmed_decree);
+                LOG_INFO(
+                    "[{}] initialize progress from metastore [partition_idx: {}, confirmed: {}]",
+                    dup->log_prefix(),
+                    partition_idx,
+                    confirmed_decree);
             });
     }
 }
@@ -620,7 +648,7 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
             auto dup = duplication_info::decode_from_blob(
                 dup_id, app->app_id, app->app_name, app->partition_count, store_path, json);
             if (nullptr == dup) {
-                derror_f("failed to decode json \"{}\" on path {}", json.to_string(), store_path);
+                LOG_ERROR("failed to decode json \"{}\" on path {}", json.to_string(), store_path);
                 return; // fail fast
             }
             if (!dup->is_invalid_status()) {

@@ -42,38 +42,79 @@
 // which is binded to this replication partition
 //
 
-#include "utils/uniq_timestamp_us.h"
-#include "utils/thread_access_checker.h"
-#include "runtime/serverlet.h"
+#include <gtest/gtest_prod.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <atomic>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "perf_counter/perf_counter_wrapper.h"
-#include "replica/replica_base.h"
-
-#include "common/replication_common.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include "prepare_list.h"
+#include "replica/backup/cold_backup_context.h"
+#include "replica/replica_base.h"
 #include "replica_context.h"
+#include "runtime/api_layer1.h"
+#include "runtime/ranger/access_type.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/serverlet.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
+#include "utils/uniq_timestamp_us.h"
 
 namespace dsn {
+class gpid;
+class perf_counter;
+class rpc_address;
+
+namespace dist {
+namespace block_service {
+class block_filesystem;
+} // namespace block_service
+} // namespace dist
+
 namespace security {
 class access_controller;
 } // namespace security
 namespace replication {
 
-class replication_app_base;
-class replica_stub;
-class replica_duplicator_manager;
+class backup_request;
+class backup_response;
+class configuration_restore_request;
+class detect_hotkey_request;
+class detect_hotkey_response;
+class group_check_request;
+class group_check_response;
+class learn_notify_response;
+class learn_request;
+class learn_response;
+class learn_state;
+class replica;
 class replica_backup_manager;
 class replica_bulk_loader;
-class replica_split_manager;
 class replica_disk_migrator;
+class replica_duplicator_manager;
 class replica_follower;
+class replica_split_manager;
+class replica_stub;
+class replication_app_base;
+class replication_options;
 
-class cold_backup_context;
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
-struct cold_backup_metadata;
 
 namespace test {
 class test_checker;
@@ -124,18 +165,6 @@ class replica : public serverlet<replica>, public ref_counter, public replica_ba
 {
 public:
     ~replica(void);
-
-    //
-    //    routines for replica stub
-    //
-    static replica *load(replica_stub *stub, const char *dir);
-    // {parent_dir} is used in partition split for get_child_dir in replica_stub
-    static replica *newr(replica_stub *stub,
-                         gpid gpid,
-                         const app_info &app,
-                         bool restore_if_necessary,
-                         bool is_duplication_follower,
-                         const std::string &parent_dir = "");
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
@@ -200,7 +229,6 @@ public:
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
     decree last_prepared_decree() const;
     decree last_durable_decree() const;
-    decree last_flushed_decree() const;
     const std::string &dir() const { return _dir; }
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
     const char *name() const { return replica_name(); }
@@ -474,6 +502,9 @@ private:
     // update allowed users for access controller
     void update_ac_allowed_users(const std::map<std::string, std::string> &envs);
 
+    // update replica access controller Ranger policies
+    void update_ac_ranger_policies(const std::map<std::string, std::string> &envs);
+
     // update bool app envs
     void update_bool_envs(const std::map<std::string, std::string> &envs,
                           const std::string &name,
@@ -491,11 +522,13 @@ private:
     // path = "" means using the default directory (`_dir`/.app_info)
     error_code store_app_info(app_info &info, const std::string &path = "");
 
-    // clear replica if open failed
-    static replica *
-    clear_on_failure(replica_stub *stub, replica *rep, const std::string &path, const gpid &pid);
-
     void update_app_max_replica_count(int32_t max_replica_count);
+    void update_app_name(const std::string &app_name);
+
+    bool is_data_corrupted() const { return _data_corrupted; }
+
+    // use Apache Ranger for replica access control
+    bool access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const;
 
 private:
     friend class ::dsn::replication::test::test_checker;
@@ -517,6 +550,7 @@ private:
     friend class replica_disk_migrate_test;
     friend class open_replica_test;
     friend class replica_follower;
+    FRIEND_TEST(replica_test, test_auto_trash);
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -638,6 +672,8 @@ private:
     disk_status::type _disk_status{disk_status::NORMAL};
 
     bool _allow_ingest_behind{false};
+    // Indicate where the storage engine data is corrupted and unrecoverable.
+    bool _data_corrupted{false};
 };
 typedef dsn::ref_ptr<replica> replica_ptr;
 } // namespace replication

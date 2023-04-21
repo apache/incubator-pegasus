@@ -33,19 +33,29 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "runtime/rpc/asio_net_provider.h"
+#include <algorithm>
+#include <string>
+
+#include "runtime/env_provider.h"
 #include "runtime/providers.common.h"
-#include "utils/lockp.std.h"
-#include "runtime/task/simple_task_queue.h"
-#include "runtime/task/hpc_task_queue.h"
-#include "runtime/rpc/network.sim.h"
-#include "utils/simple_logger.h"
+#include "runtime/rpc/asio_net_provider.h"
 #include "runtime/rpc/dsn_message_parser.h"
-#include "runtime/rpc/thrift_message_parser.h"
+#include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/raw_message_parser.h"
+#include "runtime/rpc/thrift_message_parser.h"
+#include "runtime/task/hpc_task_queue.h"
+#include "runtime/task/simple_task_queue.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
+#include "runtime/tool_api.h"
+#include "utils/flags.h"
+#include "utils/lockp.std.h"
+#include "utils/zlock_provider.h"
 
 namespace dsn {
 namespace tools {
+
+DSN_DEFINE_bool(network, enable_udp, true, "whether to enable udp rpc engine");
 
 void register_std_lock_providers()
 {
@@ -64,8 +74,10 @@ void register_common_providers()
 
     register_std_lock_providers();
 
+    if (FLAGS_enable_udp) {
+        register_component_provider<asio_udp_provider>("dsn::tools::asio_udp_provider");
+    }
     register_component_provider<asio_network_provider>("dsn::tools::asio_network_provider");
-    register_component_provider<asio_udp_provider>("dsn::tools::asio_udp_provider");
     register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
     register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
     register_component_provider<hpc_concurrent_task_queue>("dsn::tools::hpc_concurrent_task_queue");

@@ -24,26 +24,28 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     meta state service implemented with zookeeper
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
-#include "runtime/task/async_calls.h"
-#include "common/replication.codes.h"
-
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
+#include <string.h>
+#include <zookeeper/proto.h>
+#include <zookeeper/zookeeper.h>
+#include <zookeeper/zookeeper.jute.h>
+#include <algorithm>
+#include <atomic>
+#include <functional>
+#include <utility>
 
 #include "meta_state_service_zookeeper.h"
-#include "zookeeper/zookeeper_session_mgr.h"
-#include "zookeeper/zookeeper_session.h"
+#include "runtime/service_app.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
 #include "zookeeper/zookeeper_error.h"
+#include "zookeeper/zookeeper_session.h"
+#include "zookeeper/zookeeper_session_mgr.h"
 
 namespace dsn {
 namespace dist {
+
+DSN_DECLARE_int32(timeout_ms);
 
 class zoo_transaction : public meta_state_service::transaction_entries
 {
@@ -163,12 +165,12 @@ error_code meta_state_service_zookeeper::initialize(const std::vector<std::strin
                                             ref_this(this),
                                             std::placeholders::_1));
     if (_zoo_state != ZOO_CONNECTED_STATE) {
-        _notifier.wait_for(zookeeper_session_mgr::instance().timeout());
+        _notifier.wait_for(FLAGS_timeout_ms);
         if (_zoo_state != ZOO_CONNECTED_STATE)
             return ERR_TIMEOUT;
     }
 
-    ddebug("init meta_state_service_zookeeper succeed");
+    LOG_INFO("init meta_state_service_zookeeper succeed");
 
     // Notice: this reference is released in finalize
     add_ref();
@@ -206,7 +208,7 @@ task_ptr meta_state_service_zookeeper::create_node(const std::string &node,
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_create, 0));
     tsk->set_tracker(tracker);
-    dinfo("call create, node(%s)", node.c_str());
+    LOG_DEBUG("call create, node({})", node);
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_CREATE, node);
     input->_value = value;
     input->_flags = 0;
@@ -223,7 +225,7 @@ task_ptr meta_state_service_zookeeper::submit_transaction(
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_transaction, 0));
     tsk->set_tracker(tracker);
-    dinfo("call submit batch");
+    LOG_DEBUG("call submit batch");
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
     zookeeper_session::zoo_input *input = &op->_input;
     op->_callback_function = std::bind(&meta_state_service_zookeeper::visit_zookeeper_internal,
@@ -246,7 +248,7 @@ task_ptr meta_state_service_zookeeper::delete_empty_node(const std::string &node
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_delete, 0));
     tsk->set_tracker(tracker);
-    dinfo("call delete, node(%s)", node.c_str());
+    LOG_DEBUG("call delete, node({})", node);
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_DELETE, node);
     _session->visit(op);
     return tsk;
@@ -313,7 +315,7 @@ task_ptr meta_state_service_zookeeper::get_data(const std::string &node,
 {
     err_value_future_ptr tsk(new err_value_future(cb_code, cb_get_data, 0));
     tsk->set_tracker(tracker);
-    dinfo("call get, node(%s)", node.c_str());
+    LOG_DEBUG("call get, node({})", node);
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_GET, node);
     input->_is_set_watch = 0;
     _session->visit(op);
@@ -328,7 +330,7 @@ task_ptr meta_state_service_zookeeper::set_data(const std::string &node,
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_set_data, 0));
     tsk->set_tracker(tracker);
-    dinfo("call set, node(%s)", node.c_str());
+    LOG_DEBUG("call set, node({})", node);
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_SET, node);
 
     input->_value = value;
@@ -343,7 +345,7 @@ task_ptr meta_state_service_zookeeper::node_exist(const std::string &node,
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_exist, 0));
     tsk->set_tracker(tracker);
-    dinfo("call node_exist, node(%s)", node.c_str());
+    LOG_DEBUG("call node_exist, node({})", node);
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_EXISTS, node);
     input->_is_set_watch = 0;
     _session->visit(op);
@@ -357,7 +359,7 @@ task_ptr meta_state_service_zookeeper::get_children(const std::string &node,
 {
     err_stringv_future_ptr tsk(new err_stringv_future(cb_code, cb_get_children, 0));
     tsk->set_tracker(tracker);
-    dinfo("call get children, node(%s)", node.c_str());
+    LOG_DEBUG("call get children, node({})", node);
     VISIT_INIT(tsk, zookeeper_session::ZOO_OPERATION::ZOO_GETCHILDREN, node);
     input->_is_set_watch = 0;
     _session->visit(op);
@@ -372,7 +374,7 @@ void meta_state_service_zookeeper::on_zoo_session_evt(ref_this _this, int zoo_st
 
     if (ZOO_CONNECTING_STATE == zoo_state) {
         // TODO: support the switch of zookeeper session
-        dwarn("the zk session is reconnecting");
+        LOG_WARNING("the zk session is reconnecting");
     } else if (_this->_first_call && ZOO_CONNECTED_STATE == zoo_state) {
         _this->_first_call = false;
         _this->_notifier.notify();
@@ -388,8 +390,8 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(ref_this,
 {
     zookeeper_session::zoo_opcontext *op =
         reinterpret_cast<zookeeper_session::zoo_opcontext *>(result);
-    dinfo(
-        "visit zookeeper internal: ans(%s), call type(%d)", zerror(op->_output.error), op->_optype);
+    LOG_DEBUG(
+        "visit zookeeper internal: ans({}), call type({})", zerror(op->_output.error), op->_optype);
 
     switch (op->_optype) {
     case zookeeper_session::ZOO_OPERATION::ZOO_CREATE:

@@ -223,6 +223,9 @@ ExternalProject_Add(libevent
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_libevent_for_macos.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DEVENT__DISABLE_DEBUG_MODE=On
+        -DEVENT__DISABLE_BENCHMARK=On
+        -DEVENT__DISABLE_TESTS=On
+        -DEVENT__DISABLE_SAMPLES=On
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -340,7 +343,8 @@ ExternalProject_Add(prometheus-cpp
         https://codeload.github.com/jupp0r/prometheus-cpp/tar.gz/v0.7.0
         URL_MD5 dc75c31ceaefd160e978365bdca8eb01
         DEPENDS civetweb curl
-        PATCH_COMMAND rm -rf 3rdparty/civetweb && cp -R ${civetweb_SRC} 3rdparty/civetweb # replace the submodule
+        # TODO(yingchun): replace the submodule
+        PATCH_COMMAND rm -rf 3rdparty/civetweb && cp -R ${civetweb_SRC} 3rdparty/civetweb && patch -p0 < ${TP_DIR}/fix_prometheus-cpp_limits.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DENABLE_TESTING=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
@@ -390,10 +394,12 @@ ExternalProject_Add(jemalloc
 
 option(ROCKSDB_PORTABLE "build a portable binary" OFF)
 
+# The patch name '0879c240' means the patch of rocksdb:
+# https://github.com/facebook/rocksdb/commit/0879c240404b00142ba4718f36cd3f2bd537192d
 ExternalProject_Add(rocksdb
-        URL ${OSS_URL_PREFIX}/pegasus-rocksdb-ef29819c7a1ea9334ae170f506b653757f517a52.zip
-        https://github.com/XiaoMi/pegasus-rocksdb/archive/ef29819c7a1ea9334ae170f506b653757f517a52.zip
-        URL_MD5 2a6488cd87c37e0c2e42a5ca74bebc87
+        URL https://github.com/facebook/rocksdb/archive/refs/tags/v6.6.4.tar.gz
+        URL_MD5 7f7fcca3e96b7d83ef332804c90070c8
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/rocksdb_fix_atomic_flush_0879c240.patch
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DFAIL_ON_WARNINGS=OFF
@@ -406,6 +412,7 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
         -DUSE_RTTI=ON
+        -DCMAKE_BUILD_TYPE=Release
         -DWITH_JEMALLOC=${USE_JEMALLOC}
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}

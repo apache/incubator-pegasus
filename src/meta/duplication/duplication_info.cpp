@@ -16,9 +16,10 @@
 // under the License.
 
 #include "duplication_info.h"
-#include "meta/meta_data.h"
 
-#include <rapidjson/prettywriter.h>
+#include "common/duplication_common.h"
+#include "meta/meta_data.h"
+#include "runtime/api_layer1.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
@@ -48,7 +49,7 @@ namespace replication {
         s = it->second;
         return true;
     }
-    derror_f("unexpected duplication_status name: {}", name);
+    LOG_ERROR("unexpected duplication_status name: {}", name);
 
     // for forward compatibility issue, duplication of unexpected status
     // will be marked as invisible.
@@ -77,7 +78,7 @@ namespace replication {
         fmode = it->second;
         return true;
     }
-    derror_f("unexpected duplication_fail_mode name: {}", name);
+    LOG_ERROR("unexpected duplication_fail_mode name: {}", name);
     // marked as default value.
     fmode = duplication_fail_mode::FAIL_SLOW;
     return false;
@@ -152,7 +153,7 @@ void duplication_info::persist_progress(int partition_index)
     zauto_write_lock l(_lock);
 
     auto &p = _progress[partition_index];
-    dassert_dup(p.is_altering, this, "partition_index: {}", partition_index);
+    CHECK_PREFIX_MSG(p.is_altering, "partition_index: {}", partition_index);
     p.is_altering = false;
     p.stored_decree = p.volatile_decree;
 }
@@ -162,14 +163,13 @@ void duplication_info::persist_status()
     zauto_write_lock l(_lock);
 
     if (!_is_altering) {
-        derror_dup(this, "callers never write a duplication that is not altering to meta store");
+        LOG_ERROR_PREFIX("callers never write a duplication that is not altering to meta store");
         return;
     }
-    ddebug_dup(this,
-               "change duplication status from {} to {} successfully [app_id: {}]",
-               duplication_status_to_string(_status),
-               duplication_status_to_string(_next_status),
-               app_id);
+    LOG_INFO_PREFIX("change duplication status from {} to {} successfully [app_id: {}]",
+                    duplication_status_to_string(_status),
+                    duplication_status_to_string(_next_status),
+                    app_id);
 
     _is_altering = false;
     _status = _next_status;
@@ -197,7 +197,7 @@ void duplication_info::report_progress_if_time_up()
     // progress report is not supposed to be too frequent.
     if (dsn_now_ms() > _last_progress_report_ms + PROGRESS_REPORT_PERIOD_MS) {
         _last_progress_report_ms = dsn_now_ms();
-        ddebug_f("duplication report: {}", to_string());
+        LOG_INFO("duplication report: {}", to_string());
     }
 }
 

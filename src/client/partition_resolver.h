@@ -26,14 +26,26 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <chrono>
+#include <functional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
-#include "common/gpid.h"
-#include "utils/rpc_address.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/async_calls.h"
 
 namespace dsn {
+class task_tracker;
+
 namespace replication {
 
 class partition_resolver : public ref_counter
@@ -72,6 +84,8 @@ public:
     std::string get_app_name() const { return _app_name; }
 
     dsn::rpc_address get_meta_server() const { return _meta_server; }
+
+    const char *log_prefix() const { return _app_name.c_str(); }
 
 protected:
     partition_resolver(rpc_address meta_server, const char *app_name)

@@ -15,12 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "kinit_context.h"
-#include "sasl_init.h"
-#include "negotiation_manager.h"
+#include <stdlib.h>
 
-#include "utils/fmt_logging.h"
+#include "kinit_context.h"
+#include "negotiation_manager.h"
+#include "sasl_init.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace security {
@@ -52,17 +54,17 @@ bool init(bool is_server)
 {
     error_s err = init_kerberos(is_server);
     if (!err.is_ok()) {
-        derror_f("initialize kerberos failed, with err = {}", err.description());
+        LOG_ERROR("initialize kerberos failed, with err = {}", err.description());
         return false;
     }
-    ddebug("initialize kerberos succeed");
+    LOG_INFO("initialize kerberos succeed");
 
     err = init_sasl(is_server);
     if (!err.is_ok()) {
-        derror_f("initialize sasl failed, with err = {}", err.description());
+        LOG_ERROR("initialize sasl failed, with err = {}", err.description());
         return false;
     }
-    ddebug("initialize sasl succeed");
+    LOG_INFO("initialize sasl succeed");
 
     init_join_point();
     return true;
@@ -72,17 +74,17 @@ bool init_for_zookeeper_client()
 {
     error_s err = run_kinit();
     if (!err.is_ok()) {
-        derror_f("initialize kerberos failed, with err = {}", err.description());
+        LOG_ERROR("initialize kerberos failed, with err = {}", err.description());
         return false;
     }
-    ddebug("initialize kerberos for zookeeper client succeed");
+    LOG_INFO("initialize kerberos for zookeeper client succeed");
 
     err = init_sasl(false);
     if (!err.is_ok()) {
-        derror_f("initialize sasl failed, with err = {}", err.description());
+        LOG_ERROR("initialize sasl failed, with err = {}", err.description());
         return false;
     }
-    ddebug("initialize sasl for zookeeper client succeed");
+    LOG_INFO("initialize sasl for zookeeper client succeed");
     return true;
 }
 } // namespace security

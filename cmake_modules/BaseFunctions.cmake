@@ -204,7 +204,7 @@ function(dsn_setup_compiler_flags)
   # We want access to the PRI* print format macros.
   add_definitions(-D__STDC_FORMAT_MACROS)
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y" CACHE STRING "" FORCE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -gdwarf-4" CACHE STRING "" FORCE)
 
   #  -Wall: Enable all warnings.
   add_compile_options(-Wall)
@@ -213,7 +213,6 @@ function(dsn_setup_compiler_flags)
   add_compile_options(-Wno-sign-compare)
   add_compile_options(-Wno-strict-aliasing)
   add_compile_options(-Wuninitialized)
-  add_compile_options(-Wno-unused-result)
   add_compile_options(-Wno-unused-variable)
   add_compile_options(-Wno-deprecated-declarations)
   add_compile_options(-Wno-inconsistent-missing-override)

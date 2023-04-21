@@ -26,10 +26,13 @@
 
 #include "replica/replica_test_utils.h"
 
+#include "common/gpid.h"
 #include "replica.h"
 #include "replica_stub.h"
 
 namespace dsn {
+class app_info;
+
 namespace replication {
 
 class mock_replica : public replica

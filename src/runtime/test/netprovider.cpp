@@ -33,52 +33,45 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <string.h>
+#include <chrono>
+#include <functional>
 #include <memory>
+#include <string>
 #include <thread>
 
-#include <gtest/gtest.h>
-
-#include "common/api_common.h"
-#include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-
-#include "runtime/task/task.h"
-#include "runtime/task/task_spec.h"
-
+#include "runtime/api_task.h"
+#include "runtime/global_config.h"
 #include "runtime/rpc/asio_net_provider.h"
+#include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
 #include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
 #include "test_utils.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
-using namespace dsn;
-using namespace dsn::tools;
+namespace dsn {
+DSN_DECLARE_uint32(conn_threshold_per_ip);
 
-class asio_network_provider_test : public asio_network_provider
+class asio_network_provider_test : public tools::asio_network_provider
 {
 public:
     asio_network_provider_test(rpc_engine *srv, network *inner_provider)
-        : asio_network_provider(srv, inner_provider)
+        : tools::asio_network_provider(srv, inner_provider)
     {
-    }
-
-public:
-    void change_test_cfg_conn_threshold_per_ip(uint32_t n)
-    {
-        ddebug(
-            "change _cfg_conn_threshold_per_ip %u -> %u for test", _cfg_conn_threshold_per_ip, n);
-        _cfg_conn_threshold_per_ip = n;
     }
 };
 
@@ -95,9 +88,9 @@ void response_handler(dsn::error_code ec,
         std::string response_string;
         char *request_str = (char *)(request_buf);
         ::dsn::unmarshall(resp, response_string);
-        ASSERT_TRUE(strcmp(response_string.c_str(), request_str) == 0);
+        ASSERT_EQ(response_string, request_str);
     } else {
-        ddebug("error msg: %s", ec.to_string());
+        LOG_INFO("error msg: {}", ec);
     }
     wait_flag = 1;
 }
@@ -159,8 +152,8 @@ TEST(tools_common, asio_net_provider)
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
-    std::unique_ptr<asio_network_provider> asio_network(
-        new asio_network_provider(task::get_current_rpc(), nullptr));
+    std::unique_ptr<tools::asio_network_provider> asio_network(
+        new tools::asio_network_provider(task::get_current_rpc(), nullptr));
 
     error_code start_result;
     start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, true);
@@ -173,18 +166,18 @@ TEST(tools_common, asio_net_provider)
     rpc_address network_addr = asio_network->address();
     ASSERT_TRUE(network_addr.port() == TEST_PORT);
 
-    std::unique_ptr<asio_network_provider> asio_network2(
-        new asio_network_provider(task::get_current_rpc(), nullptr));
+    std::unique_ptr<tools::asio_network_provider> asio_network2(
+        new tools::asio_network_provider(task::get_current_rpc(), nullptr));
     start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, true);
     ASSERT_TRUE(start_result == ERR_OK);
 
     start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(start_result == ERR_OK);
-    ddebug("result: %s", start_result.to_string());
+    LOG_INFO("result: {}", start_result);
 
     start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(start_result == ERR_SERVICE_ALREADY_RUNNING);
-    ddebug("result: %s", start_result.to_string());
+    LOG_INFO("result: {}", start_result);
 
     rpc_session_ptr client_session =
         asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
@@ -206,8 +199,8 @@ TEST(tools_common, asio_udp_provider)
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
-    std::unique_ptr<asio_udp_provider> client(
-        new asio_udp_provider(task::get_current_rpc(), nullptr));
+    std::unique_ptr<tools::asio_udp_provider> client(
+        new tools::asio_udp_provider(task::get_current_rpc(), nullptr));
 
     error_code start_result;
     start_result = client->start(RPC_CHANNEL_UDP, 0, true);
@@ -249,8 +242,8 @@ TEST(tools_common, sim_net_provider)
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
 
-    std::unique_ptr<sim_network_provider> sim_net(
-        new sim_network_provider(task::get_current_rpc(), nullptr));
+    std::unique_ptr<tools::sim_network_provider> sim_net(
+        new tools::sim_network_provider(task::get_current_rpc(), nullptr));
 
     error_code ans;
     ans = sim_net->start(RPC_CHANNEL_TCP, TEST_PORT, false);
@@ -287,11 +280,14 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     ASSERT_TRUE(start_result == ERR_OK);
 
     auto CONN_THRESHOLD = 3;
-    asio_network->change_test_cfg_conn_threshold_per_ip(CONN_THRESHOLD);
+    LOG_INFO("change FLAGS_conn_threshold_per_ip {} -> {} for test",
+             FLAGS_conn_threshold_per_ip,
+             CONN_THRESHOLD);
+    FLAGS_conn_threshold_per_ip = CONN_THRESHOLD;
 
     // not exceed threshold
     for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
-        ddebug("client # %d", count);
+        LOG_INFO("client # {}", count);
         rpc_session_ptr client_session =
             asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
         client_session->connect();
@@ -305,7 +301,7 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     // exceed threshold
     bool reject = false;
     for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
-        ddebug("client # %d", count);
+        LOG_INFO("client # {}", count);
         rpc_session_ptr client_session =
             asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
         client_session->connect();
@@ -319,3 +315,4 @@ TEST(tools_common, asio_network_provider_connection_threshold)
 
     TEST_PORT++;
 }
+} // namespace dsn

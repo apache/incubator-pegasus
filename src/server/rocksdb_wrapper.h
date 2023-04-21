@@ -19,15 +19,21 @@
 
 #pragma once
 
-#include "replica/replica_base.h"
 #include <gtest/gtest_prod.h>
+#include <rocksdb/options.h>
+#include <rocksdb/write_batch.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "pegasus_value_schema.h"
+#include "replica/replica_base.h"
+#include "utils/string_view.h"
 
 namespace rocksdb {
-class DB;
-class ReadOptions;
-class WriteBatch;
 class ColumnFamilyHandle;
-class WriteOptions;
+class DB;
 } // namespace rocksdb
 
 namespace dsn {
@@ -35,12 +41,11 @@ class perf_counter_wrapper;
 } // namespace dsn
 
 namespace pegasus {
-class pegasus_value_generator;
 
 namespace server {
+class pegasus_server_impl;
 struct db_get_context;
 struct db_write_context;
-class pegasus_server_impl;
 
 class rocksdb_wrapper : public dsn::replication::replica_base
 {
@@ -48,9 +53,10 @@ public:
     rocksdb_wrapper(pegasus_server_impl *server);
 
     /// Calls RocksDB Get and store the result into `db_get_context`.
-    /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.
-    /// \result ctx.expired=true if record expired. Still 0 is returned.
-    /// \result ctx.found=false if record is not found. Still 0 is returned.
+    /// \returns rocksdb::Status::kOk if Get succeeded. On failure, a non-zero rocksdb status code
+    /// is returned.
+    /// \result ctx.expired=true if record expired. Still rocksdb::Status::kOk is returned.
+    /// \result ctx.found=false if record is not found. Still rocksdb::Status::kOk is returned.
     int get(dsn::string_view raw_key, /*out*/ db_get_context *ctx);
 
     int write_batch_put(int64_t decree,

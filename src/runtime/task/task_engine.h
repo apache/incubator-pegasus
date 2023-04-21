@@ -35,17 +35,25 @@
 
 #pragma once
 
-#include "runtime/service_engine.h"
-#include "task_queue.h"
-#include "task_worker.h"
-#include "timer_service.h"
+#include <iosfwd>
+#include <list>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "runtime/task/task_code.h"
 #include "utils/command_manager.h"
+#include "utils/threadpool_spec.h"
 
 namespace dsn {
 
+class service_node;
+class task;
 class task_engine;
-class task_worker_pool;
+class task_queue;
 class task_worker;
+class threadpool_code;
+class timer_service;
 
 //
 // a task_worker_pool is a set of TaskWorkers share the same configs;
@@ -99,11 +107,7 @@ class task_engine
 {
 public:
     task_engine(service_node *node);
-    ~task_engine()
-    {
-        stop();
-        UNREGISTER_VALID_HANDLER(_task_queue_max_length_cmd);
-    }
+    ~task_engine() { stop(); }
 
     //
     // service management routines
@@ -134,7 +138,7 @@ private:
     std::vector<task_worker_pool *> _pools;
     volatile bool _is_running;
     service_node *_node;
-    dsn_handle_t _task_queue_max_length_cmd;
+    std::unique_ptr<command_deregister> _task_queue_max_length_cmd;
 };
 
 // -------------------- inline implementation ----------------------------

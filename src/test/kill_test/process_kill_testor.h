@@ -17,12 +17,17 @@
  * under the License.
  */
 
-#include "kill_testor.h"
-#include "killer_handler.h"
+#include <stdint.h>
+#include <memory>
+#include <vector>
+
 #include "job.h"
+#include "kill_testor.h"
 
 namespace pegasus {
 namespace test {
+class killer_handler;
+
 class process_kill_testor : public kill_testor
 {
 public:
@@ -52,14 +57,6 @@ private:
     bool verifier_process_alive();
 
     std::shared_ptr<killer_handler> _killer_handler;
-    int32_t _total_meta_count;
-    int32_t _total_replica_count;
-    int32_t _total_zookeeper_count;
-
-    int32_t _kill_replica_max_count;
-    int32_t _kill_meta_max_count;
-    int32_t _kill_zk_max_count;
-
     std::vector<job_type> _job_types;
 
     int64_t kill_round;

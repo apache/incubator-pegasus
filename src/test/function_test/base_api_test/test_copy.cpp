@@ -17,28 +17,33 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <limits.h>
+#include <s2/third_party/absl/base/port.h>
+#include <string.h>
+#include <time.h>
+#include <algorithm>
+#include <atomic>
 #include <cstdlib>
+#include <functional>
+#include <map>
+#include <memory>
+#include <ostream>
 #include <string>
 #include <vector>
-#include <map>
 
-#include "utils/fmt_logging.h"
 #include "client/replication_ddl_client.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include <gtest/gtest.h>
 #include "include/pegasus/client.h"
-#include <unistd.h>
-
-#include "base/pegasus_const.h"
-#include "base/pegasus_utils.h"
-#include "test/function_test/utils/global_env.h"
-#include "shell/commands.h"
-#include "test/function_test/utils/utils.h"
+#include "pegasus/error.h"
+#include "runtime/task/async_calls.h"
+#include "shell/command_helper.h"
 #include "test/function_test/utils/test_util.h"
+#include "test/function_test/utils/utils.h"
+#include "test_util/test_util.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 using namespace ::pegasus;
 using std::map;
@@ -166,14 +171,14 @@ const char copy_data_test::CCH[] =
 
 TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 {
-    ddebug_f("TESTING_COPY_DATA, EMPTY HASH_KEY COPY ....");
+    LOG_INFO("TESTING_COPY_DATA, EMPTY HASH_KEY COPY ....");
 
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
     vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     ASSERT_EQ(PERR_OK, srouce_client_->get_unordered_scanners(INT_MAX, options, raw_scanners));
 
-    ddebug_f("open source app scanner succeed, partition_count = {}", raw_scanners.size());
+    LOG_INFO("open source app scanner succeed, partition_count = {}", raw_scanners.size());
 
     vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto raw_scanner : raw_scanners) {
@@ -183,7 +188,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     raw_scanners.clear();
 
     int split_count = scanners.size();
-    ddebug_f("prepare scanners succeed, split_count = {}", split_count);
+    LOG_INFO("prepare scanners succeed, split_count = {}", split_count);
 
     std::atomic_bool error_occurred(false);
     vector<std::unique_ptr<scan_data_context>> contexts;
@@ -203,20 +208,17 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     }
 
     // wait thread complete
-    int sleep_seconds = 0;
-    while (sleep_seconds < 120) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        sleep_seconds++;
-        int completed_split_count = 0;
-        for (int i = 0; i < split_count; i++) {
-            if (contexts[i]->split_completed.load()) {
-                completed_split_count++;
+    ASSERT_IN_TIME(
+        [&] {
+            int completed_split_count = 0;
+            for (int i = 0; i < split_count; i++) {
+                if (contexts[i]->split_completed.load()) {
+                    completed_split_count++;
+                }
             }
-        }
-        if (completed_split_count == split_count) {
-            break;
-        }
-    }
+            ASSERT_EQ(completed_split_count, split_count);
+        },
+        120);
 
     ASSERT_FALSE(error_occurred.load()) << "error occurred, processing terminated or timeout!";
     ASSERT_NO_FATAL_FAILURE(verify_data());

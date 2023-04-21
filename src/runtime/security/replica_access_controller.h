@@ -17,23 +17,55 @@
 
 #pragma once
 
-#include "utils/synchronize.h"
+#include <string>
+#include <unordered_set>
+
 #include "access_controller.h"
+#include "runtime/ranger/access_type.h"
+#include "runtime/ranger/ranger_resource_policy.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
+class message_ex;
+
 namespace security {
 class replica_access_controller : public access_controller
 {
 public:
-    explicit replica_access_controller(const std::string &name);
-    bool allowed(message_ex *msg) override;
-    void update(const std::string &users) override;
+    explicit replica_access_controller(const std::string &replica_name);
+
+    // Check whether replica can be accessed, this method is compatible with ACL using
+    // '_allowed_users' and ACL using Ranger policy.
+    bool allowed(message_ex *msg, ranger::access_type req_type) const override;
+
+    // Update '_allowed_users' when the app_env(REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS) of the
+    // table changes
+    void update_allowed_users(const std::string &users) override;
+
+    // Update '_ranger_policies' when the app_env(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES) of the
+    // table changes
+    void update_ranger_policies(const std::string &policies) override;
 
 private:
-    utils::rw_lock_nr _lock; // [
-    std::unordered_set<std::string> _users;
+    // Security check to avoid allowed_users is not empty in special scenarios.
+    void check_allowed_users_valid() const;
+
+private:
+    mutable utils::rw_lock_nr _lock;
+    // Users will pass the access control in the old ACL.
+    std::unordered_set<std::string> _allowed_users;
+
+    // App_env(REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS) to facilitate whether to update
+    // '_allowed_users'.
     std::string _env_users;
-    // ]
+
+    // App_env(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES) to facilitate whether to update
+    // '_ranger_policies'.
+    std::string _env_policies;
+
+    // The Ranger policies for ACL.
+    ranger::acl_policies _ranger_policies;
+
     std::string _name;
 
     friend class replica_access_controller_test;

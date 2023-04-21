@@ -19,23 +19,13 @@
 
 #include "latlng_codec.h"
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "utils/fmt_logging.h"
+#include <s2/s1angle.h>
+#include <s2/s2latlng.h>
+#include <stddef.h>
+
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 
 namespace pegasus {
@@ -71,7 +61,7 @@ void extract_indices(const std::string &line,
 
 bool latlng_codec::decode_from_value(const std::string &value, S2LatLng &latlng) const
 {
-    dcheck_eq(_sorted_indices.size(), 2);
+    CHECK_EQ(_sorted_indices.size(), 2);
     std::vector<std::string> data;
     extract_indices(value, _sorted_indices, data, '|');
     if (data.size() != 2) {
@@ -92,10 +82,10 @@ bool latlng_codec::decode_from_value(const std::string &value, S2LatLng &latlng)
 
 bool latlng_codec::encode_to_value(double lat_degrees, double lng_degrees, std::string &value) const
 {
-    dcheck_eq(_sorted_indices.size(), 2);
+    CHECK_EQ(_sorted_indices.size(), 2);
     S2LatLng latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
     if (!latlng.is_valid()) {
-        derror_f("latlng is invalid. lat_degrees={}, lng_degrees={}", lat_degrees, lng_degrees);
+        LOG_ERROR("latlng is invalid. lat_degrees={}, lng_degrees={}", lat_degrees, lng_degrees);
         return false;
     }
 

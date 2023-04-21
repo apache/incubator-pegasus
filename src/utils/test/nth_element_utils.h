@@ -59,13 +59,12 @@ public:
           _nths(nths),
           _rand(Rand())
     {
-        dassert_f(std::is_sorted(_nths.begin(), _nths.end()),
-                  "nth indexes({}) is not sorted",
-                  fmt::join(_nths, " "));
+        CHECK(std::is_sorted(_nths.begin(), _nths.end()),
+              "nth indexes({}) is not sorted",
+              fmt::join(_nths, " "));
 
         for (const auto &nth : _nths) {
-            dassert_f(
-                nth >= 0 && nth < _array_size, "nth should be in the range [0, {})", _array_size);
+            CHECK(nth >= 0 && nth < _array_size, "nth should be in the range [0, {})", _array_size);
         }
     }
 
@@ -162,7 +161,7 @@ public:
     void operator()()
     {
         _perf_counter.calc(
-            boost::make_shared<dsn::perf_counter_number_percentile_atomic::compute_context>());
+            std::make_shared<dsn::perf_counter_number_percentile_atomic::compute_context>());
         std::copy(_perf_counter._results,
                   _perf_counter._results + COUNTER_PERCENTILE_COUNT,
                   _elements.begin());

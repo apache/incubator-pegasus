@@ -24,16 +24,18 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <map>
+#include <memory>
+#include <string>
+
 #include "common/replica_envs.h"
+#include "meta/meta_data.h"
 #include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
 #include "meta_test_base.h"
-#include "meta/meta_service.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {

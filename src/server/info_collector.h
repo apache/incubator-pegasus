@@ -19,41 +19,31 @@
 
 #pragma once
 
-#include "runtime/task/task_tracker.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
-#include "common/replication_other_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
-
+// IWYU pragma: no_include <bits/std_abs.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
-#include <evhttp.h>
-#include <event2/event.h>
-#include <event2/http.h>
-#include <event2/bufferevent.h>
+#include <map>
+#include <memory>
+#include <string>
 
-#include "../shell/commands.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "shell/command_helper.h"
+#include "utils/synchronize.h"
+
+struct shell_context;
 
 namespace pegasus {
+class pegasus_client;
+
 namespace server {
 
-class result_writer;
 class hotspot_partition_calculator;
+class result_writer;
 
 class info_collector
 {
@@ -226,22 +216,17 @@ private:
     ::dsn::rpc_address _meta_servers;
     std::string _cluster_name;
     std::shared_ptr<shell_context> _shell_context;
-    uint32_t _app_stat_interval_seconds;
     ::dsn::task_ptr _app_stat_timer_task;
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
     std::map<std::string, app_stat_counters *> _app_stat_counters;
 
-    // app for recording usage statistics, including read/write capacity unit and storage size.
-    std::string _usage_stat_app;
     // client to access server.
     pegasus_client *_client;
     // for writing cu stat result
     std::unique_ptr<result_writer> _result_writer;
-    uint32_t _capacity_unit_fetch_interval_seconds;
     uint32_t _capacity_unit_retry_wait_seconds;
     uint32_t _capacity_unit_retry_max_count;
     ::dsn::task_ptr _capacity_unit_stat_timer_task;
-    uint32_t _storage_size_fetch_interval_seconds;
     uint32_t _storage_size_retry_wait_seconds;
     uint32_t _storage_size_retry_max_count;
     ::dsn::task_ptr _storage_size_stat_timer_task;

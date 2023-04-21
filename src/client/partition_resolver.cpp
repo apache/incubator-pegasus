@@ -24,11 +24,16 @@
  * THE SOFTWARE.
  */
 
-#include "utils/zlocks.h"
-#include "runtime/rpc/group_address.h"
 #include "client/partition_resolver.h"
-#include "partition_resolver_simple.h"
+
+// IWYU pragma: no_include <type_traits>
+
 #include "partition_resolver_manager.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/task/task_spec.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {
@@ -74,11 +79,11 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                     dynamic_cast<rpc_response_task *>(task::get_current_task());
                 partition_resolver_ptr r(this);
 
-                dassert(ctask != nullptr, "current task must be rpc_response_task");
+                CHECK_NOTNULL(ctask, "current task must be rpc_response_task");
                 ctask->replace_callback(std::move(oc));
-                dassert(ctask->set_retry(false),
-                        "rpc_response_task set retry failed, state = %s",
-                        enum_to_string(ctask->state()));
+                CHECK(ctask->set_retry(false),
+                      "rpc_response_task set retry failed, state = {}",
+                      enum_to_string(ctask->state()));
 
                 // sleep gap milliseconds before retry
                 tasking::enqueue(LPC_RPC_DELAY_CALL,
@@ -88,10 +93,10 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                                  std::chrono::milliseconds(gap));
                 return;
             } else {
-                derror("service access failed (%s), no more time for further "
-                       "tries, set error = ERR_TIMEOUT, trace_id = %016" PRIx64,
-                       err.to_string(),
-                       req->header->trace_id);
+                LOG_ERROR("service access failed ({}), no more time for further tries, set error "
+                          "= ERR_TIMEOUT, trace_id = {:#018x}",
+                          err,
+                          req->header->trace_id);
                 err = ERR_TIMEOUT;
             }
         }

@@ -19,39 +19,33 @@
 
 #include "killer_handler_shell.h"
 
-#include <cstdlib>
-#include <cstring>
+#include <stdio.h>
 #include <cerrno>
-#include <sstream>
-#include <fstream>
+#include <cstdlib>
+#include <sstream> // IWYU pragma: keep
 
-#include "utils/api_utilities.h"
-#include "utils/config_api.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/safe_strerror_posix.h"
+#include "utils/strings.h"
 
 namespace pegasus {
 namespace test {
 
-killer_handler_shell::killer_handler_shell()
-{
-    const char *section = "killer.handler.shell";
-    _run_script_path = dsn_config_get_value_string(
-        section, "onebox_run_path", "~/pegasus/run.sh", "onebox run path");
-    dassert(_run_script_path.size() > 0, "");
-}
+DSN_DEFINE_string(killer.handler.shell, onebox_run_path, "~/pegasus/run.sh", "onebox run path");
+DSN_DEFINE_validator(onebox_run_path,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 bool killer_handler_shell::has_meta_dumped_core(int index)
 {
     char find_core[1024];
-    snprintf(find_core,
-             1024,
-             "ls %s/onebox/meta%d | grep core | wc -l",
-             _run_script_path.c_str(),
-             index);
+    snprintf(
+        find_core, 1024, "ls %s/onebox/meta%d | grep core | wc -l", FLAGS_onebox_run_path, index);
 
     std::stringstream output;
     int core_count;
-    dcheck_eq(dsn::utils::pipe_execute(find_core, output), 0);
+    CHECK_EQ(dsn::utils::pipe_execute(find_core, output), 0);
     output >> core_count;
 
     return core_count != 0;
@@ -63,12 +57,12 @@ bool killer_handler_shell::has_replica_dumped_core(int index)
     snprintf(find_core,
              1024,
              "ls %s/onebox/replica%d | grep core | wc -l",
-             _run_script_path.c_str(),
+             FLAGS_onebox_run_path,
              index);
 
     std::stringstream output;
     int core_count;
-    dcheck_eq(dsn::utils::pipe_execute(find_core, output), 0);
+    CHECK_EQ(dsn::utils::pipe_execute(find_core, output), 0);
     output >> core_count;
 
     return core_count != 0;
@@ -78,9 +72,9 @@ bool killer_handler_shell::kill_meta(int index)
 {
     std::string cmd = generate_cmd(index, "meta", "stop");
     int res = system(cmd.c_str());
-    ddebug("kill meta command: %s", cmd.c_str());
+    LOG_INFO("kill meta command: {}", cmd);
     if (res != 0) {
-        ddebug("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "stop");
@@ -90,9 +84,9 @@ bool killer_handler_shell::kill_replica(int index)
 {
     std::string cmd = generate_cmd(index, "replica", "stop");
     int res = system(cmd.c_str());
-    ddebug("kill replica command: %s", cmd.c_str());
+    LOG_INFO("kill replica command: {}", cmd);
     if (res != 0) {
-        ddebug("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("replica", index, "stop");
@@ -108,9 +102,9 @@ bool killer_handler_shell::start_meta(int index)
 {
     std::string cmd = generate_cmd(index, "meta", "start");
     int res = system(cmd.c_str());
-    ddebug("start meta command: %s", cmd.c_str());
+    LOG_INFO("start meta command: {}", cmd);
     if (res != 0) {
-        ddebug("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "start");
@@ -121,9 +115,9 @@ bool killer_handler_shell::start_replica(int index)
     std::string cmd = generate_cmd(index, "replica", "start");
 
     int res = system(cmd.c_str());
-    ddebug("start replica command: %s", cmd.c_str());
+    LOG_INFO("start replica command: {}", cmd);
     if (res != 0) {
-        ddebug("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "start");
@@ -175,7 +169,7 @@ std::string
 killer_handler_shell::generate_cmd(int index, const std::string &job, const std::string &action)
 {
     std::stringstream res;
-    res << "cd " << _run_script_path << "; "
+    res << "cd " << FLAGS_onebox_run_path << "; "
         << "bash run.sh";
     if (action == "stop")
         res << " stop_onebox_instance ";

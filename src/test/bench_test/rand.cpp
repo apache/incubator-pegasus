@@ -18,7 +18,10 @@
  */
 
 #include <algorithm>
+#include <cstdint>
+#include <limits>
 #include <random>
+#include <string>
 
 namespace pegasus {
 namespace test {

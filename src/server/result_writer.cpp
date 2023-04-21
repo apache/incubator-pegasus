@@ -18,12 +18,22 @@
  */
 
 #include "result_writer.h"
+
+#include <pegasus/error.h>
+#include <chrono>
+#include <utility>
+
+#include "pegasus/client.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int32("pegasus.collector",
+DSN_DEFINE_int32(pegasus.collector,
                  capacity_unit_saving_ttl_days,
                  90,
                  "the ttl of the CU data, 0 if no ttl");
@@ -41,13 +51,13 @@ void result_writer::set_result(const std::string &hash_key,
         if (err != PERR_OK) {
             int new_try_count = try_count - 1;
             if (new_try_count > 0) {
-                dwarn("set_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                      "error = %s, left_try_count = %d, try again after 1 minute",
-                      hash_key.c_str(),
-                      sort_key.c_str(),
-                      value.c_str(),
-                      _client->get_error_string(err),
-                      new_try_count);
+                LOG_WARNING("set_result fail, hash_key = {}, sort_key = {}, value = {}, "
+                            "error = {}, left_try_count = {}, try again after 1 minute",
+                            hash_key,
+                            sort_key,
+                            value,
+                            _client->get_error_string(err),
+                            new_try_count);
                 ::dsn::tasking::enqueue(
                     LPC_WRITE_RESULT,
                     &_tracker,
@@ -55,19 +65,19 @@ void result_writer::set_result(const std::string &hash_key,
                     0,
                     std::chrono::minutes(1));
             } else {
-                derror("set_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                       "error = %s, left_try_count = %d, do not try again",
-                       hash_key.c_str(),
-                       sort_key.c_str(),
-                       value.c_str(),
-                       _client->get_error_string(err),
-                       new_try_count);
+                LOG_ERROR("set_result fail, hash_key = {}, sort_key = {}, value = {}, error = "
+                          "{}, left_try_count = {}, do not try again",
+                          hash_key,
+                          sort_key,
+                          value,
+                          _client->get_error_string(err),
+                          new_try_count);
             }
         } else {
-            dinfo("set_result succeed, hash_key = %s, sort_key = %s, value = %s",
-                  hash_key.c_str(),
-                  sort_key.c_str(),
-                  value.c_str());
+            LOG_DEBUG("set_result succeed, hash_key = {}, sort_key = {}, value = {}",
+                      hash_key,
+                      sort_key,
+                      value);
         }
     };
 

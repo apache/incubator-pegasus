@@ -19,19 +19,36 @@
 
 #include "pegasus_manual_compact_service.h"
 
-#include "utils/fmt_logging.h"
-#include "common/replication.codes.h"
-#include "runtime/task/async_calls.h"
-#include "utils/string_conv.h"
-#include "utils/time_utils.h"
+#include <limits.h>
+#include <rocksdb/options.h>
+#include <list>
+#include <ostream>
+#include <set>
+#include <utility>
 
 #include "base/pegasus_const.h"
+#include "common/replication.codes.h"
 #include "pegasus_server_impl.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
+#include "utils/time_utils.h"
 
 namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
+
+DSN_DEFINE_int32(pegasus.server,
+                 manual_compact_min_interval_seconds,
+                 0,
+                 "minimal interval time in seconds to start a new manual compaction, <= 0 "
+                 "means no interval limit");
 
 pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_impl *app)
     : replica_base(*app),
@@ -43,13 +60,6 @@ pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_im
       _manual_compact_last_finish_time_ms(0),
       _manual_compact_last_time_used_ms(0)
 {
-    _manual_compact_min_interval_seconds = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.server",
-        "manual_compact_min_interval_seconds",
-        0,
-        "minimal interval time in seconds to start a new manual compaction, "
-        "<= 0 means no interval limit");
-
     _pfc_manual_compact_enqueue_count.init_app_counter("app.pegasus",
                                                        "manual.compact.enqueue.count",
                                                        COUNTER_TYPE_NUMBER,
@@ -70,12 +80,12 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
     const std::map<std::string, std::string> &envs)
 {
     if (check_compact_disabled(envs)) {
-        ddebug_replica("ignored compact because disabled");
+        LOG_INFO_PREFIX("ignored compact because disabled");
         return;
     }
 
     if (check_compact_max_concurrent_running_count(envs) <= 0) {
-        ddebug_replica("ignored compact because max_concurrent_running_count <= 0");
+        LOG_INFO_PREFIX("ignored compact because max_concurrent_running_count <= 0");
         return;
     }
 
@@ -102,7 +112,7 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
             manual_compact(options);
         });
     } else {
-        ddebug_replica("ignored compact because last one is on going or just finished");
+        LOG_INFO_PREFIX("ignored compact because last one is on going or just finished");
     }
 }
 
@@ -119,10 +129,10 @@ bool pegasus_manual_compact_service::check_compact_disabled(
     if (new_disabled != old_disabled) {
         // flag changed
         if (new_disabled) {
-            ddebug_replica("manual compact is set to disabled now");
+            LOG_INFO_PREFIX("manual compact is set to disabled now");
             _disabled.store(true);
         } else {
-            ddebug_replica("manual compact is set to enabled now");
+            LOG_INFO_PREFIX("manual compact is set to enabled now");
             _disabled.store(false);
         }
     }
@@ -136,13 +146,13 @@ int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
     int new_count = INT_MAX;
     auto find = envs.find(MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY);
     if (find != envs.end() && !dsn::buf2int32(find->second, new_count)) {
-        derror_replica("{}={} is invalid.", find->first, find->second);
+        LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
     }
 
     int old_count = _max_concurrent_running_count.load();
     if (new_count != old_count) {
         // count changed
-        ddebug_replica("max_concurrent_running_count changed from {} to {}", old_count, new_count);
+        LOG_INFO_PREFIX("max_concurrent_running_count changed from {} to {}", old_count, new_count);
         _max_concurrent_running_count.store(new_count);
     }
 
@@ -159,7 +169,7 @@ bool pegasus_manual_compact_service::check_once_compact(
 
     int64_t trigger_time = 0;
     if (!dsn::buf2int64(find->second, trigger_time) || trigger_time <= 0) {
-        derror_replica("{}={} is invalid.", find->first, find->second);
+        LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
@@ -177,7 +187,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
     std::list<std::string> trigger_time_strs;
     dsn::utils::split_args(find->second.c_str(), trigger_time_strs, ',');
     if (trigger_time_strs.empty()) {
-        derror_replica("{}={} is invalid.", find->first, find->second);
+        LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
@@ -189,7 +199,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
         }
     }
     if (trigger_time.empty()) {
-        derror_replica("{}={} is invalid.", find->first, find->second);
+        LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
         return false;
     }
 
@@ -207,7 +217,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
 uint64_t pegasus_manual_compact_service::now_timestamp()
 {
 #ifdef PEGASUS_UNIT_TEST
-    ddebug_replica("_mock_now_timestamp={}", _mock_now_timestamp);
+    LOG_INFO_PREFIX("_mock_now_timestamp={}", _mock_now_timestamp);
     return _mock_now_timestamp == 0 ? dsn_now_ms() : _mock_now_timestamp;
 #else
     return dsn_now_ms();
@@ -230,10 +240,10 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
              (target_level >= 1 && target_level <= _app->_data_cf_opts.num_levels))) {
             options.target_level = target_level;
         } else {
-            dwarn_replica("{}={} is invalid, use default value {}",
-                          find->first,
-                          find->second,
-                          options.target_level);
+            LOG_WARNING_PREFIX("{}={} is invalid, use default value {}",
+                               find->first,
+                               find->second,
+                               options.target_level);
         }
     }
 
@@ -246,7 +256,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
         } else if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
             options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
         } else {
-            dwarn_replica(
+            LOG_WARNING_PREFIX(
                 "{}={} is invalid, use default value {}",
                 find->first,
                 find->second,
@@ -260,10 +270,10 @@ bool pegasus_manual_compact_service::check_manual_compact_state()
 {
     uint64_t not_enqueue = 0;
     uint64_t now = now_timestamp();
-    if (_manual_compact_min_interval_seconds <= 0 ||       // no interval limit
+    if (FLAGS_manual_compact_min_interval_seconds <= 0 ||  // no interval limit
         _manual_compact_last_finish_time_ms.load() == 0 || // has not compacted yet
         now - _manual_compact_last_finish_time_ms.load() >
-            (uint64_t)_manual_compact_min_interval_seconds * 1000) { // interval past
+            (uint64_t)FLAGS_manual_compact_min_interval_seconds * 1000) { // interval past
         // when _manual_compact_enqueue_time_ms is `not_enqueue`(which is 0), return true to allow a
         // compact task enqueue, and update the value to `now`,
         // otherwise, return false to not allow, and keep the old value.
@@ -279,7 +289,7 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     // if we find manual compaction is disabled when transfer from queue to running,
     // it would not to be started.
     if (_disabled.load()) {
-        ddebug_replica("ignored compact because disabled");
+        LOG_INFO_PREFIX("ignored compact because disabled");
         _manual_compact_enqueue_time_ms.store(0);
         return;
     }
@@ -288,8 +298,8 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     _pfc_manual_compact_running_count->increment();
     if (_pfc_manual_compact_running_count->get_integer_value() > _max_concurrent_running_count) {
         _pfc_manual_compact_running_count->decrement();
-        ddebug_replica("ignored compact because exceed max_concurrent_running_count({})",
-                       _max_concurrent_running_count.load());
+        LOG_INFO_PREFIX("ignored compact because exceed max_concurrent_running_count({})",
+                        _max_concurrent_running_count.load());
         _manual_compact_enqueue_time_ms.store(0);
         return;
     }
@@ -303,7 +313,7 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
 
 uint64_t pegasus_manual_compact_service::begin_manual_compact()
 {
-    ddebug_replica("start to execute manual compaction");
+    LOG_INFO_PREFIX("start to execute manual compaction");
     uint64_t start = now_timestamp();
     _manual_compact_start_running_time_ms.store(start);
     return start;
@@ -311,7 +321,7 @@ uint64_t pegasus_manual_compact_service::begin_manual_compact()
 
 void pegasus_manual_compact_service::end_manual_compact(uint64_t start, uint64_t finish)
 {
-    ddebug_replica("finish to execute manual compaction, time_used = {}ms", finish - start);
+    LOG_INFO_PREFIX("finish to execute manual compaction, time_used = {}ms", finish - start);
     _manual_compact_last_finish_time_ms.store(finish);
     _manual_compact_last_time_used_ms.store(finish - start);
     _manual_compact_enqueue_time_ms.store(0);

@@ -17,19 +17,49 @@
  * under the License.
  */
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <boost/asio.hpp>
-
-#include "utils/string_conv.h"
-#include "utils/rand.h"
-
+#include <boost/asio.hpp> // IWYU pragma: keep
+// IWYU pragma: no_include <boost/asio/buffer.hpp>
+// IWYU pragma: no_include <boost/asio/detail/type_traits.hpp>
+// IWYU pragma: no_include <boost/asio/impl/io_context.ipp>
+// IWYU pragma: no_include <boost/asio/impl/read.hpp>
+// IWYU pragma: no_include <boost/asio/impl/write.hpp>
+// IWYU pragma: no_include <boost/asio/io_service.hpp>
+// IWYU pragma: no_include <boost/asio/ip/address.hpp>
+// IWYU pragma: no_include <boost/asio/ip/address_v4.hpp>
+// IWYU pragma: no_include <boost/asio/ip/impl/address.ipp>
+// IWYU pragma: no_include <boost/asio/ip/impl/address_v4.ipp>
+// IWYU pragma: no_include <boost/asio/ip/tcp.hpp>
+// IWYU pragma: no_include <boost/asio/socket_base.hpp>
+#include <boost/system/error_code.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <rrdb/rrdb.client.h>
-#include <pegasus_utils.h>
+#include <gtest/gtest_prod.h>
+#include <s2/third_party/absl/base/port.h>
+#include <string.h>
+#include <algorithm>
+#include <chrono>
+#include <memory>
+#include <set>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "geo/lib/geo_client.h"
 #include "proxy_layer.h"
 #include "redis_parser.h"
+#include "runtime/app_model.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "runtime/service_app.h"
+#include "runtime/task/task_spec.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/rand.h"
+#include "utils/strings.h"
 
 using namespace boost::asio;
 using namespace ::pegasus::proxy;
@@ -48,7 +78,7 @@ public:
         proxy_session::factory f = [](proxy_stub *p, dsn::message_ex *m) {
             return std::make_shared<redis_parser>(p, m);
         };
-        _proxy = dsn::make_unique<proxy_stub>(f, args[1].c_str(), args[2].c_str());
+        _proxy = std::make_unique<proxy_stub>(f, args[1].c_str(), args[2].c_str());
         return ::dsn::ERR_OK;
     }
     ::dsn::error_code stop(bool) override { return ::dsn::ERR_OK; }
@@ -128,7 +158,8 @@ protected:
             ASSERT_EQ(bs1.length, bs2.length);
             if (bs1.length > 0) {
                 ASSERT_EQ(bs1.data.length(), bs2.data.length());
-                ASSERT_EQ(0, memcmp(bs1.data.data(), bs2.data.data(), bs2.data.length()));
+                ASSERT_TRUE(
+                    dsn::utils::mequals(bs1.data.data(), bs2.data.data(), bs2.data.length()));
             }
         }
 
@@ -572,8 +603,8 @@ TEST(proxy, connection)
             boost::asio::read(client_socket, boost::asio::buffer(got_reply, strlen(resps1)));
         got_reply[got_length] = 0;
         ASSERT_EQ(got_length, strlen(resps1));
-        ASSERT_TRUE(strncmp(got_reply, resps1, got_length) == 0 ||
-                    strncmp(got_reply, resps2, got_length) == 0);
+        ASSERT_TRUE(dsn::utils::equals(got_reply, resps1, got_length) ||
+                    dsn::utils::equals(got_reply, resps2, got_length));
     }
 
     {
@@ -602,7 +633,7 @@ TEST(proxy, connection)
             client_socket.shutdown(boost::asio::socket_base::shutdown_both);
             client_socket.close();
         } catch (...) {
-            ddebug("exception in shutdown");
+            LOG_INFO("exception in shutdown");
         }
     }
 }

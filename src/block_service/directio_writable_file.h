@@ -17,7 +17,11 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
 #include <string>
+
+#include "utils/ports.h"
 
 namespace dsn {
 namespace dist {

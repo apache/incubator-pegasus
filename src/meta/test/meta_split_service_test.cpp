@@ -24,19 +24,46 @@
  * THE SOFTWARE.
  */
 
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/fmt_logging.h"
-#include "common/replica_envs.h"
+#include <string.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
 
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/partition_split_common.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_server_failure_detector.h"
+#include "meta/meta_service.h"
+#include "meta/meta_split_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
-#include "meta/meta_split_service.h"
-#include "meta/meta_server_failure_detector.h"
+#include "metadata_types.h"
+#include "partition_split_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -60,7 +87,7 @@ public:
 
     error_code start_partition_split(const std::string &app_name, int new_partition_count)
     {
-        auto request = dsn::make_unique<start_partition_split_request>();
+        auto request = std::make_unique<start_partition_split_request>();
         request->app_name = app_name;
         request->new_partition_count = new_partition_count;
 
@@ -72,7 +99,7 @@ public:
 
     query_split_response query_partition_split(const std::string &app_name)
     {
-        auto request = dsn::make_unique<query_split_request>();
+        auto request = std::make_unique<query_split_request>();
         request->app_name = app_name;
 
         query_split_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_SPLIT);
@@ -86,7 +113,7 @@ public:
                                        const int32_t pidx,
                                        const int32_t old_partition_count = 0)
     {
-        auto req = make_unique<control_split_request>();
+        auto req = std::make_unique<control_split_request>();
         req->__set_app_name(app_name);
         req->__set_control_type(type);
         req->__set_parent_pidx(pidx);
@@ -117,7 +144,7 @@ public:
         node.put_partition(gpid(app->app_id, PARENT_INDEX), true);
         mock_node_state(NODE, node);
 
-        auto request = dsn::make_unique<register_child_request>();
+        auto request = std::make_unique<register_child_request>();
         request->app.app_name = app->app_name;
         request->app.app_id = app->app_id;
         request->parent_config = parent_config;
@@ -135,7 +162,7 @@ public:
 
     error_code notify_stop_split(split_status::type req_split_status)
     {
-        auto req = make_unique<notify_stop_split_request>();
+        auto req = std::make_unique<notify_stop_split_request>();
         req->__set_app_name(NAME);
         req->__set_parent_gpid(dsn::gpid(app->app_id, PARENT_INDEX));
         req->__set_meta_split_status(req_split_status);
@@ -150,7 +177,7 @@ public:
 
     query_child_state_response query_child_state()
     {
-        auto req = make_unique<query_child_state_request>();
+        auto req = std::make_unique<query_child_state_request>();
         req->__set_app_name(NAME);
         req->__set_pid(dsn::gpid(app->app_id, PARENT_INDEX));
         req->__set_partition_count(PARTITION_COUNT);
@@ -164,7 +191,7 @@ public:
 
     int32_t on_config_sync(configuration_query_by_node_request req)
     {
-        auto request = make_unique<configuration_query_by_node_request>(req);
+        auto request = std::make_unique<configuration_query_by_node_request>(req);
         configuration_query_by_node_rpc rpc(std::move(request), RPC_CM_CONFIG_SYNC);
         _ss->on_config_sync(rpc);
         wait_all();
@@ -271,7 +298,7 @@ public:
         _ms.reset(meta_svc);
 
         // initialize bulk load service
-        _ms->_split_svc = make_unique<meta_split_service>(_ms.get());
+        _ms->_split_svc = std::make_unique<meta_split_service>(_ms.get());
 
         // mock splitting app
         create_splitting_app_on_remote_stroage(state->_apps_root);
@@ -289,7 +316,7 @@ public:
 
         _ms->get_meta_storage()->create_node(
             std::move(path), blob(lock_state, 0, strlen(lock_state)), [&app_root]() {
-                ddebug_f("create app root {}", app_root);
+                LOG_INFO("create app root {}", app_root);
             });
         wait_all();
 
@@ -309,7 +336,7 @@ public:
             app_root + "/" + boost::lexical_cast<std::string>(ainfo.app_id),
             std::move(value),
             [this, &app_root, &ainfo]() {
-                ddebug_f("create app({}) app_id={}, dir succeed", ainfo.app_name, ainfo.app_id);
+                LOG_INFO("create app({}) app_id={}, dir succeed", ainfo.app_name, ainfo.app_id);
                 for (int i = 0; i < ainfo.init_partition_count; ++i) {
                     create_partition_configuration_on_remote_storage(app_root, ainfo.app_id, i);
                 }
@@ -338,7 +365,7 @@ public:
                 boost::lexical_cast<std::string>(pidx),
             std::move(value),
             [app_id, pidx, this]() {
-                ddebug_f("create app({}), partition({}.{}) dir succeed", NAME, app_id, pidx);
+                LOG_INFO("create app({}), partition({}.{}) dir succeed", NAME, app_id, pidx);
             });
     }
 

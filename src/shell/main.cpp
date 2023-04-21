@@ -17,15 +17,35 @@
  * under the License.
  */
 
+#include <ctype.h>
 #include <pegasus/version.h>
-#include "utils/strings.h"
-#include <setjmp.h>
+#include <s2/third_party/absl/base/port.h>
 #include <signal.h>
+#include <stdio.h>
+#include <string.h>
 #include <algorithm>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "args.h"
+#include "base/pegasus_const.h"
+#include "client/replication_ddl_client.h"
 #include "command_executor.h"
 #include "commands.h"
-#include "base/pegasus_const.h"
+#include "common/replication_other_types.h"
+#include "pegasus/client.h"
+#include "runtime/app_model.h"
+#include "shell/linenoise/linenoise.h"
+#include "shell/sds/sds.h"
+#include "utils/config_api.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 std::map<std::string, command_executor *> s_commands_map;
 shell_context s_global_context;
@@ -81,7 +101,7 @@ static command_executor commands[] = {
     {
         "create",
         "create an app",
-        "<app_name> [-p|--partition_count num] [-r|--replica_count num] "
+        "<app_name> [-p|--partition_count num] [-r|--replica_count num] [-f|--fail_if_exist] "
         "[-e|--envs k1=v1,k2=v2...]",
         create_app,
     },
@@ -90,6 +110,9 @@ static command_executor commands[] = {
     },
     {
         "recall", "recall an app", "<app_id> [new_app_name]", recall_app,
+    },
+    {
+        "rename", "rename an app", "<old_app_name> <new_app_name>", rename_app,
     },
     {
         "set_meta_level",
@@ -567,7 +590,7 @@ void register_all_commands()
 {
     for (int i = 0; commands[i].name != nullptr; ++i) {
         auto pr = s_commands_map.emplace(commands[i].name, &commands[i]);
-        dassert(pr.second, "the command '%s' is already registered!!!", commands[i].name);
+        CHECK(pr.second, "the command '{}' is already registered!!!", commands[i].name);
         s_max_name_length = std::max(s_max_name_length, strlen(commands[i].name));
     }
 }
@@ -587,7 +610,7 @@ static void completionCallback(const char *buf, linenoiseCompletions *lc)
         const command_executor &c = commands[i];
 
         size_t matchlen = strlen(buf);
-        if (strncasecmp(buf, c.name, matchlen) == 0) {
+        if (dsn::utils::iequals(buf, c.name, matchlen)) {
             linenoiseAddCompletion(lc, c.name);
         }
     }
@@ -609,7 +632,7 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
     bool endWithSpace = buflen && isspace(buf[buflen - 1]);
 
     for (int i = 0; commands[i].name != nullptr; ++i) {
-        if (strcasecmp(argv[0], commands[i].name) == 0) {
+        if (dsn::utils::iequals(argv[0], commands[i].name)) {
             *color = 90;
             *bold = 0;
             sds hint = sdsnew(commands[i].option_usage);
@@ -645,7 +668,7 @@ static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
         pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
         cluster_name.c_str());
     s_global_context.ddl_client =
-        dsn::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
+        std::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
 
     // get real cluster name from zk
     std::string name;

@@ -26,13 +26,13 @@
 
 #pragma once
 
-#include <memory>
+#include <stdint.h>
 #include <sstream>
+#include <string>
+#include <utility>
 #include <vector>
 
-#include "utils/enum_helper.h"
 #include "utils/autoref_ptr.h"
-#include "utils/dlib.h"
 
 typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_NUMBER,

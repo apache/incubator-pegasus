@@ -26,10 +26,21 @@
 
 #pragma once
 
-#include "utils/ports.h"
+#include <stdint.h>
+#include <ostream>
+#include <string>
+
 #include "utils/enum_helper.h"
+#include "utils/ports.h"
 #include "utils/threadpool_code.h"
-#include <thrift/protocol/TProtocol.h>
+
+namespace apache {
+namespace thrift {
+namespace protocol {
+class TProtocol;
+} // namespace protocol
+} // namespace thrift
+} // namespace apache
 
 typedef enum dsn_task_type_t {
     TASK_TYPE_RPC_REQUEST,  ///< task handling rpc request
@@ -123,7 +134,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, const task_code &tc)
     {
-        return os << std::string(tc.to_string());
+        return os << tc.to_string();
     }
 
 private:

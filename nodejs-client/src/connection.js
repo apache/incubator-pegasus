@@ -25,8 +25,8 @@ const util = require('util');
 
 const Exception = require('./errors');
 
-const ErrorCode = require('./dsn/base_types').error_code;
-const ErrorType = require('./dsn/base_types').error_type;
+const ErrorCode = require('./dsn/dsn_types').error_code;
+const ErrorType = require('./dsn/dsn_types').error_type;
 
 const thrift = require('thrift');
 const InputBufferUnderrunError = require('thrift/lib/nodejs/lib/thrift/input_buffer_underrun_error');

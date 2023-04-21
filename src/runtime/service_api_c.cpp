@@ -24,38 +24,73 @@
  * THE SOFTWARE.
  */
 
-#include "service_engine.h"
-#include "utils/coredump.h"
-#include "runtime/rpc/rpc_engine.h"
-#include "runtime/task/task_engine.h"
-#include "runtime/security/init.h"
-
-#include <fstream>
-
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "runtime/tool_api.h"
-#include "utils/command_manager.h"
-#include "runtime/rpc/serialization.h"
-#include "utils/filesystem.h"
-#include "utils/process_utils.h"
-#include "utils/flags.h"
-#include "utils/time_utils.h"
-#include "utils/errors.h"
-#include "utils/fmt_logging.h"
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <chrono>
+#include <fstream> // IWYU pragma: keep
+#include <list>
+#include <map>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
 
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
 #endif
 
-#include "service_engine.h"
+#include "perf_counter/perf_counters.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/app_model.h"
+#include "runtime/global_config.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
-#include "runtime/task/task_engine.h"
-#include "utils/coredump.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/security/init.h"
 #include "runtime/security/negotiation_manager.h"
+#include "runtime/service_app.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
+#include "runtime/tool_api.h"
+#include "utils/api_utilities.h"
+#include "utils/command_manager.h"
+#include "utils/config_api.h"
+#include "utils/coredump.h"
+#include "utils/error_code.h"
+#include "utils/factory_store.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/logging_provider.h"
+#include "utils/process_utils.h"
+#include "utils/strings.h"
+#include "utils/sys_exit_hook.h"
+#include "utils/threadpool_spec.h"
+
+DSN_DEFINE_bool(core,
+                pause_on_start,
+                false,
+                "whether to pause at startup time for easier debugging");
+
+#ifdef DSN_ENABLE_GPERF
+DSN_DEFINE_double(core,
+                  tcmalloc_release_rate,
+                  1.,
+                  "the memory releasing rate of tcmalloc, default "
+                  "is 1.0 in gperftools, value range is "
+                  "[0.0, 10.0]");
+#endif
 
 namespace dsn {
 namespace security {
@@ -81,18 +116,17 @@ static struct _all_info_
 
 } dsn_all;
 
-DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
+std::unique_ptr<dsn::command_deregister> dump_log_cmd;
+
+volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
 {
     return dsn::task::get_current_node()->computation()->get_task_queue_virtual_length_ptr(code,
                                                                                            hash);
 }
 
-DSN_API bool dsn_task_is_running_inside(dsn::task *t)
-{
-    return ::dsn::task::get_current_task() == t;
-}
+bool dsn_task_is_running_inside(dsn::task *t) { return ::dsn::task::get_current_task() == t; }
 
-DSN_API void dsn_coredump()
+void dsn_coredump()
 {
     ::dsn::utils::coredump::write();
     ::abort();
@@ -105,35 +139,30 @@ DSN_API void dsn_coredump()
 //------------------------------------------------------------------------------
 
 // rpc calls
-DSN_API dsn::rpc_address dsn_primary_address()
-{
-    return ::dsn::task::get_current_rpc()->primary_address();
-}
+dsn::rpc_address dsn_primary_address() { return ::dsn::task::get_current_rpc()->primary_address(); }
 
-DSN_API bool dsn_rpc_register_handler(dsn::task_code code,
-                                      const char *extra_name,
-                                      const dsn::rpc_request_handler &cb)
+bool dsn_rpc_register_handler(dsn::task_code code,
+                              const char *extra_name,
+                              const dsn::rpc_request_handler &cb)
 {
     return ::dsn::task::get_current_node()->rpc_register_handler(code, extra_name, cb);
 }
 
-DSN_API bool dsn_rpc_unregiser_handler(dsn::task_code code)
+bool dsn_rpc_unregiser_handler(dsn::task_code code)
 {
     return ::dsn::task::get_current_node()->rpc_unregister_handler(code);
 }
 
-DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
+void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
 {
-    dassert(rpc_call->spec().type == TASK_TYPE_RPC_RESPONSE,
-            "invalid task_type, type = %s",
-            enum_to_string(rpc_call->spec().type));
+    CHECK_EQ_MSG(rpc_call->spec().type, TASK_TYPE_RPC_RESPONSE, "invalid task_type");
 
     auto msg = rpc_call->get_request();
     msg->server_address = server;
     ::dsn::task::get_current_rpc()->call(msg, dsn::rpc_response_task_ptr(rpc_call));
 }
 
-DSN_API dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *request)
+dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *request)
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
@@ -153,7 +182,7 @@ DSN_API dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message
     }
 }
 
-DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request)
+void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request)
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
@@ -161,13 +190,13 @@ DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *requ
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }
 
-DSN_API void dsn_rpc_reply(dsn::message_ex *response, dsn::error_code err)
+void dsn_rpc_reply(dsn::message_ex *response, dsn::error_code err)
 {
     auto msg = ((::dsn::message_ex *)response);
     ::dsn::task::get_current_rpc()->reply(msg, err);
 }
 
-DSN_API void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
+void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
 {
     ::dsn::task::get_current_rpc()->forward((::dsn::message_ex *)(request),
                                             ::dsn::rpc_address(addr));
@@ -182,14 +211,16 @@ DSN_API void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
 static bool
 run(const char *config_file, const char *config_arguments, bool is_server, std::string &app_list);
 
-DSN_API bool dsn_run_config(const char *config, bool is_server)
+bool dsn_run_config(const char *config, bool is_server)
 {
     std::string name;
     return run(config, nullptr, is_server, name);
 }
 
-NORETURN DSN_API void dsn_exit(int code)
+[[noreturn]] void dsn_exit(int code)
 {
+    dump_log_cmd.reset();
+
     printf("dsn exit with code %d\n", code);
     fflush(stdout);
     ::dsn::tools::sys_exit.execute(::dsn::SYS_EXIT_NORMAL);
@@ -197,10 +228,10 @@ NORETURN DSN_API void dsn_exit(int code)
     _exit(code);
 }
 
-DSN_API bool dsn_mimic_app(const char *app_role, int index)
+bool dsn_mimic_app(const char *app_role, int index)
 {
     auto worker = ::dsn::task::get_current_worker2();
-    dassert(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
+    CHECK(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
 
     auto cnode = ::dsn::task::get_current_node2();
     if (cnode != nullptr) {
@@ -208,7 +239,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
         if (cnode->spec().role_name == std::string(app_role) && cnode->spec().index == index) {
             return true;
         } else {
-            derror("current thread is already attached to another rDSN app %s", name.c_str());
+            LOG_ERROR("current thread is already attached to another rDSN app {}", name);
             return false;
         }
     }
@@ -222,7 +253,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
         }
     }
 
-    derror("cannot find host app %s with index %d", app_role, index);
+    LOG_ERROR("cannot find host app {} with index {}", app_role, index);
     return false;
 }
 
@@ -236,7 +267,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
 //       port variable specified in config.ini
 //       config.ini to start ALL apps as a new process
 //
-DSN_API void dsn_run(int argc, char **argv, bool is_server)
+void dsn_run(int argc, char **argv, bool is_server)
 {
     if (argc < 2) {
         printf(
@@ -258,13 +289,13 @@ DSN_API void dsn_run(int argc, char **argv, bool is_server)
     std::string app_list = "";
 
     for (int i = 2; i < argc;) {
-        if (0 == strcmp(argv[i], "-cargs")) {
+        if (dsn::utils::equals(argv[i], "-cargs")) {
             if (++i < argc) {
                 config_args = std::string(argv[i++]);
             }
         }
 
-        else if (0 == strcmp(argv[i], "-app_list")) {
+        else if (dsn::utils::equals(argv[i], "-app_list")) {
             if (++i < argc) {
                 app_list = std::string(argv[i++]);
             }
@@ -374,10 +405,7 @@ bool run(const char *config_file,
     dsn_all.magic = 0xdeadbeef;
 
     // pause when necessary
-    if (dsn_config_get_value_bool("core",
-                                  "pause_on_start",
-                                  false,
-                                  "whether to pause at startup time for easier debugging")) {
+    if (FLAGS_pause_on_start) {
         printf("\nPause for debugging (pid = %d)...\n", static_cast<int>(getpid()));
         getchar();
     }
@@ -397,18 +425,14 @@ bool run(const char *config_file,
 
     // setup data dir
     auto &data_dir = spec.data_dir;
-    dassert(!dsn::utils::filesystem::file_exists(data_dir),
-            "%s should not be a file.",
-            data_dir.c_str());
-    if (!dsn::utils::filesystem::directory_exists(data_dir.c_str())) {
-        if (!dsn::utils::filesystem::create_directory(data_dir)) {
-            dassert(false, "Fail to create %s.", data_dir.c_str());
-        }
+    CHECK(!dsn::utils::filesystem::file_exists(data_dir), "{} should not be a file.", data_dir);
+    if (!dsn::utils::filesystem::directory_exists(data_dir)) {
+        CHECK(dsn::utils::filesystem::create_directory(data_dir), "Fail to create {}", data_dir);
     }
     std::string cdir;
-    if (!dsn::utils::filesystem::get_absolute_path(data_dir.c_str(), cdir)) {
-        dassert(false, "Fail to get absolute path from %s.", data_dir.c_str());
-    }
+    CHECK(dsn::utils::filesystem::get_absolute_path(data_dir, cdir),
+          "Fail to get absolute path from {}",
+          data_dir);
     spec.data_dir = cdir;
 
     ::dsn::utils::coredump::init();
@@ -429,13 +453,7 @@ bool run(const char *config_file,
     }
 
 #ifdef DSN_ENABLE_GPERF
-    double_t tcmalloc_release_rate =
-        (double_t)dsn_config_get_value_double("core",
-                                              "tcmalloc_release_rate",
-                                              1., // [0, 10]
-                                              "the memory releasing rate of tcmalloc, default is "
-                                              "1.0 in gperftools, value range is 0.0~10.0");
-    ::MallocExtension::instance()->SetMemoryReleaseRate(tcmalloc_release_rate);
+    ::MallocExtension::instance()->SetMemoryReleaseRate(FLAGS_tcmalloc_release_rate);
 #endif
 
     // init logging
@@ -444,16 +462,16 @@ bool run(const char *config_file,
     // prepare minimum necessary
     ::dsn::service_engine::instance().init_before_toollets(spec);
 
-    ddebug("process(%ld) start: %" PRIu64 ", date: %s",
-           getpid(),
-           dsn::utils::process_start_millis(),
-           dsn::utils::process_start_date_time_mills());
+    LOG_INFO("process({}) start: {}, date: {}",
+             getpid(),
+             dsn::utils::process_start_millis(),
+             dsn::utils::process_start_date_time_mills());
 
     // init toollets
     for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it) {
         auto tlet =
             dsn::tools::internal_use_only::get_toollet(it->c_str(), ::dsn::PROVIDER_TYPE_MAIN);
-        dassert(tlet, "toolet not found");
+        CHECK_NOTNULL(tlet, "toolet not found");
         tlet->install(spec);
     }
 
@@ -523,24 +541,25 @@ bool run(const char *config_file,
         exit(1);
     }
 
-    dsn::command_manager::instance().register_command({"config-dump"},
-                                                      "config-dump - dump configuration",
-                                                      "config-dump [to-this-config-file]",
-                                                      [](const std::vector<std::string> &args) {
-                                                          std::ostringstream oss;
-                                                          std::ofstream off;
-                                                          std::ostream *os = &oss;
-                                                          if (args.size() > 0) {
-                                                              off.open(args[0]);
-                                                              os = &off;
+    dump_log_cmd =
+        dsn::command_manager::instance().register_command({"config-dump"},
+                                                          "config-dump - dump configuration",
+                                                          "config-dump [to-this-config-file]",
+                                                          [](const std::vector<std::string> &args) {
+                                                              std::ostringstream oss;
+                                                              std::ofstream off;
+                                                              std::ostream *os = &oss;
+                                                              if (args.size() > 0) {
+                                                                  off.open(args[0]);
+                                                                  os = &off;
 
-                                                              oss << "config dump to file "
-                                                                  << args[0] << std::endl;
-                                                          }
+                                                                  oss << "config dump to file "
+                                                                      << args[0] << std::endl;
+                                                              }
 
-                                                          dsn_config_dump(*os);
-                                                          return oss.str();
-                                                      });
+                                                              dsn_config_dump(*os);
+                                                              return oss.str();
+                                                          });
 
     // invoke customized init after apps are created
     dsn::tools::sys_init_after_app_created.execute();

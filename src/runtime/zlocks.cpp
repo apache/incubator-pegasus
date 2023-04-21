@@ -33,10 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "utils/factory_store.h"
-#include "utils/zlocks.h"
-#include "utils/zlock_provider.h"
+#include <algorithm>
+#include <atomic>
+#include <string>
+
+#include "runtime/global_config.h"
 #include "runtime/service_engine.h"
+#include "utils/factory_store.h"
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
+#include "utils/zlock_provider.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 
@@ -47,20 +54,20 @@ __thread int zlock_shared_count;
 void check_wait_safety()
 {
     if (zlock_exclusive_count + zlock_shared_count > 0) {
-        dwarn("wait inside locks may lead to deadlocks - current thread owns %u exclusive locks "
-              "and %u shared locks now.",
-              zlock_exclusive_count,
-              zlock_shared_count);
+        LOG_WARNING("wait inside locks may lead to deadlocks - current thread owns {} exclusive "
+                    "locks and {} shared locks now.",
+                    zlock_exclusive_count,
+                    zlock_shared_count);
     }
 }
 
 void check_dangling_lock()
 {
     if (zlock_exclusive_count + zlock_shared_count > 0) {
-        dwarn("locks should not be hold at this point - current thread owns %u exclusive locks and "
-              "%u shared locks now.",
-              zlock_exclusive_count,
-              zlock_shared_count);
+        LOG_WARNING("locks should not be hold at this point - current thread owns {} exclusive "
+                    "locks and {} shared locks now.",
+                    zlock_exclusive_count,
+                    zlock_shared_count);
     }
 }
 } // namespace lock_checker

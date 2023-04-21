@@ -39,11 +39,18 @@
 
 #pragma once
 
-#include "runtime/task/task_spec.h"
-#include "utils/threadpool_spec.h"
-#include "utils/dlib.h"
-#include <string>
+#include <algorithm>
+#include <list>
 #include <map>
+#include <string>
+#include <vector>
+
+#include "runtime/task/task_spec.h"
+#include "utils/config_api.h"
+#include "utils/config_helper.h"
+#include "utils/customizable_id.h"
+#include "utils/threadpool_code.h"
+#include "utils/threadpool_spec.h"
 
 namespace dsn {
 
@@ -56,7 +63,7 @@ struct network_client_config
     std::string factory_name;
     int message_buffer_block_size;
 
-    DSN_API network_client_config();
+    network_client_config();
 };
 
 typedef std::map<rpc_channel, network_client_config> network_client_configs;
@@ -71,10 +78,10 @@ struct network_server_config
     std::string factory_name;
     int message_buffer_block_size;
 
-    DSN_API network_server_config();
-    DSN_API network_server_config(int p, rpc_channel c);
-    DSN_API network_server_config(const network_server_config &r);
-    DSN_API bool operator<(const network_server_config &r) const;
+    network_server_config();
+    network_server_config(int p, rpc_channel c);
+    network_server_config(const network_server_config &r);
+    bool operator<(const network_server_config &r) const;
 };
 
 // <port,channel> => config
@@ -114,11 +121,11 @@ struct service_app_spec
 
     service_app_spec() {}
     /*service_app_spec(const service_app_spec& r);*/
-    DSN_API bool init(const char *section,
-                      const char *role_name_,
-                      service_app_spec *default_value,
-                      network_client_configs *default_client_nets = nullptr,
-                      network_server_configs *default_server_nets = nullptr);
+    bool init(const char *section,
+              const char *role_name_,
+              service_app_spec *default_value,
+              network_client_configs *default_client_nets = nullptr,
+              network_server_configs *default_server_nets = nullptr);
 };
 
 CONFIG_BEGIN(service_app_spec)
@@ -172,8 +179,8 @@ struct service_spec
     std::string dir_log;
 
     service_spec() {}
-    DSN_API bool init();
-    DSN_API bool init_app_specs();
+    bool init();
+    bool init_app_specs();
 };
 
 CONFIG_BEGIN(service_spec)

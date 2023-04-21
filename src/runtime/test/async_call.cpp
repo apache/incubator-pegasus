@@ -33,28 +33,32 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "runtime/task/async_calls.h"
-#include "utils/thread_access_checker.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-
+#include <fmt/format.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <functional>
+#include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
 
+#include "runtime/api_task.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
 #include "test_utils.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/thread_access_checker.h"
 
 DEFINE_TASK_CODE(LPC_TEST_CLIENTLET, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 using namespace dsn;
@@ -166,12 +170,12 @@ class simple_task : public dsn::raw_task
 public:
     simple_task(dsn::task_code code, const task_handler &h) : dsn::raw_task(code, h, 0, nullptr)
     {
-        ddebug("simple task %p created", this);
+        LOG_INFO("simple task {} created", fmt::ptr(this));
         allocate_count++;
     }
     virtual ~simple_task() override
     {
-        ddebug("simple task %p is deallocated", this);
+        LOG_INFO("simple task {} is deallocated", fmt::ptr(this));
         allocate_count--;
     }
     static std::atomic_int allocate_count;
@@ -189,12 +193,12 @@ public:
     simple_rpc_response_task(dsn::message_ex *m, const rpc_response_handler &h)
         : dsn::rpc_response_task(m, h)
     {
-        ddebug("simple rpc response task(%p) created", this);
+        LOG_INFO("simple rpc response task({}) created", fmt::ptr(this));
         allocate_count++;
     }
     virtual ~simple_rpc_response_task() override
     {
-        ddebug("simple rpc repsonse task(%p) is dealloate", this);
+        LOG_INFO("simple rpc repsonse task({}) is dealloate", fmt::ptr(this));
         allocate_count--;
     }
     static std::atomic_int allocate_count;
@@ -247,7 +251,8 @@ TEST(async_call, task_destructor)
 
     {
         dsn::ref_ptr<simple_task_container> c(new simple_task_container());
-        c->t = new simple_task(LPC_TEST_CLIENTLET, [c]() { ddebug("cycle link reference test"); });
+        c->t =
+            new simple_task(LPC_TEST_CLIENTLET, [c]() { LOG_INFO("cycle link reference test"); });
 
         c->t->enqueue();
         c->t->wait();
@@ -256,7 +261,8 @@ TEST(async_call, task_destructor)
 
     {
         dsn::ref_ptr<simple_task_container> c(new simple_task_container());
-        c->t = new simple_task(LPC_TEST_CLIENTLET, [c]() { ddebug("cycle link reference test"); });
+        c->t =
+            new simple_task(LPC_TEST_CLIENTLET, [c]() { LOG_INFO("cycle link reference test"); });
 
         ASSERT_TRUE(c->t->cancel(false));
     }

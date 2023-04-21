@@ -15,34 +15,42 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <iostream>
+#include <string>
+
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
-#include <fmt/format.h>
 
 namespace dsn {
 namespace utils {
 
-DSN_DEFINE_int32("flag_test", test_int32, 5, "");
+DSN_DEFINE_int32(flag_test, test_int32, 5, "");
 DSN_TAG_VARIABLE(test_int32, FT_MUTABLE);
 
-DSN_DEFINE_uint32("flag_test", test_uint32, 5, "");
+DSN_DEFINE_uint32(flag_test, test_uint32, 5, "");
 DSN_TAG_VARIABLE(test_uint32, FT_MUTABLE);
 
-DSN_DEFINE_int64("flag_test", test_int64, 5, "");
+DSN_DEFINE_int64(flag_test, test_int64, 5, "");
 DSN_TAG_VARIABLE(test_int64, FT_MUTABLE);
 
-DSN_DEFINE_uint64("flag_test", test_uint64, 5, "");
+DSN_DEFINE_uint64(flag_test, test_uint64, 5, "");
 DSN_TAG_VARIABLE(test_uint64, FT_MUTABLE);
 
-DSN_DEFINE_double("flag_test", test_double, 5.0, "");
+DSN_DEFINE_double(flag_test, test_double, 5.0, "");
 DSN_TAG_VARIABLE(test_double, FT_MUTABLE);
 
-DSN_DEFINE_bool("flag_test", test_bool, true, "");
+DSN_DEFINE_bool(flag_test, test_bool, true, "");
 DSN_TAG_VARIABLE(test_bool, FT_MUTABLE);
 
-DSN_DEFINE_string("flag_test", test_string_immutable, "immutable_string", "");
+DSN_DEFINE_string(flag_test, test_string_immutable, "immutable_string", "");
 
-DSN_DEFINE_int32("flag_test", test_validator, 10, "");
+DSN_DEFINE_int32(flag_test, test_validator, 10, "");
 DSN_TAG_VARIABLE(test_validator, FT_MUTABLE);
 DSN_DEFINE_validator(test_validator, [](int32_t test_validator) -> bool {
     if (test_validator < 0) {
@@ -51,21 +59,21 @@ DSN_DEFINE_validator(test_validator, [](int32_t test_validator) -> bool {
     return true;
 });
 
-DSN_DEFINE_bool("flag_test", condition_a, false, "");
+DSN_DEFINE_bool(flag_test, condition_a, false, "");
 DSN_TAG_VARIABLE(condition_a, FT_MUTABLE);
 
-DSN_DEFINE_bool("flag_test", condition_b, false, "");
+DSN_DEFINE_bool(flag_test, condition_b, false, "");
 DSN_TAG_VARIABLE(condition_b, FT_MUTABLE);
 
 DSN_DEFINE_group_validator(inconsistent_conditions, [](std::string &message) -> bool {
     return !FLAGS_condition_a || !FLAGS_condition_b;
 });
 
-DSN_DEFINE_int32("flag_test", min_value, 1, "");
+DSN_DEFINE_int32(flag_test, min_value, 1, "");
 DSN_TAG_VARIABLE(min_value, FT_MUTABLE);
 DSN_DEFINE_validator(min_value, [](int32_t value) -> bool { return value > 0; });
 
-DSN_DEFINE_int32("flag_test", max_value, 5, "");
+DSN_DEFINE_int32(flag_test, max_value, 5, "");
 DSN_TAG_VARIABLE(max_value, FT_MUTABLE);
 DSN_DEFINE_validator(max_value, [](int32_t value) -> bool { return value <= 10; });
 
@@ -77,13 +85,13 @@ DSN_DEFINE_group_validator(min_max, [](std::string &message) -> bool {
     return true;
 });
 
-DSN_DEFINE_int32("flag_test", small_value, 0, "");
+DSN_DEFINE_int32(flag_test, small_value, 0, "");
 DSN_TAG_VARIABLE(small_value, FT_MUTABLE);
 
-DSN_DEFINE_int32("flag_test", medium_value, 5, "");
+DSN_DEFINE_int32(flag_test, medium_value, 5, "");
 DSN_TAG_VARIABLE(medium_value, FT_MUTABLE);
 
-DSN_DEFINE_int32("flag_test", large_value, 10, "");
+DSN_DEFINE_int32(flag_test, large_value, 10, "");
 DSN_TAG_VARIABLE(large_value, FT_MUTABLE);
 
 DSN_DEFINE_group_validator(small_medium_large, [](std::string &message) -> bool {
@@ -102,13 +110,13 @@ DSN_DEFINE_group_validator(small_medium_large, [](std::string &message) -> bool 
     return true;
 });
 
-DSN_DEFINE_int32("flag_test", lesser, 0, "");
+DSN_DEFINE_int32(flag_test, lesser, 0, "");
 DSN_TAG_VARIABLE(lesser, FT_MUTABLE);
 
-DSN_DEFINE_int32("flag_test", greater_0, 5, "");
+DSN_DEFINE_int32(flag_test, greater_0, 5, "");
 DSN_TAG_VARIABLE(greater_0, FT_MUTABLE);
 
-DSN_DEFINE_int32("flag_test", greater_1, 10, "");
+DSN_DEFINE_int32(flag_test, greater_1, 10, "");
 DSN_TAG_VARIABLE(greater_1, FT_MUTABLE);
 
 DSN_DEFINE_group_validator(lesser_greater_0, [](std::string &message) -> bool {
@@ -160,7 +168,7 @@ TEST(flag_test, update_config)
     // string modifications are not supported
     res = update_flag("test_string_immutable", "update_string");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
-    ASSERT_EQ(strcmp(FLAGS_test_string_immutable, "immutable_string"), 0);
+    ASSERT_STREQ("immutable_string", FLAGS_test_string_immutable);
 
     // test flag is not exist
     res = update_flag("test_not_exist", "test_string");
@@ -244,10 +252,10 @@ TEST(flag_test, update_config)
     std::cout << res.description() << std::endl;
 }
 
-DSN_DEFINE_int32("flag_test", has_tag, 5, "");
+DSN_DEFINE_int32(flag_test, has_tag, 5, "");
 DSN_TAG_VARIABLE(has_tag, FT_MUTABLE);
 
-DSN_DEFINE_int32("flag_test", no_tag, 5, "");
+DSN_DEFINE_int32(flag_test, no_tag, 5, "");
 
 TEST(flag_test, tag_flag)
 {
@@ -264,19 +272,19 @@ TEST(flag_test, tag_flag)
     ASSERT_FALSE(res);
 }
 
-DSN_DEFINE_int32("flag_test", get_flag_int32, 5, "test get_flag_int32");
+DSN_DEFINE_int32(flag_test, get_flag_int32, 5, "test get_flag_int32");
 DSN_TAG_VARIABLE(get_flag_int32, FT_MUTABLE);
-DSN_DEFINE_uint32("flag_test", get_flag_uint32, 5, "test get_flag_uint32");
+DSN_DEFINE_uint32(flag_test, get_flag_uint32, 5, "test get_flag_uint32");
 DSN_TAG_VARIABLE(get_flag_uint32, FT_MUTABLE);
-DSN_DEFINE_int64("flag_test", get_flag_int64, 5, "test get_flag_int64");
+DSN_DEFINE_int64(flag_test, get_flag_int64, 5, "test get_flag_int64");
 DSN_TAG_VARIABLE(get_flag_int64, FT_MUTABLE);
-DSN_DEFINE_uint64("flag_test", get_flag_uint64, 5, "test get_flag_uint64");
+DSN_DEFINE_uint64(flag_test, get_flag_uint64, 5, "test get_flag_uint64");
 DSN_TAG_VARIABLE(get_flag_uint64, FT_MUTABLE);
-DSN_DEFINE_double("flag_test", get_flag_double, 5.12, "test get_flag_double");
+DSN_DEFINE_double(flag_test, get_flag_double, 5.12, "test get_flag_double");
 DSN_TAG_VARIABLE(get_flag_double, FT_MUTABLE);
-DSN_DEFINE_bool("flag_test", get_flag_bool, true, "test get_flag_bool");
+DSN_DEFINE_bool(flag_test, get_flag_bool, true, "test get_flag_bool");
 DSN_TAG_VARIABLE(get_flag_bool, FT_MUTABLE);
-DSN_DEFINE_string("flag_test", get_flag_string, "flag_string", "test get_flag_string");
+DSN_DEFINE_string(flag_test, get_flag_string, "flag_string", "test get_flag_string");
 DSN_TAG_VARIABLE(get_flag_string, FT_MUTABLE);
 
 TEST(flag_test, get_config)

@@ -21,7 +21,6 @@
 
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
@@ -34,7 +33,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "common/replication_other_types.h"
 #include "common/replication.codes.h"
 #include <functional>

@@ -27,13 +27,24 @@
 #include "meta_state_service_simple.h"
 
 #include <fcntl.h>
-
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <set>
 #include <stack>
 #include <utility>
 
-#include "runtime/task/task.h"
+#include "aio/file_io.h"
+#include "runtime/service_app.h"
 #include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_reader.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/strings.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace dist {
@@ -78,7 +89,7 @@ void meta_state_service_simple::write_log(blob &&log_blob,
     uint64_t log_offset = _offset;
     _offset += log_blob.length();
     auto continuation_task = std::unique_ptr<operation>(new operation(false, [=](bool log_succeed) {
-        dassert(log_succeed, "we cannot handle logging failure now");
+        CHECK(log_succeed, "we cannot handle logging failure now");
         __err_cb_bind_and_enqueue(task, internal_operation(), 0);
     }));
     auto continuation_task_ptr = continuation_task.get();
@@ -92,8 +103,8 @@ void meta_state_service_simple::write_log(blob &&log_blob,
                 LPC_META_STATE_SERVICE_SIMPLE_INTERNAL,
                 &_tracker,
                 [=](error_code err, size_t bytes) {
-                    dassert(err == ERR_OK && bytes == log_blob.length(),
-                            "we cannot handle logging failure now");
+                    CHECK(err == ERR_OK && bytes == log_blob.length(),
+                          "we cannot handle logging failure now");
                     _log_lock.lock();
                     continuation_task_ptr->done = true;
                     while (!_task_queue.empty()) {
@@ -156,7 +167,7 @@ error_code meta_state_service_simple::delete_node_internal(const std::string &no
         auto &node_pair = delete_stack.top();
         if (node_pair.node->children.end() == node_pair.next_child_to_delete) {
             auto delnum = _quick_map.erase(node_pair.path);
-            dassert(delnum == 1, "inconsistent state between quick map and tree");
+            CHECK_EQ_MSG(delnum, 1, "inconsistent state between quick map and tree");
             delete node_pair.node;
             delete_stack.pop();
         } else {
@@ -175,11 +186,11 @@ error_code meta_state_service_simple::delete_node_internal(const std::string &no
     }
 
     auto parent_it = _quick_map.find(parent);
-    dassert(parent_it != _quick_map.end(), "unable to find parent node");
+    CHECK(parent_it != _quick_map.end(), "unable to find parent node");
     // XXX we cannot delete root, right?
 
     auto erase_num = parent_it->second->children.erase(name);
-    dassert(erase_num == 1, "inconsistent state between quick map and tree");
+    CHECK_EQ_MSG(erase_num, 1, "inconsistent state between quick map and tree");
     return ERR_OK;
 }
 
@@ -197,10 +208,10 @@ error_code meta_state_service_simple::set_data_internal(const std::string &node,
 error_code meta_state_service_simple::apply_transaction(
     const std::shared_ptr<meta_state_service::transaction_entries> &t_entries)
 {
-    dinfo("internal operation after logged");
+    LOG_DEBUG("internal operation after logged");
     simple_transaction_entries *entries =
         dynamic_cast<simple_transaction_entries *>(t_entries.get());
-    dassert(entries != nullptr, "invalid input parameter");
+    CHECK_NOTNULL(entries, "invalid input parameter");
     error_code ec;
     for (int i = 0; i != entries->_offset; ++i) {
         operation_entry &e = entries->_ops[i];
@@ -215,9 +226,9 @@ error_code meta_state_service_simple::apply_transaction(
             ec = set_data_internal(e._node, e._value);
             break;
         default:
-            dassert(false, "unsupported operation");
+            CHECK(false, "unsupported operation");
         }
-        dassert(ec == ERR_OK, "unexpected error when applying, err=%s", ec.to_string());
+        CHECK_EQ_MSG(ec, ERR_OK, "unexpected error when applying");
     }
 
     return ERR_OK;
@@ -274,7 +285,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
                 default:
                     // The log is complete but its content is modified by cosmic ray. This is
                     // unacceptable
-                    dassert(false, "meta state server log corrupted");
+                    CHECK(false, "meta state server log corrupted");
                 }
             }
             fclose(fd);
@@ -283,7 +294,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
 
     _log = file::open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
     if (!_log) {
-        derror("open file failed: %s", log_path.c_str());
+        LOG_ERROR("open file failed: {}", log_path);
         return ERR_FILE_OPERATION_FAILED;
     }
     return ERR_OK;
@@ -348,7 +359,7 @@ task_ptr meta_state_service_simple::submit_transaction(
                 op._node.push_back('/');
                 std::set<std::string>::iterator iter = snapshot.lower_bound(op._node);
                 if (iter != snapshot.end() && (*iter).length() >= op._node.length() &&
-                    memcmp((*iter).c_str(), op._node.c_str(), op._node.length()) == 0) {
+                    utils::mequals((*iter).c_str(), op._node.c_str(), op._node.length())) {
                     // op._node is the prefix of some path, so we regard this directory as not empty
                     op._result = ERR_INVALID_PARAMETERS;
                 } else {
@@ -370,7 +381,7 @@ task_ptr meta_state_service_simple::submit_transaction(
             }
         } break;
         default:
-            dassert(false, "not supported operation");
+            CHECK(false, "not supported operation");
             break;
         }
 
@@ -391,7 +402,7 @@ task_ptr meta_state_service_simple::submit_transaction(
             memcpy(dest, entry.data(), entry.length());
             dest += entry.length();
         });
-        dassert(dest - batch.get() == total_size, "memcpy error");
+        CHECK_EQ_MSG(dest - batch.get(), total_size, "memcpy error");
         task_ptr task(new error_code_future(cb_code, cb_transaction, 0));
         task->set_tracker(tracker);
         write_log(blob(batch, total_size),
@@ -506,5 +517,6 @@ meta_state_service_simple::~meta_state_service_simple()
     }
     _quick_map.clear();
 }
-}
-}
+
+} // namespace dist
+} // namespace dsn

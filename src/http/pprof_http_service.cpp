@@ -17,25 +17,37 @@
 
 #ifdef DSN_ENABLE_GPERF
 
-#include <fcntl.h>
-
-#include <cstdlib>
-#include <chrono>
-#include <fstream>
-#include <sstream>
-
 #include "pprof_http_service.h"
 
-#include "utils/fmt_logging.h"
-#include "runtime/api_layer1.h"
-#include "utils/process_utils.h"
-#include "utils/string_conv.h"
-#include "utils/defer.h"
-#include "utils/timer.h"
-#include "utils/string_splitter.h"
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <gperftools/heap-profiler.h>
 #include <gperftools/malloc_extension.h>
 #include <gperftools/profiler.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <fstream>
+#include <limits>
+#include <map>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "http/http_server.h"
+#include "runtime/api_layer1.h"
+#include "utils/blob.h"
+#include "utils/defer.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/string_conv.h"
+#include "utils/string_splitter.h"
+#include "utils/strings.h"
+#include "utils/timer.h"
 
 namespace dsn {
 
@@ -72,10 +84,10 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
     std::string cmd = "nm -C -p ";
     cmd.append(lib_info.path);
     std::stringstream ss;
-    ddebug("executing `%s`", cmd.c_str());
+    LOG_INFO("executing `{}`", cmd);
     const int rc = utils::pipe_execute(cmd.c_str(), ss);
     if (rc < 0) {
-        derror("fail to popen `%s`", cmd.c_str());
+        LOG_ERROR("fail to popen `{}`", cmd);
         return -1;
     }
     std::string line;
@@ -109,9 +121,9 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
             continue;
         }
         const char *name_begin = sp.field();
-        if (strncmp(name_begin, "typeinfo ", 9) == 0 || strncmp(name_begin, "VTT ", 4) == 0 ||
-            strncmp(name_begin, "vtable ", 7) == 0 || strncmp(name_begin, "global ", 7) == 0 ||
-            strncmp(name_begin, "guard ", 6) == 0) {
+        if (utils::equals(name_begin, "typeinfo ", 9) || utils::equals(name_begin, "VTT ", 4) ||
+            utils::equals(name_begin, "vtable ", 7) || utils::equals(name_begin, "global ", 7) ||
+            utils::equals(name_begin, "guard ", 6)) {
             addr_map[addr] = std::string();
             continue;
         }
@@ -161,7 +173,7 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
         addr_map[lib_info.end_addr] = std::string();
     }
     tm.stop();
-    ddebug("Loaded %s in %zdms", lib_info.path.c_str(), tm.m_elapsed());
+    LOG_INFO("Loaded {} in {}ms", lib_info.path, tm.m_elapsed().count());
     return 0;
 }
 
@@ -258,11 +270,11 @@ static void load_symbols()
     }
     tm2.stop();
     if (num_removed) {
-        ddebug("Removed %zd entries in %zdms", num_removed, tm2.m_elapsed());
+        LOG_INFO("Removed {} entries in {}ms", num_removed, tm2.m_elapsed().count());
     }
 
     tm.stop();
-    ddebug("Loaded all symbols in %zdms", tm.m_elapsed());
+    LOG_INFO("Loaded all symbols in {}ms", tm.m_elapsed().count());
 }
 
 static void find_symbols(std::string *out, std::vector<uintptr_t> &addr_list)
@@ -328,7 +340,7 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        dwarn_f("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
@@ -371,19 +383,19 @@ ssize_t read_command_line(char *buf, size_t len, bool with_args)
 {
     auto fd = open("/proc/self/cmdline", O_RDONLY);
     if (fd < 0) {
-        derror("Fail to open /proc/self/cmdline");
+        LOG_ERROR("Fail to open /proc/self/cmdline");
         return -1;
     }
     auto cleanup = defer([fd]() { close(fd); });
     ssize_t nr = read(fd, buf, len);
     if (nr <= 0) {
-        derror("Fail to read /proc/self/cmdline");
+        LOG_ERROR("Fail to read /proc/self/cmdline");
         return -1;
     }
 
     if (with_args) {
         if ((size_t)nr == len) {
-            derror("buf is not big enough");
+            LOG_ERROR("buf is not big enough");
             return -1;
         }
         for (ssize_t i = 0; i < nr; ++i) {
@@ -400,7 +412,7 @@ ssize_t read_command_line(char *buf, size_t len, bool with_args)
             }
         }
         if ((size_t)nr == len) {
-            ddebug("buf is not big enough");
+            LOG_INFO("buf is not big enough");
             return -1;
         }
         return nr;
@@ -425,13 +437,13 @@ void pprof_http_service::growth_handler(const http_request &req, http_response &
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        dwarn_f("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
 
     MallocExtension *malloc_ext = MallocExtension::instance();
-    ddebug("received requests for growth profile");
+    LOG_INFO("received requests for growth profile");
     malloc_ext->GetHeapGrowthStacks(&resp.body);
 
     _in_pprof_action.store(false);
@@ -468,7 +480,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        dwarn_f("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }

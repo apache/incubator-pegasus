@@ -25,14 +25,15 @@
  */
 #pragma once
 
-#include <vector>
+#include <cctype>
 #include <map>
-#include <unordered_map>
 #include <set>
 #include <sstream>
 #include <string>
 #include <type_traits>
-#include <cctype>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
@@ -57,6 +58,7 @@
 #include "consensus_types.h"
 #include "replica_admin_types.h"
 #include "common/replication_enums.h"
+#include "runtime/ranger/access_type.h"
 
 #define JSON_ENCODE_ENTRY(out, prefix, T)                                                          \
     out.Key(#T);                                                                                   \
@@ -252,7 +254,11 @@ void json_encode(Writer &out, const std::string &str)
 {
     out.String(str.c_str(), str.length(), true);
 }
-inline void json_encode(JsonWriter &out, const char *str) { out.String(str, strlen(str), true); }
+template <typename Writer>
+inline void json_encode(Writer &out, const char *str)
+{
+    out.String(str, std::strlen(str), true);
+}
 inline bool json_decode(const JsonObject &in, std::string &str)
 {
     dverify(in.IsString());
@@ -289,7 +295,11 @@ inline bool json_decode(const JsonObject &in, bool &t)
 }
 
 // json serialization for double types
-inline void json_encode(JsonWriter &out, double d) { out.Double(d); }
+template <typename Writer>
+inline void json_encode(Writer &out, double d)
+{
+    out.Double(d);
+}
 inline bool json_decode(const JsonObject &in, double &t)
 {
     if (in.IsDouble()) {
@@ -307,7 +317,11 @@ inline bool json_decode(const JsonObject &in, double &t)
 
 // json serialization for int types
 #define INT_TYPE_SERIALIZATION(TName)                                                              \
-    inline void json_encode(JsonWriter &out, TName t) { out.Int64((int64_t)t); }                   \
+    template <typename Writer>                                                                     \
+    inline void json_encode(Writer &out, TName t)                                                  \
+    {                                                                                              \
+        out.Int64(static_cast<int64_t>(t));                                                        \
+    }                                                                                              \
     inline bool json_decode(const JsonObject &in, TName &t)                                        \
     {                                                                                              \
         dverify(in.IsInt64());                                                                     \
@@ -323,9 +337,30 @@ INT_TYPE_SERIALIZATION(int16_t)
 INT_TYPE_SERIALIZATION(int32_t)
 INT_TYPE_SERIALIZATION(int64_t)
 
+template <typename Writer>
+inline void json_encode(Writer &out, dsn::ranger::access_type t)
+{
+    out.Uint64(static_cast<uint64_t>(t));
+}
+
+inline bool json_decode(const JsonObject &in, dsn::ranger::access_type &t)
+{
+    dverify(in.IsUint64());
+    auto ans = in.GetUint64();
+    auto act_none = static_cast<uint64_t>(dsn::ranger::kAccessTypeNone);
+    auto act_all = static_cast<uint64_t>(dsn::ranger::kAccessTypeAll);
+    dverify(ans >= act_none && ans <= act_all);
+    t = static_cast<dsn::ranger::access_type>(ans);
+    return true;
+}
+
 // json serialization for uint types
 #define UINT_TYPE_SERIALIZATION(TName)                                                             \
-    inline void json_encode(JsonWriter &out, TName t) { out.Uint64((uint64_t)t); }                 \
+    template <typename Writer>                                                                     \
+    inline void json_encode(Writer &out, TName t)                                                  \
+    {                                                                                              \
+        out.Uint64(static_cast<uint64_t>(t));                                                      \
+    }                                                                                              \
     inline bool json_decode(const JsonObject &in, TName &t)                                        \
     {                                                                                              \
         dverify(in.IsUint64());                                                                    \
@@ -436,6 +471,19 @@ inline bool json_decode_map(const JsonObject &in, TMap &t)
     return true;
 }
 
+template <typename TSet>
+inline bool json_decode_set(const JsonObject &in, TSet &t)
+{
+    dverify(in.IsArray());
+    t.clear();
+    for (rapidjson::Value::ConstValueIterator it = in.Begin(); it != in.End(); ++it) {
+        typename TSet::value_type value;
+        dverify(json_forwarder<decltype(value)>::decode(*it, value));
+        dverify(t.emplace(std::move(value)).second);
+    }
+    return true;
+}
+
 template <typename T>
 inline void json_encode(JsonWriter &out, const std::vector<T> &t)
 {
@@ -466,15 +514,19 @@ inline void json_encode(JsonWriter &out, const std::set<T> &t)
 template <typename T>
 inline bool json_decode(const JsonObject &in, std::set<T> &t)
 {
-    dverify(in.IsArray());
-    t.clear();
+    return json_decode_set(in, t);
+}
 
-    for (rapidjson::Value::ConstValueIterator it = in.Begin(); it != in.End(); ++it) {
-        T value;
-        dverify(json_forwarder<T>::decode(*it, value));
-        dverify(t.emplace(std::move(value)).second);
-    }
-    return true;
+template <typename T>
+inline void json_encode(JsonWriter &out, const std::unordered_set<T> &t)
+{
+    json_encode_iterable(out, t);
+}
+
+template <typename T>
+inline bool json_decode(const JsonObject &in, std::unordered_set<T> &t)
+{
+    return json_decode_set(in, t);
 }
 
 template <typename T1, typename T2>
@@ -506,7 +558,7 @@ inline void json_encode(JsonWriter &out, const dsn::ref_ptr<T> &t)
 {
     // when a smart ptr is encoded, caller should ensure the ptr is not nullptr
     // TODO: encoded to null?
-    dassert_f(t.get(), "");
+    CHECK(t.get(), "");
     json_encode(out, *t);
 }
 
@@ -522,7 +574,7 @@ inline void json_encode(JsonWriter &out, const std::shared_ptr<T> &t)
 {
     // when a smart ptr is encoded, caller should ensure the ptr is not nullptr
     // TODO: encoded to null?
-    dassert(t.get(), "");
+    CHECK(t, "");
     json_encode(out, *t);
 }
 

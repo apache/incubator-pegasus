@@ -36,38 +36,20 @@
 #include "utils/utils.h"
 
 #include <arpa/inet.h>
-#include <ifaddrs.h>
+#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <string.h>
 #include <sys/socket.h>
-
-#include <array>
 #include <fstream>
-#include <iostream>
 #include <memory>
-#include <random>
+#include <vector>
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "utils/singleton.h"
-#include <sys/stat.h>
-#include <sys/types.h>
+#include "runtime/rpc/rpc_address.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 #if defined(__linux__)
-#include <sys/syscall.h>
-#include <unistd.h>
 #elif defined(__FreeBSD__)
 #include <sys/thr.h>
 #elif defined(__APPLE__)
@@ -97,9 +79,9 @@ bool hostname_from_ip(uint32_t ip, std::string *hostname_result)
         char ip_str[256];
         inet_ntop(AF_INET, &net_addr, ip_str, sizeof(ip_str));
         if (err == EAI_SYSTEM) {
-            dwarn("got error %s when try to resolve %s", strerror(errno), ip_str);
+            LOG_WARNING("got error {} when try to resolve {}", strerror(errno), ip_str);
         } else {
-            dwarn("return error(%s) when try to resolve %s", gai_strerror(err), ip_str);
+            LOG_WARNING("return error({}) when try to resolve {}", gai_strerror(err), ip_str);
         }
         return false;
     } else {
@@ -127,7 +109,7 @@ bool hostname_from_ip_port(const char *ip_port, std::string *hostname_result)
 {
     dsn::rpc_address addr;
     if (!addr.from_string_ipv4(ip_port)) {
-        dwarn("invalid ip_port(%s)", ip_port);
+        LOG_WARNING("invalid ip_port({})", ip_port);
         *hostname_result = ip_port;
         return false;
     }
@@ -156,7 +138,7 @@ bool list_hostname_from_ip(const char *ip_list, std::string *hostname_result_lis
     dsn::utils::split_args(ip_list, splitted_ip, ',');
 
     if (splitted_ip.empty()) {
-        dwarn("invalid ip_list(%s)", ip_list);
+        LOG_WARNING("invalid ip_list({})", ip_list);
         *hostname_result_list = *ip_list;
         return false;
     }
@@ -183,7 +165,7 @@ bool list_hostname_from_ip_port(const char *ip_port_list, std::string *hostname_
     dsn::utils::split_args(ip_port_list, splitted_ip_port, ',');
 
     if (splitted_ip_port.empty()) {
-        dwarn("invalid ip_list(%s)", ip_port_list);
+        LOG_WARNING("invalid ip_list({})", ip_port_list);
         *hostname_result_list = *ip_port_list;
         return false;
     }

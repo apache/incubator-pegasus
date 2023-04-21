@@ -26,15 +26,18 @@
 
 #pragma once
 
-#include "task.h"
+#include <stdint.h>
+#include <atomic>
+#include <string>
 
+#include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "utils/dlib.h"
 
 namespace dsn {
 
-class task_worker;
+class task;
 class task_worker_pool;
+struct threadpool_spec;
 
 /*!
 @addtogroup tool-api-providers
@@ -55,8 +58,8 @@ public:
     typedef task_queue *(*factory)(task_worker_pool *, int, task_queue *);
 
 public:
-    DSN_API task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
-    DSN_API virtual ~task_queue();
+    task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
+    virtual ~task_queue();
 
     virtual void enqueue(task *task) = 0;
     // dequeue may return more than 1 tasks, but there is a configured

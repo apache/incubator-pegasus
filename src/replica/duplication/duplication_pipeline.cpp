@@ -17,13 +17,24 @@
 
 #include "duplication_pipeline.h"
 
-#include "replica/replication_app_base.h"
+#include <stddef.h>
+#include <functional>
+#include <utility>
+
+#include "dsn.layer2_types.h"
+#include "load_from_private_log.h"
+#include "perf_counter/perf_counter.h"
+#include "replica/duplication/replica_duplicator.h"
+#include "replica/mutation_log.h"
+#include "replica/replica.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "utils/autoref_ptr.h"
+#include "utils/errors.h"
 #include "utils/fmt_logging.h"
 
-#include "replica/replica_stub.h"
-#include "load_from_private_log.h"
-
 namespace dsn {
+class string_view;
+
 namespace replication {
 
 //                     //
@@ -89,13 +100,13 @@ void ship_mutation::run(decree &&last_decree, mutation_tuple_set &&in)
 
 void ship_mutation::update_progress()
 {
-    dcheck_eq_replica(
+    CHECK_EQ_PREFIX(
         _duplicator->update_progress(duplication_progress().set_last_decree(_last_decree)),
         error_s::ok());
 
     // committed decree never decreases
     decree last_committed_decree = _replica->last_committed_decree();
-    dcheck_ge_replica(last_committed_decree, _last_decree);
+    CHECK_GE_PREFIX(last_committed_decree, _last_decree);
 }
 
 ship_mutation::ship_mutation(replica_duplicator *duplicator)

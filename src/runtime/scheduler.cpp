@@ -33,17 +33,23 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "utils/rand.h"
-#include "runtime/simulator.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+#include <stddef.h>
+#include <algorithm>
+#include <chrono>
+#include <thread>
+#include <type_traits>
+#include <utility>
+
 #include "runtime/node_scoper.h"
+#include "runtime/service_app.h"
+#include "runtime/simulator.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/task_spec.h"
 #include "scheduler.h"
-#include "env.sim.h"
-#include <set>
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/rand.h"
 
 namespace dsn {
 namespace tools {
@@ -285,7 +291,7 @@ void scheduler::schedule()
 
                     t->release_ref(); // added by previous t->enqueue from app
                 } else {
-                    dassert(e.system_task != nullptr, "app and system tasks cannot be both empty");
+                    CHECK(e.system_task, "app and system tasks cannot be both empty");
                     e.system_task();
                 }
             }

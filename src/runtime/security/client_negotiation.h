@@ -17,9 +17,16 @@
 
 #pragma once
 
+#include <string>
+
 #include "negotiation.h"
+#include "runtime/rpc/rpc_message.h"
+#include "security_types.h"
+#include "utils/blob.h"
 
 namespace dsn {
+class error_code;
+
 namespace security {
 
 // client_negotiation negotiates a session on client side.

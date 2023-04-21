@@ -33,12 +33,23 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <thread>
+
 #include "checker.h"
-#include "injector.h"
-#include "case.h"
 #include "client.h"
-#include "simple_kv.server.impl.h"
 #include "http/http_server.h"
+#include "injector.h"
+#include "meta/meta_service_app.h"
+#include "replica/replication_service_app.h"
+#include "replica/storage/simple_kv/test/common.h"
+#include "runtime/app_model.h"
+#include "runtime/service_app.h"
+#include "runtime/tool_api.h"
+#include "simple_kv.server.impl.h"
+#include "utils/fmt_logging.h"
 
 void dsn_app_registration_simple_kv()
 {
@@ -72,7 +83,7 @@ int main(int argc, char **argv)
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    ddebug("=== exiting ...");
+    LOG_INFO("=== exiting ...");
 
     dsn::replication::test::test_checker::instance().exit();
 

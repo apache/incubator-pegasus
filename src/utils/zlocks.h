@@ -27,7 +27,10 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
+
 #include "utils/utils.h"
+#include "utils/ports.h"
 
 ///
 /// synchronization objects of rDSN.

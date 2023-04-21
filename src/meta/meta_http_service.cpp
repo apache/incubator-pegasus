@@ -15,31 +15,50 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+#include <rapidjson/ostreamwrapper.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <set>
+#include <sstream>
 #include <string>
+#include <unordered_map>
+#include <utility>
 
-#include "runtime/api_layer1.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
-#include "common/replica_envs.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
 #include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
+#include "bulk_load_types.h"
 #include "common//duplication_common.h"
-#include "utils/config_api.h"
+#include "common/bulk_load_common.h"
+#include "common/gpid.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "duplication_types.h"
+#include "meta/duplication/meta_duplication_service.h"
+#include "meta/meta_backup_service.h"
+#include "meta/meta_bulk_load_service.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_service.h"
+#include "meta_admin_types.h"
+#include "meta_http_service.h"
+#include "meta_server_failure_detector.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "server_load_balancer.h"
+#include "server_state.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
 #include "utils/time_utils.h"
 
-#include "meta_http_service.h"
-#include "meta_server_failure_detector.h"
-#include "server_load_balancer.h"
-#include "server_state.h"
-#include "meta/duplication/meta_duplication_service.h"
-#include "meta/meta_bulk_load_service.h"
-
 namespace dsn {
+namespace dist {
+DSN_DECLARE_string(hosts_list);
+} // namespace dist
 namespace replication {
 
 struct list_nodes_helper
@@ -71,8 +90,8 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
     if (!redirect_if_not_primary(req, resp))
         return;
 
-    configuration_query_by_index_request request;
-    configuration_query_by_index_response response;
+    query_cfg_request request;
+    query_cfg_response response;
 
     request.app_name = app_name;
     _service->_state->query_configuration_by_index(request, response);
@@ -288,18 +307,12 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
             }
-            configuration_query_by_index_request request;
-            configuration_query_by_index_response response;
+            query_cfg_request request;
+            query_cfg_response response;
             request.app_name = info.app_name;
             _service->_state->query_configuration_by_index(request, response);
-            dassert(info.app_id == response.app_id,
-                    "invalid app_id, %d VS %d",
-                    info.app_id,
-                    response.app_id);
-            dassert(info.partition_count == response.partition_count,
-                    "invalid partition_count, %d VS %d",
-                    info.partition_count,
-                    response.partition_count);
+            CHECK_EQ(info.app_id, response.app_id);
+            CHECK_EQ(info.partition_count, response.partition_count);
             int fully_healthy = 0;
             int write_unhealthy = 0;
             int read_unhealthy = 0;
@@ -387,18 +400,12 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
         request.status = dsn::app_status::AS_AVAILABLE;
         _service->_state->list_apps(request, response);
         for (const auto &app : response.infos) {
-            configuration_query_by_index_request request_app;
-            configuration_query_by_index_response response_app;
+            query_cfg_request request_app;
+            query_cfg_response response_app;
             request_app.app_name = app.app_name;
             _service->_state->query_configuration_by_index(request_app, response_app);
-            dassert(app.app_id == response_app.app_id,
-                    "invalid app_id, %d VS %d",
-                    app.app_id,
-                    response_app.app_id);
-            dassert(app.partition_count == response_app.partition_count,
-                    "invalid partition_count, %d VS %d",
-                    app.partition_count,
-                    response_app.partition_count);
+            CHECK_EQ(app.app_id, response_app.app_id);
+            CHECK_EQ(app.partition_count, response_app.partition_count);
 
             for (int i = 0; i < response_app.partitions.size(); i++) {
                 const dsn::partition_configuration &p = response_app.partitions[i];
@@ -468,10 +475,7 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
     }
     tp.add_row_name_and_data("meta_servers", meta_servers_str);
     tp.add_row_name_and_data("primary_meta_server", dsn_primary_address().to_std_string());
-    std::string zk_hosts =
-        dsn_config_get_value_string("zookeeper", "hosts_list", "", "zookeeper_hosts");
-    zk_hosts.erase(std::remove_if(zk_hosts.begin(), zk_hosts.end(), ::isspace), zk_hosts.end());
-    tp.add_row_name_and_data("zookeeper_hosts", zk_hosts);
+    tp.add_row_name_and_data("zookeeper_hosts", dsn::dist::FLAGS_hosts_list);
     tp.add_row_name_and_data("zookeeper_root", _service->_cluster_root);
     tp.add_row_name_and_data(
         "meta_function_level",
@@ -558,7 +562,7 @@ void meta_http_service::query_backup_policy_handler(const http_request &req, htt
         resp.status_code = http_status_code::not_found;
         return;
     }
-    auto request = dsn::make_unique<configuration_query_backup_policy_request>();
+    auto request = std::make_unique<configuration_query_backup_policy_request>();
     std::vector<std::string> policy_names;
     for (const auto &p : req.query_args) {
         if (p.first == "name") {
@@ -603,7 +607,7 @@ void meta_http_service::query_duplication_handler(const http_request &req, http_
         return;
     }
     if (_service->_dup_svc == nullptr) {
-        resp.body = "duplication is not enabled [duplication_enabled=false]";
+        resp.body = "duplication is not enabled [FLAGS_duplication_enabled=false]";
         resp.status_code = http_status_code::not_found;
         return;
     }
@@ -670,7 +674,7 @@ void meta_http_service::start_bulk_load_handler(const http_request &req, http_re
         return;
     }
 
-    auto rpc_req = dsn::make_unique<start_bulk_load_request>(request);
+    auto rpc_req = std::make_unique<start_bulk_load_request>(request);
     start_bulk_load_rpc rpc(std::move(rpc_req), LPC_META_CALLBACK);
     _service->_bulk_load_svc->on_start_bulk_load(rpc);
 
@@ -704,7 +708,7 @@ void meta_http_service::query_bulk_load_handler(const http_request &req, http_re
         return;
     }
 
-    auto rpc_req = dsn::make_unique<query_bulk_load_request>();
+    auto rpc_req = std::make_unique<query_bulk_load_request>();
     rpc_req->app_name = it->second;
     query_bulk_load_rpc rpc(std::move(rpc_req), LPC_META_CALLBACK);
     _service->_bulk_load_svc->on_query_bulk_load_status(rpc);
@@ -855,7 +859,7 @@ void meta_http_service::update_app_env(const std::string &app_name,
     request.__set_keys(keys);
     request.__set_values(values);
 
-    auto rpc_req = dsn::make_unique<configuration_update_app_env_request>(request);
+    auto rpc_req = std::make_unique<configuration_update_app_env_request>(request);
     update_app_env_rpc rpc(std::move(rpc_req), LPC_META_STATE_NORMAL);
     _service->_state->set_app_envs(rpc);
 

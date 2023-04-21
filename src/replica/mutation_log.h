@@ -26,20 +26,40 @@
 
 #pragma once
 
-#include "common/replication_common.h"
-#include "mutation.h"
-#include "log_block.h"
-#include "log_file.h"
-
+#include <stddef.h>
+#include <stdint.h>
+#include <algorithm>
 #include <atomic>
-#include "utils/zlocks.h"
-#include "utils/errors.h"
-#include "perf_counter/perf_counter_wrapper.h"
+#include <functional>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
+#include "log_file.h"
+#include "mutation.h"
 #include "replica/replica_base.h"
+#include "runtime/api_task.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class binary_writer;
+class perf_counter_wrapper;
+
 namespace replication {
 
+class learn_state;
+class log_appender;
 //
 // manage a sequence of continuous mutation log files
 // each log file name is: log.{index}.{global_start_offset}
@@ -47,6 +67,7 @@ namespace replication {
 // this class is thread safe
 //
 class replica;
+
 class mutation_log : public ref_counter
 {
 public:

@@ -24,19 +24,26 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "failure_detector/failure_detector.h"
-#include "utils/command_manager.h"
+
 #include <chrono>
 #include <ctime>
+#include <mutex>
+#include <ostream>
+#include <type_traits>
+#include <utility>
+
+#include "failure_detector/fd.code.definition.h"
+#include "fd_types.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/api_layer1.h"
+#include "runtime/serverlet.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/command_manager.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
 
 namespace dsn {
 namespace fd {
@@ -56,11 +63,7 @@ failure_detector::failure_detector()
     _is_started = false;
 }
 
-failure_detector::~failure_detector()
-{
-    stop();
-    unregister_ctrl_commands();
-}
+failure_detector::~failure_detector() { stop(); }
 
 void failure_detector::register_ctrl_commands()
 {
@@ -73,8 +76,6 @@ void failure_detector::register_ctrl_commands()
             [this](const std::vector<std::string> &args) { return get_allow_list(args); });
     });
 }
-
-void failure_detector::unregister_ctrl_commands() { UNREGISTER_VALID_HANDLER(_get_allow_list); }
 
 error_code failure_detector::start(uint32_t check_interval_seconds,
                                    uint32_t beacon_interval_seconds,
@@ -129,7 +130,7 @@ void failure_detector::register_master(::dsn::rpc_address target)
 
     auto ret = _masters.insert(std::make_pair(target, record));
     if (ret.second) {
-        dinfo("register master[%s] successfully", target.to_string());
+        LOG_DEBUG("register master[{}] successfully", target);
         setup_timer = true;
     } else {
         // active the beacon again in case previously local node is not in target's allow list
@@ -137,7 +138,7 @@ void failure_detector::register_master(::dsn::rpc_address target)
             ret.first->second.rejected = false;
             setup_timer = true;
         }
-        dinfo("master[%s] already registered", target.to_string());
+        LOG_DEBUG("master[{}] already registered", target);
     }
 
     if (setup_timer) {
@@ -162,9 +163,8 @@ bool failure_detector::switch_master(::dsn::rpc_address from,
     auto it2 = _masters.find(to);
     if (it != _masters.end()) {
         if (it2 != _masters.end()) {
-            dwarn("switch master failed as both are already registered, from[%s], to[%s]",
-                  from.to_string(),
-                  to.to_string());
+            LOG_WARNING(
+                "switch master failed as both are already registered, from[{}], to[{}]", from, to);
             return false;
         }
 
@@ -182,11 +182,10 @@ bool failure_detector::switch_master(::dsn::rpc_address from,
         _masters.insert(std::make_pair(to, it->second));
         _masters.erase(from);
 
-        ddebug("switch master successfully, from[%s], to[%s]", from.to_string(), to.to_string());
+        LOG_INFO("switch master successfully, from[{}], to[{}]", from, to);
     } else {
-        dwarn("switch master failed as from node is not registered yet, from[%s], to[%s]",
-              from.to_string(),
-              to.to_string());
+        LOG_WARNING(
+            "switch master failed as from node is not registered yet, from[{}], to[{}]", from, to);
         return false;
     }
     return true;
@@ -196,10 +195,8 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base) { return
 
 void failure_detector::report(::dsn::rpc_address node, bool is_master, bool is_connected)
 {
-    ddebug("%s %sconnected: %s",
-           is_master ? "master" : "worker",
-           is_connected ? "" : "dis",
-           node.to_string());
+    LOG_INFO(
+        "{} {}connected: {}", is_master ? "master" : "worker", is_connected ? "" : "dis", node);
 }
 
 /*
@@ -241,13 +238,13 @@ void failure_detector::check_all_records()
                 is_time_greater_than(now, record.last_send_time_for_beacon_with_ack) &&
                 now + _check_interval_milliseconds - record.last_send_time_for_beacon_with_ack >
                     _lease_milliseconds) {
-                derror("master %s disconnected, now=%" PRId64 ", last_send_time=%" PRId64
-                       ", now+check_interval-last_send_time=%" PRId64,
-                       record.node.to_string(),
-                       now,
-                       record.last_send_time_for_beacon_with_ack,
-                       now + _check_interval_milliseconds -
-                           record.last_send_time_for_beacon_with_ack);
+                LOG_ERROR("master {} disconnected, now={}, last_send_time={}, "
+                          "now+check_interval-last_send_time={}",
+                          record.node,
+                          now,
+                          record.last_send_time_for_beacon_with_ack,
+                          now + _check_interval_milliseconds -
+                              record.last_send_time_for_beacon_with_ack);
 
                 expire.push_back(record.node);
                 record.is_alive = false;
@@ -284,12 +281,12 @@ void failure_detector::check_all_records()
             // overflow
             if (record.is_alive && is_time_greater_than(now, record.last_beacon_recv_time) &&
                 now - record.last_beacon_recv_time > _grace_milliseconds) {
-                derror("worker %s disconnected, now=%" PRId64 ", last_beacon_recv_time=%" PRId64
-                       ", now-last_recv=%" PRId64,
-                       record.node.to_string(),
-                       now,
-                       record.last_beacon_recv_time,
-                       now - record.last_beacon_recv_time);
+                LOG_ERROR(
+                    "worker {} disconnected, now={}, last_beacon_recv_time={}, now-last_recv={}",
+                    record.node,
+                    now,
+                    record.last_beacon_recv_time,
+                    now - record.last_beacon_recv_time);
 
                 expire.push_back(record.node);
                 record.is_alive = false;
@@ -320,14 +317,14 @@ bool failure_detector::remove_from_allow_list(::dsn::rpc_address node)
 
 void failure_detector::set_allow_list(const std::vector<std::string> &replica_addrs)
 {
-    dassert(!_is_started, "FD is already started, the allow list should really not be modified");
+    CHECK(!_is_started, "FD is already started, the allow list should really not be modified");
 
     std::vector<rpc_address> nodes;
     for (auto &addr : replica_addrs) {
         rpc_address node;
         if (!node.from_string_ipv4(addr.c_str())) {
-            dwarn("replica_white_list has invalid ip %s, the allow list won't be modified",
-                  addr.c_str());
+            LOG_WARNING("replica_white_list has invalid ip {}, the allow list won't be modified",
+                        addr);
             return;
         }
         nodes.push_back(node);
@@ -370,7 +367,7 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
     if (itr == _workers.end()) {
         // if is a new worker, check allow list first if need
         if (_use_allow_list && _allow_list.find(node) == _allow_list.end()) {
-            dwarn("new worker[%s] is rejected", node.to_string());
+            LOG_WARNING("new worker[{}] is rejected", node);
             ack.allowed = false;
             return;
         }
@@ -386,9 +383,9 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
         // update last_beacon_recv_time
         itr->second.last_beacon_recv_time = now;
 
-        ddebug("master %s update last_beacon_recv_time=%" PRId64,
-               itr->second.node.to_string(),
-               itr->second.last_beacon_recv_time);
+        LOG_INFO("master {} update last_beacon_recv_time={}",
+                 itr->second.node,
+                 itr->second.last_beacon_recv_time);
 
         if (itr->second.is_alive == false) {
             itr->second.is_alive = true;
@@ -397,9 +394,7 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
             on_worker_connected(node);
         }
     } else {
-        ddebug("now[%" PRId64 "] <= last_recv_time[%" PRId64 "]",
-               now,
-               itr->second.last_beacon_recv_time);
+        LOG_INFO("now[{}] <= last_recv_time[{}]", now, itr->second.last_beacon_recv_time);
     }
 }
 
@@ -424,29 +419,29 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     auto node = ack.this_node;
 
     if (err != ERR_OK) {
-        dwarn("ping master(%s) failed, timeout_ms = %u, err = %s",
-              node.to_string(),
-              _beacon_timeout_milliseconds,
-              err.to_string());
+        LOG_WARNING("ping master({}) failed, timeout_ms = {}, err = {}",
+                    node,
+                    _beacon_timeout_milliseconds,
+                    err);
         _recent_beacon_fail_count->increment();
     }
 
     master_map::iterator itr = _masters.find(node);
 
     if (itr == _masters.end()) {
-        dwarn("received beacon ack without corresponding master, ignore it, "
-              "remote_master[%s], local_worker[%s]",
-              node.to_string(),
-              dsn_primary_address().to_string());
+        LOG_WARNING("received beacon ack without corresponding master, ignore it, "
+                    "remote_master[{}], local_worker[{}]",
+                    node,
+                    dsn_primary_address());
         return false;
     }
 
     master_record &record = itr->second;
     if (!ack.allowed) {
-        dwarn("worker rejected, stop sending beacon message, "
-              "remote_master[%s], local_worker[%s]",
-              node.to_string(),
-              dsn_primary_address().to_string());
+        LOG_WARNING(
+            "worker rejected, stop sending beacon message, remote_master[{}], local_worker[{}]",
+            node,
+            dsn_primary_address());
         record.rejected = true;
         record.send_beacon_timer->cancel(true);
         return false;
@@ -454,9 +449,9 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
 
     if (!is_time_greater_than(beacon_send_time, record.last_send_time_for_beacon_with_ack)) {
         // out-dated beacon acks, do nothing
-        ddebug("ignore out dated beacon acks, send_time(%lld), last_beacon(%lld)",
-               beacon_send_time,
-               record.last_send_time_for_beacon_with_ack);
+        LOG_INFO("ignore out dated beacon acks, send_time({}), last_beacon({})",
+                 beacon_send_time,
+                 record.last_send_time_for_beacon_with_ack);
         return false;
     }
 
@@ -467,9 +462,8 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
 
     // if ack is not from master meta, worker should not update its last send time
     if (!ack.is_master) {
-        dwarn("node[%s] is not master, ack.primary_node[%s] is real master",
-              node.to_string(),
-              ack.primary_node.to_string());
+        LOG_WARNING(
+            "node[{}] is not master, ack.primary_node[{}] is real master", node, ack.primary_node);
         return true;
     }
 
@@ -477,9 +471,9 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     record.last_send_time_for_beacon_with_ack = beacon_send_time;
     record.rejected = false;
 
-    ddebug("worker %s send beacon succeed, update last_send_time=%" PRId64,
-           record.node.to_string(),
-           record.last_send_time_for_beacon_with_ack);
+    LOG_INFO("worker {} send beacon succeed, update last_send_time={}",
+             record.node,
+             record.last_send_time_for_beacon_with_ack);
 
     uint64_t now = dsn_now_ms();
     // we should ensure now is greater than record.last_beacon_recv_time to aviod integer overflow
@@ -502,10 +496,10 @@ bool failure_detector::unregister_master(::dsn::rpc_address node)
     if (it != _masters.end()) {
         it->second.send_beacon_timer->cancel(true);
         _masters.erase(it);
-        ddebug("unregister master[%s] successfully", node.to_string());
+        LOG_INFO("unregister master[{}] successfully", node);
         return true;
     } else {
-        ddebug("unregister master[%s] failed, cannot find it in FD", node.to_string());
+        LOG_INFO("unregister master[{}] failed, cannot find it in FD", node);
         return false;
     }
 }
@@ -530,9 +524,9 @@ void failure_detector::register_worker(::dsn::rpc_address target, bool is_connec
 
     auto ret = _workers.insert(std::make_pair(target, record));
     if (ret.second) {
-        dinfo("register worker[%s] successfully", target.to_string());
+        LOG_DEBUG("register worker[{}] successfully", target);
     } else {
-        dinfo("worker[%s] already registered", target.to_string());
+        LOG_DEBUG("worker[{}] already registered", target);
     }
 }
 
@@ -551,9 +545,7 @@ bool failure_detector::unregister_worker(::dsn::rpc_address node)
         ret = true;
     }
 
-    dinfo("unregister worker[%s] successfully, removed entry count is %u",
-          node.to_string(),
-          (uint32_t)count);
+    LOG_DEBUG("unregister worker[{}] successfully, removed entry count is {}", node, count);
 
     return ret;
 }
@@ -582,10 +574,8 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
     beacon.to_addr = target;
     beacon.__set_start_time(static_cast<int64_t>(dsn::utils::process_start_millis()));
 
-    ddebug("send ping message, from[%s], to[%s], time[%" PRId64 "]",
-           beacon.from_addr.to_string(),
-           beacon.to_addr.to_string(),
-           time);
+    LOG_INFO(
+        "send ping message, from[{}], to[{}], time[{}]", beacon.from_addr, beacon.to_addr, time);
 
     ::dsn::rpc::call(target,
                      RPC_FD_FAILURE_DETECTOR_PING,

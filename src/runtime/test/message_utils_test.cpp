@@ -25,16 +25,25 @@
  */
 
 #include "runtime/message_utils.h"
-#include "common/replication.codes.h"
-#include "runtime/rpc/rpc_holder.h"
+
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <string>
+#include <utility>
+
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "utils/autoref_ptr.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 
 DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-typedef rpc_holder<configuration_query_by_index_request, configuration_query_by_index_response>
-    t_rpc;
+typedef rpc_holder<query_cfg_request, query_cfg_response> t_rpc;
 
 TEST(message_utils, msg_blob_convertion)
 {
@@ -49,7 +58,7 @@ TEST(message_utils, msg_blob_convertion)
 
 TEST(message_utils, thrift_msg_convertion)
 {
-    configuration_query_by_index_request request;
+    query_cfg_request request;
     request.app_name = "haha";
 
     message_ptr msg =
@@ -61,7 +70,7 @@ TEST(message_utils, thrift_msg_convertion)
 
 TEST(message_utils, complex_convertion)
 {
-    configuration_query_by_index_request request;
+    query_cfg_request request;
     request.app_name = "haha";
 
     message_ptr msg =

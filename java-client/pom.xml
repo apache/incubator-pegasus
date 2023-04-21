@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 
     Licensed to the Apache Software Foundation (ASF) under one
@@ -18,13 +19,18 @@
     under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache</groupId>
+    <artifactId>apache</artifactId>
+    <version>28</version>
+    <relativePath/>
+  </parent>
   <groupId>org.apache.pegasus</groupId>
   <artifactId>pegasus-client</artifactId>
-  <packaging>jar</packaging>
   <version>2.4-SNAPSHOT</version>
+  <packaging>jar</packaging>
   <name>Pegasus Java Client</name>
 
   <licenses>
@@ -49,23 +55,36 @@
 
   <properties>
     <pegasus.shade.name>org.apache.pegasus.thirdparty</pegasus.shade.name>
-
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <compileSource>1.8</compileSource>
+    <releaseTarget>8</releaseTarget>
     <junit.engine.version>5.3.2</junit.engine.version>
     <junit.platform.runner.version>1.3.0</junit.platform.runner.version>
     <guava.version>28.1-jre</guava.version>
     <mockito.version>2.24.5</mockito.version>
     <dropwizard.version>3.1.2</dropwizard.version>
-    <apache.commons.configuration2.version>2.7</apache.commons.configuration2.version>
-    <slf4j.version>1.7.2</slf4j.version>
-    <apache.commons.lang3.version>3.1</apache.commons.lang3.version>
-    <zkclient.version>0.2</zkclient.version>
+    <slf4j.version>1.7.36</slf4j.version>
+    <apache.commons.lang3.version>3.12.0</apache.commons.lang3.version>
     <json.version>20160810</json.version>
-    <netty.version>4.1.42.Final</netty.version>
+    <netty.version>4.1.85.Final</netty.version>
     <zstd-jni.version>1.3.7-1</zstd-jni.version>
     <libthrift.version>0.11.0</libthrift.version>
     <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
+    <zookeeper.version>3.4.14</zookeeper.version>
+    <doclint>none</doclint>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -96,14 +115,15 @@
       <version>${dropwizard.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-configuration2</artifactId>
-      <version>${apache.commons.configuration2.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -111,29 +131,51 @@
       <version>${apache.commons.lang3.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.101tec</groupId>
-      <artifactId>zkclient</artifactId>
-      <version>${zkclient.version}</version>
+      <groupId>org.apache.zookeeper</groupId>
+      <artifactId>zookeeper</artifactId>
+      <version>${zookeeper.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.jms</groupId>
+          <artifactId>jms</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.jdmk</groupId>
+          <artifactId>jmxtools</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.jmx</groupId>
+          <artifactId>jmxri</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jline</groupId>
+          <artifactId>jline</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-buffer</artifactId>
-      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport</artifactId>
-      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec</artifactId>
-      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec-http</artifactId>
-      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>org.json</groupId>
@@ -149,6 +191,16 @@
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
       <version>${libthrift.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpcore</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpclient</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>javax.annotation</groupId>
@@ -156,41 +208,27 @@
       <version>${javax.annotation-api.version}</version>
     </dependency>
   </dependencies>
-
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>cobertura-maven-plugin</artifactId>
-        <version>2.7</version>
-      </plugin>
-    </plugins>
-  </reporting>
   <build>
-    <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
-    <testSourceDirectory>${project.basedir}/src/test/java</testSourceDirectory>
     <directory>${project.basedir}/target</directory>
-    <outputDirectory>${project.basedir}/target/classes</outputDirectory>
-    <testOutputDirectory>${project.basedir}/target/test-classes</testOutputDirectory>
     <plugins>
 
       <!--maven-shade-plugin-->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
+        <version>3.4.1</version>
         <executions>
           <execution>
-            <phase>package</phase>
             <goals>
               <goal>shade</goal>
             </goals>
+            <phase>package</phase>
             <configuration>
               <artifactSet>
                 <includes>
-                  <include>com.101tec</include>
                   <include>com.google.guava</include>
                   <include>org.apache.thrift</include>
+                  <include>io.netty</include>
                 </includes>
               </artifactSet>
               <relocations>
@@ -199,14 +237,15 @@
                   <shadedPattern>${pegasus.shade.name}.com.google</shadedPattern>
                 </relocation>
                 <relocation>
-                  <pattern>org.I0Itec</pattern>
-                  <shadedPattern>${pegasus.shade.name}.org.I0Itec</shadedPattern>
-                </relocation>
-                <relocation>
                   <pattern>org.apache.thrift</pattern>
                   <shadedPattern>${pegasus.shade.name}.org.apache.thrift</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>io.netty</pattern>
+                  <shadedPattern>${pegasus.shade.name}.io.netty</shadedPattern>
+                </relocation>
               </relocations>
+              <createSourcesJar>true</createSourcesJar>
             </configuration>
           </execution>
         </executions>
@@ -214,65 +253,21 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.5.1</version>
+        <version>3.10.1</version>
         <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
           <fork>true</fork>
           <verbose>true</verbose>
-          <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.19.1</version>
-        <configuration>
-          <skipTests>${skipTests}</skipTests>
-          <additionalClasspathElements>
-            <additionalClasspathElement>${project.basedir}/configuration</additionalClasspathElement>
-          </additionalClasspathElements>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.10</version>
-        <executions>
-          <execution>
-            <id>copy-dependencies</id>
-            <phase>package</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/library</outputDirectory>
-              <excludeArtifactIds>gossip</excludeArtifactIds>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.5.3</version>
-        <configuration>
-          <descriptor>src/assembly/dep.xml</descriptor>
-        </configuration>
-        <executions>
-          <execution>
-            <id>create-archive</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
+        <version>3.0.0-M7</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.2.0</version>
+        <version>3.3.0</version>
         <configuration>
           <archive>
             <manifest>
@@ -284,7 +279,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>3.0.1</version>
+        <version>3.2.1</version>
         <executions>
           <execution>
             <id>attach-sources</id>
@@ -298,7 +293,7 @@
       <!-- Checkstyle -->
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.1.0</version>
+        <version>3.2.0</version>
         <dependencies>
           <dependency>
             <groupId>com.puppycrawl.tools</groupId>
@@ -309,6 +304,9 @@
         <executions>
           <execution>
             <id>checkstyle</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
             <phase>validate</phase>
             <configuration>
               <configLocation>dev-support/google-checks.xml</configLocation>
@@ -318,45 +316,30 @@
               <failOnViolation>true</failOnViolation>
               <violationSeverity>warning</violationSeverity>
               <failsOnError>true</failsOnError>
-              <excludes>
-                org/apache/pegasus/apps/*,
+              <excludes>org/apache/pegasus/apps/*,
                 org/apache/pegasus/base/*,
-                org/apache/pegasus/replication/*,
-              </excludes>
+                org/apache/pegasus/replication/*,</excludes>
             </configuration>
-            <goals>
-              <goal>check</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
-      <!--
-      TODO(yingchun): we have to fix the issues reported by spotbugs
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>4.7.0.0</version>
-        <dependencies>
-          <dependency>
-            <groupId>com.github.spotbugs</groupId>
-            <artifactId>spotbugs</artifactId>
-            <version>4.7.1</version>
-          </dependency>
-        </dependencies>
+        <version>4.7.3.3</version>
         <configuration>
           <excludeFilterFile>dev-support/findbugs-exclude.xml</excludeFilterFile>
         </configuration>
         <executions>
           <execution>
             <id>findbugs</id>
-            <phase>validate</phase>
             <goals>
               <goal>check</goal>
             </goals>
+            <phase>validate</phase>
           </execution>
         </executions>
       </plugin>
-      -->
 
       <!--License Maven Plugin
       mycila/license-maven-plugin provides a stricter license check compared to apache-rat.
@@ -373,7 +356,7 @@
       <plugin>
         <groupId>com.mycila</groupId>
         <artifactId>license-maven-plugin</artifactId>
-        <version>3.0</version>
+        <version>4.1</version>
         <configuration>
           <header>dev-support/license-header.txt</header>
           <excludes>
@@ -398,13 +381,12 @@
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
-        <version>0.13</version>
       </plugin>
 
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>2.12.2</version>
+        <version>2.28.0</version>
         <configuration>
           <formats>
             <format>
@@ -430,6 +412,11 @@
               <style>GOOGLE</style>
             </googleJavaFormat>
           </java>
+          <pom>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+            </sortPom>
+          </pom>
         </configuration>
         <executions>
           <execution>
@@ -440,6 +427,90 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.3.0</version>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+            <phase>process-resources</phase>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+            <phase>clean</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
+    <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+    <testSourceDirectory>${project.basedir}/src/test/java</testSourceDirectory>
+    <outputDirectory>${project.basedir}/target/classes</outputDirectory>
+    <testOutputDirectory>${project.basedir}/target/test-classes</testOutputDirectory>
   </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>cobertura-maven-plugin</artifactId>
+        <version>2.7</version>
+      </plugin>
+    </plugins>
+  </reporting>
+  <profiles>
+    <profile>
+      <id>build-with-jdk8</id>
+      <activation>
+        <jdk>1.8</jdk>
+      </activation>
+      <properties>
+        <maven.compiler.source>${compileSource}</maven.compiler.source>
+        <maven.compiler.target>${compileSource}</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>build-with-jdk11</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <properties>
+        <maven.compiler.release>${releaseTarget}</maven.compiler.release>
+        <argLine>-D${pegasus.shade.name}.io.netty.tryReflectionSetAccessible=true
+          --add-modules jdk.unsupported
+          --add-opens java.base/java.nio=ALL-UNNAMED
+          --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+          --add-opens java.base/java.lang=ALL-UNNAMED
+          --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
+          --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+          --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
+          --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED</argLine>
+      </properties>
+    </profile>
+    <profile>
+      <id>apache-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.13</version>
+            <extensions>true</extensions>
+            <configuration>
+              <nexusUrl>https://repository.apache.org/</nexusUrl>
+              <serverId>apache.releases.https</serverId>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

@@ -24,15 +24,36 @@
  * THE SOFTWARE.
  */
 
-#include "replica/mutation_log.h"
-#include "replica_test_base.h"
-
-#include "utils/filesystem.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <algorithm>
 #include <chrono>
-#include <condition_variable>
+#include <iostream>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
+
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "replica/mutation.h"
+#include "replica/mutation_log.h"
+#include "replica/test/mock_utils.h"
+#include "replica_test_base.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
+#include "utils/filesystem.h"
+#include "utils/strings.h"
 
 namespace dsn {
+class message_ex;
+
 namespace replication {
 
 class mutation_log_test : public replica_test_base
@@ -149,9 +170,9 @@ TEST_F(mutation_log_test, learn)
                 EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
                 EXPECT_TRUE(wmu->data.updates[0].data.length() ==
                             mu->data.updates[0].data.length());
-                EXPECT_TRUE(memcmp((const void *)wmu->data.updates[0].data.data(),
-                                   (const void *)mu->data.updates[0].data.data(),
-                                   mu->data.updates[0].data.length()) == 0);
+                EXPECT_TRUE(utils::mequals(wmu->data.updates[0].data.data(),
+                                           mu->data.updates[0].data.data(),
+                                           mu->data.updates[0].data.length()));
                 EXPECT_TRUE(wmu->data.updates[0].code == mu->data.updates[0].code);
                 EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
 

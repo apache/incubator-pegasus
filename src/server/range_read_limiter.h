@@ -31,7 +31,6 @@ struct range_read_limiter_options
     uint32_t multi_get_max_iteration_count;
     uint64_t multi_get_max_iteration_size;
     uint32_t rocksdb_max_iteration_count;
-    uint64_t rocksdb_iteration_threshold_time_ms_in_config;
     uint64_t rocksdb_iteration_threshold_time_ms;
 };
 

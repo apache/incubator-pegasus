@@ -15,16 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "replica/replica_stub.h"
-#include "replica/replica.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+#include <utility>
 
+#include "common/duplication_common.h"
+#include "common/replication.codes.h"
 #include "duplication_sync_timer.h"
+#include "metadata_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/replica.h"
+#include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
-
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/command_manager.h"
-#include "utils/output_utils.h"
-#include "utils/string_conv.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {
@@ -35,20 +48,20 @@ void duplication_sync_timer::run()
 {
     // ensure duplication sync never be concurrent
     if (_rpc_task) {
-        ddebug_f("a duplication sync is already ongoing");
+        LOG_INFO("a duplication sync is already ongoing");
         return;
     }
 
     {
         zauto_lock l(_stub->_state_lock);
         if (_stub->_state == replica_stub::NS_Disconnected) {
-            ddebug_f("stop this round of duplication sync because this server is disconnected from "
+            LOG_INFO("stop this round of duplication sync because this server is disconnected from "
                      "meta server");
             return;
         }
     }
 
-    auto req = make_unique<duplication_sync_request>();
+    auto req = std::make_unique<duplication_sync_request>();
     req->node = _stub->primary_address();
 
     // collects confirm points from all primaries on this server
@@ -64,7 +77,7 @@ void duplication_sync_timer::run()
 
     duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC, 3_s);
     rpc_address meta_server_address(_stub->get_meta_server_address());
-    ddebug_f("duplication_sync to meta({})", meta_server_address.to_string());
+    LOG_INFO("duplication_sync to meta({})", meta_server_address.to_string());
 
     zauto_lock l(_lock);
     _rpc_task =
@@ -80,7 +93,7 @@ void duplication_sync_timer::on_duplication_sync_reply(error_code err,
         err = resp.err;
     }
     if (err != ERR_OK) {
-        derror_f("on_duplication_sync_reply: err({})", err.to_string());
+        LOG_ERROR("on_duplication_sync_reply: err({})", err.to_string());
     } else {
         update_duplication_map(resp.dup_map);
     }
@@ -138,7 +151,7 @@ std::vector<replica_ptr> duplication_sync_timer::get_all_replicas()
 
 void duplication_sync_timer::close()
 {
-    ddebug("stop duplication sync");
+    LOG_INFO("stop duplication sync");
 
     {
         zauto_lock l(_lock);
@@ -156,7 +169,7 @@ void duplication_sync_timer::close()
 
 void duplication_sync_timer::start()
 {
-    ddebug_f("run duplication sync periodically in {}s", DUPLICATION_SYNC_PERIOD_SECOND);
+    LOG_INFO("run duplication sync periodically in {}s", DUPLICATION_SYNC_PERIOD_SECOND);
 
     _timer_task = tasking::enqueue_timer(LPC_DUPLICATION_SYNC_TIMER,
                                          &_stub->_tracker,

@@ -16,25 +16,24 @@
 // under the License.
 
 #include "sasl_init.h"
-#include "kinit_context.h"
 
 #include <sasl/sasl.h>
 #include <sasl/saslplug.h>
-#include <functional>
+#include <string>
 
+#include "kinit_context.h"
 #include "utils/api_utilities.h"
-#include "utils/fmt_logging.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
 namespace security {
-DSN_DEFINE_string("security", sasl_plugin_path, "/usr/lib/sasl2", "path to search sasl plugins");
+DSN_DEFINE_string(security, sasl_plugin_path, "/usr/lib/sasl2", "path to search sasl plugins");
 
 dsn_log_level_t get_dsn_log_level(int level)
 {
-    // The log levels of LOG_LEVEL_DEBUG and LOG_LEVEL_INFORMATION are in reverse order.
-    // So here we should compatible with this case.
     switch (level) {
     case SASL_LOG_ERR:
         return LOG_LEVEL_ERROR;
@@ -42,9 +41,9 @@ dsn_log_level_t get_dsn_log_level(int level)
     case SASL_LOG_WARN:
         return LOG_LEVEL_WARNING;
     case SASL_LOG_NOTE:
-        return LOG_LEVEL_DEBUG;
+        return LOG_LEVEL_INFO;
     default:
-        return LOG_LEVEL_INFORMATION;
+        return LOG_LEVEL_DEBUG;
     }
 }
 
@@ -82,7 +81,7 @@ int sasl_get_username(void *context, int id, const char **result, unsigned *len)
         }
         return SASL_OK;
     default:
-        dassert_f(false, "unexpected SASL callback type: {}", id);
+        CHECK(false, "unexpected SASL callback type: {}", id);
         return SASL_BADPARAM;
     }
 }

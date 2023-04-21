@@ -19,26 +19,63 @@
 
 #pragma once
 
-#include <vector>
-#include <rocksdb/db.h>
-#include <rocksdb/table.h>
-#include <rocksdb/listener.h>
-#include <rocksdb/options.h>
-#include "perf_counter/perf_counter_wrapper.h"
-#include "common/replication.codes.h"
-#include "utils/flags.h"
-#include <rrdb/rrdb_types.h>
 #include <gtest/gtest_prod.h>
-#include <rocksdb/rate_limiter.h>
+#include <rocksdb/options.h>
+#include <rocksdb/slice.h>
+#include <rrdb/rrdb_types.h>
+#include <stdint.h>
+#include <atomic>
+#include <chrono>
+#include <deque>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include "key_ttl_compaction_filter.h"
-#include "pegasus_scan_context.h"
+#include "bulk_load_types.h"
+#include "common/gpid.h"
+#include "metadata_types.h"
 #include "pegasus_manual_compact_service.h"
-#include "pegasus_write_service.h"
-#include "range_read_limiter.h"
 #include "pegasus_read_service.h"
+#include "pegasus_scan_context.h"
+#include "pegasus_utils.h"
+#include "pegasus_value_schema.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "range_read_limiter.h"
+#include "replica/replication_app_base.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/rand.h"
+#include "utils/synchronize.h"
+
+namespace pegasus {
+namespace server {
+class KeyWithTTLCompactionFilterFactory;
+} // namespace server
+} // namespace pegasus
+namespace rocksdb {
+class Cache;
+class ColumnFamilyHandle;
+class DB;
+class RateLimiter;
+class Statistics;
+class WriteBufferManager;
+} // namespace rocksdb
 
 namespace dsn {
+class blob;
+class message_ex;
+namespace replication {
+class detect_hotkey_request;
+class detect_hotkey_response;
+class learn_state;
+class replica;
+} // namespace replication
+
 namespace utils {
 class token_bucket_throttling_controller;
 } // namespace utils
@@ -50,11 +87,14 @@ namespace server {
 
 DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_bytes_threshold);
 DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_count_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_get_size_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_multi_get_iterate_count_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_multi_get_size_threshold);
 
-class meta_store;
 class capacity_unit_calculator;
-class pegasus_server_write;
 class hotkey_collector;
+class meta_store;
+class pegasus_server_write;
 
 enum class range_iteration_state
 {
@@ -180,8 +220,6 @@ public:
                                                const dsn::replication::learn_state &state) override;
 
     int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
-
-    int64_t last_flushed_decree() const override;
 
     void update_app_envs(const std::map<std::string, std::string> &envs) override;
 
@@ -349,11 +387,12 @@ private:
 
     bool is_multi_get_abnormal(uint64_t time_used, uint64_t size, uint64_t iterate_count)
     {
-        if (_abnormal_multi_get_size_threshold && size >= _abnormal_multi_get_size_threshold) {
+        if (FLAGS_rocksdb_abnormal_multi_get_size_threshold > 0 &&
+            size >= FLAGS_rocksdb_abnormal_multi_get_size_threshold) {
             return true;
         }
-        if (_abnormal_multi_get_iterate_count_threshold &&
-            iterate_count >= _abnormal_multi_get_iterate_count_threshold) {
+        if (FLAGS_rocksdb_abnormal_multi_get_iterate_count_threshold > 0 &&
+            iterate_count >= FLAGS_rocksdb_abnormal_multi_get_iterate_count_threshold) {
             return true;
         }
         if (time_used >= _slow_query_threshold_ns) {
@@ -382,7 +421,8 @@ private:
 
     bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
     {
-        if (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) {
+        if (FLAGS_rocksdb_abnormal_get_size_threshold > 0 &&
+            value_size >= FLAGS_rocksdb_abnormal_get_size_threshold) {
             return true;
         }
         if (time_used >= _slow_query_threshold_ns) {
@@ -415,13 +455,8 @@ private:
 
     dsn::gpid _gpid;
     std::string _primary_address;
-    bool _verbose_log;
-    uint64_t _abnormal_get_size_threshold;
-    uint64_t _abnormal_multi_get_size_threshold;
-    uint64_t _abnormal_multi_get_iterate_count_threshold;
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
-    uint64_t _slow_query_threshold_ns_in_config;
 
     range_read_limiter_options _rng_rd_opts;
 
@@ -456,8 +491,6 @@ private:
     std::unique_ptr<capacity_unit_calculator> _cu_calculator;
     std::unique_ptr<pegasus_server_write> _server_write;
 
-    uint32_t _checkpoint_reserve_min_count_in_config;
-    uint32_t _checkpoint_reserve_time_seconds_in_config;
     uint32_t _checkpoint_reserve_min_count;
     uint32_t _checkpoint_reserve_time_seconds;
     std::atomic_bool _is_checkpointing;         // whether the db is doing checkpoint
@@ -466,7 +499,6 @@ private:
 
     pegasus_context_cache _context_cache;
 
-    std::chrono::seconds _update_rdb_stat_interval;
     ::dsn::task_ptr _update_replica_rdb_stat;
     static ::dsn::task_ptr _update_server_rdb_stat;
 

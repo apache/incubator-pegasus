@@ -33,20 +33,30 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <string>
+
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "dsn.layer2_types.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
 #include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
+#include "replica/replica_context.h"
 #include "replica_stub.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
 
 void replica::handle_local_failure(error_code error)
 {
-    ddebug("%s: handle local failure error %s, status = %s",
-           name(),
-           error.to_string(),
-           enum_to_string(status()));
+    LOG_INFO_PREFIX("handle local failure error {}, status = {}", error, enum_to_string(status()));
+
+    if (error == ERR_RDB_CORRUPTION) {
+        _data_corrupted = true;
+    }
 
     if (status() == partition_status::PS_PRIMARY) {
         _stub->remove_replica_on_meta_server(_app_info, _primary_states.membership);
@@ -60,25 +70,21 @@ void replica::handle_remote_failure(partition_status::type st,
                                     error_code error,
                                     const std::string &caused_by)
 {
-    derror("%s: handle remote failure caused by %s, error = %s, status = %s, node = %s",
-           name(),
-           caused_by.c_str(),
-           error.to_string(),
-           enum_to_string(st),
-           node.to_string());
+    LOG_ERROR_PREFIX("handle remote failure caused by {}, error = {}, status = {}, node = {}",
+                     caused_by,
+                     error,
+                     enum_to_string(st),
+                     node);
 
-    dassert(status() == partition_status::PS_PRIMARY,
-            "invalid partition_status, status = %s",
-            enum_to_string(status()));
-    dassert(
-        node != _stub->_primary_address, "%s VS %s", node.to_string(), _stub->_primary_address_str);
+    CHECK_EQ(status(), partition_status::PS_PRIMARY);
+    CHECK_NE(node, _stub->_primary_address);
 
     switch (st) {
     case partition_status::PS_SECONDARY:
-        dassert(_primary_states.check_exist(node, partition_status::PS_SECONDARY),
-                "invalid node address, address = %s, status = %s",
-                node.to_string(),
-                enum_to_string(st));
+        CHECK(_primary_states.check_exist(node, partition_status::PS_SECONDARY),
+              "invalid node address, address = {}, status = {}",
+              node,
+              enum_to_string(st));
         {
             configuration_update_request request;
             request.node = node;
@@ -88,7 +94,7 @@ void replica::handle_remote_failure(partition_status::type st,
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY: {
-        ddebug("%s: remove learner %s for remote failure", name(), node.to_string());
+        LOG_INFO_PREFIX("remove learner {} for remote failure", node);
         // potential secondary failure does not lead to ballot change
         // therefore, it is possible to have multiple exec here
         _primary_states.learners.erase(node);
@@ -98,14 +104,14 @@ void replica::handle_remote_failure(partition_status::type st,
     case partition_status::PS_ERROR:
         break;
     default:
-        dassert(false, "invalid partition_status, status = %s", enum_to_string(st));
+        CHECK(false, "invalid partition_status, status = {}", enum_to_string(st));
         break;
     }
 }
 
 void replica::on_meta_server_disconnected()
 {
-    ddebug("%s: meta server disconnected", name());
+    LOG_INFO_PREFIX("meta server disconnected");
 
     auto old_status = status();
     update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);

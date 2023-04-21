@@ -34,11 +34,28 @@
  */
 
 #include "client.h"
-#include "case.h"
-#include "runtime/rpc/group_address.h"
-#include "common/replication_other_types.h"
 
-#include <sstream>
+#include <stdint.h>
+#include <algorithm>
+#include <chrono>
+#include <functional>
+#include <utility>
+
+#include "case.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "replica/storage/simple_kv/simple_kv.client.h"
+#include "replica/storage/simple_kv/test/common.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "simple_kv_types.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {
@@ -120,11 +137,7 @@ void simple_kv_client_app::begin_write(int id,
                                        const std::string &value,
                                        int timeout_ms)
 {
-    ddebug("=== on_begin_write:id=%d,key=%s,value=%s,timeout=%d",
-           id,
-           key.c_str(),
-           value.c_str(),
-           timeout_ms);
+    LOG_INFO("=== on_begin_write:id={},key={},value={},timeout={}", id, key, value, timeout_ms);
     std::shared_ptr<write_context> ctx(new write_context());
     ctx->id = id;
     ctx->req.key = key;
@@ -168,7 +181,7 @@ struct read_context
 
 void simple_kv_client_app::begin_read(int id, const std::string &key, int timeout_ms)
 {
-    ddebug("=== on_begin_read:id=%d,key=%s,timeout=%d", id, key.c_str(), timeout_ms);
+    LOG_INFO("=== on_begin_read:id={},key={},timeout={}", id, key, timeout_ms);
     std::shared_ptr<read_context> ctx(new read_context());
     ctx->id = id;
     ctx->key = key;

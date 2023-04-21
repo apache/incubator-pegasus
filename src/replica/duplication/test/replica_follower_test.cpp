@@ -15,18 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
-#include "utils/fail_point.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "replica/duplication/replica_follower.h"
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
 #include "duplication_test_base.h"
-
-namespace dsn {
-namespace apps {
-
-} // namespace apps
-} // namespace dsn
+#include "metadata_types.h"
+#include "nfs/nfs_node.h"
+#include "replica/duplication/replica_follower.h"
+#include "replica/test/mock_utils.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {
@@ -77,8 +90,7 @@ public:
         follower->_tracker.set_tasks_success();
     }
 
-    error_code update_master_replica_config(replica_follower *follower,
-                                            configuration_query_by_index_response &resp)
+    error_code update_master_replica_config(replica_follower *follower, query_cfg_response &resp)
     {
         return follower->update_master_replica_config(ERR_OK, std::move(resp));
     }
@@ -178,7 +190,7 @@ TEST_F(replica_follower_test, test_update_master_replica_config)
     update_mock_replica(_app_info);
     auto follower = _mock_replica->get_replica_follower();
 
-    configuration_query_by_index_response resp;
+    query_cfg_response resp;
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
     ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
 

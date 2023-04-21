@@ -31,7 +31,8 @@
 
 #pragma once
 
-#include "common/api_common.h"
+#include <stdarg.h>
+
 #include "ports.h"
 
 /*!
@@ -47,8 +48,8 @@
 */
 
 typedef enum dsn_log_level_t {
-    LOG_LEVEL_INFORMATION,
     LOG_LEVEL_DEBUG,
+    LOG_LEVEL_INFO,
     LOG_LEVEL_WARNING,
     LOG_LEVEL_ERROR,
     LOG_LEVEL_FATAL,
@@ -57,27 +58,27 @@ typedef enum dsn_log_level_t {
 } dsn_log_level_t;
 
 // logs with level smaller than this start_level will not be logged
-extern DSN_API dsn_log_level_t dsn_log_start_level;
-extern DSN_API dsn_log_level_t dsn_log_get_start_level();
-extern DSN_API void dsn_log_set_start_level(dsn_log_level_t level);
-extern DSN_API void dsn_logv(const char *file,
-                             const char *function,
-                             const int line,
-                             dsn_log_level_t log_level,
-                             const char *fmt,
-                             va_list args);
-extern DSN_API void dsn_logf(const char *file,
-                             const char *function,
-                             const int line,
-                             dsn_log_level_t log_level,
-                             const char *fmt,
-                             ...);
-extern DSN_API void dsn_log(const char *file,
-                            const char *function,
-                            const int line,
-                            dsn_log_level_t log_level,
-                            const char *str);
-extern DSN_API void dsn_coredump();
+extern dsn_log_level_t dsn_log_start_level;
+extern dsn_log_level_t dsn_log_get_start_level();
+extern void dsn_log_set_start_level(dsn_log_level_t level);
+extern void dsn_logv(const char *file,
+                     const char *function,
+                     const int line,
+                     dsn_log_level_t log_level,
+                     const char *fmt,
+                     va_list args);
+extern void dsn_logf(const char *file,
+                     const char *function,
+                     const int line,
+                     dsn_log_level_t log_level,
+                     const char *fmt,
+                     ...);
+extern void dsn_log(const char *file,
+                    const char *function,
+                    const int line,
+                    dsn_log_level_t log_level,
+                    const char *str);
+extern void dsn_coredump();
 
 // __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.
 #define dlog(level, ...)                                                                           \
@@ -85,33 +86,14 @@ extern DSN_API void dsn_coredump();
         if (level >= dsn_log_start_level)                                                          \
             dsn_logf(__FILENAME__, __FUNCTION__, __LINE__, level, __VA_ARGS__);                    \
     } while (false)
-#define dinfo(...) dlog(LOG_LEVEL_INFORMATION, __VA_ARGS__)
-#define ddebug(...) dlog(LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define dwarn(...) dlog(LOG_LEVEL_WARNING, __VA_ARGS__)
-#define derror(...) dlog(LOG_LEVEL_ERROR, __VA_ARGS__)
-#define dfatal(...) dlog(LOG_LEVEL_FATAL, __VA_ARGS__)
-#define dassert(x, ...)                                                                            \
-    do {                                                                                           \
-        if (dsn_unlikely(!(x))) {                                                                  \
-            dlog(LOG_LEVEL_FATAL, "assertion expression: " #x);                                    \
-            dlog(LOG_LEVEL_FATAL, __VA_ARGS__);                                                    \
-            dsn_coredump();                                                                        \
-        }                                                                                          \
-    } while (false)
 
 #define dreturn_not_ok_logged(err, ...)                                                            \
     do {                                                                                           \
         if (dsn_unlikely((err) != dsn::ERR_OK)) {                                                  \
-            derror(__VA_ARGS__);                                                                   \
+            LOG_ERROR(__VA_ARGS__);                                                                \
             return err;                                                                            \
         }                                                                                          \
     } while (0)
-
-#ifndef NDEBUG
-#define dbg_dassert dassert
-#else
-#define dbg_dassert(x, ...)
-#endif
 
 #ifdef DSN_MOCK_TEST
 #define mock_private public

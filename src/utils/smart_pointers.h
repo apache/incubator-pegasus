@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <memory>
 
 namespace dsn {
@@ -43,7 +44,7 @@ struct MakeUniqueResult<T[N]>
 using std::make_unique;
 #else
 // -----------------------------------------------------------------------------
-// Function Template: make_unique<T>()
+// Function Template: std::make_unique<T>()
 // -----------------------------------------------------------------------------
 //
 // Creates a `std::unique_ptr<>`, while avoiding issues creating temporaries
@@ -63,8 +64,8 @@ using std::make_unique;
 //
 // Example usage:
 //
-//    auto p = make_unique<X>(args...);  // 'p'  is a std::unique_ptr<X>
-//    auto pa = make_unique<X[]>(5);     // 'pa' is a std::unique_ptr<X[]>
+//    auto p = std::make_unique<X>(args...);  // 'p'  is a std::unique_ptr<X>
+//    auto pa = std::make_unique<X[]>(5);     // 'pa' is a std::unique_ptr<X[]>
 //
 // Three overloads of `absl::make_unique` are required:
 //
@@ -106,7 +107,7 @@ using std::make_unique;
 
 // `absl::make_unique` overload for non-array types.
 template <typename T, typename... Args>
-typename memory_internal::MakeUniqueResult<T>::scalar make_unique(Args &&... args)
+typename memory_internal::MakeUniqueResult<T>::scalar std::make_unique(Args &&... args)
 {
     return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
@@ -116,7 +117,7 @@ typename memory_internal::MakeUniqueResult<T>::scalar make_unique(Args &&... arg
 // element constructor arguments. The `std::unique_ptr` will manage destructing
 // these array elements.
 template <typename T>
-typename memory_internal::MakeUniqueResult<T>::array make_unique(size_t n)
+typename memory_internal::MakeUniqueResult<T>::array std::make_unique(size_t n)
 {
     return std::unique_ptr<T>(new typename std::remove_extent<T>::type[n]);
 }
@@ -124,7 +125,8 @@ typename memory_internal::MakeUniqueResult<T>::array make_unique(size_t n)
 // `absl::make_unique` overload for an array T[N] of known bounds.
 // This construction will be rejected.
 template <typename T, typename... Args>
-typename memory_internal::MakeUniqueResult<T>::invalid make_unique(Args &&... /* args */) = delete;
+typename memory_internal::MakeUniqueResult<T>::invalid
+std::make_unique(Args &&... /* args */) = delete;
 #endif
 
 } // namespace dsn

@@ -24,42 +24,56 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
 #include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "utils/zlocks.h"
-
-#include "meta/meta_service.h"
-#include "meta/server_state.h"
-#include "meta/greedy_load_balancer.h"
-#include "meta/meta_server_failure_detector.h"
-#include "meta/test/misc/misc.h"
-
-#include "meta_service_test_app.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "dummy_balancer.h"
+#include "meta/greedy_load_balancer.h"
+#include "meta/meta_data.h"
+#include "meta/meta_options.h"
+#include "meta/meta_server_failure_detector.h"
+#include "meta/meta_service.h"
+#include "meta/partition_guardian.h"
+#include "meta/server_state.h"
+#include "meta/test/misc/misc.h"
+#include "meta_admin_types.h"
+#include "meta_service_test_app.h"
+#include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
+DSN_DECLARE_uint64(node_live_percentage_threshold_for_update);
+DSN_DECLARE_uint64(replica_assign_delay_ms_for_dropouts);
 
 class fake_sender_meta_service : public dsn::replication::meta_service
 {
@@ -126,7 +140,7 @@ class null_meta_service : public dsn::replication::meta_service
 public:
     void send_message(const dsn::rpc_address &target, dsn::message_ex *request)
     {
-        ddebug("send request to %s", target.to_string());
+        LOG_INFO("send request to {}", target);
         request->add_ref();
         request->release_ref();
     }
@@ -273,7 +287,7 @@ void meta_service_test_app::update_configuration_test()
     };
     // the default delay for add node is 5 miniutes
     ASSERT_FALSE(wait_state(ss, validator3, 10));
-    svc->_meta_opts._lb_opts.replica_assign_delay_ms_for_dropouts = 0;
+    FLAGS_replica_assign_delay_ms_for_dropouts = 0;
     svc->_partition_guardian.reset(new partition_guardian(svc.get()));
     svc->_balancer.reset(new dummy_balancer(svc.get()));
     ASSERT_TRUE(wait_state(ss, validator3, 10));
@@ -458,7 +472,7 @@ void meta_service_test_app::cannot_run_balancer_test()
     // set FLAGS_min_live_node_count_for_unfreeze directly to bypass its flag validator
     FLAGS_min_live_node_count_for_unfreeze = 0;
 
-    svc->_meta_opts.node_live_percentage_threshold_for_update = 0;
+    FLAGS_node_live_percentage_threshold_for_update = 0;
 
     svc->_state->initialize(svc.get(), "/");
     svc->_failure_detector.reset(new meta_server_failure_detector(svc.get()));

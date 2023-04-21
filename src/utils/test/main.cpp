@@ -16,18 +16,14 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include "utils/api_utilities.h"
-#include "utils/logging_provider.h"
-#include "utils/flags.h"
 
-extern void command_manager_module_init();
+#include "utils/flags.h"
+#include "utils/logging_provider.h"
 
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    command_manager_module_init();
-    // init logging
     dsn_log_init("dsn::tools::simple_logger", "./", nullptr);
 
     dsn::flags_initialize();

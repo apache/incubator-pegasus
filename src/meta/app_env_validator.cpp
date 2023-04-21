@@ -17,11 +17,16 @@
 
 #include "app_env_validator.h"
 
-#include "common/replication_common.h"
-#include <fmt/format.h>
-#include "utils/string_conv.h"
-#include "utils/fmt_logging.h"
+#include <fmt/core.h>
+#include <stdint.h>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "common/replica_envs.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 
 namespace dsn {
@@ -154,7 +159,7 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
     if (func_iter != _validator_funcs.end()) {
         // check function == nullptr means no check
         if (nullptr != func_iter->second && !func_iter->second(env_value, hint_message)) {
-            dwarn_f("{}={} is invalid.", env_name, env_value);
+            LOG_WARNING("{}={} is invalid.", env_name, env_value);
             return false;
         }
 
@@ -207,7 +212,8 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, nullptr},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, nullptr},
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, nullptr},
-        {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr}};
+        {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr},
+        {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, nullptr}};
 }
 
 } // namespace replication

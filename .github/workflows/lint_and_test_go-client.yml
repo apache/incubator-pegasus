@@ -36,27 +36,16 @@ on:
 
 # workflow tasks
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.29
-          working-directory: ./go-client
-
   build:
-    name: Test
-    runs-on: ubuntu-latest
+    name: Test and Lint
+    runs-on: ubuntu-20.04
     steps:
+    - name: Install thrift
+      # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
+      # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
+      run: sudo apt-get install -y thrift-compiler
     - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
+      uses: actions/checkout@v3
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
@@ -66,4 +55,10 @@ jobs:
       working-directory: ./go-client
     - uses: codecov/codecov-action@v2
       with:
+        working-directory: ./go-client
+    # because some files are generated after building, so lint after that at last
+    - name: Lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: v1.29
         working-directory: ./go-client

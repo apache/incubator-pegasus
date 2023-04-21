@@ -24,8 +24,13 @@
  * THE SOFTWARE.
  */
 
-#include "utils/lockp.std.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <thread>
+
+#include "runtime/rpc/rpc_address.h"
+#include "utils/lockp.std.h"
 
 using namespace dsn;
 using namespace dsn::tools;

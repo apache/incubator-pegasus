@@ -15,27 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <cmath>
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include <fstream>
 #include <gtest/gtest.h>
-#include <iostream>
+#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+#include <chrono>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
-#include "meta/meta_data.h"
+#include "meta/meta_service_app.h"
 #include "meta_service_test_app.h"
+#include "runtime/app_model.h"
+#include "runtime/service_app.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 
 int gtest_flags = 0;
 int gtest_ret = 0;
@@ -47,6 +45,8 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_META_TEST)
 DEFINE_TASK_CODE(TASK_META_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_META_TEST)
 
 meta_service_test_app *g_app;
+
+DSN_DEFINE_uint32(tools.simulator, random_seed, 0, "random seed");
 
 // as it is not easy to clean test environment in some cases, we simply run these tests in several
 // commands,
@@ -81,13 +81,11 @@ TEST(meta, app_envs_basic_test) { g_app->app_envs_basic_test(); }
 
 dsn::error_code meta_service_test_app::start(const std::vector<std::string> &args)
 {
-    uint32_t seed =
-        (uint32_t)dsn_config_get_value_uint64("tools.simulator", "random_seed", 0, "random seed");
-    if (seed == 0) {
-        seed = time(0);
-        derror("initial seed: %u", seed);
+    if (FLAGS_random_seed == 0) {
+        FLAGS_random_seed = static_cast<uint32_t>(time(nullptr));
+        LOG_INFO("initial seed: {}", FLAGS_random_seed);
     }
-    srand(seed);
+    srand(FLAGS_random_seed);
 
     int argc = args.size();
     char *argv[20];

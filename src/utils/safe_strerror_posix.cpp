@@ -5,6 +5,7 @@
 #include "utils/safe_strerror_posix.h"
 
 #include <errno.h>
+// IWYU pragma: no_include <features.h>
 #include <stdio.h>
 #include <string.h>
 

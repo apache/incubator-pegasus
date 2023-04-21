@@ -24,9 +24,29 @@
 * THE SOFTWARE.
 */
 #include "simple_kv.server.impl.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
 #include <fstream>
-#include <sstream>
+#include <utility>
+#include <vector>
+
+#include "consensus_types.h"
+#include "runtime/serverlet.h"
+#include "simple_kv_types.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+
+namespace dsn {
+class blob;
+
+namespace replication {
+class replica;
+} // namespace replication
+} // namespace dsn
 
 #define VALUE_NOT_EXIST "<<not-exist>>"
 
@@ -42,14 +62,10 @@ bool simple_kv_service_impl::s_simple_kv_apply_checkpoint_fail = false;
 simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r), _lock(true)
 {
     reset_state();
-    ddebug("simple_kv_service_impl inited");
+    LOG_INFO("simple_kv_service_impl inited");
 }
 
-void simple_kv_service_impl::reset_state()
-{
-    _test_file_learning = dsn_config_get_value_bool("test", "test_file_learning", true, "");
-    _last_durable_decree = 0;
-}
+void simple_kv_service_impl::reset_state() { _last_durable_decree = 0; }
 
 // RPC_SIMPLE_KV_READ
 void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply)
@@ -64,8 +80,6 @@ void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<
         value = it->second;
     }
 
-    // ddebug("=== on_exec_read:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(),
-    // key.c_str(), value.c_str());
     reply(value);
 }
 
@@ -75,8 +89,6 @@ void simple_kv_service_impl::on_write(const kv_pair &pr, ::dsn::rpc_replier<int3
     dsn::zauto_lock l(_lock);
     _store[pr.key] = pr.value;
 
-    // ddebug("=== on_exec_write:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(),
-    // pr.key.c_str(), pr.value.c_str());
     reply(0);
 }
 
@@ -90,8 +102,6 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
     else
         _store[pr.key] = pr.value;
 
-    // ddebug("=== on_exec_append:int64_t=%" PRId64 ",key=%s,value=%s", last_committed_decree(),
-    // pr.key.c_str(), pr.value.c_str());
     reply(0);
 }
 
@@ -103,7 +113,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
 
     dsn::zauto_lock l(_lock);
     recover();
-    ddebug("simple_kv_service_impl opened");
+    LOG_INFO("simple_kv_service_impl opened");
     return ERR_OK;
 }
 
@@ -115,13 +125,13 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
 
     dsn::zauto_lock l(_lock);
     if (clear_state) {
-        if (!dsn::utils::filesystem::remove_path(data_dir().c_str())) {
-            dassert(false, "Fail to delete directory %s.", data_dir().c_str());
-        }
+        CHECK(dsn::utils::filesystem::remove_path(data_dir()),
+              "Fail to delete directory {}",
+              data_dir());
         _store.clear();
         reset_state();
     }
-    ddebug("simple_kv_service_impl closed, clear_state = %s", clear_state ? "true" : "false");
+    LOG_INFO("simple_kv_service_impl closed, clear_state = {}", clear_state ? "true" : "false");
     return ERR_OK;
 }
 
@@ -137,9 +147,9 @@ void simple_kv_service_impl::recover()
 
     std::vector<std::string> sub_list;
     std::string path = data_dir();
-    if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false)) {
-        dassert(false, "Fail to get subfiles in %s.", path.c_str());
-    }
+    CHECK(dsn::utils::filesystem::get_subfiles(path, sub_list, false),
+          "Fail to get subfiles in {}",
+          path);
     for (auto &fpath : sub_list) {
         auto &&s = dsn::utils::filesystem::get_file_name(fpath);
         if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
@@ -157,8 +167,7 @@ void simple_kv_service_impl::recover()
         recover(name, max_version);
         set_last_durable_decree(max_version);
     }
-    ddebug("simple_kv_service_impl recovered, last_durable_decree = %" PRId64 "",
-           last_durable_decree());
+    LOG_INFO("simple_kv_service_impl recovered, last_durable_decree = {}", last_durable_decree());
 }
 
 void simple_kv_service_impl::recover(const std::string &name, int64_t version)
@@ -176,7 +185,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 
     is.read((char *)&count, sizeof(count));
     is.read((char *)&magic, sizeof(magic));
-    dassert(magic == 0xdeadbeef, "invalid checkpoint");
+    CHECK_EQ_MSG(magic, 0xdeadbeef, "invalid checkpoint");
 
     for (uint64_t i = 0; i < count; i++) {
         std::string key;
@@ -203,9 +212,9 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 
     int64_t last_commit = last_committed_decree();
     if (last_commit == last_durable_decree()) {
-        ddebug("simple_kv_service_impl no need to create checkpoint, "
-               "checkpoint already the latest, last_durable_decree = %" PRId64 "",
-               last_durable_decree());
+        LOG_INFO("simple_kv_service_impl no need to create checkpoint, "
+                 "checkpoint already the latest, last_durable_decree = {}",
+                 last_durable_decree());
         return ERR_OK;
     }
 
@@ -235,9 +244,9 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     }
 
     set_last_durable_decree(last_commit);
-    ddebug("simple_kv_service_impl create checkpoint succeed, "
-           "last_durable_decree = %" PRId64 "",
-           last_durable_decree());
+    LOG_INFO("simple_kv_service_impl create checkpoint succeed, "
+             "last_durable_decree = {}",
+             last_durable_decree());
     return ERR_OK;
 }
 
@@ -267,13 +276,13 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         state.to_decree_included = last_durable_decree();
         state.files.push_back(std::string(name));
 
-        ddebug("simple_kv_service_impl get checkpoint succeed, last_durable_decree = %" PRId64 "",
-               last_durable_decree());
+        LOG_INFO("simple_kv_service_impl get checkpoint succeed, last_durable_decree = {}",
+                 last_durable_decree());
         return ERR_OK;
     } else {
         state.from_decree_excluded = 0;
         state.to_decree_included = 0;
-        derror("simple_kv_service_impl get checkpoint failed, no checkpoint found");
+        LOG_ERROR("simple_kv_service_impl get checkpoint failed, no checkpoint found");
         return ERR_OBJECT_NOT_FOUND;
     }
 }
@@ -287,26 +296,22 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 
     if (mode == replication_app_base::chkpt_apply_mode::learn) {
         recover(state.files[0], state.to_decree_included);
-        // ddebug("simple_kv_service_impl learn checkpoint succeed, last_committed_decree = %"
-        // PRId64 "", last_committed_decree());
         return ERR_OK;
     } else {
-        dassert(replication_app_base::chkpt_apply_mode::copy == mode, "invalid mode %d", (int)mode);
-        dassert(state.to_decree_included > last_durable_decree(),
-                "checkpoint's decree is smaller than current");
+        CHECK_EQ_MSG(replication_app_base::chkpt_apply_mode::copy, mode, "invalid mode");
+        CHECK_GT(state.to_decree_included, last_durable_decree());
 
         char name[256];
         sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(), state.to_decree_included);
         std::string lname(name);
 
         if (!utils::filesystem::rename_path(state.files[0], lname)) {
-            derror("simple_kv_service_impl copy checkpoint failed, rename path failed");
+            LOG_ERROR("simple_kv_service_impl copy checkpoint failed, rename path failed");
             return ERR_CHECKPOINT_FAILED;
         } else {
             set_last_durable_decree(state.to_decree_included);
-            ddebug("simple_kv_service_impl copy checkpoint succeed, last_durable_decree = %" PRId64
-                   "",
-                   last_durable_decree());
+            LOG_INFO("simple_kv_service_impl copy checkpoint succeed, last_durable_decree = {}",
+                     last_durable_decree());
             return ERR_OK;
         }
     }

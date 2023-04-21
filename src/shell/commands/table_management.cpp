@@ -17,9 +17,46 @@
  * under the License.
  */
 
-#include "shell/commands.h"
+// IWYU pragma: no_include <bits/getopt_core.h>
+// IWYU pragma: no_include <bits/std_abs.h>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <getopt.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "dsn.layer2_types.h"
+#include "meta_admin_types.h"
+#include "pegasus_utils.h"
+#include "perf_counter/perf_counter_utils.h"
+#include "runtime/rpc/rpc_address.h"
+#include "shell/command_executor.h"
+#include "shell/command_helper.h"
+#include "shell/command_utils.h"
+#include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
+#include "utils/output_utils.h"
 #include "utils/ports.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
+#include "utils/utils.h"
 
 double convert_to_ratio(double hit, double total)
 {
@@ -260,7 +297,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             std::string counter_name;
             bool parse_ret = parse_app_pegasus_perf_counter_name(
                 m.name, app_id_x, partition_index_x, counter_name);
-            dassert(parse_ret, "name = %s", m.name.c_str());
+            CHECK(parse_ret, "name = {}", m.name);
             if (m.name.find("sst(MB)") != std::string::npos) {
                 disk_map[nodes[i].address][partition_index_x] = m.value;
             } else if (m.name.find("sst.count") != std::string::npos) {
@@ -631,6 +668,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"partition_count", required_argument, 0, 'p'},
                                            {"replica_count", required_argument, 0, 'r'},
+                                           {"fail_if_exist", no_argument, 0, 'f'},
                                            {"envs", required_argument, 0, 'e'},
                                            {0, 0, 0, 0}};
 
@@ -638,6 +676,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
         return false;
 
     std::string app_name = args.argv[1];
+    bool success_if_exist = true;
 
     int pc = 4, rc = 3;
     std::map<std::string, std::string> envs;
@@ -645,7 +684,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "p:r:e:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "p:r:fe:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -661,6 +700,9 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
                 return false;
             }
             break;
+        case 'f':
+            success_if_exist = false;
+            break;
         case 'e':
             if (!::dsn::utils::parse_kv_map(optarg, envs, ',', '=')) {
                 fprintf(stderr, "invalid envs: %s\n", optarg);
@@ -672,7 +714,8 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    ::dsn::error_code err = sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false);
+    ::dsn::error_code err =
+        sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false, success_if_exist);
     if (err == ::dsn::ERR_OK)
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name) << "\" succeed"
                   << std::endl;
@@ -718,6 +761,43 @@ bool drop_app(command_executor *e, shell_context *sc, arguments args)
         std::cout << "drop app " << app_name << " succeed" << std::endl;
     else
         std::cout << "drop app " << app_name << " failed, error=" << err.to_string() << std::endl;
+    return true;
+}
+
+bool rename_app(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc <= 2) {
+        return false;
+    }
+
+    const std::string old_app_name = args.argv[1];
+    const std::string new_app_name = args.argv[2];
+
+    auto err_resp = sc->ddl_client->rename_app(old_app_name, new_app_name);
+    auto err = err_resp.get_error();
+    const auto &resp = err_resp.get_value();
+
+    if (dsn_likely(err.is_ok())) {
+        err = dsn::error_s::make(resp.err);
+    }
+
+    if (err.is_ok()) {
+        fmt::print(stdout,
+                   "rename app ok, old_app_name({}), new_app_name({})\n",
+                   old_app_name,
+                   new_app_name);
+    } else {
+        std::string error_message(resp.err.to_string());
+        if (!resp.hint_message.empty()) {
+            error_message += ", ";
+            error_message += resp.hint_message;
+        }
+        fmt::print(stderr,
+                   "rename app failed, old_app_name({}), new_app_name({}), failed: {}\n",
+                   old_app_name,
+                   new_app_name,
+                   error_message);
+    }
     return true;
 }
 

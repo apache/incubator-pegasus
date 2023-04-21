@@ -35,14 +35,27 @@
 
 #pragma once
 
-#include "common.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <fstream>
+#include <map>
+#include <string>
+#include <vector>
 
+#include "common.h"
+#include "meta_admin_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/error_code.h"
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
 
-#include <fstream>
-
 namespace dsn {
+class aio_task;
+class message_ex;
+class rpc_request_task;
+class rpc_response_task;
+class task;
+
 namespace replication {
 namespace test {
 
@@ -199,6 +212,11 @@ public:
     virtual bool check_satisfied(const event *ev) const = 0;
 
     std::string to_string() const;
+    friend std::ostream &operator<<(std::ostream &os, const event &evt)
+    {
+        return os << evt.to_string();
+    }
+
     static event *parse(int line_no, const std::string &params);
 };
 

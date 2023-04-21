@@ -16,12 +16,14 @@
 // under the License.
 
 #include "negotiation.h"
-#include "client_negotiation.h"
-#include "server_negotiation.h"
-#include "negotiation_utils.h"
 
+#include <set>
+
+#include "client_negotiation.h"
+#include "negotiation_utils.h"
+#include "runtime/security/sasl_wrapper.h"
+#include "server_negotiation.h"
 #include "utils/flags.h"
-#include "utils/smart_pointers.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
@@ -30,12 +32,12 @@ namespace security {
 /// so we should get supported mechanisms from config in the later
 const std::set<std::string> supported_mechanisms{"GSSAPI"};
 
-DSN_DEFINE_bool("security", enable_auth, false, "whether open auth or not");
-DSN_DEFINE_bool("security",
+DSN_DEFINE_bool(security, enable_auth, false, "whether open auth or not");
+DSN_DEFINE_bool(security,
                 enable_zookeeper_kerberos,
                 false,
                 "whether to enable kerberos for zookeeper client");
-DSN_DEFINE_bool("security", mandatory_auth, false, "wheter to do authertication mandatorily");
+DSN_DEFINE_bool(security, mandatory_auth, false, "wheter to do authertication mandatorily");
 DSN_TAG_VARIABLE(mandatory_auth, FT_MUTABLE);
 
 negotiation::~negotiation() {}
@@ -43,9 +45,9 @@ negotiation::~negotiation() {}
 std::unique_ptr<negotiation> create_negotiation(bool is_client, rpc_session *session)
 {
     if (is_client) {
-        return make_unique<client_negotiation>(session);
+        return std::make_unique<client_negotiation>(session);
     } else {
-        return make_unique<server_negotiation>(session);
+        return std::make_unique<server_negotiation>(session);
     }
 }
 
@@ -59,10 +61,10 @@ bool negotiation::check_status(negotiation_status::type status,
                                negotiation_status::type expected_status)
 {
     if (status != expected_status) {
-        dwarn_f("{}: get message({}) while expect({})",
-                _name,
-                enum_to_string(status),
-                enum_to_string(expected_status));
+        LOG_WARNING("{}: get message({}) while expect({})",
+                    _name,
+                    enum_to_string(status),
+                    enum_to_string(expected_status));
         return false;
     }
 

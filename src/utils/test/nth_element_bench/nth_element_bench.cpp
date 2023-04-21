@@ -15,7 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <atomic>
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <stdio.h>
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -25,14 +28,11 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/format.h>
-
+#include "perf_counter/perf_counter_atomic.h"
 #include "runtime/api_layer1.h"
 #include "utils/nth_element.h"
-#include "utils/smart_pointers.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
-
 #include "utils/test/nth_element_utils.h"
 
 void print_usage(const char *cmd)

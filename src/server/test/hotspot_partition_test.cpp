@@ -15,11 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "server/hotspot_partition_calculator.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <memory>
+#include <utility>
+#include <vector>
 
 #include "pegasus_server_test_base.h"
-#include <gtest/gtest.h>
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "server/hotspot_partition_calculator.h"
+#include "server/hotspot_partition_stat.h"
+#include "shell/command_helper.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace server {

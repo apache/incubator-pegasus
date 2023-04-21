@@ -26,11 +26,20 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
+#include <algorithm>
+#include <thread>
+
+#include "boost/asio/io_service.hpp"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/timer_service.h"
 #include "utils/priority_queue.h"
-#include <boost/asio.hpp>
 
 namespace dsn {
+class service_node;
+class task;
+class task_worker_pool;
+
 namespace tools {
 class simple_task_queue : public task_queue
 {

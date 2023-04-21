@@ -17,7 +17,16 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+#include <algorithm>
+#include <utility>
+#include <vector>
+
+#include "aio/aio_task.h"
 #include "mutation.h"
+#include "utils/blob.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -60,7 +69,7 @@ public:
     // ```
     blob &front()
     {
-        dassert(!_data.empty(), "trying to get first blob out of an empty log block");
+        CHECK(!_data.empty(), "trying to get first blob out of an empty log block");
         return _data.front();
     }
 

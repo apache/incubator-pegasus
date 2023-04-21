@@ -34,10 +34,25 @@
  */
 
 #include "runtime/tool_api.h"
-#include "utils/factory_store.h"
-#include "utils/singleton_store.h"
-#include "runtime/service_engine.h"
+
+#include <algorithm>
+#include <functional>
+#include <map>
+#include <memory>
+#include <type_traits>
+#include <utility>
+
+#include "runtime/global_config.h"
 #include "runtime/rpc/message_parser_manager.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/error_code.h"
+#include "utils/factory_store.h"
+#include "utils/fmt_logging.h"
+#include "utils/singleton_store.h"
+#include "utils/sys_exit_hook.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 
@@ -58,9 +73,9 @@ public:
         if (_start) {
             error_code err;
             err = _node->start_app();
-            dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
+            CHECK_EQ_MSG(err, ERR_OK, "start app failed");
         } else {
-            ddebug("stop app result(%s)", _node->stop_app(_cleanup).to_string());
+            LOG_INFO("stop app result({})", _node->stop_app(_cleanup));
         }
     }
 

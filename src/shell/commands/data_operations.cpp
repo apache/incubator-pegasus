@@ -17,9 +17,60 @@
  * under the License.
  */
 
-#include "shell/commands.h"
+// IWYU pragma: no_include <bits/getopt_core.h>
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/printf.h>
+#include <getopt.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <pegasus/error.h>
+#include <rocksdb/statistics.h>
+#include <s2/third_party/absl/base/port.h>
+#include <stdio.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "client/replication_ddl_client.h"
+#include "dsn.layer2_types.h"
+#include "geo/lib/geo_client.h"
 #include "idl_utils.h"
+#include "pegasus/client.h"
+#include "pegasus_key_schema.h"
+#include "pegasus_utils.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/async_calls.h"
+#include "shell/args.h"
+#include "shell/command_executor.h"
+#include "shell/command_helper.h"
+#include "shell/command_utils.h"
+#include "shell/commands.h"
+#include "shell/sds/sds.h"
+#include "utils/blob.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/output_utils.h"
+#include "utils/string_conv.h"
+
+DSN_DEFINE_int32(threadpool.THREAD_POOL_DEFAULT,
+                 worker_count,
+                 0,
+                 "get THREAD_POOL_DEFAULT worker_count.");
 
 static void
 print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
@@ -63,7 +114,7 @@ bool data_operations(command_executor *e, shell_context *sc, arguments args)
     }
 
     auto iter = data_operations_map.find(args.argv[0]);
-    dassert(iter != data_operations_map.end(), "filter should done earlier");
+    CHECK(iter != data_operations_map.end(), "filter should done earlier");
     executor func = iter->second;
 
     if (sc->current_app_name.empty()) {
@@ -1818,13 +1869,10 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                 "WARN: used multi_set will lose accurate ttl time per value! "
                 "ttl time will be assign the max value of this batch data.\n");
         op = SCAN_AND_MULTI_SET;
+
+        fprintf(stderr, "INFO: THREAD_POOL_DEFAULT worker_count = %d\n", FLAGS_worker_count);
         // threadpool worker_count should greater than source app scanner count
-        int worker_count = dsn_config_get_value_int64("threadpool.THREAD_POOL_DEFAULT",
-                                                      "worker_count",
-                                                      0,
-                                                      "get THREAD_POOL_DEFAULT worker_count.");
-        fprintf(stderr, "INFO: THREAD_POOL_DEFAULT worker_count = %d\n", worker_count);
-        if (worker_count <= split_count) {
+        if (FLAGS_worker_count <= split_count) {
             fprintf(stderr,
                     "INFO: THREAD_POOL_DEFAULT worker_count should greater than source app scanner "
                     "count %d",
@@ -2570,7 +2618,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
 std::string unescape_str(const char *escaped)
 {
     std::string dst, src = escaped;
-    dassert(pegasus::utils::c_unescape_string(src, dst) >= 0, "");
+    CHECK_GE(pegasus::utils::c_unescape_string(src, dst), 0);
     return dst;
 }
 

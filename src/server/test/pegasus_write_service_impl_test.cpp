@@ -17,11 +17,24 @@
  * under the License.
  */
 
-#include "utils/fail_point.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <rocksdb/status.h>
+#include <stdint.h>
+#include <limits>
+#include <memory>
+
+#include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
+#include "rrdb/rrdb_types.h"
 #include "server/pegasus_server_write.h"
+#include "server/pegasus_write_service.h"
 #include "server/pegasus_write_service_impl.h"
-#include "message_utils.h"
+#include "server/rocksdb_wrapper.h"
+#include "utils/blob.h"
+#include "utils/fail_point.h"
+#include "utils/string_view.h"
 
 namespace pegasus {
 namespace server {
@@ -37,7 +50,7 @@ public:
     void SetUp() override
     {
         start();
-        _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
+        _server_write = std::make_unique<pegasus_server_write>(_server.get());
         _write_impl = _server_write->_write_svc->_impl.get();
         _rocksdb_wrapper = _write_impl->_rocksdb_wrapper.get();
     }

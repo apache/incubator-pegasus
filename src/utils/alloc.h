@@ -17,18 +17,23 @@
 
 #pragma once
 
+#include "utils/ports.h"
+
+// The check for the definition of CACHELINE_SIZE has to be put after including "utils/ports.h",
+// where CACHELINE_SIZE is defined.
+#ifdef CACHELINE_SIZE
+
+#include <stddef.h>
 #include <algorithm>
 #include <functional>
 #include <memory>
 #include <new>
 
-#include "utils/api_utilities.h"
+#ifndef NDEBUG
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
+#endif
 
 namespace dsn {
-
-#ifdef CACHELINE_SIZE
 
 extern void *cacheline_aligned_alloc(size_t size);
 
@@ -51,16 +56,17 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len)
     if (sizeof(T) <= CACHELINE_SIZE && (sizeof(T) & (sizeof(T) - 1)) == 0) {
         for (size_t i = 0; i < len; ++i) {
             T *elem = &(array[i]);
-            dassert_f((reinterpret_cast<const uintptr_t>(elem) & (sizeof(T) - 1)) == 0,
-                      "unaligned array element for cache line: array={}, length={}, index={}, "
-                      "elem={}, elem_size={}, mask={}, cacheline_size={}",
-                      fmt::ptr(array),
-                      len,
-                      i,
-                      fmt::ptr(elem),
-                      sizeof(T),
-                      sizeof(T) - 1,
-                      CACHELINE_SIZE);
+            CHECK_EQ_MSG((reinterpret_cast<const uintptr_t>(elem) & (sizeof(T) - 1)),
+                         0,
+                         "unaligned array element for cache line: array={}, length={}, index={}, "
+                         "elem={}, elem_size={}, mask={}, cacheline_size={}",
+                         fmt::ptr(array),
+                         len,
+                         i,
+                         fmt::ptr(elem),
+                         sizeof(T),
+                         sizeof(T) - 1,
+                         CACHELINE_SIZE);
         }
     }
 #endif
@@ -79,6 +85,6 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len, const T &val)
     return array;
 }
 
-#endif
-
 } // namespace dsn
+
+#endif // CACHELINE_SIZE

@@ -18,9 +18,11 @@
  */
 #pragma once
 
+#include <string>
 #include <vector>
+
 #include "utils/errors.h"
-#include "perf_counter/perf_counter_wrapper.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace replication {
@@ -69,5 +71,7 @@ inline bool is_data_dir_invalid(const std::string &dir)
     const std::string folder_suffix = dir.substr(dir.length() - 4);
     return is_data_dir_removable(dir) || folder_suffix == kFolderSuffixBak;
 }
+
+void move_to_err_path(const std::string &path, const std::string &log_prefix);
 } // namespace replication
 } // namespace dsn

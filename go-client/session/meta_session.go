@@ -72,7 +72,6 @@ type MetaManager struct {
 	mu sync.RWMutex
 }
 
-//
 func NewMetaManager(addrs []string, creator NodeSessionCreator) *MetaManager {
 	metas := make([]*metaSession, len(addrs))
 	metaIPAddrs := make([]string, len(addrs))

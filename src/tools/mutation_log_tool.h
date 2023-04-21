@@ -35,12 +35,14 @@
 
 #pragma once
 
-#include <string>
-#include <iostream>
+#include <stdint.h>
 #include <functional>
-#include "runtime/rpc/rpc_message.h"
+#include <iostream>
+#include <string>
 
 namespace dsn {
+class message_ex;
+
 namespace replication {
 
 class mutation_log_tool

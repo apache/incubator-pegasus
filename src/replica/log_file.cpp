@@ -27,14 +27,31 @@
 #include "log_file.h"
 
 #include <fcntl.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <utility>
+#include <vector>
 
-#include "utils/filesystem.h"
-#include "utils/crc.h"
-#include "utils/fmt_logging.h"
-
+#include "aio/file_io.h"
 #include "log_file_stream.h"
+#include "replica/log_block.h"
+#include "replica/mutation.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/blob.h"
+#include "utils/crc.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/latency_tracer.h"
+#include "utils/ports.h"
+#include "utils/strings.h"
 
 namespace dsn {
+class disk_file;
+class task_tracker;
+
 namespace replication {
 
 log_file::~log_file() { close(); }
@@ -46,16 +63,16 @@ log_file::~log_file() { close(); }
     // log.index.start_offset
     if (name.length() < strlen("log.") || name.substr(0, strlen("log.")) != std::string("log.")) {
         err = ERR_INVALID_PARAMETERS;
-        dwarn("invalid log path %s", path);
+        LOG_WARNING("invalid log path {}", path);
         return nullptr;
     }
 
     auto pos = name.find_first_of('.');
-    dassert(pos != std::string::npos, "invalid log_file, name = %s", name.c_str());
+    CHECK(pos != std::string::npos, "invalid log_file, name = {}", name);
     auto pos2 = name.find_first_of('.', pos + 1);
     if (pos2 == std::string::npos) {
         err = ERR_INVALID_PARAMETERS;
-        dwarn("invalid log path %s", path);
+        LOG_WARNING("invalid log path {}", path);
         return nullptr;
     }
 
@@ -64,7 +81,7 @@ log_file::~log_file() { close(); }
     std::string start_offset_str = name.substr(pos2 + 1);
     if (index_str.empty() || start_offset_str.empty()) {
         err = ERR_INVALID_PARAMETERS;
-        dwarn("invalid log path %s", path);
+        LOG_WARNING("invalid log path {}", path);
         return nullptr;
     }
 
@@ -72,20 +89,20 @@ log_file::~log_file() { close(); }
     int index = static_cast<int>(strtol(index_str.c_str(), &p, 10));
     if (*p != 0) {
         err = ERR_INVALID_PARAMETERS;
-        dwarn("invalid log path %s", path);
+        LOG_WARNING("invalid log path {}", path);
         return nullptr;
     }
     int64_t start_offset = static_cast<int64_t>(strtoll(start_offset_str.c_str(), &p, 10));
     if (*p != 0) {
         err = ERR_INVALID_PARAMETERS;
-        dwarn("invalid log path %s", path);
+        LOG_WARNING("invalid log path {}", path);
         return nullptr;
     }
 
     disk_file *hfile = file::open(path, O_RDONLY | O_BINARY, 0);
     if (!hfile) {
         err = ERR_FILE_OPERATION_FAILED;
-        dwarn("open log file %s failed", path);
+        LOG_WARNING("open log file {} failed", path);
         return nullptr;
     }
 
@@ -96,10 +113,10 @@ log_file::~log_file() { close(); }
     if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF ||
         err == ERR_FILE_OPERATION_FAILED) {
         std::string removed = std::string(path) + ".removed";
-        derror("read first log entry of file %s failed, err = %s. Rename the file to %s",
-               path,
-               err.to_string(),
-               removed.c_str());
+        LOG_ERROR("read first log entry of file {} failed, err = {}. Rename the file to {}",
+                  path,
+                  err,
+                  removed);
         delete lf;
         lf = nullptr;
 
@@ -113,7 +130,7 @@ log_file::~log_file() { close(); }
     lf->read_file_header(reader);
     if (!lf->is_right_header()) {
         std::string removed = std::string(path) + ".removed";
-        derror("invalid log file header of file %s. Rename the file to %s", path, removed.c_str());
+        LOG_ERROR("invalid log file header of file {}. Rename the file to {}", path, removed);
         delete lf;
         lf = nullptr;
 
@@ -134,13 +151,13 @@ log_file::~log_file() { close(); }
     sprintf(path, "%s/log.%d.%" PRId64, dir, index, start_offset);
 
     if (dsn::utils::filesystem::path_exists(std::string(path))) {
-        dwarn("log file %s already exist", path);
+        LOG_WARNING("log file {} already exist", path);
         return nullptr;
     }
 
     disk_file *hfile = file::open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
     if (!hfile) {
-        dwarn("create log %s failed", path);
+        LOG_WARNING("create log {} failed", path);
         return nullptr;
     }
 
@@ -162,9 +179,7 @@ log_file::log_file(
 
     if (is_read) {
         int64_t sz;
-        if (!dsn::utils::filesystem::file_size(_path, sz)) {
-            dassert(false, "fail to get file size of %s.", _path.c_str());
-        }
+        CHECK(dsn::utils::filesystem::file_size(_path, sz), "fail to get file size of {}.", _path);
         _end_offset += sz;
     }
 }
@@ -178,7 +193,7 @@ void log_file::close()
     _stream.reset(nullptr);
     if (_handle) {
         error_code err = file::close(_handle);
-        dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
+        CHECK_EQ_MSG(err, ERR_OK, "file::close failed");
 
         _handle = nullptr;
     }
@@ -186,28 +201,28 @@ void log_file::close()
 
 void log_file::flush() const
 {
-    dassert(!_is_read, "log file must be of write mode");
+    CHECK(!_is_read, "log file must be of write mode");
     zauto_lock lock(_write_lock);
 
     if (_handle) {
         error_code err = file::flush(_handle);
-        dassert(err == ERR_OK, "file::flush failed, err = %s", err.to_string());
+        CHECK_EQ_MSG(err, ERR_OK, "file::flush failed");
     }
 }
 
 error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
 {
-    dassert(_is_read, "log file must be of read mode");
+    CHECK(_is_read, "log file must be of read mode");
     auto err = _stream->read_next(sizeof(log_block_header), bb);
     if (err != ERR_OK || bb.length() != sizeof(log_block_header)) {
         if (err == ERR_OK || err == ERR_HANDLE_EOF) {
             // if read_count is 0, then we meet the end of file
             err = (bb.length() == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA);
         } else {
-            derror("read data block header failed, size = %d vs %d, err = %s",
-                   bb.length(),
-                   (int)sizeof(log_block_header),
-                   err.to_string());
+            LOG_ERROR("read data block header failed, size = {} vs {}, err = {}",
+                      bb.length(),
+                      sizeof(log_block_header),
+                      err);
         }
 
         return err;
@@ -215,16 +230,14 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
     log_block_header hdr = *reinterpret_cast<const log_block_header *>(bb.data());
 
     if (hdr.magic != 0xdeadbeef) {
-        derror("invalid data header magic: 0x%x", hdr.magic);
+        LOG_ERROR("invalid data header magic: {:#x}", static_cast<uint32_t>(hdr.magic));
         return ERR_INVALID_DATA;
     }
 
     err = _stream->read_next(hdr.length, bb);
     if (err != ERR_OK || hdr.length != bb.length()) {
-        derror("read data block body failed, size = %d vs %d, err = %s",
-               bb.length(),
-               (int)hdr.length,
-               err.to_string());
+        LOG_ERROR(
+            "read data block body failed, size = {} vs {}, err = {}", bb.length(), hdr.length, err);
 
         if (err == ERR_OK || err == ERR_HANDLE_EOF) {
             // because already read log_block_header above, so here must be imcomplete data
@@ -237,7 +250,7 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
     auto crc = dsn::utils::crc32_calc(
         static_cast<const void *>(bb.data()), static_cast<size_t>(hdr.length), _crc32);
     if (crc != hdr.body_crc) {
-        derror("crc checking failed");
+        LOG_ERROR("crc checking failed");
         return ERR_INVALID_DATA;
     }
     _crc32 = crc;
@@ -261,8 +274,8 @@ aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
                                          aio_handler &&callback,
                                          int hash)
 {
-    dassert(!_is_read, "log file must be of write mode");
-    dcheck_gt(pending.size(), 0);
+    CHECK(!_is_read, "log file must be of write mode");
+    CHECK_GT(pending.size(), 0);
 
     zauto_lock lock(_write_lock);
     if (!_handle) {
@@ -277,7 +290,7 @@ aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
         int64_t local_offset = block.start_offset() - start_offset();
         auto hdr = reinterpret_cast<log_block_header *>(const_cast<char *>(block.front().data()));
 
-        dassert(hdr->magic == 0xdeadbeef, "");
+        CHECK_EQ(hdr->magic, 0xdeadbeef);
         hdr->local_offset = local_offset;
         hdr->length = static_cast<int32_t>(block.size() - sizeof(log_block_header));
         hdr->body_crc = _crc32;

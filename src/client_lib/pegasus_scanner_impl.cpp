@@ -17,8 +17,34 @@
  * under the License.
  */
 
-#include "pegasus_client_impl.h"
+#include <stdint.h>
+#include <chrono>
+#include <functional>
+#include <list>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "base/pegasus_const.h"
+#include "common/gpid.h"
+#include "pegasus/client.h"
+#include "pegasus/error.h"
+#include "pegasus_client_impl.h"
+#include "pegasus_key_schema.h"
+#include "rrdb/rrdb.client.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/synchronize.h"
+#include "utils/zlocks.h"
+
+namespace dsn {
+class message_ex;
+} // namespace dsn
 
 using namespace ::dsn;
 using namespace pegasus;
@@ -142,7 +168,7 @@ pegasus_client_impl::pegasus_scanner_impl::get_smart_wrapper()
 void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
 {
     // _lock will be locked out of the while block
-    dassert(!_queue.empty(), "queue should not be empty when _async_next_internal start");
+    CHECK(!_queue.empty(), "queue should not be empty when _async_next_internal start");
 
     std::list<async_scan_next_callback_t> temp;
     while (true) {
@@ -232,7 +258,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_next_batch()
     ::dsn::apps::scan_request req;
     req.context_id = _context;
 
-    dassert(!_rpc_started, "");
+    CHECK(!_rpc_started, "");
     _rpc_started = true;
     _client->scan(req,
                   [this](::dsn::error_code err,
@@ -267,7 +293,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
     req.__set_full_scan(_full_scan);
     req.__set_only_return_count(_options.only_return_count);
 
-    dassert(!_rpc_started, "");
+    CHECK(!_rpc_started, "");
     _rpc_started = true;
     _client->get_scanner(
         req,
@@ -282,7 +308,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
                                                                   dsn::message_ex *req,
                                                                   dsn::message_ex *resp)
 {
-    dassert(_rpc_started, "");
+    CHECK(_rpc_started, "");
     _rpc_started = false;
     ::dsn::apps::scan_response response;
     if (err == ERR_OK) {
@@ -347,8 +373,8 @@ pegasus_client_impl::pegasus_scanner_impl::~pegasus_scanner_impl()
 {
     dsn::zauto_lock l(_lock);
 
-    dassert(!_rpc_started, "all scan-rpc should be completed here");
-    dassert(_queue.empty(), "queue should be empty");
+    CHECK(!_rpc_started, "all scan-rpc should be completed here");
+    CHECK(_queue.empty(), "queue should be empty");
 
     if (_client) {
         if (_context >= SCAN_CONTEXT_ID_VALID_MIN)

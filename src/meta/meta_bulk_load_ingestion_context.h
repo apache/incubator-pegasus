@@ -17,11 +17,19 @@
 
 #pragma once
 
-#include "meta_service.h"
-#include "server_state.h"
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+
+#include "common/gpid.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/flags.h"
 
 namespace dsn {
+class partition_configuration;
+
 namespace replication {
+class config_context;
 
 DSN_DECLARE_uint32(bulk_load_node_max_ingesting_count);
 DSN_DECLARE_uint32(bulk_load_node_min_disk_count);

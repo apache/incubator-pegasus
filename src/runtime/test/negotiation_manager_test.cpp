@@ -16,14 +16,24 @@
 // under the License.
 
 #include "runtime/security/negotiation_manager.h"
-#include "runtime/security/negotiation_utils.h"
-#include "runtime/rpc/network.sim.h"
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/flags.h"
+
 #include "failure_detector/fd.code.definition.h"
-#include "http/http_server_impl.h"
+#include "http/http_server.h"
 #include "nfs/nfs_code_definition.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/security/negotiation_utils.h"
+#include "runtime/task/task_code.h"
+#include "security_types.h"
+#include "utils/autoref_ptr.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace security {
@@ -39,7 +49,7 @@ public:
             new tools::sim_network_provider(nullptr, nullptr));
         auto sim_session =
             sim_net->create_server_session(rpc_address("localhost", 10086), rpc_session_ptr());
-        auto rpc = negotiation_rpc(make_unique<negotiation_request>(), RPC_NEGOTIATION);
+        auto rpc = negotiation_rpc(std::make_unique<negotiation_request>(), RPC_NEGOTIATION);
         rpc.dsn_request()->io_session = sim_session;
         return rpc;
     }

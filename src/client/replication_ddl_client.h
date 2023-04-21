@@ -26,34 +26,37 @@
 
 #pragma once
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "common/replication_other_types.h"
-#include "common/replication.codes.h"
-
-#include <cctype>
-#include <string>
+#include <stdint.h>
 #include <map>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
-#include "runtime/task/task_tracker.h"
+#include "bulk_load_types.h"
+#include "dsn.layer2_types.h"
+#include "duplication_types.h"
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "replica_admin_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/errors.h"
 
 namespace dsn {
+class gpid;
+
 namespace replication {
+class query_backup_status_response;
+class start_backup_app_response;
 
 class replication_ddl_client
 {
@@ -66,12 +69,17 @@ public:
                                int partition_count,
                                int replica_count,
                                const std::map<std::string, std::string> &envs,
-                               bool is_stateless);
+                               bool is_stateless,
+                               bool success_if_exist = true);
 
-    // reserve_seconds == 0 means use default value in configuration 'hold_seconds_for_dropped_app'
+    // 'reserve_seconds' == 0 means use default value in configuration
+    // FLAGS_hold_seconds_for_dropped_app.
     dsn::error_code drop_app(const std::string &app_name, int reserve_seconds);
 
     dsn::error_code recall_app(int32_t app_id, const std::string &new_app_name);
+
+    error_with<configuration_rename_app_response> rename_app(const std::string &old_app_name,
+                                                             const std::string &new_app_name);
 
     dsn::error_code list_apps(const dsn::app_status::type status,
                               bool show_all,
@@ -243,6 +251,8 @@ public:
     error_with<configuration_set_max_replica_count_response>
     set_max_replica_count(const std::string &app_name, int32_t max_replica_count);
 
+    void set_max_wait_app_ready_secs(uint32_t max_wait_secs) { _max_wait_secs = max_wait_secs; }
+
 private:
     bool static valid_app_char(int c);
 
@@ -333,6 +343,7 @@ private:
 private:
     dsn::rpc_address _meta_server;
     dsn::task_tracker _tracker;
+    uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.
 
     typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
     typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;

@@ -33,10 +33,28 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "runtime/message_utils.cpp"
-#include "utils/crc.h"
-#include "runtime/rpc/rpc_message.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
+#include <string.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
+#include "runtime/message_utils.cpp"
+#include "runtime/message_utils.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/crc.h"
+#include "utils/threadpool_code.h"
 
 using namespace ::dsn;
 
@@ -188,7 +206,7 @@ TEST(core, message_ex)
 TEST(rpc_message, restore_read)
 {
     using namespace dsn;
-    configuration_query_by_index_request request, result;
+    query_cfg_request request, result;
     message_ptr msg = from_thrift_request_to_received_message(request, RPC_CODE_FOR_TEST);
     for (int i = 0; i < 10; i++) {
         unmarshall(msg, result);
@@ -202,7 +220,7 @@ TEST(rpc_message, create_receive_message_with_standalone_header)
 
     message_ptr msg = message_ex::create_receive_message_with_standalone_header(data);
     ASSERT_EQ(msg->buffers.size(), 2);
-    ASSERT_EQ(0, strcmp(msg->buffers[1].data(), data.data()));
+    ASSERT_STREQ(msg->buffers[1].data(), data.data());
     ASSERT_EQ(msg->header->body_length, data.length());
 }
 
@@ -214,7 +232,7 @@ TEST(rpc_message, copy_message_no_reply)
 
     auto msg = message_ex::copy_message_no_reply(*old_msg);
     ASSERT_EQ(msg->buffers.size(), old_msg->buffers.size());
-    ASSERT_EQ(0, strcmp(msg->buffers[1].data(), old_msg->buffers[1].data()));
+    ASSERT_STREQ(msg->buffers[1].data(), old_msg->buffers[1].data());
     ASSERT_EQ(msg->header->body_length, old_msg->header->body_length);
     ASSERT_EQ(msg->local_rpc_code, old_msg->local_rpc_code);
 

@@ -20,8 +20,6 @@ src/base/rrdb_types.cpp
 src/include/rrdb/rrdb_types.h
 src/common/serialization_helper/dsn.layer2_types.h
 src/runtime/dsn.layer2_types.cpp
-src/runtime
-src/*builder
 
 onebox/
 .zk_install/
@@ -143,6 +141,7 @@ java-client/pegasus-*
 java-client/dependency-reduced-pom.xml
 java-client/src/main/java/org/apache/pegasus/apps/*
 java-client/src/main/java/org/apache/pegasus/replication/*
+java-client/.flattened-pom.xml
 
 # Created by .ignore support plugin (hsz.mobi)
 ### SBT template

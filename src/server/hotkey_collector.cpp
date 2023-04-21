@@ -17,32 +17,41 @@
 
 #include "hotkey_collector.h"
 
-#include "common/replication_enums.h"
-#include "utils/smart_pointers.h"
-#include <boost/functional/hash.hpp>
-#include "utils/fmt_logging.h"
-#include "utils/flags.h"
+#include <boost/container_hash/extensions.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <unordered_map>
+
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
+#include "common/replication_enums.h"
+#include "runtime/api_layer1.h"
+#include "server/hotkey_collector_state.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace server {
 
 DSN_DEFINE_uint32(
-    "pegasus.server",
+    pegasus.server,
     hot_bucket_variance_threshold,
     7,
     "the variance threshold to detect hot bucket during coarse analysis of hotkey detection");
 DSN_TAG_VARIABLE(hot_bucket_variance_threshold, FT_MUTABLE);
 
 DSN_DEFINE_uint32(
-    "pegasus.server",
+    pegasus.server,
     hot_key_variance_threshold,
     5,
     "the variance threshold to detect hot key during fine analysis of hotkey detection");
 DSN_TAG_VARIABLE(hot_key_variance_threshold, FT_MUTABLE);
 
-DSN_DEFINE_uint32("pegasus.server",
+DSN_DEFINE_uint32(pegasus.server,
                   hotkey_buckets_num,
                   37,
                   "the number of data capture hash buckets");
@@ -61,7 +70,7 @@ DSN_DEFINE_validator(hotkey_buckets_num, [](uint32_t bucket_num) -> bool {
 });
 
 DSN_DEFINE_uint32(
-    "pegasus.server",
+    pegasus.server,
     max_seconds_to_detect_hotkey,
     150,
     "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
@@ -71,7 +80,7 @@ DSN_TAG_VARIABLE(max_seconds_to_detect_hotkey, FT_MUTABLE);
 /*extern*/ bool
 find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index)
 {
-    dcheck_gt(captured_keys.size(), 2);
+    CHECK_GT(captured_keys.size(), 2);
     int data_size = captured_keys.size();
     // empirical rule to calculate hot point of each partition
     // same algorithm as hotspot_partition_calculator::stat_histories_analyse
@@ -186,8 +195,8 @@ inline void hotkey_collector::change_state_by_result()
     case hotkey_collector_state::FINE_DETECTING:
         if (!_result.hot_hash_key.empty()) {
             change_state_to_finished();
-            derror_replica("Find the hotkey: {}",
-                           pegasus::utils::c_escape_string(_result.hot_hash_key));
+            LOG_ERROR_PREFIX("Find the hotkey: {}",
+                             pegasus::utils::c_escape_string(_result.hot_hash_key));
         }
         break;
     default:
@@ -212,7 +221,7 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
         std::string hint = fmt::format("{}: can't find this detect action", req.action);
         resp.err = dsn::ERR_INVALID_STATE;
         resp.__set_err_hint(hint);
-        derror_replica(hint);
+        LOG_ERROR_PREFIX(hint);
     }
 }
 
@@ -279,11 +288,11 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         hint = "invalid collector state";
         resp.err = dsn::ERR_INVALID_STATE;
         resp.__set_err_hint(hint);
-        derror_replica(hint);
-        dassert(false, "invalid collector state");
+        LOG_ERROR_PREFIX(hint);
+        CHECK(false, "invalid collector state");
     }
     resp.__set_err_hint(hint);
-    dwarn_replica(hint);
+    LOG_WARNING_PREFIX(hint);
 }
 
 void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &resp)
@@ -292,7 +301,7 @@ void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &
     resp.err = dsn::ERR_OK;
     std::string hint =
         fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
-    ddebug_replica(hint);
+    LOG_INFO_PREFIX(hint);
 }
 
 void hotkey_collector::query_result(dsn::replication::detect_hotkey_response &resp)
@@ -302,7 +311,7 @@ void hotkey_collector::query_result(dsn::replication::detect_hotkey_response &re
         std::string hint =
             fmt::format("Can't get hotkey now, now state: {}", enum_to_string(_state.load()));
         resp.__set_err_hint(hint);
-        ddebug_replica(hint);
+        LOG_INFO_PREFIX(hint);
     } else {
         resp.err = dsn::ERR_OK;
         resp.__set_hotkey_result(pegasus::utils::c_escape_string(_result.hot_hash_key));
@@ -312,7 +321,7 @@ void hotkey_collector::query_result(dsn::replication::detect_hotkey_response &re
 bool hotkey_collector::terminate_if_timeout()
 {
     if (dsn_now_s() >= _collector_start_time_second.load() + FLAGS_max_seconds_to_detect_hotkey) {
-        ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
+        LOG_INFO_PREFIX("hotkey collector work time is exhausted but no hotkey has been found");
         change_state_to_stopped();
         return true;
     }

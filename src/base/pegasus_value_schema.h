@@ -19,24 +19,20 @@
 
 #pragma once
 
-#include <array>
+#include <rocksdb/slice.h>
 #include <stdint.h>
+#include <string.h>
+#include <algorithm>
+#include <array>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include <rocksdb/slice.h>
-
-#include "common/api_common.h"
-#include "utils/api_utilities.h"
 #include "utils/blob.h"
 #include "utils/endians.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
-#include "utils/smart_pointers.h"
-#include "utils/utils.h"
-#include "runtime/api_layer1.h"
-#include "runtime/api_task.h"
-#include "runtime/app_model.h"
+#include "utils/string_view.h"
 #include "value_field.h"
 
 namespace pegasus {
@@ -61,11 +57,7 @@ inline uint64_t extract_timestamp_from_timetag(uint64_t timetag)
 /// \return expire_ts in host endian
 inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view value)
 {
-    dassert_f(version <= PEGASUS_DATA_VERSION_MAX,
-              "data version({}) must be <= {}",
-              version,
-              PEGASUS_DATA_VERSION_MAX);
-
+    CHECK_LE(version, PEGASUS_DATA_VERSION_MAX);
     return dsn::data_input(value).read_u32();
 }
 
@@ -76,10 +68,7 @@ inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view val
 inline void
 pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob &user_data)
 {
-    dassert_f(version <= PEGASUS_DATA_VERSION_MAX,
-              "data version({}) must be <= {}",
-              version,
-              PEGASUS_DATA_VERSION_MAX);
+    CHECK_LE(version, PEGASUS_DATA_VERSION_MAX);
 
     auto *s = new std::string(std::move(raw_value));
     dsn::data_input input(*s);
@@ -97,7 +86,7 @@ pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob
 /// Extracts timetag from a v1 value.
 inline uint64_t pegasus_extract_timetag(int version, dsn::string_view value)
 {
-    dcheck_eq(version, 1);
+    CHECK_EQ(version, 1);
 
     dsn::data_input input(value);
     input.skip(sizeof(uint32_t));
@@ -110,12 +99,12 @@ inline uint64_t pegasus_extract_timetag(int version, dsn::string_view value)
 inline void pegasus_update_expire_ts(uint32_t version, std::string &value, uint32_t new_expire_ts)
 {
     if (version == 0 || version == 1) {
-        dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
+        CHECK_GE_MSG(value.length(), sizeof(uint32_t), "value must include 'expire_ts' header");
 
         new_expire_ts = dsn::endian::hton(new_expire_ts);
         memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));
     } else {
-        dfatal_f("unsupported value schema version: {}", version);
+        LOG_FATAL("unsupported value schema version: {}", version);
         __builtin_unreachable();
     }
 }
@@ -156,7 +145,7 @@ public:
         } else if (value_schema_version == 1) {
             return generate_value_v1(expire_ts, timetag, user_data);
         } else {
-            dfatal_f("unsupported value schema version: {}", value_schema_version);
+            LOG_FATAL("unsupported value schema version: {}", value_schema_version);
             __builtin_unreachable();
         }
     }

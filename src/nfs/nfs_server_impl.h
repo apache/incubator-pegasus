@@ -25,19 +25,30 @@
  */
 
 #pragma once
-#include "runtime/task/task_tracker.h"
-#include "perf_counter/perf_counter_wrapper.h"
-#include <iostream>
-#include "runtime/serverlet.h"
-#include "utils/flags.h"
-#include "utils/command_manager.h"
-#include "utils/token_buckets.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
+#include "aio/file_io.h"
 #include "nfs_code_definition.h"
 #include "nfs_types.h"
-#include "nfs_client_impl.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/serverlet.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/blob.h"
+#include "utils/command_manager.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/token_buckets.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class disk_file;
+
 namespace service {
 class nfs_service_impl : public ::dsn::serverlet<nfs_service_impl>
 {
@@ -45,7 +56,8 @@ public:
     nfs_service_impl();
     virtual ~nfs_service_impl() { _tracker.cancel_outstanding_tasks(); }
 
-    void open_service()
+    // The rpc_handler is actually registered replica_stub.cpp, which is saved here for testing
+    void open_nfs_service_for_test()
     {
         register_async_rpc_handler(RPC_NFS_COPY, "copy", &nfs_service_impl::on_copy);
         register_async_rpc_handler(
@@ -54,14 +66,14 @@ public:
 
     void register_cli_commands();
 
+    // TODO(yingchun): seems nobody call it, can be removed?
     void close_service()
     {
         unregister_rpc_handler(RPC_NFS_COPY);
         unregister_rpc_handler(RPC_NFS_GET_FILE_SIZE);
-        UNREGISTER_VALID_HANDLER(_nfs_max_send_rate_megabytes_cmd);
+        _nfs_max_send_rate_megabytes_cmd.reset();
     }
 
-protected:
     // RPC_NFS_V2_NFS_COPY
     virtual void on_copy(const copy_request &request, ::dsn::rpc_replier<copy_response> &reply);
     // RPC_NFS_V2_NFS_GET_FILE_SIZE
@@ -71,7 +83,6 @@ protected:
 private:
     struct callback_para
     {
-        dsn_handle_t hfile;
         std::string source_disk_tag;
         std::string file_path;
         std::string dst_dir;
@@ -80,20 +91,15 @@ private:
         uint32_t size;
         rpc_replier<copy_response> replier;
 
-        callback_para(rpc_replier<copy_response> &&r)
-            : hfile(nullptr), offset(0), size(0), replier(std::move(r))
-        {
-        }
+        callback_para(rpc_replier<copy_response> &&r) : offset(0), size(0), replier(std::move(r)) {}
         callback_para(callback_para &&r)
-            : hfile(r.hfile),
-              file_path(std::move(r.file_path)),
+            : file_path(std::move(r.file_path)),
               dst_dir(std::move(r.dst_dir)),
               bb(std::move(r.bb)),
               offset(r.offset),
               size(r.size),
               replier(std::move(r.replier))
         {
-            r.hfile = nullptr;
             r.offset = 0;
             r.size = 0;
         }
@@ -113,7 +119,7 @@ private:
         ~file_handle_info_on_server()
         {
             error_code err = file::close(file_handle);
-            dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
+            CHECK_EQ_MSG(err, ERR_OK, "file::close failed");
         }
     };
 
@@ -134,7 +140,7 @@ private:
     perf_counter_wrapper _recent_copy_data_size;
     perf_counter_wrapper _recent_copy_fail_count;
 
-    dsn_handle_t _nfs_max_send_rate_megabytes_cmd;
+    std::unique_ptr<command_deregister> _nfs_max_send_rate_megabytes_cmd;
 
     dsn::task_tracker _tracker;
 };

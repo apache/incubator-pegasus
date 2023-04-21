@@ -17,43 +17,50 @@
  * under the License.
  */
 
-#include <vector>
-#include <bitset>
-#include <thread>
-#include <iostream>
-#include <cstdio>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <unistd.h>
 #include <chrono>
-#include <thread>
-#include <atomic>
 #include <memory>
-#include <sys/time.h>
-#include "remote_cmd/remote_command.h"
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "common/gpid.h"
+#include "dsn.layer2_types.h"
 #include "partition_kill_testor.h"
+#include "remote_cmd/remote_command.h"
+#include "runtime/task/task.h"
+#include "test/kill_test/kill_testor.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace test {
+
+DSN_DECLARE_uint32(kill_interval_seconds);
+
 partition_kill_testor::partition_kill_testor(const char *config_file) : kill_testor(config_file) {}
 
 void partition_kill_testor::Run()
 {
-    ddebug("begin the kill-partition");
+    LOG_INFO("begin the kill-partition");
     while (true) {
         if (!check_cluster_status()) {
-            ddebug("check_cluster_status() failed");
+            LOG_INFO("check_cluster_status() failed");
         } else {
             run();
         }
-        ddebug("sleep %d seconds before checking", kill_interval_seconds);
-        sleep(kill_interval_seconds);
+        LOG_INFO("sleep {} seconds before checking", FLAGS_kill_interval_seconds);
+        sleep(FLAGS_kill_interval_seconds);
     }
 }
 
 void partition_kill_testor::run()
 {
     if (partitions.size() == 0) {
-        ddebug("partitions empty");
+        LOG_INFO("partitions empty");
         return;
     }
 
@@ -100,7 +107,7 @@ void partition_kill_testor::run()
     }
 
     if (failed > 0) {
-        derror("call replica.kill_partition failed");
+        LOG_ERROR("call replica.kill_partition failed");
     }
 }
 } // namespace test

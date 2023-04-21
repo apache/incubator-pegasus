@@ -19,11 +19,28 @@
 
 #pragma once
 
-#include <pegasus/client.h>
-#include "client/replication_ddl_client.h"
+#include <stdint.h>
+#include <atomic>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "dsn.layer2_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/synchronize.h"
+
+namespace dsn {
+namespace replication {
+class replication_ddl_client;
+} // namespace replication
+} // namespace dsn
 
 namespace pegasus {
+class pegasus_client;
+
 namespace server {
 
 using ::dsn::replication::replication_ddl_client;
@@ -54,15 +71,12 @@ private:
 private:
     dsn::task_tracker _tracker;
     std::string _cluster_name;
-    std::string _app_name;
     // for writing detect result
     std::unique_ptr<result_writer> _result_writer;
     // client to access server.
     pegasus_client *_client;
     std::shared_ptr<replication_ddl_client> _ddl_client;
     std::vector<dsn::rpc_address> _meta_list;
-    uint32_t _detect_interval_seconds;
-    int32_t _alert_fail_count;
     ::dsn::utils::ex_lock_nr _alert_lock;
     // for record partition fail times.
     std::vector<std::shared_ptr<std::atomic<int32_t>>> _fail_count;
@@ -73,12 +87,9 @@ private:
     int32_t _app_id;
     int32_t _partition_count;
     std::vector<::dsn::partition_configuration> partitions;
-    uint32_t _detect_timeout;
 
     std::string _send_alert_email_cmd;
     std::string _send_availability_info_email_cmd;
-    std::string _alert_script_dir;
-    std::string _alert_email_address;
 
     // total detect times and total fail times
     std::atomic<int64_t> _recent_day_detect_times;

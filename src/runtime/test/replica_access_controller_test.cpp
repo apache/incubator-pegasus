@@ -15,26 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/flags.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "common/replication_other_types.h"
+#include <memory>
+#include <string>
+#include <unordered_set>
+#include <utility>
+
 #include "common/replication.codes.h"
-#include "runtime/security/replica_access_controller.h"
+#include "runtime/ranger/access_type.h"
+#include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/security/replica_access_controller.h"
+#include "utils/autoref_ptr.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace security {
@@ -45,14 +42,17 @@ class replica_access_controller_test : public testing::Test
 public:
     replica_access_controller_test()
     {
-        _replica_access_controller = make_unique<replica_access_controller>("test");
+        _replica_access_controller = std::make_unique<replica_access_controller>("test");
     }
 
-    bool allowed(dsn::message_ex *msg) { return _replica_access_controller->allowed(msg); }
+    bool allowed(dsn::message_ex *msg)
+    {
+        return _replica_access_controller->allowed(msg, dsn::ranger::access_type::kRead);
+    }
 
     void set_replica_users(std::unordered_set<std::string> &&replica_users)
     {
-        _replica_access_controller->_users.swap(replica_users);
+        _replica_access_controller->_allowed_users.swap(replica_users);
     }
 
     std::unique_ptr<replica_access_controller> _replica_access_controller;

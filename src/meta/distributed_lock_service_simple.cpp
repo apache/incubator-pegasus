@@ -33,10 +33,12 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "runtime/task/async_calls.h"
+#include <chrono>
 
-#include "common/replication_common.h"
+#include "common/replication.codes.h"
 #include "distributed_lock_service_simple.h"
+#include "runtime/api_layer1.h"
+#include "runtime/task/async_calls.h"
 
 namespace dsn {
 namespace dist {

@@ -15,15 +15,33 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/fail_point.h"
-#include "utils/filesystem.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "backup_types.h"
 #include "common/backup_common.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "meta/backup_engine.h"
 #include "meta/meta_backup_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
 #include "meta/server_state.h"
 #include "meta_test_base.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
@@ -53,7 +71,7 @@ public:
     start_backup_app_response
     start_backup(int32_t app_id, const std::string &provider, const std::string &backup_path = "")
     {
-        auto request = dsn::make_unique<start_backup_app_request>();
+        auto request = std::make_unique<start_backup_app_request>();
         request->app_id = app_id;
         request->backup_provider_type = provider;
         if (!backup_path.empty()) {
@@ -68,7 +86,7 @@ public:
 
     query_backup_status_response query_backup(int32_t app_id, int64_t backup_id)
     {
-        auto request = dsn::make_unique<query_backup_status_request>();
+        auto request = std::make_unique<query_backup_status_request>();
         request->app_id = app_id;
         request->__isset.backup_id = true;
         request->backup_id = backup_id;

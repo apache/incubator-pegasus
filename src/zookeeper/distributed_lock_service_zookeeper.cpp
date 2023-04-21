@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+#include <zookeeper/zookeeper.h>
+#include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
+
+#include "distributed_lock_service_zookeeper.h"
+#include "lock_struct.h"
+#include "lock_types.h"
+#include "runtime/service_app.h"
 /*
  * Description:
  *     distributed lock service implemented with zookeeper
@@ -32,23 +42,17 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 #include "runtime/task/async_calls.h"
-#include "common/replication.codes.h"
-
-#include <zookeeper/zookeeper.h>
-#include <boost/lexical_cast.hpp>
-#include <functional>
-#include <algorithm>
-#include <utility>
-
-#include "zookeeper_session.h"
-#include "distributed_lock_service_zookeeper.h"
-#include "lock_struct.h"
-#include "lock_types.h"
-
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
+#include "zookeeper/zookeeper_session_mgr.h"
 #include "zookeeper_error.h"
+#include "zookeeper_session.h"
 
 namespace dsn {
 namespace dist {
+
+DSN_DECLARE_int32(timeout_ms);
 
 std::string distributed_lock_service_zookeeper::LOCK_NODE_PREFIX = "LOCKNODE";
 
@@ -90,7 +94,7 @@ void distributed_lock_service_zookeeper::erase(const lock_key &key)
 error_code distributed_lock_service_zookeeper::initialize(const std::vector<std::string> &args)
 {
     if (args.empty()) {
-        derror("need parameters: <lock_root>");
+        LOG_ERROR("need parameters: <lock_root>");
         return ERR_INVALID_PARAMETERS;
     }
     const char *lock_root = args[0].c_str();
@@ -102,9 +106,9 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
                                             lock_srv_ptr(this),
                                             std::placeholders::_1));
     if (_zoo_state != ZOO_CONNECTED_STATE) {
-        _waiting_attach.wait_for(zookeeper_session_mgr::instance().timeout());
+        _waiting_attach.wait_for(FLAGS_timeout_ms);
         if (_zoo_state != ZOO_CONNECTED_STATE) {
-            dwarn(
+            LOG_WARNING(
                 "attach to zookeeper session timeout, distributed lock service initialized failed");
             return ERR_TIMEOUT;
         }
@@ -128,13 +132,13 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
         _session->visit(op);
         e.wait();
         if (zerr != ZOK && zerr != ZNODEEXISTS) {
-            derror("create zk node failed, path = %s, err = %s", current.c_str(), zerror(zerr));
+            LOG_ERROR("create zk node failed, path = {}, err = {}", current, zerror(zerr));
             return from_zerror(zerr);
         }
     }
     _lock_root = current.empty() ? "/" : current;
 
-    ddebug("init distributed_lock_service_zookeeper succeed, lock_root = %s", _lock_root.c_str());
+    LOG_INFO("init distributed_lock_service_zookeeper succeed, lock_root = {}", _lock_root);
     // Notice: this reference is released in the finalize
     add_ref();
     return ERR_OK;
@@ -278,11 +282,11 @@ void distributed_lock_service_zookeeper::on_zoo_session_evt(lock_srv_ptr _this, 
     }
 
     if (ZOO_EXPIRED_SESSION_STATE == zoo_state || ZOO_AUTH_FAILED_STATE == zoo_state) {
-        derror("get zoo state: %s, which means the session is expired",
-               zookeeper_session::string_zoo_state(zoo_state));
+        LOG_ERROR("get zoo state: {}, which means the session is expired",
+                  zookeeper_session::string_zoo_state(zoo_state));
         _this->dispatch_zookeeper_session_expire();
     } else {
-        dwarn("get zoo state: %s, ignore it", zookeeper_session::string_zoo_state(zoo_state));
+        LOG_WARNING("get zoo state: {}, ignore it", zookeeper_session::string_zoo_state(zoo_state));
     }
 }
 }

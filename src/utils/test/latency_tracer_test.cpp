@@ -15,8 +15,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+#include <gmock/gmock.h> // IWYU pragma: keep
+// IWYU pragma: no_include <gmock/gmock-matchers.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fmt_logging.h"
+#include <cstdint>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+
+#include "common/replication.codes.h"
 #include "utils/latency_tracer.h"
 
 namespace dsn {
@@ -93,8 +105,9 @@ TEST_F(latency_tracer_test, add_point)
             tracer1_first = false;
             continue;
         }
-        ASSERT_EQ(point.second,
-                  fmt::format("latency_tracer_test.cpp:48:init_trace_points_stage{}", count1++));
+        ASSERT_THAT(point.second,
+                    testing::ContainsRegex(fmt::format(
+                        "latency_tracer_test.cpp:[0-9]+:init_trace_points_stage{}", count1++)));
     }
 
     auto tracer2_points = get_points(_tracer2);
@@ -106,8 +119,9 @@ TEST_F(latency_tracer_test, add_point)
             tracer2_first = false;
             continue;
         }
-        ASSERT_EQ(point.second,
-                  fmt::format("latency_tracer_test.cpp:54:init_trace_points_stage{}", count2++));
+        ASSERT_THAT(point.second,
+                    testing::ContainsRegex(fmt::format(
+                        "latency_tracer_test.cpp:[0-9]+:init_trace_points_stage{}", count2++)));
     }
 
     auto tracer1_sub_tracer = get_sub_tracer(_tracer1);
@@ -124,8 +138,9 @@ TEST_F(latency_tracer_test, add_point)
             sub_tracer_first = false;
             continue;
         }
-        ASSERT_EQ(point.second,
-                  fmt::format("latency_tracer_test.cpp:64:init_trace_points_stage{}", count3++));
+        ASSERT_THAT(point.second,
+                    testing::ContainsRegex(fmt::format(
+                        "latency_tracer_test.cpp:[0-9]+:init_trace_points_stage{}", count3++)));
     }
 
     // tracer3 append one invalid point, it will reset the last position and update the

@@ -61,13 +61,32 @@
  */
 #pragma once
 
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 #include "failure_detector/fd.client.h"
 #include "failure_detector/fd.server.h"
 #include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
+class command_deregister;
+template <typename TResponse>
+class rpc_replier;
+
 namespace fd {
+class beacon_ack;
+class beacon_msg;
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FD)
 DEFINE_TASK_CODE(LPC_BEACON_CHECK, TASK_PRIORITY_HIGH, THREAD_POOL_FD)
@@ -100,7 +119,6 @@ public:
     virtual void end_ping(::dsn::error_code err, const beacon_ack &ack, void *context);
 
     virtual void register_ctrl_commands();
-    virtual void unregister_ctrl_commands();
 
 public:
     error_code start(uint32_t check_interval_seconds,
@@ -109,6 +127,7 @@ public:
                      uint32_t grace_seconds,
                      bool use_allow_list = false);
 
+    // TODO(yingchun): can it be removed ?
     void stop();
 
     uint32_t get_lease_ms() const { return _lease_milliseconds; }
@@ -221,7 +240,7 @@ private:
 
     perf_counter_wrapper _recent_beacon_fail_count;
 
-    dsn_handle_t _get_allow_list = nullptr;
+    std::unique_ptr<command_deregister> _get_allow_list;
 
 protected:
     mutable zlock _lock;

@@ -15,14 +15,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
-#include "replica_stub.h"
+#include <stdint.h>
+#include <chrono>
+#include <map>
+#include <string>
+#include <utility>
 
-#include "replica/replication_app_base.h"
-#include "utils/fmt_logging.h"
+#include "common/gpid.h"
 #include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/async_calls.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/throttling_controller.h"
 
 namespace dsn {
 namespace replication {
@@ -120,10 +131,10 @@ void replica::update_throttle_env_internal(const std::map<std::string, std::stri
                                  parse_error,
                                  throttling_changed,
                                  old_throttling)) {
-            dwarn_replica("parse env failed, key = \"{}\", value = \"{}\", error = \"{}\"",
-                          key,
-                          find->second,
-                          parse_error);
+            LOG_WARNING_PREFIX("parse env failed, key = \"{}\", value = \"{}\", error = \"{}\"",
+                               key,
+                               find->second,
+                               parse_error);
             // reset if parse failed
             cntl.reset(throttling_changed, old_throttling);
         }
@@ -132,7 +143,7 @@ void replica::update_throttle_env_internal(const std::map<std::string, std::stri
         cntl.reset(throttling_changed, old_throttling);
     }
     if (throttling_changed) {
-        ddebug_replica("switch {} from \"{}\" to \"{}\"", key, old_throttling, cntl.env_value());
+        LOG_INFO_PREFIX("switch {} from \"{}\" to \"{}\"", key, old_throttling, cntl.env_value());
     }
 }
 

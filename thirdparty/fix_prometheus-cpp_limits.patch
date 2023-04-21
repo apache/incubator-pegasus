@@ -1,0 +1,10 @@
+--- core/src/histogram.cc	2023-02-13 13:56:03.678985601 +0800
++++ core/src/histogram_fix_limits.cc	2023-02-13 13:55:55.303966447 +0800
+@@ -4,6 +4,7 @@
+ #include <cassert>
+ #include <iterator>
+ #include <numeric>
++#include <limits>
+ 
+ namespace prometheus {
+ 

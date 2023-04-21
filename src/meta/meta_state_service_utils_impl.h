@@ -21,6 +21,8 @@
 #include "utils/fmt_logging.h"
 
 #include "meta_state_service_utils.h"
+#include "meta/meta_state_service.h"
+#include "common/replication.codes.h"
 
 namespace dsn {
 namespace replication {
@@ -53,9 +55,9 @@ struct op_type
             "OP_GET_CHILDREN",
         };
 
-        dassert_f(v != OP_NONE && v <= (sizeof(op_type_to_string_map) / sizeof(char *)),
-                  "invalid type: {}",
-                  v);
+        CHECK(v != OP_NONE && v <= (sizeof(op_type_to_string_map) / sizeof(char *)),
+              "invalid type: {}",
+              v);
         return op_type_to_string_map[v - 1];
     }
 };
@@ -75,17 +77,17 @@ struct operation : pipeline::environment
     void on_error(T *this_instance, op_type::type type, error_code ec, const std::string &path)
     {
         if (ec == ERR_TIMEOUT) {
-            dwarn_f("request({}) on path({}) was timeout, retry after 1 second",
-                    op_type::to_string(type),
-                    path);
+            LOG_WARNING("request({}) on path({}) was timeout, retry after 1 second",
+                        op_type::to_string(type),
+                        path);
             pipeline::repeat(std::move(*this_instance), 1_s);
             return;
         }
-        dassert_f(false,
-                  "request({}) on path({}) encountered an unexpected error({})",
-                  op_type::to_string(type),
-                  path,
-                  ec.to_string());
+        CHECK(false,
+              "request({}) on path({}) encountered an unexpected error({})",
+              op_type::to_string(type),
+              path,
+              ec.to_string());
     }
 
     dist::meta_state_service *remote_storage() const { return _ms->_remote; }

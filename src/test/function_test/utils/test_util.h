@@ -19,10 +19,15 @@
 
 #pragma once
 
+#include <gtest/gtest.h>
+#include <stdint.h>
 #include <map>
 #include <memory>
 #include <string>
-#include <gtest/gtest.h>
+#include <vector>
+
+#include "dsn.layer2_types.h"
+#include "runtime/rpc/rpc_address.h"
 
 // TODO(yingchun): it's too tricky, but I don't know how does it happen, we can fix it later.
 #define TRICKY_CODE_TO_AVOID_LINK_ERROR                                                            \
@@ -32,8 +37,6 @@
     } while (false)
 
 namespace dsn {
-class partition_configuration;
-class rpc_address;
 namespace replication {
 class replication_ddl_client;
 } // namespace replication
@@ -52,7 +55,13 @@ public:
 
     void SetUp() override;
 
-    void run_cmd_from_project_root(const std::string &cmd);
+    static void run_cmd_from_project_root(const std::string &cmd);
+
+    static int get_alive_replica_server_count();
+
+    // Get the leader replica count of the 'replica_server_index' (based on 1) replica server
+    // on the 'table_name'.
+    static int get_leader_count(const std::string &table_name, int replica_server_index);
 
 protected:
     const std::string cluster_name_;

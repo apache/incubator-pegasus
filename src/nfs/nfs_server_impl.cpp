@@ -24,21 +24,35 @@
  * THE SOFTWARE.
  */
 
-#include "nfs_server_impl.h"
+#include "nfs/nfs_server_impl.h"
 
-#include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <chrono>
+#include <cstdint>
+#include <mutex>
+#include <vector>
 
-#include <cstdlib>
-
-#include "utils/filesystem.h"
+#include "nfs/nfs_code_definition.h"
+#include "perf_counter/perf_counter.h"
+#include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
+#include "utils/TokenBucket.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/ports.h"
+#include "utils/safe_strerror_posix.h"
+#include "utils/string_conv.h"
+#include "utils/utils.h"
 
 namespace dsn {
+class disk_file;
+
 namespace service {
 
 DSN_DEFINE_uint32(
-    "nfs",
+    nfs,
     max_send_rate_megabytes_per_disk,
     0,
     "max rate per disk of send to remote node(MB/s)，zero means disable rate limiter");
@@ -72,42 +86,35 @@ nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs")
 void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
                                ::dsn::rpc_replier<::dsn::service::copy_response> &reply)
 {
-    // dinfo(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
-
     std::string file_path =
         dsn::utils::filesystem::path_combine(request.source_dir, request.file_name);
-    disk_file *hfile;
+    disk_file *dfile = nullptr;
 
     {
         zauto_lock l(_handles_map_lock);
         auto it = _handles_map.find(file_path); // find file handle cache first
 
-        if (it == _handles_map.end()) // not found
-        {
-            hfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
-            if (hfile) {
-
+        if (it == _handles_map.end()) {
+            dfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
+            if (dfile != nullptr) {
                 auto fh = std::make_shared<file_handle_info_on_server>();
-                fh->file_handle = hfile;
+                fh->file_handle = dfile;
                 fh->file_access_count = 1;
                 fh->last_access_time = dsn_now_ms();
                 _handles_map.insert(std::make_pair(file_path, std::move(fh)));
             }
-        } else // found
-        {
-            hfile = it->second->file_handle;
+        } else {
+            dfile = it->second->file_handle;
             it->second->file_access_count++;
             it->second->last_access_time = dsn_now_ms();
         }
     }
 
-    dinfo("nfs: copy file %s [%" PRId64 ", %" PRId64 ")",
-          file_path.c_str(),
-          request.offset,
-          request.offset + request.size);
+    LOG_DEBUG(
+        "nfs: copy file {} [{}, {}]", file_path, request.offset, request.offset + request.size);
 
-    if (hfile == 0) {
-        derror("{nfs_service} open file %s failed", file_path.c_str());
+    if (dfile == nullptr) {
+        LOG_ERROR("[nfs_service] open file {} failed", file_path);
         ::dsn::service::copy_response resp;
         resp.error = ERR_OBJECT_NOT_FOUND;
         reply(resp);
@@ -119,14 +126,13 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
     cp->dst_dir = request.dst_dir;
     cp->source_disk_tag = request.source_disk_tag;
     cp->file_path = std::move(file_path);
-    cp->hfile = hfile;
     cp->offset = request.offset;
     cp->size = request.size;
 
     auto buffer_save = cp->bb.buffer().get();
 
     file::read(
-        hfile,
+        dfile,
         buffer_save,
         request.size,
         request.offset,
@@ -154,8 +160,7 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
     }
 
     if (err != ERR_OK) {
-        derror(
-            "{nfs_service} read file %s failed, err = %s", cp.file_path.c_str(), err.to_string());
+        LOG_ERROR("[nfs_service] read file {} failed, err = {}", cp.file_path, err);
         _recent_copy_fail_count->increment();
     } else {
         _recent_copy_data_size->add(sz);
@@ -175,8 +180,6 @@ void nfs_service_impl::on_get_file_size(
     const ::dsn::service::get_file_size_request &request,
     ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply)
 {
-    // dinfo(">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE");
-
     get_file_size_response resp;
     error_code err = ERR_OK;
     std::vector<std::string> file_list;
@@ -184,11 +187,11 @@ void nfs_service_impl::on_get_file_size(
     if (request.file_list.size() == 0) // return all file size in the destination file folder
     {
         if (!dsn::utils::filesystem::directory_exists(folder)) {
-            derror("{nfs_service} directory %s not exist", folder.c_str());
+            LOG_ERROR("[nfs_service] directory {} not exist", folder);
             err = ERR_OBJECT_NOT_FOUND;
         } else {
             if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true)) {
-                derror("{nfs_service} get subfiles of directory %s failed", folder.c_str());
+                LOG_ERROR("[nfs_service] get subfiles of directory {} failed", folder);
                 err = ERR_FILE_OPERATION_FAILED;
             } else {
                 for (auto &fpath : file_list) {
@@ -196,7 +199,7 @@ void nfs_service_impl::on_get_file_size(
                     // Done
                     int64_t sz;
                     if (!dsn::utils::filesystem::file_size(fpath, sz)) {
-                        derror("{nfs_service} get size of file %s failed", fpath.c_str());
+                        LOG_ERROR("[nfs_service] get size of file {} failed", fpath);
                         err = ERR_FILE_OPERATION_FAILED;
                         break;
                     }
@@ -216,9 +219,9 @@ void nfs_service_impl::on_get_file_size(
 
             struct stat st;
             if (0 != ::stat(file_path.c_str(), &st)) {
-                derror("{nfs_service} get stat of file %s failed, err = %s",
-                       file_path.c_str(),
-                       strerror(errno));
+                LOG_ERROR("[nfs_service] get stat of file {} failed, err = {}",
+                          file_path,
+                          dsn::utils::safe_strerror(errno));
                 err = ERR_OBJECT_NOT_FOUND;
                 break;
             }
@@ -248,7 +251,7 @@ void nfs_service_impl::close_file() // release out-of-date file handle
         // not used and expired
         if (fptr->file_access_count == 0 &&
             dsn_now_ms() - fptr->last_access_time > (uint64_t)FLAGS_file_close_expire_time_ms) {
-            dinfo("nfs: close file handle %s", it->first.c_str());
+            LOG_DEBUG("nfs: close file handle {}", it->first);
             it = _handles_map.erase(it);
         } else
             it++;

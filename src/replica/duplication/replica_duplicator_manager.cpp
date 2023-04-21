@@ -15,10 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common//duplication_common.h"
-#include "utils/fmt_logging.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
 
+#include "common//duplication_common.h"
+#include "common/gpid.h"
+#include "replica/duplication/replica_duplicator.h"
 #include "replica_duplicator_manager.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -35,9 +41,9 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
         if (p.last_decree != p.confirmed_decree ||
             (kv.second->status() == duplication_status::DS_PREPARE && p.checkpoint_has_prepared)) {
             if (p.last_decree < p.confirmed_decree) {
-                derror_replica("invalid decree state: p.last_decree({}) < p.confirmed_decree({})",
-                               p.last_decree,
-                               p.confirmed_decree);
+                LOG_ERROR_PREFIX("invalid decree state: p.last_decree({}) < p.confirmed_decree({})",
+                                 p.last_decree,
+                                 p.confirmed_decree);
                 continue;
             }
             duplication_confirm_entry entry;
@@ -67,15 +73,15 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
     replica_duplicator_u_ptr &dup = _duplications[dupid];
     if (dup == nullptr) {
         if (!is_duplication_status_invalid(next_status)) {
-            dup = make_unique<replica_duplicator>(ent, _replica);
+            dup = std::make_unique<replica_duplicator>(ent, _replica);
         } else {
-            derror_replica("illegal duplication status: {}",
-                           duplication_status_to_string(next_status));
+            LOG_ERROR_PREFIX("illegal duplication status: {}",
+                             duplication_status_to_string(next_status));
         }
     } else {
         // update progress
         duplication_progress newp = dup->progress().set_confirmed_decree(it->second);
-        dcheck_eq_replica(dup->update_progress(newp), error_s::ok());
+        CHECK_EQ_PREFIX(dup->update_progress(newp), error_s::ok());
         dup->update_status_if_needed(next_status);
         if (ent.__isset.fail_mode) {
             dup->update_fail_mode(ent.fail_mode);

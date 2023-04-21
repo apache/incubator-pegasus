@@ -32,18 +32,22 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
+#include <stdlib.h>
 #include <zookeeper/zookeeper.h>
-#include <sasl/sasl.h>
+#include <algorithm>
+#include <utility>
 
-#include "zookeeper_session.h"
-#include "zookeeper_session_mgr.h"
-
+#include "runtime/app_model.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "zookeeper/proto.h"
+#include "zookeeper/zookeeper.jute.h"
+#include "zookeeper_session.h"
 
 namespace dsn {
 namespace security {
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
-DSN_DEFINE_string("security",
+DSN_DEFINE_string(security,
                   zookeeper_kerberos_service_name,
                   "zookeeper",
                   "zookeeper kerberos service name");
@@ -52,6 +56,13 @@ DSN_DEFINE_string("security",
 
 namespace dsn {
 namespace dist {
+// TODO(yingchun): to keep compatibility, the global name is FLAGS_timeout_ms. The name is not very
+//  suitable, maybe improve the macro to us another global name.
+DSN_DEFINE_int32(zookeeper,
+                 timeout_ms,
+                 30000,
+                 "The timeout of accessing ZooKeeper, in milliseconds");
+DSN_DEFINE_string(zookeeper, hosts_list, "", "Zookeeper hosts list");
 
 zookeeper_session::zoo_atomic_packet::zoo_atomic_packet(unsigned int size)
 {
@@ -158,23 +169,19 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
             zoo_sasl_params_t sasl_params = {0};
             sasl_params.service = dsn::security::FLAGS_zookeeper_kerberos_service_name;
             sasl_params.mechlist = "GSSAPI";
-            _handle = zookeeper_init_sasl(zookeeper_session_mgr::instance().zoo_hosts(),
+            _handle = zookeeper_init_sasl(FLAGS_hosts_list,
                                           global_watcher,
-                                          zookeeper_session_mgr::instance().timeout(),
+                                          FLAGS_timeout_ms,
                                           nullptr,
                                           this,
                                           0,
                                           NULL,
                                           &sasl_params);
         } else {
-            _handle = zookeeper_init(zookeeper_session_mgr::instance().zoo_hosts(),
-                                     global_watcher,
-                                     zookeeper_session_mgr::instance().timeout(),
-                                     nullptr,
-                                     this,
-                                     0);
+            _handle = zookeeper_init(
+                FLAGS_hosts_list, global_watcher, FLAGS_timeout_ms, nullptr, this, 0);
         }
-        dassert(_handle != nullptr, "zookeeper session init failed");
+        CHECK_NOTNULL(_handle, "zookeeper session init failed");
     }
 
     _watchers.push_back(watcher_object());
@@ -317,11 +324,12 @@ void zookeeper_session::global_watcher(
 {
     zookeeper_session *zoo_session = (zookeeper_session *)ctx;
     zoo_session->init_non_dsn_thread();
-    ddebug("global watcher, type(%s), state(%s)", string_zoo_event(type), string_zoo_state(state));
+    LOG_INFO(
+        "global watcher, type({}), state({})", string_zoo_event(type), string_zoo_state(state));
     if (type != ZOO_SESSION_EVENT && path != nullptr)
-        ddebug("watcher path: %s", path);
+        LOG_INFO("watcher path: {}", path);
 
-    dassert(zoo_session->_handle == handle, "");
+    CHECK(zoo_session->_handle == handle, "");
     zoo_session->dispatch_event(type, state, type == ZOO_SESSION_EVENT ? "" : path);
 }
 
@@ -334,9 +342,9 @@ void zookeeper_session::global_watcher(
 void zookeeper_session::global_string_completion(int rc, const char *name, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    dinfo("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (ZOK == rc && name != nullptr)
-        dinfo("created path:%s", name);
+        LOG_DEBUG("created path: {}", name);
     output.create_op._created_path = name;
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
@@ -346,7 +354,7 @@ void zookeeper_session::global_data_completion(
     int rc, const char *value, int value_length, const Stat *, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    dinfo("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     output.get_op.value_length = value_length;
     output.get_op.value = value;
     op_ctx->_callback_function(op_ctx);
@@ -356,7 +364,7 @@ void zookeeper_session::global_data_completion(
 void zookeeper_session::global_state_completion(int rc, const Stat *stat, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    dinfo("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (op_ctx->_optype == ZOO_EXISTS) {
         output.exists_op._node_stat = stat;
         op_ctx->_callback_function(op_ctx);
@@ -372,9 +380,9 @@ void zookeeper_session::global_strings_completion(int rc,
                                                   const void *data)
 {
     COMPLETION_INIT(rc, data);
-    dinfo("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (rc == ZOK && strings != nullptr)
-        dinfo("child count: %d", strings->count);
+        LOG_DEBUG("child count: {}", strings->count);
     output.getchildren_op.strings = strings;
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
@@ -384,9 +392,9 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
 {
     COMPLETION_INIT(rc, data);
     if (op_ctx->_optype == ZOO_DELETE)
-        dinfo("rc(%s), input path( %s )", zerror(rc), op_ctx->_input._path.c_str());
+        LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     else
-        dinfo("rc(%s)", zerror(rc));
+        LOG_DEBUG("rc({})", zerror(rc));
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
 }

@@ -17,24 +17,36 @@
 
 #pragma once
 
-#include "access_controller.h"
-
+#include <memory>
+#include <string>
 #include <unordered_set>
+#include <vector>
+
+#include "access_controller.h"
 
 namespace dsn {
 class message_ex;
+
+namespace ranger {
+class ranger_resource_policy_manager;
+}
+
 namespace security {
 
 class meta_access_controller : public access_controller
 {
 public:
-    meta_access_controller();
-    bool allowed(message_ex *msg) override;
+    meta_access_controller(
+        const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager);
+
+    bool allowed(message_ex *msg, const std::string &app_name = "") const override;
 
 private:
-    void register_allowed_list(const std::string &rpc_code);
+    void register_allowed_rpc_code_list(const std::vector<std::string> &rpc_list);
 
     std::unordered_set<int> _allowed_rpc_code_list;
+
+    std::shared_ptr<ranger::ranger_resource_policy_manager> _ranger_resource_policy_manager;
 };
 } // namespace security
 } // namespace dsn

@@ -24,31 +24,28 @@
  * THE SOFTWARE.
  */
 
-#include <vector>
-#include <string>
-#include <functional>
-#include <thread>
-
-#include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdlib.h>
+#include <time.h>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/distributed_lock_service.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
 #include "zookeeper/distributed_lock_service_zookeeper.h"
-#include "zookeeper/lock_struct.h"
 
 using namespace dsn;
 using namespace dsn::dist;
@@ -69,15 +66,15 @@ public:
 
     error_code start(const std::vector<std::string> &args)
     {
-        ddebug("name: %s, argc=%u", info().full_name.c_str(), args.size());
+        LOG_INFO("name: {}, argc={}", info().full_name, args.size());
         for (const std::string &s : args)
-            ddebug("argv: %s", s.c_str());
+            LOG_INFO("argv: {}", s);
         while (!ss_start)
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
         _dlock_service = new distributed_lock_service_zookeeper();
         auto err = _dlock_service->initialize({"/dsn/tests/simple_adder_server"});
-        dassert(err == ERR_OK, "err = %s", err.to_string());
+        CHECK_EQ(err, ERR_OK);
 
         distributed_lock_service::lock_options opt = {true, true};
         while (!ss_finish) {
@@ -88,13 +85,10 @@ public:
                 [this](error_code ec, const std::string &name, int version) {
                     EXPECT_TRUE(ERR_OK == ec);
                     EXPECT_TRUE(name == this->info().full_name);
-                    ddebug("lock: error_code: %s, name: %s, lock version: %d",
-                           ec.to_string(),
-                           name.c_str(),
-                           version);
+                    LOG_INFO("lock: error_code: {}, name: {}, lock version: {}", ec, name, version);
                 },
                 DLOCK_CALLBACK,
-                [](error_code, const std::string &, int) { dassert(false, "session expired"); },
+                [](error_code, const std::string &, int) { CHECK(false, "session expired"); },
                 opt);
             task_pair.first->wait();
             for (int i = 0; i < 1000; ++i) {
@@ -107,7 +101,7 @@ public:
             task_ptr unlock_task = _dlock_service->unlock(
                 "test_lock", info().full_name, true, DLOCK_CALLBACK, [](error_code ec) {
                     EXPECT_TRUE(ERR_OK == ec);
-                    ddebug("unlock, error code: %s", ec.to_string());
+                    LOG_INFO("unlock, error code: {}", ec);
                 });
             unlock_task->wait();
             task_pair.second->cancel(false);
@@ -146,7 +140,7 @@ TEST(distributed_lock_service_zookeeper, simple_lock_unlock)
     while (!ss_finish)
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    ddebug("actual result: %lld, expect_result:%lld", result, expect_reuslt);
+    LOG_INFO("actual result: {}, expect_result: {}", result, expect_reuslt);
     EXPECT_TRUE(result == expect_reuslt);
 }
 

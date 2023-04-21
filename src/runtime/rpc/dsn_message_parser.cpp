@@ -34,12 +34,19 @@
  */
 
 #include "dsn_message_parser.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+
+#include <stddef.h>
+#include <stdint.h>
+#include <memory>
+#include <vector>
+
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_spec.h"
+#include "utils/blob.h"
 #include "utils/crc.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace dsn {
 void dsn_message_parser::reset() { _header_checked = false; }
@@ -56,7 +63,7 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
     if (buf_len >= sizeof(message_header)) {
         if (!_header_checked) {
             if (!is_right_header(buf_ptr)) {
-                derror("dsn message header check failed");
+                LOG_ERROR("dsn message header check failed");
                 read_next = -1;
                 return nullptr;
             } else {
@@ -72,12 +79,12 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
             message_ex *msg = message_ex::create_receive_message(msg_bb);
             if (!is_right_body(msg)) {
                 message_header *header = (message_header *)buf_ptr;
-                derror("dsn message body check failed, id = %" PRIu64 ", trace_id = %016" PRIx64
-                       ", rpc_name = %s, from_addr = %s",
-                       header->id,
-                       header->trace_id,
-                       header->rpc_name,
-                       header->from_address.to_string());
+                LOG_ERROR("dsn message body check failed, id = {}, trace_id = {:#018x}, rpc_name "
+                          "= {}, from_addr = {}",
+                          header->id,
+                          header->trace_id,
+                          header->rpc_name,
+                          header->from_address);
                 read_next = -1;
                 delete msg;
                 return nullptr;
@@ -112,7 +119,7 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
     for (int i = 0; i <= i_max; i++) {
         len += (size_t)buffers[i].length();
     }
-    dassert(len == (size_t)header->body_length + sizeof(message_header), "data length is wrong");
+    CHECK_EQ(len, header->body_length + sizeof(message_header));
 #endif
 
     if (task_spec::get(msg->local_rpc_code)->rpc_message_crc_required) {
@@ -140,7 +147,7 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
                 len += sz;
             }
 
-            dassert(len == (size_t)header->body_length, "data length is wrong");
+            CHECK_EQ(len, header->body_length);
             header->body_crc32 = crc32;
         }
 
@@ -170,7 +177,7 @@ int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *b
         bool r = (crc32 == dsn::utils::crc32_calc(hdr, sizeof(message_header), 0));
         *pcrc = crc32;
         if (!r) {
-            derror("dsn message header crc check failed");
+            LOG_ERROR("dsn message header crc check failed");
         }
         return r;
     }
@@ -200,11 +207,10 @@ int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *b
             len += sz;
         }
 
-        dassert(len == (size_t)header->body_length, "data length is wrong");
-
+        CHECK_EQ(len, header->body_length);
         bool r = (header->body_crc32 == crc32);
         if (!r) {
-            derror("dsn message body crc check failed");
+            LOG_ERROR("dsn message body crc check failed");
         }
         return r;
     }

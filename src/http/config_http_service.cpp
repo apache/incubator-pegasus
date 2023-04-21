@@ -15,29 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <string>
+#include <unordered_map>
+#include <utility>
+
 #include "http_server.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
-#include "utils/output_utils.h"
 
 namespace dsn {
-void update_config(const http_request &req, http_response &resp)
-{
-    if (req.query_args.size() != 1) {
-        resp.status_code = http_status_code::bad_request;
-        return;
-    }
-
-    auto iter = req.query_args.begin();
-    auto res = update_flag(iter->first, iter->second);
-
-    utils::table_printer tp;
-    tp.add_row_name_and_data("update_status", res.description());
-    std::ostringstream out;
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
-    resp.body = out.str();
-    resp.status_code = http_status_code::ok;
-}
-
 void list_all_configs(const http_request &req, http_response &resp)
 {
     if (!req.query_args.empty()) {

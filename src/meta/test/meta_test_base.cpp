@@ -17,37 +17,63 @@
 
 #include "meta_test_base.h"
 
-#include "utils/fmt_logging.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <map>
+#include <ostream>
+#include <thread>
+#include <unordered_map>
+#include <utility>
 
-#include "meta/server_load_balancer.h"
-#include "meta/meta_server_failure_detector.h"
-#include "meta/meta_split_service.h"
+#include "common/replication.codes.h"
 #include "meta/meta_bulk_load_service.h"
+#include "meta/meta_data.h"
+#include "meta/meta_options.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_server_failure_detector.h"
+#include "meta/meta_service.h"
+#include "meta/meta_split_service.h"
+#include "meta/meta_state_service_utils.h"
+#include "meta/partition_guardian.h"
+#include "meta/server_load_balancer.h"
+#include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
-
 #include "meta_service_test_app.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/error_code.h"
+#include "utils/factory_store.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
+DSN_DECLARE_string(partition_guardian_type);
+DSN_DECLARE_string(server_load_balancer_type);
 
 meta_test_base::~meta_test_base() {}
 
 void meta_test_base::SetUp()
 {
-    _ms = make_unique<fake_receiver_meta_service>();
+    _ms = std::make_unique<fake_receiver_meta_service>();
     _ms->_failure_detector.reset(new meta_server_failure_detector(_ms.get()));
     _ms->_balancer.reset(utils::factory_store<server_load_balancer>::create(
-        _ms->_meta_opts._lb_opts.server_load_balancer_type.c_str(), PROVIDER_TYPE_MAIN, _ms.get()));
+        FLAGS_server_load_balancer_type, PROVIDER_TYPE_MAIN, _ms.get()));
     _ms->_partition_guardian.reset(utils::factory_store<partition_guardian>::create(
-        _ms->_meta_opts.partition_guardian_type.c_str(), PROVIDER_TYPE_MAIN, _ms.get()));
+        FLAGS_partition_guardian_type, PROVIDER_TYPE_MAIN, _ms.get()));
     ASSERT_EQ(_ms->remote_storage_initialize(), ERR_OK);
     _ms->initialize_duplication_service();
     ASSERT_TRUE(_ms->_dup_svc);
-    _ms->_split_svc = make_unique<meta_split_service>(_ms.get());
+    _ms->_split_svc = std::make_unique<meta_split_service>(_ms.get());
     ASSERT_TRUE(_ms->_split_svc);
-    _ms->_bulk_load_svc = make_unique<bulk_load_service>(
+    _ms->_bulk_load_svc = std::make_unique<bulk_load_service>(
         _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
     ASSERT_TRUE(_ms->_bulk_load_svc);
     _ms->_bulk_load_svc->initialize_bulk_load_service();
@@ -122,14 +148,15 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
     std::vector<dsn::rpc_address> nodes(get_alive_nodes());
     if (!nodes.empty()) {
         auto node_count = static_cast<int>(nodes.size());
-        dassert_f(node_count >= min_node_count,
-                  "there should be at least {} alive nodes, now we just have {} alive nodes",
-                  min_node_count,
-                  node_count);
+        CHECK_GE_MSG(node_count,
+                     min_node_count,
+                     "there should be at least {} alive nodes, now we just have {} alive nodes",
+                     min_node_count,
+                     node_count);
 
-        dinfo_f("already exists {} alive nodes: ", nodes.size());
+        LOG_DEBUG("already exists {} alive nodes: ", nodes.size());
         for (const auto &node : nodes) {
-            dinfo_f("    {}", node.to_string());
+            LOG_DEBUG("    {}", node.to_string());
         }
 
         // ensure that _ms->_alive_set is identical with _ss->_nodes
@@ -151,9 +178,9 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
-    dinfo_f("created {} alive nodes: ", nodes.size());
+    LOG_DEBUG("created {} alive nodes: ", nodes.size());
     for (const auto &node : nodes) {
-        dinfo_f("    {}", node.to_string());
+        LOG_DEBUG("    {}", node.to_string());
     }
     return nodes;
 }
@@ -206,7 +233,7 @@ meta_test_base::update_app_envs(const std::string &app_name,
                                 const std::vector<std::string> &env_keys,
                                 const std::vector<std::string> &env_vals)
 {
-    auto req = make_unique<configuration_update_app_env_request>();
+    auto req = std::make_unique<configuration_update_app_env_request>();
     req->__set_app_name(std::move(app_name));
     req->__set_op(std::move(app_env_operation::type::APP_ENV_OP_SET));
     req->__set_keys(env_keys);

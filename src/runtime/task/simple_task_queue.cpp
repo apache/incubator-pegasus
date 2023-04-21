@@ -26,7 +26,30 @@
 
 #include "simple_task_queue.h"
 
+#include <stdio.h>
+#include <memory>
+#include <new>
+
+#include "boost/asio/basic_deadline_timer.hpp"
+#include "boost/asio/deadline_timer.hpp"
+#include "boost/asio/detail/impl/epoll_reactor.hpp"
+#include "boost/asio/detail/impl/timer_queue_ptime.ipp"
+#include "boost/asio/error.hpp"
+#include "boost/asio/impl/io_context.hpp"
+#include "boost/asio/impl/io_context.ipp"
+#include "boost/date_time/posix_time/posix_time_duration.hpp"
+#include "boost/system/error_code.hpp"
+#include "runtime/task/task.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_worker.h"
+#include "runtime/tool_api.h"
+#include "utils/fmt_logging.h"
+#include "utils/threadpool_spec.h"
+
 namespace dsn {
+class service_node;
+class task_worker_pool;
+
 namespace tools {
 
 simple_timer_service::simple_timer_service(service_node *node, timer_service *inner_provider)
@@ -52,10 +75,7 @@ void simple_timer_service::start()
         boost::asio::io_service::work work(_ios);
         boost::system::error_code ec;
         _ios.run(ec);
-        if (ec) {
-            dassert(
-                false, "io_service in simple_timer_service run failed: %s", ec.message().data());
-        }
+        CHECK(!ec, "io_service in simple_timer_service run failed: {}", ec.message());
     });
     _is_running = true;
 }
@@ -81,7 +101,7 @@ void simple_timer_service::add_timer(task *task)
         if (!ec) {
             task->enqueue();
         } else if (ec != ::boost::asio::error::operation_aborted) {
-            dfatal("timer failed for task %s, err = %u", task->spec().name.c_str(), ec.value());
+            LOG_FATAL("timer failed for task {}, err = {}", task->spec().name, ec.message());
         }
 
         // to consume the added ref count by task::enqueue for add_timer
@@ -101,7 +121,7 @@ task *simple_task_queue::dequeue(/*inout*/ int &batch_size)
 {
     long c = 0;
     auto t = _samples.dequeue(c);
-    dassert(t != nullptr, "dequeue does not return empty tasks");
+    CHECK_NOTNULL(t, "dequeue does not return empty tasks");
     batch_size = 1;
     return t;
 }

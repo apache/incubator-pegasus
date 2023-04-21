@@ -24,23 +24,30 @@
  * THE SOFTWARE.
  */
 
-#include "utils/command_manager.h"
-#include "utils/logging_provider.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "utils/flags.h"
-#include "utils/smart_pointers.h"
-#include "simple_logger.h"
+#include <stdarg.h>
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <string>
 
-DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
-DSN_DEFINE_string("core",
+#include "runtime/task/task_spec.h"
+#include "runtime/tool_api.h"
+#include "simple_logger.h"
+#include "utils/api_utilities.h"
+#include "utils/factory_store.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
+#include "utils/logging_provider.h"
+#include "utils/sys_exit_hook.h"
+
+dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFO;
+DSN_DEFINE_string(core,
                   logging_start_level,
-                  "LOG_LEVEL_INFORMATION",
+                  "LOG_LEVEL_INFO",
                   "logs with level below this will not be logged");
 
-DSN_DEFINE_bool("core", logging_flush_on_exit, true, "flush log when exit system");
+DSN_DEFINE_bool(core, logging_flush_on_exit, true, "flush log when exit system");
 
 namespace dsn {
 
@@ -69,8 +76,9 @@ void dsn_log_init(const std::string &logging_factory_name,
     dsn_log_start_level =
         enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
 
-    dassert(dsn_log_start_level != dsn_log_level_t::LOG_LEVEL_INVALID,
-            "invalid [core] logging_start_level specified");
+    CHECK_NE_MSG(dsn_log_start_level,
+                 dsn_log_level_t::LOG_LEVEL_INVALID,
+                 "invalid [core] logging_start_level specified");
 
     // register log flush on exit
     if (FLAGS_logging_flush_on_exit) {
@@ -81,63 +89,32 @@ void dsn_log_init(const std::string &logging_factory_name,
         logging_factory_name.c_str(), dsn::PROVIDER_TYPE_MAIN, dir_log.c_str());
     dsn::logging_provider::set_logger(logger);
 
-    // register command for logging
-    ::dsn::command_manager::instance().register_command(
-        {"flush-log"},
-        "flush-log - flush log to stderr or log file",
-        "flush-log",
-        [](const std::vector<std::string> &args) {
-            dsn::logging_provider *logger = dsn::logging_provider::instance();
-            logger->flush();
-            return "Flush done.";
-        });
-    ::dsn::command_manager::instance().register_command(
-        {"reset-log-start-level"},
-        "reset-log-start-level - reset the log start level",
-        "reset-log-start-level [INFORMATION | DEBUG | WARNING | ERROR | FATAL]",
-        [](const std::vector<std::string> &args) {
-            dsn_log_level_t start_level;
-            if (args.size() == 0) {
-                start_level =
-                    enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
-            } else {
-                std::string level_str = "LOG_LEVEL_" + args[0];
-                start_level =
-                    enum_from_string(level_str.c_str(), dsn_log_level_t::LOG_LEVEL_INVALID);
-                if (start_level == dsn_log_level_t::LOG_LEVEL_INVALID) {
-                    return "ERROR: invalid level '" + args[0] + "'";
-                }
-            }
-            dsn_log_set_start_level(start_level);
-            return std::string("OK, current level is ") + enum_to_string(start_level);
-        });
-
     if (dsn_log_prefixed_message_func != nullptr) {
         dsn::set_log_prefixed_message_func(dsn_log_prefixed_message_func);
     }
 }
 
-DSN_API dsn_log_level_t dsn_log_get_start_level() { return dsn_log_start_level; }
+dsn_log_level_t dsn_log_get_start_level() { return dsn_log_start_level; }
 
-DSN_API void dsn_log_set_start_level(dsn_log_level_t level) { dsn_log_start_level = level; }
+void dsn_log_set_start_level(dsn_log_level_t level) { dsn_log_start_level = level; }
 
-DSN_API void dsn_logv(const char *file,
-                      const char *function,
-                      const int line,
-                      dsn_log_level_t log_level,
-                      const char *fmt,
-                      va_list args)
+void dsn_logv(const char *file,
+              const char *function,
+              const int line,
+              dsn_log_level_t log_level,
+              const char *fmt,
+              va_list args)
 {
     dsn::logging_provider *logger = dsn::logging_provider::instance();
     logger->dsn_logv(file, function, line, log_level, fmt, args);
 }
 
-DSN_API void dsn_logf(const char *file,
-                      const char *function,
-                      const int line,
-                      dsn_log_level_t log_level,
-                      const char *fmt,
-                      ...)
+void dsn_logf(const char *file,
+              const char *function,
+              const int line,
+              dsn_log_level_t log_level,
+              const char *fmt,
+              ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -145,11 +122,11 @@ DSN_API void dsn_logf(const char *file,
     va_end(ap);
 }
 
-DSN_API void dsn_log(const char *file,
-                     const char *function,
-                     const int line,
-                     dsn_log_level_t log_level,
-                     const char *str)
+void dsn_log(const char *file,
+             const char *function,
+             const int line,
+             dsn_log_level_t log_level,
+             const char *str)
 {
     dsn::logging_provider *logger = dsn::logging_provider::instance();
     logger->dsn_log(file, function, line, log_level, str);
@@ -157,13 +134,11 @@ DSN_API void dsn_log(const char *file,
 
 namespace dsn {
 
-std::unique_ptr<logging_provider> logging_provider::_logger =
-    std::unique_ptr<logging_provider>(nullptr);
+std::unique_ptr<logging_provider> logging_provider::_logger;
 
 logging_provider *logging_provider::instance()
 {
-    static std::unique_ptr<logging_provider> default_logger =
-        std::unique_ptr<logging_provider>(create_default_instance());
+    static std::unique_ptr<logging_provider> default_logger(create_default_instance());
     return _logger ? _logger.get() : default_logger.get();
 }
 

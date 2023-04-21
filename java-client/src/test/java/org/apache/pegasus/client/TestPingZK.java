@@ -18,11 +18,12 @@
  */
 package org.apache.pegasus.client;
 
+import com.google.common.io.ByteStreams;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.Scanner;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.serialize.BytesPushThroughSerializer;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.ZooKeeper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,27 +31,34 @@ import org.junit.Test;
 public class TestPingZK {
 
   @Test
-  public void testPingZK() throws PException {
+  public void testPingZK() throws Exception {
     String zkServer = "127.0.0.1:22181";
     String zkPath = "/databases/pegasus/test-java-client";
     String configPath = "zk://" + zkServer + zkPath;
 
     // init zk config
-    ZkClient zkClient = new ZkClient(zkServer, 30000, 30000, new BytesPushThroughSerializer());
-    String[] components = zkPath.split("/");
-    String curPath = "";
-    for (int i = 0; i < components.length; ++i) {
-      if (components[i].isEmpty()) continue;
-      curPath += "/" + components[i];
-      if (!zkClient.exists(curPath)) {
-        zkClient.createPersistent(curPath);
+    ZooKeeper zk = new ZooKeeper(zkServer, 30000, null);
+    try {
+      String[] components = zkPath.split("/");
+      String curPath = "";
+      for (int i = 0; i < components.length; ++i) {
+        if (components[i].isEmpty()) {
+          continue;
+        }
+        curPath += "/" + components[i];
+        if (zk.exists(curPath, false) == null) {
+          zk.create(curPath, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        }
       }
+      byte[] configData;
+      try (InputStream is = PegasusClient.class.getResourceAsStream("/pegasus.properties")) {
+        configData = ByteStreams.toByteArray(is);
+      }
+      System.out.println("write config to " + configPath);
+      zk.setData(zkPath, configData, -1);
+    } finally {
+      zk.close();
     }
-    InputStream is = PegasusClient.class.getResourceAsStream("/pegasus.properties");
-    Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
-    String configData = s.hasNext() ? s.next() : "";
-    System.out.println("write config to " + configPath);
-    zkClient.writeData(zkPath, configData.getBytes());
 
     PegasusClientInterface client = PegasusClientFactory.createClient(configPath);
     String tableName = "temp";

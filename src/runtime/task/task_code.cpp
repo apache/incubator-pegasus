@@ -26,12 +26,48 @@
 
 #include "task_code.h"
 
-#include "utils/customizable_id.h"
+#include <memory>
+#include <vector>
+#include <sstream> // IWYU pragma: keep
+
 #include "task_spec.h"
+#include "utils/command_manager.h"
+#include "utils/customizable_id.h"
 
 namespace dsn {
 
 typedef dsn::utils::customized_id_mgr<dsn::task_code> task_code_mgr;
+
+namespace utils {
+template <>
+void task_code_mgr::register_commands()
+{
+    _cmds.emplace_back(command_manager::instance().register_command(
+        {"task-code"},
+        "task-code - query task code containing any given keywords",
+        "task-code keyword1 keyword2 ...",
+        [](const std::vector<std::string> &args) {
+            std::stringstream ss;
+
+            for (int code = 0; code <= dsn::task_code::max(); code++) {
+                if (code == TASK_CODE_INVALID)
+                    continue;
+
+                std::string codes = dsn::task_code(code).to_string();
+                if (args.size() == 0) {
+                    ss << "    " << codes << std::endl;
+                } else {
+                    for (auto &arg : args) {
+                        if (codes.find(arg.c_str()) != std::string::npos) {
+                            ss << "    " << codes << std::endl;
+                        }
+                    }
+                }
+            }
+            return ss.str();
+        }));
+}
+}
 
 /*static*/
 int task_code::max() { return task_code_mgr::instance().max_value(); }

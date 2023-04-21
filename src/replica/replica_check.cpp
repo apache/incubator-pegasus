@@ -33,20 +33,49 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
-#include "replica_stub.h"
+#include <chrono>
+#include <memory>
+#include <unordered_map>
+#include <utility>
 
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_common.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
 #include "duplication/replica_duplicator_manager.h"
-#include "split/replica_split_manager.h"
-
-#include "utils/fmt_logging.h"
+#include "metadata_types.h"
+#include "mutation.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica.h"
+#include "replica/prepare_list.h"
+#include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
+#include "replica_stub.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "split/replica_split_manager.h"
+#include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
+DSN_DEFINE_bool(replication, group_check_disabled, false, "whether group check is disabled");
+DSN_DEFINE_int32(replication,
+                 group_check_interval_ms,
+                 10000,
+                 "every what period (ms) we check the replica healthness");
+
 DSN_DECLARE_bool(empty_write_disabled);
 
 void replica::init_group_check()
@@ -55,17 +84,17 @@ void replica::init_group_check()
 
     _checker.only_one_thread_access();
 
-    ddebug("%s: init group check", name());
+    LOG_INFO_PREFIX("init group check");
 
-    if (partition_status::PS_PRIMARY != status() || _options->group_check_disabled)
+    if (partition_status::PS_PRIMARY != status() || FLAGS_group_check_disabled)
         return;
 
-    dassert(nullptr == _primary_states.group_check_task, "");
+    CHECK(nullptr == _primary_states.group_check_task, "");
     _primary_states.group_check_task =
         tasking::enqueue_timer(LPC_GROUP_CHECK,
                                &_tracker,
                                [this] { broadcast_group_check(); },
-                               std::chrono::milliseconds(_options->group_check_interval_ms),
+                               std::chrono::milliseconds(FLAGS_group_check_interval_ms),
                                get_gpid().thread_hash());
 }
 
@@ -73,15 +102,14 @@ void replica::broadcast_group_check()
 {
     FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](dsn::string_view) {});
 
-    dassert(nullptr != _primary_states.group_check_task, "");
+    CHECK_NOTNULL(_primary_states.group_check_task, "");
 
-    ddebug("%s: start to broadcast group check", name());
+    LOG_INFO_PREFIX("start to broadcast group check");
 
     if (_primary_states.group_check_pending_replies.size() > 0) {
-        dwarn("%s: %u group check replies are still pending when doing next round check, cancel "
-              "first",
-              name(),
-              static_cast<int>(_primary_states.group_check_pending_replies.size()));
+        LOG_WARNING_PREFIX(
+            "{} group check replies are still pending when doing next round check, cancel first",
+            _primary_states.group_check_pending_replies.size());
 
         for (auto it = _primary_states.group_check_pending_replies.begin();
              it != _primary_states.group_check_pending_replies.end();
@@ -114,15 +142,11 @@ void replica::broadcast_group_check()
 
         if (request->config.status == partition_status::PS_POTENTIAL_SECONDARY) {
             auto it = _primary_states.learners.find(addr);
-            dassert(
-                it != _primary_states.learners.end(), "learner %s is missing", addr.to_string());
+            CHECK(it != _primary_states.learners.end(), "learner {} is missing", addr);
             request->config.learner_signature = it->second.signature;
         }
 
-        ddebug("%s: send group check to %s with state %s",
-               name(),
-               addr.to_string(),
-               enum_to_string(it->second));
+        LOG_INFO_PREFIX("send group check to {} with state {}", addr, enum_to_string(it->second));
 
         dsn::task_ptr callback_task =
             rpc::call(addr,
@@ -141,7 +165,7 @@ void replica::broadcast_group_check()
 
     // send empty prepare when necessary
     if (!FLAGS_empty_write_disabled &&
-        dsn_now_ms() >= _primary_states.last_prepare_ts_ms + _options->group_check_interval_ms) {
+        dsn_now_ms() >= _primary_states.last_prepare_ts_ms + FLAGS_group_check_interval_ms) {
         mutation_ptr mu = new_mutation(invalid_decree);
         mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
         init_prepare(mu, false);
@@ -153,22 +177,22 @@ void replica::on_group_check(const group_check_request &request,
 {
     _checker.only_one_thread_access();
 
-    ddebug_replica("process group check, primary = {}, ballot = {}, status = {}, "
-                   "last_committed_decree = {}, confirmed_decree = {}",
-                   request.config.primary.to_string(),
-                   request.config.ballot,
-                   enum_to_string(request.config.status),
-                   request.last_committed_decree,
-                   request.__isset.confirmed_decree ? request.confirmed_decree : invalid_decree);
+    LOG_INFO_PREFIX("process group check, primary = {}, ballot = {}, status = {}, "
+                    "last_committed_decree = {}, confirmed_decree = {}",
+                    request.config.primary.to_string(),
+                    request.config.ballot,
+                    enum_to_string(request.config.status),
+                    request.last_committed_decree,
+                    request.__isset.confirmed_decree ? request.confirmed_decree : invalid_decree);
 
     if (request.config.ballot < get_ballot()) {
         response.err = ERR_VERSION_OUTDATED;
-        dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
+        LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
         return;
     } else if (request.config.ballot > get_ballot()) {
         if (!update_local_configuration(request.config)) {
             response.err = ERR_INVALID_STATE;
-            dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
+            LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
             return;
         }
     } else if (is_same_ballot_status_change_allowed(status(), request.config.status)) {
@@ -194,7 +218,7 @@ void replica::on_group_check(const group_check_request &request,
     case partition_status::PS_ERROR:
         break;
     default:
-        dassert(false, "invalid partition_status, status = %s", enum_to_string(status()));
+        CHECK(false, "invalid partition_status, status = {}", enum_to_string(status()));
     }
 
     response.pid = get_gpid();
@@ -202,7 +226,7 @@ void replica::on_group_check(const group_check_request &request,
     response.err = ERR_OK;
     if (status() == partition_status::PS_ERROR) {
         response.err = ERR_INVALID_STATE;
-        dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
+        LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
     }
 
     response.last_committed_decree_in_app = _app->last_committed_decree();
@@ -222,7 +246,7 @@ void replica::on_group_check_reply(error_code err,
     }
 
     auto r = _primary_states.group_check_pending_replies.erase(req->node);
-    dassert(r == 1, "invalid node address, address = %s", req->node.to_string());
+    CHECK_EQ_MSG(r, 1, "invalid node address, address = {}", req->node);
 
     if (err != ERR_OK || resp->err != ERR_OK) {
         if (ERR_OK == err) {

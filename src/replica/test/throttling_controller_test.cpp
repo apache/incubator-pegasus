@@ -17,6 +17,8 @@
 
 #include "utils/throttling_controller.h"
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 
 namespace dsn {

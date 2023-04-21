@@ -19,12 +19,10 @@ under the License.
 
 # Pegasus Java Client
 
-[![Test - java client](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml)
-
 ## Build
 
 ```
-cd idl && sh recompile_thrift.sh && cd -
+cd scripts && sh recompile_thrift.sh && cd -
 mvn spotless:apply
 mvn clean package -DskipTests
 ```
@@ -32,7 +30,7 @@ mvn clean package -DskipTests
 ## Install
 
 ```
-cd idl && sh recompile_thrift.sh && cd -
+cd scripts && sh recompile_thrift.sh && cd -
 mvn spotless:apply
 mvn clean install -DskipTests
 ```
@@ -42,7 +40,7 @@ mvn clean install -DskipTests
 To run test, you should start pegasus onebox firstly, and run test as:
 
 ```
-cd idl && sh recompile_thrift.sh && cd -
+cd scripts && sh recompile_thrift.sh && cd -
 mvn spotless:apply
 mvn clean package
 ```
@@ -50,7 +48,7 @@ mvn clean package
 or specify one test:
 
 ```
-cd idl && sh recompile_thrift.sh && cd -
+cd scripts && sh recompile_thrift.sh && cd -
 mvn spotless:apply
 mvn clean package -Dtest=TestPing
 ```

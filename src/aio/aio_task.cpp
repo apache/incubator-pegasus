@@ -15,10 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/task/task_engine.h"
+#include <string.h>
+#include <functional>
+#include <list>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "aio/aio_task.h"
 #include "aio/file_io.h"
+#include "runtime/api_task.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
 #include "utils/latency_tracer.h"
+#include "utils/threadpool_code.h"
+#include "utils/utils.h"
 
 namespace dsn {
 
@@ -32,9 +51,10 @@ aio_task::aio_task(dsn::task_code code, aio_handler &&cb, int hash, service_node
 {
     _is_null = (_cb == nullptr);
 
-    dassert_f(TASK_TYPE_AIO == spec().type,
-              "{} is not of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code",
-              spec().name);
+    CHECK_EQ_MSG(TASK_TYPE_AIO,
+                 spec().type,
+                 "{} is not of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code",
+                 spec().name);
     set_error_code(ERR_IO_PENDING);
 
     _aio_ctx = file::prepare_aio_context(this);
@@ -51,7 +71,7 @@ void aio_task::collapse()
             ::memcpy(dest, b.buffer, b.size);
             dest += b.size;
         }
-        dcheck_eq(dest - buffer.get(), _aio_ctx->buffer_size);
+        CHECK_EQ(dest - buffer.get(), _aio_ctx->buffer_size);
         _aio_ctx->buffer = buffer.get();
         _merged_write_buffer_holder.assign(std::move(buffer), 0, _aio_ctx->buffer_size);
     }

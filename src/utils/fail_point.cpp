@@ -28,13 +28,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fail_point_impl.h"
+// IWYU pragma: no_include <boost/regex/v4/basic_regex.hpp>
+// IWYU pragma: no_include <boost/regex/v4/match_flags.hpp>
+// IWYU pragma: no_include <boost/regex/v4/match_results.hpp>
+// IWYU pragma: no_include <boost/regex/v4/perl_matcher_common.hpp>
+// IWYU pragma: no_include <boost/regex/v4/perl_matcher_non_recursive.hpp>
+#include <boost/regex/v4/regex.hpp>
+// IWYU pragma: no_include <boost/regex/v4/regex_fwd.hpp>
+// IWYU pragma: no_include <boost/regex/v4/regex_match.hpp>
+// IWYU pragma: no_include <boost/regex/v4/sub_match.hpp>
+#include <stdint.h>
+#include <stdio.h>
+#include <algorithm>
+#include <iterator>
+#include <string>
+#include <vector>
 
-#include "runtime/api_layer1.h"
-// TOOD(wutao1): use <regex> instead when our lowest compiler support
-//               advances to gcc-4.9.
-#include <boost/regex.hpp>
+#include "fail_point_impl.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace fail {
@@ -62,7 +76,7 @@ inline const char *task_type_to_string(fail_point::task_type t)
     case fail_point::Void:
         return "Void";
     default:
-        dfatal("unexpected type: %d", t);
+        LOG_FATAL("unexpected type: {}", t);
         __builtin_unreachable();
     }
 }
@@ -71,12 +85,12 @@ inline const char *task_type_to_string(fail_point::task_type t)
 {
     fail_point &p = REGISTRY.create_if_not_exists(name);
     p.set_action(action);
-    ddebug("add fail_point [name: %s, task: %s(%s), frequency: %d%, max_count: %d]",
-           name.data(),
-           task_type_to_string(p.get_task()),
-           p.get_arg().data(),
-           p.get_frequency(),
-           p.get_max_count());
+    LOG_INFO("add fail_point [name: {}, task: {}({}), frequency: {}%, max_count: {}]",
+             name,
+             task_type_to_string(p.get_task()),
+             p.get_arg(),
+             p.get_frequency(),
+             p.get_max_count());
 }
 
 /*static*/ bool _S_FAIL_POINT_ENABLED = false;
@@ -92,7 +106,7 @@ inline const char *task_type_to_string(fail_point::task_type t)
 void fail_point::set_action(string_view action)
 {
     if (!parse_from_string(action)) {
-        dfatal("unrecognized command: %s", action.data());
+        LOG_FATAL("unrecognized command: {}", action);
     }
 }
 
@@ -152,7 +166,7 @@ const std::string *fail_point::eval()
         return nullptr;
     }
     _max_cnt--;
-    ddebug("fail on %s", _name.data());
+    LOG_INFO("fail on {}", _name);
 
     switch (_task) {
     case Off:
@@ -161,7 +175,7 @@ const std::string *fail_point::eval()
     case Return:
         return &_arg;
     case Print:
-        ddebug(_arg.data());
+        LOG_INFO(_arg);
         break;
     }
     return nullptr;

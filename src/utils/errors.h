@@ -26,12 +26,14 @@
 
 #pragma once
 
+#include <sstream>
+
+#include "utils/api_utilities.h"
 #include "utils/error_code.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/smart_pointers.h"
 #include "utils/string_view.h"
-#include "utils/api_utilities.h"
-
-#include <sstream>
 
 namespace dsn {
 
@@ -47,7 +49,7 @@ namespace dsn {
 //
 //   error_s err = open_file("");
 //   if (!err.is_ok()) {
-//       std::cerr << s.description() << std::endl;
+//       std::cerr << err.description() << std::endl;
 //       // print: "ERR_INVALID_PARAMETERS: file name should not be empty"
 //   }
 //
@@ -159,7 +161,7 @@ private:
         if (!rhs._info) {
             _info.reset();
         } else if (!_info) {
-            _info = make_unique<error_info>(rhs._info->code, rhs._info->msg);
+            _info = std::make_unique<error_info>(rhs._info->code, rhs._info->msg);
         } else {
             _info->code = rhs._info->code;
             _info->msg = rhs._info->msg;
@@ -194,13 +196,13 @@ public:
 
     const T &get_value() const
     {
-        dassert(_err.is_ok(), "%s", get_error().description().data());
+        CHECK(_err.is_ok(), get_error().description());
         return *_value;
     }
 
     T &get_value()
     {
-        dassert(_err.is_ok(), "%s", get_error().description().data());
+        CHECK(_err.is_ok(), get_error().description());
         return *_value;
     }
 
@@ -222,6 +224,13 @@ private:
 #define RETURN_NOT_OK(s)                                                                           \
     do {                                                                                           \
         const ::dsn::error_s &_s = (s);                                                            \
-        if (!_s.is_ok())                                                                           \
+        if (dsn_unlikely(!_s.is_ok())) {                                                           \
             return _s;                                                                             \
+        }                                                                                          \
+    } while (false);
+
+#define CHECK_OK(s, ...)                                                                           \
+    do {                                                                                           \
+        const ::dsn::error_s &_s = (s);                                                            \
+        CHECK(_s.is_ok(), fmt::format(__VA_ARGS__));                                               \
     } while (false);

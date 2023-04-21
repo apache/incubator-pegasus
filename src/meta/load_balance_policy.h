@@ -17,10 +17,33 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <functional>
+#include <list>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "common/gpid.h"
+#include "common/replication_other_types.h"
 #include "meta_data.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/enum_helper.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+class command_deregister;
+class partition_configuration;
+
 namespace replication {
+class configuration_balancer_request;
+
 // disk_tag->primary_count/total_count_on_this_disk
 typedef std::map<std::string, int> disk_load;
 
@@ -51,13 +74,14 @@ generate_balancer_request(const app_mapper &apps,
                           const rpc_address &from,
                           const rpc_address &to);
 
-struct flow_path;
 class meta_service;
+struct flow_path;
+
 class load_balance_policy
 {
 public:
     load_balance_policy(meta_service *svc);
-    virtual ~load_balance_policy() = 0;
+    virtual ~load_balance_policy();
 
     virtual void balance(bool checker, const meta_view *global_view, migration_list *list) = 0;
 
@@ -88,7 +112,7 @@ protected:
     dsn::zrwlock_nr _balancer_ignored_apps_lock; // {
     std::set<app_id> _balancer_ignored_apps;
     // }
-    dsn_handle_t _ctrl_balancer_ignored_apps;
+    std::unique_ptr<command_deregister> _ctrl_balancer_ignored_apps;
 
 private:
     void start_moving_primary(const std::shared_ptr<app_state> &app,
@@ -111,9 +135,6 @@ private:
     std::string set_balancer_ignored_app_ids(const std::vector<std::string> &args);
     std::string get_balancer_ignored_app_ids();
     std::string clear_balancer_ignored_app_ids();
-
-    void register_ctrl_commands();
-    void unregister_ctrl_commands();
 
     FRIEND_TEST(cluster_balance_policy, calc_potential_moving);
 };
@@ -177,7 +198,7 @@ public:
             if (0 == higher_count && 0 == lower_count) {
                 return nullptr;
             }
-            return dsn::make_unique<ford_fulkerson>(
+            return std::make_unique<ford_fulkerson>(
                 _app, _nodes, _address_id, higher_count, lower_count, replicas_low);
         }
 

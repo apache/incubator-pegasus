@@ -19,7 +19,8 @@
 
 #pragma once
 
-#include <memory>
+#include <string>
+#include <unordered_set>
 
 #include "killer_handler.h"
 
@@ -29,7 +30,7 @@ namespace test {
 class killer_handler_shell : public killer_handler
 {
 public:
-    killer_handler_shell();
+    killer_handler_shell() = default;
     virtual ~killer_handler_shell() {}
     // index begin from 1, not zero
     // kill one
@@ -57,10 +58,6 @@ private:
     std::string generate_cmd(int index, const std::string &job, const std::string &action);
     // check whether the command execute success.
     bool check(const std::string &job, int index, const std::string &type);
-
-private:
-    // using ${_run_script_path}/run.sh to kill/start
-    std::string _run_script_path;
 };
 }
 } // end namespace

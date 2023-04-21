@@ -27,7 +27,7 @@
 #pragma once
 
 #include "utils/utils.h"
-#include "utils/rpc_address.h"
+#include "rpc_address.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "common/serialization_helper/thrift_helper.h"
 
@@ -61,7 +61,7 @@ inline void marshall(binary_writer &writer, const ThriftType &value, dsn_msg_ser
         marshall_thrift_json(writer, value);
         break;
     default:
-        dassert(false, serialization::no_registered_function_error_notice(value, fmt).c_str());
+        CHECK(false, serialization::no_registered_function_error_notice(value, fmt));
     }
 }
 
@@ -76,7 +76,7 @@ inline void unmarshall(binary_reader &reader, ThriftType &value, dsn_msg_seriali
         unmarshall_thrift_json(reader, value);
         break;
     default:
-        dassert(false, serialization::no_registered_function_error_notice(value, fmt).c_str());
+        CHECK(false, serialization::no_registered_function_error_notice(value, fmt));
     }
 }
 

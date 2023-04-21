@@ -24,65 +24,34 @@
  * THE SOFTWARE.
  */
 
-#include <gtest/gtest.h>
-
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "utils/rpc_address.h"
-#include "meta_admin_types.h"
-#include "partition_split_types.h"
-#include "duplication_types.h"
-#include "bulk_load_types.h"
-#include "backup_types.h"
-#include "consensus_types.h"
-#include "replica_admin_types.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
-
+#include <boost/cstdint.hpp>
+#include <boost/lexical_cast.hpp>
+#include <algorithm>
+#include <cstdint>
 #include <fstream>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include "meta/meta_data.h"
-#include "meta/server_load_balancer.h"
+#include "common/replication_other_types.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
 #include "meta/greedy_load_balancer.h"
-
+#include "meta/meta_data.h"
+#include "meta/meta_service.h"
+#include "meta/partition_guardian.h"
+#include "meta/server_load_balancer.h"
 #include "meta/test/misc/misc.h"
-
+#include "meta_admin_types.h"
 #include "meta_service_test_app.h"
+#include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
-
-#ifdef ASSERT_EQ
-#undef ASSERT_EQ
-#endif
-
-#define ASSERT_EQ(left, right) dassert((left) == (right), "")
-
-#ifdef ASSERT_TRUE
-#undef ASSERT_TRUE
-#endif
-
-#define ASSERT_TRUE(exp) dassert((exp), "")
-
-#ifdef ASSERT_FALSE
-#undef ASSERT_FALSE
-#endif
-#define ASSERT_FALSE(exp) dassert(!(exp), "")
 
 static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_configuration &pc)
 {
@@ -98,48 +67,49 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
             break;
         switch (act.type) {
         case config_type::CT_ASSIGN_PRIMARY:
-            ASSERT_TRUE(pc.primary.is_invalid() && pc.secondaries.size() == 0);
-            ASSERT_EQ(act.node, act.target);
-            ASSERT_TRUE(nodes.find(act.node) != nodes.end());
+            CHECK(pc.primary.is_invalid(), "");
+            CHECK(pc.secondaries.empty(), "");
+            CHECK_EQ(act.node, act.target);
+            CHECK(nodes.find(act.node) != nodes.end(), "");
 
-            ASSERT_EQ(nodes[act.node].served_as(pc.pid), partition_status::PS_INACTIVE);
+            CHECK_EQ(nodes[act.node].served_as(pc.pid), partition_status::PS_INACTIVE);
             nodes[act.node].put_partition(pc.pid, true);
             pc.primary = act.node;
             break;
 
         case config_type::CT_ADD_SECONDARY:
-            ASSERT_FALSE(is_member(pc, act.node));
-            ASSERT_EQ(pc.primary, act.target);
-            ASSERT_TRUE(nodes.find(act.node) != nodes.end());
+            CHECK(!is_member(pc, act.node), "");
+            CHECK_EQ(pc.primary, act.target);
+            CHECK(nodes.find(act.node) != nodes.end(), "");
             pc.secondaries.push_back(act.node);
             ns = &nodes[act.node];
-            ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
+            CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
             ns->put_partition(pc.pid, false);
             break;
 
         default:
-            ASSERT_TRUE(false);
+            CHECK(false, "");
             break;
         }
     }
 
     // test upgrade to primary
-    ASSERT_EQ(nodes[pc.primary].served_as(pc.pid), partition_status::PS_PRIMARY);
+    CHECK_EQ(nodes[pc.primary].served_as(pc.pid), partition_status::PS_PRIMARY);
     nodes[pc.primary].remove_partition(pc.pid, true);
     pc.primary.set_invalid();
 
     ps = guardian.cure({&apps, &nodes}, pc.pid, act);
-    ASSERT_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
-    ASSERT_TRUE(pc.primary.is_invalid());
-    ASSERT_EQ(act.node, act.target);
-    ASSERT_TRUE(is_secondary(pc, act.node));
-    ASSERT_TRUE(nodes.find(act.node) != nodes.end());
+    CHECK_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
+    CHECK(pc.primary.is_invalid(), "");
+    CHECK_EQ(act.node, act.target);
+    CHECK(is_secondary(pc, act.node), "");
+    CHECK(nodes.find(act.node) != nodes.end(), "");
 
     ns = &nodes[act.node];
     pc.primary = act.node;
     std::remove(pc.secondaries.begin(), pc.secondaries.end(), pc.primary);
 
-    ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
+    CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
     ns->put_partition(pc.pid, true);
 }
 
@@ -263,31 +233,31 @@ void meta_service_test_app::balancer_validator()
     migration_list ml;
 
     for (auto &iter : nodes) {
-        dinfo("node(%s) have %d primaries, %d partitions",
-              iter.first.to_string(),
-              iter.second.primary_count(),
-              iter.second.partition_count());
+        LOG_DEBUG("node({}) have {} primaries, {} partitions",
+                  iter.first,
+                  iter.second.primary_count(),
+                  iter.second.partition_count());
     }
 
     // iterate 1000000 times
     for (int i = 0; i < 1000000 && glb.balance({&apps, &nodes}, ml); ++i) {
-        dinfo("the %dth round of balancer", i);
+        LOG_DEBUG("the {}th round of balancer", i);
         migration_check_and_apply(apps, nodes, ml, &manager);
         glb.check({&apps, &nodes}, ml);
-        dinfo("balance checker operation count = %d", ml.size());
+        LOG_DEBUG("balance checker operation count = {}", ml.size());
     }
 
     for (auto &iter : nodes) {
-        dinfo("node(%s) have %d primaries, %d partitions",
-              iter.first.to_string(),
-              iter.second.primary_count(),
-              iter.second.partition_count());
+        LOG_DEBUG("node({}) have {} primaries, {} partitions",
+                  iter.first,
+                  iter.second.primary_count(),
+                  iter.second.partition_count());
     }
 
     std::shared_ptr<app_state> &the_app = apps[1];
     for (::dsn::partition_configuration &pc : the_app->partitions) {
-        ASSERT_FALSE(pc.primary.is_invalid());
-        ASSERT_TRUE(pc.secondaries.size() >= pc.max_replica_count - 1);
+        CHECK(!pc.primary.is_invalid(), "");
+        CHECK_GE(pc.secondaries.size(), pc.max_replica_count - 1);
     }
 
     // now test the cure
@@ -369,10 +339,10 @@ void meta_service_test_app::balance_config_file()
 
         // iterate 1000 times
         for (int i = 0; i < 1000 && lb->balance({&apps, &nodes}, ml); ++i) {
-            dinfo("the %dth round of balancer", i);
+            LOG_DEBUG("the {}th round of balancer", i);
             migration_check_and_apply(apps, nodes, ml, nullptr);
             lb->check({&apps, &nodes}, ml);
-            dinfo("balance checker operation count = %d", ml.size());
+            LOG_DEBUG("balance checker operation count = {}", ml.size());
         }
     }
 }

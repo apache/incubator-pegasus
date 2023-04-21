@@ -33,20 +33,66 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "replica.h"
-#include "mutation.h"
-#include "mutation_log.h"
-#include "replica_stub.h"
+#include <fmt/core.h>
+#include <stdint.h>
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "common/replication_enums.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
 #include "duplication/replica_duplicator_manager.h"
-#include "split/replica_split_manager.h"
-#include "utils/fail_point.h"
-#include "utils/filesystem.h"
-#include "utils/chrono_literals.h"
+#include "metadata_types.h"
+#include "mutation_log.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica.h"
+#include "replica/prepare_list.h"
+#include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
+#include "replica_stub.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "split/replica_split_manager.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/chrono_literals.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
+
+DSN_DEFINE_int32(replication,
+                 checkpoint_max_interval_hours,
+                 2,
+                 "maximum time interval (hours) where a new checkpoint must be created");
+DSN_DEFINE_int32(replication,
+                 log_private_reserve_max_size_mb,
+                 0,
+                 "max size of useless private log to be reserved. NOTE: only when "
+                 "FLAGS_log_private_reserve_max_size_mb and "
+                 "FLAGS_log_private_reserve_max_time_seconds are both satisfied, the useless logs "
+                 "can be reserved.");
+DSN_DEFINE_int32(replication,
+                 log_private_reserve_max_time_seconds,
+                 0,
+                 "max time in seconds of useless private log to be reserved. NOTE: only when "
+                 "FLAGS_log_private_reserve_max_size_mb and "
+                 "FLAGS_log_private_reserve_max_time_seconds are both satisfied, the useless logs "
+                 "can be reserved.");
 
 const std::string kCheckpointFolderPrefix /*NOLINT*/ = "checkpoint";
 
@@ -62,17 +108,15 @@ void replica::on_checkpoint_timer()
 
     if (dsn_now_ms() > _next_checkpoint_interval_trigger_time_ms) {
         // we trigger emergency checkpoint if no checkpoint generated for a long time
-        ddebug("%s: trigger emergency checkpoint by checkpoint_max_interval_hours, "
-               "config_interval = %dh (%" PRIu64 "ms), random_interval = %" PRIu64 "ms",
-               name(),
-               _options->checkpoint_max_interval_hours,
-               _options->checkpoint_max_interval_hours * 3600000UL,
-               _next_checkpoint_interval_trigger_time_ms - _last_checkpoint_generate_time_ms);
+        LOG_INFO_PREFIX("trigger emergency checkpoint by FLAGS_checkpoint_max_interval_hours, "
+                        "config_interval = {}h ({}ms), random_interval = {}ms",
+                        FLAGS_checkpoint_max_interval_hours,
+                        FLAGS_checkpoint_max_interval_hours * 3600000UL,
+                        _next_checkpoint_interval_trigger_time_ms -
+                            _last_checkpoint_generate_time_ms);
         init_checkpoint(true);
     } else {
-        ddebug("%s: trigger non-emergency checkpoint",
-               name(),
-               _options->checkpoint_max_interval_hours);
+        LOG_INFO_PREFIX("trigger non-emergency checkpoint");
         init_checkpoint(false);
     }
 
@@ -89,22 +133,22 @@ void replica::on_checkpoint_timer()
             // cleanable_decree is the only GC trigger.
             valid_start_offset = 0;
             if (min_confirmed_decree < last_durable_decree) {
-                ddebug_replica("gc_private {}: delay gc for duplication: min_confirmed_decree({}) "
-                               "last_durable_decree({})",
-                               enum_to_string(status()),
-                               min_confirmed_decree,
-                               last_durable_decree);
+                LOG_INFO_PREFIX("gc_private {}: delay gc for duplication: min_confirmed_decree({}) "
+                                "last_durable_decree({})",
+                                enum_to_string(status()),
+                                min_confirmed_decree,
+                                last_durable_decree);
                 cleanable_decree = min_confirmed_decree;
             } else {
-                ddebug_replica("gc_private {}: min_confirmed_decree({}) last_durable_decree({})",
-                               enum_to_string(status()),
-                               min_confirmed_decree,
-                               last_durable_decree);
+                LOG_INFO_PREFIX("gc_private {}: min_confirmed_decree({}) last_durable_decree({})",
+                                enum_to_string(status()),
+                                min_confirmed_decree,
+                                last_durable_decree);
             }
         } else if (is_duplication_master()) {
             // unsure if the logs can be dropped, because min_confirmed_decree
             // is currently unavailable
-            ddebug_replica(
+            LOG_INFO_PREFIX(
                 "gc_private {}: skip gc because confirmed duplication progress is unknown",
                 enum_to_string(status()));
             return;
@@ -122,8 +166,8 @@ void replica::on_checkpoint_timer()
                                  get_gpid(),
                                  cleanable_decree,
                                  valid_start_offset,
-                                 (int64_t)_options->log_private_reserve_max_size_mb * 1024 * 1024,
-                                 (int64_t)_options->log_private_reserve_max_time_seconds);
+                                 (int64_t)FLAGS_log_private_reserve_max_size_mb * 1024 * 1024,
+                                 (int64_t)FLAGS_log_private_reserve_max_time_seconds);
                              if (status() == partition_status::PS_PRIMARY)
                                  _counter_private_log_size->set(_private_log->total_size() /
                                                                 1000000);
@@ -137,14 +181,14 @@ error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
     _checker.only_one_thread_access();
 
     if (_app == nullptr) {
-        derror_replica("app hasn't been init or has been released");
+        LOG_ERROR_PREFIX("app hasn't been init or has been released");
         return ERR_LOCAL_APP_FAILURE;
     }
 
     if (old_decree <= _app->last_durable_decree()) {
-        ddebug_replica("checkpoint has been completed: old = {} vs latest = {}",
-                       old_decree,
-                       _app->last_durable_decree());
+        LOG_INFO_PREFIX("checkpoint has been completed: old = {} vs latest = {}",
+                        old_decree,
+                        _app->last_durable_decree());
         _is_manual_emergency_checkpointing = false;
         _stub->_manual_emergency_checkpointing_count == 0
             ? 0
@@ -153,15 +197,16 @@ error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
     }
 
     if (_is_manual_emergency_checkpointing) {
-        dwarn_replica("replica is checkpointing, last_durable_decree = {}",
-                      _app->last_durable_decree());
+        LOG_WARNING_PREFIX("replica is checkpointing, last_durable_decree = {}",
+                           _app->last_durable_decree());
         return ERR_BUSY;
     }
 
     if (++_stub->_manual_emergency_checkpointing_count >
         FLAGS_max_concurrent_manual_emergency_checkpointing_count) {
-        dwarn_replica("please try again later because checkpointing exceed max running count[{}]",
-                      FLAGS_max_concurrent_manual_emergency_checkpointing_count);
+        LOG_WARNING_PREFIX(
+            "please try again later because checkpointing exceed max running count[{}]",
+            FLAGS_max_concurrent_manual_emergency_checkpointing_count);
         --_stub->_manual_emergency_checkpointing_count;
         return ERR_TRY_AGAIN;
     }
@@ -176,10 +221,9 @@ void replica::init_checkpoint(bool is_emergency)
 {
     // only applicable to primary and secondary replicas
     if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY) {
-        ddebug("%s: ignore doing checkpoint for status = %s, is_emergency = %s",
-               name(),
-               enum_to_string(status()),
-               (is_emergency ? "true" : "false"));
+        LOG_INFO_PREFIX("ignore doing checkpoint for status = {}, is_emergency = {}",
+                        enum_to_string(status()),
+                        is_emergency ? "true" : "false");
         return;
     }
 
@@ -234,19 +278,17 @@ error_code replica::background_async_checkpoint(bool is_emergency)
     decree old_durable = _app->last_durable_decree();
     auto err = _app->async_checkpoint(is_emergency);
     uint64_t used_time = dsn_now_ns() - start_time;
-    dassert(err != ERR_NOT_IMPLEMENTED, "err == ERR_NOT_IMPLEMENTED");
+    CHECK_NE(err, ERR_NOT_IMPLEMENTED);
     if (err == ERR_OK) {
         if (old_durable != _app->last_durable_decree()) {
             // if no need to generate new checkpoint, async_checkpoint() also returns ERR_OK,
             // so we should check if a new checkpoint has been generated.
-            ddebug("%s: call app.async_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
-                   "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
-                   " => %" PRId64 ")",
-                   name(),
-                   used_time,
-                   _app->last_committed_decree(),
-                   old_durable,
-                   _app->last_durable_decree());
+            LOG_INFO_PREFIX("call app.async_checkpoint() succeed, time_used_ns = {}, "
+                            "app_last_committed_decree = {}, app_last_durable_decree = ({} => {})",
+                            used_time,
+                            _app->last_committed_decree(),
+                            old_durable,
+                            _app->last_durable_decree());
             update_last_checkpoint_generate_time();
         }
 
@@ -262,10 +304,9 @@ error_code replica::background_async_checkpoint(bool is_emergency)
 
     if (err == ERR_TRY_AGAIN) {
         // already triggered memory flushing on async_checkpoint(), then try again later.
-        ddebug("%s: call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = %" PRIu64
-               ", schedule later checkpoint after 10 seconds",
-               name(),
-               used_time);
+        LOG_INFO_PREFIX("call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = {}"
+                        ", schedule later checkpoint after 10 seconds",
+                        used_time);
         tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
                          &_tracker,
                          [this] { init_checkpoint(false); },
@@ -282,15 +323,12 @@ error_code replica::background_async_checkpoint(bool is_emergency)
     }
     if (err == ERR_WRONG_TIMING) {
         // do nothing
-        ddebug("%s: call app.async_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = %" PRIu64
-               ", just ignore",
-               name(),
-               used_time);
+        LOG_INFO_PREFIX(
+            "call app.async_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = {}, just ignore",
+            used_time);
     } else {
-        derror("%s: call app.async_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
-               name(),
-               used_time,
-               err.to_string());
+        LOG_ERROR_PREFIX(
+            "call app.async_checkpoint() failed, time_used_ns = {}, err = {}", used_time, err);
     }
     return err;
 }
@@ -302,32 +340,28 @@ error_code replica::background_sync_checkpoint()
     decree old_durable = _app->last_durable_decree();
     auto err = _app->sync_checkpoint();
     uint64_t used_time = dsn_now_ns() - start_time;
-    dassert(err != ERR_NOT_IMPLEMENTED, "err == ERR_NOT_IMPLEMENTED");
+    CHECK_NE(err, ERR_NOT_IMPLEMENTED);
     if (err == ERR_OK) {
         if (old_durable != _app->last_durable_decree()) {
             // if no need to generate new checkpoint, sync_checkpoint() also returns ERR_OK,
             // so we should check if a new checkpoint has been generated.
-            ddebug("%s: call app.sync_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
-                   "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
-                   " => %" PRId64 ")",
-                   name(),
-                   used_time,
-                   _app->last_committed_decree(),
-                   old_durable,
-                   _app->last_durable_decree());
+            LOG_INFO_PREFIX("call app.sync_checkpoint() succeed, time_used_ns = {}, "
+                            "app_last_committed_decree = {}, "
+                            "app_last_durable_decree = ({} => {})",
+                            used_time,
+                            _app->last_committed_decree(),
+                            old_durable,
+                            _app->last_durable_decree());
             update_last_checkpoint_generate_time();
         }
     } else if (err == ERR_WRONG_TIMING) {
         // do nothing
-        ddebug("%s: call app.sync_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = %" PRIu64
-               ", just ignore",
-               name(),
-               used_time);
+        LOG_INFO_PREFIX(
+            "call app.sync_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = {}, just ignore",
+            used_time);
     } else {
-        derror("%s: call app.sync_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
-               name(),
-               used_time,
-               err.to_string());
+        LOG_ERROR_PREFIX(
+            "call app.sync_checkpoint() failed, time_used_ns = {}, err = {}", used_time, err);
     }
     return err;
 }
@@ -389,7 +423,7 @@ void replica::on_checkpoint_completed(error_code err)
         if (_app->last_committed_decree() > _prepare_list->min_decree()) {
             for (auto d = _app->last_committed_decree() + 1; d <= c; d++) {
                 auto mu = _prepare_list->get_mutation_by_decree(d);
-                dassert(nullptr != mu, "invalid mutation, decree = %" PRId64, d);
+                CHECK_NOTNULL(mu, "invalid mutation, decree = {}", d);
                 err = _app->apply_mutation(mu);
                 if (ERR_OK != err) {
                     _secondary_states.checkpoint_is_running = false;

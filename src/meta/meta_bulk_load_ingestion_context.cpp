@@ -15,21 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "meta_bulk_load_ingestion_context.h"
+#include "meta/meta_bulk_load_ingestion_context.h"
 
-#include "utils/fmt_logging.h"
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
 #include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_uint32("meta_server",
+DSN_DEFINE_uint32(meta_server,
                   bulk_load_node_max_ingesting_count,
                   4,
                   "max partition_count executing ingestion for one node at the same time");
 DSN_TAG_VARIABLE(bulk_load_node_max_ingesting_count, FT_MUTABLE);
 
-DSN_DEFINE_uint32("meta_server", bulk_load_node_min_disk_count, 1, "min disk count of one node");
+DSN_DEFINE_uint32(meta_server, bulk_load_node_min_disk_count, 1, "min disk count of one node");
 DSN_TAG_VARIABLE(bulk_load_node_min_disk_count, FT_MUTABLE);
 
 ingestion_context::ingestion_context() { reset_all(); }
@@ -80,20 +88,20 @@ bool ingestion_context::node_context::check_if_add(const std::string &disk_tag)
 {
     auto max_node_ingestion_count = FLAGS_bulk_load_node_max_ingesting_count;
     if (node_ingesting_count >= max_node_ingestion_count) {
-        dwarn_f("node[{}] has {} partition executing ingestion, max_count = {}",
-                address.to_string(),
-                node_ingesting_count,
-                max_node_ingestion_count);
+        LOG_WARNING("node[{}] has {} partition executing ingestion, max_count = {}",
+                    address.to_string(),
+                    node_ingesting_count,
+                    max_node_ingestion_count);
         return false;
     }
 
     auto max_disk_ingestion_count = get_max_disk_ingestion_count(max_node_ingestion_count);
     if (disk_ingesting_counts[disk_tag] >= max_disk_ingestion_count) {
-        dwarn_f("node[{}] disk[{}] has {} partition executing ingestion, max_count = {}",
-                address.to_string(),
-                disk_tag,
-                disk_ingesting_counts[disk_tag],
-                max_disk_ingestion_count);
+        LOG_WARNING("node[{}] disk[{}] has {} partition executing ingestion, max_count = {}",
+                    address.to_string(),
+                    disk_tag,
+                    disk_ingesting_counts[disk_tag],
+                    max_disk_ingestion_count);
         return false;
     }
     return true;

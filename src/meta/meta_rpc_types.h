@@ -34,8 +34,7 @@ typedef rpc_holder<configuration_update_app_env_request, configuration_update_ap
 typedef rpc_holder<ddd_diagnose_request, ddd_diagnose_response> ddd_diagnose_rpc;
 typedef rpc_holder<configuration_query_by_node_request, configuration_query_by_node_response>
     configuration_query_by_node_rpc;
-typedef rpc_holder<configuration_query_by_index_request, configuration_query_by_index_response>
-    configuration_query_by_index_rpc;
+typedef rpc_holder<query_cfg_request, query_cfg_response> configuration_query_by_index_rpc;
 typedef rpc_holder<configuration_list_apps_request, configuration_list_apps_response>
     configuration_list_apps_rpc;
 typedef rpc_holder<configuration_list_nodes_request, configuration_list_nodes_response>
@@ -68,6 +67,8 @@ typedef rpc_holder<configuration_get_max_replica_count_request,
 typedef rpc_holder<configuration_set_max_replica_count_request,
                    configuration_set_max_replica_count_response>
     configuration_set_max_replica_count_rpc;
+typedef rpc_holder<configuration_rename_app_request, configuration_rename_app_response>
+    configuration_rename_app_rpc;
 
 } // namespace replication
 } // namespace dsn

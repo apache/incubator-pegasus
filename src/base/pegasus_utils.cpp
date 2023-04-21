@@ -20,12 +20,13 @@
 #include "pegasus_utils.h"
 
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <netdb.h>
-#include <stdlib.h>
-#include <errno.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <cctype>
 
-#include "utils/api_utilities.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
 
 namespace pegasus {
@@ -115,8 +116,8 @@ c_escape_string(const char *src, size_t src_len, char *dest, size_t dest_len, bo
 inline unsigned int hex_digit_to_int(char c)
 {
     /* Assume ASCII. */
-    dassert_f('0' == 0x30 && 'A' == 0x41 && 'a' == 0x61, "");
-    dassert_f(isxdigit(c), "");
+    CHECK('0' == 0x30 && 'A' == 0x41 && 'a' == 0x61, "");
+    CHECK(isxdigit(c), "");
     unsigned int x = static_cast<unsigned char>(c);
     if (x > '9') {
         x += 9;

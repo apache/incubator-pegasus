@@ -24,13 +24,93 @@
  * THE SOFTWARE.
  */
 
-#include <cstring>
-#include <sstream>
 #include <openssl/md5.h>
+#include <stdio.h>
+#include <strings.h>
+#include <algorithm>
+#include <cstring>
+#include <sstream> // IWYU pragma: keep
+#include <utility>
+
+#include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
 namespace dsn {
 namespace utils {
+
+#define CHECK_NULL_PTR(lhs, rhs)                                                                   \
+    do {                                                                                           \
+        if (lhs == nullptr) {                                                                      \
+            return rhs == nullptr;                                                                 \
+        }                                                                                          \
+        if (rhs == nullptr) {                                                                      \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+
+bool equals(const char *lhs, const char *rhs)
+{
+    CHECK_NULL_PTR(lhs, rhs);
+    return std::strcmp(lhs, rhs) == 0;
+}
+
+bool equals(const char *lhs, const char *rhs, size_t n)
+{
+    CHECK_NULL_PTR(lhs, rhs);
+    return std::strncmp(lhs, rhs, n) == 0;
+}
+
+bool iequals(const char *lhs, const char *rhs)
+{
+    CHECK_NULL_PTR(lhs, rhs);
+    return ::strcasecmp(lhs, rhs) == 0;
+}
+
+bool iequals(const char *lhs, const char *rhs, size_t n)
+{
+    CHECK_NULL_PTR(lhs, rhs);
+    return ::strncasecmp(lhs, rhs, n) == 0;
+}
+
+bool iequals(const std::string &lhs, const char *rhs)
+{
+    if (rhs == nullptr) {
+        return false;
+    }
+    return ::strcasecmp(lhs.c_str(), rhs) == 0;
+}
+
+bool iequals(const std::string &lhs, const char *rhs, size_t n)
+{
+    if (rhs == nullptr) {
+        return false;
+    }
+    return ::strncasecmp(lhs.c_str(), rhs, n) == 0;
+}
+
+bool iequals(const char *lhs, const std::string &rhs)
+{
+    if (lhs == nullptr) {
+        return false;
+    }
+    return ::strcasecmp(lhs, rhs.c_str()) == 0;
+}
+
+bool iequals(const char *lhs, const std::string &rhs, size_t n)
+{
+    if (lhs == nullptr) {
+        return false;
+    }
+    return ::strncasecmp(lhs, rhs.c_str(), n) == 0;
+}
+
+bool mequals(const void *lhs, const void *rhs, size_t n)
+{
+    CHECK_NULL_PTR(lhs, rhs);
+    return std::memcmp(lhs, rhs, n) == 0;
+}
+
+#undef CHECK_NULL_PTR
 
 std::string get_last_component(const std::string &input, const char splitters[])
 {
@@ -50,73 +130,188 @@ std::string get_last_component(const std::string &input, const char splitters[])
         return input;
 }
 
-void split_args(const char *args,
-                /*out*/ std::vector<std::string> &sargs,
-                char splitter,
-                bool keep_place_holder)
+namespace {
+
+// The states while scan each split.
+enum class split_args_state : int
 {
-    sargs.clear();
-    std::string v(args);
-    uint64_t last_pos = 0;
-    while (true) {
-        auto pos = v.find(splitter, last_pos);
-        if (pos != std::string::npos) {
-            std::string s = trim_string((char *)v.substr(last_pos, pos - last_pos).c_str());
-            if (!s.empty()) {
-                sargs.push_back(s);
-            } else if (keep_place_holder) {
-                sargs.emplace_back("");
+    kSplitBeginning,     // The initial state while starting to scan a split
+    kSplitLeadingSpaces, // While meeting leading spaces, if any
+    kSplitToken,         // While running into token (after leading spaces)
+};
+
+const std::string kLeadingSpaces = " \t";
+const std::string kTrailingSpaces = " \t\r\n";
+
+inline bool is_leading_space(char ch)
+{
+    return std::any_of(
+        kLeadingSpaces.begin(), kLeadingSpaces.end(), [ch](char space) { return ch == space; });
+}
+
+inline bool is_trailing_space(char ch)
+{
+    return std::any_of(
+        kTrailingSpaces.begin(), kTrailingSpaces.end(), [ch](char space) { return ch == space; });
+}
+
+// Skip trailing spaces and find the end of token.
+const char *find_token_end(const char *token_begin, const char *end)
+{
+    CHECK(token_begin < end, "");
+
+    for (; end > token_begin && is_trailing_space(*(end - 1)); --end) {
+    }
+    return end;
+}
+
+// Append new element to sequence containers, such as std::vector and std::list.
+struct SequenceInserter
+{
+    // The new element is constructed through variadic template and appended at the end
+    // of the sequence container.
+    template <typename SequenceContainer, typename... Args>
+    void emplace(SequenceContainer &container, Args &&... args) const
+    {
+        container.emplace_back(std::forward<Args>(args)...);
+    }
+};
+
+// Insert new element to associative containers, such as std::unordered_set and std::set.
+struct AssociativeInserter
+{
+    // The new element is constructed through variadic template and inserted into the associative
+    // container.
+    template <typename AssociativeContainer, typename... Args>
+    void emplace(AssociativeContainer &container, Args &&... args) const
+    {
+        container.emplace(std::forward<Args>(args)...);
+    }
+};
+
+// Split the `input` string by the only character `separator` into tokens. Leading and trailing
+// spaces of each token will be stripped. Once the token is empty, or become empty after
+// stripping, an empty string will be added into `output` if `keep_place_holder` is enabled.
+//
+// `inserter` provides the only interface for all types of containers. By `inserter`, all tokens
+// will be collected to each type of container: for sequence containers, such as std::vector and
+// std::list, tokens will be "appended"; for associative containers, such as std::unordered_set
+// and std::set, tokens will be "inserted".
+template <typename Inserter, typename Container>
+void split(const char *input,
+           char separator,
+           bool keep_place_holder,
+           const Inserter &inserter,
+           Container &output)
+{
+    CHECK_NOTNULL(input, "");
+
+    output.clear();
+
+    auto state = split_args_state::kSplitBeginning;
+    const char *token_begin = nullptr;
+    for (auto p = input;; ++p) {
+        if (*p == separator || *p == '\0') {
+            switch (state) {
+            case split_args_state::kSplitBeginning:
+            case split_args_state::kSplitLeadingSpaces:
+                if (keep_place_holder) {
+                    // Will add an empty string as output, since all characters
+                    // in this split are spaces.
+                    inserter.emplace(output);
+                }
+                break;
+            case split_args_state::kSplitToken: {
+                auto token_end = find_token_end(token_begin, p);
+                CHECK(token_begin <= token_end, "");
+                if (token_begin == token_end && !keep_place_holder) {
+                    // Current token is empty, and place holder is not needed.
+                    break;
+                }
+                inserter.emplace(output, token_begin, token_end);
+            } break;
+            default:
+                break;
             }
-            last_pos = pos + 1;
-        } else {
-            std::string s = trim_string((char *)v.substr(last_pos).c_str());
-            if (!s.empty()) {
-                sargs.push_back(s);
-            } else if (keep_place_holder) {
-                sargs.emplace_back("");
+
+            if (*p == '\0') {
+                // The whole string has been scanned, just break from the loop.
+                break;
             }
+
+            // Current token has been scanned, continue next split.
+            state = split_args_state::kSplitBeginning;
+            continue;
+        }
+
+        // Current scanned character is not `separator`.
+        switch (state) {
+        case split_args_state::kSplitBeginning:
+            if (is_leading_space(*p)) {
+                state = split_args_state::kSplitLeadingSpaces;
+            } else {
+                state = split_args_state::kSplitToken;
+                token_begin = p;
+            }
+            break;
+        case split_args_state::kSplitLeadingSpaces:
+            if (!is_leading_space(*p)) {
+                // Any character that is not leading space will be considered as
+                // the beginning of a token. Whether all of the scanned characters
+                // belong to the token will be decided while the `separator` is
+                // found.
+                state = split_args_state::kSplitToken;
+                token_begin = p;
+            }
+            break;
+        default:
             break;
         }
     }
 }
 
-void split_args(const char *args,
-                /*out*/ std::unordered_set<std::string> &sargs,
-                char splitter,
-                bool keep_place_holder)
+template <typename Container>
+inline void split_to_sequence_container(const char *input,
+                                        char separator,
+                                        bool keep_place_holder,
+                                        Container &output)
 {
-    std::vector<std::string> sargs_vec;
-    split_args(args, sargs_vec, splitter, keep_place_holder);
-    sargs.insert(sargs_vec.begin(), sargs_vec.end());
+    split(input, separator, keep_place_holder, SequenceInserter(), output);
 }
 
-void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter)
+template <typename Container>
+inline void split_to_associative_container(const char *input,
+                                           char separator,
+                                           bool keep_place_holder,
+                                           Container &output)
 {
-    sargs.clear();
+    split(input, separator, keep_place_holder, AssociativeInserter(), output);
+}
 
-    std::string v(args);
+} // anonymous namespace
 
-    int lastPos = 0;
-    while (true) {
-        auto pos = v.find(splitter, lastPos);
-        if (pos != std::string::npos) {
-            std::string s = v.substr(lastPos, pos - lastPos);
-            if (s.length() > 0) {
-                std::string s2 = trim_string((char *)s.c_str());
-                if (s2.length() > 0)
-                    sargs.push_back(s2);
-            }
-            lastPos = static_cast<int>(pos + 1);
-        } else {
-            std::string s = v.substr(lastPos);
-            if (s.length() > 0) {
-                std::string s2 = trim_string((char *)s.c_str());
-                if (s2.length() > 0)
-                    sargs.push_back(s2);
-            }
-            break;
-        }
-    }
+void split_args(const char *input,
+                std::vector<std::string> &output,
+                char separator,
+                bool keep_place_holder)
+{
+    split_to_sequence_container(input, separator, keep_place_holder, output);
+}
+
+void split_args(const char *input,
+                std::list<std::string> &output,
+                char separator,
+                bool keep_place_holder)
+{
+    split_to_sequence_container(input, separator, keep_place_holder, output);
+}
+
+void split_args(const char *input,
+                std::unordered_set<std::string> &output,
+                char separator,
+                bool keep_place_holder)
+{
+    split_to_associative_container(input, separator, keep_place_holder, output);
 }
 
 bool parse_kv_map(const char *args,
@@ -181,12 +376,12 @@ replace_string(std::string subject, const std::string &search, const std::string
 
 char *trim_string(char *s)
 {
-    while (*s != '\0' && (*s == ' ' || *s == '\t')) {
+    while (*s != '\0' && is_leading_space(*s)) {
         s++;
     }
     char *r = s;
     s += strlen(s);
-    while (s >= r && (*s == '\0' || *s == ' ' || *s == '\t' || *s == '\r' || *s == '\n')) {
+    while (s >= r && (*s == '\0' || is_trailing_space(*s))) {
         *s = '\0';
         s--;
     }
@@ -219,6 +414,15 @@ std::string string_md5(const char *buffer, unsigned length)
     result.assign(str);
 
     return result;
+}
+
+std::string find_string_prefix(const std::string &input, char separator)
+{
+    auto current = input.find(separator);
+    if (current == 0 || current == std::string::npos) {
+        return std::string();
+    }
+    return input.substr(0, current);
 }
 } // namespace utils
 } // namespace dsn

@@ -19,7 +19,14 @@
 
 #pragma once
 
+#include <rocksdb/slice.h>
+#include <memory>
+#include <string>
+
 #include "pegasus_value_schema.h"
+#include "utils/blob.h"
+#include "utils/string_view.h"
+#include "value_field.h"
 
 namespace pegasus {
 /**

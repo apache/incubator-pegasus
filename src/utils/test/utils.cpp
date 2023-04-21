@@ -33,16 +33,28 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "utils/utils.h"
-#include "utils/strings.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+#include <gtest/gtest-param-test.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <stddef.h>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <type_traits>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
-#include "utils/link.h"
 #include "utils/crc.h"
-#include "utils/autoref_ptr.h"
-#include "runtime/api_layer1.h"
-#include <gtest/gtest.h>
+#include "utils/link.h"
 #include "utils/rand.h"
+#include "utils/strings.h"
+#include "utils/utils.h"
 
 using namespace ::dsn;
 using namespace ::dsn::utils;
@@ -84,96 +96,324 @@ TEST(core, binary_io)
     EXPECT_TRUE(value3 == value);
 }
 
-TEST(core, split_args)
+void check_empty(const char *str) { EXPECT_TRUE(dsn::utils::is_empty(str)); }
+
+void check_nonempty(const char *str) { EXPECT_FALSE(dsn::utils::is_empty(str)); }
+
+TEST(core, check_c_string_empty)
 {
-    std::string value = "a ,b, c ";
-    std::vector<std::string> sargs;
-    std::list<std::string> sargs2;
-    ::dsn::utils::split_args(value.c_str(), sargs, ',');
-    ::dsn::utils::split_args(value.c_str(), sargs2, ',');
+    const char *empty_strings[] = {nullptr, "", "\0", "\0\0", "\0\0\0", "\0a", "\0ab", "\0abc"};
+    for (const auto &p : empty_strings) {
+        check_empty(p);
+    }
 
-    EXPECT_EQ(sargs.size(), 3);
-    EXPECT_EQ(sargs[0], "a");
-    EXPECT_EQ(sargs[1], "b");
-    EXPECT_EQ(sargs[2], "c");
-
-    EXPECT_EQ(sargs2.size(), 3);
-    auto it = sargs2.begin();
-    EXPECT_EQ(*it++, "a");
-    EXPECT_EQ(*it++, "b");
-    EXPECT_EQ(*it++, "c");
-
-    std::unordered_set<std::string> sargs_set;
-    dsn::utils::split_args(value.c_str(), sargs_set, ',');
-    EXPECT_EQ(sargs_set.size(), 3);
-
-    // test value = ""
-    value = "";
-    sargs.clear();
-    dsn::utils::split_args(value.c_str(), sargs, ',');
-    EXPECT_EQ(sargs.size(), 0);
-
-    sargs2.clear();
-    dsn::utils::split_args(value.c_str(), sargs2, ',');
-    EXPECT_EQ(sargs2.size(), 0);
-
-    sargs_set.clear();
-    dsn::utils::split_args(value.c_str(), sargs_set, ',');
-    EXPECT_EQ(sargs_set.size(), 0);
+    const char *nonempty_strings[] = {"\\",
+                                      "\\\\",
+                                      "0",
+                                      "00",
+                                      "\\0",
+                                      "\\0a",
+                                      "\\\\00",
+                                      "a",
+                                      "a\0",
+                                      "a\\0",
+                                      "a\0b",
+                                      "ab\0c",
+                                      "abc\0",
+                                      "abc"};
+    for (const auto &p : nonempty_strings) {
+        check_nonempty(p);
+    }
 }
 
-TEST(core, split_args_keep_place_holder)
+using c_string_equality = std::tuple<const char *, const char *, bool, bool>;
+
+class CStringEqualityTest : public testing::TestWithParam<c_string_equality>
 {
-    std::string value = "a ,b, c ";
-    std::vector<std::string> sargs;
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+};
 
-    EXPECT_EQ(sargs.size(), 3);
-    EXPECT_EQ(sargs[0], "a");
-    EXPECT_EQ(sargs[1], "b");
-    EXPECT_EQ(sargs[2], "c");
+TEST_P(CStringEqualityTest, CStringEquals)
+{
+    const char *lhs;
+    const char *rhs;
+    bool is_equal;
+    bool is_equal_ignore_case;
+    std::tie(lhs, rhs, is_equal, is_equal_ignore_case) = GetParam();
 
-    value = " ,  a ,b, c ";
-    sargs.clear();
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+    EXPECT_EQ(is_equal, dsn::utils::equals(lhs, rhs));
 
-    EXPECT_EQ(sargs.size(), 4);
-    EXPECT_EQ(sargs[0], "");
-    EXPECT_EQ(sargs[1], "a");
-    EXPECT_EQ(sargs[2], "b");
-    EXPECT_EQ(sargs[3], "c");
+    EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs));
 
-    value = "a ,b, , c";
-    sargs.clear();
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+    if (rhs != nullptr) {
+        // Since NULL pointer cannot be used to construct std::string, related test cases
+        // are neglected.
+        std::string rhs_str(rhs);
+        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs_str));
+    }
 
-    EXPECT_EQ(sargs.size(), 4);
-    EXPECT_EQ(sargs[0], "a");
-    EXPECT_EQ(sargs[1], "b");
-    EXPECT_EQ(sargs[2], "");
-    EXPECT_EQ(sargs[3], "c");
+    if (lhs != nullptr) {
+        // Since NULL pointer cannot be used to construct std::string, related test cases
+        // are neglected.
+        std::string lhs_str(lhs);
+        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs_str, rhs));
+    }
+}
 
-    value = "a ,b, c , ";
-    sargs.clear();
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+const std::vector<c_string_equality> c_string_equality_tests = {
+    {nullptr, nullptr, true, true}, {nullptr, "", false, false}, {nullptr, "a", false, false},
+    {nullptr, "abc", false, false}, {"", nullptr, false, false}, {"a", nullptr, false, false},
+    {"abc", nullptr, false, false}, {"", "", true, true},        {"", "a", false, false},
+    {"", "abc", false, false},      {"a", "", false, false},     {"abc", "", false, false},
+    {"a", "a", true, true},         {"a", "A", false, true},     {"A", "A", true, true},
+    {"abc", "abc", true, true},     {"aBc", "abc", false, true}, {"abc", "ABC", false, true},
+    {"a", "abc", false, false},     {"A", "abc", false, false},  {"abc", "a", false, false},
+    {"Abc", "a", false, false},
+};
 
-    EXPECT_EQ(sargs.size(), 4);
-    EXPECT_EQ(sargs[0], "a");
-    EXPECT_EQ(sargs[1], "b");
-    EXPECT_EQ(sargs[2], "c");
-    EXPECT_EQ(sargs[3], "");
+INSTANTIATE_TEST_CASE_P(StringTest,
+                        CStringEqualityTest,
+                        testing::ValuesIn(c_string_equality_tests));
 
-    value = ", a ,b, ,c , ";
-    sargs.clear();
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
+using c_string_n_bytes_equality = std::tuple<const char *, const char *, size_t, bool, bool, bool>;
 
-    EXPECT_EQ(sargs.size(), 6);
-    EXPECT_EQ(sargs[0], "");
-    EXPECT_EQ(sargs[1], "a");
-    EXPECT_EQ(sargs[2], "b");
-    EXPECT_EQ(sargs[3], "");
-    EXPECT_EQ(sargs[4], "c");
-    EXPECT_EQ(sargs[5], "");
+class CStringNBytesEqualityTest : public testing::TestWithParam<c_string_n_bytes_equality>
+{
+};
+
+TEST_P(CStringNBytesEqualityTest, CStringNBytesEquals)
+{
+    const char *lhs;
+    const char *rhs;
+    size_t n;
+    bool is_equal;
+    bool is_equal_ignore_case;
+    bool is_equal_memory;
+    std::tie(lhs, rhs, n, is_equal, is_equal_ignore_case, is_equal_memory) = GetParam();
+
+    EXPECT_EQ(is_equal, dsn::utils::equals(lhs, rhs, n));
+
+    EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs, n));
+
+    if (rhs != nullptr) {
+        // Since NULL pointer cannot be used to construct std::string, related test cases
+        // are neglected.
+        std::string rhs_str(rhs);
+        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs_str, n));
+    }
+
+    if (lhs != nullptr) {
+        // Since NULL pointer cannot be used to construct std::string, related test cases
+        // are neglected.
+        std::string lhs_str(lhs);
+        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs_str, rhs, n));
+    }
+
+    EXPECT_EQ(is_equal_memory, dsn::utils::mequals(lhs, rhs, n));
+}
+
+const std::vector<c_string_n_bytes_equality> c_string_n_bytes_equality_tests = {
+    {nullptr, nullptr, 0, true, true, true},
+    {nullptr, nullptr, 1, true, true, true},
+    {nullptr, "", 0, false, false, false},
+    {nullptr, "", 1, false, false, false},
+    {nullptr, "a", 0, false, false, false},
+    {nullptr, "a", 1, false, false, false},
+    {nullptr, "abc", 0, false, false, false},
+    {nullptr, "abc", 1, false, false, false},
+    {"", nullptr, 0, false, false, false},
+    {"", nullptr, 1, false, false, false},
+    {"a", nullptr, 0, false, false, false},
+    {"a", nullptr, 1, false, false, false},
+    {"abc", nullptr, 0, false, false, false},
+    {"abc", nullptr, 1, false, false, false},
+    {"", "", 0, true, true, true},
+    {"", "", 1, true, true, true},
+    {"\0", "a", 1, false, false, false},
+    {"\0\0\0", "abc", 3, false, false, false},
+    {"a", "\0", 1, false, false, false},
+    {"abc", "\0\0\0", 3, false, false, false},
+    {"a", "a", 1, true, true, true},
+    {"a", "A", 1, false, true, false},
+    {"A", "A", 1, true, true, true},
+    {"abc", "abc", 3, true, true, true},
+    {"aBc", "abc", 3, false, true, false},
+    {"abc", "ABC", 3, false, true, false},
+    {"a\0\0", "abc", 3, false, false, false},
+    {"A\0\0", "abc", 3, false, false, false},
+    {"abc", "a\0\0", 3, false, false, false},
+    {"abc", "xyz", 0, true, true, true},
+    {"Abc", "a\0\0", 3, false, false, false},
+    {"a", "abc", 1, true, true, true},
+    {"a", "Abc", 1, false, true, false},
+    {"abc", "a", 1, true, true, true},
+    {"Abc", "a", 1, false, true, false},
+    {"abc", "abd", 2, true, true, true},
+    {"abc", "ABd", 2, false, true, false},
+    {"abc\0opq", "abc\0xyz", 7, true, true, false},
+    {"abc\0opq", "ABC\0xyz", 7, false, true, false},
+    {"abc\0xyz", "abc\0xyz", 7, true, true, true},
+};
+
+INSTANTIATE_TEST_CASE_P(StringTest,
+                        CStringNBytesEqualityTest,
+                        testing::ValuesIn(c_string_n_bytes_equality_tests));
+
+// For containers such as std::unordered_set, the expected result will be deduplicated
+// at initialization. Therefore, it can be used to compare with actual result safely.
+template <typename Container>
+void test_split_args()
+{
+    // Test cases:
+    // - split empty string by ' ' without place holder
+    // - split empty string by ' ' with place holder
+    // - split empty string by ',' without place holder
+    // - split empty string by ',' with place holder
+    // - split a space (' ') by ' ' without place holder
+    // - split a space (' ') by ' ' with place holder
+    // - split a space (' ') by ',' without place holder
+    // - split a space (' ') by ',' with place holder
+    // - split a comma (',') by ' ' without place holder
+    // - split a comma (',') by ' ' with place holder
+    // - split a comma (',') by ',' without place holder
+    // - split a comma (',') by ',' with place holder
+    // - split 2 leading spaces by ' ' without place holder
+    // - split 2 leading spaces by ' ' with place holder
+    // - split 2 leading spaces by ',' without place holder
+    // - split 2 leading spaces by ',' with place holder
+    // - split 3 leading spaces by ' ' without place holder
+    // - split 3 leading spaces by ' ' with place holder
+    // - split 3 leading spaces by ',' without place holder
+    // - split 3 leading spaces by ',' with place holder
+    // - split 2 trailing spaces by ' ' without place holder
+    // - split 2 trailing spaces by ' ' with place holder
+    // - split 2 trailing spaces by ',' without place holder
+    // - split 2 trailing spaces by ',' with place holder
+    // - split 3 trailing spaces by ' ' without place holder
+    // - split 3 trailing spaces by ' ' with place holder
+    // - split 3 trailing spaces by ',' without place holder
+    // - split 3 trailing spaces by ',' with place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ' ' without place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ' ' with place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ',' without place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ',' with place holder
+    // - split a single letter by ' ' without place holder
+    // - split a single letter by ' ' with place holder
+    // - split a single letter by ',' without place holder
+    // - split a single letter by ',' with place holder
+    // - split a single word by ' ' without place holder
+    // - split a single word by ' ' with place holder
+    // - split a single word by ',' without place holder
+    // - split a single word by ',' with place holder
+    // - split a string including letters and words by ' ' without place holder
+    // - split a string including letters and words by ' ' with place holder
+    // - split a string including letters and words by ',' without place holder
+    // - split a string including letters and words by ',' with place holder
+    // - split a string that includes multiple letters by ' ' without place holder
+    // - split a string that includes multiple letters by ' ' with place holder
+    // - split a string that includes multiple letters by ',' without place holder
+    // - split a string that includes multiple letters by ',' with place holder
+    // - split a string that includes multiple words by ' ' without place holder
+    // - split a string that includes multiple words by ' ' with place holder
+    // - split a string that includes multiple words by ',' without place holder
+    // - split a string that includes multiple words by ',' with place holder
+    struct test_case
+    {
+        const char *input;
+        char separator;
+        bool keep_place_holder;
+        Container expected_output;
+    } tests[] = {{"", ' ', false, {}},
+                 {"", ' ', true, {""}},
+                 {"", ',', false, {}},
+                 {"", ',', true, {""}},
+                 {" ", ' ', false, {}},
+                 {" ", ' ', true, {"", ""}},
+                 {" ", ',', false, {}},
+                 {" ", ',', true, {""}},
+                 {",", ' ', false, {","}},
+                 {",", ' ', true, {","}},
+                 {",", ',', false, {}},
+                 {",", ',', true, {"", ""}},
+                 {"  ", ' ', false, {}},
+                 {"\t ", ' ', true, {"", ""}},
+                 {" \t", ',', false, {}},
+                 {"\t\t", ',', true, {""}},
+                 {" \t ", ' ', false, {}},
+                 {"\t  ", ' ', true, {"", "", ""}},
+                 {"\t\t ", ',', false, {}},
+                 {"  \t", ',', true, {""}},
+                 {"\r ", ' ', false, {}},
+                 {"\t\n", ' ', true, {""}},
+                 {"\r\t", ',', false, {}},
+                 {" \n", ',', true, {""}},
+                 {"\n\t\r", ' ', false, {}},
+                 {" \r ", ' ', true, {"", "", ""}},
+                 {"\r \n", ',', false, {}},
+                 {"\t\n\r", ',', true, {""}},
+                 {" \\n,,\\t \\r ", ' ', false, {"\\n,,\\t", "\\r"}},
+                 {" \\n,,\\t \\r ", ' ', true, {"", "\\n,,\\t", "\\r", ""}},
+                 {" \\n,,\\t \\r ", ',', false, {"\\n", "\\t \\r"}},
+                 {" \\n,,\\t \\r ", ',', true, {"\\n", "", "\\t \\r"}},
+                 {"a", ' ', false, {"a"}},
+                 {"a", ' ', true, {"a"}},
+                 {"a", ',', false, {"a"}},
+                 {"a", ',', true, {"a"}},
+                 {"dinner", ' ', false, {"dinner"}},
+                 {"dinner", ' ', true, {"dinner"}},
+                 {"dinner", ',', false, {"dinner"}},
+                 {"dinner", ',', true, {"dinner"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ' ',
+                  false,
+                  {"\r\na\t\tdog,", "\r\nand", "a\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ' ',
+                  true,
+                  {"\r\na\t\tdog,", "", "\r\nand", "a\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ',',
+                  false,
+                  {"\r\na\t\tdog", "\r\n  \t\r\nand\t\r\n \t\ta\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ',',
+                  true,
+                  {"\r\na\t\tdog", "\r\n  \t\r\nand\t\r\n \t\ta\t\tcat"}},
+                 {"a ,b, ,c ", ' ', false, {"a", ",b,", ",c"}},
+                 {"a ,b, ,c ", ' ', true, {"a", ",b,", ",c", ""}},
+                 {"a ,b, ,c ", ',', false, {"a", "b", "c"}},
+                 {"a ,b, ,c ", ',', true, {"a", "b", "", "c"}},
+                 {" in  early 2000s ,  too, ", ' ', false, {"in", "early", "2000s", ",", "too,"}},
+                 {" in  early 2000s ,  too, ",
+                  ' ',
+                  true,
+                  {"", "in", "", "early", "2000s", ",", "", "too,", ""}},
+                 {" in  early 2000s ,  too, ", ',', false, {"in  early 2000s", "too"}},
+                 {" in  early 2000s ,  too, ", ',', true, {"in  early 2000s", "too", ""}}};
+
+    for (const auto &test : tests) {
+        Container actual_output;
+        split_args(test.input, actual_output, test.separator, test.keep_place_holder);
+        EXPECT_EQ(actual_output, test.expected_output);
+
+        // Test default value (i.e. false) for keep_place_holder.
+        if (!test.keep_place_holder) {
+            split_args(test.input, actual_output, test.separator);
+            EXPECT_EQ(actual_output, test.expected_output);
+
+            // Test default value (i.e. ' ') for separator.
+            if (test.separator == ' ') {
+                split_args(test.input, actual_output);
+                EXPECT_EQ(actual_output, test.expected_output);
+            }
+        }
+    }
+}
+
+TEST(core, split_args)
+{
+    test_split_args<std::vector<std::string>>();
+    test_split_args<std::list<std::string>>();
+    test_split_args<std::unordered_set<std::string>>();
 }
 
 TEST(core, trim_string)
@@ -210,6 +450,28 @@ TEST(core, dlink)
 
     EXPECT_TRUE(hdr.is_alone());
     EXPECT_TRUE(count == 0);
+}
+
+TEST(core, find_string_prefix)
+{
+    struct test_case
+    {
+        std::string input;
+        char separator;
+        std::string expected_prefix;
+    } tests[] = {{"", ' ', ""},
+                 {"abc.def", ' ', ""},
+                 {"abc.def", '.', "abc"},
+                 {"ab.cd.ef", '.', "ab"},
+                 {"abc...def", '.', "abc"},
+                 {".abc.def", '.', ""},
+                 {" ", ' ', ""},
+                 {"..", '.', ""},
+                 {". ", ' ', "."}};
+    for (const auto &test : tests) {
+        auto actual_output = find_string_prefix(test.input, test.separator);
+        EXPECT_EQ(actual_output, test.expected_prefix);
+    }
 }
 
 class foo : public ::dsn::ref_counter

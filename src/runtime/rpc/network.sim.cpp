@@ -33,19 +33,34 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <boost/asio.hpp>
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/singleton_store.h"
-#include "utils/rand.h"
-#include "runtime/node_scoper.h"
+#include <string.h>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "boost/asio/ip/impl/host_name.ipp"
 #include "network.sim.h"
+#include "runtime/node_scoper.h"
+#include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/rand.h"
+#include "utils/singleton_store.h"
+#include "utils/utils.h"
 
 namespace dsn {
+class rpc_engine;
+
 namespace tools {
+
+DSN_DEFINE_uint32(tools.simulator, min_message_delay_microseconds, 1, "min message delay (us)");
+DSN_DEFINE_uint32(tools.simulator,
+                  max_message_delay_microseconds,
+                  100000,
+                  "max message delay (us)");
 
 // switch[channel][header_format]
 // multiple machines connect to the same switch
@@ -92,7 +107,7 @@ void sim_client_session::send(uint64_t sig)
         sim_network_provider *rnet = nullptr;
         if (!s_switch[task_spec::get(msg->local_rpc_code)->rpc_call_channel][msg->hdr_format].get(
                 remote_address(), rnet)) {
-            derror("cannot find destination node %s in simulator", remote_address().to_string());
+            LOG_ERROR("cannot find destination node {} in simulator", remote_address());
             // on_disconnected();  // disable this to avoid endless resending
         } else {
             auto server_session = rnet->get_server_session(_net.address());
@@ -108,12 +123,12 @@ void sim_client_session::send(uint64_t sig)
             {
                 node_scoper ns(rnet->node());
 
-                bool ret = server_session->on_recv_message(recv_msg,
-                                                           recv_msg->to_address ==
-                                                                   recv_msg->header->from_address
-                                                               ? 0
-                                                               : rnet->net_delay_milliseconds());
-                dassert(ret, "");
+                CHECK(server_session->on_recv_message(recv_msg,
+                                                      recv_msg->to_address ==
+                                                              recv_msg->header->from_address
+                                                          ? 0
+                                                          : rnet->net_delay_milliseconds()),
+                      "");
             }
         }
     }
@@ -138,12 +153,12 @@ void sim_server_session::send(uint64_t sig)
         {
             node_scoper ns(_client->net().node());
 
-            bool ret = _client->on_recv_message(
-                recv_msg,
-                recv_msg->to_address == recv_msg->header->from_address
-                    ? 0
-                    : (static_cast<sim_network_provider *>(&_net))->net_delay_milliseconds());
-            dassert(ret, "");
+            CHECK(_client->on_recv_message(
+                      recv_msg,
+                      recv_msg->to_address == recv_msg->header->from_address
+                          ? 0
+                          : (static_cast<sim_network_provider *>(&_net))->net_delay_milliseconds()),
+                  "");
         }
     }
 
@@ -154,27 +169,13 @@ sim_network_provider::sim_network_provider(rpc_engine *rpc, network *inner_provi
     : connection_oriented_network(rpc, inner_provider)
 {
     _address.assign_ipv4("localhost", 1);
-
-    _min_message_delay_microseconds = 1;
-    _max_message_delay_microseconds = 100000;
-
-    _min_message_delay_microseconds =
-        (uint32_t)dsn_config_get_value_uint64("tools.simulator",
-                                              "min_message_delay_microseconds",
-                                              _min_message_delay_microseconds,
-                                              "min message delay (us)");
-    _max_message_delay_microseconds =
-        (uint32_t)dsn_config_get_value_uint64("tools.simulator",
-                                              "max_message_delay_microseconds",
-                                              _max_message_delay_microseconds,
-                                              "max message delay (us)");
 }
 
 error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
 {
-    dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
-            "invalid given channel %s",
-            channel.to_string());
+    CHECK(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
+          "invalid given channel {}",
+          channel);
 
     _address = ::dsn::rpc_address("localhost", port);
     auto hostname = boost::asio::ip::host_name();
@@ -195,8 +196,8 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
 
 uint32_t sim_network_provider::net_delay_milliseconds() const
 {
-    return static_cast<uint32_t>(
-               rand::next_u32(_min_message_delay_microseconds, _max_message_delay_microseconds)) /
+    return rand::next_u32(FLAGS_min_message_delay_microseconds,
+                          FLAGS_max_message_delay_microseconds) /
            1000;
 }
 }

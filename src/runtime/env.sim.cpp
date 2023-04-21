@@ -34,19 +34,29 @@
  */
 
 #include "env.sim.h"
-#include "scheduler.h"
 
+#include <random>
+
+#include "runtime/task/task_worker.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/join_point.h"
 #include "utils/rand.h"
+#include "utils/threadpool_code.h"
+#include "utils/threadpool_spec.h"
 
 namespace dsn {
 namespace tools {
 
-/*static*/ int sim_env_provider::_seed;
+DSN_DEFINE_int32(tools.simulator,
+                 random_seed,
+                 0,
+                 "random seed for the simulator, 0 for random seed");
 
 void sim_env_provider::on_worker_start(task_worker *worker)
 {
     rand::reseed_thread_local_rng(
-        (_seed + worker->index() + worker->index() * worker->pool_spec().pool_code) ^
+        (FLAGS_random_seed + worker->index() + worker->index() * worker->pool_spec().pool_code) ^
         worker->index());
 }
 
@@ -54,16 +64,11 @@ sim_env_provider::sim_env_provider(env_provider *inner_provider) : env_provider(
 {
     task_worker::on_start.put_front(on_worker_start, "sim_env_provider::on_worker_start");
 
-    _seed =
-        (int)dsn_config_get_value_uint64("tools.simulator",
-                                         "random_seed",
-                                         0,
-                                         "random seed for the simulator, 0 for random random seed");
-    if (_seed == 0) {
-        _seed = std::random_device{}();
+    if (FLAGS_random_seed == 0) {
+        FLAGS_random_seed = std::random_device{}();
     }
 
-    derror("simulation.random seed for this round is %d", _seed);
+    LOG_INFO("simulation.random seed for this round is {}", FLAGS_random_seed);
 }
 
 } // namespace tools

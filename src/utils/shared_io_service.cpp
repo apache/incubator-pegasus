@@ -17,21 +17,27 @@
 
 #include "shared_io_service.h"
 
+#include <boost/asio/impl/io_context.hpp>
+#include <boost/asio/impl/io_context.ipp>
+#include <stdint.h>
+
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace tools {
 
 const uint32_t kMinTimerServiceWorkerCount = 3;
-DSN_DEFINE_uint32("core",
+DSN_DEFINE_uint32(core,
                   timer_service_worker_count,
                   kMinTimerServiceWorkerCount,
                   "the number of threads for timer service");
 DSN_DEFINE_validator(timer_service_worker_count, [](uint32_t worker_count) -> bool {
     if (worker_count < kMinTimerServiceWorkerCount) {
-        derror("timer_service_worker_count should be at least 3, where one thread is used to "
-               "collect all metrics from registery for monitoring systems, and another two threads "
-               "are used to compute percentiles.");
+        LOG_ERROR(
+            "timer_service_worker_count should be at least 3, where one thread is used to "
+            "collect all metrics from registery for monitoring systems, and another two threads "
+            "are used to compute percentiles.");
         return false;
     }
     return true;

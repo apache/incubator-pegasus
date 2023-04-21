@@ -26,8 +26,19 @@
 
 #pragma once
 
-#include "customizable_id.h"
-#include <thrift/protocol/TProtocol.h>
+#include <stdint.h>
+#include <ostream>
+#include <string>
+
+#include "utils/ports.h"
+
+namespace apache {
+namespace thrift {
+namespace protocol {
+class TProtocol;
+} // namespace protocol
+} // namespace thrift
+} // namespace apache
 
 namespace dsn {
 
@@ -59,7 +70,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, const error_code &ec)
     {
-        return os << std::string(ec.to_string());
+        return os << ec.to_string();
     }
 
 private:
@@ -157,4 +168,10 @@ DEFINE_ERR_CODE(ERR_PARENT_PARTITION_MISUSED)
 DEFINE_ERR_CODE(ERR_CHILD_NOT_READY)
 DEFINE_ERR_CODE(ERR_DISK_INSUFFICIENT)
 DEFINE_ERR_CODE(ERR_RETRY_EXHAUSTED)
+
+DEFINE_ERR_CODE(ERR_SYNC_RANGER_POLICIES_FAILED)
+DEFINE_ERR_CODE(ERR_RANGER_PARSE_ACL)
+DEFINE_ERR_CODE(ERR_RANGER_POLICIES_NO_NEED_UPDATE)
+
+DEFINE_ERR_CODE(ERR_RDB_CORRUPTION)
 } // namespace dsn

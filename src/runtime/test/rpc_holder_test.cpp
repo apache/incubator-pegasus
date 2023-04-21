@@ -25,15 +25,22 @@
  */
 
 #include "runtime/rpc/rpc_holder.h"
+
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <gtest/gtest.h>
+#include <string>
+
+#include "common/gpid.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "runtime/message_utils.h"
-
-#include <gtest/gtest.h>
+#include "runtime/rpc/rpc_address.h"
+#include "utils/threadpool_code.h"
 
 using namespace dsn;
 
-typedef rpc_holder<configuration_query_by_index_request, configuration_query_by_index_response>
-    t_rpc;
+typedef rpc_holder<query_cfg_request, query_cfg_response> t_rpc;
 
 DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
                      TASK_PRIORITY_COMMON,
@@ -53,13 +60,13 @@ TEST(rpc_holder, construct)
     }
 
     {
-        auto request = make_unique<configuration_query_by_index_request>();
+        auto request = std::make_unique<query_cfg_request>();
         t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
         ASSERT_TRUE(rpc.is_initialized());
     }
 
     {
-        configuration_query_by_index_request request;
+        query_cfg_request request;
         request.app_name = "test";
         dsn::message_ex *msg =
             dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
@@ -72,7 +79,7 @@ TEST(rpc_holder, construct)
     }
 
     {
-        auto request = make_unique<configuration_query_by_index_request>();
+        auto request = std::make_unique<query_cfg_request>();
         t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
         ASSERT_EQ(rpc.error(), ERR_OK);
         ASSERT_TRUE(rpc.is_initialized());
@@ -92,7 +99,7 @@ TEST(rpc_holder, mock_rpc_call)
         auto &mail_box = t_rpc::mail_box();
 
         for (int i = 0; i < 10; i++) {
-            auto request = make_unique<configuration_query_by_index_request>();
+            auto request = std::make_unique<query_cfg_request>();
             t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
             rpc.call(rpc_address("127.0.0.1", 12321), nullptr, [](error_code) {});
         }
@@ -106,7 +113,7 @@ TEST(rpc_holder, mock_rpc_call)
         auto &mail_box = t_rpc::mail_box();
 
         for (int i = 0; i < 10; i++) {
-            auto request = make_unique<configuration_query_by_index_request>();
+            auto request = std::make_unique<query_cfg_request>();
             t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
             rpc.error() = ERR_BUSY;
             rpc.call(rpc_address("127.0.0.1", 12321), nullptr, [](error_code) {});
@@ -126,7 +133,7 @@ TEST(rpc_holder, mock_rpc_call)
         ASSERT_EQ(mail_box.size(), 0);
 
         for (int i = 0; i < 10; i++) {
-            auto request = make_unique<configuration_query_by_index_request>();
+            auto request = std::make_unique<query_cfg_request>();
             t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
             rpc.call(rpc_address("127.0.0.1", 12321), nullptr, [](error_code) {});
         }
@@ -142,7 +149,7 @@ TEST(rpc_holder, mock_rpc_reply)
         auto &mail_box = t_rpc::mail_box();
 
         for (int i = 0; i < 10; i++) {
-            configuration_query_by_index_request request;
+            query_cfg_request request;
             request.app_name = "haha";
             auto msg = from_thrift_request_to_received_message(
                 request, RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
@@ -164,7 +171,7 @@ TEST(rpc_holder, mock_rpc_forward)
         rpc_address forward_addr("127.0.0.1", 10086);
 
         for (int i = 0; i < 10; i++) {
-            configuration_query_by_index_request request;
+            query_cfg_request request;
             auto msg = from_thrift_request_to_received_message(
                 request, RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
             auto rpc = t_rpc::auto_reply(msg);

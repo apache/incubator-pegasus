@@ -129,7 +129,7 @@ public:
     {
         std::vector<std::string> data_dirs = {"disk1", "disk2", "disk3"};
         std::vector<std::string> data_dir_tags = {"tag1", "tag2", "tag3"};
-        auto test_stub = make_unique<mock_replica_stub>();
+        auto test_stub = std::make_unique<mock_replica_stub>();
         fail::cfg("filesystem_create_directory", "return(" + mock_create_directory + ")");
         fail::cfg("filesystem_check_dir_rw", "return(" + mock_check_rw + ")");
         fail::cfg("update_disk_stat", "return()");

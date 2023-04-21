@@ -15,12 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/security/negotiation_utils.h"
-#include "runtime/security/client_negotiation.h"
-#include "runtime/rpc/network.sim.h"
-
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/flags.h"
+#include <memory>
+#include <string>
+#include <utility>
+
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/security/client_negotiation.h"
+#include "runtime/security/negotiation.h"
+#include "security_types.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
 #include "utils/fail_point.h"
 
 namespace dsn {
@@ -33,7 +44,7 @@ public:
         std::unique_ptr<tools::sim_network_provider> sim_net(
             new tools::sim_network_provider(nullptr, nullptr));
         _sim_session = sim_net->create_client_session(rpc_address("localhost", 10086));
-        _client_negotiation = make_unique<client_negotiation>(_sim_session);
+        _client_negotiation = std::make_unique<client_negotiation>(_sim_session);
     }
 
     void on_recv_mechanism(const negotiation_response &resp)

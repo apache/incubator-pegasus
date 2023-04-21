@@ -17,6 +17,10 @@
 
 #include "log_block.h"
 
+#include "consensus_types.h"
+#include "replica/mutation.h"
+#include "utils/binary_writer.h"
+
 namespace dsn {
 namespace replication {
 

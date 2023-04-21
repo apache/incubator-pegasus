@@ -26,14 +26,20 @@
 
 #include "task_spec.h"
 
+#include <string.h>
 #include <array>
+#include <memory>
+#include <thread>
 
+#include "runtime/rpc/rpc_message.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/command_manager.h"
 #include "utils/threadpool_spec.h"
-#include "utils/smart_pointers.h"
 
 namespace dsn {
+namespace tools {
+DSN_DECLARE_bool(enable_udp);
+}
 
 constexpr int TASK_SPEC_STORE_CAPACITY = 512;
 
@@ -51,10 +57,11 @@ void task_spec::register_task_code(task_code code,
                                    dsn_task_priority_t pri,
                                    dsn::threadpool_code pool)
 {
-    dcheck_ge(code, 0);
-    dcheck_lt(code, TASK_SPEC_STORE_CAPACITY);
+    CHECK_GE(code, 0);
+    CHECK_LT(code, TASK_SPEC_STORE_CAPACITY);
     if (!s_task_spec_store[code]) {
-        s_task_spec_store[code] = make_unique<task_spec>(code, code.to_string(), type, pri, pool);
+        s_task_spec_store[code] =
+            std::make_unique<task_spec>(code, code.to_string(), type, pri, pool);
         auto &spec = s_task_spec_store[code];
 
         if (type == TASK_TYPE_RPC_REQUEST) {
@@ -70,30 +77,28 @@ void task_spec::register_task_code(task_code code,
         }
     } else {
         auto spec = task_spec::get(code);
-        if (spec->type != type) {
-            dassert(
-                false,
-                "task code %s registerd for %s, which does not match with previously registered %s",
-                code.to_string(),
-                enum_to_string(type),
-                enum_to_string(spec->type));
-            return;
-        }
+        CHECK_EQ_MSG(
+            spec->type,
+            type,
+            "task code {} registerd for {}, which does not match with previously registered {}",
+            code,
+            enum_to_string(type),
+            enum_to_string(spec->type));
 
         if (spec->priority != pri) {
-            dwarn("overwrite priority for task %s from %s to %s",
-                  code.to_string(),
-                  enum_to_string(spec->priority),
-                  enum_to_string(pri));
+            LOG_WARNING("overwrite priority for task {} from {} to {}",
+                        code,
+                        enum_to_string(spec->priority),
+                        enum_to_string(pri));
             spec->priority = pri;
         }
 
         if (spec->pool_code != pool) {
             if (spec->pool_code != THREAD_POOL_INVALID) {
-                dwarn("overwrite default thread pool for task %s from %s to %s",
-                      code.to_string(),
-                      spec->pool_code.to_string(),
-                      pool.to_string());
+                LOG_WARNING("overwrite default thread pool for task {} from {} to {}",
+                            code,
+                            spec->pool_code,
+                            pool);
             }
             spec->pool_code = pool;
         }
@@ -121,8 +126,8 @@ void task_spec::register_storage_task_code(task_code code,
 
 task_spec *task_spec::get(int code)
 {
-    dcheck_ge(code, 0);
-    dcheck_lt(code, TASK_SPEC_STORE_CAPACITY);
+    CHECK_GE(code, 0);
+    CHECK_LT(code, TASK_SPEC_STORE_CAPACITY);
     return s_task_spec_store[code].get();
 }
 
@@ -165,11 +170,12 @@ task_spec::task_spec(int code,
       on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
       on_rpc_create_response((std::string(name) + std::string(".rpc.response.create")).c_str())
 {
-    dassert(strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH,
-            "task code name '%s' is too long: length must be smaller than "
-            "DSN_MAX_TASK_CODE_NAME_LENGTH (%u)",
-            name,
-            DSN_MAX_TASK_CODE_NAME_LENGTH);
+    CHECK_LT_MSG(strlen(name),
+                 DSN_MAX_TASK_CODE_NAME_LENGTH,
+                 "task code name '{}' is too long: length must be smaller than "
+                 "DSN_MAX_TASK_CODE_NAME_LENGTH ({})",
+                 name,
+                 DSN_MAX_TASK_CODE_NAME_LENGTH);
 
     rpc_call_channel = RPC_CHANNEL_TCP;
     rpc_timeout_milliseconds = 5 * 1000; // 5 seconds
@@ -201,7 +207,7 @@ bool task_spec::init()
         std::string section_name =
             std::string("task.") + std::string(dsn::task_code(code).to_string());
         task_spec *spec = task_spec::get(code);
-        dassert(spec != nullptr, "task_spec cannot be null");
+        CHECK_NOTNULL(spec, "");
 
         if (!read_config(section_name.c_str(), *spec, &default_spec))
             return false;
@@ -210,46 +216,27 @@ bool task_spec::init()
             spec->allow_inline = true;
         }
 
-        dassert(spec->rpc_request_delays_milliseconds.size() == 0 ||
-                    spec->rpc_request_delays_milliseconds.size() == 6,
-                "invalid length of rpc_request_delays_milliseconds, must be of length 6");
+        CHECK(spec->rpc_request_delays_milliseconds.size() == 0 ||
+                  spec->rpc_request_delays_milliseconds.size() == 6,
+              "invalid length of rpc_request_delays_milliseconds, must be of length 6");
         if (spec->rpc_request_delays_milliseconds.size() > 0) {
             spec->rpc_request_delayer.initialize(spec->rpc_request_delays_milliseconds);
         }
 
         if (spec->rpc_request_throttling_mode != TM_NONE) {
             if (spec->type != TASK_TYPE_RPC_REQUEST) {
-                derror("%s: only rpc request type can have non TM_NONE throttling_mode",
-                       spec->name.c_str());
+                LOG_ERROR("{}: only rpc request type can have non TM_NONE throttling_mode",
+                          spec->name);
                 return false;
             }
         }
+
+        if (spec->rpc_call_channel == RPC_CHANNEL_UDP && !dsn::tools::FLAGS_enable_udp) {
+            LOG_ERROR("task rpc_call_channel RPC_CHANNEL_UCP need udp service, make sure "
+                      "[network].enable_udp");
+            return false;
+        }
     }
-
-    ::dsn::command_manager::instance().register_command(
-        {"task-code"},
-        "task-code - query task code containing any given keywords",
-        "task-code keyword1 keyword2 ...",
-        [](const std::vector<std::string> &args) {
-            std::stringstream ss;
-
-            for (int code = 0; code <= dsn::task_code::max(); code++) {
-                if (code == TASK_CODE_INVALID)
-                    continue;
-
-                std::string codes = dsn::task_code(code).to_string();
-                if (args.size() == 0) {
-                    ss << "    " << codes << std::endl;
-                } else {
-                    for (auto &arg : args) {
-                        if (codes.find(arg.c_str()) != std::string::npos) {
-                            ss << "    " << codes << std::endl;
-                        }
-                    }
-                }
-            }
-            return ss.str();
-        });
 
     return true;
 }

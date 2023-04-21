@@ -33,27 +33,46 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <sstream>
 #include <boost/lexical_cast.hpp>
-#include "utils/factory_store.h"
-#include "runtime/tool_api.h"
+// IWYU pragma: no_include <ext/alloc_traits.h>
+#include <atomic>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <unordered_map>
+#include <utility>
 
-#include "checker.h"
 #include "case.h"
-
+#include "checker.h"
+#include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_server_failure_detector.h"
+#include "meta/meta_service.h"
+#include "meta/meta_service_app.h"
+#include "meta/partition_guardian.h"
+#include "meta/server_load_balancer.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
+#include "metadata_types.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "replica/mutation_log.h"
-#include "meta/meta_service.h"
-#include "meta/meta_server_failure_detector.h"
-#include "meta/server_state.h"
-#include "meta/server_load_balancer.h"
-
-#include "runtime/service_engine.h"
+#include "replica/replication_service_app.h"
+#include "replica/storage/simple_kv/test/common.h"
 #include "runtime/rpc/rpc_engine.h"
+#include "runtime/service_app.h"
+#include "runtime/service_engine.h"
+#include "runtime/tool_api.h"
+#include "utils/autoref_ptr.h"
+#include "utils/factory_store.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
+class gpid;
+
 namespace replication {
+DSN_DECLARE_string(partition_guardian_type);
+
 namespace test {
 
 class checker_partition_guardian : public partition_guardian
@@ -96,11 +115,10 @@ public:
             else {
                 action.node = *pc.last_drops.rbegin();
                 action.type = config_type::CT_ASSIGN_PRIMARY;
-                derror("%d.%d enters DDD state, we are waiting for its last primary node %s to "
-                       "come back ...",
-                       pc.pid.get_app_id(),
-                       pc.pid.get_partition_index(),
-                       action.node.to_string());
+                LOG_ERROR("{} enters DDD state, we are waiting for its last primary node {} to "
+                          "come back ...",
+                          pc.pid,
+                          action.node);
                 result = pc_status::dead;
             }
             action.target = action.node;
@@ -171,13 +189,13 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
         PROVIDER_TYPE_MAIN);
 
     for (auto &app : _apps) {
-        if (0 == strcmp(app->info().type.c_str(), "meta")) {
+        if (app->info().type == "meta") {
             meta_service_app *meta_app = (meta_service_app *)app;
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                 std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
-            meta_app->_service->_meta_opts.partition_guardian_type = "checker_partition_guardian";
+            FLAGS_partition_guardian_type = "checker_partition_guardian";
             _meta_servers.push_back(meta_app);
-        } else if (0 == strcmp(app->info().type.c_str(), "replica")) {
+        } else if (app->info().type == "replica") {
             replication_service_app *replica_app = (replication_service_app *)app;
             replica_app->_stub->set_replica_state_subscriber_for_test(
                 std::bind(&test_checker::on_replica_state_change,
@@ -197,12 +215,12 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
         rpc_address paddr = node.second->rpc()->primary_address();
         int port = paddr.port();
         _node_to_address[name] = paddr;
-        ddebug("=== node_to_address[%s]=%s", name.c_str(), paddr.to_string());
+        LOG_INFO("=== node_to_address[{}]={}", name, paddr);
         _address_to_node[port] = name;
-        ddebug("=== address_to_node[%u]=%s", port, name.c_str());
+        LOG_INFO("=== address_to_node[{}]={}", port, name);
         if (id != port) {
             _address_to_node[id] = name;
-            ddebug("=== address_to_node[%u]=%s", id, name.c_str());
+            LOG_INFO("=== address_to_node[{}]={}", id, name);
         }
     }
 
@@ -271,7 +289,7 @@ void test_checker::on_replica_state_change(::dsn::rpc_address from,
 void test_checker::on_config_change(const app_mapper &new_config)
 {
     const partition_configuration *pc = get_config(new_config, g_default_gpid);
-    dassert(pc != nullptr, "drop table is not allowed in test");
+    CHECK_NOTNULL(pc, "drop table is not allowed in test");
 
     parti_config cur_config;
     cur_config.convert_from(*pc);
@@ -290,7 +308,7 @@ void test_checker::get_current_states(state_snapshot &states)
 
         for (auto &kv : app->_stub->_replicas) {
             replica_ptr r = kv.second;
-            dassert(kv.first == r->get_gpid(), "");
+            CHECK_EQ(kv.first, r->get_gpid());
             replica_id id(r->get_gpid(), app->info().full_name);
             replica_state &rs = states.state_map[id];
             rs.id = id;

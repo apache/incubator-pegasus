@@ -25,10 +25,14 @@
  */
 
 #include <algorithm>
-#include "runtime/rpc/group_address.h"
+
 #include "client/partition_resolver.h"
 #include "partition_resolver_manager.h"
 #include "partition_resolver_simple.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/autoref_ptr.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -66,7 +70,7 @@ partition_resolver_ptr partition_resolver_manager::find_or_create(
         dsn::rpc_address meta_group = ptr->get_meta_server();
         const std::vector<dsn::rpc_address> &existing_list = meta_group.group_address()->members();
         if (!vector_equal(meta_list, existing_list)) {
-            derror("meta list not match for cluster(%s)", cluster_name);
+            LOG_ERROR("meta list not match for cluster({})", cluster_name);
             return nullptr;
         }
         return ptr;

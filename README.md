@@ -21,8 +21,8 @@ under the License.
 <!-- markdown-link-check-disable -->
 [PacificA]: https://www.microsoft.com/en-us/research/publication/pacifica-replication-in-log-based-distributed-storage-systems/
 <!-- markdown-link-check-enable-->
-[pegasus-rocksdb]: https://github.com/xiaomi/pegasus-rocksdb
-[hbase]: https://hbase.apache.org/
+[rocksdb]: https://github.com/facebook/rocksdb
+[hbase]: https://hbase.apache.org
 [website]: https://pegasus.apache.org
 
 ![pegasus-logo](https://github.com/apache/incubator-pegasus-website/blob/master/assets/images/pegasus-logo-inv.png)
@@ -38,7 +38,7 @@ Apache Pegasus is a distributed key-value storage system which is designed to be
 
 - **horizontally scalable**: distributed using hash-based partitioning
 - **strongly consistent**: ensured by [PacificA][PacificA] consensus protocol
-- **high-performance**: using [RocksDB][pegasus-rocksdb] as underlying storage engine
+- **high-performance**: using [RocksDB][rocksdb] as underlying storage engine
 - **simple**: well-defined, easy-to-use APIs
 
 ## Background

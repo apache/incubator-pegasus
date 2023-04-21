@@ -15,19 +15,57 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/replica_envs.h"
-#include "utils/defer.h"
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/filesystem.h"
-#include "runtime/rpc/network.sim.h"
+#include <stdint.h>
+#include <unistd.h>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "backup_types.h"
 #include "common/backup_common.h"
-#include "replica_test_base.h"
+#include "common/fs_manager.h"
+#include "common/gpid.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "consensus_types.h"
+#include "dsn.layer2_types.h"
+#include "http/http_server.h"
+#include "metadata_types.h"
+#include "perf_counter/perf_counter.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/disk_cleaner.h"
 #include "replica/replica.h"
 #include "replica/replica_http_service.h"
+#include "replica/replica_stub.h"
+#include "replica/replication_app_base.h"
+#include "replica/test/mock_utils.h"
+#include "replica_test_base.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/network.h"
+#include "runtime/rpc/network.sim.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_bool(fd_disabled);
+DSN_DECLARE_string(cold_backup_root);
 
 class replica_test : public replica_test_base
 {
@@ -47,10 +85,10 @@ public:
         mock_app_info();
         _mock_replica = stub->generate_replica_ptr(_app_info, pid, partition_status::PS_PRIMARY, 1);
 
-        // set cold_backup_root manually.
-        // `cold_backup_root` is set by configuration "replication.cold_backup_root",
+        // set FLAGS_cold_backup_root manually.
+        // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
         // which is usually the cluster_name of production clusters.
-        _mock_replica->_options->cold_backup_root = "test_cluster";
+        FLAGS_cold_backup_root = "test_cluster";
     }
 
     int get_write_size_exceed_threshold_count()
@@ -134,8 +172,8 @@ public:
         ASSERT_EQ(ERR_OK, resp.err);
 
         // test checkpoint files have been uploaded successfully.
-        std::string backup_root = dsn::utils::filesystem::path_combine(
-            user_specified_path, _mock_replica->_options->cold_backup_root);
+        std::string backup_root =
+            dsn::utils::filesystem::path_combine(user_specified_path, FLAGS_cold_backup_root);
         std::string current_chkpt_file =
             cold_backup::get_current_chkpt_file(backup_root, req.app_name, req.pid, req.backup_id);
         ASSERT_TRUE(dsn::utils::filesystem::file_exists(current_chkpt_file));
@@ -150,7 +188,7 @@ public:
         req.app_id = _app_info.app_id;
         req.app_name = _app_info.app_name;
         req.backup_provider_name = _provider_name;
-        req.cluster_name = _mock_replica->_options->cold_backup_root;
+        req.cluster_name = FLAGS_cold_backup_root;
         req.time_stamp = _backup_id;
         if (!user_specified_path.empty()) {
             req.__set_restore_path(user_specified_path);
@@ -167,14 +205,6 @@ public:
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
 
-    replica *call_clear_on_failure(replica_stub *stub,
-                                   replica *rep,
-                                   const std::string &path,
-                                   const gpid &gpid)
-    {
-        return replica::clear_on_failure(stub, rep, path, gpid);
-    }
-
     bool has_gpid(gpid &gpid) const
     {
         for (const auto &node : stub->_fs_manager._dir_nodes) {
@@ -189,11 +219,7 @@ public:
     {
         const auto reserved_max_replica_count = _app_info.max_replica_count;
         const int32_t target_max_replica_count = 5;
-        dassert_f(target_max_replica_count != reserved_max_replica_count,
-                  "target_max_replica_count should not be equal to reserved_max_replica_count:"
-                  "target_max_replica_count={}, reserved_max_replica_count={}",
-                  target_max_replica_count,
-                  reserved_max_replica_count);
+        CHECK_NE(target_max_replica_count, reserved_max_replica_count);
 
         // store new max_replica_count into file
         _mock_replica->update_app_max_replica_count(target_max_replica_count);
@@ -439,18 +465,57 @@ TEST_F(replica_test, test_query_last_checkpoint_info)
     ASSERT_EQ(resp.base_local_dir, "./data/checkpoint.100");
 }
 
-TEST_F(replica_test, test_clear_on_failer)
+TEST_F(replica_test, test_clear_on_failure)
 {
+    // Disable failure detector to avoid connecting with meta server which is not started.
+    FLAGS_fd_disabled = true;
+
     replica *rep =
         stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
-    auto path = stub->get_replica_dir(_app_info.app_type.c_str(), pid);
+    auto path = rep->dir();
     dsn::utils::filesystem::create_directory(path);
-    ASSERT_TRUE(dsn::utils::filesystem::path_exists(path));
     ASSERT_TRUE(has_gpid(pid));
 
-    ASSERT_FALSE(call_clear_on_failure(stub.get(), rep, path, pid));
+    stub->clear_on_failure(rep, path, pid);
 
     ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
+    ASSERT_FALSE(has_gpid(pid));
+}
+
+TEST_F(replica_test, test_auto_trash)
+{
+    // Disable failure detector to avoid connecting with meta server which is not started.
+    FLAGS_fd_disabled = true;
+
+    replica *rep =
+        stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
+    auto path = rep->dir();
+    dsn::utils::filesystem::create_directory(path);
+    ASSERT_TRUE(has_gpid(pid));
+
+    rep->handle_local_failure(ERR_RDB_CORRUPTION);
+    stub->wait_closing_replicas_finished();
+
+    ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
+    dir_node *dn = stub->get_fs_manager()->get_dir_node(path);
+    ASSERT_NE(dn, nullptr);
+    std::vector<std::string> subs;
+    ASSERT_TRUE(dsn::utils::filesystem::get_subdirectories(dn->full_dir, subs, false));
+    bool found = false;
+    const int ts_length = 16;
+    size_t err_pos = path.size() + ts_length + 1; // Add 1 for dot in path.
+    for (const auto &sub : subs) {
+        if (sub.size() <= path.size()) {
+            continue;
+        }
+        uint64_t ts = 0;
+        if (sub.find(path) == 0 && sub.find(kFolderSuffixErr) == err_pos &&
+            dsn::buf2uint64(sub.substr(path.size() + 1, ts_length), ts)) {
+            found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(found);
     ASSERT_FALSE(has_gpid(pid));
 }
 

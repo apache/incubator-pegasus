@@ -34,16 +34,26 @@
 
 #pragma once
 
-#include "utils/synchronize.h"
-#include "utils/autoref_ptr.h"
-#include "runtime/task/task_tracker.h"
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "meta/meta_state_service.h"
-#include "utils/distributed_lock_service.h"
+#include "runtime/task/future_types.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/error_code.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace dist {
 
 class zookeeper_session;
+
 class meta_state_service_zookeeper : public meta_state_service, public ref_counter
 {
 public:

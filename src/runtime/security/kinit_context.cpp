@@ -16,22 +16,35 @@
 // under the License.
 
 #include "kinit_context.h"
-#include "utils/shared_io_service.h"
 
 #include <boost/asio/deadline_timer.hpp>
-#include <fmt/format.h>
 #include <krb5/krb5.h>
+#include <stdint.h>
+#include <memory>
+#include <mutex>
+#include <new>
 
+#include "boost/asio/basic_deadline_timer.hpp"
+#include "boost/asio/detail/impl/epoll_reactor.hpp"
+#include "boost/asio/detail/impl/timer_queue_ptime.ipp"
+#include "boost/date_time/posix_time/posix_time_duration.hpp"
+#include "boost/system/error_code.hpp"
+#include "fmt/core.h"
 #include "utils/defer.h"
-#include "utils/time_utils.h"
-#include "utils/fmt_logging.h"
-#include "utils/flags.h"
+#include "utils/error_code.h"
 #include "utils/filesystem.h"
-#include "utils/smart_pointers.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
+#include "utils/shared_io_service.h"
+#include "utils/singleton.h"
+#include "utils/strings.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace security {
+class kinit_context;
+
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
 
@@ -43,32 +56,32 @@ DSN_DECLARE_bool(enable_zookeeper_kerberos);
         }                                                                                          \
     } while (0);
 
-DSN_DEFINE_string("security", krb5_keytab, "", "absolute path of keytab file");
-DSN_DEFINE_string("security", krb5_config, "", "absolute path of krb5_config file");
-DSN_DEFINE_string("security", krb5_principal, "", "kerberos principal");
-DSN_DEFINE_string("security", service_fqdn, "", "the fully qualified domain name of the server");
-DSN_DEFINE_string("security", service_name, "", "service name");
+DSN_DEFINE_string(security, krb5_keytab, "", "absolute path of keytab file");
+DSN_DEFINE_string(security, krb5_config, "", "absolute path of krb5_config file");
+DSN_DEFINE_string(security, krb5_principal, "", "kerberos principal");
+DSN_DEFINE_string(security, service_fqdn, "", "the fully qualified domain name of the server");
+DSN_DEFINE_string(security, service_name, "", "service name");
 
 // Attention: we can't do these check work by `DSN_DEFINE_validator`, because somebody may don't
 // want to use security, so these configuration may not setted. In this situation, these checks
 // will not pass.
 error_s check_configuration()
 {
-    dassert(FLAGS_enable_auth || FLAGS_enable_zookeeper_kerberos,
-            "There is no need to check configuration if FLAGS_enable_auth"
-            " and FLAGS_enable_zookeeper_kerberos both are not true");
+    CHECK(FLAGS_enable_auth || FLAGS_enable_zookeeper_kerberos,
+          "There is no need to check configuration if FLAGS_enable_auth"
+          " and FLAGS_enable_zookeeper_kerberos both are not true");
 
-    if (0 == strlen(FLAGS_krb5_keytab) || !utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
+    if (utils::is_empty(FLAGS_krb5_keytab) || !utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
         return error_s::make(ERR_INVALID_PARAMETERS,
                              fmt::format("invalid keytab file \"{}\"", FLAGS_krb5_keytab));
     }
 
-    if (0 == strlen(FLAGS_krb5_config) || !utils::filesystem::file_exists(FLAGS_krb5_config)) {
+    if (utils::is_empty(FLAGS_krb5_config) || !utils::filesystem::file_exists(FLAGS_krb5_config)) {
         return error_s::make(ERR_INVALID_PARAMETERS,
                              fmt::format("invalid krb5 config file \"{}\"", FLAGS_krb5_config));
     }
 
-    if (0 == strlen(FLAGS_krb5_principal)) {
+    if (utils::is_empty(FLAGS_krb5_principal)) {
         return error_s::make(ERR_INVALID_PARAMETERS, "empty principal");
     }
 
@@ -166,7 +179,7 @@ void kinit_context::init_krb5_ctx()
     static std::once_flag once;
     std::call_once(once, [&]() {
         int64_t err = krb5_init_context(&_krb5_context);
-        dcheck_eq(err, 0);
+        CHECK_EQ(err, 0);
     });
 }
 
@@ -202,7 +215,7 @@ error_s kinit_context::parse_username_from_principal()
     }
     KRB5_RETURN_NOT_OK(err, "krb5 parse aname to localname failed");
 
-    if (strlen(buf) <= 0) {
+    if (utils::is_empty(buf)) {
         return error_s::make(ERR_KRB5_INTERNAL, "empty username");
     }
 
@@ -226,9 +239,9 @@ error_s kinit_context::get_credentials()
                                                    _opt),
                         "get_init_cred");
     if (!err.is_ok()) {
-        dwarn_f("get credentials of {} from KDC failed, reason({})",
-                FLAGS_krb5_principal,
-                err.description());
+        LOG_WARNING("get credentials of {} from KDC failed, reason({})",
+                    FLAGS_krb5_principal,
+                    err.description());
         return err;
     }
     auto cleanup = dsn::defer([&]() { krb5_free_cred_contents(_krb5_context, &creds); });
@@ -236,14 +249,14 @@ error_s kinit_context::get_credentials()
     // store credentials into _ccache.
     err = wrap_krb5_err(krb5_cc_store_cred(_krb5_context, _ccache, &creds), "store_cred");
     if (!err.is_ok()) {
-        dwarn_f("store credentials of {} to cache failed, err({})",
-                FLAGS_krb5_principal,
-                err.description());
+        LOG_WARNING("store credentials of {} to cache failed, err({})",
+                    FLAGS_krb5_principal,
+                    err.description());
         return err;
     }
 
     _cred_expire_timestamp = creds.times.endtime;
-    ddebug_f("get credentials of {} from KDC ok, expires at {}",
+    LOG_INFO("get credentials of {} from KDC ok, expires at {}",
              FLAGS_krb5_principal,
              utils::time_s_to_date_time(_cred_expire_timestamp));
     return err;
@@ -252,7 +265,7 @@ error_s kinit_context::get_credentials()
 void kinit_context::schedule_renew_credentials()
 {
     int64_t renew_gap = get_next_renew_interval();
-    ddebug_f("schedule to renew credentials in {} seconds later", renew_gap);
+    LOG_INFO("schedule to renew credentials in {} seconds later", renew_gap);
 
     // why don't we use timers in rDSN framework?
     //  1. currently the rdsn framework may not started yet.
@@ -267,9 +280,9 @@ void kinit_context::schedule_renew_credentials()
             get_credentials();
             schedule_renew_credentials();
         } else if (err == boost::system::errc::operation_canceled) {
-            dwarn("the renew credentials timer is cancelled");
+            LOG_WARNING("the renew credentials timer is cancelled");
         } else {
-            dassert_f(false, "unhandled error({})", err.message());
+            CHECK(false, "unhandled error({})", err.message());
         }
     });
 }

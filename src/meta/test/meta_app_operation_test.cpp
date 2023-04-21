@@ -15,27 +15,50 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include "utils/fmt_logging.h"
-#include "common/replica_envs.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/defer.h"
+#include <stdint.h>
+#include <functional>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "common/gpid.h"
+#include "common/json_helper.h"
+#include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "meta/meta_data.h"
+#include "meta/meta_rpc_types.h"
+#include "meta/meta_service.h"
+#include "meta/meta_state_service.h"
+#include "meta/server_state.h"
+#include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
-#include "meta/meta_split_service.h"
 #include "misc/misc.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
+class blob;
+
 namespace replication {
 
-DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
-DSN_DECLARE_int32(min_allowed_replica_count);
 DSN_DECLARE_int32(max_allowed_replica_count);
+DSN_DECLARE_int32(min_allowed_replica_count);
+DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
 class meta_app_operation_test : public meta_test_base
 {
@@ -104,7 +127,7 @@ public:
 
         // dropped app can only be find by app_id
         auto app = _ss->get_app(app_id);
-        // hold_seconds_for_dropped_app = 604800 in unit test config
+        // FLAGS_hold_seconds_for_dropped_app = 604800 in unit test config
         // make app expired immediatly
         app->expire_second -= 604800;
     }
@@ -113,7 +136,7 @@ public:
 
     configuration_get_max_replica_count_response get_max_replica_count(const std::string &app_name)
     {
-        auto req = dsn::make_unique<configuration_get_max_replica_count_request>();
+        auto req = std::make_unique<configuration_get_max_replica_count_request>();
         req->__set_app_name(app_name);
 
         configuration_get_max_replica_count_rpc rpc(std::move(req), RPC_CM_GET_MAX_REPLICA_COUNT);
@@ -128,7 +151,7 @@ public:
                                          int32_t max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         auto &partition_config = app->partitions[partition_index];
         partition_config.max_replica_count = max_replica_count;
@@ -137,7 +160,7 @@ public:
     void set_max_replica_count_env(const std::string &app_name, const std::string &env)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         if (env.empty()) {
             app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
@@ -161,7 +184,7 @@ public:
     configuration_set_max_replica_count_response set_max_replica_count(const std::string &app_name,
                                                                        int32_t max_replica_count)
     {
-        auto req = dsn::make_unique<configuration_set_max_replica_count_request>();
+        auto req = std::make_unique<configuration_set_max_replica_count_request>();
         req->__set_app_name(app_name);
         req->__set_max_replica_count(max_replica_count);
 
@@ -172,11 +195,25 @@ public:
         return rpc.response();
     }
 
+    configuration_rename_app_response rename_app(const std::string &old_app_name,
+                                                 const std::string &new_app_name)
+    {
+        auto req = std::make_unique<configuration_rename_app_request>();
+        req->__set_old_app_name(old_app_name);
+        req->__set_new_app_name(new_app_name);
+
+        configuration_rename_app_rpc rpc(std::move(req), RPC_CM_RENAME_APP);
+        _ss->rename_app(rpc);
+        _ss->wait_all_task();
+
+        return rpc.response();
+    }
+
     void set_app_and_all_partitions_max_replica_count(const std::string &app_name,
                                                       int32_t max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         auto partition_size = static_cast<int>(app->partitions.size());
         for (int i = 0; i < partition_size; ++i) {
@@ -217,7 +254,7 @@ public:
                                                  int32_t expected_max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         auto partition_size = static_cast<int>(app->partitions.size());
         for (int i = 0; i < partition_size; ++i) {
@@ -251,7 +288,7 @@ public:
                                       int32_t expected_max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         // verify local max_replica_count of the app
         ASSERT_EQ(app->max_replica_count, expected_max_replica_count);
@@ -381,7 +418,7 @@ TEST_F(meta_app_operation_test, create_app)
     std::vector<rpc_address> nodes = ensure_enough_alive_nodes(total_node_count);
 
     // the meta function level will become freezed once
-    // alive_nodes * 100 < total_nodes * node_live_percentage_threshold_for_update
+    // alive_nodes * 100 < total_nodes * _node_live_percentage_threshold_for_update
     // even if alive_nodes >= min_live_node_count_for_unfreeze
     set_node_live_percentage_threshold_for_update(0);
 
@@ -405,10 +442,7 @@ TEST_F(meta_app_operation_test, create_app)
 
         set_min_live_node_count_for_unfreeze(test.min_live_node_count_for_unfreeze);
 
-        dassert_f(total_node_count >= test.alive_node_count,
-                  "total_node_count({}) should be >= alive_node_count({})",
-                  total_node_count,
-                  test.alive_node_count);
+        CHECK_GE(total_node_count, test.alive_node_count);
         for (int i = 0; i < total_node_count - test.alive_node_count; i++) {
             _ms->set_node_state({nodes[i]}, false);
         }
@@ -716,9 +750,9 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
                   << ", max_allowed_replica_count=" << test.max_allowed_replica_count
                   << ", expected_err=" << test.expected_err << std::endl;
 
-        // disable node_live_percentage_threshold_for_update
+        // disable _node_live_percentage_threshold_for_update
         // for the reason that the meta function level will become freezed once
-        // alive_nodes * 100 < total_nodes * node_live_percentage_threshold_for_update
+        // alive_nodes * 100 < total_nodes * _node_live_percentage_threshold_for_update
         // even if alive_nodes >= min_live_node_count_for_unfreeze
         set_node_live_percentage_threshold_for_update(0);
 
@@ -749,10 +783,7 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
         FLAGS_max_allowed_replica_count = test.max_allowed_replica_count;
 
         // set some nodes unalive to match the expected number of alive ndoes
-        dassert_f(total_node_count >= test.alive_node_count,
-                  "total_node_count({}) should be >= alive_node_count({})",
-                  total_node_count,
-                  test.alive_node_count);
+        CHECK_GE(total_node_count, test.alive_node_count);
         for (int i = 0; i < total_node_count - test.alive_node_count; i++) {
             _ms->set_node_state({nodes[i]}, false);
         }
@@ -802,5 +833,35 @@ TEST_F(meta_app_operation_test, recover_from_max_replica_count_env)
     verify_app_max_replica_count(APP_NAME, new_max_replica_count);
 }
 
+TEST_F(meta_app_operation_test, rename_app)
+{
+    const std::string app_name_1 = APP_NAME + "_rename_1";
+    create_app(app_name_1);
+    auto app = find_app(app_name_1);
+    ASSERT_TRUE(app) << fmt::format("app({}) does not exist", app_name_1);
+    auto app_id_1 = app->app_id;
+
+    const std::string app_name_2 = APP_NAME + "_rename_2";
+    create_app(app_name_2);
+    app = find_app(app_name_2);
+    ASSERT_TRUE(app) << fmt::format("app({}) does not exist", app_name_2);
+    auto app_id_2 = app->app_id;
+
+    // case 1: new_app_name table exist
+    auto resp = rename_app(app_name_1, app_name_2);
+    ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
+
+    const std::string app_name_3 = APP_NAME + "_rename_3";
+    // case 2: old_app_name table not exist
+    resp = rename_app(APP_NAME + "_rename_invaild", app_name_3);
+    ASSERT_EQ(ERR_APP_NOT_EXIST, resp.err);
+
+    // case 3: rename successful
+    resp = rename_app(app_name_1, app_name_3);
+    ASSERT_EQ(ERR_OK, resp.err);
+    app = find_app(app_name_3);
+    ASSERT_TRUE(app) << fmt::format("app({}) does not exist", app_name_3);
+    ASSERT_EQ(app_id_1, app->app_id);
+}
 } // namespace replication
 } // namespace dsn

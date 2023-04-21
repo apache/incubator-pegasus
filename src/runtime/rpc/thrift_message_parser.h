@@ -26,16 +26,17 @@
 
 #pragma once
 
-#include "runtime/rpc/message_parser.h"
-#include "runtime/rpc/rpc_message.h"
-#include "utils/ports.h"
-#include "utils/endians.h"
 #include <gtest/gtest_prod.h>
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include <stdint.h>
+#include <memory>
 
 #include "request_meta_types.h"
+#include "runtime/rpc/message_parser.h"
+#include "runtime/task/task_spec.h"
+#include "utils/customizable_id.h"
 
 namespace dsn {
+class message_ex;
 
 struct request_meta_v0
 {

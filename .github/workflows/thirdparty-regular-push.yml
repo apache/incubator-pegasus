@@ -41,7 +41,7 @@ jobs:
   build_push_src_docker_images:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -74,10 +74,11 @@ jobs:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
+          - ubuntu2204
           - centos6
           - centos7
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -111,10 +112,11 @@ jobs:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
+          - ubuntu2204
           - centos6
           - centos7
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -146,9 +148,9 @@ jobs:
       fail-fast: false
       matrix:
         osversion:
-          - ubuntu1804
+          - ubuntu2204
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -182,9 +184,9 @@ jobs:
       fail-fast: false
       matrix:
         osversion:
-          - ubuntu1804
+          - ubuntu2204
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx

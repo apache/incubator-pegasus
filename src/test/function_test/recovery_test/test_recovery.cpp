@@ -17,36 +17,34 @@
  * under the License.
  */
 
-#include <cstdlib>
-#include <string>
-#include <vector>
-#include <climits>
-#include <map>
-#include <memory>
-
-#include <fmt/ostream.h>
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-#include "utils/rand.h"
-
 #include "include/pegasus/client.h"
-
-#include "base/pegasus_const.h"
+#include "pegasus/error.h"
+#include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/test_util.h"
+#include "utils/error_code.h"
+#include "utils/rand.h"
 
 using namespace dsn::replication;
 using namespace pegasus;
 
 // TODO(yingchun): add a check for it, get config by curl
 // NOTE: THREAD_POOL_META_SERVER worker count should be greater than 1
-// This function test update 'distributed_lock_service_type' to
+// This function test update FLAGS_distributed_lock_service_type to
 // 'distributed_lock_service_simple', which executes in threadpool THREAD_POOL_META_SERVER
 // As a result, failure detection lock executes in this pool
 // if worker count = 1, it will lead to ERR_TIMEOUT when execute 'ddl_client_->do_recovery'

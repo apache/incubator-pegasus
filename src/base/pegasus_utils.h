@@ -19,14 +19,20 @@
 
 #pragma once
 
-#include <time.h>
-#include <cctype>
-#include <cstring>
-#include <queue>
-#include <boost/lexical_cast.hpp>
-#include "utils/rpc_address.h"
-#include "utils/string_view.h"
 #include <rocksdb/slice.h>
+#include <stdint.h>
+#include <time.h>
+#include <functional>
+#include <list>
+#include <queue>
+#include <string>
+#include <vector>
+
+#include "utils/string_view.h"
+
+namespace dsn {
+class rpc_address;
+} // namespace dsn
 
 namespace pegasus {
 namespace utils {

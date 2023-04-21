@@ -24,27 +24,37 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include "failure_detector/failure_detector.h"
-#include "utils/distributed_lock_service.h"
+#include <stdint.h>
+#include <atomic>
+#include <map>
+#include <string>
+#include <vector>
 
-#include "common/replication_common.h"
-#include "meta_options.h"
+#include "failure_detector/failure_detector.h"
+#include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/task/task.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
+namespace dist {
+class distributed_lock_service;
+} // namespace dist
+namespace fd {
+class beacon_ack;
+class beacon_msg;
+} // namespace fd
+template <typename TResponse>
+class rpc_replier;
+
 namespace replication {
 
+class fd_suboptions;
 class meta_service;
+
 namespace test {
 class test_checker;
 }
@@ -86,9 +96,9 @@ public:
     // client side
     virtual void on_master_disconnected(const std::vector<rpc_address> &)
     {
-        dassert(false, "unsupported method");
+        CHECK(false, "unsupported method");
     }
-    virtual void on_master_connected(rpc_address) { dassert(false, "unsupported method"); }
+    virtual void on_master_connected(rpc_address) { CHECK(false, "unsupported method"); }
 
     // server side
     // it is in the protection of failure_detector::_lock

@@ -17,13 +17,19 @@
 
 #pragma once
 
-#include "block_service/block_service.h"
-#include "utils/singleton_store.h"
+#include <stdint.h>
+#include <map>
+#include <memory>
+#include <string>
+
+#include "utils/error_code.h"
+#include "utils/singleton.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 namespace dist {
 namespace block_service {
+class block_filesystem;
 
 // a singleton for rDSN service_engine to register all blocks, this should be called only once
 class block_service_registry : public utils::singleton<block_service_registry>

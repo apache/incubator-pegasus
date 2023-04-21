@@ -17,17 +17,49 @@
  * under the License.
  */
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+#include <rocksdb/status.h>
+#include <algorithm>
+#include <iosfwd>
+#include <string>
+
 #include "base/pegasus_rpc_types.h"
+#include "bulk_load_types.h"
+#include "capacity_unit_calculator.h"
+#include "common/duplication_common.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "duplication_internal_types.h"
+#include "pegasus_value_schema.h"
 #include "pegasus_write_service.h"
 #include "pegasus_write_service_impl.h"
-#include "capacity_unit_calculator.h"
-
+#include "perf_counter/perf_counter.h"
+#include "rrdb/rrdb.code.definition.h"
+#include "rrdb/rrdb_types.h"
+#include "runtime/api_layer1.h"
 #include "runtime/message_utils.h"
-#include "common/replication.codes.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task_code.h"
+#include "server/pegasus_server_impl.h"
 #include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+
+namespace dsn {
+class blob;
+class message_ex;
+} // namespace dsn
 
 namespace pegasus {
 namespace server {
+
+DSN_DEFINE_int64(pegasus.server,
+                 dup_lagging_write_threshold_ms,
+                 10 * 1000,
+                 "If the duration that a write flows from master to slave is larger than this "
+                 "threshold, the write is defined a lagging write.");
 
 DEFINE_TASK_CODE(LPC_INGESTION, TASK_PRIORITY_COMMON, THREAD_POOL_INGESTION)
 
@@ -130,12 +162,6 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
         COUNTER_TYPE_NUMBER_PERCENTILES,
         "the time (in ms) lag between master and slave in the duplication");
 
-    _dup_lagging_write_threshold_ms = dsn_config_get_value_int64(
-        "pegasus.server",
-        "dup_lagging_write_threshold_ms",
-        10 * 1000,
-        "If the duration that a write flows from master to slave is larger than this threshold, "
-        "the write is defined a lagging write.");
     _pfc_dup_lagging_writes.init_app_counter(
         "app.pegasus",
         fmt::format("dup.lagging_writes@{}", app_name()).c_str(),
@@ -234,8 +260,8 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
 
 void pegasus_write_service::batch_prepare(int64_t decree)
 {
-    dassert(_batch_start_time == 0,
-            "batch_prepare and batch_commit/batch_abort must be called in pair");
+    CHECK_EQ_MSG(
+        _batch_start_time, 0, "batch_prepare and batch_commit/batch_abort must be called in pair");
 
     _batch_start_time = dsn_now_ns();
 }
@@ -244,7 +270,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
                                      const dsn::apps::update_request &update,
                                      dsn::apps::update_response &resp)
 {
-    dassert(_batch_start_time != 0, "batch_put must be called after batch_prepare");
+    CHECK_GT_MSG(_batch_start_time, 0, "batch_put must be called after batch_prepare");
 
     _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
@@ -261,7 +287,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
                                         const dsn::blob &key,
                                         dsn::apps::update_response &resp)
 {
-    dassert(_batch_start_time != 0, "batch_remove must be called after batch_prepare");
+    CHECK_GT_MSG(_batch_start_time, 0, "batch_remove must be called after batch_prepare");
 
     _batch_qps_perfcounters.push_back(_pfc_remove_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());
@@ -276,7 +302,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
 
 int pegasus_write_service::batch_commit(int64_t decree)
 {
-    dassert(_batch_start_time != 0, "batch_commit must be called after batch_prepare");
+    CHECK_GT_MSG(_batch_start_time, 0, "batch_commit must be called after batch_prepare");
 
     int err = _impl->batch_commit(decree);
     clear_up_batch_states();
@@ -285,8 +311,8 @@ int pegasus_write_service::batch_commit(int64_t decree)
 
 void pegasus_write_service::batch_abort(int64_t decree, int err)
 {
-    dassert(_batch_start_time != 0, "batch_abort must be called after batch_prepare");
-    dassert(err, "must abort on non-zero err");
+    CHECK_GT_MSG(_batch_start_time, 0, "batch_abort must be called after batch_prepare");
+    CHECK(err, "must abort on non-zero err");
 
     _impl->batch_abort(decree, err);
     clear_up_batch_states();
@@ -327,7 +353,7 @@ int pegasus_write_service::duplicate(int64_t decree,
         _pfc_duplicate_qps->increment();
         auto cleanup = dsn::defer([this, &request]() {
             uint64_t latency_ms = (dsn_now_us() - request.timestamp) / 1000;
-            if (latency_ms > _dup_lagging_write_threshold_ms) {
+            if (latency_ms > FLAGS_dup_lagging_write_threshold_ms) {
                 _pfc_dup_lagging_writes->increment();
             }
             _pfc_dup_time_lag->set(latency_ms);
@@ -360,7 +386,7 @@ int pegasus_write_service::duplicate(int64_t decree,
         remove_rpc remove;
         if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT ||
             request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
-            int err = 0;
+            int err = rocksdb::Status::kOk;
             if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
                 put = put_rpc(write);
                 err = _impl->batch_put(ctx, put.request(), put.response());
@@ -396,7 +422,7 @@ int pegasus_write_service::ingest_files(int64_t decree,
     resp.err = dsn::ERR_OK;
     // write empty put to flush decree
     resp.rocksdb_error = empty_put(decree);
-    if (resp.rocksdb_error != 0) {
+    if (resp.rocksdb_error != rocksdb::Status::kOk) {
         resp.err = dsn::ERR_TRY_AGAIN;
         return resp.rocksdb_error;
     }

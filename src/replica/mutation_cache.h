@@ -26,16 +26,18 @@
 
 #pragma once
 
-#include "common/replication_common.h"
-#include "mutation.h"
-#include <vector>
 #include <atomic>
+#include <vector>
+
+#include "common/replication_other_types.h"
+#include "mutation.h"
+#include "utils/error_code.h"
 
 namespace dsn {
 namespace replication {
 
 // mutation_cache is an in-memory array that stores a limited number
-// (SEE replication_options::max_mutation_count_in_prepare_list) of mutation log entries.
+// (SEE FLAGS_max_mutation_count_in_prepare_list) of mutation log entries.
 //
 // Inherited by: prepare_list
 class mutation_cache
