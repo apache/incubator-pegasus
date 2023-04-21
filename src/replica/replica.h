@@ -528,7 +528,7 @@ private:
     bool is_data_corrupted() const { return _data_corrupted; }
 
     // use Apache Ranger for replica access control
-    bool access_controller_allowed(message_ex *msg, ranger::access_type req_type) const;
+    bool access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const;
 
 private:
     friend class ::dsn::replication::test::test_checker;

@@ -60,8 +60,10 @@
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
+#include "runtime/ranger/access_type.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/security/access_controller.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -75,10 +77,12 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
-
-namespace security {
-class access_controller;
-} // namespace security
+namespace service {
+class copy_request;
+class copy_response;
+class get_file_size_request;
+class get_file_size_response;
+} // namespace service
 
 namespace replication {
 class configuration_query_by_node_response;
@@ -269,6 +273,39 @@ public:
     void update_config(const std::string &name);
 
     fs_manager *get_fs_manager() { return &_fs_manager; }
+
+    template <typename TReqType, typename TRespType>
+    bool check_status_and_authz_with_reply(const TReqType &request,
+                                           ::dsn::rpc_replier<TRespType> &reply,
+                                           const ::dsn::ranger::access_type &ac_type) const
+    {
+        if (!_access_controller->is_enable_ranger_acl()) {
+            return true;
+        }
+        const auto &pid = request.pid;
+        replica_ptr rep = get_replica(pid);
+
+        if (!rep) {
+            TRespType resp;
+            resp.error = ERR_OBJECT_NOT_FOUND;
+            reply(resp);
+            return false;
+        }
+        dsn::message_ex *msg = reply.response_message();
+        if (!rep->access_controller_allowed(msg, ac_type)) {
+            TRespType resp;
+            resp.error = ERR_ACL_DENY;
+            reply(resp);
+            return false;
+        }
+        return true;
+    }
+
+    void on_nfs_copy(const ::dsn::service::copy_request &request,
+                     ::dsn::rpc_replier<::dsn::service::copy_response> &reply);
+
+    void on_nfs_get_file_size(const ::dsn::service::get_file_size_request &request,
+                              ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply);
 
 private:
     enum replica_node_state
