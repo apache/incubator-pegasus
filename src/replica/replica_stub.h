@@ -277,7 +277,7 @@ public:
     template <typename TReqType, typename TRespType>
     bool check_status_and_authz_with_reply(const TReqType &request,
                                            ::dsn::rpc_replier<TRespType> &reply,
-                                           const ::dsn::ranger::access_type &ac_type)
+                                           const ::dsn::ranger::access_type &ac_type) const
     {
         if (!_access_controller->is_enable_ranger_acl()) {
             return true;
