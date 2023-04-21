@@ -216,7 +216,7 @@ inline bool rpc_group_host_port::contains(host_port hp) const
     return _members.end() != std::find(_members.begin(), _members.end(), hp);
 }
 
-inline int rpc_group_host_port::count()
+inline int rpc_group_host_port::count() const
 {
     alr_t l(_lock);
     return _members.size();
