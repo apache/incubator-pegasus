@@ -32,7 +32,7 @@
 
 namespace pegasus {
 
-void AssertEventually(const std::function<void(void)> &f, int timeout_sec, AssertBackoff backoff)
+void AssertEventually(const std::function<void(void)> &f, int timeout_sec, WaitBackoff backoff)
 {
     // TODO(yingchun): should use mono time
     uint64_t deadline = dsn_now_s() + timeout_sec;
@@ -69,10 +69,10 @@ void AssertEventually(const std::function<void(void)> &f, int timeout_sec, Asser
             // If they had failures, sleep and try again.
             int sleep_ms = 0;
             switch (backoff) {
-            case AssertBackoff::EXPONENTIAL:
+            case WaitBackoff::EXPONENTIAL:
                 sleep_ms = (attempts < 10) ? (1 << attempts) : 1000;
                 break;
-            case AssertBackoff::NONE:
+            case WaitBackoff::NONE:
                 sleep_ms = 1000;
                 break;
             default:
@@ -93,21 +93,19 @@ void AssertEventually(const std::function<void(void)> &f, int timeout_sec, Asser
     }
 }
 
-void KeepConditionForTime(const std::function<bool(void)> &f,
-                          int timeout_sec,
-                          AssertBackoff backoff)
+void WaitCondition(const std::function<bool(void)> &f, int timeout_sec, WaitBackoff backoff)
 {
     uint64_t deadline = dsn_now_s() + timeout_sec;
     for (int attempts = 0; dsn_now_s() < deadline; attempts++) {
-        if (!f()) {
+        if (f()) {
             break;
         }
         int sleep_ms = 0;
         switch (backoff) {
-        case AssertBackoff::EXPONENTIAL:
+        case WaitBackoff::EXPONENTIAL:
             sleep_ms = (attempts < 10) ? (1 << attempts) : 1000;
             break;
-        case AssertBackoff::NONE:
+        case WaitBackoff::NONE:
             sleep_ms = 1000;
             break;
         default:

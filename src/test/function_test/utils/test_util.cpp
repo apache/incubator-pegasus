@@ -50,12 +50,13 @@ using dsn::replication::replica_helper;
 using dsn::replication::replication_ddl_client;
 using dsn::rpc_address;
 using nlohmann::json;
+using std::map;
 using std::string;
 using std::vector;
 
 namespace pegasus {
 
-test_util::test_util(std::map<string, string> create_envs)
+test_util::test_util(map<string, string> create_envs)
     : cluster_name_("mycluster"), app_name_("temp"), create_envs_(std::move(create_envs))
 {
 }

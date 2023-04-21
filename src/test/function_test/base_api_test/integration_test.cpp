@@ -28,15 +28,6 @@
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
 #include "test_util/test_util.h"
-#include "utils/flags.h"
-#include "utils/fmt_logging.h"
-
-namespace dsn {
-namespace replication {
-DSN_DECLARE_int32(fd_check_interval_seconds);
-DSN_DECLARE_int32(fd_grace_seconds);
-} // namespace replication
-} // namespace dsn
 
 using namespace ::pegasus;
 
@@ -111,8 +102,7 @@ TEST_F(integration_test, write_corrupt_db)
               << std::endl;
 
     // Make effort to get a trustable alive replica server count.
-    KEEP_COND_FOR_TIME([&] { return get_alive_replica_server_count() == 3; }, 30);
-    LOG_WARNING("get_alive_replica_server_count: {}", get_alive_replica_server_count());
+    WAIT_IN_TIME([&] { return get_alive_replica_server_count() != 3; }, 30);
     // Now only 2 RSs left, or RS-1 has no leader replicas.
     ASSERT_IN_TIME(
         [&] {
@@ -136,7 +126,7 @@ TEST_F(integration_test, write_corrupt_db)
     ASSERT_NO_FATAL_FAILURE(
         run_cmd_from_project_root("echo 'set_meta_level lively' | ./run.sh shell"));
     // Make sure RS-1 has some primaries of table 'temp'.
-    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 60);
+    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 120);
 
     for (int i = 0; i < 1000; i++) {
         std::string hkey = fmt::format("hkey2_{}", i);

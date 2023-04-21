@@ -3186,7 +3186,6 @@ bool pegasus_server_impl::set_options(
     }
 
     for (const auto &column_family : column_families) {
-        LOG_ERROR_PREFIX("column family name: {}", column_family);
         if (column_family == META_COLUMN_FAMILY_NAME) {
             *missing_meta_cf = false;
         } else if (column_family == DATA_COLUMN_FAMILY_NAME) {

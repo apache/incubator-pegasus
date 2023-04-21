@@ -39,13 +39,13 @@ namespace pegasus {
 
 #define ASSERT_IN_TIME_WITH_FIXED_INTERVAL(expr, sec)                                              \
     do {                                                                                           \
-        AssertEventually(expr, sec, AssertBackoff::NONE);                                          \
+        AssertEventually(expr, sec, WaitBackoff::NONE);                                            \
         NO_PENDING_FATALS();                                                                       \
     } while (0)
 
-#define KEEP_COND_FOR_TIME(expr, sec)                                                              \
+#define WAIT_IN_TIME(expr, sec)                                                                    \
     do {                                                                                           \
-        KeepConditionForTime(expr, sec);                                                           \
+        WaitCondition(expr, sec);                                                                  \
         NO_PENDING_FATALS();                                                                       \
     } while (0)
 
@@ -61,7 +61,7 @@ namespace pegasus {
 // To check whether AssertEventually() eventually succeeded, call
 // NO_PENDING_FATALS() afterward, or use ASSERT_EVENTUALLY() which performs
 // this check automatically.
-enum class AssertBackoff
+enum class WaitBackoff
 {
     // Use exponential back-off while looping, capped at one second.
     EXPONENTIAL,
@@ -71,8 +71,11 @@ enum class AssertBackoff
 };
 void AssertEventually(const std::function<void(void)> &f,
                       int timeout_sec = 30,
-                      AssertBackoff backoff = AssertBackoff::EXPONENTIAL);
-void KeepConditionForTime(const std::function<bool(void)> &f,
-                          int timeout_sec = 30,
-                          AssertBackoff backoff = AssertBackoff::EXPONENTIAL);
+                      WaitBackoff backoff = WaitBackoff::EXPONENTIAL);
+
+// Wait until 'f()' succeeds or timeout, there is no GTest 'fatal failures'
+// regardless failed or timeout.
+void WaitCondition(const std::function<bool(void)> &f,
+                   int timeout_sec = 30,
+                   WaitBackoff backoff = WaitBackoff::EXPONENTIAL);
 } // namespace pegasus
