@@ -279,10 +279,10 @@ private:
                                        int timeout_milliseconds = 0,
                                        int reply_thread_hash = 0)
     {
-        dsn::message_ex *msg = dsn::message_ex::create_request(code, timeout_milliseconds);
+        auto msg = dsn::message_ex::create_request(code, timeout_milliseconds);
         dsn::marshall(msg, *req);
 
-        rpc_response_task_ptr task =
+        auto task =
             dsn::rpc::create_rpc_response_task(msg, nullptr, empty_rpc_handler, reply_thread_hash);
         rpc::call(_meta_server,
                   msg,
@@ -323,18 +323,24 @@ private:
                 return resp_task;
             }
 
-            // Received the response from meta server successfully. Deserialize the response.
-            dsn::unmarshall(resp_task->get_response(), resp);
+            // Once response is nullptr, it must be mocked by unit tests since network is
+            // not connected.
+            if (dsn_likely(resp_task->get_response() != nullptr)) {
+                // Received the response from meta server successfully, thus deserialize the
+                // response.
+                dsn::unmarshall(resp_task->get_response(), resp);
+            }
+
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "ddl_client_request_meta",
+                [&resp, this](dsn::string_view str) { resp.err = pop_mock_error(); });
+
             LOG_INFO("received response from meta server: rpc_code={}, err={}, attempt_count={}, "
                      "max_attempt_count={}",
                      code,
                      resp.err,
                      i,
                      FLAGS_ddl_client_max_attempt_count);
-
-            FAIL_POINT_INJECT_NOT_RETURN_F(
-                "ddl_client_request_meta",
-                [&resp, this](dsn::string_view str) { resp.err = pop_mock_error(); });
 
             // Once `err` field in the received response is ERR_OK or some non-busy error, do not
             // attempt again.

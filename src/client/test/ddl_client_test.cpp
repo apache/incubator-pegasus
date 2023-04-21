@@ -19,6 +19,7 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <deque>
+#include <iosfwd>
 #include <memory>
 #include <vector>
 
@@ -26,8 +27,6 @@
 #include "common/replication.codes.h"
 #include "meta_admin_types.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task.h"
-#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
@@ -50,7 +49,9 @@ TEST(DDLClientTest, RetryEndMetaRequest)
         {{dsn::ERR_TIMEOUT,
           dsn::ERR_OK,
           dsn::ERR_BUSY_CREATING,
+          dsn::ERR_OK,
           dsn::ERR_BUSY_CREATING,
+          dsn::ERR_OK,
           dsn::ERR_BUSY_CREATING}},
     };
 
