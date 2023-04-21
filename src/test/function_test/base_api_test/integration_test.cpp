@@ -29,7 +29,7 @@
 #include "test/function_test/utils/test_util.h"
 #include "test_util/test_util.h"
 #include "utils/flags.h"
-#include "base/pegasus_utils.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

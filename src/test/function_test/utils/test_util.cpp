@@ -21,6 +21,7 @@
 
 #include <nlohmann/json.hpp>
 #include <unistd.h>
+#include <algorithm>
 #include <fstream>
 #include <initializer_list>
 #include <utility>
@@ -42,9 +43,7 @@
 #include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
 #include "utils/rand.h"
-#include "utils/string_conv.h"
 
 using dsn::partition_configuration;
 using dsn::replication::replica_helper;
