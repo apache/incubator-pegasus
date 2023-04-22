@@ -57,6 +57,7 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/string_view.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
@@ -424,7 +425,7 @@ private:
     uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.
 
     // Used only for unit tests.
-    FRIEND_TEST(DDLClientTest, RetryEndMetaRequest);
+    FRIEND_TEST(DDLClientTest, RetryMetaRequest);
     void set_mock_errors(const std::vector<dsn::error_code> &mock_errors)
     {
         _mock_errors.assign(mock_errors.begin(), mock_errors.end());

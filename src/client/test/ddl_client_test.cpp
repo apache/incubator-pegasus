@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/ostream.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -37,22 +38,54 @@ DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
 namespace dsn {
 namespace replication {
 
-TEST(DDLClientTest, RetryEndMetaRequest)
+TEST(DDLClientTest, RetryMetaRequest)
 {
+    // `mock_errors` are the sequence in which each error happens:
+    // * first is the error that happens while sending request to meta server, for example
+    // ERR_NETWORK_FAILURE or ERR_TIMEOUT, which could be called send error;
+    // * then, once request is received successfully by meta server, the error might happen
+    // while the request is being processed, which could be called response error.
+    //
+    // All the errors in `mock_errors` would be traversed in sequence. Once some logic is
+    // wrong, CHECK_FALSE(_mock_errors.empty()) in `pop_mock_error()` will fail.
+    //
     // Test cases:
-    // - return ERR_OK for the first attempt
+    // - successful for the first attempt
+    // - failed to send request to meta server since network cannot be connected
+    // - meta server received request successfully, however there are some invalid parameters
+    // - initially timeout while sending request to meta server, then busy creating for 2
+    // times until success
+    // - initially timeout while sending request to meta server, then busy creating for 3
+    // times until retry is not allowed
     struct test_case
     {
         std::vector<dsn::error_code> mock_errors;
+        dsn::error_code final_send_error;
+        dsn::error_code final_resp_error;
     } tests[] = {
-        {{dsn::ERR_OK, dsn::ERR_OK}},
+        {{dsn::ERR_OK, dsn::ERR_OK}, dsn::ERR_OK, dsn::ERR_OK},
+        {{dsn::ERR_NETWORK_FAILURE, dsn::ERR_NETWORK_FAILURE, dsn::ERR_NETWORK_FAILURE},
+         dsn::ERR_NETWORK_FAILURE,
+         dsn::ERR_UNKNOWN},
+        {{dsn::ERR_OK, dsn::ERR_INVALID_PARAMETERS}, dsn::ERR_OK, dsn::ERR_INVALID_PARAMETERS},
         {{dsn::ERR_TIMEOUT,
           dsn::ERR_OK,
           dsn::ERR_BUSY_CREATING,
           dsn::ERR_OK,
           dsn::ERR_BUSY_CREATING,
           dsn::ERR_OK,
-          dsn::ERR_BUSY_CREATING}},
+          dsn::ERR_OK},
+         dsn::ERR_OK,
+         dsn::ERR_OK},
+        {{dsn::ERR_TIMEOUT,
+          dsn::ERR_OK,
+          dsn::ERR_BUSY_CREATING,
+          dsn::ERR_OK,
+          dsn::ERR_BUSY_CREATING,
+          dsn::ERR_OK,
+          dsn::ERR_BUSY_CREATING},
+         dsn::ERR_OK,
+         dsn::ERR_BUSY_CREATING},
     };
 
     auto reserved_ddl_client_max_attempt_count = FLAGS_ddl_client_max_attempt_count;
@@ -72,7 +105,18 @@ TEST(DDLClientTest, RetryEndMetaRequest)
 
         configuration_create_app_response resp;
         auto resp_task = ddl_client->request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
+
+        // Check if all the errors have been traversed in sequence.
         EXPECT_TRUE(ddl_client->_mock_errors.empty());
+
+        // Check if final send error is matched.
+        EXPECT_EQ(test.final_send_error, resp_task->error());
+
+        // Check if final response error is matched. Once send error is not ERR_OK, response
+        // error would not exist; thus set ERR_UNKNOWN in `mock_errors`.
+        if (test.final_send_error == dsn::ERR_OK) {
+            EXPECT_EQ(test.final_resp_error, resp.err);
+        }
 
         fail::teardown();
     }
