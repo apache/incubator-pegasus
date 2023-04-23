@@ -121,9 +121,9 @@ METRIC_DEFINE_gauge_int64(server,
                           "The max duration among all learning replicas");
 
 METRIC_DEFINE_gauge_int64(server,
-                          learning_replicas_max_duration_ms,
-                          dsn::metric_unit::kMilliSeconds,
-                          "The max duration among all learning replicas");
+                          learning_replicas_max_copy_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The max size of data that are copied from remote among all learning replicas");
 
 namespace dsn {
 namespace replication {
@@ -249,16 +249,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    _counter_replicas_learning_max_duration_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.max.duration.time(ms)",
-        COUNTER_TYPE_NUMBER,
-        "current learning max duration time(ms)");
-    _counter_replicas_learning_max_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.max.copy.file.size",
-        COUNTER_TYPE_NUMBER,
-        "current learning max copy file size");
     _counter_replicas_learning_recent_start_count.init_app_counter(
         "eon.replica_stub",
         "replicas.learning.recent.start.count",
@@ -1986,7 +1976,7 @@ void replica_stub::on_gc()
 
     METRIC_VAR_SET(learning_replicas, learning_count);
     METRIC_VAR_SET(learning_replicas_max_duration_ms, learning_max_duration_time_ms);
-    _counter_replicas_learning_max_copy_file_size->set(learning_max_copy_file_size);
+    METRIC_VAR_SET(learning_replicas_max_copy_bytes, learning_max_copy_file_size);
     _counter_cold_backup_running_count->set(cold_backup_running_count);
     _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
     _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);

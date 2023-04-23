@@ -474,7 +474,7 @@ private:
 
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
-    perf_counter_wrapper _counter_replicas_learning_max_copy_file_size;
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_bytes);
     perf_counter_wrapper _counter_replicas_learning_recent_start_count;
     perf_counter_wrapper _counter_replicas_learning_recent_round_start_count;
     perf_counter_wrapper _counter_replicas_learning_recent_copy_file_count;
