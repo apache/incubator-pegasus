@@ -304,10 +304,13 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
     auto storage_error = _app->on_request(request);
     if (dsn_unlikely(storage_error != ERR_OK)) {
         switch (storage_error) {
-        // TODO(yingchun): Now only kCorruption is dealt, consider to deal with more storage
-        //  engine errors.
+        // TODO(yingchun): Now only kCorruption and kIOError is dealt, consider to deal with
+        //  more storage engine errors.
         case rocksdb::Status::kCorruption:
             handle_local_failure(ERR_RDB_CORRUPTION);
+            break;
+        case rocksdb::Status::kIOError:
+            handle_local_failure(ERR_DISK_IO_ERROR);
             break;
         default:
             LOG_ERROR_PREFIX("client read encountered an unhandled error: {}", storage_error);
