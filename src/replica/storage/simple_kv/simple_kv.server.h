@@ -51,7 +51,11 @@ public:
     simple_kv_service(replica *r) : replication_app_base(r) {}
     virtual ~simple_kv_service() {}
 
-    virtual int on_request(dsn::message_ex *request) override { return handle_request(request); }
+    virtual int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
+    {
+        return handle_request(request);
+    }
+
 protected:
     // all service handlers to be implemented further
     // RPC_SIMPLE_KV_SIMPLE_KV_READ

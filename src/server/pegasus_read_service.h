@@ -43,7 +43,10 @@ public:
     {
     }
 
-    int on_request(dsn::message_ex *request) override { return handle_request(request); }
+    int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
+    {
+        return handle_request(request);
+    }
 
 protected:
     // all service handlers to be implemented further

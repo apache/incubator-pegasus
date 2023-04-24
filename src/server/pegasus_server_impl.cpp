@@ -114,6 +114,11 @@ DSN_DEFINE_int32(pegasus.server,
                  update_rdb_stat_interval,
                  60,
                  "The interval seconds to update RocksDB statistics, in seconds.");
+DSN_DEFINE_int32(pegasus.server,
+                 inject_read_error_for_test,
+                 0,
+                 "Which error code to inject in read path, 0 means no error. Only for test.");
+DSN_TAG_VARIABLE(inject_read_error_for_test, FT_MUTABLE);
 
 static std::string chkpt_get_dir_name(int64_t decree)
 {
@@ -328,6 +333,11 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
+
+    if (dsn_unlikely(FLAGS_inject_read_error_for_test != rocksdb::Status::kOk)) {
+        resp.error = FLAGS_inject_read_error_for_test;
+        return;
+    }
 
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;

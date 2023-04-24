@@ -76,7 +76,7 @@ public:
         utils::filesystem::create_file(fmt::format("{}/checkpoint.file", checkpoint_dir));
         return ERR_OK;
     }
-    int on_request(message_ex *request) override { return 0; }
+    int on_request(message_ex *request) override WARN_UNUSED_RESULT { return 0; }
     std::string query_compact_state() const { return ""; };
 
     // we mock the followings
