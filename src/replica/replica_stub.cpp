@@ -121,9 +121,9 @@ METRIC_DEFINE_gauge_int64(server,
                           "The max duration among all learning replicas");
 
 METRIC_DEFINE_gauge_int64(server,
-                          learning_replicas_max_copy_bytes,
+                          learning_replicas_max_copy_file_bytes,
                           dsn::metric_unit::kBytes,
-                          "The max size of data that are copied from remote among all learning replicas");
+                          "The max size of files that are copied from learnee among all learning replicas");
 
 namespace dsn {
 namespace replication {
@@ -249,63 +249,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    _counter_replicas_learning_recent_start_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current learning start count in the recent period");
-    _counter_replicas_learning_recent_round_start_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.round.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning round start count in the recent period");
-    _counter_replicas_learning_recent_copy_file_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.copy.file.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning copy file count in the recent period");
-    _counter_replicas_learning_recent_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.copy.file.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning copy file size in the recent period");
-    _counter_replicas_learning_recent_copy_buffer_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.copy.buffer.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning copy buffer size in the recent period");
-    _counter_replicas_learning_recent_learn_cache_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.cache.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning LT_CACHE count in the recent period");
-    _counter_replicas_learning_recent_learn_app_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.app.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning LT_APP count in the recent period");
-    _counter_replicas_learning_recent_learn_log_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.log.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning LT_LOG count in the recent period");
-    _counter_replicas_learning_recent_learn_reset_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.reset.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning reset count in the recent period"
-        "for the reason of resp.last_committed_decree < _app->last_committed_decree()");
-    _counter_replicas_learning_recent_learn_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning fail count in the recent period");
-    _counter_replicas_learning_recent_learn_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning succeed count in the recent period");
-
     _counter_replicas_recent_prepare_fail_count.init_app_counter(
         "eon.replica_stub",
         "replicas.recent.prepare.fail.count",
@@ -1976,7 +1919,7 @@ void replica_stub::on_gc()
 
     METRIC_VAR_SET(learning_replicas, learning_count);
     METRIC_VAR_SET(learning_replicas_max_duration_ms, learning_max_duration_time_ms);
-    METRIC_VAR_SET(learning_replicas_max_copy_bytes, learning_max_copy_file_size);
+    METRIC_VAR_SET(learning_replicas_max_copy_file_bytes, learning_max_copy_file_size);
     _counter_cold_backup_running_count->set(cold_backup_running_count);
     _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
     _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
