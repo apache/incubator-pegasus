@@ -90,8 +90,6 @@ public:
         return _response != nullptr ? _response->to_address : rpc_address::s_invalid_address;
     }
 
-    int error_code() const { return _response != nullptr ? _response->error() : 0; }
-
 private:
     void release()
     {

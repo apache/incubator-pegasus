@@ -30,6 +30,8 @@
 #include <unordered_map>
 #include <functional>
 
+#include "replica/storage/simple_kv/simple_kv.code.definition.h"
+#include "rrdb/rrdb.code.definition.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
@@ -60,12 +62,19 @@ protected:
                                const char *name,
                                void (*handler)(T *svc, const TReq &req, rpc_replier<TResp> &resp))
     {
+        // Only allowed to register simple.kv rpc handler.
+        CHECK(dsn::replication::application::RPC_SIMPLE_KV_SIMPLE_KV_READ == rpc_code ||
+                  dsn::replication::application::RPC_SIMPLE_KV_SIMPLE_KV_WRITE == rpc_code ||
+                  dsn::replication::application::RPC_SIMPLE_KV_SIMPLE_KV_APPEND == rpc_code,
+              "Not allowed to register with rpc_code {}",
+              rpc_code);
         rpc_handler h = [handler](T *p, dsn::message_ex *r) {
             TReq req;
             ::dsn::unmarshall(r, req);
             rpc_replier<TResp> replier(r->create_response());
             handler(p, req, replier);
-            return replier.error_code();
+            // For simple.kv, always return 0 which means success.
+            return 0;
         };
 
         return register_async_rpc_handler(rpc_code, name, h);
@@ -85,18 +94,21 @@ protected:
         return register_async_rpc_handler(rpc_code, name, h);
     }
 
-    // TODO(yingchun): only RPC_RRDB_RRDB_CLEAR_SCANNER use it, consider to replace and remove it.
     template <typename TReq>
     static bool register_async_rpc_handler(dsn::task_code rpc_code,
                                            const char *name,
                                            void (*handler)(T *svc, const TReq &req))
     {
+        // Only allowed to register RPC_RRDB_RRDB_CLEAR_SCANNER handler.
+        CHECK_EQ_MSG(dsn::apps::RPC_RRDB_RRDB_CLEAR_SCANNER,
+                     rpc_code,
+                     "Not allowed to register with rpc_code {}",
+                     rpc_code);
         rpc_handler h = [handler](T *p, dsn::message_ex *r) {
             TReq req;
             ::dsn::unmarshall(r, req);
             handler(p, req);
-            // Because only RPC_RRDB_RRDB_CLEAR_SCANNER use this function,
-            // so it's safe to return 0.
+            // For RPC_RRDB_RRDB_CLEAR_SCANNER, always return 0 which means success.
             return 0;
         };
 
