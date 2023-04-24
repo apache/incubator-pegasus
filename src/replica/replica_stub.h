@@ -479,13 +479,13 @@ private:
     METRIC_VAR_DECLARE_counter(learn_rounds);
     METRIC_VAR_DECLARE_counter(learn_copy_files);
     METRIC_VAR_DECLARE_counter(learn_copy_file_bytes);
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_buffer_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_cache_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_app_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_log_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_reset_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_fail_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_succ_count;
+    METRIC_VAR_DECLARE_counter(learn_copy_buffer_bytes);
+    METRIC_VAR_DECLARE_counter(learn_lt_cache_responses);
+    METRIC_VAR_DECLARE_counter(learn_lt_app_responses);
+    METRIC_VAR_DECLARE_counter(learn_lt_log_responses);
+    METRIC_VAR_DECLARE_counter(learn_resets);
+    METRIC_VAR_DECLARE_counter(learn_failed_count);
+    METRIC_VAR_DECLARE_counter(learn_successful_count);
 
     perf_counter_wrapper _counter_replicas_recent_prepare_fail_count;
     perf_counter_wrapper _counter_replicas_recent_replica_move_error_count;
