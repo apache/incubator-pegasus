@@ -475,17 +475,6 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
-    METRIC_VAR_DECLARE_counter(learn_count);
-    METRIC_VAR_DECLARE_counter(learn_rounds);
-    METRIC_VAR_DECLARE_counter(learn_copy_files);
-    METRIC_VAR_DECLARE_counter(learn_copy_file_bytes);
-    METRIC_VAR_DECLARE_counter(learn_copy_buffer_bytes);
-    METRIC_VAR_DECLARE_counter(learn_lt_cache_responses);
-    METRIC_VAR_DECLARE_counter(learn_lt_app_responses);
-    METRIC_VAR_DECLARE_counter(learn_lt_log_responses);
-    METRIC_VAR_DECLARE_counter(learn_resets);
-    METRIC_VAR_DECLARE_counter(learn_failed_count);
-    METRIC_VAR_DECLARE_counter(learn_successful_count);
 
     perf_counter_wrapper _counter_replicas_recent_prepare_fail_count;
     perf_counter_wrapper _counter_replicas_recent_replica_move_error_count;
