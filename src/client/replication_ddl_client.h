@@ -26,10 +26,14 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
 #include <stdint.h>
+#include <chrono>
+#include <deque>
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -50,6 +54,14 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/fail_point.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/string_view.h"
+
+DSN_DECLARE_uint32(ddl_client_max_attempt_count);
+DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
 
 namespace dsn {
 class gpid;
@@ -257,30 +269,97 @@ private:
     bool static valid_app_char(int c);
 
     void end_meta_request(const rpc_response_task_ptr &callback,
-                          int retry_times,
-                          error_code err,
+                          uint32_t attempt_count,
+                          const error_code &err,
                           dsn::message_ex *request,
                           dsn::message_ex *resp);
 
     template <typename TRequest>
-    rpc_response_task_ptr request_meta(dsn::task_code code,
+    rpc_response_task_ptr request_meta(const dsn::task_code &code,
                                        std::shared_ptr<TRequest> &req,
                                        int timeout_milliseconds = 0,
                                        int reply_thread_hash = 0)
     {
-        dsn::message_ex *msg = dsn::message_ex::create_request(code, timeout_milliseconds);
-        ::dsn::marshall(msg, *req);
+        auto msg = dsn::message_ex::create_request(code, timeout_milliseconds);
+        dsn::marshall(msg, *req);
 
-        rpc_response_task_ptr task = ::dsn::rpc::create_rpc_response_task(
-            msg, nullptr, empty_rpc_handler, reply_thread_hash);
+        auto task =
+            dsn::rpc::create_rpc_response_task(msg, nullptr, empty_rpc_handler, reply_thread_hash);
         rpc::call(_meta_server,
                   msg,
                   &_tracker,
                   [this, task](
                       error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-                      end_meta_request(std::move(task), 0, err, request, response);
+
+                      FAIL_POINT_INJECT_NOT_RETURN_F(
+                          "ddl_client_request_meta",
+                          [&err, this](dsn::string_view str) { err = pop_mock_error(); });
+
+                      end_meta_request(std::move(task), 1, err, request, response);
                   });
         return task;
+    }
+
+    static inline bool is_busy(const dsn::error_code &err)
+    {
+        return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
+    }
+
+    template <typename TRequest, typename TResponse>
+    rpc_response_task_ptr request_meta_and_wait_response(const dsn::task_code &code,
+                                                         std::shared_ptr<TRequest> &req,
+                                                         TResponse &resp,
+                                                         int timeout_milliseconds = 0,
+                                                         int reply_thread_hash = 0)
+    {
+        rpc_response_task_ptr resp_task;
+        for (uint32_t i = 1; i <= FLAGS_ddl_client_max_attempt_count; ++i) {
+            resp_task = request_meta(code, req, timeout_milliseconds, reply_thread_hash);
+            resp_task->wait();
+
+            // Failed to send request to meta server. The possible reason might be:
+            // * cannot connect to meta server (such as ERR_NETWORK_FAILURE);
+            // * do not receive any response from meta server (such as ERR_TIMEOUT)
+            if (resp_task->error() != dsn::ERR_OK) {
+                return resp_task;
+            }
+
+            // Once response is nullptr, it must be mocked by unit tests since network is
+            // not connected.
+            if (dsn_likely(resp_task->get_response() != nullptr)) {
+                // Received the response from meta server successfully, thus deserialize the
+                // response.
+                dsn::unmarshall(resp_task->get_response(), resp);
+            }
+
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "ddl_client_request_meta",
+                [&resp, this](dsn::string_view str) { resp.err = pop_mock_error(); });
+
+            LOG_INFO("received response from meta server: rpc_code={}, err={}, attempt_count={}, "
+                     "max_attempt_count={}",
+                     code,
+                     resp.err,
+                     i,
+                     FLAGS_ddl_client_max_attempt_count);
+
+            // Once `err` field in the received response is ERR_OK or some non-busy error, do not
+            // attempt again.
+            if (resp.err == dsn::ERR_OK || !is_busy(resp.err)) {
+                return resp_task;
+            }
+
+            // Would not sleep for the last attempt.
+            if (i < FLAGS_ddl_client_max_attempt_count) {
+                LOG_WARNING("sleep {} milliseconds before launch another attempt for {}: err={}",
+                            FLAGS_ddl_client_retry_interval_ms,
+                            code,
+                            resp.err);
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(FLAGS_ddl_client_retry_interval_ms));
+            }
+        }
+        return resp_task;
     }
 
     /// Send request to meta server synchronously.
@@ -344,6 +423,21 @@ private:
     dsn::rpc_address _meta_server;
     dsn::task_tracker _tracker;
     uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.
+
+    // Used only for unit tests.
+    FRIEND_TEST(DDLClientTest, RetryMetaRequest);
+    void set_mock_errors(const std::vector<dsn::error_code> &mock_errors)
+    {
+        _mock_errors.assign(mock_errors.begin(), mock_errors.end());
+    }
+    dsn::error_code pop_mock_error()
+    {
+        CHECK_FALSE(_mock_errors.empty());
+        auto err = _mock_errors.front();
+        _mock_errors.pop_front();
+        return err;
+    }
+    std::deque<dsn::error_code> _mock_errors;
 
     typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
     typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;

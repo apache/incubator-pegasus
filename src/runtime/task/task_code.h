@@ -200,4 +200,5 @@ DEFINE_TASK_CODE(TASK_CODE_INVALID, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 // define a task_code "task_code_inlined", it's mainly used in situations when you want execute
 // a task with "inline" mode.
 DEFINE_TASK_CODE(TASK_CODE_EXEC_INLINED, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
-}
+
+} // namespace dsn

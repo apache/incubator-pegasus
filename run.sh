@@ -345,6 +345,7 @@ function run_test()
       detect_hotspot_test
       dsn_aio_test
       dsn_block_service_test
+      dsn_client_test
       dsn.failure_detector.tests
       dsn_http_test
       dsn_meta_state_tests
