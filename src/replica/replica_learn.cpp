@@ -57,8 +57,6 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "nfs/nfs_node.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/prepare_list.h"
