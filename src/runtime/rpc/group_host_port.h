@@ -63,7 +63,11 @@ public:
     bool contains(host_port hp) const WARN_UNUSED_RESULT;
     int count() const;
 
-    const std::vector<host_port> &members() const { return _members; }
+    const std::vector<host_port> &members() const
+    {
+        alr_t l(_lock);
+        return _members;
+    }
     host_port random_member() const
     {
         alr_t l(_lock);
