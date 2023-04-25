@@ -126,15 +126,17 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of rejected non-idempotent write requests by duplication");
 
-METRIC_DEFINE_counter(replica,
-                      learn_count,
-                      dsn::metric_unit::kLearns,
-                      "The number of learns launched by learner (i.e. potential secondary replica)");
+METRIC_DEFINE_counter(
+    replica,
+    learn_count,
+    dsn::metric_unit::kLearns,
+    "The number of learns launched by learner (i.e. potential secondary replica)");
 
-METRIC_DEFINE_counter(replica,
-                      learn_rounds,
-                      dsn::metric_unit::kRounds,
-                      "The number of learn rounds launched by learner (during a learn there might be multiple rounds)");
+METRIC_DEFINE_counter(replica, learn_rounds, dsn::metric_unit::kRounds, "The number of learn "
+                                                                        "rounds launched by "
+                                                                        "learner (during a learn "
+                                                                        "there might be multiple "
+                                                                        "rounds)");
 
 METRIC_DEFINE_counter(replica,
                       learn_copy_files,
@@ -154,22 +156,27 @@ METRIC_DEFINE_counter(replica,
 METRIC_DEFINE_counter(replica,
                       learn_lt_cache_responses,
                       dsn::metric_unit::kResponses,
-                      "The number of learn responses of LT_CACHE type decided by learner, with each learn response related to an RPC_LEARN request");
+                      "The number of learn responses of LT_CACHE type decided by learner, with "
+                      "each learn response related to an RPC_LEARN request");
 
 METRIC_DEFINE_counter(replica,
                       learn_lt_app_responses,
                       dsn::metric_unit::kResponses,
-                      "The number of learn responses of LT_APP type decided by learner, with each learn response related to an RPC_LEARN request");
+                      "The number of learn responses of LT_APP type decided by learner, with each "
+                      "learn response related to an RPC_LEARN request");
 
 METRIC_DEFINE_counter(replica,
                       learn_lt_log_responses,
                       dsn::metric_unit::kResponses,
-                      "The number of learn responses of LT_LOG type decided by learner, with each learn response related to an RPC_LEARN request");
+                      "The number of learn responses of LT_LOG type decided by learner, with each "
+                      "learn response related to an RPC_LEARN request");
 
 METRIC_DEFINE_counter(replica,
                       learn_resets,
                       dsn::metric_unit::kResets,
-                      "The number of times learner resets its local state (since its local state is newer than learnee's), with each reset related to an learn response of an RPC_LEARN request");
+                      "The number of times learner resets its local state (since its local state "
+                      "is newer than learnee's), with each reset related to an learn response of "
+                      "an RPC_LEARN request");
 
 METRIC_DEFINE_counter(replica,
                       learn_failed_count,
@@ -246,17 +253,17 @@ replica::replica(replica_stub *stub,
       METRIC_VAR_INIT_replica(splitting_rejected_read_requests),
       METRIC_VAR_INIT_replica(bulk_load_ingestion_rejected_write_requests),
       METRIC_VAR_INIT_replica(dup_rejected_non_idempotent_write_requests),
-    METRIC_VAR_INIT_replica(learn_count),
-    METRIC_VAR_INIT_replica(learn_rounds),
-    METRIC_VAR_INIT_replica(learn_copy_files),
-    METRIC_VAR_INIT_replica(learn_copy_file_bytes),
-    METRIC_VAR_INIT_replica(learn_copy_buffer_bytes),
-    METRIC_VAR_INIT_replica(learn_lt_cache_responses),
-    METRIC_VAR_INIT_replica(learn_lt_app_responses),
-    METRIC_VAR_INIT_replica(learn_lt_log_responses),
-    METRIC_VAR_INIT_replica(learn_resets),
-    METRIC_VAR_INIT_replica(learn_failed_count),
-    METRIC_VAR_INIT_replica(learn_successful_count)
+      METRIC_VAR_INIT_replica(learn_count),
+      METRIC_VAR_INIT_replica(learn_rounds),
+      METRIC_VAR_INIT_replica(learn_copy_files),
+      METRIC_VAR_INIT_replica(learn_copy_file_bytes),
+      METRIC_VAR_INIT_replica(learn_copy_buffer_bytes),
+      METRIC_VAR_INIT_replica(learn_lt_cache_responses),
+      METRIC_VAR_INIT_replica(learn_lt_app_responses),
+      METRIC_VAR_INIT_replica(learn_lt_log_responses),
+      METRIC_VAR_INIT_replica(learn_resets),
+      METRIC_VAR_INIT_replica(learn_failed_count),
+      METRIC_VAR_INIT_replica(learn_successful_count)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");

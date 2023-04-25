@@ -120,10 +120,11 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kMilliSeconds,
                           "The max duration among all learning replicas");
 
-METRIC_DEFINE_gauge_int64(server,
-                          learning_replicas_max_copy_file_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The max size of files that are copied from learnee among all learning replicas");
+METRIC_DEFINE_gauge_int64(
+    server,
+    learning_replicas_max_copy_file_bytes,
+    dsn::metric_unit::kBytes,
+    "The max size of files that are copied from learnee among all learning replicas");
 
 namespace dsn {
 namespace replication {
