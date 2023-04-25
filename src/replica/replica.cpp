@@ -132,11 +132,14 @@ METRIC_DEFINE_counter(
     dsn::metric_unit::kLearns,
     "The number of learns launched by learner (i.e. potential secondary replica)");
 
-METRIC_DEFINE_counter(replica, learn_rounds, dsn::metric_unit::kRounds, "The number of learn "
-                                                                        "rounds launched by "
-                                                                        "learner (during a learn "
-                                                                        "there might be multiple "
-                                                                        "rounds)");
+METRIC_DEFINE_counter(replica,
+                      learn_rounds,
+                      dsn::metric_unit::kRounds,
+                      "The number of learn "
+                      "rounds launched by "
+                      "learner (during a learn "
+                      "there might be multiple "
+                      "rounds)");
 
 METRIC_DEFINE_counter(replica,
                       learn_copy_files,
