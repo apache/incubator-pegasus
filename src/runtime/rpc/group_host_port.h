@@ -68,12 +68,13 @@ public:
         alr_t l(_lock);
         return _members;
     }
+
+    uint32_t random_index_unlocked() const;
     host_port random_member() const
     {
         alr_t l(_lock);
-        return _members.empty()
-                   ? host_port::s_invalid_host_port
-                   : _members[rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1))];
+        return _members.empty() ? host_port::s_invalid_host_port
+                                : _members[random_index_unlocked()];
     }
     host_port next(host_port current) const;
     host_port leader() const
@@ -99,6 +100,8 @@ private:
 
     mutable utils::rw_lock_nr _lock;
     members_t _members;
+    // It's not always valid even if _members is not empty.
+    // Initialization is a possible value, which needs to be negotiated.
     int _leader_index;
     bool _update_leader_automatically;
     std::string _name;
@@ -184,6 +187,11 @@ inline void rpc_group_host_port::set_leader(host_port hp)
     _leader_index = static_cast<int>(_members.size() - 1);
 }
 
+inline uint32_t rpc_group_host_port::random_index_unlocked() const
+{
+    return rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1));
+}
+
 inline host_port rpc_group_host_port::possible_leader()
 {
     alw_t l(_lock);
@@ -191,7 +199,7 @@ inline host_port rpc_group_host_port::possible_leader()
         return host_port::s_invalid_host_port;
     }
     if (_leader_index == kInvalidIndex) {
-        _leader_index = rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1));
+        _leader_index = random_index_unlocked();
     }
     return _members[_leader_index];
 }
@@ -233,12 +241,12 @@ inline host_port rpc_group_host_port::next(host_port current) const
     }
 
     if (current.is_invalid()) {
-        return _members[rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1))];
+        return _members[random_index_unlocked()];
     }
 
     auto it = std::find(_members.begin(), _members.end(), current);
     if (it == _members.end()) {
-        return _members[rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1))];
+        return _members[random_index_unlocked()];
     }
 
     it++;
