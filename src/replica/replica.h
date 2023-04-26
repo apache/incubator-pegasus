@@ -668,6 +668,18 @@ private:
     METRIC_VAR_DECLARE_counter(dup_rejected_non_idempotent_write_requests);
     std::vector<perf_counter *> _counters_table_level_latency;
 
+    METRIC_VAR_DECLARE_counter(learn_count);
+    METRIC_VAR_DECLARE_counter(learn_rounds);
+    METRIC_VAR_DECLARE_counter(learn_copy_files);
+    METRIC_VAR_DECLARE_counter(learn_copy_file_bytes);
+    METRIC_VAR_DECLARE_counter(learn_copy_buffer_bytes);
+    METRIC_VAR_DECLARE_counter(learn_lt_cache_responses);
+    METRIC_VAR_DECLARE_counter(learn_lt_app_responses);
+    METRIC_VAR_DECLARE_counter(learn_lt_log_responses);
+    METRIC_VAR_DECLARE_counter(learn_resets);
+    METRIC_VAR_DECLARE_counter(learn_failed_count);
+    METRIC_VAR_DECLARE_counter(learn_successful_count);
+
     dsn::task_tracker _tracker;
     // the thread access checker
     dsn::thread_access_checker _checker;
