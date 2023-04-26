@@ -58,7 +58,7 @@ public:
             LOG_WARNING_IF(!add(hp), "duplicate adress {}", hp);
         }
     }
-    void set_leader(host_port hp);
+    void set_leader(const host_port &hp);
     bool remove(host_port hp) WARN_UNUSED_RESULT;
     bool contains(host_port hp) const WARN_UNUSED_RESULT;
     int count() const;
