@@ -78,8 +78,6 @@
 #include "utils/thread_access_checker.h"
 #include "utils/uniq_timestamp_us.h"
 
-METRIC_DECLARE_counter(prepare_failed_requests);
-
 namespace dsn {
 namespace replication {
 

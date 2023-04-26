@@ -484,10 +484,6 @@ private:
     METRIC_VAR_DECLARE_counter(replica_tmp_dirs);
     METRIC_VAR_DECLARE_counter(replica_origin_dirs);
 
-    perf_counter_wrapper _counter_shared_log_size;
-    perf_counter_wrapper _counter_shared_log_recent_write_size;
-    perf_counter_wrapper _counter_recent_trigger_emergency_checkpoint_count;
-
     // <- Duplication Metrics ->
     // TODO(wutao1): calculate the counters independently for each remote cluster
     //               if we need to duplicate to multiple clusters someday.

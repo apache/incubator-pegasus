@@ -664,6 +664,7 @@ enum class metric_unit : size_t
     kFiles,
     kDirs,
     kAmplification,
+    kCheckpoints,
     kFlushes,
     kCompactions,
     kWrites,

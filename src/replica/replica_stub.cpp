@@ -301,19 +301,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    _counter_shared_log_size.init_app_counter(
-        "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
-    _counter_shared_log_recent_write_size.init_app_counter(
-        "eon.replica_stub",
-        "shared.log.recent.write.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "shared log write size in the recent period");
-    _counter_recent_trigger_emergency_checkpoint_count.init_app_counter(
-        "eon.replica_stub",
-        "recent.trigger.emergency.checkpoint.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "trigger emergency checkpoint count in the recent period");
-
     // <- Duplication Metrics ->
 
     _counter_dup_confirmed_rate.init_app_counter("eon.replica_stub",
@@ -564,8 +551,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     _log = new mutation_log_shared(_options.slog_dir,
                                    FLAGS_log_shared_file_size_mb,
-                                   FLAGS_log_shared_force_flush,
-                                   &_counter_shared_log_recent_write_size);
+                                   FLAGS_log_shared_force_flush);
     LOG_INFO("slog_dir = {}", _options.slog_dir);
 
     // init rps
@@ -681,8 +667,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
               _options.slog_dir);
         _log = new mutation_log_shared(_options.slog_dir,
                                        FLAGS_log_shared_file_size_mb,
-                                       FLAGS_log_shared_force_flush,
-                                       &_counter_shared_log_recent_write_size);
+                                       FLAGS_log_shared_force_flush);
         CHECK_EQ_MSG(_log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); }),
                      ERR_OK,
                      "restart log service failed");
@@ -1866,8 +1851,6 @@ void replica_stub::on_gc()
                 }
             }
         }
-
-        _counter_shared_log_size->set(_log->total_size() / (1024 * 1024));
     }
 
     // statistic learning info

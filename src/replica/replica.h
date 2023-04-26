@@ -681,6 +681,8 @@ private:
 
     METRIC_VAR_DECLARE_counter(group_check_failed_requests);
 
+    METRIC_VAR_DECLARE_counter(emergency_checkpoints);
+
     dsn::task_tracker _tracker;
     // the thread access checker
     dsn::thread_access_checker _checker;

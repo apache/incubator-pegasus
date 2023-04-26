@@ -80,18 +80,6 @@
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
-METRIC_DECLARE_counter(learn_count);
-METRIC_DECLARE_counter(learn_rounds);
-METRIC_DECLARE_counter(learn_copy_files);
-METRIC_DECLARE_counter(learn_copy_file_bytes);
-METRIC_DECLARE_counter(learn_copy_buffer_bytes);
-METRIC_DECLARE_counter(learn_lt_cache_responses);
-METRIC_DECLARE_counter(learn_lt_app_responses);
-METRIC_DECLARE_counter(learn_lt_log_responses);
-METRIC_DECLARE_counter(learn_resets);
-METRIC_DECLARE_counter(learn_failed_count);
-METRIC_DECLARE_counter(learn_successful_count);
-
 namespace dsn {
 namespace replication {
 

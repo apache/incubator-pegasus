@@ -240,8 +240,9 @@ void replica::init_checkpoint(bool is_emergency)
                      0,
                      10_ms);
 
-    if (is_emergency)
-        _stub->_counter_recent_trigger_emergency_checkpoint_count->increment();
+    if (is_emergency) {
+        METRIC_VAR_INCREMENT(emergency_checkpoints);
+    }
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
