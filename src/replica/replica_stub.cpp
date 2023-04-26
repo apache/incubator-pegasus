@@ -126,47 +126,40 @@ METRIC_DEFINE_gauge_int64(
     dsn::metric_unit::kBytes,
     "The max size of files that are copied from learnee among all learning replicas");
 
-METRIC_DEFINE_counter(
-    server,
-    moved_error_replicas,
-    dsn::metric_unit::kReplicas,
-    "The number of replicas whose dirs are moved as error");
+METRIC_DEFINE_counter(server,
+                      moved_error_replicas,
+                      dsn::metric_unit::kReplicas,
+                      "The number of replicas whose dirs are moved as error");
 
-METRIC_DEFINE_counter(
-    server,
-    moved_garbage_replicas,
-    dsn::metric_unit::kReplicas,
-    "The number of replicas whose dirs are moved as garbage");
+METRIC_DEFINE_counter(server,
+                      moved_garbage_replicas,
+                      dsn::metric_unit::kReplicas,
+                      "The number of replicas whose dirs are moved as garbage");
 
-METRIC_DEFINE_counter(
-    server,
-    replica_removed_dirs,
-    dsn::metric_unit::kDirs,
-    "The number of removed replica dirs");
+METRIC_DEFINE_counter(server,
+                      replica_removed_dirs,
+                      dsn::metric_unit::kDirs,
+                      "The number of removed replica dirs");
 
-METRIC_DEFINE_counter(
-    server,
-    replica_error_dirs,
-    dsn::metric_unit::kDirs,
-    "The number of error replica dirs (*.err)");
+METRIC_DEFINE_counter(server,
+                      replica_error_dirs,
+                      dsn::metric_unit::kDirs,
+                      "The number of error replica dirs (*.err)");
 
-METRIC_DEFINE_counter(
-    server,
-    replica_garbage_dirs,
-    dsn::metric_unit::kDirs,
-    "The number of garbage replica dirs (*.gar)");
+METRIC_DEFINE_counter(server,
+                      replica_garbage_dirs,
+                      dsn::metric_unit::kDirs,
+                      "The number of garbage replica dirs (*.gar)");
 
-METRIC_DEFINE_counter(
-    server,
-    replica_tmp_dirs,
-    dsn::metric_unit::kDirs,
-    "The number of tmp replica dirs (*.tmp) for disk migration");
+METRIC_DEFINE_counter(server,
+                      replica_tmp_dirs,
+                      dsn::metric_unit::kDirs,
+                      "The number of tmp replica dirs (*.tmp) for disk migration");
 
-METRIC_DEFINE_counter(
-    server,
-    replica_origin_dirs,
-    dsn::metric_unit::kDirs,
-    "The number of origin replica dirs (*.ori) for disk migration");
+METRIC_DEFINE_counter(server,
+                      replica_origin_dirs,
+                      dsn::metric_unit::kDirs,
+                      "The number of origin replica dirs (*.ori) for disk migration");
 
 namespace dsn {
 namespace replication {
@@ -549,9 +542,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     _options.slog_dir = cdir;
     initialize_fs_manager(_options.data_dirs, _options.data_dir_tags);
 
-    _log = new mutation_log_shared(_options.slog_dir,
-                                   FLAGS_log_shared_file_size_mb,
-                                   FLAGS_log_shared_force_flush);
+    _log = new mutation_log_shared(
+        _options.slog_dir, FLAGS_log_shared_file_size_mb, FLAGS_log_shared_force_flush);
     LOG_INFO("slog_dir = {}", _options.slog_dir);
 
     // init rps
@@ -665,9 +657,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         CHECK(utils::filesystem::remove_path(_options.slog_dir),
               "remove directory {} failed",
               _options.slog_dir);
-        _log = new mutation_log_shared(_options.slog_dir,
-                                       FLAGS_log_shared_file_size_mb,
-                                       FLAGS_log_shared_force_flush);
+        _log = new mutation_log_shared(
+            _options.slog_dir, FLAGS_log_shared_file_size_mb, FLAGS_log_shared_force_flush);
         CHECK_EQ_MSG(_log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); }),
                      ERR_OK,
                      "restart log service failed");
