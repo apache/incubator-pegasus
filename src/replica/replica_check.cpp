@@ -65,6 +65,7 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/string_view.h"
 #include "utils/thread_access_checker.h"
 
@@ -253,7 +254,7 @@ void replica::on_group_check_reply(error_code err,
             err = resp->err;
         }
         handle_remote_failure(req->config.status, req->node, err, "group check");
-        _stub->_counter_replicas_recent_group_check_fail_count->increment();
+        METRIC_VAR_INCREMENT(group_check_failed_requests);
     } else {
         if (resp->learner_status_ == learner_status::LearningSucceeded &&
             req->config.status == partition_status::PS_POTENTIAL_SECONDARY) {

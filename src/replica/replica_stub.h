@@ -476,15 +476,13 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
 
-    METRIC_VAR_DECLARE_counter(move_error_replicas);
-    METRIC_VAR_DECLARE_counter(move_garbage_replicas);
-    perf_counter_wrapper _counter_replicas_recent_replica_remove_dir_count;
-    perf_counter_wrapper _counter_replicas_error_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_garbage_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_tmp_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_origin_replica_dir_count;
-
-    perf_counter_wrapper _counter_replicas_recent_group_check_fail_count;
+    METRIC_VAR_DECLARE_counter(moved_error_replicas);
+    METRIC_VAR_DECLARE_counter(moved_garbage_replicas);
+    METRIC_VAR_DECLARE_counter(replica_removed_dirs);
+    METRIC_VAR_DECLARE_counter(replica_error_dirs);
+    METRIC_VAR_DECLARE_counter(replica_garbage_dirs);
+    METRIC_VAR_DECLARE_counter(replica_tmp_dirs);
+    METRIC_VAR_DECLARE_counter(replica_origin_dirs);
 
     perf_counter_wrapper _counter_shared_log_size;
     perf_counter_wrapper _counter_shared_log_recent_write_size;
