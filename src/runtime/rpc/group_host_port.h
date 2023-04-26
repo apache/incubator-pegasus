@@ -60,7 +60,7 @@ public:
     }
     void set_leader(const host_port &hp);
     bool remove(host_port hp) WARN_UNUSED_RESULT;
-    bool contains(host_port hp) const WARN_UNUSED_RESULT;
+    bool contains(const host_port &hp) const WARN_UNUSED_RESULT;
     int count() const;
 
     const std::vector<host_port> &members() const
