@@ -124,6 +124,7 @@ jobs:
         with:
           version: v1.29
           working-directory: ./pegic
+      # lint and build collector
 
   build_java:
     name: Build Java

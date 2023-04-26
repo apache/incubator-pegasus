@@ -22,7 +22,7 @@ package util
 import (
 	"strings"
 
-	"github.com/pegasus-kv/collector/aggregate"
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 )
 
 func GetPartitionStat(perfSession *aggregate.PerfSession, counter string) map[string]float64 {

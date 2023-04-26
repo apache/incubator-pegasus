@@ -3,7 +3,7 @@ package metrics
 import (
 	"sync"
 
-	"github.com/pegasus-kv/collector/aggregate"
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

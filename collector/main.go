@@ -9,9 +9,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pegasus-kv/collector/aggregate"
-	"github.com/pegasus-kv/collector/usage"
-	"github.com/pegasus-kv/collector/webui"
+	"github.com/apache/incubator-pegasus/collector/aggregate"
+	"github.com/apache/incubator-pegasus/collector/usage"
+	"github.com/apache/incubator-pegasus/collector/webui"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"

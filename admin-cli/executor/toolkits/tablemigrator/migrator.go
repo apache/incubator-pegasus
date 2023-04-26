@@ -27,7 +27,7 @@ import (
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
 	"github.com/apache/incubator-pegasus/go-client/session"
-	"github.com/pegasus-kv/collector/aggregate"
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 )
 
 var pendingMutationThreshold = 100000.0

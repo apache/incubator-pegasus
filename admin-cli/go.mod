@@ -33,7 +33,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/pegasus-kv/collector v0.0.0-20220526124628-023287923c32
+	github.com/apache/incubator-pegasus/collector v0.0.0-20220526124628-023287923c32
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.5.1 // indirect

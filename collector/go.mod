@@ -1,4 +1,4 @@
-module github.com/pegasus-kv/collector
+module github.com/apache/incubator-pegasus/collector
 
 go 1.13
 
@@ -24,6 +24,7 @@ require (
 	github.com/yudai/gojsondiff v1.0.0 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yudai/pp v2.0.1+incompatible // indirect
+	golang.org/x/sys v0.7.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
 	k8s.io/apimachinery v0.0.0-20191123233150-4c4803ed55e3
