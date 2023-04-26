@@ -534,20 +534,9 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(opening_replicas);
     METRIC_VAR_DECLARE_gauge_int64(closing_replicas);
 
-    perf_counter_wrapper _counter_replicas_learning_count;
-    perf_counter_wrapper _counter_replicas_learning_max_duration_time_ms;
-    perf_counter_wrapper _counter_replicas_learning_max_copy_file_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_start_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_round_start_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_file_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_file_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_buffer_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_cache_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_app_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_log_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_reset_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_fail_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_succ_count;
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
 
     perf_counter_wrapper _counter_replicas_recent_prepare_fail_count;
     perf_counter_wrapper _counter_replicas_recent_replica_move_error_count;
