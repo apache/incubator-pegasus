@@ -76,7 +76,7 @@ public:
         return _members.empty() ? host_port::s_invalid_host_port
                                 : _members[random_index_unlocked()];
     }
-    host_port next(host_port current) const;
+    host_port next(const host_port &current) const;
     host_port leader() const
     {
         alr_t l(_lock);
