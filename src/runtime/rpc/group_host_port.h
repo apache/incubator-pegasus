@@ -146,7 +146,7 @@ inline rpc_group_host_port &rpc_group_host_port::operator=(const rpc_group_host_
     return *this;
 }
 
-inline bool rpc_group_host_port::add(host_port hp)
+inline bool rpc_group_host_port::add(const host_port &hp)
 {
     CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
 
@@ -168,7 +168,7 @@ inline void rpc_group_host_port::leader_forward()
     _leader_index = (_leader_index + 1) % _members.size();
 }
 
-inline void rpc_group_host_port::set_leader(host_port hp)
+inline void rpc_group_host_port::set_leader(const host_port &hp)
 {
     CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
     alw_t l(_lock);
@@ -189,6 +189,7 @@ inline void rpc_group_host_port::set_leader(host_port hp)
 
 inline uint32_t rpc_group_host_port::random_index_unlocked() const
 {
+    CHECK(!_members.empty(), "invaild group member size");
     return rand::next_u32(0, static_cast<uint32_t>(_members.size() - 1));
 }
 
@@ -204,7 +205,7 @@ inline host_port rpc_group_host_port::possible_leader()
     return _members[_leader_index];
 }
 
-inline bool rpc_group_host_port::remove(host_port hp)
+inline bool rpc_group_host_port::remove(const host_port &hp)
 {
     alw_t l(_lock);
     auto it = std::find(_members.begin(), _members.end(), hp);
@@ -221,7 +222,7 @@ inline bool rpc_group_host_port::remove(host_port hp)
     return true;
 }
 
-inline bool rpc_group_host_port::contains(host_port hp) const
+inline bool rpc_group_host_port::contains(const host_port &hp) const
 {
     alr_t l(_lock);
     return _members.end() != std::find(_members.begin(), _members.end(), hp);
@@ -233,7 +234,7 @@ inline int rpc_group_host_port::count() const
     return _members.size();
 }
 
-inline host_port rpc_group_host_port::next(host_port current) const
+inline host_port rpc_group_host_port::next(const host_port &current) const
 {
     alr_t l(_lock);
     if (_members.empty()) {

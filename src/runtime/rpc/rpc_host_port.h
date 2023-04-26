@@ -70,7 +70,7 @@ private:
     std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;
-    rpc_group_host_port *_group_host_port = nullptr;
+    ref_ptr<rpc_group_host_port> _group_host_port;
 };
 
 inline bool operator==(const host_port &hp1, const host_port &hp2)
