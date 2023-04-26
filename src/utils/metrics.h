@@ -657,6 +657,7 @@ enum class metric_unit : size_t
     kReplicas,
     kServers,
     kRequests,
+    kResponses,
     kSeeks,
     kPointLookups,
     kValues,
@@ -670,6 +671,9 @@ enum class metric_unit : size_t
     kOperations,
     kTasks,
     kDisconnections,
+    kLearns,
+    kRounds,
+    kResets,
     kInvalidUnit,
 };
 
