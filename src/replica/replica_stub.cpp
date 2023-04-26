@@ -141,25 +141,25 @@ METRIC_DEFINE_counter(server,
                       dsn::metric_unit::kDirs,
                       "The number of removed replica dirs");
 
-METRIC_DEFINE_counter(server,
-                      replica_error_dirs,
-                      dsn::metric_unit::kDirs,
-                      "The number of error replica dirs (*.err)");
+METRIC_DEFINE_gauge_int64(server,
+                          replica_error_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of error replica dirs (*.err)");
 
-METRIC_DEFINE_counter(server,
-                      replica_garbage_dirs,
-                      dsn::metric_unit::kDirs,
-                      "The number of garbage replica dirs (*.gar)");
+METRIC_DEFINE_gauge_int64(server,
+                          replica_garbage_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of garbage replica dirs (*.gar)");
 
-METRIC_DEFINE_counter(server,
-                      replica_tmp_dirs,
-                      dsn::metric_unit::kDirs,
-                      "The number of tmp replica dirs (*.tmp) for disk migration");
+METRIC_DEFINE_gauge_int64(server,
+                          replica_tmp_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of tmp replica dirs (*.tmp) for disk migration");
 
-METRIC_DEFINE_counter(server,
-                      replica_origin_dirs,
-                      dsn::metric_unit::kDirs,
-                      "The number of origin replica dirs (*.ori) for disk migration");
+METRIC_DEFINE_gauge_int64(server,
+                          replica_origin_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of origin replica dirs (*.ori) for disk migration");
 
 namespace dsn {
 namespace replication {

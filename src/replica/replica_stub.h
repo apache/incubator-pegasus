@@ -479,10 +479,10 @@ private:
     METRIC_VAR_DECLARE_counter(moved_error_replicas);
     METRIC_VAR_DECLARE_counter(moved_garbage_replicas);
     METRIC_VAR_DECLARE_counter(replica_removed_dirs);
-    METRIC_VAR_DECLARE_counter(replica_error_dirs);
-    METRIC_VAR_DECLARE_counter(replica_garbage_dirs);
-    METRIC_VAR_DECLARE_counter(replica_tmp_dirs);
-    METRIC_VAR_DECLARE_counter(replica_origin_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_error_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_garbage_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_tmp_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_origin_dirs);
 
     // <- Duplication Metrics ->
     // TODO(wutao1): calculate the counters independently for each remote cluster
