@@ -51,7 +51,7 @@ public:
     rpc_group_host_port(const rpc_group_address *g_addr);
     rpc_group_host_port(const rpc_group_host_port &other);
     rpc_group_host_port &operator=(const rpc_group_host_port &other);
-    bool add(host_port hp) WARN_UNUSED_RESULT;
+    bool add(const host_port &hp) WARN_UNUSED_RESULT;
     void add_list(const std::vector<host_port> &hps)
     {
         for (const auto &hp : hps) {
