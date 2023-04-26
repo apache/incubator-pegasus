@@ -55,7 +55,7 @@ METRIC_DEFINE_counter(
 
 METRIC_DEFINE_counter(
     server,
-    nfs_server_failed_copy_requests,
+    nfs_server_copy_failed_requests,
     dsn::metric_unit::kRequests,
     "The number of nfs copy requests (received by server) that fail to read local file in server");
 
@@ -77,7 +77,7 @@ DSN_DECLARE_int32(file_close_expire_time_ms);
 nfs_service_impl::nfs_service_impl()
     : ::dsn::serverlet<nfs_service_impl>("nfs"),
       METRIC_VAR_INIT_server(nfs_server_copy_bytes),
-      METRIC_VAR_INIT_server(nfs_server_failed_copy_requests)
+      METRIC_VAR_INIT_server(nfs_server_copy_failed_requests)
 {
     _file_close_timer = ::dsn::tasking::enqueue_timer(
         LPC_NFS_FILE_CLOSE_TIMER,
@@ -167,7 +167,7 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
 
     if (err != ERR_OK) {
         LOG_ERROR("[nfs_service] read file {} failed, err = {}", cp.file_path, err);
-        METRIC_VAR_INCREMENT(nfs_server_failed_copy_requests);
+        METRIC_VAR_INCREMENT(nfs_server_copy_failed_requests);
     } else {
         METRIC_VAR_INCREMENT_BY(nfs_server_copy_bytes, sz);
     }

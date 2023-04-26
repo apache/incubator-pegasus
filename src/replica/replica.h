@@ -677,6 +677,8 @@ private:
     METRIC_VAR_DECLARE_counter(learn_failed_count);
     METRIC_VAR_DECLARE_counter(learn_successful_count);
 
+    METRIC_VAR_DECLARE(prepare_failed_requests);
+
     dsn::task_tracker _tracker;
     // the thread access checker
     dsn::thread_access_checker _checker;

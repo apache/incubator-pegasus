@@ -476,9 +476,8 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
 
-    perf_counter_wrapper _counter_replicas_recent_prepare_fail_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_move_error_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_move_garbage_count;
+    METRIC_VAR_DECLARE_counter(move_error_replicas);
+    METRIC_VAR_DECLARE_counter(move_garbage_replicas);
     perf_counter_wrapper _counter_replicas_recent_replica_remove_dir_count;
     perf_counter_wrapper _counter_replicas_error_replica_dir_count;
     perf_counter_wrapper _counter_replicas_garbage_replica_dir_count;
