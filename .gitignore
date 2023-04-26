@@ -1,4 +1,2 @@
-collector
-pegasus.log
-pegasus-tools-*
-.idea
+collector/pegasus.log
+collector/pegasus-tools-*
