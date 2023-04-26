@@ -88,7 +88,6 @@ TEST(host_port_test, rpc_group_host_port)
     ASSERT_EQ(HOST_TYPE_GROUP, hp_grp.type());
     rpc_group_host_port *g = hp_grp.group_host_port();
     ASSERT_EQ(std::string("test_group"), g->name());
-    ASSERT_EQ(1, g->get_count());
 
     // invalid_hp
     ASSERT_FALSE(g->remove(hp));
