@@ -14,41 +14,11 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
----
-github:
-  - .github/**/*
-admin-cli:
-  - admin-cli/**/*
-collector:
-  - collector/**/*
-docker:
-  - docker/**/*
-go-client:
-  - go-client/**/*
-java-client:
-  - java-client/**/*
-nodejs-client:
-  - nodejs-client/**/*
-pegic:
-  - pegic/**/*
-python-client:
-  - python-client/**/*
-scala-client:
-  - scala-client/**/*
-thirdparty:
-  - thirdparty/**/*
-thrift:
-  - '**/*.thrift'
-docs:
-  - '**/*.md'
-scripts:
-  - 'scripts/**/*'
-  - '**/*.sh'
+
 build:
-  - 'cmake_modules/**/*'
-  - '**/CMakeLists.txt'
-  - 'run.sh'
-cpp:
-  # TODO(yingchun): add more fine-grained labels
-  - 'src/**/*.h'
-  - 'src/**/*.cpp'
+	go mod tidy
+	go mod verify
+	go build -o collector
+
+fmt:
+	go fmt ./...
