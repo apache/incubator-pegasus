@@ -65,21 +65,21 @@ public:
 
     const std::vector<host_port> &members() const
     {
-        alr_t l(_lock);
+        arl_t l(_lock);
         return _members;
     }
 
     uint32_t random_index_unlocked() const;
     host_port random_member() const
     {
-        alr_t l(_lock);
+        arl_t l(_lock);
         return _members.empty() ? host_port::s_invalid_host_port
                                 : _members[random_index_unlocked()];
     }
     host_port next(const host_port &current) const;
     host_port leader() const
     {
-        alr_t l(_lock);
+        arl_t l(_lock);
         return _leader_index >= 0 ? _members[_leader_index] : host_port::s_invalid_host_port;
     }
     void leader_forward();
@@ -95,8 +95,8 @@ public:
 
 private:
     typedef std::vector<host_port> members_t;
-    typedef utils::auto_read_lock alr_t;
-    typedef utils::auto_write_lock alw_t;
+    typedef utils::auto_read_lock arl_t;
+    typedef utils::auto_write_lock awl_t;
 
     mutable utils::rw_lock_nr _lock;
     members_t _members;
@@ -150,7 +150,7 @@ inline bool rpc_group_host_port::add(const host_port &hp)
 {
     CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
 
-    alw_t l(_lock);
+    awl_t l(_lock);
     if (_members.end() == std::find(_members.begin(), _members.end(), hp)) {
         _members.push_back(hp);
         return true;
@@ -161,7 +161,7 @@ inline bool rpc_group_host_port::add(const host_port &hp)
 
 inline void rpc_group_host_port::leader_forward()
 {
-    alw_t l(_lock);
+    awl_t l(_lock);
     if (_members.empty()) {
         return;
     }
@@ -171,7 +171,7 @@ inline void rpc_group_host_port::leader_forward()
 inline void rpc_group_host_port::set_leader(const host_port &hp)
 {
     CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
-    alw_t l(_lock);
+    awl_t l(_lock);
     if (hp.is_invalid()) {
         _leader_index = kInvalidIndex;
         return;
@@ -195,7 +195,7 @@ inline uint32_t rpc_group_host_port::random_index_unlocked() const
 
 inline host_port rpc_group_host_port::possible_leader()
 {
-    alw_t l(_lock);
+    awl_t l(_lock);
     if (_members.empty()) {
         return host_port::s_invalid_host_port;
     }
@@ -207,7 +207,7 @@ inline host_port rpc_group_host_port::possible_leader()
 
 inline bool rpc_group_host_port::remove(const host_port &hp)
 {
-    alw_t l(_lock);
+    awl_t l(_lock);
     auto it = std::find(_members.begin(), _members.end(), hp);
     if (it == _members.end()) {
         return false;
@@ -224,19 +224,19 @@ inline bool rpc_group_host_port::remove(const host_port &hp)
 
 inline bool rpc_group_host_port::contains(const host_port &hp) const
 {
-    alr_t l(_lock);
+    arl_t l(_lock);
     return _members.end() != std::find(_members.begin(), _members.end(), hp);
 }
 
 inline int rpc_group_host_port::count() const
 {
-    alr_t l(_lock);
+    arl_t l(_lock);
     return _members.size();
 }
 
 inline host_port rpc_group_host_port::next(const host_port &current) const
 {
-    alr_t l(_lock);
+    arl_t l(_lock);
     if (_members.empty()) {
         return host_port::s_invalid_host_port;
     }
