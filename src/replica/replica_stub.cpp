@@ -128,6 +128,41 @@ METRIC_DEFINE_gauge_int64(
     dsn::metric_unit::kBytes,
     "The max size of files that are copied from learnee among all learning replicas");
 
+METRIC_DEFINE_counter(server,
+                      moved_error_replicas,
+                      dsn::metric_unit::kReplicas,
+                      "The number of replicas whose dirs are moved as error");
+
+METRIC_DEFINE_counter(server,
+                      moved_garbage_replicas,
+                      dsn::metric_unit::kReplicas,
+                      "The number of replicas whose dirs are moved as garbage");
+
+METRIC_DEFINE_counter(server,
+                      replica_removed_dirs,
+                      dsn::metric_unit::kDirs,
+                      "The number of removed replica dirs");
+
+METRIC_DEFINE_gauge_int64(server,
+                          replica_error_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of error replica dirs (*.err)");
+
+METRIC_DEFINE_gauge_int64(server,
+                          replica_garbage_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of garbage replica dirs (*.gar)");
+
+METRIC_DEFINE_gauge_int64(server,
+                          replica_tmp_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of tmp replica dirs (*.tmp) for disk migration");
+
+METRIC_DEFINE_gauge_int64(server,
+                          replica_origin_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of origin replica dirs (*.ori) for disk migration");
+
 namespace dsn {
 namespace replication {
 DSN_DEFINE_bool(replication,
@@ -231,7 +266,14 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(closing_replicas),
       METRIC_VAR_INIT_server(learning_replicas),
       METRIC_VAR_INIT_server(learning_replicas_max_duration_ms),
-      METRIC_VAR_INIT_server(learning_replicas_max_copy_file_bytes)
+      METRIC_VAR_INIT_server(learning_replicas_max_copy_file_bytes),
+      METRIC_VAR_INIT_server(moved_error_replicas),
+      METRIC_VAR_INIT_server(moved_garbage_replicas),
+      METRIC_VAR_INIT_server(replica_removed_dirs),
+      METRIC_VAR_INIT_server(replica_error_dirs),
+      METRIC_VAR_INIT_server(replica_garbage_dirs),
+      METRIC_VAR_INIT_server(replica_tmp_dirs),
+      METRIC_VAR_INIT_server(replica_origin_dirs)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
@@ -249,66 +291,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    _counter_replicas_recent_prepare_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.prepare.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "prepare fail count in the recent period");
-    _counter_replicas_recent_replica_move_error_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.replica.move.error.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "replica move to error count in the recent period");
-    _counter_replicas_recent_replica_move_garbage_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.replica.move.garbage.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "replica move to garbage count in the recent period");
-    _counter_replicas_recent_replica_remove_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.replica.remove.dir.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "replica directory remove count in the recent period");
-    _counter_replicas_error_replica_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.error.replica.dir.count",
-        COUNTER_TYPE_NUMBER,
-        "error replica directory(*.err) count");
-    _counter_replicas_garbage_replica_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.garbage.replica.dir.count",
-        COUNTER_TYPE_NUMBER,
-        "garbage replica directory(*.gar) count");
-    _counter_replicas_tmp_replica_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.tmp.replica.dir.count",
-        COUNTER_TYPE_NUMBER,
-        "disk migration tmp replica directory(*.tmp) count");
-    _counter_replicas_origin_replica_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.origin.replica.dir.count",
-        COUNTER_TYPE_NUMBER,
-        "disk migration origin replica directory(.ori) count");
-
-    _counter_replicas_recent_group_check_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.group.check.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "group check fail count in the recent period");
-
-    _counter_shared_log_size.init_app_counter(
-        "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
-    _counter_shared_log_recent_write_size.init_app_counter(
-        "eon.replica_stub",
-        "shared.log.recent.write.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "shared log write size in the recent period");
-    _counter_recent_trigger_emergency_checkpoint_count.init_app_counter(
-        "eon.replica_stub",
-        "recent.trigger.emergency.checkpoint.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "trigger emergency checkpoint count in the recent period");
-
     // <- Duplication Metrics ->
 
     _counter_dup_confirmed_rate.init_app_counter("eon.replica_stub",
@@ -560,10 +542,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     _options.slog_dir = cdir;
 
     // Initialize slog.
-    _log = new mutation_log_shared(_options.slog_dir,
-                                   FLAGS_log_shared_file_size_mb,
-                                   FLAGS_log_shared_force_flush,
-                                   &_counter_shared_log_recent_write_size);
+    _log = new mutation_log_shared(
+        _options.slog_dir, FLAGS_log_shared_file_size_mb, FLAGS_log_shared_force_flush);
     LOG_INFO("slog_dir = {}", _options.slog_dir);
 
     // Start to load replicas in available data directories.
@@ -670,7 +650,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         for (auto it = rps.begin(); it != rps.end(); ++it) {
             it->second->close();
             move_to_err_path(it->second->dir(), "initialize replica");
-            _counter_replicas_recent_replica_move_error_count->increment();
+            METRIC_VAR_INCREMENT(moved_error_replicas);
         }
         rps.clear();
 
@@ -680,10 +660,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         CHECK(utils::filesystem::remove_path(_options.slog_dir),
               "remove directory {} failed",
               _options.slog_dir);
-        _log = new mutation_log_shared(_options.slog_dir,
-                                       FLAGS_log_shared_file_size_mb,
-                                       FLAGS_log_shared_force_flush,
-                                       &_counter_shared_log_recent_write_size);
+        _log = new mutation_log_shared(
+            _options.slog_dir, FLAGS_log_shared_file_size_mb, FLAGS_log_shared_force_flush);
         CHECK_EQ_MSG(_log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); }),
                      ERR_OK,
                      "restart log service failed");
@@ -1724,7 +1702,7 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
         LOG_WARNING("gc_replica: replica_dir_op succeed to move directory '{}' to '{}'",
                     replica_path,
                     rename_path);
-        _counter_replicas_recent_replica_move_garbage_count->increment();
+        METRIC_VAR_INCREMENT(moved_garbage_replicas);
     }
 }
 
@@ -1857,8 +1835,6 @@ void replica_stub::on_gc()
                 }
             }
         }
-
-        _counter_shared_log_size->set(_log->total_size() / (1024 * 1024));
     }
 
     // statistic learning info
@@ -1940,11 +1916,11 @@ void replica_stub::on_disk_stat()
     _fs_manager.update_disk_stat();
     update_disk_holding_replicas();
 
-    _counter_replicas_error_replica_dir_count->set(report.error_replica_count);
-    _counter_replicas_garbage_replica_dir_count->set(report.garbage_replica_count);
-    _counter_replicas_tmp_replica_dir_count->set(report.disk_migrate_tmp_count);
-    _counter_replicas_origin_replica_dir_count->set(report.disk_migrate_origin_count);
-    _counter_replicas_recent_replica_remove_dir_count->add(report.remove_dir_count);
+    METRIC_VAR_SET(replica_error_dirs, report.error_replica_count);
+    METRIC_VAR_SET(replica_garbage_dirs, report.garbage_replica_count);
+    METRIC_VAR_SET(replica_tmp_dirs, report.disk_migrate_tmp_count);
+    METRIC_VAR_SET(replica_origin_dirs, report.disk_migrate_origin_count);
+    METRIC_VAR_INCREMENT_BY(replica_removed_dirs, report.remove_dir_count);
 
     LOG_INFO("finish to update disk stat, time_used_ns = {}", dsn_now_ns() - start);
 }
@@ -2258,7 +2234,7 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
         // clear work on failure
         if (dsn::utils::filesystem::directory_exists(dir)) {
             move_to_err_path(dir, "load replica");
-            _counter_replicas_recent_replica_move_error_count->increment();
+            METRIC_VAR_INCREMENT(moved_error_replicas);
             _fs_manager.remove_replica(pid);
         }
 
@@ -2346,7 +2322,7 @@ void replica_stub::close_replica(replica_ptr r)
     if (r->is_data_corrupted()) {
         _fs_manager.remove_replica(id);
         move_to_err_path(r->dir(), "trash replica");
-        _counter_replicas_recent_replica_move_error_count->increment();
+        METRIC_VAR_INCREMENT(moved_error_replicas);
     }
 
     LOG_INFO("{}: finish to close replica", name);
