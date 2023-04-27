@@ -184,6 +184,21 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kLearns,
                       "The number of successful learns launched by learner");
 
+METRIC_DEFINE_counter(replica,
+                      prepare_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed RPC_PREPARE requests");
+
+METRIC_DEFINE_counter(replica,
+                      group_check_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed RPC_GROUP_CHECK requests launched by primary replicas");
+
+METRIC_DEFINE_counter(replica,
+                      emergency_checkpoints,
+                      dsn::metric_unit::kCheckpoints,
+                      "The number of triggered emergency checkpoints");
+
 namespace dsn {
 namespace replication {
 
@@ -259,7 +274,10 @@ replica::replica(replica_stub *stub,
       METRIC_VAR_INIT_replica(learn_lt_log_responses),
       METRIC_VAR_INIT_replica(learn_resets),
       METRIC_VAR_INIT_replica(learn_failed_count),
-      METRIC_VAR_INIT_replica(learn_successful_count)
+      METRIC_VAR_INIT_replica(learn_successful_count),
+      METRIC_VAR_INIT_replica(prepare_failed_requests),
+      METRIC_VAR_INIT_replica(group_check_failed_requests),
+      METRIC_VAR_INIT_replica(emergency_checkpoints)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");

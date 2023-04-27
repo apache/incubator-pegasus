@@ -89,8 +89,8 @@ private:
 
     size_t _total_shipped_size{0};
 
-    METRIC_VAR_DECLARE_counter(successful_mutation_dup_requests);
-    METRIC_VAR_DECLARE_counter(failed_mutation_dup_requests);
+    METRIC_VAR_DECLARE_counter(mutation_dup_successful_requests);
+    METRIC_VAR_DECLARE_counter(mutation_dup_failed_requests);
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and
