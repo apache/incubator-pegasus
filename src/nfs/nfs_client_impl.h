@@ -312,7 +312,7 @@ private:
     std::deque<copy_request_ex_ptr> _local_writes;
 
     METRIC_VAR_DECLARE_counter(nfs_client_copy_bytes);
-    METRIC_VAR_DECLARE_counter(nfs_client_failed_copy_requests);
+    METRIC_VAR_DECLARE_counter(nfs_client_copy_failed_requests);
     METRIC_VAR_DECLARE_counter(nfs_client_write_bytes);
     METRIC_VAR_DECLARE_counter(nfs_client_failed_writes);
 

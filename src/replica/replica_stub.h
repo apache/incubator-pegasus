@@ -513,20 +513,13 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
 
-    perf_counter_wrapper _counter_replicas_recent_prepare_fail_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_move_error_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_move_garbage_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_remove_dir_count;
-    perf_counter_wrapper _counter_replicas_error_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_garbage_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_tmp_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_origin_replica_dir_count;
-
-    perf_counter_wrapper _counter_replicas_recent_group_check_fail_count;
-
-    perf_counter_wrapper _counter_shared_log_size;
-    perf_counter_wrapper _counter_shared_log_recent_write_size;
-    perf_counter_wrapper _counter_recent_trigger_emergency_checkpoint_count;
+    METRIC_VAR_DECLARE_counter(moved_error_replicas);
+    METRIC_VAR_DECLARE_counter(moved_garbage_replicas);
+    METRIC_VAR_DECLARE_counter(replica_removed_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_error_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_garbage_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_tmp_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_origin_dirs);
 
     // <- Duplication Metrics ->
     // TODO(wutao1): calculate the counters independently for each remote cluster
