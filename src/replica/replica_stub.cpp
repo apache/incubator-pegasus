@@ -164,6 +164,26 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kDirs,
                           "The number of origin replica dirs (*.ori) for disk migration");
 
+METRIC_DEFINE_counter(server,
+                      read_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed read requests");
+
+METRIC_DEFINE_counter(server,
+                      write_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed write requests");
+
+METRIC_DEFINE_counter(server,
+                      read_busy_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of busy read requests");
+
+METRIC_DEFINE_counter(server,
+                      write_busy_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of busy write requests");
+
 namespace dsn {
 namespace replication {
 
@@ -279,7 +299,11 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(replica_error_dirs),
       METRIC_VAR_INIT_server(replica_garbage_dirs),
       METRIC_VAR_INIT_server(replica_tmp_dirs),
-      METRIC_VAR_INIT_server(replica_origin_dirs)
+      METRIC_VAR_INIT_server(replica_origin_dirs),
+      METRIC_VAR_INIT_server(read_failed_requests),
+      METRIC_VAR_INIT_server(write_failed_requests),
+      METRIC_VAR_INIT_server(read_busy_requests),
+      METRIC_VAR_INIT_server(write_busy_requests)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
@@ -353,23 +377,6 @@ void replica_stub::install_perf_counters()
         "cold.backup.max.upload.file.size",
         COUNTER_TYPE_NUMBER,
         "current cold backup max upload file size");
-
-    _counter_recent_read_fail_count.init_app_counter("eon.replica_stub",
-                                                     "recent.read.fail.count",
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "read fail count in the recent period");
-    _counter_recent_write_fail_count.init_app_counter("eon.replica_stub",
-                                                      "recent.write.fail.count",
-                                                      COUNTER_TYPE_VOLATILE_NUMBER,
-                                                      "write fail count in the recent period");
-    _counter_recent_read_busy_count.init_app_counter("eon.replica_stub",
-                                                     "recent.read.busy.count",
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "read busy count in the recent period");
-    _counter_recent_write_busy_count.init_app_counter("eon.replica_stub",
-                                                      "recent.write.busy.count",
-                                                      COUNTER_TYPE_VOLATILE_NUMBER,
-                                                      "write busy count in the recent period");
 
     _counter_recent_write_size_exceed_threshold_count.init_app_counter(
         "eon.replica_stub",
@@ -1650,15 +1657,17 @@ void replica_stub::response_client(gpid id,
                                    error_code error)
 {
     if (error == ERR_BUSY) {
-        if (is_read)
-            _counter_recent_read_busy_count->increment();
-        else
-            _counter_recent_write_busy_count->increment();
+        if (is_read) {
+            METRIC_VAR_INCREMENT(read_busy_requests);
+        } else {
+            METRIC_VAR_INCREMENT(write_busy_requests);
+        }
     } else if (error != ERR_OK) {
-        if (is_read)
-            _counter_recent_read_fail_count->increment();
-        else
-            _counter_recent_write_fail_count->increment();
+        if (is_read) {
+            METRIC_VAR_INCREMENT(read_failed_requests);
+        } else {
+            METRIC_VAR_INCREMENT(write_failed_requests);
+        }
         LOG_ERROR("{}@{}: {} fail: client = {}, code = {}, timeout = {}, status = {}, error = {}",
                   id,
                   _primary_address_str,

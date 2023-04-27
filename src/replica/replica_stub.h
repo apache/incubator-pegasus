@@ -533,10 +533,10 @@ private:
     perf_counter_wrapper _counter_cold_backup_max_duration_time_ms;
     perf_counter_wrapper _counter_cold_backup_max_upload_file_size;
 
-    perf_counter_wrapper _counter_recent_read_fail_count;
-    perf_counter_wrapper _counter_recent_write_fail_count;
-    perf_counter_wrapper _counter_recent_read_busy_count;
-    perf_counter_wrapper _counter_recent_write_busy_count;
+    METRIC_VAR_DECLARE_counter(read_failed_requests);
+    METRIC_VAR_DECLARE_counter(write_failed_requests);
+    METRIC_VAR_DECLARE_counter(read_busy_requests);
+    METRIC_VAR_DECLARE_counter(write_busy_requests);
 
     perf_counter_wrapper _counter_recent_write_size_exceed_threshold_count;
 
