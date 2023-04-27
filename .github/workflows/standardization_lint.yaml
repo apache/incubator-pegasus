@@ -62,15 +62,16 @@ jobs:
           bodyRegex: '#(\d+)'
           bodyURLRegex: 'http(s?):\/\/(github.com)(\/apache)(\/incubator-pegasus)(\/issues)\/\d+'
 
-  dockerfile_linter:
-    name: Lint Dockerfile
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: hadolint/hadolint-action@v3.1.0
-        with:
-          recursive: true
-          ignore: 'DL3033,DL3013,DL3059,SC2086,DL3003,SC2164,DL3008,DL3007,DL3006,DL4001'
+# TODO(yingchun): hadolint/hadolint-action@v3.1.0 is not allowed to be used in apache/incubator-pegasus.
+#  dockerfile_linter:
+#    name: Lint Dockerfile
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - uses: hadolint/hadolint-action@v3.1.0
+#        with:
+#          recursive: true
+#          ignore: 'DL3033,DL3013,DL3059,SC2086,DL3003,SC2164,DL3008,DL3007,DL3006,DL4001'
 
   license_check:
     name: Check License
