@@ -48,7 +48,7 @@ METRIC_DEFINE_counter(server,
                       "The accumulated data size in bytes requested by client during nfs copy");
 
 METRIC_DEFINE_counter(server,
-                      nfs_client_failed_copy_requests,
+                      nfs_client_copy_failed_requests,
                       dsn::metric_unit::kRequests,
                       "The number of failed nfs copy requests (requested by client)");
 
@@ -121,7 +121,7 @@ nfs_client_impl::nfs_client_impl()
       _copy_requests_low(FLAGS_max_file_copy_request_count_per_file),
       _high_priority_remaining_time(FLAGS_high_priority_speed_rate),
       METRIC_VAR_INIT_server(nfs_client_copy_bytes),
-      METRIC_VAR_INIT_server(nfs_client_failed_copy_requests),
+      METRIC_VAR_INIT_server(nfs_client_copy_failed_requests),
       METRIC_VAR_INIT_server(nfs_client_write_bytes),
       METRIC_VAR_INIT_server(nfs_client_failed_writes)
 {
@@ -345,7 +345,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
     }
 
     if (err != ::dsn::ERR_OK) {
-        METRIC_VAR_INCREMENT(nfs_client_failed_copy_requests);
+        METRIC_VAR_INCREMENT(nfs_client_copy_failed_requests);
 
         if (!fc->user_req->is_finished) {
             if (reqc->retry_count > 0) {
