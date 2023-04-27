@@ -14,41 +14,32 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
----
-github:
-  - .github/**/*
-admin-cli:
-  - admin-cli/**/*
-collector:
-  - collector/**/*
-docker:
-  - docker/**/*
-go-client:
-  - go-client/**/*
-java-client:
-  - java-client/**/*
-nodejs-client:
-  - nodejs-client/**/*
-pegic:
-  - pegic/**/*
-python-client:
-  - python-client/**/*
-scala-client:
-  - scala-client/**/*
-thirdparty:
-  - thirdparty/**/*
-thrift:
-  - '**/*.thrift'
-docs:
-  - '**/*.md'
-scripts:
-  - 'scripts/**/*'
-  - '**/*.sh'
-build:
-  - 'cmake_modules/**/*'
-  - '**/CMakeLists.txt'
-  - 'run.sh'
-cpp:
-  # TODO(yingchun): add more fine-grained labels
-  - 'src/**/*.h'
-  - 'src/**/*.cpp'
+
+# the cluster that this collector is binding
+cluster_name : "onebox"
+
+# the meta server addresses of the cluster.
+meta_servers: 
+  - 127.0.0.1:34601
+  - 127.0.0.1:34602
+
+# local server port
+port : 34101
+
+metrics:
+  # use falcon as monitoring system.
+  sink : falcon 
+  report_interval : 10s
+
+prometheus:
+  # the exposed port for prometheus exposer
+  exposer_port : 1111 
+
+falcon_agent:
+  # the host IP of falcon agent
+  host : "127.0.0.1"
+  port : 1988
+  http_path : "/v1/push"
+
+available_detect:
+  table_name : test
