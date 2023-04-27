@@ -667,6 +667,7 @@ enum class metric_unit : size_t
     kCheckpoints,
     kFlushes,
     kCompactions,
+    kMutations,
     kWrites,
     kChanges,
     kOperations,

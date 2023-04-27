@@ -521,12 +521,6 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(replica_tmp_dirs);
     METRIC_VAR_DECLARE_gauge_int64(replica_origin_dirs);
 
-    // <- Duplication Metrics ->
-    // TODO(wutao1): calculate the counters independently for each remote cluster
-    //               if we need to duplicate to multiple clusters someday.
-    perf_counter_wrapper _counter_dup_confirmed_rate;
-    perf_counter_wrapper _counter_dup_pending_mutations_count;
-
     perf_counter_wrapper _counter_cold_backup_running_count;
     perf_counter_wrapper _counter_cold_backup_recent_start_count;
     perf_counter_wrapper _counter_cold_backup_recent_succ_count;

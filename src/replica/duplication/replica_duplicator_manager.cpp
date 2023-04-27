@@ -26,8 +26,16 @@
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 
+METRIC_DEFINE_gauge_int64(replica,
+                      dup_pending_mutations,
+                      dsn::metric_unit::kMutations,
+                      "The number of pending mutations for dup");
+
 namespace dsn {
 namespace replication {
+
+replica_duplicator_manager::replica_duplicator_manager(replica *r) : replica_base(r), _replica(r),
+   METRIC_VAR_INIT_replica(dup_pending_mutations) {}
 
 std::vector<duplication_confirm_entry>
 replica_duplicator_manager::get_duplication_confirms_to_update() const
@@ -149,13 +157,13 @@ void replica_duplicator_manager::update_confirmed_decree_if_secondary(decree con
     }
 }
 
-int64_t replica_duplicator_manager::get_pending_mutations_count() const
+void replica_duplicator_manager::METRIC_FUNC_NAME_SET(dup_pending_mutations)()
 {
     int64_t total = 0;
     for (const auto &dup : _duplications) {
         total += dup.second->get_pending_mutations_count();
     }
-    return total;
+    METRIC_VAR_SET(dup_pending_mutations, total);
 }
 
 std::vector<replica_duplicator_manager::dup_state>

@@ -297,18 +297,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    // <- Duplication Metrics ->
-
-    _counter_dup_confirmed_rate.init_app_counter("eon.replica_stub",
-                                                 "dup.confirmed_rate",
-                                                 COUNTER_TYPE_RATE,
-                                                 "increasing rate of confirmed mutations");
-    _counter_dup_pending_mutations_count.init_app_counter(
-        "eon.replica_stub",
-        "dup.pending_mutations_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "number of mutations pending for duplication");
-
     // <- Cold Backup Metrics ->
 
     _counter_cold_backup_running_count.init_app_counter("eon.replica_stub",
