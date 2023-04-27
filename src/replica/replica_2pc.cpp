@@ -765,7 +765,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
             }
         }
 
-        _stub->_counter_replicas_recent_prepare_fail_count->increment();
+        METRIC_VAR_INCREMENT(prepare_failed_requests);
 
         // make sure this is before any later commit ops
         // because now commit ops may lead to new prepare ops
