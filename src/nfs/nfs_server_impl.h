@@ -132,7 +132,7 @@ private:
         _send_token_buckets; // rate limiter of send to remote
 
     METRIC_VAR_DECLARE_counter(nfs_server_copy_bytes);
-    METRIC_VAR_DECLARE_counter(nfs_server_failed_copy_requests);
+    METRIC_VAR_DECLARE_counter(nfs_server_copy_failed_requests);
 
     std::unique_ptr<command_deregister> _nfs_max_send_rate_megabytes_cmd;
 
