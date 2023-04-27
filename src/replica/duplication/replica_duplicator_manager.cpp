@@ -27,15 +27,17 @@
 #include "utils/fmt_logging.h"
 
 METRIC_DEFINE_gauge_int64(replica,
-                      dup_pending_mutations,
-                      dsn::metric_unit::kMutations,
-                      "The number of pending mutations for dup");
+                          dup_pending_mutations,
+                          dsn::metric_unit::kMutations,
+                          "The number of pending mutations for dup");
 
 namespace dsn {
 namespace replication {
 
-replica_duplicator_manager::replica_duplicator_manager(replica *r) : replica_base(r), _replica(r),
-   METRIC_VAR_INIT_replica(dup_pending_mutations) {}
+replica_duplicator_manager::replica_duplicator_manager(replica *r)
+    : replica_base(r), _replica(r), METRIC_VAR_INIT_replica(dup_pending_mutations)
+{
+}
 
 std::vector<duplication_confirm_entry>
 replica_duplicator_manager::get_duplication_confirms_to_update() const

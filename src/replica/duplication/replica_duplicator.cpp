@@ -228,7 +228,8 @@ error_s replica_duplicator::update_progress(const duplication_progress &p)
     }
     if (_progress.confirmed_decree > last_confirmed_decree) {
         // has confirmed_decree updated.
-        METRIC_VAR_INCREMENT_BY(dup_confirmed_mutations, _progress.confirmed_decree - last_confirmed_decree);
+        METRIC_VAR_INCREMENT_BY(dup_confirmed_mutations,
+                                _progress.confirmed_decree - last_confirmed_decree);
     }
 
     return error_s::ok();
