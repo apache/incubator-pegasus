@@ -50,8 +50,6 @@
 #include "duplication/replica_duplicator_manager.h"
 #include "metadata_types.h"
 #include "mutation_log.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
@@ -240,8 +238,9 @@ void replica::init_checkpoint(bool is_emergency)
                      0,
                      10_ms);
 
-    if (is_emergency)
-        _stub->_counter_recent_trigger_emergency_checkpoint_count->increment();
+    if (is_emergency) {
+        METRIC_VAR_INCREMENT(emergency_checkpoints);
+    }
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

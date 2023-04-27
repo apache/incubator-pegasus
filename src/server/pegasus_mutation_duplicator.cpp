@@ -48,12 +48,12 @@
 #include "utils/rand.h"
 
 METRIC_DEFINE_counter(replica,
-                      successful_mutation_dup_requests,
+                      mutation_dup_successful_requests,
                       dsn::metric_unit::kRequests,
                       "The number of successful DUPLICATE requests sent from mutation duplicator");
 
 METRIC_DEFINE_counter(replica,
-                      failed_mutation_dup_requests,
+                      mutation_dup_failed_requests,
                       dsn::metric_unit::kRequests,
                       "The number of failed DUPLICATE requests sent from mutation duplicator");
 
@@ -107,8 +107,8 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
                                                          dsn::string_view app)
     : mutation_duplicator(r),
       _remote_cluster(remote_cluster),
-      METRIC_VAR_INIT_replica(successful_mutation_dup_requests),
-      METRIC_VAR_INIT_replica(failed_mutation_dup_requests)
+      METRIC_VAR_INIT_replica(mutation_dup_successful_requests),
+      METRIC_VAR_INIT_replica(mutation_dup_failed_requests)
 {
     // initialize pegasus-client when this class is first time used.
     static __attribute__((unused)) bool _dummy = pegasus_client_factory::initialize(nullptr);
@@ -162,7 +162,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
     }
 
     if (perr != PERR_OK || err != dsn::ERR_OK) {
-        METRIC_VAR_INCREMENT(failed_mutation_dup_requests);
+        METRIC_VAR_INCREMENT(mutation_dup_failed_requests);
 
         // randomly log the 1% of the failed duplicate rpc, because minor number of
         // errors are acceptable.
@@ -175,7 +175,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
         // duplicating an illegal write to server is unacceptable, fail fast.
         CHECK_NE_PREFIX_MSG(perr, PERR_INVALID_ARGUMENT, rpc.response().error_hint);
     } else {
-        METRIC_VAR_INCREMENT(successful_mutation_dup_requests);
+        METRIC_VAR_INCREMENT(mutation_dup_successful_requests);
         _total_shipped_size +=
             rpc.dsn_request()->header->body_length + rpc.dsn_request()->header->hdr_length;
     }
