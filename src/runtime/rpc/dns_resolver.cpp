@@ -34,7 +34,7 @@ void dns_resolver::add_item(const host_port &hp, const rpc_address &addr)
     _dsn_cache.insert(std::make_pair(hp, addr));
 }
 
-bool dns_resolver::get_cached_addresses(const host_port &hp, std::vector<rpc_address> addresses)
+bool dns_resolver::get_cached_addresses(const host_port &hp, std::vector<rpc_address> &addresses)
 {
     utils::auto_read_lock l(_lock);
     const auto &found = _dsn_cache.find(hp);
@@ -46,7 +46,7 @@ bool dns_resolver::get_cached_addresses(const host_port &hp, std::vector<rpc_add
     return true;
 }
 
-error_s dns_resolver::resolve_addresses(const host_port &hp, std::vector<rpc_address> addresses)
+error_s dns_resolver::resolve_addresses(const host_port &hp, std::vector<rpc_address> &addresses)
 {
     CHECK(addresses.empty(), "invalid addresses, not empty");
     if (get_cached_addresses(hp, addresses)) {

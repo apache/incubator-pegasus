@@ -18,16 +18,46 @@
  */
 
 #include <netinet/in.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <unordered_set>
 #include <utility>
 
 #include "fmt/core.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/utils.h"
+
 
 namespace dsn {
 
 const host_port host_port::s_invalid_host_port;
+
+namespace {
+
+using AddrInfo = std::unique_ptr<addrinfo, std::function<void(addrinfo *)>>;
+
+error_s GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo *info)
+{
+    addrinfo *res = nullptr;
+    const int rc = getaddrinfo(hostname.c_str(), nullptr, &hints, &res);
+    const int err = errno; // preserving the errno from the getaddrinfo() call
+    AddrInfo result(res, ::freeaddrinfo);
+    if (rc != 0) {
+        if (rc == EAI_SYSTEM) {
+            return error_s::make(ERR_NETWORK_FAILURE, utils::safe_strerror(err));
+        }
+        return error_s::make(ERR_NETWORK_FAILURE, gai_strerror(rc));
+    }
+
+    if (info != nullptr) {
+        info->swap(result);
+    }
+
+    return error_s::ok();
+}
+}
 
 host_port::host_port(std::string host, uint16_t port)
     : _host(std::move(host)), _port(port), _type(HOST_TYPE_IPV4)
