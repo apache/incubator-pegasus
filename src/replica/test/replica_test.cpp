@@ -91,11 +91,6 @@ public:
         FLAGS_cold_backup_root = "test_cluster";
     }
 
-    int get_write_size_exceed_threshold_count()
-    {
-        return stub->_counter_recent_write_size_exceed_threshold_count->get_value();
-    }
-
     int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
 
     bool get_validate_partition_hash() const { return _mock_replica->_validate_partition_hash; }
@@ -274,7 +269,7 @@ TEST_F(replica_test, write_size_limited)
         stub->on_client_write(pid, write_request);
     }
 
-    ASSERT_EQ(get_write_size_exceed_threshold_count(), count);
+    ASSERT_EQ(count, METRIC_VALUE(*_mock_replica, write_size_exceed_threshold_requests));
 }
 
 TEST_F(replica_test, backup_request_count)

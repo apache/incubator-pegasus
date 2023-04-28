@@ -32,15 +32,13 @@
 #include "dsn.layer2_types.h"
 #include "duplication_pipeline.h"
 #include "load_from_private_log.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
-#include "replica/replica_stub.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 
 METRIC_DEFINE_counter(replica,
                       dup_confirmed_mutations,

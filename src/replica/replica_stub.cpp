@@ -164,6 +164,13 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kDirs,
                           "The number of origin replica dirs (*.ori) for disk migration");
 
+#ifdef DSN_ENABLE_GPERF
+METRIC_DEFINE_gauge_int64(server,
+                          tcmalloc_released_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory bytes that are released by tcmalloc recently");
+#endif
+
 METRIC_DEFINE_counter(server,
                       read_failed_requests,
                       dsn::metric_unit::kRequests,
@@ -300,6 +307,9 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(replica_garbage_dirs),
       METRIC_VAR_INIT_server(replica_tmp_dirs),
       METRIC_VAR_INIT_server(replica_origin_dirs),
+#ifdef DSN_ENABLE_GPERF
+      METRIC_VAR_INIT_server(tcmalloc_released_bytes),
+#endif
       METRIC_VAR_INIT_server(read_failed_requests),
       METRIC_VAR_INIT_server(write_failed_requests),
       METRIC_VAR_INIT_server(read_busy_requests),
@@ -378,12 +388,6 @@ void replica_stub::install_perf_counters()
         COUNTER_TYPE_NUMBER,
         "current cold backup max upload file size");
 
-    _counter_recent_write_size_exceed_threshold_count.init_app_counter(
-        "eon.replica_stub",
-        "recent_write_size_exceed_threshold_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "write size exceed threshold count in the recent period");
-
     // <- Bulk Load Metrics ->
 
     _counter_bulk_load_running_count.init_app_counter("eon.replica_stub",
@@ -429,13 +433,6 @@ void replica_stub::install_perf_counters()
                                                              "bulk.load.max.duration.time.ms",
                                                              COUNTER_TYPE_NUMBER,
                                                              "bulk load max duration time(ms)");
-
-#ifdef DSN_ENABLE_GPERF
-    _counter_tcmalloc_release_memory_size.init_app_counter("eon.replica_stub",
-                                                           "tcmalloc.release.memory.size",
-                                                           COUNTER_TYPE_NUMBER,
-                                                           "current tcmalloc release memory size");
-#endif
 
     // <- Partition split Metrics ->
 
@@ -2867,7 +2864,7 @@ uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
     auto tcmalloc_released_bytes = 0;
     if (!_release_tcmalloc_memory) {
         _is_releasing_memory.store(false);
-        _counter_tcmalloc_release_memory_size->set(tcmalloc_released_bytes);
+        METRIC_VAR_SET(tcmalloc_released_bytes, tcmalloc_released_bytes);
         return tcmalloc_released_bytes;
     }
 
@@ -2898,7 +2895,7 @@ uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
             release_bytes -= 1024 * 1024;
         }
     }
-    _counter_tcmalloc_release_memory_size->set(tcmalloc_released_bytes);
+    METRIC_VAR_SET(tcmalloc_released_bytes, tcmalloc_released_bytes);
     _is_releasing_memory.store(false);
     return tcmalloc_released_bytes;
 }

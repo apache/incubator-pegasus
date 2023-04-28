@@ -148,7 +148,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
             request_info,
             request->body_size(),
             FLAGS_max_allowed_write_size);
-        _stub->_counter_recent_write_size_exceed_threshold_count->increment();
+        METRIC_VAR_INCREMENT(write_size_exceed_threshold_requests);
         response_client_write(request, ERR_INVALID_DATA);
         return;
     }

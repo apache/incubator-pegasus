@@ -23,8 +23,10 @@
 #include "common/gpid.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica_duplicator_manager.h"
+#include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 
 METRIC_DEFINE_gauge_int64(replica,
                           dup_pending_mutations,
