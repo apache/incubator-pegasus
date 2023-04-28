@@ -113,4 +113,43 @@ void host_port::assign_group(const char *name)
     _group_host_port->add_ref();
 }
 
+error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
+{
+    CHECK(addresses.empty(), "invalid addresses, not empty");
+    if (type() != HOST_TYPE_IPV4) {
+        return std::move(error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type"));
+    }
+
+    rpc_address rpc_addr;
+    if (rpc_addr.from_string_ipv4(this->to_string().c_str())) {
+        addresses.emplace_back(rpc_addr);
+        return error_s::ok();
+    }
+
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    AddrInfo result;
+    RETURN_NOT_OK(GetAddrInfo(_host, hints, &result));
+
+    // DNS may return the same host multiple times. We want to return only the unique
+    // addresses, but in the same order as DNS returned them. To do so, we keep track
+    // of the already-inserted elements in a set.
+    std::unordered_set<rpc_address> inserted;
+    std::vector<rpc_address> result_addresses;
+    for (const addrinfo *ai = result.get(); ai != nullptr; ai = ai->ai_next) {
+        CHECK_EQ(AF_INET, ai->ai_family);
+        sockaddr_in *addr = reinterpret_cast<sockaddr_in *>(ai->ai_addr);
+        addr->sin_port = htons(_port);
+        rpc_address rpc_addr(*addr);
+        LOG_INFO("resolved address {} for host_port {}", rpc_addr, to_string());
+        if (inserted.insert(rpc_addr).second) {
+            result_addresses.emplace_back(rpc_addr);
+        }
+    }
+    addresses = std::move(result_addresses);
+    return error_s::ok();
+}
+
 } // namespace dsn

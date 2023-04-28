@@ -68,6 +68,8 @@ public:
     }
     void assign_group(const char *name);
 
+    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
+
 private:
     std::string _host;
     uint16_t _port = 0;
