@@ -21,6 +21,7 @@
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <string>
+#include <string.h>
 #include <vector>
 
 #include "runtime/rpc/dns_resolver.h"
@@ -168,12 +169,12 @@ TEST(host_port_test, transfer_rpc_address)
 
 TEST(host_port_test, dns_resolver)
 {
-    std::unique_ptr<dns_resolver> resolver = new dns_resolver();
+    dns_resolver resolver;
     {
         host_port hp("localhost", 8080);
         auto addr = resolver.resolve_address(hp);
-        ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == hp ||
-                    rpc_address("127.0.1.1", 8080) == hp);
+        ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == addr ||
+                    rpc_address("127.0.1.1", 8080) == addr);
     }
 
     {
@@ -188,11 +189,10 @@ TEST(host_port_test, dns_resolver)
 
         auto addr_grp  = resolver.resolve_address(hp_grp);
 
-        ASSERT_EQ(addr_grp.name(), hp_grp.name());
-        ASSERT_EQ(addr_grp.is_update_leader_automatically(), hp_grp.is_update_leader_automatically());
-        ASSERT_EQ(addr_grp.name(), hp_grp.name());
-        ASSERT_EQ(addr_grp.count(), hp_grp.count());
-        ASSERT_EQ(host_port(addr_grp.leader()), hp_grp.leader());
+        ASSERT_EQ(addr_grp.group_address()->is_update_leader_automatically(), hp_grp.group_host_port()->is_update_leader_automatically());
+        ASSERT_EQ(strcmp(addr_grp.group_address()->name(), hp_grp.group_host_port()->name()), 0);
+        ASSERT_EQ(addr_grp.group_address()->count(), hp_grp.group_host_port()->count());
+        ASSERT_EQ(host_port(addr_grp.group_address()->leader()), hp_grp.group_host_port()->leader());
     }
 }
 
