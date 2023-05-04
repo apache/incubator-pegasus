@@ -187,12 +187,14 @@ TEST(host_port_test, dns_resolver)
         host_port hp2("localhost", 8081);
         g->set_leader(hp2);
 
-        auto addr_grp  = resolver.resolve_address(hp_grp);
+        auto addr_grp = resolver.resolve_address(hp_grp);
 
-        ASSERT_EQ(addr_grp.group_address()->is_update_leader_automatically(), hp_grp.group_host_port()->is_update_leader_automatically());
+        ASSERT_EQ(addr_grp.group_address()->is_update_leader_automatically(),
+                  hp_grp.group_host_port()->is_update_leader_automatically());
         ASSERT_EQ(strcmp(addr_grp.group_address()->name(), hp_grp.group_host_port()->name()), 0);
         ASSERT_EQ(addr_grp.group_address()->count(), hp_grp.group_host_port()->count());
-        ASSERT_EQ(host_port(addr_grp.group_address()->leader()), hp_grp.group_host_port()->leader());
+        ASSERT_EQ(host_port(addr_grp.group_address()->leader()),
+                  hp_grp.group_host_port()->leader());
     }
 }
 

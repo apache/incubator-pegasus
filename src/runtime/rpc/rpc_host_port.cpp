@@ -29,7 +29,6 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/utils.h"
 
-
 namespace dsn {
 
 const host_port host_port::s_invalid_host_port;
