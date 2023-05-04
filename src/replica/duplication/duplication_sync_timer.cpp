@@ -69,7 +69,7 @@ void duplication_sync_timer::run()
         if (!confirmed.empty()) {
             req->confirm_list[r->get_gpid()] = std::move(confirmed);
         }
-        METRIC_SET(*(r->get_duplication_manager()), dup_pending_mutations);
+        METRIC_SET(*r, dup_pending_mutations);
     }
 
     duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC, 3_s);

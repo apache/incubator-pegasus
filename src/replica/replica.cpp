@@ -724,5 +724,10 @@ bool replica::access_controller_allowed(message_ex *msg, const ranger::access_ty
 
 int64_t replica::get_backup_request_count() const { return METRIC_VAR_VALUE(backup_requests); }
 
+void replica::METRIC_FUNC_NAME_SET(dup_pending_mutations)()
+{
+    METRIC_SET(*_duplication_mgr, dup_pending_mutations);
+}
+
 } // namespace replication
 } // namespace dsn

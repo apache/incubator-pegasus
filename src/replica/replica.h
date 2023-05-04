@@ -289,6 +289,7 @@ public:
     std::string get_replica_disk_tag() const { return _disk_tag; }
 
     METRIC_DEFINE_VALUE(write_size_exceed_threshold_requests, int64_t)
+    void METRIC_FUNC_NAME_SET(dup_pending_mutations)();
 
     static const std::string kAppInfo;
 
