@@ -26,8 +26,6 @@
 #include "common/replication.codes.h"
 #include "duplication_sync_timer.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
@@ -37,6 +35,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/threadpool_code.h"
 
 namespace dsn {
@@ -65,15 +64,13 @@ void duplication_sync_timer::run()
     req->node = _stub->primary_address();
 
     // collects confirm points from all primaries on this server
-    uint64_t pending_muts_cnt = 0;
     for (const replica_ptr &r : get_all_primaries()) {
         auto confirmed = r->get_duplication_manager()->get_duplication_confirms_to_update();
         if (!confirmed.empty()) {
             req->confirm_list[r->get_gpid()] = std::move(confirmed);
         }
-        pending_muts_cnt += r->get_duplication_manager()->get_pending_mutations_count();
+        METRIC_SET(*r, dup_pending_mutations);
     }
-    _stub->_counter_dup_pending_mutations_count->set(pending_muts_cnt);
 
     duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC, 3_s);
     rpc_address meta_server_address(_stub->get_meta_server_address());
