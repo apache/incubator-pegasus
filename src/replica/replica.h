@@ -604,7 +604,6 @@ private:
     partition_split_context _split_states;
 
     // timer task that running in replication-thread
-    std::atomic<uint64_t> _cold_backup_running_count;
     std::atomic<uint64_t> _cold_backup_max_duration_time_ms;
     std::atomic<uint64_t> _cold_backup_max_upload_file_size;
 

@@ -44,6 +44,11 @@
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 
+METRIC_DEFINE_gauge_int64(replica,
+                          backup_policy_running_count,
+                          dsn::metric_unit::kBackupPolicies,
+                          "The number of current running backup policies");
+
 namespace dsn {
 namespace replication {
 
@@ -83,7 +88,8 @@ static bool get_policy_checkpoint_dirs(const std::string &dir,
     return true;
 }
 
-replica_backup_manager::replica_backup_manager(replica *r) : replica_base(r), _replica(r) {}
+replica_backup_manager::replica_backup_manager(replica *r) : replica_base(r), _replica(r),
+    METRIC_VAR_INIT_replica(backup_policy_running_count) {}
 
 replica_backup_manager::~replica_backup_manager()
 {
@@ -160,7 +166,7 @@ void replica_backup_manager::collect_backup_info()
         }
     }
 
-    _replica->_cold_backup_running_count.store(cold_backup_running_count);
+    METRIC_VAR_SET(backup_policy_running_count, cold_backup_running_count);
     _replica->_cold_backup_max_duration_time_ms.store(cold_backup_max_duration_time_ms);
     _replica->_cold_backup_max_upload_file_size.store(cold_backup_max_upload_file_size);
 }

@@ -333,10 +333,6 @@ void replica_stub::install_perf_counters()
 {
     // <- Cold Backup Metrics ->
 
-    _counter_cold_backup_running_count.init_app_counter("eon.replica_stub",
-                                                        "cold.backup.running.count",
-                                                        COUNTER_TYPE_NUMBER,
-                                                        "current cold backup count");
     _counter_cold_backup_recent_start_count.init_app_counter(
         "eon.replica_stub",
         "cold.backup.recent.start.count",
@@ -1867,7 +1863,6 @@ void replica_stub::on_gc()
     uint64_t learning_count = 0;
     uint64_t learning_max_duration_time_ms = 0;
     uint64_t learning_max_copy_file_size = 0;
-    uint64_t cold_backup_running_count = 0;
     uint64_t cold_backup_max_duration_time_ms = 0;
     uint64_t cold_backup_max_upload_file_size = 0;
     uint64_t bulk_load_running_count = 0;
@@ -1889,7 +1884,6 @@ void replica_stub::on_gc()
         }
         if (rep->status() == partition_status::PS_PRIMARY ||
             rep->status() == partition_status::PS_SECONDARY) {
-            cold_backup_running_count += rep->_cold_backup_running_count.load();
             cold_backup_max_duration_time_ms = std::max(
                 cold_backup_max_duration_time_ms, rep->_cold_backup_max_duration_time_ms.load());
             cold_backup_max_upload_file_size = std::max(
@@ -1918,7 +1912,6 @@ void replica_stub::on_gc()
     METRIC_VAR_SET(learning_replicas, learning_count);
     METRIC_VAR_SET(learning_replicas_max_duration_ms, learning_max_duration_time_ms);
     METRIC_VAR_SET(learning_replicas_max_copy_file_bytes, learning_max_copy_file_size);
-    _counter_cold_backup_running_count->set(cold_backup_running_count);
     _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
     _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
     _counter_bulk_load_running_count->set(bulk_load_running_count);
