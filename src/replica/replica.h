@@ -292,6 +292,9 @@ public:
     const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }
     const dir_node *get_dir_node() const { return _dir_node; }
 
+    METRIC_DEFINE_VALUE(write_size_exceed_threshold_requests, int64_t)
+    void METRIC_FUNC_NAME_SET(dup_pending_mutations)();
+
     static const std::string kAppInfo;
 
 protected:
@@ -684,6 +687,8 @@ private:
     METRIC_VAR_DECLARE_counter(group_check_failed_requests);
 
     METRIC_VAR_DECLARE_counter(emergency_checkpoints);
+
+    METRIC_VAR_DECLARE_counter(write_size_exceed_threshold_requests);
 
     dsn::task_tracker _tracker;
     // the thread access checker
