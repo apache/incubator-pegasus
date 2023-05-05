@@ -522,7 +522,7 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(replica_origin_dirs);
 
 #ifdef DSN_ENABLE_GPERF
-    METRIC_VAR_DECLARE_gauge_int64(tcmalloc_released_bytes);
+    METRIC_VAR_DECLARE_counter(tcmalloc_released_bytes);
 #endif
 
     METRIC_VAR_DECLARE_counter(read_failed_requests);

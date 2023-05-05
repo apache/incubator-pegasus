@@ -165,10 +165,10 @@ METRIC_DEFINE_gauge_int64(server,
                           "The number of origin replica dirs (*.ori) for disk migration");
 
 #ifdef DSN_ENABLE_GPERF
-METRIC_DEFINE_gauge_int64(server,
+METRIC_DEFINE_counter(server,
                           tcmalloc_released_bytes,
                           dsn::metric_unit::kBytes,
-                          "The memory bytes that are released by tcmalloc recently");
+                          "The memory bytes that are released accumulatively by tcmalloc");
 #endif
 
 METRIC_DEFINE_counter(server,
@@ -2861,43 +2861,48 @@ static int64_t get_tcmalloc_numeric_property(const char *prop)
 
 uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
 {
-    auto tcmalloc_released_bytes = 0;
     if (!_release_tcmalloc_memory) {
         _is_releasing_memory.store(false);
-        METRIC_VAR_SET(tcmalloc_released_bytes, tcmalloc_released_bytes);
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     if (_is_releasing_memory.load()) {
         LOG_WARNING("This node is releasing memory...");
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     _is_releasing_memory.store(true);
+
     int64_t total_allocated_bytes =
         get_tcmalloc_numeric_property("generic.current_allocated_bytes");
     int64_t reserved_bytes = get_tcmalloc_numeric_property("tcmalloc.pageheap_free_bytes");
     if (total_allocated_bytes == -1 || reserved_bytes == -1) {
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     int64_t max_reserved_bytes =
         release_all ? 0
                     : (total_allocated_bytes * _mem_release_max_reserved_mem_percentage / 100.0);
-    if (reserved_bytes > max_reserved_bytes) {
-        int64_t release_bytes = reserved_bytes - max_reserved_bytes;
-        tcmalloc_released_bytes = release_bytes;
-        LOG_INFO("Memory release started, almost {} bytes will be released", release_bytes);
-        while (release_bytes > 0) {
-            // tcmalloc releasing memory will lock page heap, release 1MB at a time to avoid locking
-            // page heap for long time
-            ::MallocExtension::instance()->ReleaseToSystem(1024 * 1024);
-            release_bytes -= 1024 * 1024;
-        }
+    if (reserved_bytes <= max_reserved_bytes) {
+        return 0;
     }
-    METRIC_VAR_SET(tcmalloc_released_bytes, tcmalloc_released_bytes);
+
+    const int64_t expected_released_bytes = reserved_bytes - max_reserved_bytes;
+    LOG_INFO("Memory release started, almost {} bytes will be released", expected_released_bytes);
+
+    int64_t unreleased_bytes = expected_released_bytes;
+    while (unreleased_bytes > 0) {
+        // tcmalloc releasing memory will lock page heap, release 1MB at a time to avoid locking
+        // page heap for long time
+        static const int64_t kReleasedBytesEachTime = 1024 * 1024; 
+        ::MallocExtension::instance()->ReleaseToSystem(kReleasedBytesEachTime);
+        unreleased_bytes -= kReleasedBytesEachTime;
+    }
+    METRIC_VAR_INCREMENT_BY(tcmalloc_released_bytes, expected_released_bytes);
+
     _is_releasing_memory.store(false);
-    return tcmalloc_released_bytes;
+
+    return expected_released_bytes;
 }
 #endif
 
