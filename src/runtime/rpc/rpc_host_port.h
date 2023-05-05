@@ -25,6 +25,7 @@
 #include <functional>
 #include <iosfwd>
 #include <string>
+#include <vector>
 
 #include "runtime/rpc/rpc_address.h"
 #include "utils/autoref_ptr.h"

@@ -17,15 +17,19 @@
  * under the License.
  */
 
-#include <netinet/in.h>
+#include <errno.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <string.h>
 #include <sys/socket.h>
+#include <memory>
 #include <unordered_set>
 #include <utility>
 
 #include "fmt/core.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "utils/error_code.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/utils.h"
 

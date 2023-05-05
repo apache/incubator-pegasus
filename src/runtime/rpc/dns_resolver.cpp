@@ -19,6 +19,12 @@
 
 #include "runtime/rpc/dns_resolver.h"
 
+#include <utility>
+
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/group_host_port.h"
+#include "utils/fmt_logging.h"
+
 namespace dsn {
 
 void dns_resolver::add_item(const host_port &hp, const rpc_address &addr)

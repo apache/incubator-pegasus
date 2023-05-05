@@ -20,14 +20,17 @@
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <string>
 #include <string.h>
+#include <string>
 #include <vector>
 
 #include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 
 namespace dsn {
 
