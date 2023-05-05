@@ -38,8 +38,6 @@
 #include "dsn.layer2_types.h"
 #include "http/http_server.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/disk_cleaner.h"
 #include "replica/replica.h"
 #include "replica/replica_http_service.h"
@@ -60,6 +58,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/string_conv.h"
 
 namespace dsn {
@@ -89,11 +88,6 @@ public:
         // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
         // which is usually the cluster_name of production clusters.
         FLAGS_cold_backup_root = "test_cluster";
-    }
-
-    int get_write_size_exceed_threshold_count()
-    {
-        return stub->_counter_recent_write_size_exceed_threshold_count->get_value();
     }
 
     int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
@@ -274,7 +268,7 @@ TEST_F(replica_test, write_size_limited)
         stub->on_client_write(pid, write_request);
     }
 
-    ASSERT_EQ(get_write_size_exceed_threshold_count(), count);
+    ASSERT_EQ(count, METRIC_VALUE(*_mock_replica, write_size_exceed_threshold_requests));
 }
 
 TEST_F(replica_test, backup_request_count)

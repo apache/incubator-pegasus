@@ -288,6 +288,9 @@ public:
     disk_status::type get_disk_status() { return _disk_status; }
     std::string get_replica_disk_tag() const { return _disk_tag; }
 
+    METRIC_DEFINE_VALUE(write_size_exceed_threshold_requests, int64_t)
+    void METRIC_FUNC_NAME_SET(dup_pending_mutations)();
+
     static const std::string kAppInfo;
 
 protected:
@@ -681,6 +684,8 @@ private:
     METRIC_VAR_DECLARE_counter(group_check_failed_requests);
 
     METRIC_VAR_DECLARE_counter(emergency_checkpoints);
+
+    METRIC_VAR_DECLARE_counter(write_size_exceed_threshold_requests);
 
     dsn::task_tracker _tracker;
     // the thread access checker
