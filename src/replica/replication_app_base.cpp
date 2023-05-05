@@ -289,23 +289,21 @@ error_code replication_app_base::open_internal(replica *r)
     LOG_AND_RETURN_NOT_TRUE(ERROR_PREFIX,
                             utils::filesystem::directory_exists(_dir_data),
                             ERR_FILE_OPERATION_FAILED,
-                            "[{}]: replica data dir {} does not exist",
-                            r->name(),
+                            "replica data dir {} does not exist",
                             _dir_data);
 
-    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, open(), "[{}]: open replica app failed", r->name());
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, open(), "open replica app failed");
 
     _last_committed_decree = last_durable_decree();
 
     auto err = _info.load(r->dir());
-    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, err, "[{}]: load replica_init_info failed", r->name());
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, err, "load replica_init_info failed");
 
     LOG_AND_RETURN_NOT_TRUE(ERROR_PREFIX,
                             err != ERR_OK || last_durable_decree() >= _info.init_durable_decree,
                             ERR_INCOMPLETE_DATA,
-                            "[{}]: replica data is not complete coz "
+                            "replica data is not complete coz "
                             "last_durable_decree({}) < init_durable_decree({})",
-                            r->name(),
                             last_durable_decree(),
                             _info.init_durable_decree);
 
@@ -321,16 +319,14 @@ error_code replication_app_base::open_new_internal(replica *r,
     LOG_AND_RETURN_NOT_TRUE(ERROR_PREFIX,
                             utils::filesystem::directory_exists(_dir_data),
                             ERR_FILE_OPERATION_FAILED,
-                            "[{}]: create replica data dir {} failed",
-                            r->name(),
+                            "create replica data dir {} failed",
                             _dir_data);
 
-    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, open(), "[{}]: open replica app failed", r->name());
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, open(), "open replica app failed");
     _last_committed_decree = last_durable_decree();
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
                           update_init_info(_replica, shared_log_start, private_log_start, 0),
-                          "[{}]: open replica app failed",
-                          r->name());
+                          "open replica app failed");
     return ERR_OK;
 }
 
@@ -367,8 +363,7 @@ error_code replication_app_base::open()
 
 error_code replication_app_base::close(bool clear_state)
 {
-    LOG_AND_RETURN_NOT_OK(
-        ERROR_PREFIX, stop(clear_state), "[{}]: stop storage failed", replica_name());
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, stop(clear_state), "stop storage failed");
 
     _last_committed_decree.store(0);
 
@@ -515,8 +510,7 @@ error_code replication_app_base::update_init_info(replica *r,
     _info.init_offset_in_shared_log = shared_log_offset;
     _info.init_offset_in_private_log = private_log_offset;
 
-    LOG_AND_RETURN_NOT_OK(
-        ERROR_PREFIX, _info.store(r->dir()), "[{}]: store replica_init_info failed", r->name());
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, _info.store(r->dir()), "store replica_init_info failed");
 
     return ERR_OK;
 }
