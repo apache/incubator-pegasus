@@ -161,12 +161,13 @@ TEST(host_port_test, transfer_rpc_address)
         std::vector<rpc_address> addresses;
         host_port hp;
         hp.resolve_addresses(addresses);
-        ASSERT_EQ(hp.resolve_addresses(addresses),
-                  error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type"));
+        ASSERT_EQ(
+            hp.resolve_addresses(addresses),
+            error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_INVALID"));
 
         hp.assign_group("test_group");
         ASSERT_EQ(hp.resolve_addresses(addresses),
-                  error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type"));
+                  error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_GROUP"));
     }
 }
 
