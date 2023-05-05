@@ -145,11 +145,18 @@ void host_port::assign_group(const char *name)
 error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
 {
     CHECK(addresses.empty(), "");
-    if (type() != HOST_TYPE_IPV4) {
-        return error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type");
+
+    switch (type()) {
+    case HOST_TYPE_INVALID:
+        return error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_INVALID");
+    case HOST_TYPE_GROUP:
+        return error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_GROUP");
+    case HOST_TYPE_IPV4:
+        break;
     }
 
     rpc_address rpc_addr;
+    // Transfer hostname like "local" & "192.168.0.1".
     if (rpc_addr.from_string_ipv4(this->to_string().c_str())) {
         addresses.emplace_back(rpc_addr);
         return error_s::ok();

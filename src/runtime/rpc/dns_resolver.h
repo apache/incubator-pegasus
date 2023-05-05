@@ -31,6 +31,7 @@
 
 namespace dsn {
 
+// This class provider way transfer host_port to rpc_address.
 class dns_resolver
 {
 public:
@@ -38,6 +39,7 @@ public:
 
     void add_item(const host_port &hp, const rpc_address &addr);
 
+    // Transfer host_port to unique rpc_address.
     rpc_address resolve_address(const host_port &hp);
 
 private:

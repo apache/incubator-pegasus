@@ -69,6 +69,8 @@ public:
     }
     void assign_group(const char *name);
 
+    // Transfer host_port to rpc_addresses.
+    // Trere could be multi rpc_address for one host_port.
     error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
 
 private:
