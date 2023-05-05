@@ -686,6 +686,8 @@ private:
 
     METRIC_VAR_DECLARE_counter(write_size_exceed_threshold_requests);
 
+    METRIC_VAR_DECLARE_counter(backup_policy_started_count);
+
     dsn::task_tracker _tracker;
     // the thread access checker
     dsn::thread_access_checker _checker;

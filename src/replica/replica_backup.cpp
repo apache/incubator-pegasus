@@ -175,7 +175,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 backup_context->start_check();
                 backup_context->complete_check(false);
                 if (backup_context->start_checkpoint()) {
-                    _stub->_counter_cold_backup_recent_start_count->increment();
+                    METRIC_VAR_INCREMENT(backup_policy_started_count);
                     tasking::enqueue(
                         LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, backup_context]() {
                             generate_backup_checkpoint(backup_context);
@@ -196,7 +196,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                      backup_context->progress());
             response.err = ERR_BUSY;
         } else if (backup_status == ColdBackupInvalid && backup_context->start_check()) {
-            _stub->_counter_cold_backup_recent_start_count->increment();
+            METRIC_VAR_INCREMENT(backup_policy_started_count);
             LOG_INFO("{}: start checking backup on remote, response ERR_BUSY",
                      backup_context->name);
             tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, nullptr, [backup_context]() {

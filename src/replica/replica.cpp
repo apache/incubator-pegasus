@@ -209,6 +209,11 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of write requests whose size exceeds threshold");
 
+METRIC_DEFINE_counter(replica,
+                          backup_policy_started_count,
+                          dsn::metric_unit::kBackupPolicies,
+                          "The number of times the backup policies are started");
+
 namespace dsn {
 namespace replication {
 
@@ -287,7 +292,8 @@ replica::replica(replica_stub *stub,
       METRIC_VAR_INIT_replica(prepare_failed_requests),
       METRIC_VAR_INIT_replica(group_check_failed_requests),
       METRIC_VAR_INIT_replica(emergency_checkpoints),
-      METRIC_VAR_INIT_replica(write_size_exceed_threshold_requests)
+      METRIC_VAR_INIT_replica(write_size_exceed_threshold_requests),
+      METRIC_VAR_INIT_replica(backup_policy_started_count)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
