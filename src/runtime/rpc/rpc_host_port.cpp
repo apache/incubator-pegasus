@@ -144,7 +144,7 @@ void host_port::assign_group(const char *name)
 
 error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
 {
-    CHECK(addresses.empty(), "invalid addresses, not empty");
+    CHECK(addresses.empty(), "");
     if (type() != HOST_TYPE_IPV4) {
         return error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type");
     }
