@@ -22,6 +22,7 @@ cluster_name : "onebox"
 meta_servers: 
   - 127.0.0.1:34601
   - 127.0.0.1:34602
+  - 127.0.0.1:34603
 
 # local server port
 port : 34101
@@ -41,5 +42,5 @@ falcon_agent:
   port : 1988
   http_path : "/v1/push"
 
-available_detect:
+availablity_detect:
   table_name : test
