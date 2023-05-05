@@ -231,6 +231,14 @@ class error_code;
 // To be adaptive to self-defined `set` methods, arguments are declared as variadic.
 #define METRIC_SET(obj, name, ...) (obj).METRIC_FUNC_NAME_SET(name)(__VA_ARGS__)
 
+#define METRIC_FUNC_NAME_VALUE(name) get_##name
+
+#define METRIC_DEFINE_VALUE(name, value_type)                                                      \
+    value_type METRIC_FUNC_NAME_VALUE(name)() { return METRIC_VAR_VALUE(name); }
+
+// To be adaptive to self-defined `value` methods, arguments are declared as variadic.
+#define METRIC_VALUE(obj, name, ...) (obj).METRIC_FUNC_NAME_VALUE(name)(__VA_ARGS__)
+
 namespace dsn {
 class metric;                  // IWYU pragma: keep
 class metric_entity_prototype; // IWYU pragma: keep
@@ -667,6 +675,7 @@ enum class metric_unit : size_t
     kCheckpoints,
     kFlushes,
     kCompactions,
+    kMutations,
     kWrites,
     kChanges,
     kOperations,

@@ -514,11 +514,14 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(replica_tmp_dirs);
     METRIC_VAR_DECLARE_gauge_int64(replica_origin_dirs);
 
-    // <- Duplication Metrics ->
-    // TODO(wutao1): calculate the counters independently for each remote cluster
-    //               if we need to duplicate to multiple clusters someday.
-    perf_counter_wrapper _counter_dup_confirmed_rate;
-    perf_counter_wrapper _counter_dup_pending_mutations_count;
+#ifdef DSN_ENABLE_GPERF
+    METRIC_VAR_DECLARE_gauge_int64(tcmalloc_released_bytes);
+#endif
+
+    METRIC_VAR_DECLARE_counter(read_failed_requests);
+    METRIC_VAR_DECLARE_counter(write_failed_requests);
+    METRIC_VAR_DECLARE_counter(read_busy_requests);
+    METRIC_VAR_DECLARE_counter(write_busy_requests);
 
     perf_counter_wrapper _counter_cold_backup_running_count;
     perf_counter_wrapper _counter_cold_backup_recent_start_count;
@@ -531,17 +534,6 @@ private:
     perf_counter_wrapper _counter_cold_backup_recent_upload_file_size;
     perf_counter_wrapper _counter_cold_backup_max_duration_time_ms;
     perf_counter_wrapper _counter_cold_backup_max_upload_file_size;
-
-    perf_counter_wrapper _counter_recent_read_fail_count;
-    perf_counter_wrapper _counter_recent_write_fail_count;
-    perf_counter_wrapper _counter_recent_read_busy_count;
-    perf_counter_wrapper _counter_recent_write_busy_count;
-
-    perf_counter_wrapper _counter_recent_write_size_exceed_threshold_count;
-
-#ifdef DSN_ENABLE_GPERF
-    perf_counter_wrapper _counter_tcmalloc_release_memory_size;
-#endif
 
     // <- Bulk load Metrics ->
     perf_counter_wrapper _counter_bulk_load_running_count;
