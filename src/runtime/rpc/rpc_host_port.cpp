@@ -160,7 +160,7 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     }
 
     rpc_address rpc_addr;
-    // Transfer hostname like "local" & "192.168.0.1".
+    // Resolve hostname like "localhost:80" or "192.168.0.1:8080".
     if (rpc_addr.from_string_ipv4(this->to_string().c_str())) {
         addresses.emplace_back(rpc_addr);
         return error_s::ok();
