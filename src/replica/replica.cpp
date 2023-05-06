@@ -210,9 +210,9 @@ METRIC_DEFINE_counter(replica,
                       "The number of write requests whose size exceeds threshold");
 
 METRIC_DEFINE_counter(replica,
-                          backup_started_count,
-                          dsn::metric_unit::kBackups,
-                          "The number of started backups");
+                      backup_started_count,
+                      dsn::metric_unit::kBackups,
+                      "The number of started backups");
 
 METRIC_DEFINE_counter(replica,
                       backup_failed_count,

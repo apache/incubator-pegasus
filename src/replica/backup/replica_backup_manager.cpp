@@ -52,12 +52,12 @@ METRIC_DEFINE_gauge_int64(replica,
 METRIC_DEFINE_gauge_int64(replica,
                           backup_max_duration_ms,
                           dsn::metric_unit::kMilliSeconds,
-                          "The max backup duration among backup policies");
+                          "The max backup duration among backups");
 
-METRIC_DEFINE_counter(replica,
-                      backup_file_upload_max_bytes,
-                      dsn::metric_unit::kBytes,
-                      "The max size of uploaded files among backup policies");
+METRIC_DEFINE_gauge_int64(replica,
+                          backup_file_upload_max_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The max size of uploaded files among backups");
 
 namespace dsn {
 namespace replication {
@@ -98,11 +98,14 @@ static bool get_policy_checkpoint_dirs(const std::string &dir,
     return true;
 }
 
-replica_backup_manager::replica_backup_manager(replica *r) : replica_base(r), _replica(r),
-    METRIC_VAR_INIT_replica(backup_running_count),
-    METRIC_VAR_INIT_replica(backup_max_duration_ms),
-    METRIC_VAR_INIT_replica(backup_file_upload_max_bytes)
-{}
+replica_backup_manager::replica_backup_manager(replica *r)
+    : replica_base(r),
+      _replica(r),
+      METRIC_VAR_INIT_replica(backup_running_count),
+      METRIC_VAR_INIT_replica(backup_max_duration_ms),
+      METRIC_VAR_INIT_replica(backup_file_upload_max_bytes)
+{
+}
 
 replica_backup_manager::~replica_backup_manager()
 {

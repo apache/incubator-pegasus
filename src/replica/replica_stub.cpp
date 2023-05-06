@@ -166,9 +166,9 @@ METRIC_DEFINE_gauge_int64(server,
 
 #ifdef DSN_ENABLE_GPERF
 METRIC_DEFINE_counter(server,
-                          tcmalloc_released_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The memory bytes that are released accumulatively by tcmalloc");
+                      tcmalloc_released_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The memory bytes that are released accumulatively by tcmalloc");
 #endif
 
 METRIC_DEFINE_counter(server,
@@ -2825,7 +2825,7 @@ uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
     while (unreleased_bytes > 0) {
         // tcmalloc releasing memory will lock page heap, release 1MB at a time to avoid locking
         // page heap for long time
-        static const int64_t kReleasedBytesEachTime = 1024 * 1024; 
+        static const int64_t kReleasedBytesEachTime = 1024 * 1024;
         ::MallocExtension::instance()->ReleaseToSystem(kReleasedBytesEachTime);
         unreleased_bytes -= kReleasedBytesEachTime;
     }
