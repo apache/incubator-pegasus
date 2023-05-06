@@ -92,7 +92,7 @@ rpc_address dns_resolver::resolve_address(const host_port &hp)
         CHECK(!addresses.empty(), "host_port '{}' can not be resolved to any address", hp);
 
         if (addresses.size() > 1) {
-            LOG_WARNING("host_port '{}' resolves to {} different addresses, using {}",
+            LOG_WARNING("host_port '{}' resolves to {} different addresses, using the first one {}",
                         hp,
                         addresses.size(),
                         addresses[0]);
