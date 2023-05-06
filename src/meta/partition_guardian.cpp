@@ -310,7 +310,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         action.node.set_invalid();
         for (int i = 0; i < cc.dropped.size(); ++i) {
             const dropped_replica &dr = cc.dropped[i];
-            char time_buf[30];
+            char time_buf[30] = {0};
             ::dsn::utils::time_ms_to_string(dr.time, time_buf);
             LOG_INFO("{}: config_context.dropped[{}]: "
                      "node({}), time({})[{}], ballot({}), "
@@ -510,7 +510,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
     } else if (has_milliseconds_expired(cc.dropped.back().time +
                                         _replica_assign_delay_ms_for_dropouts)) {
         is_emergency = true;
-        char time_buf[30];
+        char time_buf[30] = {0};
         ::dsn::utils::time_ms_to_string(cc.dropped.back().time, time_buf);
         LOG_INFO("gpid({}): is emergency due to lose secondary for a long time, "
                  "last_dropped_node({}), drop_time({}), delay_ms({})",

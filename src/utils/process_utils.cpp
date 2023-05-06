@@ -99,8 +99,8 @@ public:
         mills = get_current_physical_time_ns() / 1000000;
         time_ms_to_string(mills, date_time_mills);
     }
-    uint64_t mills;
-    char date_time_mills[64];
+    uint64_t mills = 0;
+    char date_time_mills[64] = {0};
 };
 
 //

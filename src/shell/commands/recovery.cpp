@@ -295,7 +295,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             secondary_latest_dropped = pinfo.config.last_drops[pinfo.config.last_drops.size() - 2];
         int j = 0;
         for (const ddd_node_info &n : pinfo.dropped) {
-            char time_buf[30];
+            char time_buf[30] = {0};
             ::dsn::utils::time_ms_to_string(n.drop_time_ms, time_buf);
             out << "    dropped[" << j++ << "]: "
                 << "node(" << n.node.to_string() << "), "

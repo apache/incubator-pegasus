@@ -55,7 +55,7 @@ bool mutation_log_tool::dump(
             if (mlog->max_decree(mu->data.header.pid) == 0) {
                 mlog->set_valid_start_offset_on_open(mu->data.header.pid, 0);
             }
-            char timestamp_buf[32];
+            char timestamp_buf[32] = {0};
             utils::time_ms_to_string(mu->data.header.timestamp / 1000, timestamp_buf);
             output << "mutation [" << mu->name() << "]: "
                    << "gpid=" << mu->data.header.pid.get_app_id() << "."

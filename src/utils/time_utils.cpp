@@ -37,6 +37,8 @@ namespace utils {
 {
     struct tm tmp;
     auto ret = get_localtime(ts_ms, &tmp);
+    // NOTE: format_to() does not append a terminating null character, so remember to initialize
+    // str's memory as zero before.
     fmt::format_to(str, "{:%Y-%m-%d %H:%M:%S}.{}", *ret, static_cast<uint32_t>(ts_ms % 1000));
 }
 
