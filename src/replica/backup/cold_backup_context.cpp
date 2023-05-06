@@ -1002,8 +1002,7 @@ void cold_backup_context::on_upload_file_complete(const std::string &local_filen
     file_upload_complete(local_filename);
     if (_owner_replica != nullptr) {
         METRIC_INCREMENT(*_owner_replica, backup_file_upload_successful_count);
-        _owner_replica->get_replica_stub()->_counter_cold_backup_recent_upload_file_size->add(
-            f_size);
+        METRIC_INCREMENT_BY(*_owner_replica, backup_file_upload_total_bytes, f_size);
     }
     // update progress
     // int a = 10; int b = 3; then  b/a = 0;

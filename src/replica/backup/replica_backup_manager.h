@@ -53,6 +53,8 @@ private:
     dsn::task_ptr _collect_info_timer;
 
     METRIC_VAR_DECLARE_gauge_int64(backup_running_count);
+    METRIC_VAR_DECLARE_gauge_int64(backup_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(backup_file_upload_max_bytes);
 };
 
 } // namespace replication

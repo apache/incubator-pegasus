@@ -530,10 +530,6 @@ private:
     METRIC_VAR_DECLARE_counter(read_busy_requests);
     METRIC_VAR_DECLARE_counter(write_busy_requests);
 
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_size;
-    perf_counter_wrapper _counter_cold_backup_max_duration_time_ms;
-    perf_counter_wrapper _counter_cold_backup_max_upload_file_size;
-
     // <- Bulk load Metrics ->
     perf_counter_wrapper _counter_bulk_load_running_count;
     perf_counter_wrapper _counter_bulk_load_downloading_count;

@@ -239,6 +239,11 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kFileUploads,
                       "The number of successful file uploads for backups");
 
+METRIC_DEFINE_counter(replica,
+                      backup_file_upload_total_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The total size of uploaded files for backups");
+
 namespace dsn {
 namespace replication {
 
@@ -280,8 +285,6 @@ replica::replica(replica_stub *stub,
       _app_info(app),
       _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),
-      _cold_backup_max_duration_time_ms(0),
-      _cold_backup_max_upload_file_size(0),
       _chkpt_total_size(0),
       _cur_download_size(0),
       _restore_progress(0),
@@ -323,7 +326,8 @@ replica::replica(replica_stub *stub,
       METRIC_VAR_INIT_replica(backup_successful_count),
       METRIC_VAR_INIT_replica(backup_cancelled_count),
       METRIC_VAR_INIT_replica(backup_file_upload_failed_count),
-      METRIC_VAR_INIT_replica(backup_file_upload_successful_count)
+      METRIC_VAR_INIT_replica(backup_file_upload_successful_count),
+      METRIC_VAR_INIT_replica(backup_file_upload_total_bytes)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");

@@ -292,6 +292,10 @@ public:
     void METRIC_FUNC_NAME_SET(dup_pending_mutations)();
     METRIC_DEFINE_INCREMENT(backup_failed_count)
     METRIC_DEFINE_INCREMENT(backup_successful_count)
+    METRIC_DEFINE_INCREMENT(backup_cancelled_count)
+    METRIC_DEFINE_INCREMENT(backup_file_upload_failed_count)
+    METRIC_DEFINE_INCREMENT(backup_file_upload_successful_count)
+    METRIC_DEFINE_INCREMENT_BY(backup_file_upload_total_bytes)
 
     static const std::string kAppInfo;
 
@@ -605,10 +609,6 @@ private:
     std::map<std::string, cold_backup_context_ptr> _cold_backup_contexts;
     partition_split_context _split_states;
 
-    // timer task that running in replication-thread
-    std::atomic<uint64_t> _cold_backup_max_duration_time_ms;
-    std::atomic<uint64_t> _cold_backup_max_upload_file_size;
-
     // record the progress of restore
     int64_t _chkpt_total_size;
     std::atomic<int64_t> _cur_download_size;
@@ -694,6 +694,7 @@ private:
     METRIC_VAR_DECLARE_counter(backup_cancelled_count);
     METRIC_VAR_DECLARE_counter(backup_file_upload_failed_count);
     METRIC_VAR_DECLARE_counter(backup_file_upload_successful_count);
+    METRIC_VAR_DECLARE_counter(backup_file_upload_total_bytes);
 
     dsn::task_tracker _tracker;
     // the thread access checker
