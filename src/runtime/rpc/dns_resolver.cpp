@@ -58,9 +58,10 @@ error_s dns_resolver::resolve_addresses(const host_port &hp, std::vector<rpc_add
     {
         utils::auto_write_lock l(_lock);
         if (resolved_addresses.size() > 1) {
-            LOG_WARNING("host_port '{}' resolves to {} different addresses, using the first one {}.",
+            LOG_DEBUGING("host_port '{}' resolves to {} different addresses {}, using the first one {}.",
                         hp,
                         resolved_addresses.size(),
+                        fmt::join(resolved_addresses, ","),
                         resolved_addresses[0]);
         }
         _dsn_cache.insert(std::make_pair(hp, resolved_addresses[0]));

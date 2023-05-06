@@ -188,6 +188,11 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
             result_addresses.emplace_back(rpc_addr);
         }
     }
+    
+    if (result_addresses.empty()) {
+        return error_s::make(dsn::ERR_NETWORK_FAILURE, fmt::format("can not resolve host_port {}.", to_string()));
+    }
+
     addresses = std::move(result_addresses);
     return error_s::ok();
 }
