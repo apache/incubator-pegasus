@@ -691,6 +691,9 @@ private:
     METRIC_VAR_DECLARE_counter(backup_started_count);
     METRIC_VAR_DECLARE_counter(backup_failed_count);
     METRIC_VAR_DECLARE_counter(backup_successful_count);
+    METRIC_VAR_DECLARE_counter(backup_cancelled_count);
+    METRIC_VAR_DECLARE_counter(backup_file_upload_failed_count);
+    METRIC_VAR_DECLARE_counter(backup_file_upload_successful_count);
 
     dsn::task_tracker _tracker;
     // the thread access checker
