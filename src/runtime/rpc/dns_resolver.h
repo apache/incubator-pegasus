@@ -37,7 +37,7 @@ public:
 
     void add_item(const host_port &hp, const rpc_address &addr);
 
-    // Transfer host_port to unique rpc_address.
+    // Resolve this host_port to an unique rpc_address.
     rpc_address resolve_address(const host_port &hp);
 
 private:
