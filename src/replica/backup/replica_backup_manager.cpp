@@ -19,7 +19,6 @@
 
 #include <stdint.h>
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <map>
 #include <memory>
@@ -41,6 +40,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 

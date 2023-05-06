@@ -24,15 +24,13 @@
 
 #include "common/backup_common.h"
 #include "common/replication.codes.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica.h"
-#include "replica/replica_stub.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/metrics.h"
 #include "utils/utils.h"
 
 namespace dsn {
