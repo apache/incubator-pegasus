@@ -17,10 +17,10 @@
  * under the License.
  */
 
-#include "runtime/rpc/dns_resolver.h"
-
 #include <utility>
 
+#include "fmt/format.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
 #include "utils/fmt_logging.h"
