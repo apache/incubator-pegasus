@@ -29,7 +29,7 @@
 
 namespace dsn {
 
-// This class provider way transfer host_port to rpc_address.
+// This class provide a way to resolve host_port to rpc_address.
 class dns_resolver
 {
 public:
