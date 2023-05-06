@@ -91,7 +91,7 @@ TEST(time_utils, get_current_physical_time_ns)
 
 TEST(time_utils, time_ms_to_string)
 {
-    char buf[64];
+    char buf[64] = {0};
     time_ms_to_string(1605091506136, buf);
     // time differ between time zones,
     // the real time 2020-11-11 18:45:06.136 (UTC+8)

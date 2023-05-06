@@ -336,7 +336,7 @@ std::string pegasus_manual_compact_service::query_compact_state() const
     uint64_t last_time_used_ms = _manual_compact_last_time_used_ms.load();
     std::stringstream state;
     if (last_finish_time_ms > 0) {
-        char str[24];
+        char str[24] = {0};
         dsn::utils::time_ms_to_string(last_finish_time_ms, str);
         state << "last finish at [" << str << "]";
     } else {
@@ -348,13 +348,13 @@ std::string pegasus_manual_compact_service::query_compact_state() const
     }
 
     if (enqueue_time_ms > 0) {
-        char str[24];
+        char str[24] = {0};
         dsn::utils::time_ms_to_string(enqueue_time_ms, str);
         state << ", recent enqueue at [" << str << "]";
     }
 
     if (start_time_ms > 0) {
-        char str[24];
+        char str[24] = {0};
         dsn::utils::time_ms_to_string(start_time_ms, str);
         state << ", recent start at [" << str << "]";
     }

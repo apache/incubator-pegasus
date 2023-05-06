@@ -255,7 +255,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         status_str = status_str.substr(status_str.find("AS_") + 3);
         std::string create_time = "-";
         if (app.create_second > 0) {
-            char buf[24];
+            char buf[24] = {0};
             dsn::utils::time_ms_to_string((uint64_t)app.create_second * 1000, buf);
             create_time = buf;
         }
@@ -265,12 +265,12 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             available_app_count++;
         } else if (app.status == app_status::AS_DROPPED && app.expire_second > 0) {
             if (app.drop_second > 0) {
-                char buf[24];
+                char buf[24] = {0};
                 dsn::utils::time_ms_to_string((uint64_t)app.drop_second * 1000, buf);
                 drop_time = buf;
             }
             if (app.expire_second > 0) {
-                char buf[24];
+                char buf[24] = {0};
                 dsn::utils::time_ms_to_string((uint64_t)app.expire_second * 1000, buf);
                 drop_expire_time = buf;
             }
