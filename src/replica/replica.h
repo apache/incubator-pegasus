@@ -290,6 +290,8 @@ public:
 
     METRIC_DEFINE_VALUE(write_size_exceed_threshold_requests, int64_t)
     void METRIC_FUNC_NAME_SET(dup_pending_mutations)();
+    METRIC_DEFINE_INCREMENT(backup_failed_count)
+    METRIC_DEFINE_INCREMENT(backup_successful_count)
 
     static const std::string kAppInfo;
 
@@ -686,7 +688,9 @@ private:
 
     METRIC_VAR_DECLARE_counter(write_size_exceed_threshold_requests);
 
-    METRIC_VAR_DECLARE_counter(backup_policy_started_count);
+    METRIC_VAR_DECLARE_counter(backup_started_count);
+    METRIC_VAR_DECLARE_counter(backup_failed_count);
+    METRIC_VAR_DECLARE_counter(backup_successful_count);
 
     dsn::task_tracker _tracker;
     // the thread access checker

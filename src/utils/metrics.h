@@ -684,7 +684,7 @@ enum class metric_unit : size_t
     kLearns,
     kRounds,
     kResets,
-    kBackupPolicies,
+    kBackups,
     kInvalidUnit,
 };
 

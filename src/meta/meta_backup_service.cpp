@@ -55,9 +55,9 @@
 METRIC_DEFINE_entity(backup_policy);
 
 METRIC_DEFINE_gauge_int64(backup_policy,
-                          backup_policy_recent_duration_ms,
+                          backup_recent_duration_ms,
                           dsn::metric_unit::kMilliSeconds,
-                          "The recent backup duration");
+                          "The duration of recent backup");
 
 namespace dsn {
 namespace replication {
@@ -78,7 +78,7 @@ metric_entity_ptr instantiate_backup_policy_metric_entity(const std::string &pol
 
 backup_policy_metrics::backup_policy_metrics(const std::string &policy_name)
     : _backup_policy_metric_entity(instantiate_backup_policy_metric_entity(policy_name)),
-      METRIC_VAR_INIT_backup_policy(backup_policy_recent_duration_ms)
+      METRIC_VAR_INIT_backup_policy(backup_recent_duration_ms)
 {
 }
 
@@ -1039,7 +1039,7 @@ void policy_context::issue_gc_backup_info_task_unlocked()
             last_backup_duration_time_ms = (_cur_backup.end_time_ms - _cur_backup.start_time_ms);
         }
     }
-    METRIC_SET(*_metrics, backup_policy_recent_duration_ms, last_backup_duration_time_ms);
+    METRIC_SET(*_metrics, backup_recent_duration_ms, last_backup_duration_time_ms);
 }
 
 void policy_context::sync_remove_backup_info(const backup_info &info, dsn::task_ptr sync_callback)

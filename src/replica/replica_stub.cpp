@@ -333,16 +333,6 @@ void replica_stub::install_perf_counters()
 {
     // <- Cold Backup Metrics ->
 
-    _counter_cold_backup_recent_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup succeed count in the recent period");
-    _counter_cold_backup_recent_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup fail count in the recent period");
     _counter_cold_backup_recent_cancel_count.init_app_counter(
         "eon.replica_stub",
         "cold.backup.recent.cancel.count",
