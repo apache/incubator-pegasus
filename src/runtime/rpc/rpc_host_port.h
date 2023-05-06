@@ -70,7 +70,7 @@ public:
     }
     void assign_group(const char *name);
 
-    // Transfer host_port to rpc_addresses.
+    // Resolve host_port to rpc_addresses.
     // Trere may be multiple rpc_addresses for one host_port.
     error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
 
