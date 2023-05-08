@@ -240,4 +240,13 @@ const char *rpc_address::to_string() const
 
     return (const char *)p;
 }
+
+rpc_address::rpc_address(const struct sockaddr_in &addr)
+{
+    set_invalid();
+    _addr.v4.type = HOST_TYPE_IPV4;
+    _addr.v4.ip = static_cast<uint32_t>(ntohl(addr.sin_addr.s_addr));
+    _addr.v4.port = ntohs(addr.sin_port);
+}
+
 } // namespace dsn

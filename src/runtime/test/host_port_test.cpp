@@ -20,12 +20,17 @@
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <string.h>
 #include <string>
 #include <vector>
 
+#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 
 namespace dsn {
 
@@ -141,6 +146,60 @@ TEST(host_port_test, rpc_group_host_port)
     ASSERT_FALSE(g->contains(hp2));
     ASSERT_EQ(0u, g->members().size());
     ASSERT_EQ(invalid_hp, g->leader());
+}
+
+TEST(host_port_test, transfer_rpc_address)
+{
+    {
+        std::vector<rpc_address> addresses;
+        host_port hp("localhost", 8080);
+        ASSERT_EQ(hp.resolve_addresses(addresses), error_s::ok());
+        ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == addresses[0] ||
+                    rpc_address("127.0.1.1", 8080) == addresses[0]);
+    }
+    {
+        std::vector<rpc_address> addresses;
+        host_port hp;
+        hp.resolve_addresses(addresses);
+        ASSERT_EQ(
+            hp.resolve_addresses(addresses),
+            error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_INVALID"));
+
+        hp.assign_group("test_group");
+        ASSERT_EQ(hp.resolve_addresses(addresses),
+                  error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_GROUP"));
+    }
+}
+
+TEST(host_port_test, dns_resolver)
+{
+    dns_resolver resolver;
+    {
+        host_port hp("localhost", 8080);
+        auto addr = resolver.resolve_address(hp);
+        ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == addr ||
+                    rpc_address("127.0.1.1", 8080) == addr);
+    }
+
+    {
+        host_port hp_grp;
+        hp_grp.assign_group("test_group");
+        rpc_group_host_port *g = hp_grp.group_host_port();
+
+        host_port hp1("localhost", 8080);
+        ASSERT_TRUE(g->add(hp1));
+        host_port hp2("localhost", 8081);
+        g->set_leader(hp2);
+
+        auto addr_grp = resolver.resolve_address(hp_grp);
+
+        ASSERT_EQ(addr_grp.group_address()->is_update_leader_automatically(),
+                  hp_grp.group_host_port()->is_update_leader_automatically());
+        ASSERT_EQ(strcmp(addr_grp.group_address()->name(), hp_grp.group_host_port()->name()), 0);
+        ASSERT_EQ(addr_grp.group_address()->count(), hp_grp.group_host_port()->count());
+        ASSERT_EQ(host_port(addr_grp.group_address()->leader()),
+                  hp_grp.group_host_port()->leader());
+    }
 }
 
 } // namespace dsn

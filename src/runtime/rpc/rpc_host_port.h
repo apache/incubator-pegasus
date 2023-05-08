@@ -25,9 +25,11 @@
 #include <functional>
 #include <iosfwd>
 #include <string>
+#include <vector>
 
 #include "runtime/rpc/rpc_address.h"
 #include "utils/autoref_ptr.h"
+#include "utils/errors.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
@@ -67,6 +69,10 @@ public:
         return _group_host_port;
     }
     void assign_group(const char *name);
+
+    // Resolve host_port to rpc_addresses.
+    // Trere may be multiple rpc_addresses for one host_port.
+    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
 
 private:
     std::string _host;
