@@ -22,8 +22,11 @@ package org.apache.pegasus.client;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.pegasus.replication.app_info;
 import org.apache.pegasus.rpc.async.MetaHandler;
 import org.apache.pegasus.rpc.async.MetaSession;
 import org.junit.After;
@@ -133,5 +136,36 @@ public class TestAdminClient {
     }
     pClient.close();
     Assert.fail("expected PException for openTable");
+  }
+
+  @Test
+  public void testListApps() throws PException {
+    String appName = "testListApps" + System.currentTimeMillis();
+    List<app_info> appInfoList = new ArrayList<>();
+    toolsClient.listApps(true, appInfoList);
+    int size1 = appInfoList.size();
+    toolsClient.createApp(
+        appName,
+        this.tablePartitionCount,
+        this.tableReplicaCount,
+        new HashMap<>(),
+        this.tableOpTimeoutMs);
+    boolean isAppHealthy = toolsClient.isAppHealthy(appName, this.tableReplicaCount);
+    Assert.assertTrue(isAppHealthy);
+
+    appInfoList.clear();
+    toolsClient.listApps(true, appInfoList);
+    Assert.assertTrue(appInfoList.size() == size1 + 1);
+
+    appInfoList.clear();
+    toolsClient.listApps(false, appInfoList);
+    int size2 = appInfoList.size();
+    toolsClient.dropApp(appName);
+    appInfoList.clear();
+    toolsClient.listApps(true, appInfoList);
+    Assert.assertTrue(appInfoList.size() == size1);
+    appInfoList.clear();
+    toolsClient.listApps(false, appInfoList);
+    Assert.assertTrue(appInfoList.size() == size2);
   }
 }

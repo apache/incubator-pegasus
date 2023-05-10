@@ -19,7 +19,9 @@
 
 package org.apache.pegasus.client;
 
+import org.apache.pegasus.replication.app_info;
 import java.io.Closeable;
+import java.util.List;
 import java.util.Map;
 
 public interface PegasusAdminClientInterface extends Closeable {
@@ -70,6 +72,16 @@ public interface PegasusAdminClientInterface extends Closeable {
   public boolean isAppHealthy(String appName, int replicaCount) throws PException;
 
   public void dropApp(String appName, int reserveSeconds) throws PException;
+
+  /**
+   * Get all app names of the pegasus cluster
+   *
+   * @param onlyGetAvailableApps Whether to return all available tables, true means to return only
+   *     available tables, false means to return all tables, including dropped tables
+   * @param appInfoList List of all table names in the pegasus cluster
+   * @throws PException
+   */
+  public void listApps(boolean onlyGetAvailableApps, List<app_info> appInfoList) throws PException;
 
   /** close the client */
   @Override

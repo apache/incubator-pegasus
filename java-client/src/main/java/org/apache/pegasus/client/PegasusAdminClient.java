@@ -19,12 +19,14 @@
 
 package org.apache.pegasus.client;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.operator.create_app_operator;
 import org.apache.pegasus.operator.drop_app_operator;
+import org.apache.pegasus.operator.list_apps_operator;
 import org.apache.pegasus.operator.query_cfg_operator;
 import org.apache.pegasus.replication.*;
 import org.apache.pegasus.rpc.Meta;
@@ -228,6 +230,36 @@ public class PegasusAdminClient extends PegasusAbstractClient
     if (error != error_code.error_types.ERR_OK) {
       throw new PException(
           String.format("Drop app:%s failed! error: %s.", appName, error.toString()));
+    }
+  }
+
+  @Override
+  public void listApps(boolean onlyGetAvailableApps, List<app_info> appInfoList) throws PException {
+    if (!appInfoList.isEmpty()) {
+      throw new PException(
+          new IllegalArgumentException(
+              String.format("listApps failed: output parameters 'appList' not empty.")));
+    }
+
+    configuration_list_apps_request request = new configuration_list_apps_request();
+    request.setStatus(app_status.AS_AVAILABLE);
+    if (!onlyGetAvailableApps) {
+      request.setStatus(app_status.AS_INVALID);
+    }
+
+    list_apps_operator app_operator = new list_apps_operator(request);
+    error_code.error_types error = this.meta.operate(app_operator, META_RETRY_MIN_COUNT);
+
+    if (error != error_code.error_types.ERR_OK) {
+      throw new PException(
+          String.format(
+              "List apps failed, query status:%s, error:%s.",
+              request.getStatus(), error.toString()));
+    }
+
+    configuration_list_apps_response response = app_operator.get_response();
+    for (int i = 0; i < response.infos.size(); i++) {
+      appInfoList.add(response.infos.get(i));
     }
   }
 }
