@@ -160,7 +160,7 @@ public class TestAdminClient {
     appInfoList.clear();
     toolsClient.listApps(false, appInfoList);
     int size2 = appInfoList.size();
-    toolsClient.dropApp(appName);
+    toolsClient.dropApp(appName, this.tableOpTimeoutMs);
     appInfoList.clear();
     toolsClient.listApps(true, appInfoList);
     Assert.assertTrue(appInfoList.size() == size1);
