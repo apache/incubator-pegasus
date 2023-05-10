@@ -89,7 +89,7 @@ public class MetaSession extends HostNameResolver {
       return ((drop_app_operator) (metaQueryOp)).get_response().getErr().errno;
     } else if (metaQueryOp instanceof list_apps_operator) {
       return ((list_apps_operator) (metaQueryOp)).get_response().getErr().errno;
-    else {
+    } else {
       assert (false);
       return null;
     }
