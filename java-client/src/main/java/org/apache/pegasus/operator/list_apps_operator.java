@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
- package org.apache.pegasus.operator;
+package org.apache.pegasus.operator;
 
 import org.apache.pegasus.apps.meta.list_apps_args;
 import org.apache.pegasus.apps.meta.list_apps_result;

@@ -19,10 +19,10 @@
 
 package org.apache.pegasus.client;
 
-import org.apache.pegasus.replication.app_info;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Map;
+import org.apache.pegasus.replication.app_info;
 
 public interface PegasusAdminClientInterface extends Closeable {
   /**
