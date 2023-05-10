@@ -238,7 +238,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
     if (!appInfoList.isEmpty()) {
       throw new PException(
           new IllegalArgumentException(
-              String.format("listApps failed: output parameters 'appList' not empty.")));
+              String.format("listApps failed: output parameters 'appInfoList' not empty.")));
     }
 
     configuration_list_apps_request request = new configuration_list_apps_request();
