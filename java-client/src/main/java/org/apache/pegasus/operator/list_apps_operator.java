@@ -18,9 +18,9 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.meta.list_apps_args;
-import org.apache.pegasus.apps.meta.list_apps_result;
 import org.apache.pegasus.base.gpid;
+import org.apache.pegasus.replication.admin_client.list_apps_args;
+import org.apache.pegasus.replication.admin_client.list_apps_result;
 import org.apache.pegasus.replication.configuration_list_apps_request;
 import org.apache.pegasus.replication.configuration_list_apps_response;
 import org.apache.thrift.TException;
@@ -43,14 +43,14 @@ public class list_apps_operator extends client_operator {
   public void send_data(TProtocol oprot, int sequence_id) throws TException {
     TMessage msg = new TMessage("RPC_CM_LIST_APPS", TMessageType.CALL, sequence_id);
     oprot.writeMessageBegin(msg);
-    org.apache.pegasus.apps.meta.list_apps_args args = new list_apps_args(request);
+    org.apache.pegasus.replication.admin_client.list_apps_args args = new list_apps_args(request);
     args.write(oprot);
     oprot.writeMessageEnd();
   }
 
   @Override
   public void recv_data(TProtocol iprot) throws TException {
-    org.apache.pegasus.apps.meta.list_apps_result result = new list_apps_result();
+    org.apache.pegasus.replication.admin_client.list_apps_result result = new list_apps_result();
     result.read(iprot);
     if (result.isSetSuccess()) response = result.success;
     else

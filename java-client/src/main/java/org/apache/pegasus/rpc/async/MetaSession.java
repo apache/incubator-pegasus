@@ -35,6 +35,7 @@ import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.operator.client_operator;
 import org.apache.pegasus.operator.create_app_operator;
 import org.apache.pegasus.operator.drop_app_operator;
+import org.apache.pegasus.operator.list_apps_operator;
 import org.apache.pegasus.operator.query_cfg_operator;
 import org.apache.pegasus.replication.partition_configuration;
 
