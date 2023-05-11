@@ -93,14 +93,16 @@ class block_filesystem;
 namespace replication {
 
 replica_bulk_loader::replica_bulk_loader(replica *r)
-    : replica_base(r), _replica(r), _stub(r->get_replica_stub()),
-    METRIC_VAR_INIT_replica(bulk_load_downloading_count),
-    METRIC_VAR_INIT_replica(bulk_load_ingestion_count),
-    METRIC_VAR_INIT_replica(bulk_load_successful_count),
-    METRIC_VAR_INIT_replica(bulk_load_failed_count),
-    METRIC_VAR_INIT_replica(bulk_load_download_file_successful_count),
-    METRIC_VAR_INIT_replica(bulk_load_download_file_failed_count),
-    METRIC_VAR_INIT_replica(bulk_load_download_file_bytes),
+    : replica_base(r),
+      _replica(r),
+      _stub(r->get_replica_stub()),
+      METRIC_VAR_INIT_replica(bulk_load_downloading_count),
+      METRIC_VAR_INIT_replica(bulk_load_ingestion_count),
+      METRIC_VAR_INIT_replica(bulk_load_successful_count),
+      METRIC_VAR_INIT_replica(bulk_load_failed_count),
+      METRIC_VAR_INIT_replica(bulk_load_download_file_successful_count),
+      METRIC_VAR_INIT_replica(bulk_load_download_file_failed_count),
+      METRIC_VAR_INIT_replica(bulk_load_download_file_bytes),
 {
 }
 
