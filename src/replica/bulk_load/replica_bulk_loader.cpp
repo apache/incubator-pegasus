@@ -102,7 +102,7 @@ replica_bulk_loader::replica_bulk_loader(replica *r)
       METRIC_VAR_INIT_replica(bulk_load_failed_count),
       METRIC_VAR_INIT_replica(bulk_load_download_file_successful_count),
       METRIC_VAR_INIT_replica(bulk_load_download_file_failed_count),
-      METRIC_VAR_INIT_replica(bulk_load_download_file_bytes),
+      METRIC_VAR_INIT_replica(bulk_load_download_file_bytes)
 {
 }
 
