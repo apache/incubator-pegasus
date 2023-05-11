@@ -31,6 +31,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/task/task.h"
 #include "utils/error_code.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -194,6 +195,14 @@ private:
     task_ptr _download_task;
     // Used for perf-counter
     uint64_t _bulk_load_start_time_ms{0};
+
+    METRIC_VAR_DECLARE_counter(bulk_load_downloading_count);
+    METRIC_VAR_DECLARE_counter(bulk_load_ingestion_count);
+    METRIC_VAR_DECLARE_counter(bulk_load_successful_count);
+    METRIC_VAR_DECLARE_counter(bulk_load_failed_count);
+    METRIC_VAR_DECLARE_counter(bulk_load_download_file_successful_count);
+    METRIC_VAR_DECLARE_counter(bulk_load_download_file_failed_count);
+    METRIC_VAR_DECLARE_counter(bulk_load_download_file_bytes);
 };
 
 } // namespace replication
