@@ -547,25 +547,13 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(replica_origin_dirs);
 
 #ifdef DSN_ENABLE_GPERF
-    METRIC_VAR_DECLARE_gauge_int64(tcmalloc_released_bytes);
+    METRIC_VAR_DECLARE_counter(tcmalloc_released_bytes);
 #endif
 
     METRIC_VAR_DECLARE_counter(read_failed_requests);
     METRIC_VAR_DECLARE_counter(write_failed_requests);
     METRIC_VAR_DECLARE_counter(read_busy_requests);
     METRIC_VAR_DECLARE_counter(write_busy_requests);
-
-    perf_counter_wrapper _counter_cold_backup_running_count;
-    perf_counter_wrapper _counter_cold_backup_recent_start_count;
-    perf_counter_wrapper _counter_cold_backup_recent_succ_count;
-    perf_counter_wrapper _counter_cold_backup_recent_fail_count;
-    perf_counter_wrapper _counter_cold_backup_recent_cancel_count;
-    perf_counter_wrapper _counter_cold_backup_recent_pause_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_succ_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_fail_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_size;
-    perf_counter_wrapper _counter_cold_backup_max_duration_time_ms;
-    perf_counter_wrapper _counter_cold_backup_max_upload_file_size;
 
     // <- Bulk load Metrics ->
     perf_counter_wrapper _counter_bulk_load_running_count;
