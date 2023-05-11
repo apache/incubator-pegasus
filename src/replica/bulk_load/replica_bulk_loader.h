@@ -196,7 +196,7 @@ private:
     // Used for perf-counter
     uint64_t _bulk_load_start_time_ms{0};
 
-    METRIC_VAR_DECLARE_counter(bulk_load_downloading_count);
+    METRIC_VAR_DECLARE_counter(bulk_load_download_count);
     METRIC_VAR_DECLARE_counter(bulk_load_ingestion_count);
     METRIC_VAR_DECLARE_counter(bulk_load_successful_count);
     METRIC_VAR_DECLARE_counter(bulk_load_failed_count);
