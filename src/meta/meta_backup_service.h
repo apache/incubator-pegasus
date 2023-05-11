@@ -186,11 +186,11 @@ public:
 
     const metric_entity_ptr &backup_policy_metric_entity() const;
 
-    METRIC_DEFINE_SET(policy_recent_backup_duration_ms, int64_t)
+    METRIC_DEFINE_SET(backup_recent_duration_ms, int64_t)
 
 private:
     const metric_entity_ptr _backup_policy_metric_entity;
-    METRIC_VAR_DECLARE_gauge_int64(policy_recent_backup_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(backup_recent_duration_ms);
 
     DISALLOW_COPY_AND_ASSIGN(backup_policy_metrics);
 };
