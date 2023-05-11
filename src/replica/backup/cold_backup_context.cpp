@@ -24,15 +24,13 @@
 
 #include "common/backup_common.h"
 #include "common/replication.codes.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica.h"
-#include "replica/replica_stub.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/metrics.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -71,7 +69,7 @@ void cold_backup_context::cancel()
 {
     _status.store(ColdBackupCanceled);
     if (_owner_replica != nullptr) {
-        _owner_replica->get_replica_stub()->_counter_cold_backup_recent_cancel_count->increment();
+        METRIC_INCREMENT(*_owner_replica, backup_cancelled_count);
     }
 }
 
@@ -93,7 +91,7 @@ bool cold_backup_context::fail_check(const char *failure_reason)
         strncpy(_reason, failure_reason, sizeof(_reason) - 1);
         _reason[sizeof(_reason) - 1] = '\0';
         if (_owner_replica != nullptr) {
-            _owner_replica->get_replica_stub()->_counter_cold_backup_recent_fail_count->increment();
+            METRIC_INCREMENT(*_owner_replica, backup_failed_count);
         }
         return true;
     } else {
@@ -107,7 +105,7 @@ bool cold_backup_context::complete_check(bool uploaded)
     if (uploaded) {
         _progress.store(cold_backup_constant::PROGRESS_FINISHED);
         if (_owner_replica != nullptr) {
-            _owner_replica->get_replica_stub()->_counter_cold_backup_recent_succ_count->increment();
+            METRIC_INCREMENT(*_owner_replica, backup_successful_count);
         }
         return _status.compare_exchange_strong(checking, ColdBackupCompleted);
     } else {
@@ -132,7 +130,7 @@ bool cold_backup_context::fail_checkpoint(const char *failure_reason)
         strncpy(_reason, failure_reason, sizeof(_reason) - 1);
         _reason[sizeof(_reason) - 1] = '\0';
         if (_owner_replica != nullptr) {
-            _owner_replica->get_replica_stub()->_counter_cold_backup_recent_fail_count->increment();
+            METRIC_INCREMENT(*_owner_replica, backup_failed_count);
         }
         return true;
     } else {
@@ -158,7 +156,7 @@ bool cold_backup_context::fail_upload(const char *failure_reason)
         strncpy(_reason, failure_reason, sizeof(_reason) - 1);
         _reason[sizeof(_reason) - 1] = '\0';
         if (_owner_replica != nullptr) {
-            _owner_replica->get_replica_stub()->_counter_cold_backup_recent_fail_count->increment();
+            METRIC_INCREMENT(*_owner_replica, backup_failed_count);
         }
         return true;
     } else {
@@ -174,7 +172,7 @@ bool cold_backup_context::complete_upload()
         _status.compare_exchange_strong(paused, ColdBackupCompleted)) {
         _progress.store(cold_backup_constant::PROGRESS_FINISHED);
         if (_owner_replica != nullptr) {
-            _owner_replica->get_replica_stub()->_counter_cold_backup_recent_succ_count->increment();
+            METRIC_INCREMENT(*_owner_replica, backup_successful_count);
         }
         return true;
     } else {
@@ -720,8 +718,7 @@ void cold_backup_context::upload_file(const std::string &local_filename)
                 fail_upload("create file failed");
             }
             if (resp.err != ERR_OK && _owner_replica != nullptr) {
-                _owner_replica->get_replica_stub()
-                    ->_counter_cold_backup_recent_upload_file_fail_count->increment();
+                METRIC_INCREMENT(*_owner_replica, backup_file_upload_failed_count);
             }
             release_ref();
             return;
@@ -783,8 +780,7 @@ void cold_backup_context::on_upload(const dist::block_service::block_file_ptr &f
                 fail_upload("upload checkpoint file to remote failed");
             }
             if (resp.err != ERR_OK && _owner_replica != nullptr) {
-                _owner_replica->get_replica_stub()
-                    ->_counter_cold_backup_recent_upload_file_fail_count->increment();
+                METRIC_INCREMENT(*_owner_replica, backup_file_upload_failed_count);
             }
             release_ref();
             return;
@@ -1003,10 +999,8 @@ void cold_backup_context::on_upload_file_complete(const std::string &local_filen
     _upload_file_size.fetch_add(f_size);
     file_upload_complete(local_filename);
     if (_owner_replica != nullptr) {
-        _owner_replica->get_replica_stub()
-            ->_counter_cold_backup_recent_upload_file_succ_count->increment();
-        _owner_replica->get_replica_stub()->_counter_cold_backup_recent_upload_file_size->add(
-            f_size);
+        METRIC_INCREMENT(*_owner_replica, backup_file_upload_successful_count);
+        METRIC_INCREMENT_BY(*_owner_replica, backup_file_upload_total_bytes, f_size);
     }
     // update progress
     // int a = 10; int b = 3; then  b/a = 0;
