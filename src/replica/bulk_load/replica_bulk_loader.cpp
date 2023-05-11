@@ -49,12 +49,12 @@
 #include "utils/thread_access_checker.h"
 
 METRIC_DEFINE_counter(replica,
-                      bulk_load_download_count,
+                      bulk_load_downloading_count,
                       dsn::metric_unit::kBulkLoads,
                       "The number of downloading bulk loads");
 
 METRIC_DEFINE_counter(replica,
-                      bulk_load_ingestion_count,
+                      bulk_load_ingesting_count,
                       dsn::metric_unit::kBulkLoads,
                       "The number of ingesting bulk loads");
 
@@ -96,8 +96,8 @@ replica_bulk_loader::replica_bulk_loader(replica *r)
     : replica_base(r),
       _replica(r),
       _stub(r->get_replica_stub()),
-      METRIC_VAR_INIT_replica(bulk_load_download_count),
-      METRIC_VAR_INIT_replica(bulk_load_ingestion_count),
+      METRIC_VAR_INIT_replica(bulk_load_downloading_count),
+      METRIC_VAR_INIT_replica(bulk_load_ingesting_count),
       METRIC_VAR_INIT_replica(bulk_load_successful_count),
       METRIC_VAR_INIT_replica(bulk_load_failed_count),
       METRIC_VAR_INIT_replica(bulk_load_download_file_successful_count),
@@ -450,7 +450,7 @@ error_code replica_bulk_loader::start_download(const std::string &remote_dir,
                     _stub->_primary_address_str,
                     _stub->_bulk_load_downloading_count.load());
     _bulk_load_start_time_ms = dsn_now_ms();
-    METRIC_VAR_INCREMENT(bulk_load_download_count);
+    METRIC_VAR_INCREMENT(bulk_load_downloading_count);
 
     // create local bulk load dir
     if (!utils::filesystem::directory_exists(_replica->_dir)) {
@@ -688,7 +688,7 @@ void replica_bulk_loader::check_download_finish()
 void replica_bulk_loader::start_ingestion()
 {
     _status = bulk_load_status::BLS_INGESTING;
-    METRIC_VAR_INCREMENT(bulk_load_ingestion_count);
+    METRIC_VAR_INCREMENT(bulk_load_ingesting_count);
     if (status() == partition_status::PS_PRIMARY) {
         _replica->_primary_states.ingestion_is_empty_prepare_sent = false;
     }
