@@ -165,10 +165,10 @@ METRIC_DEFINE_gauge_int64(server,
                           "The number of origin replica dirs (*.ori) for disk migration");
 
 #ifdef DSN_ENABLE_GPERF
-METRIC_DEFINE_gauge_int64(server,
-                          tcmalloc_released_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The memory bytes that are released by tcmalloc recently");
+METRIC_DEFINE_counter(server,
+                      tcmalloc_released_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The memory bytes that are released accumulatively by tcmalloc");
 #endif
 
 METRIC_DEFINE_counter(server,
@@ -331,63 +331,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    // <- Cold Backup Metrics ->
-
-    _counter_cold_backup_running_count.init_app_counter("eon.replica_stub",
-                                                        "cold.backup.running.count",
-                                                        COUNTER_TYPE_NUMBER,
-                                                        "current cold backup count");
-    _counter_cold_backup_recent_start_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup start count in the recent period");
-    _counter_cold_backup_recent_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup succeed count in the recent period");
-    _counter_cold_backup_recent_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup fail count in the recent period");
-    _counter_cold_backup_recent_cancel_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.cancel.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup cancel count in the recent period");
-    _counter_cold_backup_recent_pause_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.pause.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup pause count in the recent period");
-    _counter_cold_backup_recent_upload_file_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.upload.file.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup upload file succeed count in the recent period");
-    _counter_cold_backup_recent_upload_file_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.upload.file.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup upload file failed count in the recent period");
-    _counter_cold_backup_recent_upload_file_size.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.upload.file.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup upload file size in the recent perriod");
-    _counter_cold_backup_max_duration_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.max.duration.time.ms",
-        COUNTER_TYPE_NUMBER,
-        "current cold backup max duration time");
-    _counter_cold_backup_max_upload_file_size.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.max.upload.file.size",
-        COUNTER_TYPE_NUMBER,
-        "current cold backup max upload file size");
-
     // <- Bulk Load Metrics ->
 
     _counter_bulk_load_running_count.init_app_counter("eon.replica_stub",
@@ -1867,9 +1810,6 @@ void replica_stub::on_gc()
     uint64_t learning_count = 0;
     uint64_t learning_max_duration_time_ms = 0;
     uint64_t learning_max_copy_file_size = 0;
-    uint64_t cold_backup_running_count = 0;
-    uint64_t cold_backup_max_duration_time_ms = 0;
-    uint64_t cold_backup_max_upload_file_size = 0;
     uint64_t bulk_load_running_count = 0;
     uint64_t bulk_load_max_ingestion_time_ms = 0;
     uint64_t bulk_load_max_duration_time_ms = 0;
@@ -1889,12 +1829,6 @@ void replica_stub::on_gc()
         }
         if (rep->status() == partition_status::PS_PRIMARY ||
             rep->status() == partition_status::PS_SECONDARY) {
-            cold_backup_running_count += rep->_cold_backup_running_count.load();
-            cold_backup_max_duration_time_ms = std::max(
-                cold_backup_max_duration_time_ms, rep->_cold_backup_max_duration_time_ms.load());
-            cold_backup_max_upload_file_size = std::max(
-                cold_backup_max_upload_file_size, rep->_cold_backup_max_upload_file_size.load());
-
             if (rep->get_bulk_loader()->get_bulk_load_status() != bulk_load_status::BLS_INVALID) {
                 bulk_load_running_count++;
                 bulk_load_max_ingestion_time_ms =
@@ -1918,9 +1852,6 @@ void replica_stub::on_gc()
     METRIC_VAR_SET(learning_replicas, learning_count);
     METRIC_VAR_SET(learning_replicas_max_duration_ms, learning_max_duration_time_ms);
     METRIC_VAR_SET(learning_replicas_max_copy_file_bytes, learning_max_copy_file_size);
-    _counter_cold_backup_running_count->set(cold_backup_running_count);
-    _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
-    _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
     _counter_bulk_load_running_count->set(bulk_load_running_count);
     _counter_bulk_load_max_ingestion_time_ms->set(bulk_load_max_ingestion_time_ms);
     _counter_bulk_load_max_duration_time_ms->set(bulk_load_max_duration_time_ms);
@@ -2861,43 +2792,48 @@ static int64_t get_tcmalloc_numeric_property(const char *prop)
 
 uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
 {
-    auto tcmalloc_released_bytes = 0;
     if (!_release_tcmalloc_memory) {
         _is_releasing_memory.store(false);
-        METRIC_VAR_SET(tcmalloc_released_bytes, tcmalloc_released_bytes);
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     if (_is_releasing_memory.load()) {
         LOG_WARNING("This node is releasing memory...");
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     _is_releasing_memory.store(true);
+
     int64_t total_allocated_bytes =
         get_tcmalloc_numeric_property("generic.current_allocated_bytes");
     int64_t reserved_bytes = get_tcmalloc_numeric_property("tcmalloc.pageheap_free_bytes");
     if (total_allocated_bytes == -1 || reserved_bytes == -1) {
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     int64_t max_reserved_bytes =
         release_all ? 0
                     : (total_allocated_bytes * _mem_release_max_reserved_mem_percentage / 100.0);
-    if (reserved_bytes > max_reserved_bytes) {
-        int64_t release_bytes = reserved_bytes - max_reserved_bytes;
-        tcmalloc_released_bytes = release_bytes;
-        LOG_INFO("Memory release started, almost {} bytes will be released", release_bytes);
-        while (release_bytes > 0) {
-            // tcmalloc releasing memory will lock page heap, release 1MB at a time to avoid locking
-            // page heap for long time
-            ::MallocExtension::instance()->ReleaseToSystem(1024 * 1024);
-            release_bytes -= 1024 * 1024;
-        }
+    if (reserved_bytes <= max_reserved_bytes) {
+        return 0;
     }
-    METRIC_VAR_SET(tcmalloc_released_bytes, tcmalloc_released_bytes);
+
+    const int64_t expected_released_bytes = reserved_bytes - max_reserved_bytes;
+    LOG_INFO("Memory release started, almost {} bytes will be released", expected_released_bytes);
+
+    int64_t unreleased_bytes = expected_released_bytes;
+    while (unreleased_bytes > 0) {
+        // tcmalloc releasing memory will lock page heap, release 1MB at a time to avoid locking
+        // page heap for long time
+        static const int64_t kReleasedBytesEachTime = 1024 * 1024;
+        ::MallocExtension::instance()->ReleaseToSystem(kReleasedBytesEachTime);
+        unreleased_bytes -= kReleasedBytesEachTime;
+    }
+    METRIC_VAR_INCREMENT_BY(tcmalloc_released_bytes, expected_released_bytes);
+
     _is_releasing_memory.store(false);
-    return tcmalloc_released_bytes;
+
+    return expected_released_bytes;
 }
 #endif
 
