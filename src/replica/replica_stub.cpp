@@ -182,6 +182,21 @@ METRIC_DEFINE_counter(server,
                       dsn::metric_unit::kRequests,
                       "The number of busy write requests");
 
+METRIC_DEFINE_gauge_int64(server,
+                          bulk_load_running_count,
+                          dsn::metric_unit::kBulkLoads,
+                          "The number of current running bulk loads");
+
+METRIC_DEFINE_gauge_int64(server,
+                          bulk_load_ingestion_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration of ingestions for bulk loads");
+
+METRIC_DEFINE_gauge_int64(server,
+                          bulk_load_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration of bulk loads");
+
 namespace dsn {
 namespace replication {
 DSN_DEFINE_bool(replication,
@@ -316,7 +331,10 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(read_failed_requests),
       METRIC_VAR_INIT_server(write_failed_requests),
       METRIC_VAR_INIT_server(read_busy_requests),
-      METRIC_VAR_INIT_server(write_busy_requests)
+      METRIC_VAR_INIT_server(write_busy_requests),
+      METRIC_VAR_INIT_server(bulk_load_running_count),
+      METRIC_VAR_INIT_server(bulk_load_ingestion_max_duration_ms),
+      METRIC_VAR_INIT_server(bulk_load_max_duration_ms)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
@@ -334,52 +352,6 @@ replica_stub::~replica_stub(void) { close(); }
 
 void replica_stub::install_perf_counters()
 {
-    // <- Bulk Load Metrics ->
-
-    _counter_bulk_load_running_count.init_app_counter("eon.replica_stub",
-                                                      "bulk.load.running.count",
-                                                      COUNTER_TYPE_VOLATILE_NUMBER,
-                                                      "current bulk load running count");
-    _counter_bulk_load_downloading_count.init_app_counter("eon.replica_stub",
-                                                          "bulk.load.downloading.count",
-                                                          COUNTER_TYPE_VOLATILE_NUMBER,
-                                                          "current bulk load downloading count");
-    _counter_bulk_load_ingestion_count.init_app_counter("eon.replica_stub",
-                                                        "bulk.load.ingestion.count",
-                                                        COUNTER_TYPE_VOLATILE_NUMBER,
-                                                        "current bulk load ingestion count");
-    _counter_bulk_load_succeed_count.init_app_counter("eon.replica_stub",
-                                                      "bulk.load.succeed.count",
-                                                      COUNTER_TYPE_VOLATILE_NUMBER,
-                                                      "current bulk load succeed count");
-    _counter_bulk_load_failed_count.init_app_counter("eon.replica_stub",
-                                                     "bulk.load.failed.count",
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "current bulk load failed count");
-    _counter_bulk_load_download_file_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "bulk.load.download.file.success.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "bulk load recent download file success count");
-    _counter_bulk_load_download_file_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "bulk.load.download.file.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "bulk load recent download file failed count");
-    _counter_bulk_load_download_file_size.init_app_counter("eon.replica_stub",
-                                                           "bulk.load.download.file.size",
-                                                           COUNTER_TYPE_VOLATILE_NUMBER,
-                                                           "bulk load recent download file size");
-    _counter_bulk_load_max_ingestion_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "bulk.load.max.ingestion.duration.time.ms",
-        COUNTER_TYPE_NUMBER,
-        "bulk load max ingestion duration time(ms)");
-    _counter_bulk_load_max_duration_time_ms.init_app_counter("eon.replica_stub",
-                                                             "bulk.load.max.duration.time.ms",
-                                                             COUNTER_TYPE_NUMBER,
-                                                             "bulk load max duration time(ms)");
-
     // <- Partition split Metrics ->
 
     _counter_replicas_splitting_count.init_app_counter("eon.replica_stub",
@@ -1873,9 +1845,9 @@ void replica_stub::on_gc()
     METRIC_VAR_SET(learning_replicas, learning_count);
     METRIC_VAR_SET(learning_replicas_max_duration_ms, learning_max_duration_time_ms);
     METRIC_VAR_SET(learning_replicas_max_copy_file_bytes, learning_max_copy_file_size);
-    _counter_bulk_load_running_count->set(bulk_load_running_count);
-    _counter_bulk_load_max_ingestion_time_ms->set(bulk_load_max_ingestion_time_ms);
-    _counter_bulk_load_max_duration_time_ms->set(bulk_load_max_duration_time_ms);
+    METRIC_VAR_SET(bulk_load_running_count, bulk_load_running_count);
+    METRIC_VAR_SET(bulk_load_ingestion_max_duration_ms, bulk_load_max_ingestion_time_ms);
+    METRIC_VAR_SET(bulk_load_max_duration_ms, bulk_load_max_duration_time_ms);
     _counter_replicas_splitting_count->set(splitting_count);
     _counter_replicas_splitting_max_duration_time_ms->set(splitting_max_duration_time_ms);
     _counter_replicas_splitting_max_async_learn_time_ms->set(splitting_max_async_learn_time_ms);
