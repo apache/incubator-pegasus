@@ -555,17 +555,9 @@ private:
     METRIC_VAR_DECLARE_counter(read_busy_requests);
     METRIC_VAR_DECLARE_counter(write_busy_requests);
 
-    // <- Bulk load Metrics ->
-    perf_counter_wrapper _counter_bulk_load_running_count;
-    perf_counter_wrapper _counter_bulk_load_downloading_count;
-    perf_counter_wrapper _counter_bulk_load_ingestion_count;
-    perf_counter_wrapper _counter_bulk_load_succeed_count;
-    perf_counter_wrapper _counter_bulk_load_failed_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_succ_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_fail_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_size;
-    perf_counter_wrapper _counter_bulk_load_max_ingestion_time_ms;
-    perf_counter_wrapper _counter_bulk_load_max_duration_time_ms;
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_running_count);
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_ingestion_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_max_duration_ms);
 
     // <- Partition split Metrics ->
     perf_counter_wrapper _counter_replicas_splitting_count;
