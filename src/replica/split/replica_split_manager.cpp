@@ -29,8 +29,6 @@
 #include "dsn.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
 #include "partition_split_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/mutation_log.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
