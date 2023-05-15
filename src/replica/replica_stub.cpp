@@ -354,7 +354,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(splitting_replicas),
       METRIC_VAR_INIT_server(splitting_replicas_max_duration_ms),
       METRIC_VAR_INIT_server(splitting_replicas_async_learn_max_duration_ms),
-      METRIC_VAR_INIT_server(splitting_replicas_max_copy_file_bytes),
+      METRIC_VAR_INIT_server(splitting_replicas_max_copy_file_bytes)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
