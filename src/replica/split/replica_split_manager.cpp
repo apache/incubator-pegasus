@@ -51,6 +51,36 @@
 #include "utils/string_view.h"
 #include "utils/thread_access_checker.h"
 
+METRIC_DEFINE_counter(replica,
+                      splitting_started_count,
+                      dsn::metric_unit::kPartitionSplittings,
+                      "The number of started splittings");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_copy_file_count,
+                      dsn::metric_unit::kFiles,
+                      "The number of files copied for splitting");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_copy_file_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of files copied for splitting");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_copy_mutation_count,
+                      dsn::metric_unit::kMutations,
+                      "The number of mutations copied for splitting");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_failed_count,
+                      dsn::metric_unit::kPartitionSplittings,
+                      "The number of failed splittings");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_successful_count,
+                      dsn::metric_unit::kPartitionSplittings,
+                      "The number of successful splittings");
+
 namespace dsn {
 namespace replication {
 
@@ -58,7 +88,13 @@ DSN_DECLARE_bool(empty_write_disabled);
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
 
 replica_split_manager::replica_split_manager(replica *r)
-    : replica_base(r), _replica(r), _stub(r->get_replica_stub())
+    : replica_base(r), _replica(r), _stub(r->get_replica_stub()),
+    METRIC_VAR_INIT_replica(splitting_started_count),
+    METRIC_VAR_INIT_replica(splitting_copy_file_count),
+    METRIC_VAR_INIT_replica(splitting_copy_file_bytes),
+    METRIC_VAR_INIT_replica(splitting_copy_mutation_count),
+    METRIC_VAR_INIT_replica(splitting_failed_count),
+    METRIC_VAR_INIT_replica(splitting_successful_count)
 {
     _partition_version.store(_replica->_app_info.partition_count - 1);
 }
@@ -159,7 +195,7 @@ void replica_split_manager::child_init_replica(gpid parent_gpid,
                          get_gpid().thread_hash(),
                          std::chrono::seconds(3));
     _replica->_split_states.splitting_start_ts_ns = dsn_now_ns();
-    _stub->_counter_replicas_splitting_recent_start_count->increment();
+    METRIC_VAR_INCREMENT(splitting_started_count);
 
     LOG_INFO_PREFIX(
         "child initialize succeed, init_ballot={}, parent_gpid={}", init_ballot, parent_gpid);
@@ -469,8 +505,8 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
 
     _replica->_split_states.splitting_copy_file_count += plog_files.size();
     _replica->_split_states.splitting_copy_file_size += total_file_size;
-    _stub->_counter_replicas_splitting_recent_copy_file_count->add(plog_files.size());
-    _stub->_counter_replicas_splitting_recent_copy_file_size->add(total_file_size);
+    METRIC_VAR_INCREMENT_BY(splitting_copy_file_count, plog_files.size());
+    METRIC_VAR_INCREMENT_BY(splitting_copy_file_bytes, total_file_size);
 
     LOG_INFO_PREFIX("replay private_log files succeed, file count={}, app last_committed_decree={}",
                     plog_files.size(),
@@ -494,7 +530,7 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
         ++count;
     }
     _replica->_split_states.splitting_copy_mutation_count += count;
-    _stub->_counter_replicas_splitting_recent_copy_mutation_count->add(count);
+    METRIC_VAR_INCREMENT_BY(splitting_copy_mutation_count, count);
     plist.commit(last_committed_decree, COMMIT_TO_DECREE_HARD);
     LOG_INFO_PREFIX(
         "apply in-memory mutations succeed, mutation count={}, app last_committed_decree={}",
@@ -1096,11 +1132,10 @@ void replica_split_manager::child_partition_active(
         return;
     }
 
-    _stub->_counter_replicas_splitting_recent_split_succ_count->increment();
     _replica->_primary_states.last_prepare_decree_on_new_primary =
         _replica->_prepare_list->max_decree();
     _replica->update_configuration(config);
-    _stub->_counter_replicas_splitting_recent_split_succ_count->increment();
+    METRIC_VAR_INCREMENT(splitting_successful_count);
     LOG_INFO_PREFIX("child partition is active, status={}", enum_to_string(status()));
 }
 
@@ -1123,7 +1158,7 @@ void replica_split_manager::child_handle_split_error(
                          _replica->_split_states.parent_gpid,
                          _replica->_split_states.total_ms(),
                          _replica->_split_states.async_learn_ms());
-        _stub->_counter_replicas_splitting_recent_split_fail_count->increment();
+        METRIC_VAR_INCREMENT(splitting_failed_count);
         _replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
     }
 }

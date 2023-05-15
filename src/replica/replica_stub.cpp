@@ -206,6 +206,11 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kMilliSeconds,
                           "The max duration of bulk loads");
 
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of current splitting replicas");
+
 namespace dsn {
 namespace replication {
 
@@ -331,7 +336,8 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(write_busy_requests),
       METRIC_VAR_INIT_server(bulk_load_running_count),
       METRIC_VAR_INIT_server(bulk_load_ingestion_max_duration_ms),
-      METRIC_VAR_INIT_server(bulk_load_max_duration_ms)
+      METRIC_VAR_INIT_server(bulk_load_max_duration_ms),
+      METRIC_VAR_INIT_server(splitting_replicas)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
@@ -351,11 +357,6 @@ void replica_stub::install_perf_counters()
 {
     // <- Partition split Metrics ->
 
-    _counter_replicas_splitting_count.init_app_counter("eon.replica_stub",
-                                                       "replicas.splitting.count",
-                                                       COUNTER_TYPE_NUMBER,
-                                                       "current partition splitting count");
-
     _counter_replicas_splitting_max_duration_time_ms.init_app_counter(
         "eon.replica_stub",
         "replicas.splitting.max.duration.time(ms)",
@@ -371,36 +372,6 @@ void replica_stub::install_perf_counters()
         "replicas.splitting.max.copy.file.size",
         COUNTER_TYPE_NUMBER,
         "current splitting max copy file size");
-    _counter_replicas_splitting_recent_start_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current splitting start count in the recent period");
-    _counter_replicas_splitting_recent_copy_file_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.file.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy file count in the recent period");
-    _counter_replicas_splitting_recent_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.file.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy file size in the recent period");
-    _counter_replicas_splitting_recent_copy_mutation_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.mutation.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy mutation count in the recent period");
-    _counter_replicas_splitting_recent_split_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.split.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting succeed count in the recent period");
-    _counter_replicas_splitting_recent_split_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.split.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting fail count in the recent period");
 }
 
 void replica_stub::initialize(bool clear /* = false*/)
@@ -1827,7 +1798,7 @@ void replica_stub::on_gc()
     METRIC_VAR_SET(bulk_load_running_count, bulk_load_running_count);
     METRIC_VAR_SET(bulk_load_ingestion_max_duration_ms, bulk_load_max_ingestion_time_ms);
     METRIC_VAR_SET(bulk_load_max_duration_ms, bulk_load_max_duration_time_ms);
-    _counter_replicas_splitting_count->set(splitting_count);
+    METRIC_VAR_SET(splitting_replicas, splitting_count);
     _counter_replicas_splitting_max_duration_time_ms->set(splitting_max_duration_time_ms);
     _counter_replicas_splitting_max_async_learn_time_ms->set(splitting_max_async_learn_time_ms);
     _counter_replicas_splitting_max_copy_file_size->set(splitting_max_copy_file_size);

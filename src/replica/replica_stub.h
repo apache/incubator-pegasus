@@ -535,16 +535,10 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(bulk_load_max_duration_ms);
 
     // <- Partition split Metrics ->
-    perf_counter_wrapper _counter_replicas_splitting_count;
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas);
     perf_counter_wrapper _counter_replicas_splitting_max_duration_time_ms;
     perf_counter_wrapper _counter_replicas_splitting_max_async_learn_time_ms;
     perf_counter_wrapper _counter_replicas_splitting_max_copy_file_size;
-    perf_counter_wrapper _counter_replicas_splitting_recent_start_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_size;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_mutation_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_split_fail_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_split_succ_count;
 
     dsn::task_tracker _tracker;
 };

@@ -662,6 +662,7 @@ enum class metric_unit : size_t
     kPercent,
     kReplicas,
     kPartitions,
+    kPartitionSplittings,
     kServers,
     kRequests,
     kResponses,
