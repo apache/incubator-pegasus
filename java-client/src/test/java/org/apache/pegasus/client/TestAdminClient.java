@@ -142,7 +142,7 @@ public class TestAdminClient {
   public void testListApps() throws PException {
     String appName = "testListApps" + System.currentTimeMillis();
     List<app_info> appInfoList = new ArrayList<>();
-    toolsClient.listApps(true, appInfoList);
+    toolsClient.listApps(ListAppInfoType.ONLYGETAVAILABLEAPPS, appInfoList);
     int size1 = appInfoList.size();
     toolsClient.createApp(
         appName,
@@ -154,18 +154,17 @@ public class TestAdminClient {
     Assert.assertTrue(isAppHealthy);
 
     appInfoList.clear();
-    toolsClient.listApps(true, appInfoList);
-    Assert.assertTrue(appInfoList.size() == size1 + 1);
-
+    toolsClient.listApps(ListAppInfoType.ONLYGETAVAILABLEAPPS, appInfoList);
+    Assert.assertEquals(size1 + 1, appInfoList.size());
     appInfoList.clear();
-    toolsClient.listApps(false, appInfoList);
+    toolsClient.listApps(ListAppInfoType.GETALLAPPINFOS, appInfoList);
     int size2 = appInfoList.size();
     toolsClient.dropApp(appName, this.tableOpTimeoutMs);
     appInfoList.clear();
-    toolsClient.listApps(true, appInfoList);
-    Assert.assertTrue(appInfoList.size() == size1);
+    toolsClient.listApps(ListAppInfoType.ONLYGETAVAILABLEAPPS, appInfoList);
+    Assert.assertEquals(size1, appInfoList.size());
     appInfoList.clear();
-    toolsClient.listApps(false, appInfoList);
-    Assert.assertTrue(appInfoList.size() == size2);
+    toolsClient.listApps(ListAppInfoType.GETALLAPPINFOS, appInfoList);
+    Assert.assertEquals(size2, appInfoList.size());
   }
 }

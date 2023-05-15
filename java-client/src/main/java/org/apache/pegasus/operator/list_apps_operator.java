@@ -43,14 +43,14 @@ public class list_apps_operator extends client_operator {
   public void send_data(TProtocol oprot, int sequence_id) throws TException {
     TMessage msg = new TMessage("RPC_CM_LIST_APPS", TMessageType.CALL, sequence_id);
     oprot.writeMessageBegin(msg);
-    org.apache.pegasus.replication.admin_client.list_apps_args args = new list_apps_args(request);
+    list_apps_args args = new list_apps_args(request);
     args.write(oprot);
     oprot.writeMessageEnd();
   }
 
   @Override
   public void recv_data(TProtocol iprot) throws TException {
-    org.apache.pegasus.replication.admin_client.list_apps_result result = new list_apps_result();
+    list_apps_result result = new list_apps_result();
     result.read(iprot);
     if (result.isSetSuccess()) response = result.success;
     else
