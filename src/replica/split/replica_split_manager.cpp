@@ -88,13 +88,15 @@ DSN_DECLARE_bool(empty_write_disabled);
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
 
 replica_split_manager::replica_split_manager(replica *r)
-    : replica_base(r), _replica(r), _stub(r->get_replica_stub()),
-    METRIC_VAR_INIT_replica(splitting_started_count),
-    METRIC_VAR_INIT_replica(splitting_copy_file_count),
-    METRIC_VAR_INIT_replica(splitting_copy_file_bytes),
-    METRIC_VAR_INIT_replica(splitting_copy_mutation_count),
-    METRIC_VAR_INIT_replica(splitting_failed_count),
-    METRIC_VAR_INIT_replica(splitting_successful_count)
+    : replica_base(r),
+      _replica(r),
+      _stub(r->get_replica_stub()),
+      METRIC_VAR_INIT_replica(splitting_started_count),
+      METRIC_VAR_INIT_replica(splitting_copy_file_count),
+      METRIC_VAR_INIT_replica(splitting_copy_file_bytes),
+      METRIC_VAR_INIT_replica(splitting_copy_mutation_count),
+      METRIC_VAR_INIT_replica(splitting_failed_count),
+      METRIC_VAR_INIT_replica(splitting_successful_count)
 {
     _partition_version.store(_replica->_app_info.partition_count - 1);
 }

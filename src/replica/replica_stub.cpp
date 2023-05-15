@@ -220,11 +220,10 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kMilliSeconds,
                           "The max duration among all splitting replicas for async learns");
 
-METRIC_DEFINE_gauge_int64(
-    server,
-    splitting_replicas_max_copy_file_bytes,
-    dsn::metric_unit::kBytes,
-    "The max size of copied files among all splitting replicas");
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas_max_copy_file_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The max size of copied files among all splitting replicas");
 
 namespace dsn {
 namespace replication {
@@ -1796,7 +1795,8 @@ void replica_stub::on_gc()
     METRIC_VAR_SET(bulk_load_max_duration_ms, bulk_load_max_duration_time_ms);
     METRIC_VAR_SET(splitting_replicas, splitting_count);
     METRIC_VAR_SET(splitting_replicas_max_duration_ms, splitting_max_duration_time_ms);
-    METRIC_VAR_SET(splitting_replicas_async_learn_max_duration_ms, splitting_max_async_learn_time_ms);
+    METRIC_VAR_SET(splitting_replicas_async_learn_max_duration_ms,
+                   splitting_max_async_learn_time_ms);
     METRIC_VAR_SET(splitting_replicas_max_copy_file_bytes, splitting_max_copy_file_size);
 
     LOG_INFO("finish to garbage collection, time_used_ns = {}", dsn_now_ns() - start);
