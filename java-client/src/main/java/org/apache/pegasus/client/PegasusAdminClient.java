@@ -234,17 +234,10 @@ public class PegasusAdminClient extends PegasusAbstractClient
   }
 
   @Override
-  public void listApps(ListAppInfoType listAppInfoType, List<app_info> appInfoList)
-      throws PException {
-    if (!appInfoList.isEmpty()) {
-      throw new PException(
-          new IllegalArgumentException(
-              String.format("listApps failed: output parameters 'appInfoList' is not empty.")));
-    }
-
+  public List<app_info> listApps(ListAppInfoType listAppInfoType) throws PException {
     configuration_list_apps_request request = new configuration_list_apps_request();
     request.setStatus(app_status.AS_AVAILABLE);
-    if (listAppInfoType = ListAppInfoType.GETALLAPPINFOS) {
+    if (listAppInfoType == ListAppInfoType.LT_GET_ALL_APPS) {
       request.setStatus(app_status.AS_INVALID);
     }
 
@@ -258,6 +251,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
               request.getStatus(), error.toString()));
     }
 
-    appInfoList = response.infos;
+    configuration_list_apps_response response = app_operator.get_response();
+    return response.infos;
   }
 }

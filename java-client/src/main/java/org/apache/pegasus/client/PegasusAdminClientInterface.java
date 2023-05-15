@@ -24,11 +24,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.pegasus.replication.app_info;
 
-public enum ListAppInfoType {
-  GETALLAPPINFOS,
-  ONLYGETAVAILABLEAPPS;
-}
-
 public interface PegasusAdminClientInterface extends Closeable {
   /**
    * Create A new pegasus app which is not stateless However the successful execution of the
@@ -87,8 +82,7 @@ public interface PegasusAdminClientInterface extends Closeable {
    * @param appInfoList List of all 'app_info' in the pegasus cluster
    * @throws PException
    */
-  public void listApps(ListAppInfoType listAppInfoType, List<app_info> appInfoList)
-      throws PException;
+  public List<app_info> listApps(ListAppInfoType listAppInfoType) throws PException;
 
   /** close the client */
   @Override

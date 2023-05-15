@@ -22,7 +22,6 @@ package org.apache.pegasus.client;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -141,8 +140,7 @@ public class TestAdminClient {
   @Test
   public void testListApps() throws PException {
     String appName = "testListApps" + System.currentTimeMillis();
-    List<app_info> appInfoList = new ArrayList<>();
-    toolsClient.listApps(ListAppInfoType.ONLYGETAVAILABLEAPPS, appInfoList);
+    List<app_info> appInfoList = toolsClient.listApps(ListAppInfoType.LT_ONLY_GET_AVAILABLE_APPS);
     int size1 = appInfoList.size();
     toolsClient.createApp(
         appName,
@@ -154,17 +152,17 @@ public class TestAdminClient {
     Assert.assertTrue(isAppHealthy);
 
     appInfoList.clear();
-    toolsClient.listApps(ListAppInfoType.ONLYGETAVAILABLEAPPS, appInfoList);
+    appInfoList = toolsClient.listApps(ListAppInfoType.LT_ONLY_GET_AVAILABLE_APPS);
     Assert.assertEquals(size1 + 1, appInfoList.size());
     appInfoList.clear();
-    toolsClient.listApps(ListAppInfoType.GETALLAPPINFOS, appInfoList);
+    appInfoList = toolsClient.listApps(ListAppInfoType.LT_GET_ALL_APPS);
     int size2 = appInfoList.size();
     toolsClient.dropApp(appName, this.tableOpTimeoutMs);
     appInfoList.clear();
-    toolsClient.listApps(ListAppInfoType.ONLYGETAVAILABLEAPPS, appInfoList);
+    appInfoList = toolsClient.listApps(ListAppInfoType.LT_ONLY_GET_AVAILABLE_APPS);
     Assert.assertEquals(size1, appInfoList.size());
     appInfoList.clear();
-    toolsClient.listApps(ListAppInfoType.GETALLAPPINFOS, appInfoList);
+    appInfoList = toolsClient.listApps(ListAppInfoType.LT_GET_ALL_APPS);
     Assert.assertEquals(size2, appInfoList.size());
   }
 }
