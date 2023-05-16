@@ -83,7 +83,7 @@ public:
     fs_manager();
 
     // Should be called before open/load any replicas.
-    // NOTE: 'data_dirs' and 'tags' must have the same size and in the same order.
+    // NOTE: 'data_dirs' and 'data_dir_tags' must have the same size and in the same order.
     void initialize(const std::vector<std::string> &data_dirs,
                     const std::vector<std::string> &data_dir_tags);
 
