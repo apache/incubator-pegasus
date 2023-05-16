@@ -236,9 +236,16 @@ public class PegasusAdminClient extends PegasusAbstractClient
   @Override
   public List<app_info> listApps(ListAppInfoType listAppInfoType) throws PException {
     configuration_list_apps_request request = new configuration_list_apps_request();
-    request.setStatus(app_status.AS_AVAILABLE);
-    if (listAppInfoType == ListAppInfoType.LT_GET_ALL_APPS) {
+    if (listAppInfoType == ListAppInfoType.LT_AVAILABLE_APPS) {
+      // if set request.setStatus as 'AS_AVAILABLE', It will return 'app_info' of all available
+      // tables
+      request.setStatus(app_status.AS_AVAILABLE);
+    } else if (listAppInfoType == ListAppInfoType.LT_ALL_APPS) {
+      // if set request.setStatus as 'AS_INVALID', It will return app_info of all tables, including
+      // dropped but currently reserved tables
       request.setStatus(app_status.AS_INVALID);
+    } else {
+      throw new PException(String.format("List apps failed, unknown ListAppInfoType."));
     }
 
     list_apps_operator app_operator = new list_apps_operator(request);
@@ -247,7 +254,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
     if (error != error_code.error_types.ERR_OK) {
       throw new PException(
           String.format(
-              "List apps failed, query status:%s, error:%s.",
+              "List apps failed, query status: %s, error: %s.",
               request.getStatus(), error.toString()));
     }
 

@@ -19,8 +19,8 @@
 package org.apache.pegasus.client;
 
 public enum ListAppInfoType {
-  LT_ONLY_GET_AVAILABLE_APPS(0),
-  LT_GET_ALL_APPS(1);
+  LT_AVAILABLE_APPS(0),
+  LT_ALL_APPS(1);
 
   private final int value;
 

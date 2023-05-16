@@ -74,12 +74,11 @@ public interface PegasusAdminClientInterface extends Closeable {
   public void dropApp(String appName, int reserveSeconds) throws PException;
 
   /**
-   * Get all app names of the pegasus cluster
+   * Get app infos in the Pegasus cluster
    *
-   * @param onlyGetAvailableApps Whether to return all available tables, true means to return only
-   *     available tables, false means to return all tables, including dropped but currently
-   *     reserved tables
-   * @param appInfoList List of all 'app_info' in the pegasus cluster
+   * @param listAppInfoType 'LT_AVAILABLE_APPS' means to return only available tables, 'LT_ALL_APPS'
+   *     means to return all tables, including dropped but currently reserved tables
+   * @return List of 'app_info' in the Pegasus cluster
    * @throws PException
    */
   public List<app_info> listApps(ListAppInfoType listAppInfoType) throws PException;
