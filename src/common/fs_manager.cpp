@@ -61,36 +61,39 @@ DSN_DEFINE_int32(replication,
                  "space insufficient");
 DSN_TAG_VARIABLE(disk_min_available_space_ratio, FT_MUTABLE);
 
-unsigned dir_node::replicas_count() const
+uint64_t dir_node::replicas_count() const
 {
-    unsigned sum = 0;
+    uint64_t sum = 0;
     for (const auto &s : holding_replicas) {
         sum += s.second.size();
     }
     return sum;
 }
 
-unsigned dir_node::replicas_count(app_id id) const
+uint64_t dir_node::replicas_count(app_id id) const
 {
     const auto iter = holding_replicas.find(id);
-    if (iter == holding_replicas.end())
+    if (iter == holding_replicas.end()) {
         return 0;
+    }
     return iter->second.size();
 }
 
 bool dir_node::has(const gpid &pid) const
 {
     auto iter = holding_replicas.find(pid.get_app_id());
-    if (iter == holding_replicas.end())
+    if (iter == holding_replicas.end()) {
         return false;
+    }
     return iter->second.find(pid) != iter->second.end();
 }
 
-unsigned dir_node::remove(const gpid &pid)
+uint64_t dir_node::remove(const gpid &pid)
 {
     auto iter = holding_replicas.find(pid.get_app_id());
-    if (iter == holding_replicas.end())
+    if (iter == holding_replicas.end()) {
         return 0;
+    }
     return iter->second.erase(pid);
 }
 
@@ -134,55 +137,51 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
     return (old_status != new_status);
 }
 
-fs_manager::fs_manager(bool for_test)
+fs_manager::fs_manager()
 {
-    if (!for_test) {
-        _counter_total_capacity_mb.init_app_counter("eon.replica_stub",
-                                                    "disk.capacity.total(MB)",
+    _counter_total_capacity_mb.init_app_counter("eon.replica_stub",
+                                                "disk.capacity.total(MB)",
+                                                COUNTER_TYPE_NUMBER,
+                                                "total disk capacity in MB");
+    _counter_total_available_mb.init_app_counter("eon.replica_stub",
+                                                 "disk.available.total(MB)",
+                                                 COUNTER_TYPE_NUMBER,
+                                                 "total disk available in MB");
+    _counter_total_available_ratio.init_app_counter("eon.replica_stub",
+                                                    "disk.available.total.ratio",
                                                     COUNTER_TYPE_NUMBER,
-                                                    "total disk capacity in MB");
-        _counter_total_available_mb.init_app_counter("eon.replica_stub",
-                                                     "disk.available.total(MB)",
-                                                     COUNTER_TYPE_NUMBER,
-                                                     "total disk available in MB");
-        _counter_total_available_ratio.init_app_counter("eon.replica_stub",
-                                                        "disk.available.total.ratio",
-                                                        COUNTER_TYPE_NUMBER,
-                                                        "total disk available ratio");
-        _counter_min_available_ratio.init_app_counter("eon.replica_stub",
-                                                      "disk.available.min.ratio",
-                                                      COUNTER_TYPE_NUMBER,
-                                                      "minimal disk available ratio in all disks");
-        _counter_max_available_ratio.init_app_counter("eon.replica_stub",
-                                                      "disk.available.max.ratio",
-                                                      COUNTER_TYPE_NUMBER,
-                                                      "maximal disk available ratio in all disks");
-    }
+                                                    "total disk available ratio");
+    _counter_min_available_ratio.init_app_counter("eon.replica_stub",
+                                                  "disk.available.min.ratio",
+                                                  COUNTER_TYPE_NUMBER,
+                                                  "minimal disk available ratio in all disks");
+    _counter_max_available_ratio.init_app_counter("eon.replica_stub",
+                                                  "disk.available.max.ratio",
+                                                  COUNTER_TYPE_NUMBER,
+                                                  "maximal disk available ratio in all disks");
 }
 
 dir_node *fs_manager::get_dir_node(const std::string &subdir) const
 {
-    zauto_read_lock l(_lock);
     std::string norm_subdir;
     utils::filesystem::get_normalized_path(subdir, norm_subdir);
-    for (auto &n : _dir_nodes) {
-        // if input is a subdir of some dir_nodes
-        const std::string &d = n->full_dir;
-        if (norm_subdir.compare(0, d.size(), d) == 0 &&
-            (norm_subdir.size() == d.size() || norm_subdir[d.size()] == '/')) {
-            return n.get();
+
+    zauto_read_lock l(_lock);
+    for (auto &dn : _dir_nodes) {
+        // Check if 'subdir' is a sub-directory of 'dn'.
+        const std::string &dir = dn->full_dir;
+        if (norm_subdir.compare(0, dir.size(), dir) == 0 &&
+            (norm_subdir.size() == dir.size() || norm_subdir[dir.size()] == '/')) {
+            return dn.get();
         }
     }
     return nullptr;
 }
 
-// size of the two vectors should be equal
-dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs,
-                                       const std::vector<std::string> &tags,
-                                       bool for_test)
+void fs_manager::initialize(const std::vector<std::string> &data_dirs,
+                            const std::vector<std::string> &data_dir_tags)
 {
-    // create all dir_nodes
-    CHECK_EQ(data_dirs.size(), tags.size());
+    CHECK_EQ(data_dirs.size(), data_dir_tags.size());
     for (unsigned i = 0; i < data_dirs.size(); ++i) {
         std::string norm_path;
         utils::filesystem::get_normalized_path(data_dirs[i], norm_path);
@@ -192,10 +191,9 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
     }
     _available_data_dirs = data_dirs;
 
-    if (!for_test) {
-        update_disk_stat(false);
-    }
-    return dsn::ERR_OK;
+
+    // Update the disk statistics.
+    update_disk_stat();
 }
 
 dsn::error_code fs_manager::get_disk_tag(const std::string &dir, std::string &tag)
@@ -211,20 +209,21 @@ dsn::error_code fs_manager::get_disk_tag(const std::string &dir, std::string &ta
 
 void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
 {
-    dir_node *n = get_dir_node(pid_dir);
-    if (nullptr == n) {
+    const auto &dn = get_dir_node(pid_dir);
+    if (nullptr == dn) {
         LOG_ERROR(
             "{}: dir({}) of gpid({}) haven't registered", dsn_primary_address(), pid_dir, pid);
+        return;
+    }
+
+    zauto_write_lock l(_lock);
+    auto &replicas_for_app = dn->holding_replicas[pid.get_app_id()];
+    auto result = replicas_for_app.emplace(pid);
+    if (!result.second) {
+        LOG_WARNING(
+            "{}: gpid({}) already in the dir_node({})", dsn_primary_address(), pid, dn->tag);
     } else {
-        zauto_write_lock l(_lock);
-        std::set<dsn::gpid> &replicas_for_app = n->holding_replicas[pid.get_app_id()];
-        auto result = replicas_for_app.emplace(pid);
-        if (!result.second) {
-            LOG_WARNING(
-                "{}: gpid({}) already in the dir_node({})", dsn_primary_address(), pid, n->tag);
-        } else {
-            LOG_INFO("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, n->tag);
-        }
+        LOG_INFO("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, dn->tag);
     }
 }
 
@@ -271,16 +270,16 @@ void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ 
 void fs_manager::remove_replica(const gpid &pid)
 {
     zauto_write_lock l(_lock);
-    unsigned remove_count = 0;
-    for (auto &n : _dir_nodes) {
-        unsigned r = n->remove(pid);
+    uint64_t remove_count = 0;
+    for (auto &dn : _dir_nodes) {
+        uint64_t r = dn->remove(pid);
         CHECK_LE_MSG(remove_count + r,
                      1,
                      "gpid({}) found in dir({}), which was removed before",
                      pid,
-                     n->tag);
+                     dn->tag);
         if (r != 0) {
-            LOG_INFO("{}: remove gpid({}) from dir({})", dsn_primary_address(), pid, n->tag);
+            LOG_INFO("{}: remove gpid({}) from dir({})", dsn_primary_address(), pid, dn->tag);
         }
         remove_count += r;
     }

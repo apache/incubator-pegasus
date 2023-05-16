@@ -44,12 +44,12 @@ DSN_DECLARE_int32(disk_min_available_space_ratio);
 struct dir_node
 {
 public:
-    std::string tag;
-    std::string full_dir;
+    const std::string tag;
+    const std::string full_dir;
     int64_t disk_capacity_mb;
     int64_t disk_available_mb;
     int disk_available_ratio;
-    disk_status::type status;
+    std::atomic<disk_status::type> status;
     std::map<app_id, std::set<gpid>> holding_replicas;
     std::map<app_id, std::set<gpid>> holding_primary_replicas;
     std::map<app_id, std::set<gpid>> holding_secondary_replicas;
@@ -69,24 +69,24 @@ public:
           status(status_)
     {
     }
-    unsigned replicas_count(app_id id) const;
-    unsigned replicas_count() const;
+    // All functions are not thread-safe. However, they are only used in fs_manager
+    // and protected by the lock in fs_manager.
+    uint64_t replicas_count(app_id id) const;
+    uint64_t replicas_count() const;
     bool has(const dsn::gpid &pid) const;
-    unsigned remove(const dsn::gpid &pid);
+    uint64_t remove(const dsn::gpid &pid);
     bool update_disk_stat(const bool update_disk_status);
 };
 
 class fs_manager
 {
 public:
-    fs_manager(bool for_test);
-    ~fs_manager() {}
+    fs_manager();
 
-    // this should be called before open/load any replicas
-    dsn::error_code initialize(const replication_options &opts);
-    dsn::error_code initialize(const std::vector<std::string> &data_dirs,
-                               const std::vector<std::string> &tags,
-                               bool for_test);
+    // Should be called before open/load any replicas.
+    // NOTE: 'data_dirs' and 'tags' must have the same size and in the same order.
+    void initialize(const std::vector<std::string> &data_dirs,
+                    const std::vector<std::string> &data_dir_tags);
 
     dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
     void allocate_dir(const dsn::gpid &pid,
