@@ -185,12 +185,12 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
     for (unsigned i = 0; i < data_dirs.size(); ++i) {
         std::string norm_path;
         utils::filesystem::get_normalized_path(data_dirs[i], norm_path);
-        dir_node *n = new dir_node(tags[i], norm_path);
+        dir_node *n = new dir_node(data_dir_tags[i], norm_path);
         _dir_nodes.emplace_back(n);
-        LOG_INFO("{}: mark data dir({}) as tag({})", dsn_primary_address(), norm_path, tags[i]);
+        LOG_INFO(
+            "{}: mark data dir({}) as tag({})", dsn_primary_address(), norm_path, data_dir_tags[i]);
     }
     _available_data_dirs = data_dirs;
-
 
     // Update the disk statistics.
     update_disk_stat();
