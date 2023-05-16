@@ -17,9 +17,9 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <functional>
-#include <gtest/gtest_prod.h>
 #include <map>
 #include <memory>
 #include <set>
@@ -37,7 +37,6 @@ namespace dsn {
 class gpid;
 
 namespace replication {
-class replication_options;
 
 DSN_DECLARE_int32(disk_min_available_space_ratio);
 
