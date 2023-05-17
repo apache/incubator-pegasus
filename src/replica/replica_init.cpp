@@ -68,16 +68,9 @@ DSN_DEFINE_int32(replication,
 
 error_code replica::initialize_on_new()
 {
-    // if (dsn::utils::filesystem::directory_exists(_dir) &&
-    //    !dsn::utils::filesystem::remove_path(_dir))
-    //{
-    //    LOG_ERROR("cannot allocate new replica @ {}, as the dir is already exists", _dir);
-    //    return ERR_PATH_ALREADY_EXIST;
-    //}
-    //
     // TODO: check if _dir contain other file or directory except for
-    // "restore.policy_name.backup_id"
-    // which is applied to restore from cold backup
+    // "restore.policy_name.backup_id" which is applied to restore from
+    // cold backup.
     if (!dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::create_directory(_dir)) {
         LOG_ERROR("cannot allocate new replica @ {}, because create dir failed", _dir);

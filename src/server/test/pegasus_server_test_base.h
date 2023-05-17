@@ -23,7 +23,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "replica/replica_test_utils.h"
+#include "replica/replica_stub.h"
 #include "utils/filesystem.h"
 
 namespace pegasus {
@@ -45,14 +45,18 @@ public:
     {
         // Remove rdb to prevent rocksdb recovery from last test.
         dsn::utils::filesystem::remove_path("./data/rdb");
-        _replica_stub = dsn::replication::create_test_replica_stub();
+        _replica_stub = new dsn::replication::replica_stub();
 
         _gpid = dsn::gpid(100, 1);
         dsn::app_info app_info;
         app_info.app_type = "pegasus";
 
-        _replica = dsn::replication::create_test_replica(
-            _replica_stub, _gpid, app_info, "./", false, false);
+        _replica =
+            new dsn::replication::replica(_replica_stub, _gpid, app_info, "./", false, false);
+        const auto dir_data = dsn::utils::filesystem::path_combine(_replica->dir(), "data");
+        CHECK(dsn::utils::filesystem::create_directory(dir_data),
+              "create data dir {} failed",
+              dir_data);
 
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
     }
@@ -77,14 +81,14 @@ public:
         // do not clear state
         _server->stop(false);
 
-        dsn::replication::destroy_replica_stub(_replica_stub);
-        dsn::replication::destroy_replica(_replica);
+        delete _replica_stub;
+        delete _replica;
     }
 
 protected:
     std::unique_ptr<mock_pegasus_server_impl> _server;
-    dsn::replication::replica *_replica;
-    dsn::replication::replica_stub *_replica_stub;
+    dsn::replication::replica *_replica = nullptr;
+    dsn::replication::replica_stub *_replica_stub = nullptr;
     dsn::gpid _gpid;
 };
 

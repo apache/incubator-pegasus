@@ -30,7 +30,6 @@
 #include "pegasus_server_test_base.h"
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
-#include "replica/replica_test_utils.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service.h"
 #include "server/pegasus_write_service_impl.h"
@@ -48,9 +47,11 @@ protected:
     dsn::blob _raw_key;
 
 public:
+    rocksdb_wrapper_test() = default;
+
     void SetUp() override
     {
-        start();
+        ASSERT_EQ(::dsn::ERR_OK, start());
         _server_write = std::make_unique<pegasus_server_write>(_server.get());
         _rocksdb_wrapper = _server_write->_write_svc->_impl->_rocksdb_wrapper.get();
 
@@ -74,13 +75,18 @@ public:
     void set_app_duplicating()
     {
         _server->stop(false);
-        dsn::replication::destroy_replica(_replica);
+        delete _replica;
 
         dsn::app_info app_info;
         app_info.app_type = "pegasus";
         app_info.duplicating = true;
-        _replica = dsn::replication::create_test_replica(
-            _replica_stub, _gpid, app_info, "./", false, false);
+
+        _replica =
+            new dsn::replication::replica(_replica_stub, _gpid, app_info, "./", false, false);
+        const auto dir_data = dsn::utils::filesystem::path_combine(_replica->dir(), "data");
+        CHECK(dsn::utils::filesystem::create_directory(dir_data),
+              "create data dir {} failed",
+              dir_data);
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
 
         SetUp();
