@@ -89,7 +89,6 @@ public:
     void SetUp() override
     {
         FLAGS_enable_http_server = false;
-        stub->install_perf_counters();
         mock_app_info();
         _mock_replica =
             stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
