@@ -56,7 +56,6 @@
 #include "failure_detector/failure_detector_multimaster.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
@@ -358,7 +357,6 @@ private:
     void trigger_checkpoint(replica_ptr r, bool is_emergency);
     void handle_log_failure(error_code err);
 
-    void install_perf_counters();
     dsn::error_code on_kill_replica(gpid id);
 
     void get_replica_info(/*out*/ replica_info &info, /*in*/ replica_ptr r);
@@ -504,7 +502,6 @@ private:
     std::atomic_bool _is_releasing_memory{false};
 #endif
 
-    // performance counters
     METRIC_VAR_DECLARE_gauge_int64(total_replicas);
     METRIC_VAR_DECLARE_gauge_int64(opening_replicas);
     METRIC_VAR_DECLARE_gauge_int64(closing_replicas);
@@ -534,17 +531,10 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(bulk_load_ingestion_max_duration_ms);
     METRIC_VAR_DECLARE_gauge_int64(bulk_load_max_duration_ms);
 
-    // <- Partition split Metrics ->
-    perf_counter_wrapper _counter_replicas_splitting_count;
-    perf_counter_wrapper _counter_replicas_splitting_max_duration_time_ms;
-    perf_counter_wrapper _counter_replicas_splitting_max_async_learn_time_ms;
-    perf_counter_wrapper _counter_replicas_splitting_max_copy_file_size;
-    perf_counter_wrapper _counter_replicas_splitting_recent_start_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_size;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_mutation_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_split_fail_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_split_succ_count;
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_async_learn_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_max_copy_file_bytes);
 
     dsn::task_tracker _tracker;
 };
