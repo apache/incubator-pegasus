@@ -32,6 +32,7 @@
 #include "replica/replica_base.h"
 #include "runtime/pipeline.h"
 #include "utils/chrono_literals.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 namespace replication {
@@ -105,8 +106,8 @@ private:
 
     perf_counter_wrapper _counter_dup_load_file_failed_count;
     perf_counter_wrapper _counter_dup_load_skipped_bytes_count;
-    perf_counter_wrapper _counter_dup_log_read_bytes_rate;
-    perf_counter_wrapper _counter_dup_log_read_mutations_rate;
+    METRIC_VAR_DECLARE_counter(dup_log_read_bytes);
+    METRIC_VAR_DECLARE_counter(dup_log_read_mutations);
 
     std::chrono::milliseconds _repeat_delay{10_s};
 };

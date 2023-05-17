@@ -35,6 +35,16 @@
 #include "utils/ports.h"
 #include "utils/string_view.h"
 
+METRIC_DEFINE_counter(replica,
+                          dup_log_read_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The size read from private log for dup");
+
+METRIC_DEFINE_counter(replica,
+                          dup_log_read_mutations,
+                          dsn::metric_unit::kMutations,
+                          "The number of mutations read from private log for dup");
+
 namespace dsn {
 namespace replication {
 
@@ -175,8 +185,8 @@ void load_from_private_log::replay_log_block()
                                    [this](int log_bytes_length, mutation_ptr &mu) -> bool {
                                        auto es = _mutation_batch.add(std::move(mu));
                                        CHECK_PREFIX_MSG(es.is_ok(), es.description());
-                                       _counter_dup_log_read_bytes_rate->add(log_bytes_length);
-                                       _counter_dup_log_read_mutations_rate->increment();
+                                       METRIC_VAR_INCREMENT_BY(dup_log_read_bytes, log_bytes_length);
+                                       METRIC_VAR_INCREMENT(dup_log_read_mutations);
                                        return true;
                                    },
                                    _start_offset,
@@ -252,17 +262,10 @@ load_from_private_log::load_from_private_log(replica *r, replica_duplicator *dup
       _private_log(r->private_log()),
       _duplicator(dup),
       _stub(r->get_replica_stub()),
-      _mutation_batch(dup)
+      _mutation_batch(dup),
+      METRIC_VAR_INIT_replica(dup_log_read_bytes),
+      METRIC_VAR_INIT_replica(dup_log_read_mutations)
 {
-    _counter_dup_log_read_bytes_rate.init_app_counter("eon.replica_stub",
-                                                      "dup.log_read_bytes_rate",
-                                                      COUNTER_TYPE_RATE,
-                                                      "reading rate of private log in bytes");
-    _counter_dup_log_read_mutations_rate.init_app_counter(
-        "eon.replica_stub",
-        "dup.log_read_mutations_rate",
-        COUNTER_TYPE_RATE,
-        "reading rate of mutations from private log");
     _counter_dup_load_file_failed_count.init_app_counter(
         "eon.replica_stub",
         "dup.load_file_failed_count",
