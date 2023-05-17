@@ -297,7 +297,6 @@ public:
     {
         utils::filesystem::remove_path(_log_dir);
         utils::filesystem::create_directory(_log_dir);
-
         utils::filesystem::remove_path(_log_dir + ".test");
     }
 

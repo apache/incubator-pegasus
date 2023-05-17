@@ -34,6 +34,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <set>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -46,7 +47,6 @@
 #include "duplication_types.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
-#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
@@ -240,19 +240,21 @@ void track_disk_info_check_and_apply(const dsn::replication::configuration_propo
     std::string dir;
     replica_info ri;
     switch (act.type) {
-    case config_type::CT_ASSIGN_PRIMARY:
-        target_manager->allocate_dir(pid, "test", dir);
-        CHECK_EQ(dsn::ERR_OK, target_manager->get_disk_tag(dir, ri.disk_tag));
+    case config_type::CT_ASSIGN_PRIMARY: {
+        auto selected = target_manager->find_best_dir_for_new_replica(pid);
+        CHECK_NOTNULL(selected, "");
+        selected->holding_replicas[pid.get_app_id()].emplace(pid);
         cc->collect_serving_replica(act.target, ri);
         break;
-
+    }
     case config_type::CT_ADD_SECONDARY:
-    case config_type::CT_ADD_SECONDARY_FOR_LB:
-        node_manager->allocate_dir(pid, "test", dir);
-        CHECK_EQ(dsn::ERR_OK, node_manager->get_disk_tag(dir, ri.disk_tag));
+    case config_type::CT_ADD_SECONDARY_FOR_LB: {
+        auto selected = node_manager->find_best_dir_for_new_replica(pid);
+        CHECK_NOTNULL(selected, "");
+        selected->holding_replicas[pid.get_app_id()].emplace(pid);
         cc->collect_serving_replica(act.node, ri);
         break;
-
+    }
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
     case config_type::CT_UPGRADE_TO_PRIMARY:
         break;

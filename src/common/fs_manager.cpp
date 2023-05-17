@@ -34,13 +34,15 @@
 
 #include "fs_manager.h"
 
-#include <stdio.h>
 #include <algorithm>
 #include <cmath>
+#include <iosfwd>
 #include <utility>
 
 #include "common/gpid.h"
 #include "common/replication_enums.h"
+#include "fmt/core.h"
+#include "fmt/ostream.h"
 #include "perf_counter/perf_counter.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
@@ -62,6 +64,11 @@ DSN_DEFINE_int32(replication,
                  "space insufficient");
 DSN_TAG_VARIABLE(disk_min_available_space_ratio, FT_MUTABLE);
 
+DSN_DEFINE_bool(replication,
+                ignore_broken_disk,
+                true,
+                "true means ignore broken data disk when initialize");
+
 uint64_t dir_node::replicas_count() const
 {
     uint64_t sum = 0;
@@ -78,6 +85,11 @@ uint64_t dir_node::replicas_count(app_id id) const
         return 0;
     }
     return iter->second.size();
+}
+
+std::string dir_node::replica_dir(const char *app_type, const dsn::gpid &pid) const
+{
+    return utils::filesystem::path_combine(full_dir, fmt::format("{}.{}", pid, app_type));
 }
 
 bool dir_node::has(const gpid &pid) const
@@ -187,15 +199,44 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
                             const std::vector<std::string> &data_dir_tags)
 {
     CHECK_EQ(data_dirs.size(), data_dir_tags.size());
-    for (unsigned i = 0; i < data_dirs.size(); ++i) {
+
+    // Skip the data directories which are broken.
+    std::vector<std::shared_ptr<dir_node>> dir_nodes;
+    for (auto i = 0; i < data_dir_tags.size(); ++i) {
+        const auto &dir_tag = data_dir_tags[i];
+        const auto &dir = data_dirs[i];
+
+        // Check the status of this directory.
+        std::string cdir;
+        std::string err_msg;
+        if (dsn_unlikely(!utils::filesystem::create_directory(dir, cdir, err_msg) ||
+                         !utils::filesystem::check_dir_rw(dir, err_msg))) {
+            if (FLAGS_ignore_broken_disk) {
+                LOG_ERROR("data dir({}) is broken, ignore it, error: {}", dir, err_msg);
+            } else {
+                CHECK(false, err_msg);
+            }
+            // TODO(yingchun): Remove the 'continue' and mark its io error status, regardless
+            //  the status of the disks, add all disks.
+            continue;
+        }
+
+        // Normalize the data directories.
         std::string norm_path;
-        utils::filesystem::get_normalized_path(data_dirs[i], norm_path);
-        dir_node *n = new dir_node(data_dir_tags[i], norm_path);
-        _dir_nodes.emplace_back(n);
-        LOG_INFO(
-            "{}: mark data dir({}) as tag({})", dsn_primary_address(), norm_path, data_dir_tags[i]);
+        utils::filesystem::get_normalized_path(cdir, norm_path);
+
+        // Create and add this dir_node.
+        auto dn = std::make_shared<dir_node>(dir_tag, norm_path);
+        dir_nodes.emplace_back(dn);
+        LOG_INFO("mark data dir({}) as tag({})", norm_path, dir_tag);
     }
-    _available_data_dirs = data_dirs;
+    CHECK_FALSE(dir_nodes.empty());
+
+    // Update the memory state.
+    {
+        zauto_read_lock l(_lock);
+        _dir_nodes.swap(dir_nodes);
+    }
 
     // Update the disk statistics.
     update_disk_stat();
@@ -236,44 +277,40 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
     LOG_INFO("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, dn->tag);
 }
 
-void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ std::string &dir)
+dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
 {
-    char buffer[256];
-    sprintf(buffer, "%d.%d.%s", pid.get_app_id(), pid.get_partition_index(), type.c_str());
-
-    zauto_write_lock l(_lock);
-
     dir_node *selected = nullptr;
+    uint64_t least_app_replicas_count = 0;
+    uint64_t least_total_replicas_count = 0;
+    {
+        zauto_write_lock l(_lock);
+        // Try to find the dir_node with the least replica count.
+        for (const auto &dn : _dir_nodes) {
+            CHECK(!dn->has(pid), "gpid({}) already exists in dir_node({})", pid, dn->tag);
+            uint64_t app_replicas_count = dn->replicas_count(pid.get_app_id());
+            uint64_t total_replicas_count = dn->replicas_count();
 
-    unsigned least_app_replicas_count = 0;
-    unsigned least_total_replicas_count = 0;
-
-    for (auto &n : _dir_nodes) {
-        CHECK(!n->has(pid), "gpid({}) already in dir_node({})", pid, n->tag);
-        unsigned app_replicas = n->replicas_count(pid.get_app_id());
-        unsigned total_replicas = n->replicas_count();
-
-        if (selected == nullptr || least_app_replicas_count > app_replicas) {
-            least_app_replicas_count = app_replicas;
-            least_total_replicas_count = total_replicas;
-            selected = n.get();
-        } else if (least_app_replicas_count == app_replicas &&
-                   least_total_replicas_count > total_replicas) {
-            least_total_replicas_count = total_replicas;
-            selected = n.get();
+            if (selected == nullptr || least_app_replicas_count > app_replicas_count) {
+                least_app_replicas_count = app_replicas_count;
+                least_total_replicas_count = total_replicas_count;
+                selected = dn.get();
+            } else if (least_app_replicas_count == app_replicas_count &&
+                       least_total_replicas_count > total_replicas_count) {
+                least_total_replicas_count = total_replicas_count;
+                selected = dn.get();
+            }
         }
     }
-
-    LOG_INFO(
-        "{}: put pid({}) to dir({}), which has {} replicas of current app, {} replicas totally",
-        dsn_primary_address(),
-        pid,
-        selected->tag,
-        least_app_replicas_count,
-        least_total_replicas_count);
-
-    selected->holding_replicas[pid.get_app_id()].emplace(pid);
-    dir = utils::filesystem::path_combine(selected->full_dir, buffer);
+    if (selected) {
+        LOG_INFO(
+            "{}: put pid({}) to dir({}), which has {} replicas of current app, {} replicas totally",
+            dsn_primary_address(),
+            pid,
+            selected->tag,
+            least_app_replicas_count,
+            least_total_replicas_count);
+    }
+    return selected;
 }
 
 void fs_manager::remove_replica(const gpid &pid)
@@ -342,7 +379,6 @@ void fs_manager::add_new_dir_node(const std::string &data_dir, const std::string
     utils::filesystem::get_normalized_path(data_dir, norm_path);
     dir_node *n = new dir_node(tag, norm_path);
     _dir_nodes.emplace_back(n);
-    _available_data_dirs.emplace_back(data_dir);
     LOG_INFO("{}: mark data dir({}) as tag({})", dsn_primary_address().to_string(), norm_path, tag);
 }
 
@@ -357,6 +393,78 @@ bool fs_manager::is_dir_node_available(const std::string &data_dir, const std::s
         }
     }
     return false;
+}
+
+dir_node *fs_manager::find_replica_dir(const char *app_type, gpid pid)
+{
+    std::string replica_dir;
+    dir_node *replica_dn = nullptr;
+    {
+        zauto_read_lock l(_lock);
+        for (const auto &dn : _dir_nodes) {
+            const auto dir = dn->replica_dir(app_type, pid);
+            if (utils::filesystem::directory_exists(dir)) {
+                // Check if there are duplicate replica instance directories.
+                CHECK(replica_dir.empty(), "replica dir conflict: {} <--> {}", dir, replica_dir);
+                replica_dir = dir;
+                replica_dn = dn.get();
+            }
+        }
+    }
+
+    return replica_dn;
+}
+
+dir_node *fs_manager::create_replica_dir_if_necessary(const char *app_type, gpid pid)
+{
+    // Try to find the replica directory.
+    dir_node *replica_dn = find_replica_dir(app_type, pid);
+    if (replica_dn != nullptr) {
+        return replica_dn;
+    }
+
+    // Find a dir_node for the new replica.
+    replica_dn = find_best_dir_for_new_replica(pid);
+    if (replica_dn == nullptr) {
+        return nullptr;
+    }
+
+    const auto dir = replica_dn->replica_dir(app_type, pid);
+    if (!dsn::utils::filesystem::create_directory(dir)) {
+        LOG_ERROR("create replica directory({}) failed", dir);
+        return nullptr;
+    }
+
+    replica_dn->holding_replicas[pid.get_app_id()].emplace(pid);
+    return replica_dn;
+}
+
+dir_node *fs_manager::create_child_replica_dir(const char *app_type,
+                                               gpid child_pid,
+                                               const std::string &parent_dir)
+{
+    dir_node *child_dn = nullptr;
+    std::string child_dir;
+    {
+        zauto_read_lock l(_lock);
+        for (const auto &dn : _dir_nodes) {
+            child_dir = dn->replica_dir(app_type, child_pid);
+            // <parent_dir> = <prefix>/<gpid>.<app_type>
+            // check if <parent_dir>'s <prefix> is equal to <data_dir>
+            // TODO(yingchun): use a function instead.
+            if (parent_dir.substr(0, dn->full_dir.size() + 1) == dn->full_dir + "/") {
+                child_dn = dn.get();
+                break;
+            }
+        }
+    }
+    CHECK_NOTNULL(child_dn, "can not find parent_dir {} in data_dirs", parent_dir);
+    if (!dsn::utils::filesystem::create_directory(child_dir)) {
+        LOG_ERROR("create child replica directory({}) failed", child_dir);
+        return nullptr;
+    }
+    add_replica(child_pid, child_dir);
+    return child_dn;
 }
 
 } // namespace replication

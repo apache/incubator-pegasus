@@ -20,13 +20,10 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <stdint.h>
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
-#include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
@@ -47,68 +44,55 @@ class open_replica_test : public replica_test_base
 public:
     open_replica_test() = default;
     ~open_replica_test() { dsn::utils::filesystem::remove_path("./tmp_dir"); }
-
-    void test_open_replica()
-    {
-        app_info app_info;
-        app_info.app_type = "replica";
-        app_info.is_stateful = true;
-        app_info.max_replica_count = 3;
-        app_info.partition_count = 8;
-        app_info.app_id = 1;
-
-        struct test_data
-        {
-            ballot b;
-            decree last_committed_decree;
-            bool is_in_dir_nodes;
-            bool exec_failed;
-        } tests[] = {
-            {0, 0, true, true}, {0, 0, false, false}, {5, 5, true, true}, {5, 5, false, true},
-        };
-        int i = 0;
-        for (auto tt : tests) {
-            gpid gpid(app_info.app_id, i);
-            stub->_opening_replicas[gpid] = task_ptr(nullptr);
-
-            dsn::rpc_address node;
-            node.assign_ipv4("127.0.0.11", static_cast<uint16_t>(12321 + i + 1));
-
-            if (!tt.is_in_dir_nodes) {
-                dir_node *node_disk = new dir_node("tag_" + std::to_string(i), "tmp_dir");
-                stub->_fs_manager._dir_nodes.emplace_back(node_disk);
-                stub->_fs_manager._available_data_dirs.emplace_back("tmp_dir");
-            }
-
-            _replica->register_service();
-            mock_mutation_log_shared_ptr shared_log_mock =
-                new mock_mutation_log_shared("./tmp_dir");
-            stub->set_log(shared_log_mock);
-            partition_configuration config;
-            config.pid = gpid;
-            config.ballot = tt.b;
-            config.last_committed_decree = tt.last_committed_decree;
-            std::shared_ptr<app_state> _the_app = app_state::create(app_info);
-
-            configuration_update_request fake_request;
-            fake_request.info = *_the_app;
-            fake_request.config = config;
-            fake_request.type = config_type::CT_ASSIGN_PRIMARY;
-            fake_request.node = node;
-
-            std::shared_ptr<configuration_update_request> req2(new configuration_update_request);
-            *req2 = fake_request;
-            if (tt.exec_failed) {
-                ASSERT_DEATH(stub->open_replica(app_info, gpid, nullptr, req2), "");
-            } else {
-                stub->open_replica(app_info, gpid, nullptr, req2);
-            }
-            ++i;
-        }
-    }
 };
 
-TEST_F(open_replica_test, open_replica_add_decree_and_ballot_check) { test_open_replica(); }
+TEST_F(open_replica_test, open_replica_add_decree_and_ballot_check)
+{
+    app_info ai;
+    ai.app_type = "replica";
+    ai.is_stateful = true;
+    ai.max_replica_count = 3;
+    ai.partition_count = 8;
+    ai.app_id = 11;
 
+    struct test_data
+    {
+        ballot b;
+        decree last_committed_decree;
+        bool expect_crash;
+    } tests[] = {{0, 0, false}, {5, 5, true}};
+    int i = 0;
+    for (auto test : tests) {
+        gpid pid(ai.app_id, i);
+        stub->_opening_replicas[pid] = task_ptr(nullptr);
+
+        dsn::rpc_address node;
+        node.assign_ipv4("127.0.0.11", static_cast<uint16_t>(12321 + i + 1));
+
+        _replica->register_service();
+        mock_mutation_log_shared_ptr shared_log_mock = new mock_mutation_log_shared("./tmp_dir");
+        stub->set_log(shared_log_mock);
+
+        partition_configuration config;
+        config.pid = pid;
+        config.ballot = test.b;
+        config.last_committed_decree = test.last_committed_decree;
+        auto as = app_state::create(ai);
+
+        auto req = std::make_shared<configuration_update_request>();
+        req->info = *as;
+        req->config = config;
+        req->type = config_type::CT_ASSIGN_PRIMARY;
+        req->node = node;
+        if (test.expect_crash) {
+            ASSERT_DEATH(stub->open_replica(ai, pid, nullptr, req), "");
+        } else {
+            stub->open_replica(ai, pid, nullptr, req);
+        }
+        // Both of the tests will fail, the replica is not exist in the stub.
+        ASSERT_EQ(nullptr, stub->get_replica(pid));
+        ++i;
+    }
+}
 } // namespace replication
 } // namespace dsn

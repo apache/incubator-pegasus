@@ -347,7 +347,7 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_update)
     ASSERT_TRUE(utils::filesystem::directory_exists(kReplicaNewDir));
     utils::filesystem::remove_path(fmt::format("./{}/", request.origin_disk));
     utils::filesystem::remove_path(fmt::format("./{}/", request.target_disk));
-    for (const auto &node_disk : get_dir_nodes()) {
+    for (const auto &node_disk : stub->get_fs_manager()->get_dir_nodes()) {
         if (node_disk->tag == request.origin_disk) {
             auto gpids = node_disk->holding_replicas[app_info_1.app_id];
             ASSERT_TRUE(gpids.find(request.pid) == gpids.end());
@@ -362,14 +362,25 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_update)
     }
 }
 
+// Test load from new replica dir failed, then fall back to load from origin dir succeed,
+// and then mark the "new" replica dir as ".gar".
 TEST_F(replica_disk_migrate_test, disk_migrate_replica_open)
 {
+    gpid test_pid(app_info_1.app_id, 4);
+
+    // Suppose gpid 1.4 is migrated from tag_2 to tag_empty_1.
     auto &request = *fake_migrate_rpc.mutable_request();
-    request.pid = dsn::gpid(app_info_1.app_id, 4);
+    request.pid = test_pid;
     request.origin_disk = "tag_2";
     request.target_disk = "tag_empty_1";
 
-    remove_mock_dir_node(request.origin_disk);
+    // Remove the gpid 1.4 dir which is created in constructor.
+    const std::string kReplicaOriginDir =
+        fmt::format("./{}/{}.replica", request.origin_disk, request.pid.to_string());
+    utils::filesystem::remove_path(kReplicaOriginDir);
+    stub->get_fs_manager()->remove_replica(test_pid);
+
+    // Create the related dirs.
     const std::string kReplicaOriginSuffixDir = fmt::format(
         "./{}/{}.replica.disk.migrate.ori/", request.origin_disk, request.pid.to_string());
     const std::string kReplicaNewDir =
@@ -377,16 +388,18 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_open)
     utils::filesystem::create_directory(kReplicaOriginSuffixDir);
     utils::filesystem::create_directory(kReplicaNewDir);
 
+    // The replica can be opened nomally. In fact, the original dir is opened, and the new dir will
+    // be garbage.
     fail::cfg("mock_replica_load", "return()");
-    const std::string kReplicaOriginDir =
-        fmt::format("./{}/{}.replica", request.origin_disk, request.pid.to_string());
-    const std::string kReplicaGarDir =
-        fmt::format("./{}/{}.replica.gar", request.target_disk, request.pid.to_string());
     open_replica(app_info_1, request.pid);
 
+    // Check it works as expected.
+    const std::string kReplicaGarDir =
+        fmt::format("./{}/{}.replica.gar", request.target_disk, request.pid.to_string());
     ASSERT_TRUE(utils::filesystem::directory_exists(kReplicaOriginDir));
     ASSERT_TRUE(utils::filesystem::directory_exists(kReplicaGarDir));
 
+    // Clean up.
     utils::filesystem::remove_path(kReplicaOriginDir);
     utils::filesystem::remove_path(kReplicaGarDir);
 }

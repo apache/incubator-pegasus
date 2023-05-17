@@ -231,23 +231,27 @@ private:
 };
 typedef dsn::ref_ptr<mock_replica> mock_replica_ptr;
 
-inline std::unique_ptr<mock_replica> create_mock_replica(replica_stub *stub,
-                                                         int appid = 1,
-                                                         int partition_index = 1,
-                                                         const char *dir = "./")
+inline std::unique_ptr<mock_replica>
+create_mock_replica(replica_stub *stub, int appid = 1, int partition_index = 1)
 {
     gpid gpid(appid, partition_index);
     app_info app_info;
     app_info.app_type = "replica";
     app_info.app_name = "temp";
 
-    return std::make_unique<mock_replica>(stub, gpid, app_info, dir);
+    dir_node *dn =
+        stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type.c_str(), gpid);
+    CHECK_NOTNULL(dn, "");
+    const auto replica_path = dn->replica_dir(app_info.app_type.c_str(), gpid);
+    CHECK(
+        dsn::utils::filesystem::directory_exists(replica_path), "dir({}) not exist", replica_path);
+    return std::make_unique<mock_replica>(stub, gpid, app_info, replica_path.c_str());
 }
 
 class mock_replica_stub : public replica_stub
 {
 public:
-    mock_replica_stub() = default;
+    mock_replica_stub() { _fs_manager.initialize({"./"}, {"tag"}); }
 
     ~mock_replica_stub() override = default;
 
@@ -313,9 +317,10 @@ public:
         config.pid = pid;
         config.status = status;
 
-        // TODO(yingchun): should refactor to move to cstor or initializer.
-        initialize_fs_manager({"./"}, {"tag"});
-        std::string dir = get_replica_dir("test", pid);
+        auto dn = _fs_manager.create_replica_dir_if_necessary(info.app_type.c_str(), pid);
+        CHECK_NOTNULL(dn, "");
+        const auto &dir = dn->replica_dir(info.app_type.c_str(), pid);
+        CHECK(dsn::utils::filesystem::directory_exists(dir), "dir({}) not exist", dir);
         auto *rep =
             new mock_replica(this, pid, info, dir.c_str(), need_restore, is_duplication_follower);
         rep->set_replica_config(config);
