@@ -76,6 +76,13 @@
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
 
+namespace pegasus {
+namespace server {
+class pegasus_server_test_base;
+class rocksdb_wrapper_test;
+} // namespace server
+} // namespace pegasus
+
 namespace dsn {
 class gpid;
 class perf_counter;
@@ -550,6 +557,8 @@ private:
     friend class replica_disk_migrate_test;
     friend class open_replica_test;
     friend class replica_follower;
+    friend class ::pegasus::server::pegasus_server_test_base;
+    friend class ::pegasus::server::rocksdb_wrapper_test;
     FRIEND_TEST(replica_test, test_auto_trash);
 
     // replica configuration, updated by update_local_configuration ONLY

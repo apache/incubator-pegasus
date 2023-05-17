@@ -83,10 +83,6 @@ public:
 
         _replica =
             new dsn::replication::replica(_replica_stub, _gpid, app_info, "./", false, false);
-        const auto dir_data = dsn::utils::filesystem::path_combine(_replica->dir(), "data");
-        CHECK(dsn::utils::filesystem::create_directory(dir_data),
-              "create data dir {} failed",
-              dir_data);
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
 
         SetUp();
