@@ -198,7 +198,6 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _mem_release_max_reserved_mem_percentage(10),
       _max_concurrent_bulk_load_downloading_count(5),
       _learn_app_concurrent_count(0),
-      _fs_manager(false),
       _bulk_load_downloading_count(0),
       _manual_emergency_checkpointing_count(0),
       _is_running(false)
@@ -858,9 +857,7 @@ void replica_stub::initialize_fs_manager(const std::vector<std::string> &data_di
 
     CHECK_GT_MSG(
         available_dirs.size(), 0, "initialize fs manager failed, no available data directory");
-    CHECK_EQ_MSG(_fs_manager.initialize(available_dirs, available_dir_tags, false),
-                 dsn::ERR_OK,
-                 "initialize fs manager failed");
+    _fs_manager.initialize(available_dirs, available_dir_tags);
 }
 
 void replica_stub::initialize_start()

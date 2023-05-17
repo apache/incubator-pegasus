@@ -60,5 +60,22 @@ TEST(fs_manager, dir_update_disk_status)
     }
 }
 
+TEST(fs_manager, get_dir_node)
+{
+    fs_manager fm;
+    fm.initialize({"/data1"}, {"data1"});
+
+    ASSERT_EQ(nullptr, fm.get_dir_node(""));
+    ASSERT_EQ(nullptr, fm.get_dir_node("/"));
+
+    ASSERT_NE(nullptr, fm.get_dir_node("/data1"));
+    ASSERT_NE(nullptr, fm.get_dir_node("/data1/"));
+    ASSERT_NE(nullptr, fm.get_dir_node("/data1/replica1"));
+
+    ASSERT_EQ(nullptr, fm.get_dir_node("/data2"));
+    ASSERT_EQ(nullptr, fm.get_dir_node("/data2/"));
+    ASSERT_EQ(nullptr, fm.get_dir_node("/data2/replica1"));
+}
+
 } // namespace replication
 } // namespace dsn
