@@ -55,7 +55,6 @@
 #include "mutation_log.h"
 #include "nfs/nfs_node.h"
 #include "nfs_types.h"
-#include "perf_counter/perf_counter.h"
 #include "replica.h"
 #include "replica/duplication/replica_follower.h"
 #include "replica/log_file.h"
@@ -197,6 +196,26 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kMilliSeconds,
                           "The max duration of bulk loads");
 
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of current splitting replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration among all splitting replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas_async_learn_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration among all splitting replicas for async learns");
+
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas_max_copy_file_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The max size of copied files among all splitting replicas");
+
 namespace dsn {
 namespace replication {
 DSN_DEFINE_bool(replication,
@@ -334,7 +353,11 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(write_busy_requests),
       METRIC_VAR_INIT_server(bulk_load_running_count),
       METRIC_VAR_INIT_server(bulk_load_ingestion_max_duration_ms),
-      METRIC_VAR_INIT_server(bulk_load_max_duration_ms)
+      METRIC_VAR_INIT_server(bulk_load_max_duration_ms),
+      METRIC_VAR_INIT_server(splitting_replicas),
+      METRIC_VAR_INIT_server(splitting_replicas_max_duration_ms),
+      METRIC_VAR_INIT_server(splitting_replicas_async_learn_max_duration_ms),
+      METRIC_VAR_INIT_server(splitting_replicas_max_copy_file_bytes)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
@@ -345,66 +368,9 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     _state = NS_Disconnected;
     _log = nullptr;
     _primary_address_str[0] = '\0';
-    install_perf_counters();
 }
 
 replica_stub::~replica_stub(void) { close(); }
-
-void replica_stub::install_perf_counters()
-{
-    // <- Partition split Metrics ->
-
-    _counter_replicas_splitting_count.init_app_counter("eon.replica_stub",
-                                                       "replicas.splitting.count",
-                                                       COUNTER_TYPE_NUMBER,
-                                                       "current partition splitting count");
-
-    _counter_replicas_splitting_max_duration_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.max.duration.time(ms)",
-        COUNTER_TYPE_NUMBER,
-        "current partition splitting max duration time(ms)");
-    _counter_replicas_splitting_max_async_learn_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.max.async.learn.time(ms)",
-        COUNTER_TYPE_NUMBER,
-        "current partition splitting max async learn time(ms)");
-    _counter_replicas_splitting_max_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.max.copy.file.size",
-        COUNTER_TYPE_NUMBER,
-        "current splitting max copy file size");
-    _counter_replicas_splitting_recent_start_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current splitting start count in the recent period");
-    _counter_replicas_splitting_recent_copy_file_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.file.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy file count in the recent period");
-    _counter_replicas_splitting_recent_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.file.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy file size in the recent period");
-    _counter_replicas_splitting_recent_copy_mutation_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.mutation.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy mutation count in the recent period");
-    _counter_replicas_splitting_recent_split_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.split.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting succeed count in the recent period");
-    _counter_replicas_splitting_recent_split_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.split.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting fail count in the recent period");
-}
 
 void replica_stub::initialize(bool clear /* = false*/)
 {
@@ -1848,10 +1814,11 @@ void replica_stub::on_gc()
     METRIC_VAR_SET(bulk_load_running_count, bulk_load_running_count);
     METRIC_VAR_SET(bulk_load_ingestion_max_duration_ms, bulk_load_max_ingestion_time_ms);
     METRIC_VAR_SET(bulk_load_max_duration_ms, bulk_load_max_duration_time_ms);
-    _counter_replicas_splitting_count->set(splitting_count);
-    _counter_replicas_splitting_max_duration_time_ms->set(splitting_max_duration_time_ms);
-    _counter_replicas_splitting_max_async_learn_time_ms->set(splitting_max_async_learn_time_ms);
-    _counter_replicas_splitting_max_copy_file_size->set(splitting_max_copy_file_size);
+    METRIC_VAR_SET(splitting_replicas, splitting_count);
+    METRIC_VAR_SET(splitting_replicas_max_duration_ms, splitting_max_duration_time_ms);
+    METRIC_VAR_SET(splitting_replicas_async_learn_max_duration_ms,
+                   splitting_max_async_learn_time_ms);
+    METRIC_VAR_SET(splitting_replicas_max_copy_file_bytes, splitting_max_copy_file_size);
 
     LOG_INFO("finish to garbage collection, time_used_ns = {}", dsn_now_ns() - start);
 }
