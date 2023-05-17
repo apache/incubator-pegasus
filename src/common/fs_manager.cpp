@@ -169,9 +169,13 @@ dir_node *fs_manager::get_dir_node(const std::string &subdir) const
     zauto_read_lock l(_lock);
     for (const auto &dn : _dir_nodes) {
         // Check if 'subdir' is a sub-directory of 'dn'.
-        const std::string &dir = dn->full_dir;
-        if (norm_subdir.compare(0, dir.size(), dir) == 0 &&
-            (norm_subdir.size() == dir.size() || norm_subdir[dir.size()] == '/')) {
+        const std::string &full_dir = dn->full_dir;
+        if (full_dir.size() > norm_subdir.size()) {
+            continue;
+        }
+
+        if ((norm_subdir.size() == full_dir.size() || norm_subdir[full_dir.size()] == '/') &&
+            norm_subdir.compare(0, full_dir.size(), full_dir) == 0) {
             return dn.get();
         }
     }
@@ -210,21 +214,25 @@ dsn::error_code fs_manager::get_disk_tag(const std::string &dir, std::string &ta
 void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
 {
     const auto &dn = get_dir_node(pid_dir);
-    if (nullptr == dn) {
+    if (dsn_unlikely(nullptr == dn)) {
         LOG_ERROR(
             "{}: dir({}) of gpid({}) haven't registered", dsn_primary_address(), pid_dir, pid);
         return;
     }
 
-    zauto_write_lock l(_lock);
-    auto &replicas_for_app = dn->holding_replicas[pid.get_app_id()];
-    auto result = replicas_for_app.emplace(pid);
-    if (!result.second) {
+    bool emplace_success = false;
+    {
+        zauto_write_lock l(_lock);
+        auto &replicas_for_app = dn->holding_replicas[pid.get_app_id()];
+        emplace_success = replicas_for_app.emplace(pid).second;
+    }
+    if (!emplace_success) {
         LOG_WARNING(
             "{}: gpid({}) already in the dir_node({})", dsn_primary_address(), pid, dn->tag);
-    } else {
-        LOG_INFO("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, dn->tag);
+        return;
     }
+
+    LOG_INFO("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, dn->tag);
 }
 
 void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ std::string &dir)
