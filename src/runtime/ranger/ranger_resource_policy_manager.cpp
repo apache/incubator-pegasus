@@ -72,6 +72,10 @@ DSN_DEFINE_string(ranger,
                   ranger_service_name,
                   "",
                   "The name of the policies defined in the Ranger service.");
+DSN_DEFINE_string(ranger,
+                  ranger_legacy_table_database_mapping_policy_name,
+                  "default_legacy_table_database_mapping_policy",
+                  "The name of the Ranger database policy matched by the legacy table");
 
 #define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
     do {                                                                                           \
@@ -147,10 +151,9 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
     : _meta_svc(meta_svc), _local_policy_version(-1)
 {
     // GLOBAL - kMetadata
-    register_rpc_access_type(
-        access_type::kMetadata,
-        {"RPC_CM_LIST_NODES", "RPC_CM_CLUSTER_INFO", "RPC_CM_LIST_APPS", "RPC_QUERY_DISK_INFO"},
-        _ac_type_of_global_rpcs);
+    register_rpc_access_type(access_type::kMetadata,
+                             {"RPC_CM_LIST_NODES", "RPC_CM_CLUSTER_INFO", "RPC_QUERY_DISK_INFO"},
+                             _ac_type_of_global_rpcs);
     // GLOBAL - kControl
     register_rpc_access_type(access_type::kControl,
                              {"RPC_HTTP_SERVICE",
@@ -231,12 +234,8 @@ bool ranger_resource_policy_manager::allowed(const int rpc_code,
             }
         }
 
-        // It's not allowed to access except list_app.
-        // list_app rpc code is in both GLOBAL and DATABASE policies, check the DATABASE policies
-        // later.
-        if (rpc_code != RPC_CM_LIST_APPS.code()) {
-            return false;
-        }
+        // The check that does not match any GLOBAL policy returns false.
+        return false;
     } while (false);
 
     do {
@@ -252,12 +251,20 @@ bool ranger_resource_policy_manager::allowed(const int rpc_code,
             if (!policy.policies.allowed(ac_type->second, user_name)) {
                 continue;
             }
-            // Legacy tables may don't contain database section.
-            if (database_name.empty() && policy.database_names.count("*") != 0) {
-                return true;
-            }
-            if (policy.database_names.count(database_name) != 0) {
-                return true;
+            if (database_name.empty()) {
+                // Legacy tables may don't contain database section, the check that does match
+                // defult policy.
+                if (policy.database_names.count(
+                        FLAGS_ranger_legacy_table_database_mapping_policy_name) != 0) {
+                    return true;
+                }
+            } else {
+                // the check that does match 'database_name' policy, or this policy applies to all
+                // databases.
+                if (policy.database_names.count("*") != 0 ||
+                    policy.database_names.count(database_name) != 0) {
+                    return true;
+                }
             }
         }
     } while (false);
