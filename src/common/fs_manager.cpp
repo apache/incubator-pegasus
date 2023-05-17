@@ -167,7 +167,7 @@ dir_node *fs_manager::get_dir_node(const std::string &subdir) const
     utils::filesystem::get_normalized_path(subdir, norm_subdir);
 
     zauto_read_lock l(_lock);
-    for (auto &dn : _dir_nodes) {
+    for (const auto &dn : _dir_nodes) {
         // Check if 'subdir' is a sub-directory of 'dn'.
         const std::string &dir = dn->full_dir;
         if (norm_subdir.compare(0, dir.size(), dir) == 0 &&
