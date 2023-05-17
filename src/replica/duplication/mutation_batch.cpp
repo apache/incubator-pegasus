@@ -29,7 +29,6 @@
 #include "consensus_types.h"
 #include "metadata_types.h"
 #include "mutation_batch.h"
-#include "perf_counter/perf_counter.h"
 #include "replica_duplicator.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
@@ -40,6 +39,11 @@
 #include "utils/smart_pointers.h"
 #include "utils/string_view.h"
 
+METRIC_DEFINE_gauge_int64(replica,
+                          dup_recent_lost_mutations,
+                          dsn::metric_unit::kMutations,
+                          "The number of lost mutations recently for dup");
+
 namespace dsn {
 namespace replication {
 
@@ -49,11 +53,9 @@ mutation_buffer::mutation_buffer(replica_base *r,
                                  decree init_decree,
                                  int max_count,
                                  mutation_committer committer)
-    : prepare_list(r, init_decree, max_count, committer)
+    : prepare_list(r, init_decree, max_count, committer),
+    METRIC_VAR_INIT_replica(dup_recent_lost_mutations)
 {
-    auto counter_str = fmt::format("dup_recent_mutation_loss_count@{}", r->get_gpid());
-    _counter_dulication_mutation_loss_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 }
 
 void mutation_buffer::commit(decree d, commit_type ct)
@@ -78,8 +80,7 @@ void mutation_buffer::commit(decree d, commit_type ct)
         //
         // just LOG_ERROR but not CHECK if mutation loss or other problem, it's different from
         // base class implement. And from the error and perf-counter, we can choose restart
-        // duplication
-        // or ignore the loss.
+        // duplication or ignore the loss.
         if (next_committed_mutation == nullptr || !next_committed_mutation->is_logged()) {
             LOG_ERROR_PREFIX("mutation[{}] is lost in prepare_list: "
                              "prepare_last_committed_decree={}, prepare_min_decree={}, "
@@ -88,7 +89,7 @@ void mutation_buffer::commit(decree d, commit_type ct)
                              last_committed_decree(),
                              min_decree(),
                              max_decree());
-            _counter_dulication_mutation_loss_count->set(min_decree() - last_committed_decree());
+            METRIC_VAR_SET(dup_recent_lost_mutations, min_decree() - last_committed_decree());
             // if next_commit_mutation loss, let last_commit_decree catch up  with min_decree, and
             // the next loop will commit from min_decree
             _last_committed_decree = min_decree() - 1;

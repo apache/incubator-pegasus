@@ -22,7 +22,6 @@
 #include <memory>
 
 #include "common/replication_other_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "replica/mutation.h"
 #include "replica/prepare_list.h"
@@ -45,7 +44,7 @@ public:
     void commit(decree d, commit_type ct) override;
 
 private:
-    perf_counter_wrapper _counter_dulication_mutation_loss_count;
+    METRIC_VAR_DECLARE_gauge_int64(dup_recent_lost_mutations);
 };
 
 // A sorted array of committed mutations that are ready for duplication.

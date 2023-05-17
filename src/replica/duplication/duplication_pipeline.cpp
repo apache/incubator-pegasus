@@ -23,7 +23,6 @@
 
 #include "dsn.layer2_types.h"
 #include "load_from_private_log.h"
-#include "perf_counter/perf_counter.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
@@ -31,6 +30,11 @@
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+
+METRIC_DEFINE_counter(replica,
+                          dup_shipped_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The shipped size of private log for dup");
 
 namespace dsn {
 class string_view;
@@ -80,7 +84,7 @@ void ship_mutation::ship(mutation_tuple_set &&in)
 {
     _mutation_duplicator->duplicate(std::move(in), [this](size_t total_shipped_size) mutable {
         update_progress();
-        _counter_dup_shipped_bytes_rate->add(total_shipped_size);
+        METRIC_VAR_INCREMENT_BY(dup_shipped_bytes, total_shipped_size);
         step_down_next_stage();
     });
 }
@@ -113,16 +117,12 @@ ship_mutation::ship_mutation(replica_duplicator *duplicator)
     : replica_base(duplicator),
       _duplicator(duplicator),
       _replica(duplicator->_replica),
-      _stub(duplicator->_replica->get_replica_stub())
+      _stub(duplicator->_replica->get_replica_stub()),
+      METRIC_VAR_INIT_replica(dup_shipped_bytes)
 {
     _mutation_duplicator = new_mutation_duplicator(
         duplicator, _duplicator->remote_cluster_name(), _replica->get_app_info()->app_name);
     _mutation_duplicator->set_task_environment(duplicator);
-
-    _counter_dup_shipped_bytes_rate.init_app_counter("eon.replica_stub",
-                                                     "dup.shipped_bytes_rate",
-                                                     COUNTER_TYPE_RATE,
-                                                     "shipping rate of private log in bytes");
 }
 
 } // namespace replication
