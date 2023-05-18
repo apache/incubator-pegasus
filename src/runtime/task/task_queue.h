@@ -32,6 +32,7 @@
 
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 
@@ -71,12 +72,12 @@ public:
     int count() const { return _queue_length.load(std::memory_order_relaxed); }
     int decrease_count(int count = 1)
     {
-        _queue_length_counter->add((int64_t)(-count));
+        METRIC_VAR_DECREMENT_BY(queue_length, count);
         return _queue_length.fetch_sub(count, std::memory_order_relaxed) - count;
     }
     int increase_count(int count = 1)
     {
-        _queue_length_counter->add(count);
+        METRIC_VAR_INCREMENT_BY(queue_length, count);
         return _queue_length.fetch_add(count, std::memory_order_relaxed) + count;
     }
     const std::string &get_name() { return _name; }
@@ -88,16 +89,20 @@ private:
     friend class task_worker_pool;
     void enqueue_internal(task *task);
 
+    const metric_entity_ptr &queue_metric_entity() const;
+
 private:
     task_worker_pool *_pool;
     std::string _name;
     int _index;
     std::atomic<int> _queue_length;
-    dsn::perf_counter_wrapper _queue_length_counter;
-    dsn::perf_counter_wrapper _delay_task_counter;
-    dsn::perf_counter_wrapper _reject_task_counter;
     threadpool_spec *_spec;
     volatile int _virtual_queue_length;
+
+    const metric_entity_ptr _queue_metric_entity;
+    METRIC_VAR_DECLARE_gauge_int64(queue_length);
+    METRIC_VAR_DECLARE_counter(queue_delayed_tasks);
+    METRIC_VAR_DECLARE_counter(queue_rejected_tasks);
 };
 /*@}*/
 } // namespace dsn
