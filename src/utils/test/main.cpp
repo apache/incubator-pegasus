@@ -24,9 +24,9 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn_log_init("dsn::tools::simple_logger", "./", nullptr);
+    dsn_log_init("pegasus::tools::simple_logger", "./", nullptr);
 
-    dsn::flags_initialize();
+    pegasus::flags_initialize();
 
     return RUN_ALL_TESTS();
 }

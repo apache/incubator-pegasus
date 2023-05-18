@@ -36,7 +36,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 prepare_list::prepare_list(replica_base *r,
@@ -206,4 +206,4 @@ void prepare_list::commit(decree d, commit_type ct)
     return;
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

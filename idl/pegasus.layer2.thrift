@@ -24,23 +24,23 @@
  * THE SOFTWARE.
  */
 
-include "dsn.thrift"
+include "pegasus.thrift"
 
-namespace cpp dsn
+namespace cpp pegasus
 namespace go replication
 namespace java org.apache.pegasus.replication
 namespace py pypegasus.replication
 
 struct partition_configuration
 {
-    1:dsn.gpid               pid;
-    2:i64                    ballot;
-    3:i32                    max_replica_count;
-    4:dsn.rpc_address        primary;
-    5:list<dsn.rpc_address>  secondaries;
-    6:list<dsn.rpc_address>  last_drops;
-    7:i64                    last_committed_decree;
-    8:i32                    partition_flags;
+    1:pegasus.gpid              pid;
+    2:i64                       ballot;
+    3:i32                       max_replica_count;
+    4:pegasus.rpc_address       primary;
+    5:list<pegasus.rpc_address> secondaries;
+    6:list<pegasus.rpc_address> last_drops;
+    7:i64                       last_committed_decree;
+    8:i32                       partition_flags;
 }
 
 struct query_cfg_request
@@ -53,7 +53,7 @@ struct query_cfg_request
 // then the forward address will be put in partitions[0].primary if exist.
 struct query_cfg_response
 {
-    1:dsn.error_code                err;
+    1:pegasus.error_code            err;
     2:i32                           app_id;
     3:i32                           partition_count;
     4:bool                          is_stateful;

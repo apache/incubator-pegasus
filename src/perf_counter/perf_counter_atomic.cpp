@@ -29,7 +29,7 @@
 #include "utils/flags.h"
 #include "utils/shared_io_service.h"
 
-namespace dsn {
+namespace pegasus {
 
 DSN_DEFINE_int32(components.pegasus_perf_counter_number_percentile_atomic,
                  counter_computation_interval_seconds,
@@ -80,4 +80,4 @@ void perf_counter_number_percentile_atomic::on_timer(
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

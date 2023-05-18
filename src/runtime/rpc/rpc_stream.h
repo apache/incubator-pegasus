@@ -40,7 +40,7 @@
 #include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 // rpc_read_stream is a bridge between binary_reader and rpc_message, with which you can
 // easily visit rpc_message's buffer in binary_reader's manner.
@@ -55,8 +55,8 @@ public:
     {
         _msg = msg;
         if (nullptr != _msg) {
-            ::dsn::blob bb;
-            CHECK(((::dsn::message_ex *)_msg)->read_next(bb),
+            blob bb;
+            CHECK(((message_ex *)_msg)->read_next(bb),
                   "read msg must have one segment of buffer ready");
             init(std::move(bb));
         }
@@ -74,9 +74,9 @@ public:
     }
 
 private:
-    dsn::message_ex *_msg;
+    message_ex *_msg;
 };
-typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
+typedef ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
 
 // rpc_write_stream is a bridge between binary_writer and rpc_message, with which you can
 // easily store data to rpc_message's buffer in binary_writer's manner.
@@ -132,5 +132,5 @@ private:
     bool _last_write_next_committed;
     int _last_write_next_total_size;
 };
-typedef ::dsn::ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
-} // namespace dsn
+typedef ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
+} // namespace pegasus

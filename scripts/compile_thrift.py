@@ -35,7 +35,7 @@ the default thrift generator
 
 thrift_description = [
     {
-        "name": "dsn.layer2",
+        "name": "pegasus.layer2",
         "path": "idl",
         "include_fix": {
             "_types.h": {
@@ -43,8 +43,8 @@ thrift_description = [
                 "remove": ["dsn_types.h"]
             },
             "_types.cpp": {
-                "add": ["\"common/serialization_helper/dsn.layer2_types.h\""],
-                "remove": ["dsn.layer2_types.h"]
+                "add": ["\"common/serialization_helper/pegasus.layer2_types.h\""],
+                "remove": ["pegasus.layer2_types.h"]
             }
         },
         "file_move": {
@@ -229,10 +229,10 @@ if __name__ == "__main__":
         sys.exit()
 
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
-    ctor_configuration_proposal_action = "  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}"
+    ctor_configuration_proposal_action = "  configuration_proposal_action(::pegasus::rpc_address t, ::pegasus::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}"
 
-    add_hook("dsn.layer2", "idl", replace_hook, ["dsn.layer2_types.h", {
-             r"dsn\.layer2_TYPES_H": 'dsn_layer2_TYPES_H'}])
+    add_hook("pegasus.layer2", "idl", replace_hook, ["pegasus.layer2_types.h", {
+             r"pegasus\.layer2_TYPES_H": 'dsn_layer2_TYPES_H'}])
 
     for i in thrift_description:
         compile_thrift_file(i)

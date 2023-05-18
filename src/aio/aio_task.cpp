@@ -39,14 +39,14 @@
 #include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 
-aio_task::aio_task(dsn::task_code code, const aio_handler &cb, int hash, service_node *node)
+aio_task::aio_task(task_code code, const aio_handler &cb, int hash, service_node *node)
     : aio_task(code, aio_handler(cb), hash, node)
 {
 }
 
-aio_task::aio_task(dsn::task_code code, aio_handler &&cb, int hash, service_node *node)
+aio_task::aio_task(task_code code, aio_handler &&cb, int hash, service_node *node)
     : task(code, hash, node), _cb(std::move(cb))
 {
     _is_null = (_cb == nullptr);
@@ -59,13 +59,13 @@ aio_task::aio_task(dsn::task_code code, aio_handler &&cb, int hash, service_node
 
     _aio_ctx = file::prepare_aio_context(this);
 
-    _tracer = std::make_shared<dsn::utils::latency_tracer>(true, "aio_task", 0, code);
+    _tracer = std::make_shared<utils::latency_tracer>(true, "aio_task", 0, code);
 }
 
 void aio_task::collapse()
 {
     if (!_unmerged_write_buffers.empty()) {
-        std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(_aio_ctx->buffer_size));
+        std::shared_ptr<char> buffer(utils::make_shared_array<char>(_aio_ctx->buffer_size));
         char *dest = buffer.get();
         for (const dsn_file_buffer_t &b : _unmerged_write_buffers) {
             ::memcpy(dest, b.buffer, b.size);
@@ -87,4 +87,4 @@ void aio_task::enqueue(error_code err, size_t transferred_size)
     task::enqueue(node()->computation()->get_pool(spec().pool_code));
 }
 
-} // namespace dsn
+} // namespace pegasus

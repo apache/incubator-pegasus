@@ -42,7 +42,7 @@
 #include "utils/factory_store.h"
 #include "zookeeper/distributed_lock_service_zookeeper.h"
 
-namespace dsn {
+namespace pegasus {
 namespace service {
 
 #define register_component(name, base_type, derived_type)                                          \
@@ -76,7 +76,7 @@ void meta_service_app::register_components()
 
 void meta_service_app::register_all()
 {
-    dsn::service_app::register_factory<meta_service_app>("meta");
+    service_app::register_factory<meta_service_app>("meta");
     register_components();
 }
 
@@ -107,4 +107,4 @@ error_code meta_service_app::stop(bool /*cleanup*/)
     return ERR_OK;
 }
 } // namespace service
-} // namespace dsn
+} // namespace pegasus

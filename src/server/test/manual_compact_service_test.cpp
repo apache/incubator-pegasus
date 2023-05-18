@@ -67,19 +67,19 @@ public:
     void check_compact_disabled(const std::map<std::string, std::string> &envs, bool ok)
     {
         ASSERT_EQ(ok, manual_compact_svc->check_compact_disabled(envs))
-            << dsn::utils::kv_map_to_string(envs, ';', '=');
+            << utils::kv_map_to_string(envs, ';', '=');
     }
 
     void check_once_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
         ASSERT_EQ(ok, manual_compact_svc->check_once_compact(envs))
-            << dsn::utils::kv_map_to_string(envs, ';', '=');
+            << utils::kv_map_to_string(envs, ';', '=');
     }
 
     void check_periodic_compact(const std::map<std::string, std::string> &envs, bool ok)
     {
         ASSERT_EQ(ok, manual_compact_svc->check_periodic_compact(envs))
-            << dsn::utils::kv_map_to_string(envs, ';', '=');
+            << utils::kv_map_to_string(envs, ';', '=');
     }
 
     void extract_manual_compact_opts(const std::map<std::string, std::string> &envs,
@@ -187,7 +187,7 @@ TEST_F(manual_compact_service_test, check_periodic_compact)
     check_periodic_compact(envs, false);
 
     // suppose compacted at 10:00
-    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("10:00"));
+    set_compact_time(utils::hh_mm_today_to_unix_sec("10:00"));
 
     // has been compacted
     envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "9:00";
@@ -200,48 +200,48 @@ TEST_F(manual_compact_service_test, check_periodic_compact)
     check_periodic_compact(envs, false);
 
     // suppose compacted at 09:00
-    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("09:00"));
+    set_compact_time(utils::hh_mm_today_to_unix_sec("09:00"));
 
     // single compact time
     envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("08:00"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("08:00"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("09:30"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("09:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("10:30"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("10:30"));
     check_periodic_compact(envs, true);
 
     // multiple compact time
     envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00,21:00";
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("08:00"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("08:00"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("09:30"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("09:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("10:30"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("10:30"));
     check_periodic_compact(envs, true);
 
     // suppose compacted at 11:00
-    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("11:00"));
+    set_compact_time(utils::hh_mm_today_to_unix_sec("11:00"));
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("11:01"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("11:01"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("20:30"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("20:30"));
     check_periodic_compact(envs, false);
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("21:01"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("21:01"));
     check_periodic_compact(envs, true);
 
     // suppose compacted at 21:50
-    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("21:50"));
+    set_compact_time(utils::hh_mm_today_to_unix_sec("21:50"));
 
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("22:00"));
+    set_mock_now((uint64_t)utils::hh_mm_today_to_unix_sec("22:00"));
     check_periodic_compact(envs, false);
 }
 

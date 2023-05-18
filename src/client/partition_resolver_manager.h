@@ -34,12 +34,12 @@
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_address;
 
 namespace replication {
 
-class partition_resolver_manager : public dsn::utils::singleton<partition_resolver_manager>
+class partition_resolver_manager : public utils::singleton<partition_resolver_manager>
 {
 public:
     partition_resolver_ptr find_or_create(const char *cluster_name,
@@ -47,10 +47,10 @@ public:
                                           const char *app_name);
 
 private:
-    dsn::zlock _lock;
+    zlock _lock;
     // cluster_name -> <app_name, resolver>
     std::map<std::string, std::map<std::string, partition_resolver_ptr>> _resolvers;
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

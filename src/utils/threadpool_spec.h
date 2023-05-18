@@ -32,7 +32,7 @@
 #include "utils/config_helper.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 
 enum worker_priority_t
 {
@@ -56,7 +56,7 @@ ENUM_END(worker_priority_t)
 struct threadpool_spec
 {
     std::string name;
-    dsn::threadpool_code pool_code;
+    threadpool_code pool_code;
     int worker_count;
     worker_priority_t worker_priority;
     bool worker_share_core;
@@ -70,7 +70,7 @@ struct threadpool_spec
     int queue_length_throttling_threshold;
     bool enable_virtual_queue_throttling;
 
-    threadpool_spec(const dsn::threadpool_code &code) : name(code.to_string()), pool_code(code) {}
+    threadpool_spec(const threadpool_code &code) : name(code.to_string()), pool_code(code) {}
     threadpool_spec(const threadpool_spec &source) = default;
     threadpool_spec &operator=(const threadpool_spec &source) = default;
 

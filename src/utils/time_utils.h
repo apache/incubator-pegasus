@@ -34,7 +34,7 @@
 
 #include "string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 static struct tm *get_localtime(uint64_t ts_ms, struct tm *tm_buf)
@@ -108,7 +108,7 @@ inline int64_t get_unix_sec_today_midnight()
 // `hh:mm` (range in [00:00, 23:59]) to seconds since 00:00:00
 // eg. `01:00` => `3600`
 // Return: -1 when invalid
-inline int hh_mm_to_seconds(dsn::string_view hhmm)
+inline int hh_mm_to_seconds(pegasus::string_view hhmm)
 {
     int hour = 0, min = 0, sec = -1;
     if (::sscanf(hhmm.data(), "%d:%d", &hour, &min) == 2 && (0 <= hour && hour <= 23) &&
@@ -132,4 +132,4 @@ inline int64_t hh_mm_today_to_unix_sec(string_view hhmm_of_day)
 }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

@@ -34,6 +34,7 @@
 
 #include "utils/autoref_ptr.h"
 
+namespace pegasus {
 typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_NUMBER,
     COUNTER_TYPE_VOLATILE_NUMBER, // special kind of NUMBER which will be reset on get
@@ -59,8 +60,6 @@ dsn_perf_counter_type_t dsn_counter_type_from_string(const char *str);
 
 const char *dsn_percentile_type_to_string(dsn_perf_counter_percentile_type_t t);
 dsn_perf_counter_percentile_type_t dsn_percentile_type_from_string(const char *str);
-
-namespace dsn {
 
 class perf_counter : public ref_counter
 {
@@ -125,4 +124,4 @@ private:
 };
 typedef ref_ptr<perf_counter> perf_counter_ptr;
 
-} // namespace dsn
+} // namespace pegasus

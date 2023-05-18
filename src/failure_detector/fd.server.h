@@ -37,18 +37,18 @@
 #include "fd.code.definition.h"
 #include <iostream>
 
-namespace dsn {
+namespace pegasus {
 namespace fd {
-class failure_detector_service : public ::dsn::serverlet<failure_detector_service>
+class failure_detector_service : public serverlet<failure_detector_service>
 {
 public:
-    failure_detector_service() : ::dsn::serverlet<failure_detector_service>("failure_detector") {}
+    failure_detector_service() : serverlet<failure_detector_service>("failure_detector") {}
     virtual ~failure_detector_service() {}
 
 protected:
     // all service handlers to be implemented further
     // RPC_FD_FAILURE_DETECTOR_PING
-    virtual void on_ping(const beacon_msg &beacon, ::dsn::rpc_replier<beacon_ack> &reply)
+    virtual void on_ping(const beacon_msg &beacon, rpc_replier<beacon_ack> &reply)
     {
         std::cout << "... exec RPC_FD_FAILURE_DETECTOR_PING ... (not implemented) " << std::endl;
         beacon_ack resp;

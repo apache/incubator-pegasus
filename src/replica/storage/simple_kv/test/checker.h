@@ -46,7 +46,7 @@
 #include "runtime/simulator.h"
 #include "utils/singleton.h"
 
-namespace dsn {
+namespace pegasus {
 class service_app;
 namespace service {
 class meta_service_app;
@@ -58,9 +58,9 @@ class replication_service_app;
 
 namespace test {
 
-using ::dsn::service::meta_service_app;
+using service::meta_service_app;
 
-class test_checker : public dsn::utils::singleton<test_checker>
+class test_checker : public utils::singleton<test_checker>
 {
 public:
     static bool s_inited;
@@ -85,7 +85,7 @@ public:
     std::string address_to_node_name(rpc_address addr);
     rpc_address node_name_to_address(const std::string &name);
 
-    void on_replica_state_change(::dsn::rpc_address from,
+    void on_replica_state_change(rpc_address from,
                                  const replica_configuration &new_config,
                                  bool is_closing);
     void on_config_change(const app_mapper &new_config);
@@ -101,14 +101,14 @@ private:
     parti_config _last_config;
     state_snapshot _last_states;
 
-    std::map<std::string, dsn::rpc_address> _node_to_address; // address is primary_address()
-    std::map<int, std::string> _address_to_node;              // port is enough for key
+    std::map<std::string, rpc_address> _node_to_address; // address is primary_address()
+    std::map<int, std::string> _address_to_node;         // port is enough for key
 };
 
-class wrap_checker : public dsn::tools::checker
+class wrap_checker : public tools::checker
 {
 public:
-    wrap_checker() : dsn::tools::checker() {}
+    wrap_checker() : tools::checker() {}
 
     virtual void initialize(const std::string &name, const std::vector<service_app *> &apps)
     {

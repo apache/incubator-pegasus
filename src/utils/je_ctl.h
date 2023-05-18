@@ -23,7 +23,7 @@
 
 #include "utils/enum_helper.h"
 
-namespace dsn {
+namespace pegasus {
 
 // `je_stats_type` defines the types of stats that are dumped for jemalloc allocator:
 //   * By SUMMARY_STATS, it will dump the briefest message of stats, which only referred the
@@ -62,6 +62,6 @@ void je_dump_stats(je_stats_type type, size_t buf_sz, std::string &stats);
 // Dump the stats of specified type to a string, with default buffer size.
 void je_dump_stats(je_stats_type type, std::string &stats);
 
-} // namespace dsn
+} // namespace pegasus
 
 #endif // DSN_USE_JEMALLOC

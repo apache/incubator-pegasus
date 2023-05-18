@@ -22,7 +22,7 @@
 
 #include "runtime/rpc/rpc_holder.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 
 namespace replication {
@@ -189,4 +189,4 @@ std::string get_remote_chkpt_meta_file(const std::string &root,
 
 } // namespace cold_backup
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

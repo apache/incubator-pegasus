@@ -47,7 +47,7 @@
 #include "utils/rand.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 DSN_DECLARE_uint32(local_hash);
 
 DEFINE_TASK_CODE(LPC_RPC_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
@@ -87,7 +87,7 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
     int bucket_index = key % MATCHER_BUCKET_NR;
 
     {
-        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
         auto it = _requests[bucket_index].find(key);
         if (it != _requests[bucket_index].end()) {
             call = std::move(it->second.resp_task);
@@ -132,7 +132,7 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
     // in this case, the server will return ERR_FORWARD_TO_OTHERS
     if (err == ERR_FORWARD_TO_OTHERS) {
         rpc_address addr;
-        ::dsn::unmarshall((dsn::message_ex *)reply, addr);
+        unmarshall((message_ex *)reply, addr);
 
         // handle the case of forwarding to itself where addr == req->to_address.
         DCHECK_NE_MSG(
@@ -213,7 +213,7 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     bool resend = false;
 
     {
-        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
         auto it = _requests[bucket_index].find(key);
         if (it != _requests[bucket_index].end()) {
             timeout_ts_ms = it->second.timeout_ts_ms;
@@ -255,7 +255,7 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
     }
 
     {
-        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
         auto it = _requests[bucket_index].find(key);
         if (it != _requests[bucket_index].end()) {
             // timeout
@@ -310,7 +310,7 @@ void rpc_client_matcher::on_call(message_ex *request, const rpc_response_task_pt
     task *timeout_task(new rpc_timeout_task(this, hdr.id, call->node()));
 
     {
-        utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_requests_lock[bucket_index]);
         auto pr =
             _requests[bucket_index].emplace(hdr.id, match_entry{call, timeout_task, timeout_ts_ms});
         CHECK(pr.second, "the message is already on the fly!!!");
@@ -323,7 +323,7 @@ void rpc_client_matcher::on_call(message_ex *request, const rpc_response_task_pt
 //----------------------------------------------------------------------------------------------
 rpc_server_dispatcher::rpc_server_dispatcher()
 {
-    _vhandlers.resize(dsn::task_code::max() + 1);
+    _vhandlers.resize(task_code::max() + 1);
     for (auto &h : _vhandlers) {
         h = new std::pair<std::unique_ptr<handler_entry>, utils::rw_lock_nr>();
     }
@@ -341,7 +341,7 @@ rpc_server_dispatcher::~rpc_server_dispatcher()
         _handlers.size(), 0, "please make sure all rpc handlers are unregistered at this point");
 }
 
-bool rpc_server_dispatcher::register_rpc_handler(dsn::task_code code,
+bool rpc_server_dispatcher::register_rpc_handler(task_code code,
                                                  const char *extra_name,
                                                  const rpc_request_handler &h)
 {
@@ -365,7 +365,7 @@ bool rpc_server_dispatcher::register_rpc_handler(dsn::task_code code,
     return true;
 }
 
-bool rpc_server_dispatcher::unregister_rpc_handler(dsn::task_code rpc_code)
+bool rpc_server_dispatcher::unregister_rpc_handler(task_code rpc_code)
 {
     {
         utils::auto_write_lock l(_handlers_lock);
@@ -429,7 +429,7 @@ network *rpc_engine::create_network(const network_server_config &netcs,
                                     network_header_format client_hdr_format)
 {
     network *net = utils::factory_store<network>::create(
-        netcs.factory_name.c_str(), ::dsn::PROVIDER_TYPE_MAIN, this, nullptr);
+        netcs.factory_name.c_str(), PROVIDER_TYPE_MAIN, this, nullptr);
     net->reset_parser_attr(client_hdr_format, netcs.message_buffer_block_size);
 
     // start the net
@@ -526,14 +526,14 @@ error_code rpc_engine::start(const service_app_spec &aspec)
     return ERR_OK;
 }
 
-bool rpc_engine::register_rpc_handler(dsn::task_code code,
+bool rpc_engine::register_rpc_handler(task_code code,
                                       const char *extra_name,
                                       const rpc_request_handler &h)
 {
     return _rpc_dispatcher.register_rpc_handler(code, extra_name, h);
 }
 
-bool rpc_engine::unregister_rpc_handler(dsn::task_code rpc_code)
+bool rpc_engine::unregister_rpc_handler(task_code rpc_code)
 {
     return _rpc_dispatcher.unregister_rpc_handler(rpc_code);
 }
@@ -554,11 +554,11 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
 
     auto code = msg->rpc_code();
 
-    if (code != ::dsn::TASK_CODE_INVALID) {
+    if (code != TASK_CODE_INVALID) {
         rpc_request_task *tsk = nullptr;
 
         // handle replication
-        if (msg->header->gpid.get_app_id() > 0) {
+        if (msg->header->gpid_.get_app_id() > 0) {
             tsk = _node->generate_intercepted_request_task(msg);
         }
 
@@ -597,7 +597,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
 
             CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
             msg->add_ref();
-            dsn_rpc_reply(msg->create_response(), ::dsn::ERR_HANDLER_NOT_FOUND);
+            dsn_rpc_reply(msg->create_response(), ERR_HANDLER_NOT_FOUND);
             msg->release_ref();
         }
     } else {
@@ -608,7 +608,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
 
         CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
         msg->add_ref();
-        dsn_rpc_reply(msg->create_response(), ::dsn::ERR_HANDLER_NOT_FOUND);
+        dsn_rpc_reply(msg->create_response(), ERR_HANDLER_NOT_FOUND);
         msg->release_ref();
     }
 }
@@ -844,8 +844,8 @@ void rpc_engine::forward(message_ex *request, rpc_address address)
     // we therefore cannot really do the forwarding but fake it
     if (request->header->from_address.port() <= MAX_CLIENT_PORT) {
         auto resp = request->create_response();
-        ::dsn::marshall(resp, address);
-        ::dsn::task::get_current_rpc()->reply(resp, ::dsn::ERR_FORWARD_TO_OTHERS);
+        marshall(resp, address);
+        task::get_current_rpc()->reply(resp, ERR_FORWARD_TO_OTHERS);
     }
 
     // do real forwarding, not reset request_id, but set forwarded flag
@@ -857,4 +857,4 @@ void rpc_engine::forward(message_ex *request, rpc_address address)
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

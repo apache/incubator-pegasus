@@ -48,7 +48,7 @@
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 DSN_DEFINE_uint32(network,
                   conn_threshold_per_ip,
                   0,
@@ -240,7 +240,7 @@ void rpc_session::start_read_next(int read_next)
         // delayed read
         if (delay_ms > 0) {
             this->add_ref();
-            dsn::task_ptr delay_task(new raw_task(LPC_DELAY_RPC_REQUEST_RATE, [this]() {
+            task_ptr delay_task(new raw_task(LPC_DELAY_RPC_REQUEST_RATE, [this]() {
                 start_read_next();
                 this->release_ref();
             }));
@@ -368,7 +368,7 @@ void rpc_session::on_send_completed(uint64_t signature)
 }
 
 rpc_session::rpc_session(connection_oriented_network &net,
-                         ::dsn::rpc_address remote_addr,
+                         rpc_address remote_addr,
                          message_parser_ptr &parser,
                          bool is_client)
     : _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
@@ -662,7 +662,7 @@ void connection_oriented_network::send_message(message_ex *request)
     client->send_message(request);
 }
 
-rpc_session_ptr connection_oriented_network::get_server_session(::dsn::rpc_address ep)
+rpc_session_ptr connection_oriented_network::get_server_session(rpc_address ep)
 {
     utils::auto_read_lock l(_servers_lock);
     auto it = _servers.find(ep);
@@ -751,7 +751,7 @@ void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr
     }
 }
 
-bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_address ep)
+bool connection_oriented_network::check_if_conn_threshold_exceeded(rpc_address ep)
 {
     if (FLAGS_conn_threshold_per_ip <= 0) {
         LOG_DEBUG("new client from {} is connecting to server {}, no connection threshold",
@@ -826,4 +826,4 @@ void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

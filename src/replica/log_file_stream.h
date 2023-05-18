@@ -31,7 +31,7 @@
 #include "log_file.h"
 #include "common/replication.codes.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 // log_file::file_streamer
@@ -196,4 +196,4 @@ private:
 const size_t log_file::file_streamer::block_size_bytes = 1024 * 1024; // 1MB
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

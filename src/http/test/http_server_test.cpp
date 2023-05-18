@@ -37,7 +37,7 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 
 TEST(http_server, parse_url)
 {
@@ -342,4 +342,4 @@ TEST_F(http_message_parser_test, parse_query_params)
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

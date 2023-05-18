@@ -29,7 +29,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica/disk_cleaner.h"
@@ -50,7 +50,7 @@
 #include "utils/string_view.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 class block_filesystem;
@@ -1082,4 +1082,4 @@ void replica_bulk_loader::clear_bulk_load_states_if_needed(partition_status::typ
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

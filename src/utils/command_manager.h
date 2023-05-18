@@ -40,11 +40,11 @@
 #include "utils/singleton.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 
 class command_deregister;
 
-class command_manager : public ::dsn::utils::singleton<command_manager>
+class command_manager : public utils::singleton<command_manager>
 {
 public:
     typedef std::function<std::string(const std::vector<std::string> &)> command_handler;
@@ -90,7 +90,7 @@ public:
     ~command_deregister()
     {
         if (cmd_id_ != 0) {
-            dsn::command_manager::instance().deregister_command(cmd_id_);
+            command_manager::instance().deregister_command(cmd_id_);
             cmd_id_ = 0;
         }
     }
@@ -99,7 +99,7 @@ private:
     uintptr_t cmd_id_ = 0;
 };
 
-} // namespace dsn
+} // namespace pegasus
 
 // if args are empty, then return the old flag;
 // otherwise set the proper "flag" according to args

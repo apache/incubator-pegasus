@@ -32,7 +32,7 @@
 #include "runtime/tool_api.h"
 #include "utils/sys_exit_hook.h"
 
-namespace dsn {
+namespace pegasus {
 class service_app;
 struct service_spec;
 
@@ -73,4 +73,4 @@ private:
 
 // ---- inline implementation ------
 }
-} // end namespace dsn::tools
+} // end namespace pegasus::tools

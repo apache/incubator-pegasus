@@ -34,7 +34,7 @@
 #include "utils/logging_provider.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 /*
@@ -62,7 +62,7 @@ public:
     virtual void flush();
 
 private:
-    ::dsn::utils::ex_lock_nr _lock;
+    utils::ex_lock_nr _lock;
     bool _short_header;
 };
 
@@ -96,8 +96,8 @@ private:
 
 private:
     std::string _log_dir;
-    ::dsn::utils::ex_lock _lock; // use recursive lock to avoid dead lock when flush() is called
-                                 // in signal handler if cored for bad logging format reason.
+    utils::ex_lock _lock; // use recursive lock to avoid dead lock when flush() is called
+                          // in signal handler if cored for bad logging format reason.
     FILE *_log;
     int _start_index;
     int _index;
@@ -105,4 +105,4 @@ private:
     dsn_log_level_t _stderr_start_level;
 };
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

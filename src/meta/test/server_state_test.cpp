@@ -36,7 +36,7 @@
 #include <vector>
 
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
@@ -48,7 +48,7 @@
 #include "utils/error_code.h"
 #include "utils/flags.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
@@ -89,14 +89,14 @@ static std::string acquire_prefix(const std::string &str)
 void meta_service_test_app::app_envs_basic_test()
 {
     // create a fake app
-    dsn::app_info info;
+    app_info info;
     info.is_stateful = true;
     info.app_id = 1;
     info.app_type = "simple_kv";
     info.app_name = "test_app1";
     info.max_replica_count = 3;
     info.partition_count = 32;
-    info.status = dsn::app_status::AS_CREATING;
+    info.status = app_status::AS_CREATING;
     info.envs.clear();
     std::shared_ptr<app_state> fake_app = app_state::create(info);
 
@@ -113,8 +113,8 @@ void meta_service_test_app::app_envs_basic_test()
     ss->initialize(svc, apps_root);
 
     ss->_all_apps.emplace(std::make_pair(fake_app->app_id, fake_app));
-    dsn::error_code ec = ss->sync_apps_to_remote_storage();
-    ASSERT_EQ(ec, dsn::ERR_OK);
+    error_code ec = ss->sync_apps_to_remote_storage();
+    ASSERT_EQ(ec, ERR_OK);
 
     std::cout << "test server_state::set_app_envs()..." << std::endl;
     {
@@ -124,9 +124,9 @@ void meta_service_test_app::app_envs_basic_test()
         request.__set_keys(keys);
         request.__set_values(values);
 
-        dsn::message_ptr binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
-        dsn::marshall(binary_req, request);
-        dsn::message_ex *recv_msg = create_corresponding_receive(binary_req);
+        message_ptr binary_req = message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
+        marshall(binary_req, request);
+        message_ex *recv_msg = create_corresponding_receive(binary_req);
         app_env_rpc rpc(recv_msg); // don't need reply
         ss->set_app_envs(rpc);
         ss->wait_all_task();
@@ -146,9 +146,9 @@ void meta_service_test_app::app_envs_basic_test()
         request.__set_op(app_env_operation::type::APP_ENV_OP_DEL);
         request.__set_keys(del_keys);
 
-        dsn::message_ptr binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
-        dsn::marshall(binary_req, request);
-        dsn::message_ex *recv_msg = create_corresponding_receive(binary_req);
+        message_ptr binary_req = message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
+        marshall(binary_req, request);
+        message_ex *recv_msg = create_corresponding_receive(binary_req);
         app_env_rpc rpc(recv_msg); // don't need reply
         ss->del_app_envs(rpc);
         ss->wait_all_task();
@@ -175,9 +175,9 @@ void meta_service_test_app::app_envs_basic_test()
             request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
             request.__set_clear_prefix(clear_prefix);
 
-            dsn::message_ptr binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
-            dsn::marshall(binary_req, request);
-            dsn::message_ex *recv_msg = create_corresponding_receive(binary_req);
+            message_ptr binary_req = message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
+            marshall(binary_req, request);
+            message_ex *recv_msg = create_corresponding_receive(binary_req);
             app_env_rpc rpc(recv_msg); // don't need reply
             ss->clear_app_envs(rpc);
             ss->wait_all_task();
@@ -207,9 +207,9 @@ void meta_service_test_app::app_envs_basic_test()
             request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
             request.__set_clear_prefix("");
 
-            dsn::message_ptr binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
-            dsn::marshall(binary_req, request);
-            dsn::message_ex *recv_msg = create_corresponding_receive(binary_req);
+            message_ptr binary_req = message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
+            marshall(binary_req, request);
+            message_ex *recv_msg = create_corresponding_receive(binary_req);
             app_env_rpc rpc(recv_msg); // don't need reply
             ss->clear_app_envs(rpc);
             ss->wait_all_task();
@@ -221,4 +221,4 @@ void meta_service_test_app::app_envs_basic_test()
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

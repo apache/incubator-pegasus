@@ -21,46 +21,46 @@
 #include <ostream>
 #include <type_traits>
 
-namespace {
+namespace pegasus {
 
 // Separated from STL1() because some compilers produce an overly
 // large stack frame for the combined function.
 TEST(StringViewTest, STL2)
 {
-    const dsn::string_view a("abcdefghijklmnopqrstuvwxyz");
-    const dsn::string_view b("abc");
-    const dsn::string_view c("xyz");
-    dsn::string_view d("foobar");
-    const dsn::string_view e;
-    const dsn::string_view f("123"
-                             "\0"
-                             "456",
-                             7);
+    const string_view a("abcdefghijklmnopqrstuvwxyz");
+    const string_view b("abc");
+    const string_view c("xyz");
+    string_view d("foobar");
+    const string_view e;
+    const string_view f("123"
+                        "\0"
+                        "456",
+                        7);
 
-    d = dsn::string_view();
+    d = string_view();
     EXPECT_EQ(d.size(), 0);
     EXPECT_TRUE(d.empty());
     EXPECT_TRUE(d.data() == nullptr);
     EXPECT_TRUE(d.begin() == d.end());
 
     EXPECT_EQ(a.find(b), 0);
-    EXPECT_EQ(a.find(b, 1), dsn::string_view::npos);
+    EXPECT_EQ(a.find(b, 1), string_view::npos);
     EXPECT_EQ(a.find(c), 23);
     EXPECT_EQ(a.find(c, 9), 23);
-    EXPECT_EQ(a.find(c, dsn::string_view::npos), dsn::string_view::npos);
-    EXPECT_EQ(b.find(c), dsn::string_view::npos);
-    EXPECT_EQ(b.find(c, dsn::string_view::npos), dsn::string_view::npos);
+    EXPECT_EQ(a.find(c, string_view::npos), string_view::npos);
+    EXPECT_EQ(b.find(c), string_view::npos);
+    EXPECT_EQ(b.find(c, string_view::npos), string_view::npos);
     EXPECT_EQ(a.find(d), 0);
     EXPECT_EQ(a.find(e), 0);
     EXPECT_EQ(a.find(d, 12), 12);
     EXPECT_EQ(a.find(e, 17), 17);
-    dsn::string_view g("xx not found bb");
-    EXPECT_EQ(a.find(g), dsn::string_view::npos);
+    string_view g("xx not found bb");
+    EXPECT_EQ(a.find(g), string_view::npos);
     // empty std::string nonsense
-    EXPECT_EQ(d.find(b), dsn::string_view::npos);
-    EXPECT_EQ(e.find(b), dsn::string_view::npos);
-    EXPECT_EQ(d.find(b, 4), dsn::string_view::npos);
-    EXPECT_EQ(e.find(b, 7), dsn::string_view::npos);
+    EXPECT_EQ(d.find(b), string_view::npos);
+    EXPECT_EQ(e.find(b), string_view::npos);
+    EXPECT_EQ(d.find(b, 4), string_view::npos);
+    EXPECT_EQ(e.find(b, 7), string_view::npos);
 
     size_t empty_search_pos = std::string().find(std::string());
     EXPECT_EQ(d.find(d), empty_search_pos);
@@ -76,13 +76,13 @@ TEST(StringViewTest, STL2)
 // Continued from STL2
 TEST(StringViewTest, STL2Substr)
 {
-    const dsn::string_view a("abcdefghijklmnopqrstuvwxyz");
-    const dsn::string_view b("abc");
-    const dsn::string_view c("xyz");
-    dsn::string_view d("foobar");
-    const dsn::string_view e;
+    const string_view a("abcdefghijklmnopqrstuvwxyz");
+    const string_view b("abc");
+    const string_view c("xyz");
+    string_view d("foobar");
+    const string_view e;
 
-    d = dsn::string_view();
+    d = string_view();
     EXPECT_EQ(a.substr(0, 3), b);
     EXPECT_EQ(a.substr(23), c);
     EXPECT_EQ(a.substr(23, 3), c);
@@ -92,8 +92,8 @@ TEST(StringViewTest, STL2Substr)
     // empty std::string nonsense
     EXPECT_EQ(d.substr(0, 99), e);
     // use of npos
-    EXPECT_EQ(a.substr(0, dsn::string_view::npos), a);
-    EXPECT_EQ(a.substr(23, dsn::string_view::npos), c);
+    EXPECT_EQ(a.substr(0, string_view::npos), a);
+    EXPECT_EQ(a.substr(23, string_view::npos), c);
 
     EXPECT_THROW(a.substr(99, 2), std::out_of_range);
 }
@@ -102,7 +102,7 @@ TEST(StringViewTest, Ctor)
 {
     {
         // Null.
-        dsn::string_view s10;
+        string_view s10;
         EXPECT_TRUE(s10.data() == nullptr);
         EXPECT_EQ(0, s10.length());
     }
@@ -110,17 +110,17 @@ TEST(StringViewTest, Ctor)
     {
         // const char* without length.
         const char *hello = "hello";
-        dsn::string_view s20(hello);
+        string_view s20(hello);
         EXPECT_TRUE(s20.data() == hello);
         EXPECT_EQ(5, s20.length());
 
         // const char* with length.
-        dsn::string_view s21(hello, 4);
+        string_view s21(hello, 4);
         EXPECT_TRUE(s21.data() == hello);
         EXPECT_EQ(4, s21.length());
 
         // Not recommended, but valid C++
-        dsn::string_view s22(hello, 6);
+        string_view s22(hello, 6);
         EXPECT_TRUE(s22.data() == hello);
         EXPECT_EQ(6, s22.length());
     }
@@ -128,7 +128,7 @@ TEST(StringViewTest, Ctor)
     {
         // std::string.
         std::string hola = "hola";
-        dsn::string_view s30(hola);
+        string_view s30(hola);
         EXPECT_TRUE(s30.data() == hola.data());
         EXPECT_EQ(4, s30.length());
 
@@ -136,7 +136,7 @@ TEST(StringViewTest, Ctor)
         hola.push_back('\0');
         hola.append("h2");
         hola.push_back('\0');
-        dsn::string_view s31(hola);
+        string_view s31(hola);
         EXPECT_TRUE(s31.data() == hola.data());
         EXPECT_EQ(8, s31.length());
     }
@@ -144,8 +144,8 @@ TEST(StringViewTest, Ctor)
 
 TEST(StringViewTest, Swap)
 {
-    dsn::string_view a("a");
-    dsn::string_view b("bbb");
+    string_view a("a");
+    string_view b("bbb");
     EXPECT_TRUE(noexcept(a.swap(b)));
     a.swap(b);
     EXPECT_EQ(a, "bbb");
@@ -156,12 +156,12 @@ TEST(StringViewTest, Swap)
 }
 
 #define EXPECT_COMPARE_TRUE(op, x, y)                                                              \
-    EXPECT_TRUE(dsn::string_view((x)) op dsn::string_view((y)));                                   \
-    EXPECT_TRUE(dsn::string_view((x)).compare(dsn::string_view((y))) op 0)
+    EXPECT_TRUE(string_view((x)) op string_view((y)));                                             \
+    EXPECT_TRUE(string_view((x)).compare(string_view((y))) op 0)
 
 #define EXPECT_COMPARE_FALSE(op, x, y)                                                             \
-    EXPECT_FALSE(dsn::string_view((x)) op dsn::string_view((y)));                                  \
-    EXPECT_FALSE(dsn::string_view((x)).compare(dsn::string_view((y))) op 0)
+    EXPECT_FALSE(string_view((x)) op string_view((y)));                                            \
+    EXPECT_FALSE(string_view((x)).compare(string_view((y))) op 0)
 
 TEST(StringViewTest, ComparisonOperators)
 {
@@ -172,8 +172,8 @@ TEST(StringViewTest, ComparisonOperators)
     EXPECT_COMPARE_FALSE(==, "aa", "a");
 
     EXPECT_COMPARE_TRUE(==, "", "");
-    EXPECT_COMPARE_TRUE(==, "", dsn::string_view());
-    EXPECT_COMPARE_TRUE(==, dsn::string_view(), "");
+    EXPECT_COMPARE_TRUE(==, "", string_view());
+    EXPECT_COMPARE_TRUE(==, string_view(), "");
     EXPECT_COMPARE_TRUE(==, "a", "a");
     EXPECT_COMPARE_TRUE(==, "aa", "aa");
 
@@ -190,15 +190,15 @@ TEST(StringViewTest, ComparisonOperators)
 
 TEST(StringViewTest, STL1)
 {
-    const dsn::string_view a("abcdefghijklmnopqrstuvwxyz");
-    const dsn::string_view b("abc");
-    const dsn::string_view c("xyz");
-    const dsn::string_view d("foobar");
-    const dsn::string_view e;
+    const string_view a("abcdefghijklmnopqrstuvwxyz");
+    const string_view b("abc");
+    const string_view c("xyz");
+    const string_view d("foobar");
+    const string_view e;
     std::string temp("123");
     temp += '\0';
     temp += "456";
-    const dsn::string_view f(temp);
+    const string_view f(temp);
 
     EXPECT_EQ(a[6], 'g');
     EXPECT_EQ(b[0], 'a');
@@ -236,16 +236,16 @@ TEST(StringViewTest, STL1)
 
 TEST(StringViewTest, Remove)
 {
-    dsn::string_view a("foobar");
+    string_view a("foobar");
     std::string s1("123");
     s1 += '\0';
     s1 += "456";
-    dsn::string_view b(s1);
-    dsn::string_view e;
+    string_view b(s1);
+    string_view e;
     std::string s2;
 
     // remove_prefix
-    dsn::string_view c(a);
+    string_view c(a);
     c.remove_prefix(3);
     EXPECT_EQ(c, "bar");
     c = a;
@@ -267,26 +267,26 @@ TEST(StringViewTest, Remove)
 
 TEST(StringViewTest, Set)
 {
-    dsn::string_view a("foobar");
-    dsn::string_view empty;
-    dsn::string_view b;
+    string_view a("foobar");
+    string_view empty;
+    string_view b;
 
     // set
-    b = dsn::string_view("foobar", 6);
+    b = string_view("foobar", 6);
     EXPECT_EQ(b, a);
-    b = dsn::string_view("foobar", 0);
+    b = string_view("foobar", 0);
     EXPECT_EQ(b, empty);
-    b = dsn::string_view("foobar", 7);
+    b = string_view("foobar", 7);
     EXPECT_NE(b, a);
 
-    b = dsn::string_view("foobar");
+    b = string_view("foobar");
     EXPECT_EQ(b, a);
 }
 
 TEST(StringViewTest, FrontBack)
 {
     static const char arr[] = "abcd";
-    const dsn::string_view csp(arr, 4);
+    const string_view csp(arr, 4);
     EXPECT_EQ(&arr[0], &csp.front());
     EXPECT_EQ(&arr[3], &csp.back());
 }
@@ -294,18 +294,18 @@ TEST(StringViewTest, FrontBack)
 TEST(StringViewTest, FrontBackSingleChar)
 {
     static const char c = 'a';
-    const dsn::string_view csp(&c, 1);
+    const string_view csp(&c, 1);
     EXPECT_EQ(&c, &csp.front());
     EXPECT_EQ(&c, &csp.back());
 }
 
 TEST(StringViewTest, NULLInput)
 {
-    dsn::string_view s;
+    string_view s;
     EXPECT_EQ(s.data(), nullptr);
     EXPECT_EQ(s.size(), 0);
 
-    s = dsn::string_view(nullptr);
+    s = string_view(nullptr);
     EXPECT_EQ(s.data(), nullptr);
     EXPECT_EQ(s.size(), 0);
 
@@ -314,16 +314,16 @@ TEST(StringViewTest, NULLInput)
 
 TEST(StringViewTest, ExplicitConversionOperator)
 {
-    dsn::string_view sp = "hi";
+    string_view sp = "hi";
     EXPECT_EQ(sp, std::string(sp));
 }
 
 TEST(StringViewTest, Noexcept)
 {
-    EXPECT_TRUE((std::is_nothrow_constructible<dsn::string_view, const std::string &>::value));
-    EXPECT_TRUE((std::is_nothrow_constructible<dsn::string_view, const std::string &>::value));
-    EXPECT_TRUE(std::is_nothrow_constructible<dsn::string_view>::value);
-    constexpr dsn::string_view sp;
+    EXPECT_TRUE((std::is_nothrow_constructible<string_view, const std::string &>::value));
+    EXPECT_TRUE((std::is_nothrow_constructible<string_view, const std::string &>::value));
+    EXPECT_TRUE(std::is_nothrow_constructible<string_view>::value);
+    constexpr string_view sp;
     EXPECT_TRUE(noexcept(sp.begin()));
     EXPECT_TRUE(noexcept(sp.end()));
     EXPECT_TRUE(noexcept(sp.cbegin()));
@@ -342,8 +342,8 @@ TEST(StringViewTest, Noexcept)
 
 TEST(StringViewTest, HeterogenousStringViewEquals)
 {
-    EXPECT_EQ(dsn::string_view("hello"), std::string("hello"));
-    EXPECT_EQ("hello", dsn::string_view("hello"));
+    EXPECT_EQ(string_view("hello"), std::string("hello"));
+    EXPECT_EQ("hello", string_view("hello"));
 }
 
 TEST(StringViewTest, FindConformance)
@@ -375,9 +375,9 @@ TEST(StringViewTest, FindConformance)
         SCOPED_TRACE(s.haystack);
         SCOPED_TRACE(s.needle);
         std::string st = s.haystack;
-        dsn::string_view sp = s.haystack;
+        string_view sp = s.haystack;
         for (size_t i = 0; i <= sp.size(); ++i) {
-            size_t pos = (i == sp.size()) ? dsn::string_view::npos : i;
+            size_t pos = (i == sp.size()) ? string_view::npos : i;
             SCOPED_TRACE(pos);
             EXPECT_EQ(sp.find(s.needle, pos), st.find(s.needle, pos));
         }
@@ -407,7 +407,7 @@ public:
 TEST_F(StringViewStreamTest, Padding)
 {
     std::string s("hello");
-    dsn::string_view sp(s);
+    string_view sp(s);
     for (int w = -64; w < 64; ++w) {
         SCOPED_TRACE(w);
         EXPECT_EQ(Pad(s, w), Pad(sp, w));
@@ -425,7 +425,7 @@ TEST_F(StringViewStreamTest, ResetsWidth)
     // we'd have width=5 carrying over to the printing of the "]",
     // creating "[###hi####]".
     std::string s = "hi";
-    dsn::string_view sp = s;
+    string_view sp = s;
     {
         std::ostringstream oss;
         oss << "[" << std::setfill('#') << std::setw(5) << s << "]";
@@ -438,4 +438,4 @@ TEST_F(StringViewStreamTest, ResetsWidth)
     }
 }
 
-} // namespace
+} // namespace pegasus

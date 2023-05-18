@@ -28,7 +28,7 @@
 #include "utils/process_utils.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+namespace pegasus {
 
 thread_access_checker::thread_access_checker() { _access_thread_id_inited = false; }
 
@@ -37,11 +37,11 @@ thread_access_checker::~thread_access_checker() { _access_thread_id_inited = fal
 void thread_access_checker::only_one_thread_access()
 {
     if (_access_thread_id_inited) {
-        CHECK_EQ_MSG(::dsn::utils::get_current_tid(),
+        CHECK_EQ_MSG(utils::get_current_tid(),
                      _access_thread_id,
                      "the service is assumed to be accessed by one thread only!");
     } else {
-        _access_thread_id = ::dsn::utils::get_current_tid();
+        _access_thread_id = utils::get_current_tid();
         _access_thread_id_inited = true;
     }
 }

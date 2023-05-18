@@ -51,7 +51,7 @@
 #include "utils/threadpool_spec.h"
 #include "utils/zlock_provider.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 DSN_DECLARE_int32(random_seed);
@@ -64,34 +64,35 @@ void simulator::register_checker(const std::string &name, checker::factory f)
 
 void simulator::install(service_spec &spec)
 {
-    register_component_provider<sim_env_provider>("dsn::tools::sim_env_provider");
-    register_component_provider<sim_task_queue>("dsn::tools::sim_task_queue");
-    register_component_provider<sim_timer_service>("dsn::tools::sim_timer_service");
+    register_component_provider<sim_env_provider>("pegasus::tools::sim_env_provider");
+    register_component_provider<sim_task_queue>("pegasus::tools::sim_task_queue");
+    register_component_provider<sim_timer_service>("pegasus::tools::sim_timer_service");
 
     semaphore_provider::register_component<sim_semaphore_provider>(
-        "dsn::tools::sim_semaphore_provider");
-    lock_provider::register_component<sim_lock_provider>("dsn::tools::sim_lock_provider");
-    lock_nr_provider::register_component<sim_lock_nr_provider>("dsn::tools::sim_lock_nr_provider");
+        "pegasus::tools::sim_semaphore_provider");
+    lock_provider::register_component<sim_lock_provider>("pegasus::tools::sim_lock_provider");
+    lock_nr_provider::register_component<sim_lock_nr_provider>(
+        "pegasus::tools::sim_lock_nr_provider");
     rwlock_nr_provider::register_component<sim_rwlock_nr_provider>(
-        "dsn::tools::sim_rwlock_nr_provider");
+        "pegasus::tools::sim_rwlock_nr_provider");
 
     scheduler::instance();
 
     if (spec.env_factory_name == "")
-        spec.env_factory_name = ("dsn::tools::sim_env_provider");
+        spec.env_factory_name = ("pegasus::tools::sim_env_provider");
 
     if (spec.timer_factory_name == "")
-        spec.timer_factory_name = ("dsn::tools::sim_timer_service");
+        spec.timer_factory_name = ("pegasus::tools::sim_timer_service");
 
     network_client_config cs;
-    cs.factory_name = "dsn::tools::sim_network_provider";
+    cs.factory_name = "pegasus::tools::sim_network_provider";
     cs.message_buffer_block_size = 1024 * 64;
     spec.network_default_client_cfs[RPC_CHANNEL_TCP] = cs;
     spec.network_default_client_cfs[RPC_CHANNEL_UDP] = cs;
 
     network_server_config cs2;
     cs2.port = 0;
-    cs2.factory_name = "dsn::tools::sim_network_provider";
+    cs2.factory_name = "pegasus::tools::sim_network_provider";
     cs2.message_buffer_block_size = 1024 * 64;
     cs2.channel = RPC_CHANNEL_TCP;
     spec.network_default_server_cfs[cs2] = cs2;
@@ -99,28 +100,28 @@ void simulator::install(service_spec &spec)
     spec.network_default_server_cfs[cs2] = cs2;
 
     if (spec.logging_factory_name == "")
-        spec.logging_factory_name = "dsn::tools::simple_logger";
+        spec.logging_factory_name = "pegasus::tools::simple_logger";
 
     if (spec.lock_factory_name == "")
-        spec.lock_factory_name = ("dsn::tools::sim_lock_provider");
+        spec.lock_factory_name = ("pegasus::tools::sim_lock_provider");
 
     if (spec.lock_nr_factory_name == "")
-        spec.lock_nr_factory_name = ("dsn::tools::sim_lock_nr_provider");
+        spec.lock_nr_factory_name = ("pegasus::tools::sim_lock_nr_provider");
 
     if (spec.rwlock_nr_factory_name == "")
-        spec.rwlock_nr_factory_name = ("dsn::tools::sim_rwlock_nr_provider");
+        spec.rwlock_nr_factory_name = ("pegasus::tools::sim_rwlock_nr_provider");
 
     if (spec.semaphore_factory_name == "")
-        spec.semaphore_factory_name = ("dsn::tools::sim_semaphore_provider");
+        spec.semaphore_factory_name = ("pegasus::tools::sim_semaphore_provider");
 
     for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); ++it) {
         threadpool_spec &tspec = *it;
 
         if (tspec.worker_factory_name == "")
-            tspec.worker_factory_name = ("dsn::task_worker");
+            tspec.worker_factory_name = ("pegasus::task_worker");
 
         if (tspec.queue_factory_name == "")
-            tspec.queue_factory_name = ("dsn::tools::sim_task_queue");
+            tspec.queue_factory_name = ("pegasus::tools::sim_task_queue");
     }
 
     sys_exit.put_front(simulator::on_system_exit, "simulator");
@@ -142,4 +143,4 @@ void simulator::run()
     tool_app::run();
 }
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

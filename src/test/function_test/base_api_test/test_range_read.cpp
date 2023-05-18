@@ -78,9 +78,9 @@ public:
                    const int32_t batch_count,
                    const int32_t expected_scan_count)
     {
-        pegasus::pegasus_client::scan_options options;
+        pegasus_client::scan_options options;
         options.batch_size = batch_count;
-        pegasus::pegasus_client::pegasus_scanner *scanner;
+        pegasus_client::pegasus_scanner *scanner;
         ASSERT_EQ(PERR_OK, client_->get_scanner(expect_hashkey, "", "", options, scanner));
 
         std::map<std::string, std::string> actual_kvs;
@@ -112,7 +112,7 @@ public:
 // TODO(yingchun): use TEST_P to refact
 TEST_F(range_read_test, multiget_test)
 {
-    pegasus::pegasus_client::multi_get_options options;
+    pegasus_client::multi_get_options options;
     struct test_struct
     {
         int32_t expire_count;

@@ -28,7 +28,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "duplication_types.h"
 #include "meta/meta_service.h"
 #include "meta/meta_state_service_utils.h"
@@ -52,7 +52,7 @@
 #include "utils/string_view.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 using namespace literals::chrono_literals;
@@ -179,10 +179,9 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     }
 
     std::vector<rpc_address> meta_list;
-    if (!dsn::replication::replica_helper::load_meta_servers(
-            meta_list,
-            duplication_constants::kClustersSectionName.c_str(),
-            request.remote_cluster_name.c_str())) {
+    if (!replica_helper::load_meta_servers(meta_list,
+                                           duplication_constants::kClustersSectionName.c_str(),
+                                           request.remote_cluster_name.c_str())) {
         response.err = ERR_INVALID_PARAMETERS;
         response.__set_hint(fmt::format("failed to find cluster[{}] address in config [{}]",
                                         request.remote_cluster_name,
@@ -312,9 +311,9 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
 
     /// update progress
     for (const auto &kv : request.confirm_list) {
-        gpid gpid = kv.first;
+        gpid pid = kv.first;
 
-        auto it = app_map.find(gpid.get_app_id());
+        auto it = app_map.find(pid.get_app_id());
         if (it == app_map.end()) {
             // app is unsynced
             // Since duplication-sync separates with config-sync, it's not guaranteed to have the
@@ -334,7 +333,7 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
             if (dup->is_invalid_status()) {
                 continue;
             }
-            do_update_partition_confirmed(dup, rpc, gpid.get_partition_index(), confirm);
+            do_update_partition_confirmed(dup, rpc, pid.get_partition_index(), confirm);
         }
     }
 }
@@ -364,8 +363,8 @@ void meta_duplication_service::create_follower_app_for_duplication(
     meta_servers.assign_group(dup->follower_cluster_name.c_str());
     meta_servers.group_address()->add_list(dup->follower_cluster_metas);
 
-    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CREATE_APP);
-    dsn::marshall(msg, request);
+    message_ex *msg = message_ex::create_request(RPC_CM_CREATE_APP);
+    marshall(msg, request);
     rpc::call(
         meta_servers,
         msg,
@@ -414,8 +413,8 @@ void meta_duplication_service::check_follower_app_if_create_completed(
     query_cfg_request meta_config_request;
     meta_config_request.app_name = dup->app_name;
 
-    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
-    dsn::marshall(msg, meta_config_request);
+    message_ex *msg = message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+    marshall(msg, meta_config_request);
     rpc::call(meta_servers,
               msg,
               _meta_svc->tracker(),
@@ -662,4 +661,4 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

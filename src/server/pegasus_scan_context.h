@@ -36,9 +36,9 @@ struct pegasus_scan_context
     pegasus_scan_context(std::unique_ptr<rocksdb::Iterator> &&iterator_,
                          const std::string &&stop_,
                          bool stop_inclusive_,
-                         ::dsn::apps::filter_type::type hash_key_filter_type_,
+                         apps::filter_type::type hash_key_filter_type_,
                          const std::string &&hash_key_filter_pattern_,
-                         ::dsn::apps::filter_type::type sort_key_filter_type_,
+                         apps::filter_type::type sort_key_filter_type_,
                          const std::string &&sort_key_filter_pattern_,
                          int32_t batch_size_,
                          bool no_value_,
@@ -74,10 +74,10 @@ public:
     std::unique_ptr<rocksdb::Iterator> iterator;
     rocksdb::Slice stop;
     bool stop_inclusive;
-    ::dsn::apps::filter_type::type hash_key_filter_type;
-    dsn::blob hash_key_filter_pattern;
-    ::dsn::apps::filter_type::type sort_key_filter_type;
-    dsn::blob sort_key_filter_pattern;
+    apps::filter_type::type hash_key_filter_type;
+    blob hash_key_filter_pattern;
+    apps::filter_type::type sort_key_filter_type;
+    blob sort_key_filter_pattern;
     int32_t batch_size;
     bool no_value;
     bool validate_partition_hash;
@@ -101,19 +101,19 @@ public:
         //
         // however, currently the implementation is not 100% correct.
         //
-        _counter = dsn::rand::next_u64(0, 2L << 31);
+        _counter = rand::next_u64(0, 2L << 31);
         _counter <<= 32;
     }
 
     void clear()
     {
-        ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
         _map.clear();
     }
 
     int64_t put(std::unique_ptr<pegasus_scan_context> context)
     {
-        ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
         int64_t handle = _counter++;
         _map[handle] = std::move(context);
         return handle;
@@ -121,7 +121,7 @@ public:
 
     std::unique_ptr<pegasus_scan_context> fetch(int64_t handle)
     {
-        ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr_spin> l(_lock);
+        utils::auto_lock<utils::ex_lock_nr_spin> l(_lock);
         auto kv = _map.find(handle);
         if (kv == _map.end())
             return nullptr;
@@ -133,7 +133,7 @@ public:
 private:
     int64_t _counter;
     std::unordered_map<int64_t, std::unique_ptr<pegasus_scan_context>> _map;
-    ::dsn::utils::ex_lock_nr_spin _lock;
+    utils::ex_lock_nr_spin _lock;
 };
 }
 }

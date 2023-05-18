@@ -43,7 +43,7 @@
 #include "utils/singleton_store.h"
 #include "zookeeper_session.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 DSN_DEFINE_string(zookeeper, logfile, "", "The Zookeeper logfile");

@@ -36,7 +36,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 extern const std::set<std::string> supported_mechanisms;
 
@@ -210,4 +210,4 @@ void client_negotiation::succ_negotiation()
     LOG_INFO("{}: negotiation succeed", _name);
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

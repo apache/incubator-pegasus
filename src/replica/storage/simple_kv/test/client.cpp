@@ -57,24 +57,23 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace test {
 
-using namespace dsn::replication::application;
-DEFINE_TASK_CODE(LPC_SIMPLE_KV_TEST, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_SIMPLE_KV_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 simple_kv_client_app::simple_kv_client_app(const service_app_info *info)
-    : ::dsn::service_app(info), _simple_kv_client(nullptr)
+    : service_app(info), _simple_kv_client(nullptr)
 {
 }
 
 simple_kv_client_app::~simple_kv_client_app() { stop(); }
 
-::dsn::error_code simple_kv_client_app::start(const std::vector<std::string> &args)
+error_code simple_kv_client_app::start(const std::vector<std::string> &args)
 {
     if (args.size() < 2)
-        return ::dsn::ERR_INVALID_PARAMETERS;
+        return ERR_INVALID_PARAMETERS;
 
     std::vector<rpc_address> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
@@ -84,17 +83,16 @@ simple_kv_client_app::~simple_kv_client_app() { stop(); }
     _simple_kv_client.reset(
         new application::simple_kv_client("mycluster", meta_servers, "simple_kv.instance0"));
 
-    dsn::tasking::enqueue(
-        LPC_SIMPLE_KV_TEST, &_tracker, std::bind(&simple_kv_client_app::run, this));
+    tasking::enqueue(LPC_SIMPLE_KV_TEST, &_tracker, std::bind(&simple_kv_client_app::run, this));
 
-    return ::dsn::ERR_OK;
+    return ERR_OK;
 }
 
-dsn::error_code simple_kv_client_app::stop(bool cleanup)
+error_code simple_kv_client_app::stop(bool cleanup)
 {
     _tracker.cancel_outstanding_tasks();
     _simple_kv_client.reset();
-    return ::dsn::ERR_OK;
+    return ERR_OK;
 }
 
 void simple_kv_client_app::run()
@@ -105,7 +103,7 @@ void simple_kv_client_app::run()
     int timeout_ms;
 
     rpc_address receiver;
-    dsn::replication::config_type::type type;
+    config_type::type type;
     rpc_address node;
 
     while (!g_done) {
@@ -128,7 +126,7 @@ void simple_kv_client_app::run()
 struct write_context
 {
     int id;
-    ::dsn::replication::test::kv_pair req;
+    application::kv_pair req;
     int timeout_ms;
 };
 
@@ -152,10 +150,10 @@ void simple_kv_client_app::begin_write(int id,
 }
 
 void simple_kv_client_app::send_config_to_meta(const rpc_address &receiver,
-                                               dsn::replication::config_type::type type,
+                                               config_type::type type,
                                                const rpc_address &node)
 {
-    dsn::message_ex *req = dsn::message_ex::create_request(RPC_CM_PROPOSE_BALANCER, 30000);
+    message_ex *req = message_ex::create_request(RPC_CM_PROPOSE_BALANCER, 30000);
 
     configuration_balancer_request request;
     request.gpid = g_default_gpid;
@@ -167,7 +165,7 @@ void simple_kv_client_app::send_config_to_meta(const rpc_address &receiver,
     request.action_list.emplace_back(std::move(act));
     request.__set_force(true);
 
-    dsn::marshall(req, request);
+    marshall(req, request);
 
     dsn_rpc_call_one_way(_meta_server_group, req);
 }
@@ -194,4 +192,4 @@ void simple_kv_client_app::begin_read(int id, const std::string &key, int timeou
 }
 } // namespace test
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

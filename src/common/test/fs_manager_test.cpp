@@ -26,7 +26,7 @@
 #include "metadata_types.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 TEST(fs_manager, dir_update_disk_status)
@@ -78,4 +78,4 @@ TEST(fs_manager, get_dir_node)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

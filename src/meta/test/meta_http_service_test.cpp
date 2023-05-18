@@ -51,7 +51,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class meta_http_service_test : public meta_test_base
@@ -123,10 +123,9 @@ public:
         _ms->_backup_handler->backup_option().request_backup_period_ms = 20_ms;
         _ms->_backup_handler->backup_option().issue_backup_interval_ms = 1000_ms;
         const std::string policy_root = "/test";
-        dsn::error_code ec;
+        error_code ec;
         _ms->_storage
-            ->create_node(
-                _policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
+            ->create_node(_policy_root, TASK_CODE_EXEC_INLINED, [&ec](error_code err) { ec = err; })
             ->wait();
         _mhs = std::make_unique<meta_http_service>(_ms.get());
         create_app(test_app);
@@ -421,4 +420,4 @@ TEST_F(meta_bulk_load_http_test, update_scenario_test)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

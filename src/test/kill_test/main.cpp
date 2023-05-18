@@ -25,20 +25,22 @@
 #include "test/kill_test/kill_testor.h"
 #include "utils/strings.h"
 
+using namespace pegasus;
+
 int main(int argc, const char **argv)
 {
     if (argc < 3) {
         printf("invalid arguments: pegasus_kill_test configfile "
                "worker_type(verifier|process_killer|partition_killer)\n");
         return -1;
-    } else if (dsn::utils::equals(argv[2], "verifier")) {
-        pegasus::test::verifier_initialize(argv[1]);
-        pegasus::test::verifier_start();
-    } else if (dsn::utils::equals(argv[2], "process_killer")) {
-        pegasus::test::kill_testor *killtestor = new pegasus::test::process_kill_testor(argv[1]);
+    } else if (utils::equals(argv[2], "verifier")) {
+        test::verifier_initialize(argv[1]);
+        test::verifier_start();
+    } else if (utils::equals(argv[2], "process_killer")) {
+        test::kill_testor *killtestor = new test::process_kill_testor(argv[1]);
         killtestor->Run();
-    } else if (dsn::utils::equals(argv[2], "partition_killer")) {
-        pegasus::test::kill_testor *killtestor = new pegasus::test::partition_kill_testor(argv[1]);
+    } else if (utils::equals(argv[2], "partition_killer")) {
+        test::kill_testor *killtestor = new test::partition_kill_testor(argv[1]);
         killtestor->Run();
     } else {
         printf("invalid worker_type: %s\n", argv[2]);

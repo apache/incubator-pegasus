@@ -45,19 +45,22 @@
 #include "runtime/task/task_worker.h"
 #include "test_utils.h"
 #include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 
 DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+
+using namespace pegasus;
 
 void on_lpc_test(void *p)
 {
     std::string &result = *(std::string *)p;
-    result = ::dsn::task::get_current_worker()->name();
+    result = task::get_current_worker()->name();
 }
 
 TEST(core, lpc)
 {
     std::string result = "heheh";
-    dsn::task_ptr t(new raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
+    task_ptr t(new raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
     t->enqueue();
     t->wait();
     EXPECT_TRUE(result.substr(0, result.length() - 2) == "client.THREAD_POOL_TEST_SERVER");

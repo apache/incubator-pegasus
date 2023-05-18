@@ -33,7 +33,7 @@
 #include "utils/fmt_logging.h"
 #endif
 
-namespace dsn {
+namespace pegasus {
 
 extern void *cacheline_aligned_alloc(size_t size);
 
@@ -85,6 +85,6 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len, const T &val)
     return array;
 }
 
-} // namespace dsn
+} // namespace pegasus
 
 #endif // CACHELINE_SIZE

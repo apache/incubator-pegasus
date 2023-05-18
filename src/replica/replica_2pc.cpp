@@ -43,7 +43,7 @@
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
@@ -77,7 +77,7 @@
 #include "utils/thread_access_checker.h"
 #include "utils/uniq_timestamp_us.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_bool(replication,
@@ -115,7 +115,7 @@ DSN_DEFINE_uint64(
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
 DSN_DECLARE_int32(staleness_for_commit);
 
-void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
+void replica::on_client_write(message_ex *request, bool ignore_throttling)
 {
     _checker.only_one_thread_access();
 
@@ -184,7 +184,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (_is_bulk_load_ingestion) {
-        if (request->rpc_code() != dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+        if (request->rpc_code() != apps::RPC_RRDB_RRDB_BULK_LOAD) {
             // reject write requests during ingestion
             _counter_recent_write_bulk_load_ingestion_reject_count->increment();
             response_client_write(request, ERR_OPERATION_DISABLED);
@@ -194,7 +194,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    if (request->rpc_code() == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+    if (request->rpc_code() == apps::RPC_RRDB_RRDB_BULK_LOAD) {
         auto cur_bulk_load_status = _bulk_loader->get_bulk_load_status();
         if (cur_bulk_load_status != bulk_load_status::BLS_DOWNLOADED &&
             cur_bulk_load_status != bulk_load_status::BLS_INGESTING) {
@@ -275,7 +275,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // stop prepare bulk load ingestion if there are secondaries unalive
     for (auto i = 0; i < request_count; ++i) {
         const mutation_update &update = mu->data.updates[i];
-        if (update.code != dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+        if (update.code != apps::RPC_RRDB_RRDB_BULK_LOAD) {
             break;
         }
         LOG_INFO_PREFIX("try to prepare bulk load mutation({})", mu->name());
@@ -360,7 +360,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             FLAGS_log_shared_pending_size_throttling_delay_ms > 0 &&
             pending_size >= FLAGS_log_shared_pending_size_throttling_threshold_kb * 1024) {
             int delay_ms = FLAGS_log_shared_pending_size_throttling_delay_ms;
-            for (dsn::message_ex *r : mu->client_requests) {
+            for (message_ex *r : mu->client_requests) {
                 if (r && r->io_session->delay_recv(delay_ms)) {
                     LOG_WARNING("too large pending shared log ({}), delay traffic from {} for {} "
                                 "milliseconds",
@@ -382,7 +382,7 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(::dsn::rpc_address addr,
+void replica::send_prepare_message(rpc_address addr,
                                    partition_status::type status,
                                    const mutation_ptr &mu,
                                    int timeout_milliseconds,
@@ -392,8 +392,8 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
     mu->_tracer->add_sub_tracer(addr.to_string());
     ADD_POINT(mu->_tracer->sub_tracer(addr.to_string()));
 
-    dsn::message_ex *msg = dsn::message_ex::create_request(
-        RPC_PREPARE, timeout_milliseconds, get_gpid().thread_hash());
+    message_ex *msg =
+        message_ex::create_request(RPC_PREPARE, timeout_milliseconds, get_gpid().thread_hash());
     replica_configuration rconfig;
     _primary_states.get_replica_config(status, rconfig, learn_signature);
     rconfig.__set_pop_all(pop_all_committed_mutations);
@@ -412,7 +412,7 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
         rpc::call(addr,
                   msg,
                   &_tracker,
-                  [=](error_code err, dsn::message_ex *request, dsn::message_ex *reply) {
+                  [=](error_code err, message_ex *request, message_ex *reply) {
                       on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
                   },
                   get_gpid().thread_hash());
@@ -433,7 +433,7 @@ void replica::do_possible_commit_on_primary(mutation_ptr &mu)
     }
 }
 
-void replica::on_prepare(dsn::message_ex *request)
+void replica::on_prepare(message_ex *request)
 {
     _checker.only_one_thread_access();
 
@@ -634,8 +634,8 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
 
 void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr,
                                error_code err,
-                               dsn::message_ex *request,
-                               dsn::message_ex *reply)
+                               message_ex *request,
+                               message_ex *reply)
 {
     _checker.only_one_thread_access();
 
@@ -649,7 +649,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
 
     CHECK_EQ_MSG(mu->data.header.ballot, get_ballot(), "{}: invalid mutation ballot", mu->name());
 
-    ::dsn::rpc_address node = request->to_address;
+    rpc_address node = request->to_address;
     partition_status::type st = _primary_states.get_node_status(node);
 
     // handle reply
@@ -659,7 +659,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     if (err != ERR_OK) {
         resp.err = err;
     } else {
-        ::dsn::unmarshall(reply, resp);
+        unmarshall(reply, resp);
     }
 
     auto send_prepare_tracer = mu->_tracer->sub_tracer(request->to_address.to_string());
@@ -795,7 +795,7 @@ void replica::ack_prepare_message(error_code err, mutation_ptr &mu)
     resp.last_committed_decree_in_app = _app->last_committed_decree();
     resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
-    const std::vector<dsn::message_ex *> &prepare_requests = mu->prepare_requests();
+    const std::vector<message_ex *> &prepare_requests = mu->prepare_requests();
     CHECK(!prepare_requests.empty(), "mutation = {}", mu->name());
 
     if (err == ERR_OK) {
@@ -845,4 +845,4 @@ void replica::cleanup_preparing_mutations(bool wait)
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

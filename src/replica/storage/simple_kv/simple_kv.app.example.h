@@ -37,41 +37,41 @@
 #include "simple_kv.client.h"
 #include "simple_kv.server.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace application {
 // client app example
-class simple_kv_client_app : public ::dsn::service_app
+class simple_kv_client_app : public service_app
 {
 public:
-    simple_kv_client_app(const service_app_info *info) : ::dsn::service_app(info) {}
+    simple_kv_client_app(const service_app_info *info) : service_app(info) {}
 
     virtual ~simple_kv_client_app() override { stop(); }
 
-    virtual ::dsn::error_code start(const std::vector<std::string> &args)
+    virtual error_code start(const std::vector<std::string> &args)
     {
         if (args.size() < 2)
-            return ::dsn::ERR_INVALID_PARAMETERS;
+            return ERR_INVALID_PARAMETERS;
 
         printf("%s %s %s\n", args[1].c_str(), args[2].c_str(), args[3].c_str());
-        dsn::rpc_address meta;
+        rpc_address meta;
         meta.from_string_ipv4(args[2].c_str());
         _simple_kv_client.reset(new simple_kv_client(args[1].c_str(), {meta}, args[3].c_str()));
 
-        _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER,
-                                               &_tracker,
-                                               [this] { on_test_timer(); },
-                                               std::chrono::seconds(1));
-        return ::dsn::ERR_OK;
+        _timer = tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER,
+                                        &_tracker,
+                                        [this] { on_test_timer(); },
+                                        std::chrono::seconds(1));
+        return ERR_OK;
     }
 
-    virtual ::dsn::error_code stop(bool cleanup = false)
+    virtual error_code stop(bool cleanup = false)
     {
         _tracker.cancel_outstanding_tasks();
 
         _simple_kv_client.reset();
 
-        return ::dsn::ERR_OK;
+        return ERR_OK;
     }
 
     void on_test_timer()
@@ -120,11 +120,11 @@ public:
     }
 
 private:
-    ::dsn::task_ptr _timer;
-    ::dsn::rpc_address _server;
+    task_ptr _timer;
+    rpc_address _server;
     std::unique_ptr<simple_kv_client> _simple_kv_client;
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 } // namespace application
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

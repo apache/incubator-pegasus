@@ -31,7 +31,7 @@
 #include "utils/flags.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 
 DSN_DECLARE_bool(enable_http_server);
 
@@ -48,7 +48,7 @@ class message_ex;
 
 struct http_request
 {
-    static error_with<http_request> parse(dsn::message_ex *m);
+    static error_with<http_request> parse(message_ex *m);
 
     std::string path;
     // <args_name, args_val>
@@ -156,9 +156,9 @@ extern void start_http_server();
 // TODO(wutao): pass `svc` as a std::unique_ptr.
 extern void register_http_service(http_service *svc);
 
-inline bool is_http_message(dsn::task_code code)
+inline bool is_http_message(task_code code)
 {
     return code == RPC_HTTP_SERVICE || code == RPC_HTTP_SERVICE_ACK;
 }
 
-} // namespace dsn
+} // namespace pegasus

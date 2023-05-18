@@ -24,9 +24,6 @@
 #include <vector>
 
 #include "../base/pegasus_utils.h"
-#include "utils/string_view.h"
-
-using namespace ::dsn;
 
 namespace pegasus {
 
@@ -84,7 +81,7 @@ void pegasus_client::mutations::del(std::string &&sort_key)
 
 void pegasus_client::mutations::get_mutations(std::vector<mutate> &mutations) const
 {
-    int current_time = pegasus::utils::epoch_now();
+    int current_time = utils::epoch_now();
     mutations = mu_list;
     for (auto &pair : ttl_list) {
         mutations[pair.first].set_expire_ts_seconds = pair.second + current_time;

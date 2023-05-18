@@ -34,36 +34,36 @@
 #include "utils/error_code.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace proxy {
 
-class proxy_app : public ::dsn::service_app
+class proxy_app : public service_app
 {
 public:
-    explicit proxy_app(const dsn::service_app_info *info) : service_app(info) {}
+    explicit proxy_app(const service_app_info *info) : service_app(info) {}
 
-    ::dsn::error_code start(const std::vector<std::string> &args) override
+    error_code start(const std::vector<std::string> &args) override
     {
         if (args.size() < 2) {
-            return ::dsn::ERR_INVALID_PARAMETERS;
+            return ERR_INVALID_PARAMETERS;
         }
 
-        proxy_session::factory f = [](proxy_stub *p, dsn::message_ex *m) {
+        proxy_session::factory f = [](proxy_stub *p, message_ex *m) {
             return std::make_shared<redis_parser>(p, m);
         };
         _proxy = std::make_unique<proxy_stub>(
             f, args[1].c_str(), args[2].c_str(), args.size() > 3 ? args[3].c_str() : "");
 
-        pegasus::server::pegasus_counter_reporter::instance().start();
+        server::pegasus_counter_reporter::instance().start();
 
-        return ::dsn::ERR_OK;
+        return ERR_OK;
     }
 
-    ::dsn::error_code stop(bool) final { return ::dsn::ERR_OK; }
+    error_code stop(bool) final { return ERR_OK; }
 
 private:
     std::unique_ptr<proxy_stub> _proxy;
@@ -71,7 +71,7 @@ private:
 } // namespace proxy
 } // namespace pegasus
 
-void register_apps() { ::dsn::service_app::register_factory<::pegasus::proxy::proxy_app>("proxy"); }
+void register_apps() { pegasus::service_app::register_factory<pegasus::proxy::proxy_app>("proxy"); }
 
 volatile int exit_flags(0);
 void signal_handler(int signal_id)
@@ -84,8 +84,8 @@ void signal_handler(int signal_id)
 int main(int argc, char **argv)
 {
     for (int i = 1; i < argc; ++i) {
-        if (dsn::utils::equals(argv[i], "-v") || dsn::utils::equals(argv[i], "-version") ||
-            dsn::utils::equals(argv[i], "--version")) {
+        if (pegasus::utils::equals(argv[i], "-v") || pegasus::utils::equals(argv[i], "-version") ||
+            pegasus::utils::equals(argv[i], "--version")) {
             printf("Pegasus Redis Proxy %s\n", PEGASUS_VERSION);
             return 0;
         }

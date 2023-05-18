@@ -29,7 +29,7 @@
 #include <ostream>
 #include <thrift/protocol/TProtocol.h>
 
-namespace dsn {
+namespace pegasus {
 
 // Group-Partition-ID.
 class gpid
@@ -89,13 +89,13 @@ private:
     } _value{.value = 0};
 };
 
-} // namespace dsn
+} // namespace pegasus
 
 namespace std {
 template <>
-struct hash<::dsn::gpid>
+struct hash<::pegasus::gpid>
 {
-    size_t operator()(const ::dsn::gpid &pid) const
+    size_t operator()(const ::pegasus::gpid &pid) const
     {
         return static_cast<std::size_t>(pid.thread_hash());
     }

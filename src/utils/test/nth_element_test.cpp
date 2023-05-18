@@ -25,7 +25,7 @@
 
 #include "nth_element_utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 template <typename NthElementFinder,
           typename = typename std::enable_if<
@@ -288,4 +288,4 @@ TEST(nth_element_test, generated_double)
     run_generated_double_cases<stl_nth_element_finder<double>>();
 }
 
-} // namespace dsn
+} // namespace pegasus

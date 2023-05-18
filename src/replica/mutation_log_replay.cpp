@@ -40,7 +40,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 /*static*/ error_code mutation_log::replay(log_file_ptr log,
@@ -54,7 +54,7 @@ namespace replication {
              log->end_offset(),
              log->end_offset() - log->start_offset());
 
-    ::dsn::blob bb;
+    blob bb;
     log->reset_stream();
     error_s err;
     size_t start_offset = 0;
@@ -219,4 +219,4 @@ namespace replication {
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

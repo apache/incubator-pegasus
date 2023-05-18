@@ -35,10 +35,11 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(mandatory_auth);
+
+namespace pegasus {
+namespace security {
 
 class negotiation_manager_test : public testing::Test
 {
@@ -124,7 +125,7 @@ TEST_F(negotiation_manager_test, on_rpc_recv_msg)
 
     for (const auto &test : tests) {
         FLAGS_mandatory_auth = test.mandatory_auth;
-        message_ptr msg = dsn::message_ex::create_request(test.rpc_code, 0, 0);
+        message_ptr msg = message_ex::create_request(test.rpc_code, 0, 0);
         auto sim_session = create_fake_session(test.is_client);
         msg->io_session = sim_session;
         if (test.negotiation_succeed) {
@@ -165,7 +166,7 @@ TEST_F(negotiation_manager_test, on_rpc_send_msg)
 
     for (const auto &test : tests) {
         FLAGS_mandatory_auth = test.mandatory_auth;
-        message_ptr msg = dsn::message_ex::create_request(test.rpc_code, 0, 0);
+        message_ptr msg = message_ex::create_request(test.rpc_code, 0, 0);
         auto sim_session = create_fake_session(test.is_client);
         msg->io_session = sim_session;
         if (test.negotiation_succeed) {
@@ -176,4 +177,4 @@ TEST_F(negotiation_manager_test, on_rpc_send_msg)
     }
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

@@ -44,30 +44,30 @@ meta_store::meta_store(pegasus_server_impl *server,
     _wt_opts.disableWAL = true;
 }
 
-dsn::error_code meta_store::get_last_flushed_decree(uint64_t *decree) const
+error_code meta_store::get_last_flushed_decree(uint64_t *decree) const
 {
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
                           get_value_from_meta_cf(true, LAST_FLUSHED_DECREE, decree),
                           "get_value_from_meta_cf failed");
-    return dsn::ERR_OK;
+    return ERR_OK;
 }
 
-dsn::error_code meta_store::get_data_version(uint32_t *version) const
+error_code meta_store::get_data_version(uint32_t *version) const
 {
     uint64_t pegasus_data_version = 0;
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
                           get_value_from_meta_cf(false, DATA_VERSION, &pegasus_data_version),
                           "get_value_from_meta_cf failed");
     *version = static_cast<uint32_t>(pegasus_data_version);
-    return dsn::ERR_OK;
+    return ERR_OK;
 }
 
-dsn::error_code meta_store::get_last_manual_compact_finish_time(uint64_t *ts) const
+error_code meta_store::get_last_manual_compact_finish_time(uint64_t *ts) const
 {
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
                           get_value_from_meta_cf(false, LAST_MANUAL_COMPACT_FINISH_TIME, ts),
                           "get_value_from_meta_cf failed");
-    return dsn::ERR_OK;
+    return ERR_OK;
 }
 
 uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
@@ -75,7 +75,7 @@ uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
 {
     uint64_t last_flushed_decree = 0;
     auto ec = get_value_from_meta_cf(db, meta_cf, true, LAST_FLUSHED_DECREE, &last_flushed_decree);
-    CHECK_EQ_PREFIX(::dsn::ERR_OK, ec);
+    CHECK_EQ_PREFIX(ERR_OK, ec);
     return last_flushed_decree;
 }
 
@@ -84,7 +84,7 @@ std::string meta_store::get_usage_scenario() const
     // If couldn't find rocksdb usage scenario in meta column family, return normal in default.
     std::string usage_scenario = ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
     auto ec = get_string_value_from_meta_cf(false, ROCKSDB_ENV_USAGE_SCENARIO_KEY, &usage_scenario);
-    CHECK_PREFIX_MSG(ec == ::dsn::ERR_OK || ec == ::dsn::ERR_OBJECT_NOT_FOUND,
+    CHECK_PREFIX_MSG(ec == ERR_OK || ec == ERR_OBJECT_NOT_FOUND,
                      "rocksdb {} get {} from meta column family failed: {}",
                      _db->GetName(),
                      ROCKSDB_ENV_USAGE_SCENARIO_KEY,
@@ -92,43 +92,43 @@ std::string meta_store::get_usage_scenario() const
     return usage_scenario;
 }
 
-::dsn::error_code meta_store::get_value_from_meta_cf(bool read_flushed_data,
-                                                     const std::string &key,
-                                                     uint64_t *value) const
+error_code meta_store::get_value_from_meta_cf(bool read_flushed_data,
+                                              const std::string &key,
+                                              uint64_t *value) const
 {
     return get_value_from_meta_cf(_db, _meta_cf, read_flushed_data, key, value);
 }
 
-::dsn::error_code meta_store::get_value_from_meta_cf(rocksdb::DB *db,
-                                                     rocksdb::ColumnFamilyHandle *cf,
-                                                     bool read_flushed_data,
-                                                     const std::string &key,
-                                                     uint64_t *value)
+error_code meta_store::get_value_from_meta_cf(rocksdb::DB *db,
+                                              rocksdb::ColumnFamilyHandle *cf,
+                                              bool read_flushed_data,
+                                              const std::string &key,
+                                              uint64_t *value)
 {
     std::string data;
     auto ec = get_string_value_from_meta_cf(db, cf, read_flushed_data, key, &data);
-    if (ec != ::dsn::ERR_OK) {
+    if (ec != ERR_OK) {
         return ec;
     }
-    CHECK(dsn::buf2uint64(data, *value),
+    CHECK(buf2uint64(data, *value),
           "rocksdb {} get \"{}\" from meta column family failed to parse into uint64",
           db->GetName(),
           data);
-    return ::dsn::ERR_OK;
+    return ERR_OK;
 }
 
-::dsn::error_code meta_store::get_string_value_from_meta_cf(bool read_flushed_data,
-                                                            const std::string &key,
-                                                            std::string *value) const
+error_code meta_store::get_string_value_from_meta_cf(bool read_flushed_data,
+                                                     const std::string &key,
+                                                     std::string *value) const
 {
     return get_string_value_from_meta_cf(_db, _meta_cf, read_flushed_data, key, value);
 }
 
-::dsn::error_code meta_store::get_string_value_from_meta_cf(rocksdb::DB *db,
-                                                            rocksdb::ColumnFamilyHandle *cf,
-                                                            bool read_flushed_data,
-                                                            const std::string &key,
-                                                            std::string *value)
+error_code meta_store::get_string_value_from_meta_cf(rocksdb::DB *db,
+                                                     rocksdb::ColumnFamilyHandle *cf,
+                                                     bool read_flushed_data,
+                                                     const std::string &key,
+                                                     std::string *value)
 {
     rocksdb::ReadOptions rd_opts;
     if (read_flushed_data) {
@@ -137,55 +137,55 @@ std::string meta_store::get_usage_scenario() const
     }
     auto status = db->Get(rd_opts, cf, key, value);
     if (status.ok()) {
-        return ::dsn::ERR_OK;
+        return ERR_OK;
     }
 
     if (status.IsNotFound()) {
-        return ::dsn::ERR_OBJECT_NOT_FOUND;
+        return ERR_OBJECT_NOT_FOUND;
     }
 
     // TODO(yingchun): add a rocksdb io error.
-    return ::dsn::ERR_LOCAL_APP_FAILURE;
+    return ERR_LOCAL_APP_FAILURE;
 }
 
-::dsn::error_code meta_store::set_value_to_meta_cf(const std::string &key, uint64_t value) const
+error_code meta_store::set_value_to_meta_cf(const std::string &key, uint64_t value) const
 {
     return set_string_value_to_meta_cf(key, std::to_string(value));
 }
 
-::dsn::error_code meta_store::set_string_value_to_meta_cf(const std::string &key,
-                                                          const std::string &value) const
+error_code meta_store::set_string_value_to_meta_cf(const std::string &key,
+                                                   const std::string &value) const
 {
     auto status = _db->Put(_wt_opts, _meta_cf, key, value);
     if (!status.ok()) {
         LOG_ERROR_PREFIX(
             "Put {}={} to meta column family failed, status {}", key, value, status.ToString());
         // TODO(yingchun): add a rocksdb io error.
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
+        return ERR_LOCAL_APP_FAILURE;
     }
-    return ::dsn::ERR_OK;
+    return ERR_OK;
 }
 
 void meta_store::set_last_flushed_decree(uint64_t decree) const
 {
-    CHECK_EQ_PREFIX(::dsn::ERR_OK, set_value_to_meta_cf(LAST_FLUSHED_DECREE, decree));
+    CHECK_EQ_PREFIX(ERR_OK, set_value_to_meta_cf(LAST_FLUSHED_DECREE, decree));
 }
 
 void meta_store::set_data_version(uint32_t version) const
 {
-    CHECK_EQ_PREFIX(::dsn::ERR_OK, set_value_to_meta_cf(DATA_VERSION, version));
+    CHECK_EQ_PREFIX(ERR_OK, set_value_to_meta_cf(DATA_VERSION, version));
 }
 
 void meta_store::set_last_manual_compact_finish_time(uint64_t last_manual_compact_finish_time) const
 {
     CHECK_EQ_PREFIX(
-        ::dsn::ERR_OK,
+        ERR_OK,
         set_value_to_meta_cf(LAST_MANUAL_COMPACT_FINISH_TIME, last_manual_compact_finish_time));
 }
 
 void meta_store::set_usage_scenario(const std::string &usage_scenario) const
 {
-    CHECK_EQ_PREFIX(::dsn::ERR_OK,
+    CHECK_EQ_PREFIX(ERR_OK,
                     set_string_value_to_meta_cf(ROCKSDB_ENV_USAGE_SCENARIO_KEY, usage_scenario));
 }
 

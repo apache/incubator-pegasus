@@ -24,7 +24,7 @@
 #include "utils/TokenBucket.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 class token_buckets
@@ -40,4 +40,4 @@ private:
     friend class token_buckets_test;
 };
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

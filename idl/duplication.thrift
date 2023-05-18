@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-include "dsn.thrift"
-include "dsn.layer2.thrift"
+include "pegasus.thrift"
+include "pegasus.layer2.thrift"
 
-namespace cpp dsn.replication
+namespace cpp pegasus.replication
 namespace go admin
 namespace java org.apache.pegasus.replication
 
@@ -73,10 +73,10 @@ struct duplication_add_response
     // Possible errors:
     // - ERR_INVALID_PARAMETERS:
     //   the address of remote cluster is not well configured in meta sever.
-    1:dsn.error_code   err;
-    2:i32              appid;
-    3:i32              dupid;
-    4:optional string  hint;
+    1:pegasus.error_code err;
+    2:i32                appid;
+    3:i32                dupid;
+    4:optional string    hint;
 }
 
 // This request is sent from client to meta.
@@ -95,8 +95,8 @@ struct duplication_modify_response
     // - ERR_OBJECT_NOT_FOUND: duplication is not found
     // - ERR_BUSY: busy for updating state
     // - ERR_INVALID_PARAMETERS: illegal request
-    1:dsn.error_code   err;
-    2:i32              appid;
+    1:pegasus.error_code err;
+    2:i32                appid;
 }
 
 struct duplication_entry
@@ -122,7 +122,7 @@ struct duplication_query_response
 {
     // Possible errors:
     // - ERR_APP_NOT_EXIST: app is not found
-    1:dsn.error_code             err;
+    1:pegasus.error_code         err;
     3:i32                        appid;
     4:list<duplication_entry>    entry_list;
 }
@@ -147,16 +147,15 @@ struct duplication_sync_request
 {
     // the address of of the replica server who sends this request
     // TODO(wutao1): remove this field and get the source address by dsn_msg_from_address
-    1:dsn.rpc_address                                   node;
-
-    2:map<dsn.gpid, list<duplication_confirm_entry>>    confirm_list;
+    1:pegasus.rpc_address                                   node;
+    2:map<pegasus.gpid, list<duplication_confirm_entry>>    confirm_list;
 }
 
 struct duplication_sync_response
 {
     // Possible errors:
     // - ERR_OBJECT_NOT_FOUND: node is not found
-    1:dsn.error_code                                   err;
+    1:pegasus.error_code                               err;
 
     // appid -> map<dupid, dup_entry>
     // this rpc will not return the apps that were not assigned duplication.

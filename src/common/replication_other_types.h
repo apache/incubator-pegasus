@@ -45,15 +45,15 @@
 #include "replica_admin_types.h"
 #include "common/replication_enums.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 typedef int32_t app_id;
 typedef int64_t ballot;
 typedef int64_t decree;
 
-#define invalid_ballot ((::dsn::replication::ballot)-1LL)
-#define invalid_decree ((::dsn::replication::decree)-1LL)
+#define invalid_ballot ((replication::ballot)-1LL)
+#define invalid_decree ((replication::decree)-1LL)
 #define invalid_offset (-1LL)
 #define invalid_signature 0
 
@@ -87,17 +87,17 @@ inline bool is_partition_config_equal(const partition_configuration &pc1,
 class replica_helper
 {
 public:
-    static bool remove_node(::dsn::rpc_address node,
-                            /*inout*/ std::vector<::dsn::rpc_address> &nodeList);
+    static bool remove_node(rpc_address node,
+                            /*inout*/ std::vector<rpc_address> &nodeList);
     static bool get_replica_config(const partition_configuration &partition_config,
-                                   ::dsn::rpc_address node,
+                                   rpc_address node,
                                    /*out*/ replica_configuration &replica_config);
     // true if meta_list's value of config is valid, otherwise return false
-    static bool load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
+    static bool load_meta_servers(/*out*/ std::vector<rpc_address> &servers,
                                   const char *section = "meta_server",
                                   const char *key = "server_list");
 };
-}
-} // namespace
+} // namespace replication
+} // namespace pegasus
 
 #endif

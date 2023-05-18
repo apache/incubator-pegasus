@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/cluster_balance_policy.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
@@ -42,7 +42,7 @@
 #include "utils/defer.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 TEST(cluster_balance_policy, app_migration_info)
@@ -174,7 +174,7 @@ TEST(cluster_balance_policy, get_node_migration_info)
     sr.disk_tag = disk_tag;
     config_context context;
     context.config_owner = new partition_configuration();
-    auto cleanup = dsn::defer([&context]() { delete context.config_owner; });
+    auto cleanup = defer([&context]() { delete context.config_owner; });
     context.config_owner->pid = gpid(appid, 0);
     context.serving.emplace_back(std::move(sr));
     app->helpers->contexts.emplace_back(std::move(context));
@@ -510,7 +510,7 @@ TEST(cluster_balance_policy, calc_potential_moving)
     auto addr3 = rpc_address(1, 3);
 
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
@@ -556,4 +556,4 @@ TEST(cluster_balance_policy, calc_potential_moving)
     ASSERT_EQ(gpids.size(), 0);
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

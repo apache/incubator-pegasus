@@ -24,14 +24,14 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "replica/replica_base.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class learn_response;
 class replica;
@@ -91,4 +91,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

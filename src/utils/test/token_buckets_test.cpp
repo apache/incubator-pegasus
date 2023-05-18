@@ -25,18 +25,15 @@
 #include "utils/TokenBucket.h"
 #include "utils/token_buckets.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 class token_buckets_test : public testing::Test
 {
 public:
-    std::unique_ptr<dsn::utils::token_buckets> _token_buckets_wrapper;
+    std::unique_ptr<utils::token_buckets> _token_buckets_wrapper;
 
-    void SetUp() override
-    {
-        _token_buckets_wrapper = std::make_unique<dsn::utils::token_buckets>();
-    }
+    void SetUp() override { _token_buckets_wrapper = std::make_unique<utils::token_buckets>(); }
 
     std::unordered_map<std::string, std::shared_ptr<folly::DynamicTokenBucket>>
     token_buckets() const
@@ -58,4 +55,4 @@ TEST_F(token_buckets_test, test_token_buckets)
 }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

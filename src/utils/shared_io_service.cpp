@@ -24,7 +24,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 const uint32_t kMinTimerServiceWorkerCount = 3;
@@ -63,4 +63,4 @@ shared_io_service::~shared_io_service()
 }
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

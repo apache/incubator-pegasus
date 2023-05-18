@@ -44,7 +44,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 // There is an option FLAGS_max_replicas_in_group which restricts the max replica count of the whole
@@ -215,7 +215,7 @@ void proposal_actions::reset_tracked_current_learner()
     current_learner.last_prepared_decree = invalid_decree;
 }
 
-void proposal_actions::track_current_learner(const dsn::rpc_address &node, const replica_info &info)
+void proposal_actions::track_current_learner(const rpc_address &node, const replica_info &info)
 {
     if (empty())
         return;
@@ -235,7 +235,7 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
             if (current_learner.ballot != invalid_ballot) {
                 LOG_INFO("{}: a learner's is down to status({}), perhaps learn failed",
                          info.pid,
-                         dsn::enum_to_string(info.status));
+                         pegasus::enum_to_string(info.status));
                 learning_progress_abnormal_detected = true;
             } else {
                 LOG_DEBUG(
@@ -711,4 +711,4 @@ partition_status::type node_state::served_as(const gpid &pid) const
     return partition_status::PS_INACTIVE;
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

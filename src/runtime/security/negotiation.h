@@ -28,7 +28,7 @@
 #include "security_types.h"
 #include "utils/autoref_ptr.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace security {
 typedef rpc_holder<negotiation_request, negotiation_response> negotiation_rpc;
@@ -63,4 +63,4 @@ protected:
 
 std::unique_ptr<negotiation> create_negotiation(bool is_client, rpc_session *session);
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

@@ -23,7 +23,8 @@
 
 #include "utils/singleton.h"
 
-class global_env : public dsn::utils::singleton<global_env>
+namespace pegasus {
+class global_env : public utils::singleton<global_env>
 {
 public:
     std::string _pegasus_root;
@@ -39,5 +40,6 @@ private:
     void get_hostip();
     void get_dirs();
 
-    friend dsn::utils::singleton<global_env>;
+    friend utils::singleton<global_env>;
 };
+} // namespace pegasus

@@ -31,14 +31,14 @@
 namespace pegasus {
 namespace server {
 
-class info_collector_app : public ::dsn::service_app
+class info_collector_app : public service_app
 {
 public:
-    info_collector_app(const dsn::service_app_info *info);
+    info_collector_app(const service_app_info *info);
     virtual ~info_collector_app(void);
 
-    virtual ::dsn::error_code start(const std::vector<std::string> &args) override;
-    virtual ::dsn::error_code stop(bool cleanup = false) override;
+    virtual error_code start(const std::vector<std::string> &args) override;
+    virtual error_code stop(bool cleanup = false) override;
 
 private:
     info_collector _collector;

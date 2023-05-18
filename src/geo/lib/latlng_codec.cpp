@@ -72,7 +72,7 @@ bool latlng_codec::decode_from_value(const std::string &value, S2LatLng &latlng)
     std::string &lng = data[_latlng_order ? 1 : 0];
     double lat_degrees = 0.0;
     double lng_degrees = 0.0;
-    if (!dsn::buf2double(lat, lat_degrees) || !dsn::buf2double(lng, lng_degrees)) {
+    if (!buf2double(lat, lat_degrees) || !buf2double(lng, lng_degrees)) {
         return false;
     }
     latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
@@ -107,11 +107,11 @@ bool latlng_codec::encode_to_value(double lat_degrees, double lng_degrees, std::
     return true;
 }
 
-dsn::error_s latlng_codec::set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index)
+error_s latlng_codec::set_latlng_indices(uint32_t latitude_index, uint32_t longitude_index)
 {
     if (latitude_index == longitude_index) {
-        return dsn::error_s::make(dsn::ERR_INVALID_PARAMETERS,
-                                  "latitude_index and longitude_index should not be equal");
+        return error_s::make(ERR_INVALID_PARAMETERS,
+                             "latitude_index and longitude_index should not be equal");
     } else if (latitude_index < longitude_index) {
         _sorted_indices = {(int)latitude_index, (int)longitude_index};
         _latlng_order = true;
@@ -119,7 +119,7 @@ dsn::error_s latlng_codec::set_latlng_indices(uint32_t latitude_index, uint32_t 
         _sorted_indices = {(int)longitude_index, (int)latitude_index};
         _latlng_order = false;
     }
-    return dsn::error_s::ok();
+    return error_s::ok();
 }
 
 } // namespace geo

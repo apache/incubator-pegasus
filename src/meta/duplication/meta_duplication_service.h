@@ -30,7 +30,7 @@
 #include "meta/server_state.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_address;
 class zrwlock_nr;
 
@@ -151,4 +151,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -27,6 +27,7 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
+namespace pegasus {
 bool use_app_as_current(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc == 1) {
@@ -52,11 +53,11 @@ bool process_escape_all(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "Current escape_all: %s.\n", sc->escape_all ? "true" : "false");
         return true;
     } else if (args.argc == 2) {
-        if (dsn::utils::iequals(args.argv[1], "true")) {
+        if (utils::iequals(args.argv[1], "true")) {
             sc->escape_all = true;
             fprintf(stderr, "OK\n");
             return true;
-        } else if (dsn::utils::iequals(args.argv[1], "false")) {
+        } else if (utils::iequals(args.argv[1], "false")) {
             sc->escape_all = false;
             fprintf(stderr, "OK\n");
             return true;
@@ -76,7 +77,7 @@ bool process_timeout(command_executor *e, shell_context *sc, arguments args)
         return true;
     } else if (args.argc == 2) {
         int timeout;
-        if (!dsn::buf2int32(args.argv[1], timeout)) {
+        if (!buf2int32(args.argv[1], timeout)) {
             fprintf(stderr, "ERROR: parse %s as timeout failed\n", args.argv[1]);
             return false;
         }
@@ -105,3 +106,4 @@ bool cc_command(command_executor *e, shell_context *sc, arguments args)
     }
     return false;
 }
+} // namespace pegasus

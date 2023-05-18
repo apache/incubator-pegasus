@@ -25,7 +25,7 @@
 #include <string>
 #include <utility>
 
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "pegasus_utils.h"
@@ -45,7 +45,7 @@ class rocksdb_wrapper_test : public pegasus_server_test_base
 protected:
     std::unique_ptr<pegasus_server_write> _server_write;
     rocksdb_wrapper *_rocksdb_wrapper{nullptr};
-    dsn::blob _raw_key;
+    blob _raw_key;
 
 public:
     void SetUp() override
@@ -54,13 +54,12 @@ public:
         _server_write = std::make_unique<pegasus_server_write>(_server.get());
         _rocksdb_wrapper = _server_write->_write_svc->_impl->_rocksdb_wrapper.get();
 
-        pegasus::pegasus_generate_key(
-            _raw_key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
+        pegasus_generate_key(_raw_key, string_view("hash_key"), string_view("sort_key"));
     }
 
     void single_set(db_write_context write_ctx,
-                    dsn::blob raw_key,
-                    dsn::string_view user_value,
+                    blob raw_key,
+                    string_view user_value,
                     int32_t expire_ts_seconds)
     {
         ASSERT_EQ(_rocksdb_wrapper->write_batch_put_ctx(
@@ -74,19 +73,19 @@ public:
     void set_app_duplicating()
     {
         _server->stop(false);
-        dsn::replication::destroy_replica(_replica);
+        replication::destroy_replica(_replica);
 
-        dsn::app_info app_info;
+        app_info app_info;
         app_info.app_type = "pegasus";
         app_info.duplicating = true;
-        _replica = dsn::replication::create_test_replica(
-            _replica_stub, _gpid, app_info, "./", false, false);
+        _replica =
+            replication::create_test_replica(_replica_stub, _gpid, app_info, "./", false, false);
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
 
         SetUp();
     }
 
-    uint64_t read_timestamp_from(dsn::string_view raw_value)
+    uint64_t read_timestamp_from(string_view raw_value)
     {
         uint64_t local_timetag =
             pegasus_extract_timetag(_rocksdb_wrapper->_pegasus_data_version, raw_value);
@@ -120,7 +119,7 @@ TEST_F(rocksdb_wrapper_test, get)
     ASSERT_TRUE(get_ctx2.found);
     ASSERT_FALSE(get_ctx3.expired);
     ASSERT_EQ(get_ctx3.expire_ts, expired_ts);
-    dsn::blob user_value;
+    blob user_value;
     pegasus_extract_user_data(
         _rocksdb_wrapper->_pegasus_data_version, std::move(get_ctx3.raw_value), user_value);
     ASSERT_EQ(user_value, value);
@@ -142,7 +141,7 @@ TEST_F(rocksdb_wrapper_test, put_verify_timetag)
     ASSERT_TRUE(get_ctx1.found);
     ASSERT_FALSE(get_ctx1.expired);
     ASSERT_EQ(read_timestamp_from(get_ctx1.raw_value), timestamp);
-    dsn::blob user_value;
+    blob user_value;
     pegasus_extract_user_data(
         _rocksdb_wrapper->_pegasus_data_version, std::move(get_ctx1.raw_value), user_value);
     ASSERT_EQ(user_value, value);
@@ -166,7 +165,7 @@ TEST_F(rocksdb_wrapper_test, put_verify_timetag)
     /// since its cluster id is larger (current cluster_id=1)
     timestamp = 15;
     value = "value_15_new";
-    ctx.remote_timetag = pegasus::generate_timetag(timestamp, 2, false);
+    ctx.remote_timetag = generate_timetag(timestamp, 2, false);
     ctx.verify_timetag = true;
     single_set(ctx, _raw_key, value, 0);
 
@@ -218,7 +217,7 @@ TEST_F(rocksdb_wrapper_test, verify_timetag_compatible_with_version_0)
     _rocksdb_wrapper->get(_raw_key, &get_ctx);
     ASSERT_TRUE(get_ctx.found);
     ASSERT_FALSE(get_ctx.expired);
-    dsn::blob user_value;
+    blob user_value;
     pegasus_extract_user_data(
         _rocksdb_wrapper->_pegasus_data_version, std::move(get_ctx.raw_value), user_value);
     ASSERT_EQ(user_value, value);

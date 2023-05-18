@@ -40,11 +40,11 @@
 #include <map>
 #include <vector>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 template <typename TKey, typename TValue, typename TCompare = std::less<TKey>>
-class singleton_store : public dsn::utils::singleton<singleton_store<TKey, TValue, TCompare>>
+class singleton_store : public utils::singleton<singleton_store<TKey, TValue, TCompare>>
 {
 public:
     bool put(TKey key, TValue val)
@@ -82,8 +82,7 @@ private:
 };
 
 template <typename TKey, typename TValue, typename TCompare = std::less<TKey>>
-class safe_singleton_store
-    : public dsn::utils::singleton<safe_singleton_store<TKey, TValue, TCompare>>
+class safe_singleton_store : public utils::singleton<safe_singleton_store<TKey, TValue, TCompare>>
 {
 public:
     bool put(TKey key, TValue val)
@@ -129,5 +128,5 @@ private:
 };
 
 //------------- inline implementation ----------
-}
-} // end namespace dsn::utils
+} // namespace utils
+} // namespace pegasus

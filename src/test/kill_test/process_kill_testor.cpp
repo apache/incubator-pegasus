@@ -71,7 +71,7 @@ DSN_DEFINE_uint32(pegasus.killtest,
 
 DSN_DEFINE_string(pegasus.killtest, killer_handler, "", "killer handler");
 DSN_DEFINE_validator(killer_handler,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 
 DSN_DECLARE_uint32(kill_interval_seconds);
 
@@ -95,7 +95,7 @@ bool process_kill_testor::verifier_process_alive()
     std::stringstream output;
     int process_count;
 
-    CHECK_EQ(dsn::utils::pipe_execute(command, output), 0);
+    CHECK_EQ(utils::pipe_execute(command, output), 0);
     output >> process_count;
 
     // one for the verifier, one for command
@@ -228,7 +228,7 @@ bool process_kill_testor::start_job_by_index(job_type type, int index)
 void process_kill_testor::stop_verifier_and_exit(const char *msg)
 {
     std::stringstream ss;
-    int ret = dsn::utils::pipe_execute(
+    int ret = utils::pipe_execute(
         "ps aux | grep pegasus | grep verifier | awk '{print $2}' | xargs kill -9", ss);
     CHECK(ret == 0 || ret == 256, "");
     LOG_FATAL(msg);

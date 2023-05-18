@@ -21,7 +21,7 @@
 #include "utils/memutil.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace {
 void WritePadding(std::ostream &o, size_t pad)
@@ -103,4 +103,4 @@ string_view::size_type string_view::find(string_view s, size_type pos) const noe
 
 constexpr string_view::size_type string_view::npos;
 
-} // namespace dsn
+} // namespace pegasus

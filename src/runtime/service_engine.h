@@ -48,7 +48,7 @@
 #include "utils/error_code.h"
 #include "utils/singleton.h"
 
-namespace dsn {
+namespace pegasus {
 
 class env_provider;
 class message_ex;
@@ -74,9 +74,9 @@ public:
                           /*out*/ std::stringstream &ss);
     void get_queue_info(/*out*/ std::stringstream &ss);
 
-    dsn::error_code start();
-    dsn::error_code start_app();
-    dsn::error_code stop_app(bool cleanup);
+    error_code start();
+    error_code start_app();
+    error_code stop_app(bool cleanup);
 
     int id() const { return _app_spec.id; }
     const char *full_name() const { return _app_spec.full_name.c_str(); }
@@ -144,4 +144,4 @@ private:
 
 // ------------ inline impl ---------------------
 
-} // namespace dsn
+} // namespace pegasus

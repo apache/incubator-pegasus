@@ -89,7 +89,7 @@ extern void dsn_coredump();
 
 #define dreturn_not_ok_logged(err, ...)                                                            \
     do {                                                                                           \
-        if (dsn_unlikely((err) != dsn::ERR_OK)) {                                                  \
+        if (dsn_unlikely((err) != ERR_OK)) {                                                       \
             LOG_ERROR(__VA_ARGS__);                                                                \
             return err;                                                                            \
         }                                                                                          \

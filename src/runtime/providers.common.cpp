@@ -52,40 +52,42 @@
 #include "utils/lockp.std.h"
 #include "utils/zlock_provider.h"
 
-namespace dsn {
-namespace tools {
-
 DSN_DEFINE_bool(network, enable_udp, true, "whether to enable udp rpc engine");
+
+namespace pegasus {
+namespace tools {
 
 void register_std_lock_providers()
 {
-    lock_provider::register_component<std_lock_provider>("dsn::tools::std_lock_provider");
-    lock_nr_provider::register_component<std_lock_nr_provider>("dsn::tools::std_lock_nr_provider");
+    lock_provider::register_component<std_lock_provider>("pegasus::tools::std_lock_provider");
+    lock_nr_provider::register_component<std_lock_nr_provider>(
+        "pegasus::tools::std_lock_nr_provider");
     rwlock_nr_provider::register_component<std_rwlock_nr_provider>(
-        "dsn::tools::std_rwlock_nr_provider");
+        "pegasus::tools::std_rwlock_nr_provider");
     semaphore_provider::register_component<std_semaphore_provider>(
-        "dsn::tools::std_semaphore_provider");
+        "pegasus::tools::std_semaphore_provider");
 }
 
 void register_common_providers()
 {
-    register_component_provider<env_provider>("dsn::env_provider");
-    register_component_provider<task_worker>("dsn::task_worker");
+    register_component_provider<env_provider>("pegasus::env_provider");
+    register_component_provider<task_worker>("pegasus::task_worker");
 
     register_std_lock_providers();
 
     if (FLAGS_enable_udp) {
-        register_component_provider<asio_udp_provider>("dsn::tools::asio_udp_provider");
+        register_component_provider<asio_udp_provider>("pegasus::tools::asio_udp_provider");
     }
-    register_component_provider<asio_network_provider>("dsn::tools::asio_network_provider");
-    register_component_provider<sim_network_provider>("dsn::tools::sim_network_provider");
-    register_component_provider<simple_task_queue>("dsn::tools::simple_task_queue");
-    register_component_provider<hpc_concurrent_task_queue>("dsn::tools::hpc_concurrent_task_queue");
-    register_component_provider<simple_timer_service>("dsn::tools::simple_timer_service");
+    register_component_provider<asio_network_provider>("pegasus::tools::asio_network_provider");
+    register_component_provider<sim_network_provider>("pegasus::tools::sim_network_provider");
+    register_component_provider<simple_task_queue>("pegasus::tools::simple_task_queue");
+    register_component_provider<hpc_concurrent_task_queue>(
+        "pegasus::tools::hpc_concurrent_task_queue");
+    register_component_provider<simple_timer_service>("pegasus::tools::simple_timer_service");
 
     register_message_header_parser<dsn_message_parser>(NET_HDR_DSN, {"RDSN"});
     register_message_header_parser<thrift_message_parser>(NET_HDR_THRIFT, {"THFT"});
     register_message_header_parser<raw_message_parser>(NET_HDR_RAW, {"_RAW"});
 }
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

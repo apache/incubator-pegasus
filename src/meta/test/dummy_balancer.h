@@ -20,7 +20,7 @@
 #include "meta/meta_service.h"
 #include "meta/server_load_balancer.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class dummy_balancer : public server_load_balancer
@@ -38,4 +38,4 @@ public:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

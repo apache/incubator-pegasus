@@ -52,7 +52,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 
 namespace replication {
@@ -69,7 +69,7 @@ simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r
 void simple_kv_service_impl::reset_state() { _last_durable_decree = 0; }
 
 // RPC_SIMPLE_KV_READ
-void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply)
+void simple_kv_service_impl::on_read(const std::string &key, rpc_replier<std::string> &reply)
 {
     std::string r;
     {
@@ -86,7 +86,7 @@ void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<
 }
 
 // RPC_SIMPLE_KV_WRITE
-void simple_kv_service_impl::on_write(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
+void simple_kv_service_impl::on_write(const kv_pair &pr, rpc_replier<int32_t> &reply)
 {
     {
         zauto_lock l(_lock);
@@ -98,7 +98,7 @@ void simple_kv_service_impl::on_write(const kv_pair &pr, ::dsn::rpc_replier<int3
 }
 
 // RPC_SIMPLE_KV_APPEND
-void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
+void simple_kv_service_impl::on_append(const kv_pair &pr, rpc_replier<int32_t> &reply)
 {
     {
         zauto_lock l(_lock);
@@ -113,7 +113,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
     reply(0);
 }
 
-::dsn::error_code simple_kv_service_impl::start(int argc, char **argv)
+error_code simple_kv_service_impl::start(int argc, char **argv)
 {
     {
         zauto_lock l(_lock);
@@ -123,12 +123,12 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
     return ERR_OK;
 }
 
-::dsn::error_code simple_kv_service_impl::stop(bool clear_state)
+error_code simple_kv_service_impl::stop(bool clear_state)
 {
     {
         zauto_lock l(_lock);
         if (clear_state) {
-            CHECK(dsn::utils::filesystem::remove_path(_dir_data),
+            CHECK(utils::filesystem::remove_path(_dir_data),
                   "Fail to delete directory {}",
                   _dir_data);
             reset_state();
@@ -150,11 +150,10 @@ void simple_kv_service_impl::recover()
 
     std::vector<std::string> sub_list;
     std::string path = _dir_data;
-    CHECK(dsn::utils::filesystem::get_subfiles(path, sub_list, false),
-          "Fail to get subfiles in {}",
-          path);
+    CHECK(
+        utils::filesystem::get_subfiles(path, sub_list, false), "Fail to get subfiles in {}", path);
     for (auto &fpath : sub_list) {
-        auto &&s = dsn::utils::filesystem::get_file_name(fpath);
+        auto &&s = utils::filesystem::get_file_name(fpath);
         if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
             continue;
 
@@ -209,7 +208,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     is.close();
 }
 
-::dsn::error_code simple_kv_service_impl::sync_checkpoint()
+error_code simple_kv_service_impl::sync_checkpoint()
 {
     char name[256];
     int64_t last_commit = _last_committed_decree.load();
@@ -251,15 +250,15 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     return ERR_OK;
 }
 
-::dsn::error_code simple_kv_service_impl::async_checkpoint(bool flush_memtable)
+error_code simple_kv_service_impl::async_checkpoint(bool flush_memtable)
 {
     return sync_checkpoint();
 }
 
 // helper routines to accelerate learning
-::dsn::error_code simple_kv_service_impl::get_checkpoint(int64_t learn_start,
-                                                         const dsn::blob &learn_request,
-                                                         /*out*/ learn_state &state)
+error_code simple_kv_service_impl::get_checkpoint(int64_t learn_start,
+                                                  const blob &learn_request,
+                                                  /*out*/ learn_state &state)
 {
     if (last_durable_decree() > 0) {
         char name[256];
@@ -276,8 +275,8 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     }
 }
 
-::dsn::error_code simple_kv_service_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
-                                                                   const learn_state &state)
+error_code simple_kv_service_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
+                                                            const learn_state &state)
 {
     if (mode == chkpt_apply_mode::learn) {
         recover(state.files[0], state.to_decree_included);

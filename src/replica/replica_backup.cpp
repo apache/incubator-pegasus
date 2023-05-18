@@ -40,7 +40,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
@@ -59,7 +59,7 @@
 #include "utils/thread_access_checker.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 class block_filesystem;
@@ -112,10 +112,10 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             CHECK(r.second, "");
             backup_context = r.first->second;
             backup_context->block_service = block_service;
-            backup_context->backup_root = request.__isset.backup_path
-                                              ? dsn::utils::filesystem::path_combine(
-                                                    request.backup_path, FLAGS_cold_backup_root)
-                                              : FLAGS_cold_backup_root;
+            backup_context->backup_root =
+                request.__isset.backup_path
+                    ? utils::filesystem::path_combine(request.backup_path, FLAGS_cold_backup_root)
+                    : FLAGS_cold_backup_root;
         }
 
         CHECK_EQ_PREFIX(backup_context->request.policy.policy_name, policy_name);
@@ -297,7 +297,7 @@ static int is_related_or_valid_checkpoint(const std::string &chkpt_dirname,
                                           const cold_backup_context_ptr &backup_context)
 {
     std::vector<std::string> strs;
-    ::dsn::utils::split_args(chkpt_dirname.c_str(), strs, '.');
+    utils::split_args(chkpt_dirname.c_str(), strs, '.');
     if (strs.size() == 4 && strs[0] == std::string("backup_tmp") &&
         strs[1] == backup_context->request.policy.policy_name) {
         // backup_tmp.<policy_name>.<backup_id>.<timestamp>
@@ -408,7 +408,7 @@ static bool backup_parse_dir_name(const char *name,
                                   int64_t &timestamp)
 {
     std::vector<std::string> strs;
-    ::dsn::utils::split_args(name, strs, '.');
+    utils::split_args(name, strs, '.');
     if (strs.size() < 5) {
         return false;
     } else {
@@ -555,7 +555,7 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
                backup_context->durable_decree_when_checkpoint == durable_decree) {
         // already triggered, just wait
         char time_buf[20];
-        dsn::utils::time_ms_to_date_time(backup_context->checkpoint_timestamp, time_buf, 20);
+        utils::time_ms_to_date_time(backup_context->checkpoint_timestamp, time_buf, 20);
         LOG_INFO("{}: do not trigger async checkpoint because it is already triggered, "
                  "checkpoint_decree = {}, checkpoint_timestamp = {} ({}), "
                  "durable_decree_when_checkpoint = {}",
@@ -577,7 +577,7 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
         backup_context->checkpoint_timestamp = dsn_now_ms();
         backup_context->durable_decree_when_checkpoint = durable_decree;
         char time_buf[20];
-        dsn::utils::time_ms_to_date_time(backup_context->checkpoint_timestamp, time_buf, 20);
+        utils::time_ms_to_date_time(backup_context->checkpoint_timestamp, time_buf, 20);
         LOG_INFO("{}: trigger async checkpoint, "
                  "checkpoint_decree = {}, checkpoint_timestamp = {} ({}), "
                  "durable_decree_when_checkpoint = {}",
@@ -668,7 +668,7 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
                                 backup_context->request.backup_id,
                                 backup_context->checkpoint_timestamp));
     int64_t last_decree = 0;
-    dsn::error_code err =
+    error_code err =
         _app->copy_checkpoint_to_dir(backup_checkpoint_tmp_dir_path.c_str(), &last_decree);
     if (err != ERR_OK) {
         // try local_create_backup_checkpoint 10s later
@@ -748,4 +748,4 @@ void replica::set_backup_context_cancel()
 
 void replica::clear_cold_backup_state() { _cold_backup_contexts.clear(); }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

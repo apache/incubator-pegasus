@@ -22,7 +22,7 @@
 #include "metadata_types.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class replica_stub;
 
@@ -83,4 +83,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

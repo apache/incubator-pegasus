@@ -31,7 +31,7 @@
 #include "common/replication.codes.h"
 #include "utils/latency_tracer.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 class latency_tracer_test : public testing::Test
 {
@@ -154,4 +154,4 @@ TEST_F(latency_tracer_test, add_point)
     ASSERT_EQ(tracer4_points.size(), 0);
 }
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

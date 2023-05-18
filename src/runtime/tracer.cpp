@@ -48,7 +48,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 DSN_DEFINE_bool(task..default, is_trace, false, "whether to trace tasks by default");
@@ -298,12 +298,11 @@ static std::string tracer_log_flow(const std::vector<std::string> &args)
 
 void tracer::install(service_spec &spec)
 {
-    for (int i = 0; i <= dsn::task_code::max(); i++) {
+    for (int i = 0; i <= task_code::max(); i++) {
         if (i == TASK_CODE_INVALID)
             continue;
 
-        std::string section_name =
-            std::string("task.") + std::string(dsn::task_code(i).to_string());
+        std::string section_name = std::string("task.") + std::string(task_code(i).to_string());
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
 
@@ -418,4 +417,4 @@ void tracer::install(service_spec &spec)
 tracer::tracer(const char *name) : toollet(name) {}
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

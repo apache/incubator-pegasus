@@ -50,7 +50,7 @@
 #include "utils/singleton.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 class task_queue;
 
 namespace tools {
@@ -72,14 +72,14 @@ public:
     void clear();
     bool has_more_events() const
     {
-        utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+        utils::auto_lock<utils::ex_lock> l(_lock);
         return _events.size() > 0;
     }
 
 private:
     typedef std::map<uint64_t, std::vector<event_entry> *> Events;
     Events _events;
-    mutable ::dsn::utils::ex_lock _lock;
+    mutable utils::ex_lock _lock;
 };
 
 struct sim_worker_state
@@ -100,7 +100,7 @@ public:
     void start();
     uint64_t now_ns() const
     {
-        utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
+        utils::auto_lock<utils::ex_lock> l(_lock);
         return _time_ns;
     }
 
@@ -128,7 +128,7 @@ public:
 
 private:
     event_wheel _wheel;
-    mutable ::dsn::utils::ex_lock _lock;
+    mutable utils::ex_lock _lock;
     uint64_t _time_ns;
     bool _running;
     std::vector<sim_worker_state *> _threads;
@@ -162,4 +162,4 @@ private:
 
 inline void scheduler::reset() { _wheel.clear(); }
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

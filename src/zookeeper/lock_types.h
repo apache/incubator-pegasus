@@ -40,7 +40,7 @@
 #include "common/gpid.h"
 #include "utils/distributed_lock_service.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_DLOCK)

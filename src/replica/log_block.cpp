@@ -21,7 +21,7 @@
 #include "replica/mutation.h"
 #include "utils/binary_writer.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 log_block::log_block(int64_t start_offset) : _start_offset(start_offset) { init(); }
@@ -56,4 +56,4 @@ void log_appender::append_mutation(const mutation_ptr &mu, const aio_task_ptr &c
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

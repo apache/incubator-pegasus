@@ -31,7 +31,7 @@
 #include "utils/ports.h"
 
 namespace pegasus {
-std::unique_ptr<value_field> value_schema_v0::extract_field(dsn::string_view value,
+std::unique_ptr<value_field> value_schema_v0::extract_field(string_view value,
                                                             value_field_type type)
 {
     std::unique_ptr<value_field> field = nullptr;
@@ -45,9 +45,9 @@ std::unique_ptr<value_field> value_schema_v0::extract_field(dsn::string_view val
     return field;
 }
 
-dsn::blob value_schema_v0::extract_user_data(std::string &&value)
+blob value_schema_v0::extract_user_data(std::string &&value)
 {
-    auto ret = dsn::blob::create_from_bytes(std::move(value));
+    auto ret = blob::create_from_bytes(std::move(value));
     return ret.range(sizeof(uint32_t));
 }
 
@@ -75,20 +75,20 @@ rocksdb::SliceParts value_schema_v0::generate_value(const value_params &params)
     }
 
     params.write_buf.resize(sizeof(uint32_t));
-    dsn::data_output(params.write_buf).write_u32(expire_ts_field->expire_ts);
+    data_output(params.write_buf).write_u32(expire_ts_field->expire_ts);
     params.write_slices.clear();
     params.write_slices.emplace_back(params.write_buf.data(), params.write_buf.size());
 
-    dsn::string_view user_data = data_field->user_data;
+    string_view user_data = data_field->user_data;
     if (user_data.length() > 0) {
         params.write_slices.emplace_back(user_data.data(), user_data.length());
     }
     return {&params.write_slices[0], static_cast<int>(params.write_slices.size())};
 }
 
-std::unique_ptr<value_field> value_schema_v0::extract_timestamp(dsn::string_view value)
+std::unique_ptr<value_field> value_schema_v0::extract_timestamp(string_view value)
 {
-    uint32_t expire_ts = dsn::data_input(value).read_u32();
+    uint32_t expire_ts = data_input(value).read_u32();
     return std::make_unique<expire_timestamp_field>(expire_ts);
 }
 
@@ -97,8 +97,7 @@ void value_schema_v0::update_expire_ts(std::string &value, std::unique_ptr<value
     CHECK_GE_MSG(value.length(), sizeof(uint32_t), "value must include 'expire_ts' header");
     auto expire_field = static_cast<expire_timestamp_field *>(field.get());
 
-    auto new_expire_ts = dsn::endian::hton(expire_field->expire_ts);
+    auto new_expire_ts = endian::hton(expire_field->expire_ts);
     memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));
 }
-
 } // namespace pegasus

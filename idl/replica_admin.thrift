@@ -24,34 +24,34 @@
  * THE SOFTWARE.
  */
 
-include "dsn.thrift"
-include "dsn.layer2.thrift"
+include "pegasus.thrift"
+include "pegasus.layer2.thrift"
 include "metadata.thrift"
 
-namespace cpp dsn.replication
+namespace cpp pegasus.replication
 namespace go radmin
 
 struct query_replica_decree_request
 {
-    1:dsn.gpid pid;
-    2:dsn.rpc_address     node;
+    1:pegasus.gpid        pid;
+    2:pegasus.rpc_address node;
 }
 
 struct query_replica_decree_response
 {
-    1:dsn.error_code      err;
-    2:i64                 last_decree;
+    1:pegasus.error_code err;
+    2:i64                last_decree;
 }
 
 struct query_replica_info_request
 {
-    1:dsn.rpc_address     node;
+    1:pegasus.rpc_address node;
 }
 
 struct query_replica_info_response
 {
-    1:dsn.error_code      err;
-    2:list<metadata.replica_info>  replicas;
+    1:pegasus.error_code          err;
+    2:list<metadata.replica_info> replicas;
 }
 
 struct disk_info
@@ -61,22 +61,22 @@ struct disk_info
     3:i64 disk_capacity_mb;
     4:i64 disk_available_mb;
     // app_id=>set<gpid>
-    5:map<i32,set<dsn.gpid>> holding_primary_replicas;
-    6:map<i32,set<dsn.gpid>> holding_secondary_replicas;
+    5:map<i32,set<pegasus.gpid>> holding_primary_replicas;
+    6:map<i32,set<pegasus.gpid>> holding_secondary_replicas;
 }
 
 // This request is sent from client to replica_server.
 struct query_disk_info_request
 {
-    1:dsn.rpc_address node;
-    2:string          app_name;
+    1:pegasus.rpc_address node;
+    2:string              app_name;
 }
 
 // This response is from replica_server to client.
 struct query_disk_info_response
 {
     // app not existed will return "ERR_OBJECT_NOT_FOUND", otherwise "ERR_OK"
-    1:dsn.error_code err;
+    1:pegasus.error_code err;
     2:i64 total_capacity_mb;
     3:i64 total_available_mb;
     4:list<disk_info> disk_infos;
@@ -85,7 +85,7 @@ struct query_disk_info_response
 // This request is sent from client to replica_server.
 struct replica_disk_migrate_request
 {
-    1:dsn.gpid pid
+    1:pegasus.gpid pid
     // disk tag, for example `ssd1`. `origin_disk` and `target_disk` must be specified in the config of [replication] data_dirs.
     2:string origin_disk;
     3:string target_disk;
@@ -101,7 +101,7 @@ struct replica_disk_migrate_response
    // -ERR_INVALID_PARAMETERS: origin disk is equal with target disk
    // -ERR_OBJECT_NOT_FOUND: replica not found, origin or target disk isn't existed, origin disk doesn't exist current replica
    // -ERR_PATH_ALREADY_EXIST: target disk has existed current replica
-   1:dsn.error_code err;
+   1:pegasus.error_code err;
    2:optional string hint;
 }
 
@@ -129,7 +129,7 @@ enum detect_action
 struct detect_hotkey_request {
     1: hotkey_type type
     2: detect_action action
-    3: dsn.gpid pid;
+    3: pegasus.gpid pid;
 }
 
 struct detect_hotkey_response {
@@ -137,7 +137,7 @@ struct detect_hotkey_response {
     // - ERR_OK: start/stop hotkey detect succeed
     // - ERR_OBJECT_NOT_FOUND: replica not found
     // - ERR_SERVICE_ALREADY_EXIST: hotkey detection is running now
-    1: dsn.error_code err;
+    1: pegasus.error_code err;
     2: optional string err_hint;
     3: optional string hotkey_result;
 }
@@ -154,7 +154,7 @@ struct add_new_disk_response {
     // - ERR_NODE_ALREADY_EXIST: data_dir is already available
     // - ERR_DIR_NOT_EMPTY: data_dir is not empty
     // - ERR_FILE_OPERATION_FAILED: can't create data_dir or directory can't read/write
-    1: dsn.error_code err;
+    1: pegasus.error_code err;
     2: optional string err_hint;
 }
 

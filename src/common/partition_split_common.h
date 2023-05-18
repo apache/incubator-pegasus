@@ -20,7 +20,7 @@
 #include "partition_split_types.h"
 #include "runtime/rpc/rpc_holder.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 typedef rpc_holder<start_partition_split_request, start_partition_split_response> start_split_rpc;
 typedef rpc_holder<control_split_request, control_split_response> control_split_rpc;
@@ -29,4 +29,4 @@ typedef rpc_holder<register_child_request, register_child_response> register_chi
 typedef rpc_holder<notify_stop_split_request, notify_stop_split_response> notify_stop_split_rpc;
 typedef rpc_holder<query_child_state_request, query_child_state_response> query_child_state_rpc;
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

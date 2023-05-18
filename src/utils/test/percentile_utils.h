@@ -28,7 +28,7 @@
 
 #include "nth_element_utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 // The generator is used to produce the test cases randomly for unit tests and benchmarks of
 // percentile. This is implemented by converting kth percentiles to nth indexes, and calling
@@ -85,4 +85,4 @@ template <typename T, typename = typename std::enable_if<std::is_floating_point<
 using floating_percentile_case_generator =
     percentile_case_generator<floating_nth_element_case_generator<T>>;
 
-} // namespace dsn
+} // namespace pegasus

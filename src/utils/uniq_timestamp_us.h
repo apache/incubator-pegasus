@@ -31,7 +31,7 @@
 #include "utils/ports.h"
 #include "runtime/api_layer1.h"
 
-namespace dsn {
+namespace pegasus {
 //
 // uniq_timestamp_us is used to generate an increasing unique microsecond timestamp
 // in rdsn, it's mainly used for replica to set mutation's timestamp

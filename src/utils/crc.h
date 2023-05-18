@@ -31,7 +31,7 @@
 
 #define CRC_INVALID 0x0
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 uint32_t crc32_calc(const void *ptr, size_t size, uint32_t init_crc);

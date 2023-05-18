@@ -49,7 +49,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_int32(replication,
@@ -100,8 +101,8 @@ uint64_t dir_node::remove(const gpid &pid)
 bool dir_node::update_disk_stat(const bool update_disk_status)
 {
     FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) { return false; });
-    dsn::utils::filesystem::disk_space_info info;
-    if (!dsn::utils::filesystem::get_disk_space_info(full_dir, info)) {
+    disk_space_info info;
+    if (!get_disk_space_info(full_dir, info)) {
         LOG_ERROR("update disk space failed: dir = {}", full_dir);
         return false;
     }
@@ -164,7 +165,7 @@ fs_manager::fs_manager()
 dir_node *fs_manager::get_dir_node(const std::string &subdir) const
 {
     std::string norm_subdir;
-    utils::filesystem::get_normalized_path(subdir, norm_subdir);
+    get_normalized_path(subdir, norm_subdir);
 
     zauto_read_lock l(_lock);
     for (const auto &dn : _dir_nodes) {
@@ -188,7 +189,7 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
     CHECK_EQ(data_dirs.size(), data_dir_tags.size());
     for (unsigned i = 0; i < data_dirs.size(); ++i) {
         std::string norm_path;
-        utils::filesystem::get_normalized_path(data_dirs[i], norm_path);
+        get_normalized_path(data_dirs[i], norm_path);
         dir_node *n = new dir_node(data_dir_tags[i], norm_path);
         _dir_nodes.emplace_back(n);
         LOG_INFO(
@@ -200,14 +201,14 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
     update_disk_stat();
 }
 
-dsn::error_code fs_manager::get_disk_tag(const std::string &dir, std::string &tag)
+error_code fs_manager::get_disk_tag(const std::string &dir, std::string &tag)
 {
     dir_node *n = get_dir_node(dir);
     if (nullptr == n) {
-        return dsn::ERR_OBJECT_NOT_FOUND;
+        return ERR_OBJECT_NOT_FOUND;
     } else {
         tag = n->tag;
-        return dsn::ERR_OK;
+        return ERR_OK;
     }
 }
 
@@ -272,7 +273,7 @@ void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ 
         least_total_replicas_count);
 
     selected->holding_replicas[pid.get_app_id()].emplace(pid);
-    dir = utils::filesystem::path_combine(selected->full_dir, buffer);
+    dir = path_combine(selected->full_dir, buffer);
 }
 
 void fs_manager::remove_replica(const gpid &pid)
@@ -338,7 +339,7 @@ void fs_manager::add_new_dir_node(const std::string &data_dir, const std::string
 {
     zauto_write_lock l(_lock);
     std::string norm_path;
-    utils::filesystem::get_normalized_path(data_dir, norm_path);
+    get_normalized_path(data_dir, norm_path);
     dir_node *n = new dir_node(tag, norm_path);
     _dir_nodes.emplace_back(n);
     _available_data_dirs.emplace_back(data_dir);
@@ -350,7 +351,7 @@ bool fs_manager::is_dir_node_available(const std::string &data_dir, const std::s
     zauto_read_lock l(_lock);
     for (const auto &dir_node : _dir_nodes) {
         std::string norm_path;
-        utils::filesystem::get_normalized_path(data_dir, norm_path);
+        get_normalized_path(data_dir, norm_path);
         if (dir_node->full_dir == norm_path || dir_node->tag == tag) {
             return true;
         }
@@ -359,4 +360,4 @@ bool fs_manager::is_dir_node_available(const std::string &data_dir, const std::s
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

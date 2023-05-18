@@ -29,9 +29,8 @@
 #include "shell/argh.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_address;
-}
 struct shell_context;
 
 inline bool validate_cmd(const argh::parser &cmd,
@@ -67,7 +66,7 @@ inline bool validate_cmd(const argh::parser &cmd,
 
 bool validate_ip(shell_context *sc,
                  const std::string &ip_str,
-                 /*out*/ dsn::rpc_address &target_address,
+                 /*out*/ rpc_address &target_address,
                  /*out*/ std::string &err_info);
 
 #define verify_logged(exp, ...)                                                                    \
@@ -84,7 +83,7 @@ EnumType type_from_string(const std::map<int, const char *> &type_maps,
                           const EnumType &default_type)
 {
     for (auto it = type_maps.begin(); it != type_maps.end(); it++) {
-        if (dsn::utils::iequals(type_string, it->second)) {
+        if (utils::iequals(type_string, it->second)) {
             return (EnumType)it->first;
         }
     }
@@ -92,3 +91,4 @@ EnumType type_from_string(const std::map<int, const char *> &type_maps,
 }
 
 bool confirm_unsafe_command(const std::string &action);
+} // namespace pegasus

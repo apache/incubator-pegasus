@@ -46,7 +46,8 @@
 #include "utils/string_conv.h"
 #include "utils/utils.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 class disk_file;
 
 namespace service {
@@ -61,9 +62,9 @@ DSN_TAG_VARIABLE(max_send_rate_megabytes_per_disk, FT_MUTABLE);
 DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
 DSN_DECLARE_int32(file_close_expire_time_ms);
 
-nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs")
+nfs_service_impl::nfs_service_impl() : serverlet<nfs_service_impl>("nfs")
 {
-    _file_close_timer = ::dsn::tasking::enqueue_timer(
+    _file_close_timer = tasking::enqueue_timer(
         LPC_NFS_FILE_CLOSE_TIMER,
         &_tracker,
         [this] { close_file(); },
@@ -79,15 +80,14 @@ nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs")
         COUNTER_TYPE_VOLATILE_NUMBER,
         "nfs server copy fail count count in the recent period");
 
-    _send_token_buckets = std::make_unique<dsn::utils::token_buckets>();
+    _send_token_buckets = std::make_unique<utils::token_buckets>();
     register_cli_commands();
 }
 
-void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
-                               ::dsn::rpc_replier<::dsn::service::copy_response> &reply)
+void nfs_service_impl::on_copy(const service::copy_request &request,
+                               rpc_replier<service::copy_response> &reply)
 {
-    std::string file_path =
-        dsn::utils::filesystem::path_combine(request.source_dir, request.file_name);
+    std::string file_path = path_combine(request.source_dir, request.file_name);
     disk_file *dfile = nullptr;
 
     {
@@ -115,14 +115,14 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
 
     if (dfile == nullptr) {
         LOG_ERROR("[nfs_service] open file {} failed", file_path);
-        ::dsn::service::copy_response resp;
+        service::copy_response resp;
         resp.error = ERR_OBJECT_NOT_FOUND;
         reply(resp);
         return;
     }
 
     std::shared_ptr<callback_para> cp = std::make_shared<callback_para>(std::move(reply));
-    cp->bb = blob(dsn::utils::make_shared_array<char>(request.size), request.size);
+    cp->bb = blob(utils::make_shared_array<char>(request.size), request.size);
     cp->dst_dir = request.dst_dir;
     cp->source_disk_tag = request.source_disk_tag;
     cp->file_path = std::move(file_path);
@@ -166,7 +166,7 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
         _recent_copy_data_size->add(sz);
     }
 
-    ::dsn::service::copy_response resp;
+    service::copy_response resp;
     resp.error = err;
     resp.file_content = std::move(cp.bb);
     resp.offset = cp.offset;
@@ -176,9 +176,8 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
 }
 
 // RPC_NFS_NEW_NFS_GET_FILE_SIZE
-void nfs_service_impl::on_get_file_size(
-    const ::dsn::service::get_file_size_request &request,
-    ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply)
+void nfs_service_impl::on_get_file_size(const service::get_file_size_request &request,
+                                        rpc_replier<service::get_file_size_response> &reply)
 {
     get_file_size_response resp;
     error_code err = ERR_OK;
@@ -186,11 +185,11 @@ void nfs_service_impl::on_get_file_size(
     std::string folder = request.source_dir;
     if (request.file_list.size() == 0) // return all file size in the destination file folder
     {
-        if (!dsn::utils::filesystem::directory_exists(folder)) {
+        if (!directory_exists(folder)) {
             LOG_ERROR("[nfs_service] directory {} not exist", folder);
             err = ERR_OBJECT_NOT_FOUND;
         } else {
-            if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true)) {
+            if (!get_subfiles(folder, file_list, true)) {
                 LOG_ERROR("[nfs_service] get subfiles of directory {} failed", folder);
                 err = ERR_FILE_OPERATION_FAILED;
             } else {
@@ -198,7 +197,7 @@ void nfs_service_impl::on_get_file_size(
                     // TODO: using uint64 instead as file ma
                     // Done
                     int64_t sz;
-                    if (!dsn::utils::filesystem::file_size(fpath, sz)) {
+                    if (!file_size(fpath, sz)) {
                         LOG_ERROR("[nfs_service] get size of file {} failed", fpath);
                         err = ERR_FILE_OPERATION_FAILED;
                         break;
@@ -214,14 +213,13 @@ void nfs_service_impl::on_get_file_size(
     } else // return file size in the request file folder
     {
         for (size_t i = 0; i < request.file_list.size(); i++) {
-            std::string file_path =
-                dsn::utils::filesystem::path_combine(folder, request.file_list[i]);
+            std::string file_path = path_combine(folder, request.file_list[i]);
 
             struct stat st;
             if (0 != ::stat(file_path.c_str(), &st)) {
                 LOG_ERROR("[nfs_service] get stat of file {} failed, err = {}",
                           file_path,
-                          dsn::utils::safe_strerror(errno));
+                          utils::safe_strerror(errno));
                 err = ERR_OBJECT_NOT_FOUND;
                 break;
             }
@@ -264,7 +262,7 @@ void nfs_service_impl::register_cli_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _nfs_max_send_rate_megabytes_cmd = dsn::command_manager::instance().register_command(
+        _nfs_max_send_rate_megabytes_cmd = command_manager::instance().register_command(
             {"nfs.max_send_rate_megabytes_per_disk"},
             "nfs.max_send_rate_megabytes_per_disk [num]",
             "control the max rate(MB/s) for one disk to send file to remote node",
@@ -276,8 +274,7 @@ void nfs_service_impl::register_cli_commands()
                 }
 
                 int32_t max_send_rate_megabytes = 0;
-                if (!dsn::buf2int32(args[0], max_send_rate_megabytes) ||
-                    max_send_rate_megabytes <= 0) {
+                if (!buf2int32(args[0], max_send_rate_megabytes) || max_send_rate_megabytes <= 0) {
                     return std::string("ERR: invalid arguments");
                 }
 
@@ -288,4 +285,4 @@ void nfs_service_impl::register_cli_commands()
 }
 
 } // namespace service
-} // namespace dsn
+} // namespace pegasus

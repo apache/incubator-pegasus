@@ -43,10 +43,10 @@
 #include "command_helper.h"
 #include "args.h"
 
-using namespace dsn::replication;
-using tp_alignment = ::dsn::utils::table_printer::alignment;
-using tp_output_format = ::dsn::utils::table_printer::output_format;
+using tp_alignment = pegasus::utils::table_printer::alignment;
+using tp_output_format = pegasus::utils::table_printer::output_format;
 
+namespace pegasus {
 static const char *INDENT = "  ";
 struct list_nodes_helper
 {
@@ -284,3 +284,4 @@ bool clear_bulk_load(command_executor *e, shell_context *sc, arguments args);
 // == detect hotkey (see 'commands/detect_hotkey.cpp') == //
 
 bool detect_hotkey(command_executor *e, shell_context *sc, arguments args);
+} // namespace pegasus

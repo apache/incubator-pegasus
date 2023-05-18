@@ -54,7 +54,8 @@
 #include "utils/sys_exit_hook.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+using pegasus::utils::factory_store;
+namespace pegasus {
 
 DEFINE_TASK_CODE(LPC_CONTROL_SERVICE_APP, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
 
@@ -123,45 +124,39 @@ join_point<void> sys_init_after_app_created("system.init.2");
 join_point<void, sys_exit_type> sys_exit("system.exit");
 
 namespace internal_use_only {
-bool register_toollet(const char *name, toollet::factory f, ::dsn::provider_type type)
+bool register_toollet(const char *name, toollet::factory f, provider_type type)
 {
-    return dsn::utils::factory_store<toollet>::register_factory(name, f, type);
+    return factory_store<toollet>::register_factory(name, f, type);
 }
 
-bool register_tool(const char *name, tool_app::factory f, ::dsn::provider_type type)
+bool register_tool(const char *name, tool_app::factory f, provider_type type)
 {
-    return dsn::utils::factory_store<tool_app>::register_factory(name, f, type);
+    return factory_store<tool_app>::register_factory(name, f, type);
 }
 
-bool register_component_provider(const char *name,
-                                 timer_service::factory f,
-                                 ::dsn::provider_type type)
+bool register_component_provider(const char *name, timer_service::factory f, provider_type type)
 {
-    return dsn::utils::factory_store<timer_service>::register_factory(name, f, type);
+    return factory_store<timer_service>::register_factory(name, f, type);
 }
 
-bool register_component_provider(const char *name, task_queue::factory f, ::dsn::provider_type type)
+bool register_component_provider(const char *name, task_queue::factory f, provider_type type)
 {
-    return dsn::utils::factory_store<task_queue>::register_factory(name, f, type);
+    return factory_store<task_queue>::register_factory(name, f, type);
 }
 
-bool register_component_provider(const char *name,
-                                 task_worker::factory f,
-                                 ::dsn::provider_type type)
+bool register_component_provider(const char *name, task_worker::factory f, provider_type type)
 {
-    return dsn::utils::factory_store<task_worker>::register_factory(name, f, type);
+    return factory_store<task_worker>::register_factory(name, f, type);
 }
 
-bool register_component_provider(const char *name, network::factory f, ::dsn::provider_type type)
+bool register_component_provider(const char *name, network::factory f, provider_type type)
 {
-    return dsn::utils::factory_store<network>::register_factory(name, f, type);
+    return factory_store<network>::register_factory(name, f, type);
 }
 
-bool register_component_provider(const char *name,
-                                 env_provider::factory f,
-                                 ::dsn::provider_type type)
+bool register_component_provider(const char *name, env_provider::factory f, provider_type type)
 {
-    return dsn::utils::factory_store<env_provider>::register_factory(name, f, type);
+    return factory_store<env_provider>::register_factory(name, f, type);
 }
 
 bool register_component_provider(network_header_format fmt,
@@ -173,7 +168,7 @@ bool register_component_provider(network_header_format fmt,
     return true;
 }
 
-toollet *get_toollet(const char *name, ::dsn::provider_type type)
+toollet *get_toollet(const char *name, provider_type type)
 {
     toollet *tlt = nullptr;
     if (utils::singleton_store<std::string, toollet *>::instance().get(name, tlt))
@@ -186,4 +181,4 @@ toollet *get_toollet(const char *name, ::dsn::provider_type type)
 }
 } // namespace internal_use_only
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

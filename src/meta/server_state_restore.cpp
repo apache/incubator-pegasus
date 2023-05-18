@@ -34,7 +34,7 @@
 #include "common/gpid.h"
 #include "common/json_helper.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_admin_types.h"
@@ -52,34 +52,33 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-using namespace dsn::dist::block_service;
-
-namespace dsn {
+using namespace pegasus::dist::block_service;
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 namespace replication {
 
 void server_state::sync_app_from_backup_media(
     const configuration_restore_request &request,
     std::function<void(error_code, const blob &)> &&callback)
 {
-    dsn::ref_ptr<dsn::future_task<dsn::error_code, dsn::blob>> callback_tsk(
-        new dsn::future_task<dsn::error_code, dsn::blob>(
-            LPC_RESTORE_BACKGROUND, std::move(callback), 0));
+    ref_ptr<future_task<error_code, blob>> callback_tsk(
+        new future_task<error_code, blob>(LPC_RESTORE_BACKGROUND, std::move(callback), 0));
 
     block_filesystem *blk_fs =
         _meta_svc->get_block_service_manager().get_or_create_block_filesystem(
             request.backup_provider_name);
     if (blk_fs == nullptr) {
         LOG_ERROR("acquire block_filesystem({}) failed", request.backup_provider_name);
-        callback_tsk->enqueue_with(ERR_INVALID_PARAMETERS, dsn::blob());
+        callback_tsk->enqueue_with(ERR_INVALID_PARAMETERS, blob());
         return;
     }
 
     std::string backup_root = request.cluster_name;
     if (request.__isset.restore_path) {
-        backup_root = dsn::utils::filesystem::path_combine(request.restore_path, backup_root);
+        backup_root = path_combine(request.restore_path, backup_root);
     }
     if (!request.policy_name.empty()) {
-        backup_root = dsn::utils::filesystem::path_combine(backup_root, request.policy_name);
+        backup_root = path_combine(backup_root, request.policy_name);
     }
     std::string app_metadata = cold_backup::get_app_metadata_file(
         backup_root, request.app_name, request.app_id, request.time_stamp);
@@ -98,7 +97,7 @@ void server_state::sync_app_from_backup_media(
 
     if (err != ERR_OK) {
         LOG_ERROR("create metadata file {} failed.", app_metadata);
-        callback_tsk->enqueue_with(err, dsn::blob());
+        callback_tsk->enqueue_with(err, blob());
         return;
     }
     CHECK_NOTNULL(file_handle, "create file from backup media ecounter error");
@@ -108,14 +107,14 @@ void server_state::sync_app_from_backup_media(
         });
 }
 
-std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app_info(
-    dsn::message_ex *msg, const configuration_restore_request &req, const dsn::blob &app_info)
+std::pair<error_code, std::shared_ptr<app_state>> server_state::restore_app_info(
+    message_ex *msg, const configuration_restore_request &req, const blob &ai)
 {
-    std::pair<dsn::error_code, std::shared_ptr<app_state>> res = std::make_pair(ERR_OK, nullptr);
+    std::pair<error_code, std::shared_ptr<app_state>> res = std::make_pair(ERR_OK, nullptr);
 
-    dsn::app_info info;
-    if (!::dsn::json::json_forwarder<dsn::app_info>::decode(app_info, info)) {
-        std::string b_str(app_info.data(), app_info.length());
+    app_info info;
+    if (!json::json_forwarder<app_info>::decode(ai, info)) {
+        std::string b_str(ai.data(), ai.length());
         LOG_ERROR("decode app_info '{}' failed", b_str);
         // NOTICE : maybe find a better error_code to replace err_corruption
         res.first = ERR_CORRUPTION;
@@ -166,13 +165,13 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
     return res;
 }
 
-void server_state::restore_app(dsn::message_ex *msg)
+void server_state::restore_app(message_ex *msg)
 {
     configuration_restore_request request;
-    dsn::unmarshall(msg, request);
+    unmarshall(msg, request);
     sync_app_from_backup_media(
-        request, [this, msg, request](dsn::error_code err, const dsn::blob &app_info_data) {
-            dsn::error_code ec = ERR_OK;
+        request, [this, msg, request](error_code err, const blob &app_info_data) {
+            error_code ec = ERR_OK;
             // if err != ERR_OK, then sync_app_from_backup_media ecounter some error
             if (err != ERR_OK) {
                 LOG_ERROR("sync app_info_data from backup media failed with err({})", err);
@@ -260,4 +259,4 @@ void server_state::on_query_restore_status(configuration_query_restore_rpc rpc)
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

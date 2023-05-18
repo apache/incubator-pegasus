@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-include "dsn.layer2.thrift"
-include "dsn.thrift"
+include "pegasus.layer2.thrift"
+include "pegasus.thrift"
 
-namespace cpp dsn.apps
+namespace cpp pegasus.apps
 namespace go rrdb
 namespace java org.apache.pegasus.apps
 namespace py pypegasus.rrdb
@@ -70,9 +70,9 @@ enum mutate_operation
 
 struct update_request
 {
-    1:dsn.blob      key;
-    2:dsn.blob      value;
-    3:i32           expire_ts_seconds;
+    1:pegasus.blob key;
+    2:pegasus.blob value;
+    3:i32          expire_ts_seconds;
 }
 
 struct update_response
@@ -86,11 +86,11 @@ struct update_response
 
 struct read_response
 {
-    1:i32           error;
-    2:dsn.blob      value;
-    3:i32           app_id;
-    4:i32           partition_index;
-    6:string        server;
+    1:i32          error;
+    2:pegasus.blob value;
+    3:i32          app_id;
+    4:i32          partition_index;
+    6:string       server;
 }
 
 struct ttl_response
@@ -113,26 +113,26 @@ struct count_response
 
 struct key_value
 {
-    1:dsn.blob      key;
-    2:dsn.blob      value;
-    3:optional i32  expire_ts_seconds;
+    1:pegasus.blob key;
+    2:pegasus.blob value;
+    3:optional i32 expire_ts_seconds;
 }
 
 struct multi_put_request
 {
-    1:dsn.blob      hash_key;
+    1:pegasus.blob    hash_key;
     2:list<key_value> kvs; // sort_key => value
-    3:i32           expire_ts_seconds;
+    3:i32             expire_ts_seconds;
 }
 
 struct multi_remove_request
 {
-    1:dsn.blob      hash_key;
+    1:pegasus.blob       hash_key;
     // Should not be empty
     // Except for go/java-client which empty means remove all sortkeys
     // TODO(yingchun): check
-    2:list<dsn.blob> sort_keys;
-    3:i64           max_count; // deprecated
+    2:list<pegasus.blob> sort_keys;
+    3:i64                max_count; // deprecated
 }
 
 struct multi_remove_response
@@ -147,18 +147,18 @@ struct multi_remove_response
 
 struct multi_get_request
 {
-    1:dsn.blob      hash_key;
-    2:list<dsn.blob> sort_keys; // not empty means only fetch specified sortkeys
-    3:i32           max_kv_count; // <= 0 means no limit
-    4:i32           max_kv_size; // <= 0 means no limit
-    5:bool          no_value; // not return value, only return sortkeys
-    6:dsn.blob      start_sortkey;
-    7:dsn.blob      stop_sortkey; // empty means fetch to the last sort key
-    8:bool          start_inclusive;
-    9:bool          stop_inclusive;
-    10:filter_type  sort_key_filter_type;
-    11:dsn.blob     sort_key_filter_pattern;
-    12:bool         reverse; // if search in reverse direction
+    1:pegasus.blob       hash_key;
+    2:list<pegasus.blob> sort_keys; // not empty means only fetch specified sortkeys
+    3:i32                max_kv_count; // <= 0 means no limit
+    4:i32                max_kv_size; // <= 0 means no limit
+    5:bool               no_value; // not return value, only return sortkeys
+    6:pegasus.blob       start_sortkey;
+    7:pegasus.blob       stop_sortkey; // empty means fetch to the last sort key
+    8:bool               start_inclusive;
+    9:bool               stop_inclusive;
+    10:filter_type       sort_key_filter_type;
+    11:pegasus.blob      sort_key_filter_pattern;
+    12:bool              reverse; // if search in reverse direction
 }
 
 struct multi_get_response
@@ -171,8 +171,8 @@ struct multi_get_response
 }
 
 struct full_key {
-    1:dsn.blob hash_key;
-    2:dsn.blob sort_key;
+    1:pegasus.blob hash_key;
+    2:pegasus.blob sort_key;
 }
 
 struct batch_get_request {
@@ -180,9 +180,9 @@ struct batch_get_request {
 }
 
 struct full_data {
-    1:dsn.blob hash_key;
-    2:dsn.blob sort_key;
-    3:dsn.blob value;
+    1:pegasus.blob hash_key;
+    2:pegasus.blob sort_key;
+    3:pegasus.blob value;
 }
 
 struct batch_get_response {
@@ -195,9 +195,9 @@ struct batch_get_response {
 
 struct incr_request
 {
-    1:dsn.blob      key;
-    2:i64           increment;
-    3:i32           expire_ts_seconds; // 0 means keep original ttl
+    1:pegasus.blob key;
+    2:i64          increment;
+    3:i32          expire_ts_seconds; // 0 means keep original ttl
                                        // >0 means reset to new ttl
                                        // <0 means reset to no ttl
 }
@@ -214,13 +214,13 @@ struct incr_response
 
 struct check_and_set_request
 {
-    1:dsn.blob       hash_key;
-    2:dsn.blob       check_sort_key;
+    1:pegasus.blob   hash_key;
+    2:pegasus.blob   check_sort_key;
     3:cas_check_type check_type;
-    4:dsn.blob       check_operand;
+    4:pegasus.blob   check_operand;
     5:bool           set_diff_sort_key; // if set different sort key with check_sort_key
-    6:dsn.blob       set_sort_key; // used only if set_diff_sort_key is true
-    7:dsn.blob       set_value;
+    6:pegasus.blob   set_sort_key; // used only if set_diff_sort_key is true
+    7:pegasus.blob   set_value;
     8:i32            set_expire_ts_seconds;
     9:bool           return_check_value;
 }
@@ -232,7 +232,7 @@ struct check_and_set_response
                             // check_operand/check_value is not integer or out of range.
     2:bool           check_value_returned;
     3:bool           check_value_exist; // used only if check_value_returned is true
-    4:dsn.blob       check_value; // used only if check_value_returned and check_value_exist is true
+    4:pegasus.blob   check_value; // used only if check_value_returned and check_value_exist is true
     5:i32            app_id;
     6:i32            partition_index;
     7:i64            decree;
@@ -242,17 +242,17 @@ struct check_and_set_response
 struct mutate
 {
     1:mutate_operation operation;
-    2:dsn.blob         sort_key;
-    3:dsn.blob         value; // set null if operation is MO_DELETE
+    2:pegasus.blob     sort_key;
+    3:pegasus.blob     value; // set null if operation is MO_DELETE
     4:i32              set_expire_ts_seconds; // set 0 if operation is MO_DELETE
 }
 
 struct check_and_mutate_request
 {
-    1:dsn.blob       hash_key;
-    2:dsn.blob       check_sort_key;
+    1:pegasus.blob   hash_key;
+    2:pegasus.blob   check_sort_key;
     3:cas_check_type check_type;
-    4:dsn.blob       check_operand;
+    4:pegasus.blob   check_operand;
     5:list<mutate>   mutate_list;
     6:bool           return_check_value;
 }
@@ -264,7 +264,7 @@ struct check_and_mutate_response
                             // check_operand/check_value is not integer or out of range.
     2:bool           check_value_returned;
     3:bool           check_value_exist; // used only if check_value_returned is true
-    4:dsn.blob       check_value; // used only if check_value_returned and check_value_exist is true
+    4:pegasus.blob   check_value; // used only if check_value_returned and check_value_exist is true
     5:i32            app_id;
     6:i32            partition_index;
     7:i64            decree;
@@ -273,18 +273,18 @@ struct check_and_mutate_response
 
 struct get_scanner_request
 {
-    1:dsn.blob  start_key;
-    2:dsn.blob  stop_key;
-    3:bool      start_inclusive;
-    4:bool      stop_inclusive;
-    5:i32       batch_size;
-    6:bool      no_value; // not return value, only return sortkeys
-    7:filter_type  hash_key_filter_type;
-    8:dsn.blob     hash_key_filter_pattern;
-    9:filter_type  sort_key_filter_type;
-    10:dsn.blob    sort_key_filter_pattern;
-    11:optional bool    validate_partition_hash;
-    12:optional bool    return_expire_ts;
+    1:pegasus.blob   start_key;
+    2:pegasus.blob   stop_key;
+    3:bool           start_inclusive;
+    4:bool           stop_inclusive;
+    5:i32            batch_size;
+    6:bool           no_value; // not return value, only return sortkeys
+    7:filter_type    hash_key_filter_type;
+    8:pegasus.blob   hash_key_filter_pattern;
+    9:filter_type    sort_key_filter_type;
+    10:pegasus.blob  sort_key_filter_pattern;
+    11:optional bool validate_partition_hash;
+    12:optional bool return_expire_ts;
     13:optional bool full_scan; // true means client want to build 'full scan' context with the server side, false otherwise
     14:optional bool only_return_count = false;
 }
@@ -309,16 +309,16 @@ service rrdb
 {
     update_response put(1:update_request update);
     update_response multi_put(1:multi_put_request request);
-    update_response remove(1:dsn.blob key);
+    update_response remove(1:pegasus.blob key);
     multi_remove_response multi_remove(1:multi_remove_request request);
     incr_response incr(1:incr_request request);
     check_and_set_response check_and_set(1:check_and_set_request request);
     check_and_mutate_response check_and_mutate(1:check_and_mutate_request request);
-    read_response get(1:dsn.blob key);
+    read_response get(1:pegasus.blob key);
     multi_get_response multi_get(1:multi_get_request request);
     batch_get_response batch_get(1:batch_get_request request);
-    count_response sortkey_count(1:dsn.blob hash_key);
-    ttl_response ttl(1:dsn.blob key);
+    count_response sortkey_count(1:pegasus.blob hash_key);
+    ttl_response ttl(1:pegasus.blob key);
     scan_response get_scanner(1:get_scanner_request request);
     scan_response scan(1:scan_request request);
     oneway void clear_scanner(1:i64 context_id);
@@ -326,6 +326,6 @@ service rrdb
 
 service meta
 {
-    dsn.layer2.query_cfg_response query_cfg(1:dsn.layer2.query_cfg_request query);
+    pegasus.layer2.query_cfg_response query_cfg(1:pegasus.layer2.query_cfg_request query);
 }
 

@@ -48,7 +48,7 @@
 
 struct String_vector;
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 class zookeeper_session
@@ -134,7 +134,7 @@ public:
         };
     };
 
-    struct zoo_opcontext : public dsn::ref_counter
+    struct zoo_opcontext : public ref_counter
     {
         ZOO_OPERATION _optype;
         zoo_input _input;

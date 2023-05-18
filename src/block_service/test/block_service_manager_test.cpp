@@ -32,7 +32,7 @@
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -129,4 +129,4 @@ TEST_F(block_service_manager_test, do_download_succeed)
 
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

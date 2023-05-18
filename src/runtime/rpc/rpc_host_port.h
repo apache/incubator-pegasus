@@ -32,7 +32,7 @@
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 
 class rpc_group_host_port;
 
@@ -103,13 +103,13 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
 
 inline bool operator!=(const host_port &hp1, const host_port &hp2) { return !(hp1 == hp2); }
 
-} // namespace dsn
+} // namespace pegasus
 
 namespace std {
 template <>
-struct hash<::dsn::host_port>
+struct hash<::pegasus::host_port>
 {
-    size_t operator()(const ::dsn::host_port &hp) const
+    size_t operator()(const ::pegasus::host_port &hp) const
     {
         switch (hp.type()) {
         case HOST_TYPE_IPV4:

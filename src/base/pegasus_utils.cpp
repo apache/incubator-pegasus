@@ -32,7 +32,7 @@
 namespace pegasus {
 namespace utils {
 
-void addr2host(const ::dsn::rpc_address &addr, char *str, int len /* = 100*/)
+void addr2host(const rpc_address &addr, char *str, int len /* = 100*/)
 {
     struct sockaddr_in addr2;
     addr2.sin_addr.s_addr = htonl(addr.ip());

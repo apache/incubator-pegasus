@@ -35,9 +35,9 @@
 
 using std::vector;
 using std::string;
-using dsn::utils::table_printer;
+using pegasus::utils::table_printer;
 
-namespace dsn {
+namespace pegasus {
 
 const vector<string>
     single_column_tp_output({"[tp1]\n"
@@ -203,4 +203,4 @@ TEST(multi_table_printer_test, multi_sub_test)
          "{" + single_column_tp_output[1] + "," + multi_columns_tp_output[1] + "}\n",
          "{\n" + single_column_tp_output[2] + ",\n" + multi_columns_tp_output[2] + "\n}\n"}));
 }
-} // namespace dsn
+} // namespace pegasus

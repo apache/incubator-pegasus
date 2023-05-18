@@ -51,7 +51,7 @@
 namespace pegasus {
 namespace server {
 
-DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 DSN_DEFINE_int32(pegasus.collector,
                  available_detect_alert_fail_count,
@@ -67,13 +67,13 @@ DSN_DEFINE_uint32(pegasus.collector,
                   "available detect timeout in millisecond");
 DSN_DEFINE_string(pegasus.collector, available_detect_app, "", "available detector app name");
 DSN_DEFINE_validator(available_detect_app,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 DSN_DEFINE_string(pegasus.collector,
                   available_detect_alert_script_dir,
                   ".",
                   "available detect alert script dir");
 DSN_DEFINE_validator(available_detect_alert_script_dir,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 DSN_DEFINE_string(pegasus.collector,
                   available_detect_alert_email_address,
                   "",
@@ -92,9 +92,9 @@ available_detector::available_detector()
       _recent_minute_fail_times(0)
 {
     // initialize information for available_detector.
-    _cluster_name = dsn::get_current_cluster_name();
+    _cluster_name = get_current_cluster_name();
     _meta_list.clear();
-    dsn::replication::replica_helper::load_meta_servers(_meta_list);
+    replication::replica_helper::load_meta_servers(_meta_list);
     CHECK(!_meta_list.empty(), "");
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {
@@ -105,7 +105,7 @@ available_detector::available_detector()
     _result_writer = std::make_unique<result_writer>(_client);
     _ddl_client.reset(new replication_ddl_client(_meta_list));
     CHECK_NOTNULL(_ddl_client, "Initialize the _ddl_client failed");
-    if (!dsn::utils::is_empty(FLAGS_available_detect_alert_email_address)) {
+    if (!utils::is_empty(FLAGS_available_detect_alert_email_address)) {
         _send_alert_email_cmd = std::string("cd ") + FLAGS_available_detect_alert_script_dir +
                                 "; bash sendmail.sh alert " +
                                 FLAGS_available_detect_alert_email_address + " " + _cluster_name +
@@ -165,11 +165,11 @@ available_detector::~available_detector() = default;
 void available_detector::start()
 {
     // available detector delay 60s to wait the pegasus finishing the initialization.
-    _detect_timer = ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                            &_tracker,
-                                            std::bind(&available_detector::detect_available, this),
-                                            0,
-                                            std::chrono::minutes(1));
+    _detect_timer = tasking::enqueue(LPC_DETECT_AVAILABLE,
+                                     &_tracker,
+                                     std::bind(&available_detector::detect_available, this),
+                                     0,
+                                     std::chrono::minutes(1));
     report_availability_info();
 }
 
@@ -179,12 +179,11 @@ void available_detector::detect_available()
 {
     if (!generate_hash_keys()) {
         LOG_ERROR("initialize hash_keys failed, do not detect available, retry after 60 seconds");
-        _detect_timer =
-            ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
-                                    &_tracker,
-                                    std::bind(&available_detector::detect_available, this),
-                                    0,
-                                    std::chrono::minutes(1));
+        _detect_timer = tasking::enqueue(LPC_DETECT_AVAILABLE,
+                                         &_tracker,
+                                         std::bind(&available_detector::detect_available, this),
+                                         0,
+                                         std::chrono::minutes(1));
         return;
     }
     _detect_tasks.clear();
@@ -195,32 +194,32 @@ void available_detector::detect_available()
         _fail_count[i].reset(new std::atomic<int32_t>(0));
         _fail_count[i]->store(0);
         auto call_func = std::bind(&available_detector::on_detect, this, i);
-        _detect_tasks[i] = ::dsn::tasking::enqueue_timer(
-            LPC_DETECT_AVAILABLE,
-            &_tracker,
-            std::move(call_func),
-            std::chrono::seconds(FLAGS_available_detect_interval_seconds));
+        _detect_tasks[i] =
+            tasking::enqueue_timer(LPC_DETECT_AVAILABLE,
+                                   &_tracker,
+                                   std::move(call_func),
+                                   std::chrono::seconds(FLAGS_available_detect_interval_seconds));
     }
 }
 
 std::string get_date_to_string(uint64_t now_ms)
 {
     char buf[50] = {'\0'};
-    ::dsn::utils::time_ms_to_date(now_ms, buf, 50);
+    utils::time_ms_to_date(now_ms, buf, 50);
     return std::string(buf);
 }
 
 std::string get_hour_to_string(uint64_t now_ms)
 {
     char buf[50] = {'\0'};
-    ::dsn::utils::time_ms_to_date_time(now_ms, buf, 50);
+    utils::time_ms_to_date_time(now_ms, buf, 50);
     return std::string(buf, 13);
 }
 
 std::string get_minute_to_string(uint64_t now_ms)
 {
     char buf[50] = {'\0'};
-    ::dsn::utils::time_ms_to_date_time(now_ms, buf, 50);
+    utils::time_ms_to_date_time(now_ms, buf, 50);
     return std::string(buf, 16);
 }
 
@@ -248,14 +247,14 @@ void available_detector::report_availability_info()
             _old_minute = new_minute;
         }
     };
-    _report_task = ::dsn::tasking::enqueue_timer(
-        LPC_DETECT_AVAILABLE,
-        &_tracker,
-        std::move(call_func),
-        std::chrono::minutes(1),
-        0,
-        std::chrono::minutes(2) // waiting for pegasus finishing start.
-        );
+    _report_task =
+        tasking::enqueue_timer(LPC_DETECT_AVAILABLE,
+                               &_tracker,
+                               std::move(call_func),
+                               std::chrono::minutes(1),
+                               0,
+                               std::chrono::minutes(2) // waiting for pegasus finishing start.
+                               );
 }
 
 bool available_detector::generate_hash_keys()
@@ -263,7 +262,7 @@ bool available_detector::generate_hash_keys()
     // get app_id and partition_count.
     auto err =
         _ddl_client->list_app(FLAGS_available_detect_app, _app_id, _partition_count, partitions);
-    if (err == ::dsn::ERR_OK && _app_id >= 0) {
+    if (err == ERR_OK && _app_id >= 0) {
         _hash_keys.clear();
         for (auto pidx = 0; pidx < _partition_count; pidx++) {
             std::string base_key = "detect_available_p" + std::to_string(pidx) + "_";
@@ -272,9 +271,9 @@ bool available_detector::generate_hash_keys()
             while (true) {
                 ++base_idx;
                 std::string key = base_key + std::to_string(base_idx);
-                ::dsn::blob my_hash_key(key.c_str(), 0, key.length());
-                ::dsn::blob tmp_key;
-                pegasus_generate_key(tmp_key, my_hash_key, ::dsn::blob());
+                blob my_hash_key(key.c_str(), 0, key.length());
+                blob tmp_key;
+                pegasus_generate_key(tmp_key, my_hash_key, blob());
                 if (pegasus_key_hash(tmp_key) % _partition_count == pidx) {
                     _hash_keys.emplace_back(key);
                     break;
@@ -378,7 +377,7 @@ void available_detector::check_and_send_email(std::atomic<int> *cnt, int32_t idx
 {
     bool send_email = false;
     if (cnt->load() >= FLAGS_available_detect_alert_fail_count) {
-        ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_alert_lock);
+        utils::auto_lock<utils::ex_lock_nr> l(_alert_lock);
         if (cnt->load() >= FLAGS_available_detect_alert_fail_count) {
             for (auto i = 0; i < _partition_count; i++) {
                 std::atomic<int> &c = (*_fail_count[i]);

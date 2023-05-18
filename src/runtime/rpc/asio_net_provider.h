@@ -42,7 +42,7 @@
 #include "utils/error_code.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_engine;
 
 namespace tools {
@@ -78,8 +78,8 @@ public:
     ~asio_network_provider() override;
 
     virtual error_code start(rpc_channel channel, int port, bool client_only) override;
-    virtual ::dsn::rpc_address address() override { return _address; }
-    virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
+    virtual rpc_address address() override { return _address; }
+    virtual rpc_session_ptr create_client_session(rpc_address server_addr) override;
 
 private:
     void do_accept();
@@ -92,7 +92,7 @@ private:
     std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;
     std::vector<std::unique_ptr<boost::asio::io_service>> _io_services;
     std::vector<std::shared_ptr<std::thread>> _workers;
-    ::dsn::rpc_address _address;
+    rpc_address _address;
 };
 
 // TODO(Tangyanzhao): change the network model like asio_network_provider
@@ -107,7 +107,7 @@ public:
 
     virtual error_code start(rpc_channel channel, int port, bool client_only) override;
 
-    virtual ::dsn::rpc_address address() override { return _address; }
+    virtual rpc_address address() override { return _address; }
 
     virtual void inject_drop_message(message_ex *msg, bool is_send) override
     {
@@ -124,10 +124,10 @@ private:
     boost::asio::io_service _io_service;
     std::shared_ptr<boost::asio::ip::udp::socket> _socket;
     std::vector<std::shared_ptr<std::thread>> _workers;
-    ::dsn::rpc_address _address;
+    rpc_address _address;
     message_reader _recv_reader;
 
-    ::dsn::utils::ex_lock_nr _lock; // [
+    utils::ex_lock_nr _lock; // [
     message_parser **_parsers;
     // ]
 
@@ -135,4 +135,4 @@ private:
 };
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

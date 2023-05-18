@@ -78,7 +78,7 @@ int main(int argc, const char *argv[])
     }
 
     assert(scanner != nullptr);
-    pegasus::pegasus_client::pegasus_scanner_wrapper scanner_wrapper(scanner);
+    pegasus_client::pegasus_scanner_wrapper scanner_wrapper(scanner);
     std::string scan_hash_key;
     std::string scan_sort_key;
     std::string scan_value;

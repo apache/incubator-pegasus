@@ -19,7 +19,7 @@
 
 #include <utility>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 std::shared_ptr<folly::DynamicTokenBucket> token_buckets::get_token_bucket(const std::string &name)
@@ -43,4 +43,4 @@ std::shared_ptr<folly::DynamicTokenBucket> token_buckets::get_token_bucket(const
     return token;
 }
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

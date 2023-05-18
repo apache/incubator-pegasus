@@ -26,7 +26,7 @@
 #include "runtime/pipeline.h"
 #include "utils/chrono_literals.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class load_from_private_log;
 class replica;
@@ -94,4 +94,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

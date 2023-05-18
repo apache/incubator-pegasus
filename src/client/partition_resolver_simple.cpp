@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "partition_resolver_simple.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
@@ -45,7 +45,7 @@
 #include "utils/rand.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 partition_resolver_simple::partition_resolver_simple(rpc_address meta_server, const char *app_name)
@@ -250,7 +250,7 @@ task_ptr partition_resolver_simple::query_config(int partition_index, int timeou
     task_spec *sp = task_spec::get(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     if (timeout_ms >= sp->rpc_timeout_milliseconds)
         timeout_ms = 0;
-    auto msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, timeout_ms);
+    auto msg = message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, timeout_ms);
 
     query_cfg_request req;
     req.app_name = _app_name;
@@ -259,18 +259,17 @@ task_ptr partition_resolver_simple::query_config(int partition_index, int timeou
     }
     marshall(msg, req);
 
-    return rpc::call(
-        _meta_server,
-        msg,
-        &_tracker,
-        [this, partition_index](error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
-            query_config_reply(err, req, resp, partition_index);
-        });
+    return rpc::call(_meta_server,
+                     msg,
+                     &_tracker,
+                     [this, partition_index](error_code err, message_ex *req, message_ex *resp) {
+                         query_config_reply(err, req, resp, partition_index);
+                     });
 }
 
 void partition_resolver_simple::query_config_reply(error_code err,
-                                                   dsn::message_ex *request,
-                                                   dsn::message_ex *response,
+                                                   message_ex *request,
+                                                   message_ex *response,
                                                    int partition_index)
 {
     auto client_err = ERR_OK;
@@ -453,4 +452,4 @@ int partition_resolver_simple::get_partition_index(int partition_count, uint64_t
     return partition_hash % static_cast<uint64_t>(partition_count);
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

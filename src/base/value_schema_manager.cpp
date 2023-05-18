@@ -46,9 +46,9 @@ void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)
 }
 
 value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_version,
-                                                     dsn::string_view value) const
+                                                     string_view value) const
 {
-    dsn::data_input input(value);
+    data_input input(value);
     uint8_t first_byte = input.read_u8();
     // first bit = 1 means the data version is >= VERSION_2
     if (first_byte & 0x80) {

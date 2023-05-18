@@ -29,7 +29,7 @@
 #include "replica/replica_base.h"
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_duplicator;
@@ -88,4 +88,4 @@ using mutation_batch_u_ptr = std::unique_ptr<mutation_batch>;
 
 /// Extract mutations into mutation_tuple_set if they are not WRITE_EMPTY.
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

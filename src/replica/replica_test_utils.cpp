@@ -30,7 +30,7 @@
 #include "replica.h"
 #include "replica_stub.h"
 
-namespace dsn {
+namespace pegasus {
 class app_info;
 
 namespace replication {
@@ -66,4 +66,4 @@ void destroy_replica(replica *r) { delete r; }
 void destroy_replica_stub(replica_stub *rs) { delete rs; }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -26,7 +26,7 @@
 #include "common/json_helper.h"
 #include "http/http_server.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 NON_MEMBER_JSON_SERIALIZATION(
@@ -160,4 +160,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

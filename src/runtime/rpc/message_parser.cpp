@@ -50,7 +50,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 // ------------------- header type ------------------------------
 struct header_type
@@ -160,7 +160,7 @@ char *message_reader::read_buffer_ptr(unsigned int read_next)
         // TODO(wutao1): make it a buffer queue like what sofa-pbrpc does
         //               (https://github.com/baidu/sofa-pbrpc/blob/master/src/sofa/pbrpc/buffer.h)
         //               to reduce memory copy.
-        _buffer.assign(dsn::utils::make_shared_array<char>(sz), 0, sz);
+        _buffer.assign(utils::make_shared_array<char>(sz), 0, sz);
         _buffer_occupied = 0;
 
         // copy

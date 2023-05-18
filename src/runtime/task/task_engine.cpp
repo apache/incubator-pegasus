@@ -47,9 +47,9 @@
 #include "utils/string_conv.h"
 #include "utils/threadpool_code.h"
 
-using dsn::utils::factory_store;
+using pegasus::utils::factory_store;
 
-namespace dsn {
+namespace pegasus {
 
 task_worker_pool::task_worker_pool(const threadpool_spec &opts, task_engine *owner)
     : _spec(opts), _owner(owner), _node(owner->node()), _is_running(false)
@@ -273,7 +273,7 @@ void task_engine::stop()
     LOG_INFO("[{}]: task engine stopped", _node->full_name());
 }
 
-volatile int *task_engine::get_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
+volatile int *task_engine::get_task_queue_virtual_length_ptr(task_code code, int hash)
 {
     auto pl = get_pool(task_spec::get(code)->pool_code);
     auto idx = (pl->spec().partitioned ? hash % pl->spec().worker_count : 0);
@@ -314,7 +314,7 @@ void task_engine::register_cli_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _task_queue_max_length_cmd = dsn::command_manager::instance().register_command(
+        _task_queue_max_length_cmd = command_manager::instance().register_command(
             {"task.queue_max_length"},
             "task.queue_max_length <pool_code> [queue_max_length]",
             "get/set the max task queue length of specific thread_pool, you can set INT_MAX, to "
@@ -338,8 +338,7 @@ void task_engine::register_cli_commands()
                         }
                         if (args.size() == 2) {
                             int queue_length = INT_MAX;
-                            if ((args[1] != "INT_MAX") &&
-                                (!dsn::buf2int32(args[1], queue_length))) {
+                            if ((args[1] != "INT_MAX") && (!buf2int32(args[1], queue_length))) {
                                 return fmt::format("queue_max_length must >= 0, or set `INT_MAX`");
                             }
                             if (queue_length < 0) {
@@ -357,4 +356,4 @@ void task_engine::register_cli_commands()
     });
 }
 
-} // namespace dsn
+} // namespace pegasus

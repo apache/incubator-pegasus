@@ -21,7 +21,7 @@
 #include "common/json_helper.h"
 #include "perf_counter/perf_counter.h"
 
-namespace dsn {
+namespace pegasus {
 
 struct perf_counter_metric
 {
@@ -47,4 +47,4 @@ struct perf_counter_info
     DEFINE_JSON_SERIALIZATION(result, timestamp, timestamp_str, counters)
 };
 
-} // namespace dsn
+} // namespace pegasus

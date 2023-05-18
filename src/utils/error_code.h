@@ -40,7 +40,7 @@ class TProtocol;
 } // namespace thrift
 } // namespace apache
 
-namespace dsn {
+namespace pegasus {
 
 class error_code
 {
@@ -77,7 +77,7 @@ private:
     int _internal_code{0};
 };
 
-#define DEFINE_ERR_CODE(x) __selectany const dsn::error_code x(#x);
+#define DEFINE_ERR_CODE(x) __selectany const error_code x(#x);
 
 // the following error codes are grouped per 10 items,
 // so that we can get the integer representation for each error_code easily
@@ -174,4 +174,4 @@ DEFINE_ERR_CODE(ERR_RANGER_PARSE_ACL)
 DEFINE_ERR_CODE(ERR_RANGER_POLICIES_NO_NEED_UPDATE)
 
 DEFINE_ERR_CODE(ERR_RDB_CORRUPTION)
-} // namespace dsn
+} // namespace pegasus

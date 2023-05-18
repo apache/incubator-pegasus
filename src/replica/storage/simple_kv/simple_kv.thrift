@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace cpp dsn.replication.application
+namespace cpp pegasus.replication.application
 
 struct kv_pair
 {

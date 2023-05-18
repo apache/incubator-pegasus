@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace dsn {
+namespace pegasus {
 namespace ranger {
 
 // ACL type defined in Range service for RPC matching policy
@@ -50,4 +50,4 @@ const access_type kAccessTypeAll = access_type::kRead | access_type::kWrite | ac
                                    access_type::kMetadata | access_type::kControl;
 
 } // namespace ranger
-} // namespace dsn
+} // namespace pegasus

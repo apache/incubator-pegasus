@@ -38,7 +38,7 @@
 #include "common/replication.codes.h"
 #include <functional>
 
-namespace dsn {
+namespace pegasus {
 
 namespace dist {
 namespace block_service {
@@ -46,7 +46,7 @@ namespace block_service {
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_BLOCK_SERVICE)
 
 class block_file;
-typedef dsn::ref_ptr<block_file> block_file_ptr;
+typedef ref_ptr<block_file> block_file_ptr;
 
 /**
  * @brief The ls_request struct, use to list all the files and directories under the dir_name
@@ -79,14 +79,14 @@ struct ls_entry
  */
 struct ls_response
 {
-    dsn::error_code err;
+    error_code err;
     // use shared_ptr to avoid extra memory copy
     std::shared_ptr<std::vector<ls_entry>> entries;
     ls_response() : entries(std::make_shared<std::vector<ls_entry>>()) {}
 };
 typedef std::function<void(const ls_response &)> ls_callback;
 typedef future_task<ls_response> ls_future;
-typedef dsn::ref_ptr<ls_future> ls_future_ptr;
+typedef ref_ptr<ls_future> ls_future_ptr;
 
 /**
  * @brief The create_file_request struct, used to create a block_file_ptr
@@ -117,12 +117,12 @@ struct create_file_request
  */
 struct create_file_response
 {
-    dsn::error_code err;
+    error_code err;
     block_file_ptr file_handle;
 };
 typedef std::function<void(const create_file_response &)> create_file_callback;
 typedef future_task<create_file_response> create_file_future;
-typedef dsn::ref_ptr<create_file_future> create_file_future_ptr;
+typedef ref_ptr<create_file_future> create_file_future_ptr;
 
 /**
  * @brief The remove_path_request struct
@@ -148,11 +148,11 @@ struct remove_path_request
  */
 struct remove_path_response
 {
-    dsn::error_code err;
+    error_code err;
 };
 typedef std::function<void(const remove_path_response &)> remove_path_callback;
 typedef future_task<remove_path_response> remove_path_future;
-typedef dsn::ref_ptr<remove_path_future> remove_path_future_ptr;
+typedef ref_ptr<remove_path_future> remove_path_future_ptr;
 
 /**
  * @brief The read_request struct
@@ -183,12 +183,12 @@ struct read_request
  */
 struct read_response
 {
-    dsn::error_code err;
-    dsn::blob buffer;
+    error_code err;
+    blob buffer;
 };
 typedef std::function<void(const read_response &)> read_callback;
 typedef future_task<read_response> read_future;
-typedef dsn::ref_ptr<read_future> read_future_ptr;
+typedef ref_ptr<read_future> read_future_ptr;
 
 /**
  * @brief The write_request struct
@@ -198,7 +198,7 @@ typedef dsn::ref_ptr<read_future> read_future_ptr;
  */
 struct write_request
 {
-    dsn::blob buffer;
+    blob buffer;
 };
 
 /**
@@ -213,12 +213,12 @@ struct write_request
  */
 struct write_response
 {
-    dsn::error_code err;
+    error_code err;
     uint64_t written_size;
 };
 typedef std::function<void(const write_response &)> write_callback;
 typedef future_task<write_response> write_future;
-typedef dsn::ref_ptr<write_future> write_future_ptr;
+typedef ref_ptr<write_future> write_future_ptr;
 
 /**
  * @brief The upload_request struct
@@ -238,12 +238,12 @@ struct upload_request
  */
 struct upload_response
 {
-    dsn::error_code err;
+    error_code err;
     uint64_t uploaded_size;
 };
 typedef std::function<void(const upload_response &)> upload_callback;
 typedef future_task<upload_response> upload_future;
-typedef dsn::ref_ptr<upload_future> upload_future_ptr;
+typedef ref_ptr<upload_future> upload_future_ptr;
 
 /**
  * @brief The download_request struct
@@ -264,13 +264,13 @@ struct download_request
  */
 struct download_response
 {
-    dsn::error_code err;
+    error_code err;
     uint64_t downloaded_size;
     std::string file_md5;
 };
 typedef std::function<void(const download_response &)> download_callback;
 typedef future_task<download_response> download_future;
-typedef dsn::ref_ptr<download_future> download_future_ptr;
+typedef ref_ptr<download_future> download_future_ptr;
 
 class block_filesystem
 {
@@ -300,10 +300,10 @@ public:
      * @param tracker
      * @return a task which represent the async operation
      */
-    virtual dsn::task_ptr list_dir(const ls_request &req,
-                                   dsn::task_code code,
-                                   const ls_callback &callback,
-                                   dsn::task_tracker *tracker = nullptr) = 0;
+    virtual task_ptr list_dir(const ls_request &req,
+                              task_code code,
+                              const ls_callback &callback,
+                              task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief create_file
@@ -313,10 +313,10 @@ public:
      * @param tracker
      * @return a task which represent the async operation
      */
-    virtual dsn::task_ptr create_file(const create_file_request &req,
-                                      dsn::task_code code,
-                                      const create_file_callback &cb,
-                                      dsn::task_tracker *tracker = nullptr) = 0;
+    virtual task_ptr create_file(const create_file_request &req,
+                                 task_code code,
+                                 const create_file_callback &cb,
+                                 task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief remove_path
@@ -326,17 +326,17 @@ public:
      * @param tracker
      * @return a task which represent the async operation
      */
-    virtual dsn::task_ptr remove_path(const remove_path_request &req,
-                                      dsn::task_code code,
-                                      const remove_path_callback &cb,
-                                      dsn::task_tracker *tracker = nullptr) = 0;
+    virtual task_ptr remove_path(const remove_path_request &req,
+                                 task_code code,
+                                 const remove_path_callback &cb,
+                                 task_tracker *tracker = nullptr) = 0;
 
     virtual bool is_root_path_set() const { return false; }
 
     virtual ~block_filesystem() {}
 };
 
-class block_file : public dsn::ref_counter
+class block_file : public ref_counter
 {
 public:
     block_file(const std::string &name) : _name(name) {}
@@ -373,10 +373,10 @@ public:
      * @param tracker
      * @return a task which represent the async operation
      */
-    virtual dsn::task_ptr write(const write_request &req,
-                                dsn::task_code code,
-                                const write_callback &cb,
-                                dsn::task_tracker *tracker = nullptr) = 0;
+    virtual task_ptr write(const write_request &req,
+                           task_code code,
+                           const write_callback &cb,
+                           task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief read
@@ -386,10 +386,10 @@ public:
      * @param tracker
      * @return a task which represent the async operation
      */
-    virtual dsn::task_ptr read(const read_request &req,
-                               dsn::task_code code,
-                               const read_callback &cb,
-                               dsn::task_tracker *tracker = nullptr) = 0;
+    virtual task_ptr read(const read_request &req,
+                          task_code code,
+                          const read_callback &cb,
+                          task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief upload
@@ -399,10 +399,10 @@ public:
      * @param tracker
      * @return a task which represent the async operation
      */
-    virtual dsn::task_ptr upload(const upload_request &req,
-                                 dsn::task_code code,
-                                 const upload_callback &cb,
-                                 dsn::task_tracker *tracker = nullptr) = 0;
+    virtual task_ptr upload(const upload_request &req,
+                            task_code code,
+                            const upload_callback &cb,
+                            task_tracker *tracker = nullptr) = 0;
 
     /**
      * @brief download
@@ -412,10 +412,10 @@ public:
      * @param tracker
      * @return a task which represent the async operation
      */
-    virtual dsn::task_ptr download(const download_request &req,
-                                   dsn::task_code code,
-                                   const download_callback &cb,
-                                   dsn::task_tracker *tracker = nullptr) = 0;
+    virtual task_ptr download(const download_request &req,
+                              task_code code,
+                              const download_callback &cb,
+                              task_tracker *tracker = nullptr) = 0;
 
 protected:
     std::string _name;

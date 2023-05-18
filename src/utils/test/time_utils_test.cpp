@@ -30,7 +30,7 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 TEST(time_utils, hh_mm_to_seconds)
@@ -101,4 +101,4 @@ TEST(time_utils, time_ms_to_string)
 }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

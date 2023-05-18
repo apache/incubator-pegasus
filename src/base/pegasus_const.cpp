@@ -21,7 +21,7 @@
 
 namespace pegasus {
 
-// should be same with items in dsn::backup_restore_constant
+// should be same with items in backup_restore_constant
 const std::string ROCKSDB_ENV_RESTORE_FORCE_RESTORE("restore.force_restore");
 const std::string ROCKSDB_ENV_RESTORE_POLICY_NAME("restore.policy_name");
 const std::string ROCKSDB_ENV_RESTORE_BACKUP_ID("restore.backup_id");

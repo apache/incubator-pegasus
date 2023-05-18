@@ -37,26 +37,28 @@
 int g_test_count = 0;
 int g_test_ret = 0;
 
-class gtest_app : public dsn::service_app
+using namespace pegasus;
+
+class gtest_app : public service_app
 {
 public:
-    explicit gtest_app(const dsn::service_app_info *info) : ::dsn::service_app(info) {}
+    explicit gtest_app(const service_app_info *info) : service_app(info) {}
 
-    dsn::error_code start(const std::vector<std::string> &args) override
+    error_code start(const std::vector<std::string> &args) override
     {
         g_test_ret = RUN_ALL_TESTS();
         g_test_count = 1;
-        return dsn::ERR_OK;
+        return ERR_OK;
     }
 
-    dsn::error_code stop(bool) override { return dsn::ERR_OK; }
+    error_code stop(bool) override { return ERR_OK; }
 };
 
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::service_app::register_factory<gtest_app>("replica");
+    service_app::register_factory<gtest_app>("replica");
 
     dsn_run_config("config-test.ini", false);
     while (g_test_count == 0) {

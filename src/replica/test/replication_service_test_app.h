@@ -26,18 +26,17 @@
 
 #pragma once
 
+#include "block_service/test/block_service_mock.h"
 #include "replica/replication_service_app.h"
-using ::dsn::replication::replication_service_app;
-using ::dsn::error_code;
 
+namespace pegasus {
+namespace replication {
 class replication_service_test_app : public replication_service_app
 {
 public:
-    replication_service_test_app(const dsn::service_app_info *info) : replication_service_app(info)
-    {
-    }
+    replication_service_test_app(const service_app_info *info) : replication_service_app(info) {}
     virtual error_code start(const std::vector<std::string> &args) override;
-    virtual dsn::error_code stop(bool /*cleanup*/) { return dsn::ERR_OK; }
+    virtual error_code stop(bool /*cleanup*/) { return ERR_OK; }
 
     // test for cold_backup_context
     void check_backup_on_remote_test();
@@ -50,3 +49,5 @@ public:
     void write_backup_metadata_test();
     void write_current_chkpt_file_test();
 };
+} // namespace replication
+} // namespace pegasus

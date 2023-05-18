@@ -23,10 +23,13 @@
 #include <memory>
 #include <vector>
 
+#include "utils/token_bucket_throttling_controller.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica_base.h"
 
-namespace dsn {
+using throttling_controller = pegasus::utils::token_bucket_throttling_controller;
+
+namespace pegasus {
 class blob;
 class message_ex;
 namespace apps {
@@ -34,19 +37,14 @@ class full_data;
 class key_value;
 class mutate;
 } // namespace apps
-
-namespace utils {
-class token_bucket_throttling_controller;
-} // namespace utils
-} // namespace dsn
-typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
 
 class hotkey_collector;
 
-class capacity_unit_calculator : public dsn::replication::replica_base
+class capacity_unit_calculator : public replication::replica_base
 {
 public:
     capacity_unit_calculator(
@@ -57,39 +55,33 @@ public:
 
     virtual ~capacity_unit_calculator() = default;
 
+    void add_get_cu(message_ex *req, int32_t status, const blob &key, const blob &value);
+    void add_multi_get_cu(message_ex *req,
+                          int32_t status,
+                          const blob &hash_key,
+                          const std::vector<apps::key_value> &kvs);
     void
-    add_get_cu(dsn::message_ex *req, int32_t status, const dsn::blob &key, const dsn::blob &value);
-    void add_multi_get_cu(dsn::message_ex *req,
-                          int32_t status,
-                          const dsn::blob &hash_key,
-                          const std::vector<::dsn::apps::key_value> &kvs);
-    void add_batch_get_cu(dsn::message_ex *req,
-                          int32_t status,
-                          const std::vector<::dsn::apps::full_data> &rows);
-    void add_scan_cu(dsn::message_ex *req,
-                     int32_t status,
-                     const std::vector<::dsn::apps::key_value> &kvs);
-    void add_sortkey_count_cu(dsn::message_ex *req, int32_t status, const dsn::blob &hash_key);
-    void add_ttl_cu(dsn::message_ex *req, int32_t status, const dsn::blob &key);
+    add_batch_get_cu(message_ex *req, int32_t status, const std::vector<apps::full_data> &rows);
+    void add_scan_cu(message_ex *req, int32_t status, const std::vector<apps::key_value> &kvs);
+    void add_sortkey_count_cu(message_ex *req, int32_t status, const blob &hash_key);
+    void add_ttl_cu(message_ex *req, int32_t status, const blob &key);
 
-    void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
-    void add_remove_cu(int32_t status, const dsn::blob &key);
-    void add_multi_put_cu(int32_t status,
-                          const dsn::blob &hash_key,
-                          const std::vector<::dsn::apps::key_value> &kvs);
-    void add_multi_remove_cu(int32_t status,
-                             const dsn::blob &hash_key,
-                             const std::vector<::dsn::blob> &sort_keys);
-    void add_incr_cu(int32_t status, const dsn::blob &key);
+    void add_put_cu(int32_t status, const blob &key, const blob &value);
+    void add_remove_cu(int32_t status, const blob &key);
+    void
+    add_multi_put_cu(int32_t status, const blob &hash_key, const std::vector<apps::key_value> &kvs);
+    void
+    add_multi_remove_cu(int32_t status, const blob &hash_key, const std::vector<blob> &sort_keys);
+    void add_incr_cu(int32_t status, const blob &key);
     void add_check_and_set_cu(int32_t status,
-                              const dsn::blob &hash_key,
-                              const dsn::blob &check_sort_key,
-                              const dsn::blob &set_sort_key,
-                              const dsn::blob &value);
+                              const blob &hash_key,
+                              const blob &check_sort_key,
+                              const blob &set_sort_key,
+                              const blob &value);
     void add_check_and_mutate_cu(int32_t status,
-                                 const dsn::blob &hash_key,
-                                 const dsn::blob &check_sort_key,
-                                 const std::vector<::dsn::apps::mutate> &mutate_list);
+                                 const blob &hash_key,
+                                 const blob &check_sort_key,
+                                 const std::vector<apps::mutate> &mutate_list);
 
 protected:
     friend class capacity_unit_calculator_test;
@@ -97,29 +89,29 @@ protected:
 #ifdef PEGASUS_UNIT_TEST
     virtual int64_t add_read_cu(int64_t read_data_size);
     virtual int64_t add_write_cu(int64_t write_data_size);
-    virtual void add_backup_request_bytes(dsn::message_ex *req, int64_t bytes);
+    virtual void add_backup_request_bytes(message_ex *req, int64_t bytes);
 #else
     int64_t add_read_cu(int64_t read_data_size);
     int64_t add_write_cu(int64_t write_data_size);
-    void add_backup_request_bytes(dsn::message_ex *req, int64_t bytes);
+    void add_backup_request_bytes(message_ex *req, int64_t bytes);
 #endif
 
 private:
     uint32_t _log_read_cu_size;
     uint32_t _log_write_cu_size;
 
-    ::dsn::perf_counter_wrapper _pfc_recent_read_cu;
-    ::dsn::perf_counter_wrapper _pfc_recent_write_cu;
+    perf_counter_wrapper _pfc_recent_read_cu;
+    perf_counter_wrapper _pfc_recent_write_cu;
 
-    ::dsn::perf_counter_wrapper _pfc_get_bytes;
-    ::dsn::perf_counter_wrapper _pfc_multi_get_bytes;
-    ::dsn::perf_counter_wrapper _pfc_batch_get_bytes;
-    ::dsn::perf_counter_wrapper _pfc_scan_bytes;
-    ::dsn::perf_counter_wrapper _pfc_put_bytes;
-    ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
-    ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
-    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
-    ::dsn::perf_counter_wrapper _pfc_backup_request_bytes;
+    perf_counter_wrapper _pfc_get_bytes;
+    perf_counter_wrapper _pfc_multi_get_bytes;
+    perf_counter_wrapper _pfc_batch_get_bytes;
+    perf_counter_wrapper _pfc_scan_bytes;
+    perf_counter_wrapper _pfc_put_bytes;
+    perf_counter_wrapper _pfc_multi_put_bytes;
+    perf_counter_wrapper _pfc_check_and_set_bytes;
+    perf_counter_wrapper _pfc_check_and_mutate_bytes;
+    perf_counter_wrapper _pfc_backup_request_bytes;
 
     /*
         hotkey capturing weight rules:

@@ -45,7 +45,7 @@
 #include "utils/rand.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 class task_worker_pool;
 
 namespace tools {
@@ -148,7 +148,7 @@ void sim_lock_provider::lock()
     if (scheduler::is_scheduling())
         return;
 
-    int ctid = ::dsn::utils::get_current_tid();
+    int ctid = utils::get_current_tid();
     if (ctid == _current_holder) {
         ++_lock_depth;
         return;
@@ -167,7 +167,7 @@ bool sim_lock_provider::try_lock()
     if (scheduler::is_scheduling())
         return true;
 
-    int ctid = ::dsn::utils::get_current_tid();
+    int ctid = utils::get_current_tid();
     if (ctid == _current_holder) {
         ++_lock_depth;
         return true;
@@ -188,9 +188,8 @@ void sim_lock_provider::unlock()
     if (scheduler::is_scheduling())
         return;
 
-    CHECK_EQ_MSG(::dsn::utils::get_current_tid(),
-                 _current_holder,
-                 "lock must be locked must current holder");
+    CHECK_EQ_MSG(
+        utils::get_current_tid(), _current_holder, "lock must be locked must current holder");
 
     if (0 == --_lock_depth) {
         _current_holder = -1;
@@ -214,7 +213,7 @@ void sim_lock_nr_provider::lock()
     if (scheduler::is_scheduling())
         return;
 
-    int ctid = ::dsn::utils::get_current_tid();
+    int ctid = utils::get_current_tid();
     CHECK_NE_MSG(ctid, _current_holder, "non-recursive lock, error or use recursive locks instead");
 
     _sema.wait(TIME_MS_MAX);
@@ -230,7 +229,7 @@ bool sim_lock_nr_provider::try_lock()
     if (scheduler::is_scheduling())
         return true;
 
-    int ctid = ::dsn::utils::get_current_tid();
+    int ctid = utils::get_current_tid();
     CHECK_NE_MSG(ctid, _current_holder, "non-recursive lock, error or use recursive locks instead");
 
     bool r = _sema.wait(0);
@@ -248,9 +247,8 @@ void sim_lock_nr_provider::unlock()
     if (scheduler::is_scheduling())
         return;
 
-    CHECK_EQ_MSG(::dsn::utils::get_current_tid(),
-                 _current_holder,
-                 "lock must be locked must current holder");
+    CHECK_EQ_MSG(
+        utils::get_current_tid(), _current_holder, "lock must be locked must current holder");
 
     CHECK_EQ_MSG(0, --_lock_depth, "non-recursive lock, error or use recursive locks instead");
     _current_holder = -1;

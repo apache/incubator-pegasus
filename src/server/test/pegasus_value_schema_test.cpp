@@ -24,8 +24,8 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace pegasus;
-
+namespace pegasus {
+namespace server {
 TEST(value_schema, generate_and_extract_v1_v0)
 {
     struct test_case
@@ -62,8 +62,10 @@ TEST(value_schema, generate_and_extract_v1_v0)
             ASSERT_EQ(t.timetag, pegasus_extract_timetag(t.value_schema_version, raw_value));
         }
 
-        dsn::blob user_data;
+        blob user_data;
         pegasus_extract_user_data(t.value_schema_version, std::move(raw_value), user_data);
         ASSERT_EQ(t.user_data, user_data.to_string());
     }
 }
+} // namespace server
+} // namespace pegasus

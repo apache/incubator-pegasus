@@ -87,8 +87,8 @@ def generate_code_in_info_collector_header(replica_counter):
             "%s->set(row_stats.%s);" %
             (table_counter, table_counter)),
         Appender(
-            "::dsn::perf_counter_wrapper write_bytes;",
-            "::dsn::perf_counter_wrapper %s;" %
+            "::pegasus::perf_counter_wrapper write_bytes;",
+            "::pegasus::perf_counter_wrapper %s;" %
             table_counter)]
     append_line(info_collector_header_path, appends)
 

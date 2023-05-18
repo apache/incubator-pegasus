@@ -28,7 +28,7 @@
 #include "runtime/task/task_spec.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 class disk_file;
 
 DEFINE_TASK_CODE_AIO(LPC_TASK_TEST, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
@@ -89,4 +89,4 @@ TEST_F(task_test, null_task) { test_null_task(); }
 
 TEST_F(task_test, signal_finished_task) { test_signal_finished_task(); }
 
-} // namespace dsn
+} // namespace pegasus

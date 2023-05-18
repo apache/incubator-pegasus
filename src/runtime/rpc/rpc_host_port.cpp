@@ -33,7 +33,7 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 const host_port host_port::s_invalid_host_port;
 
@@ -152,9 +152,9 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
 
     switch (type()) {
     case HOST_TYPE_INVALID:
-        return error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_INVALID");
+        return error_s::make(ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_INVALID");
     case HOST_TYPE_GROUP:
-        return error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_GROUP");
+        return error_s::make(ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_GROUP");
     case HOST_TYPE_IPV4:
         break;
     }
@@ -190,7 +190,7 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     }
 
     if (result_addresses.empty()) {
-        return error_s::make(dsn::ERR_NETWORK_FAILURE,
+        return error_s::make(ERR_NETWORK_FAILURE,
                              fmt::format("can not resolve host_port {}.", to_string()));
     }
 
@@ -198,4 +198,4 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     return error_s::ok();
 }
 
-} // namespace dsn
+} // namespace pegasus

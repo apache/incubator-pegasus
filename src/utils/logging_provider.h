@@ -32,7 +32,7 @@
 #include "utils/command_manager.h"
 #include "utils/factory_store.h"
 
-namespace dsn {
+namespace pegasus {
 
 /*!
 @addtogroup tool-api-providers
@@ -88,12 +88,10 @@ extern std::function<std::string()> log_prefixed_message_func;
 
 namespace tools {
 namespace internal_use_only {
-bool register_component_provider(const char *name,
-                                 logging_provider::factory f,
-                                 ::dsn::provider_type type);
+bool register_component_provider(const char *name, logging_provider::factory f, provider_type type);
 } // namespace internal_use_only
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus
 
 extern void dsn_log_init(const std::string &logging_factory_name,
                          const std::string &dir_log,

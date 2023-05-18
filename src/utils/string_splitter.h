@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-namespace dsn {
+namespace pegasus {
 
 enum empty_field_action
 {
@@ -244,4 +244,4 @@ int string_splitter::to_double(double *pv) const
     return (endptr == field() + length()) ? 0 : -1;
 }
 
-} // namespace dsn
+} // namespace pegasus

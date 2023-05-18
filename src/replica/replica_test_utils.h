@@ -27,7 +27,7 @@
 /// This file contains utilities for upper level applications (pegasus) which
 /// needs the hidden abstraction of rDSN in order to make unit test.
 
-namespace dsn {
+namespace pegasus {
 class app_info;
 class gpid;
 
@@ -50,4 +50,4 @@ extern void destroy_replica(replica *r);
 extern void destroy_replica_stub(replica_stub *rs);
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

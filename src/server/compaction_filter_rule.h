@@ -56,8 +56,8 @@ public:
     static compaction_filter_rule *create(const std::string &params, uint32_t data_version)
     {
         T *rule = new T(data_version);
-        if (!dsn::json::json_forwarder<T>::decode(
-                dsn::blob::create_from_bytes(params.data(), params.size()), *rule)) {
+        if (!json::json_forwarder<T>::decode(blob::create_from_bytes(params.data(), params.size()),
+                                             *rule)) {
             delete rule;
             return nullptr;
         }
@@ -67,16 +67,15 @@ public:
     template <typename T>
     static void register_component(const char *name)
     {
-        dsn::utils::factory_store<compaction_filter_rule>::register_factory(
-            name, create<T>, dsn::PROVIDER_TYPE_MAIN);
+        utils::factory_store<compaction_filter_rule>::register_factory(
+            name, create<T>, PROVIDER_TYPE_MAIN);
     }
     virtual ~compaction_filter_rule() = default;
 
     // TODO(zhaoliwei): we can use `value_filed` to replace existing_value in the later,
     // after the refactor of value schema
-    virtual bool match(dsn::string_view hash_key,
-                       dsn::string_view sort_key,
-                       dsn::string_view existing_value) const = 0;
+    virtual bool
+    match(string_view hash_key, string_view sort_key, string_view existing_value) const = 0;
 };
 
 enum string_match_type
@@ -99,9 +98,7 @@ class hashkey_pattern_rule : public compaction_filter_rule
 public:
     hashkey_pattern_rule(uint32_t data_version = VERSION_MAX);
 
-    bool match(dsn::string_view hash_key,
-               dsn::string_view sort_key,
-               dsn::string_view existing_value) const;
+    bool match(string_view hash_key, string_view sort_key, string_view existing_value) const;
     DEFINE_JSON_SERIALIZATION(pattern, match_type)
 
 private:
@@ -121,9 +118,7 @@ class sortkey_pattern_rule : public compaction_filter_rule
 public:
     sortkey_pattern_rule(uint32_t data_version = VERSION_MAX);
 
-    bool match(dsn::string_view hash_key,
-               dsn::string_view sort_key,
-               dsn::string_view existing_value) const;
+    bool match(string_view hash_key, string_view sort_key, string_view existing_value) const;
     DEFINE_JSON_SERIALIZATION(pattern, match_type)
 
 private:
@@ -141,9 +136,7 @@ class ttl_range_rule : public compaction_filter_rule
 public:
     explicit ttl_range_rule(uint32_t data_version);
 
-    bool match(dsn::string_view hash_key,
-               dsn::string_view sort_key,
-               dsn::string_view existing_value) const;
+    bool match(string_view hash_key, string_view sort_key, string_view existing_value) const;
     DEFINE_JSON_SERIALIZATION(start_ttl, stop_ttl)
 
 private:

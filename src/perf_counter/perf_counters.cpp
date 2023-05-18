@@ -46,7 +46,7 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace {
 std::map<std::string, std::string> s_brief_stat_map = {
@@ -87,15 +87,15 @@ std::string get_brief_stat()
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(0);
     bool first_item = true;
-    dsn::perf_counters::snapshot_iterator iter =
-        [&oss, &first_item](const dsn::perf_counters::counter_snapshot &cs) mutable {
+    pegasus::perf_counters::snapshot_iterator iter =
+        [&oss, &first_item](const pegasus::perf_counters::counter_snapshot &cs) mutable {
             if (!first_item)
                 oss << ", ";
             oss << s_brief_stat_map.find(cs.name)->second << "=" << cs.value;
             first_item = false;
         };
     std::vector<bool> match_result;
-    dsn::perf_counters::instance().query_snapshot(stat_counters, iter, &match_result);
+    pegasus::perf_counters::instance().query_snapshot(stat_counters, iter, &match_result);
 
     CHECK_EQ(stat_counters.size(), match_result.size());
     for (int i = 0; i < match_result.size(); ++i) {
@@ -441,4 +441,4 @@ void perf_counters::query_snapshot(const std::vector<std::string> &counters,
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

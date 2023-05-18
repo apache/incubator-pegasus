@@ -31,7 +31,7 @@
 
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta_admin_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "shell/command_executor.h"
@@ -42,6 +42,11 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
+using pegasus::replication::config_type;
+using pegasus::replication::ddd_node_info;
+using pegasus::replication::ddd_partition_info;
+
+namespace pegasus {
 bool recover(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"node_list_file", required_argument, 0, 'f'},
@@ -73,7 +78,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
             node_list_str = optarg;
             break;
         case 'w':
-            if (!dsn::buf2int32(optarg, wait_seconds)) {
+            if (!buf2int32(optarg, wait_seconds)) {
                 fprintf(stderr, "parse %s as wait_seconds failed\n", optarg);
                 return false;
             }
@@ -107,17 +112,17 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<rpc_address> node_list;
     if (!node_list_str.empty()) {
         std::vector<std::string> tokens;
-        dsn::utils::split_args(node_list_str.c_str(), tokens, ',');
+        utils::split_args(node_list_str.c_str(), tokens, ',');
         if (tokens.empty()) {
             fprintf(stderr, "can't parse node from node_list_str\n");
             return true;
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node;
+            rpc_address node;
             if (!node.from_string_ipv4(token.c_str())) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
@@ -138,7 +143,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
             boost::trim(str);
             if (str.empty() || str[0] == '#' || str[0] == ';')
                 continue;
-            dsn::rpc_address node;
+            rpc_address node;
             if (!node.from_string_ipv4(str.c_str())) {
                 fprintf(stderr,
                         "parse %s at file %s line %d as ip:port failed\n",
@@ -156,7 +161,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    dsn::error_code ec = sc->ddl_client->do_recovery(
+    error_code ec = sc->ddl_client->do_recovery(
         node_list, wait_seconds, skip_bad_nodes, skip_lost_partitions, output_file);
     if (!output_file.empty()) {
         std::cout << "recover complete with err = " << ec.to_string() << std::endl;
@@ -164,15 +169,15 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo);
+rpc_address diagnose_recommend(const ddd_partition_info &pinfo);
 
-dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo)
+rpc_address diagnose_recommend(const ddd_partition_info &pinfo)
 {
     if (pinfo.config.last_drops.size() < 2)
-        return dsn::rpc_address();
+        return rpc_address();
 
-    std::vector<dsn::rpc_address> last_two_nodes(pinfo.config.last_drops.end() - 2,
-                                                 pinfo.config.last_drops.end());
+    std::vector<rpc_address> last_two_nodes(pinfo.config.last_drops.end() - 2,
+                                            pinfo.config.last_drops.end());
     std::vector<ddd_node_info> last_dropped;
     for (auto &node : last_two_nodes) {
         auto it = std::find_if(pinfo.dropped.begin(),
@@ -207,7 +212,7 @@ dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo)
             return secondary.node;
     }
 
-    return dsn::rpc_address();
+    return rpc_address();
 }
 
 bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
@@ -220,7 +225,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
                                            {0, 0, 0, 0}};
 
     std::string out_file;
-    dsn::gpid id(-1, -1);
+    gpid id(-1, -1);
     bool diagnose = false;
     bool auto_diagnose = false;
     bool skip_prompt = false;
@@ -262,8 +267,8 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::vector<ddd_partition_info> ddd_partitions;
-    ::dsn::error_code ret = sc->ddl_client->ddd_diagnose(id, ddd_partitions);
-    if (ret != dsn::ERR_OK) {
+    error_code ret = sc->ddl_client->ddd_diagnose(id, ddd_partitions);
+    if (ret != ERR_OK) {
         fprintf(stderr, "ERROR: DDD diagnose failed with err = %s\n", ret.to_string());
         return true;
     }
@@ -288,7 +293,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         out << "    config: ballot(" << pinfo.config.ballot << "), "
             << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
         out << "    ----" << std::endl;
-        dsn::rpc_address latest_dropped, secondary_latest_dropped;
+        rpc_address latest_dropped, secondary_latest_dropped;
         if (pinfo.config.last_drops.size() > 0)
             latest_dropped = pinfo.config.last_drops[pinfo.config.last_drops.size() - 1];
         if (pinfo.config.last_drops.size() > 1)
@@ -296,7 +301,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         int j = 0;
         for (const ddd_node_info &n : pinfo.dropped) {
             char time_buf[30] = {0};
-            ::dsn::utils::time_ms_to_string(n.drop_time_ms, time_buf);
+            utils::time_ms_to_string(n.drop_time_ms, time_buf);
             out << "    dropped[" << j++ << "]: "
                 << "node(" << n.node.to_string() << "), "
                 << "drop_time(" << time_buf << "), "
@@ -313,7 +318,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         }
         out << "    ----" << std::endl;
         j = 0;
-        for (const ::dsn::rpc_address &r : pinfo.config.last_drops) {
+        for (const rpc_address &r : pinfo.config.last_drops) {
             out << "    last_drops[" << j++ << "]: "
                 << "node(" << r.to_string() << ")";
             if (j == (int)pinfo.config.last_drops.size() - 1)
@@ -327,7 +332,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         if (diagnose) {
             out << "    ----" << std::endl;
 
-            dsn::rpc_address primary = diagnose_recommend(pinfo);
+            rpc_address primary = diagnose_recommend(pinfo);
             out << "    recommend_primary: "
                 << (primary.is_invalid() ? "none" : primary.to_string());
             if (primary == latest_dropped)
@@ -371,12 +376,12 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             }
 
             if (!primary.is_invalid() && !skip_this) {
-                dsn::replication::configuration_balancer_request request;
+                replication::configuration_balancer_request request;
                 request.gpid = pinfo.config.pid;
                 request.action_list = {
                     new_proposal_action(primary, primary, config_type::CT_ASSIGN_PRIMARY)};
                 request.force = false;
-                dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
+                error_code err = sc->ddl_client->send_balancer_proposal(request);
                 out << "    propose_request: propose -g " << request.gpid.to_string()
                     << " -p ASSIGN_PRIMARY -t " << primary.to_string() << " -n "
                     << primary.to_string() << std::endl;
@@ -394,3 +399,4 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
     std::cout << "Diagnose ddd done." << std::endl;
     return true;
 }
+} // namespace pegasus

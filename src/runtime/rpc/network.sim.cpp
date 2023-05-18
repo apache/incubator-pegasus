@@ -51,7 +51,7 @@
 #include "utils/singleton_store.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_engine;
 
 namespace tools {
@@ -66,10 +66,10 @@ DSN_DEFINE_uint32(tools.simulator,
 // multiple machines connect to the same switch
 // 10 should be >= than rpc_channel::max_value() + 1
 // 10 should be >= than network_header_format::max_value() + 1
-static utils::safe_singleton_store<::dsn::rpc_address, sim_network_provider *> s_switch[10][10];
+static utils::safe_singleton_store<rpc_address, sim_network_provider *> s_switch[10][10];
 
 sim_client_session::sim_client_session(sim_network_provider &net,
-                                       ::dsn::rpc_address remote_addr,
+                                       rpc_address remote_addr,
                                        message_parser_ptr &parser)
     : rpc_session(net, remote_addr, parser, true)
 {
@@ -84,7 +84,7 @@ void sim_client_session::connect()
 static message_ex *virtual_send_message(message_ex *msg)
 {
     std::shared_ptr<char> buffer(
-        dsn::utils::make_shared_array<char>(msg->header->body_length + sizeof(message_header)));
+        utils::make_shared_array<char>(msg->header->body_length + sizeof(message_header)));
     char *tmp = buffer.get();
 
     for (auto &buf : msg->buffers) {
@@ -137,7 +137,7 @@ void sim_client_session::send(uint64_t sig)
 }
 
 sim_server_session::sim_server_session(sim_network_provider &net,
-                                       ::dsn::rpc_address remote_addr,
+                                       rpc_address remote_addr,
                                        rpc_session_ptr &client,
                                        message_parser_ptr &parser)
     : rpc_session(net, remote_addr, parser, false)
@@ -177,12 +177,12 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
           "invalid given channel {}",
           channel);
 
-    _address = ::dsn::rpc_address("localhost", port);
+    _address = rpc_address("localhost", port);
     auto hostname = boost::asio::ip::host_name();
     if (!client_only) {
         for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++) {
             if (s_switch[channel][i].put(_address, this)) {
-                auto ep2 = ::dsn::rpc_address(hostname.c_str(), port);
+                auto ep2 = rpc_address(hostname.c_str(), port);
                 s_switch[channel][i].put(ep2, this);
             } else {
                 return ERR_ADDRESS_ALREADY_USED;

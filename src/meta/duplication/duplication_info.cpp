@@ -22,15 +22,15 @@
 #include "runtime/api_layer1.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
-/*extern*/ void json_encode(dsn::json::JsonWriter &out, const duplication_status::type &s)
+/*extern*/ void json_encode(json::JsonWriter &out, const duplication_status::type &s)
 {
     json::json_encode(out, duplication_status_to_string(s));
 }
 
-/*extern*/ bool json_decode(const dsn::json::JsonObject &in, duplication_status::type &s)
+/*extern*/ bool json_decode(const json::JsonObject &in, duplication_status::type &s)
 {
     static const std::map<std::string, duplication_status::type>
         _duplication_status_NAMES_TO_VALUES = {
@@ -57,12 +57,12 @@ namespace replication {
     return false;
 }
 
-/*extern*/ void json_encode(dsn::json::JsonWriter &out, const duplication_fail_mode::type &fmode)
+/*extern*/ void json_encode(json::JsonWriter &out, const duplication_fail_mode::type &fmode)
 {
     json::json_encode(out, duplication_fail_mode_to_string(fmode));
 }
 
-/*extern*/ bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::type &fmode)
+/*extern*/ bool json_decode(const json::JsonObject &in, duplication_fail_mode::type &fmode)
 {
     static const std::map<std::string, duplication_fail_mode::type>
         _duplication_fail_mode_NAMES_TO_VALUES = {
@@ -213,7 +213,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
         return nullptr;
     }
     std::vector<rpc_address> meta_list;
-    if (!dsn::replication::replica_helper::load_meta_servers(
+    if (!replication::replica_helper::load_meta_servers(
             meta_list, duplication_constants::kClustersSectionName.c_str(), info.remote.c_str())) {
         return nullptr;
     }
@@ -245,4 +245,4 @@ void duplication_info::append_if_valid_for_query(
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

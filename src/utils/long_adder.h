@@ -26,7 +26,7 @@
 
 // Refer to https://github.com/apache/kudu/blob/master/src/kudu/util/striped64.h
 
-namespace dsn {
+namespace pegasus {
 
 // Padded POD container for std::atomic<int64_t>. This prevents false sharing of cache lines.
 // Notice that in older versions of GCC `std::is_pod<std::atomic<int64_t>>::value` will return
@@ -234,4 +234,4 @@ private:
     DISALLOW_COPY_AND_ASSIGN(long_adder_wrapper);
 };
 
-} // namespace dsn
+} // namespace pegasus

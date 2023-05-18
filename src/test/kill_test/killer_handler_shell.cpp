@@ -35,7 +35,7 @@ namespace test {
 
 DSN_DEFINE_string(killer.handler.shell, onebox_run_path, "~/pegasus/run.sh", "onebox run path");
 DSN_DEFINE_validator(onebox_run_path,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 
 bool killer_handler_shell::has_meta_dumped_core(int index)
 {
@@ -45,7 +45,7 @@ bool killer_handler_shell::has_meta_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    CHECK_EQ(dsn::utils::pipe_execute(find_core, output), 0);
+    CHECK_EQ(utils::pipe_execute(find_core, output), 0);
     output >> core_count;
 
     return core_count != 0;
@@ -62,7 +62,7 @@ bool killer_handler_shell::has_replica_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    CHECK_EQ(dsn::utils::pipe_execute(find_core, output), 0);
+    CHECK_EQ(utils::pipe_execute(find_core, output), 0);
     output >> core_count;
 
     return core_count != 0;
@@ -74,7 +74,7 @@ bool killer_handler_shell::kill_meta(int index)
     int res = system(cmd.c_str());
     LOG_INFO("kill meta command: {}", cmd);
     if (res != 0) {
-        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
+        LOG_INFO("kill meta encounter error({})", utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "stop");
@@ -86,7 +86,7 @@ bool killer_handler_shell::kill_replica(int index)
     int res = system(cmd.c_str());
     LOG_INFO("kill replica command: {}", cmd);
     if (res != 0) {
-        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
+        LOG_INFO("kill meta encounter error({})", utils::safe_strerror(errno));
         return false;
     }
     return check("replica", index, "stop");
@@ -104,7 +104,7 @@ bool killer_handler_shell::start_meta(int index)
     int res = system(cmd.c_str());
     LOG_INFO("start meta command: {}", cmd);
     if (res != 0) {
-        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
+        LOG_INFO("kill meta encounter error({})", utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "start");
@@ -117,7 +117,7 @@ bool killer_handler_shell::start_replica(int index)
     int res = system(cmd.c_str());
     LOG_INFO("start replica command: {}", cmd);
     if (res != 0) {
-        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
+        LOG_INFO("kill meta encounter error({})", utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "start");

@@ -20,14 +20,16 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 
+namespace pegasus {
 TEST(MemUtilTest, memmatch)
 {
     const char kHaystack[] = "0123456789";
-    EXPECT_EQ(dsn::strings_internal::memmatch(kHaystack, 0, "", 0), kHaystack);
-    EXPECT_EQ(dsn::strings_internal::memmatch(kHaystack, 10, "012", 3), kHaystack);
-    EXPECT_EQ(dsn::strings_internal::memmatch(kHaystack, 10, "0xx", 1), kHaystack);
-    EXPECT_EQ(dsn::strings_internal::memmatch(kHaystack, 10, "789", 3), kHaystack + 7);
-    EXPECT_EQ(dsn::strings_internal::memmatch(kHaystack, 10, "9xx", 1), kHaystack + 9);
-    EXPECT_TRUE(dsn::strings_internal::memmatch(kHaystack, 10, "9xx", 3) == nullptr);
-    EXPECT_TRUE(dsn::strings_internal::memmatch(kHaystack, 10, "xxx", 1) == nullptr);
+    EXPECT_EQ(strings_internal::memmatch(kHaystack, 0, "", 0), kHaystack);
+    EXPECT_EQ(strings_internal::memmatch(kHaystack, 10, "012", 3), kHaystack);
+    EXPECT_EQ(strings_internal::memmatch(kHaystack, 10, "0xx", 1), kHaystack);
+    EXPECT_EQ(strings_internal::memmatch(kHaystack, 10, "789", 3), kHaystack + 7);
+    EXPECT_EQ(strings_internal::memmatch(kHaystack, 10, "9xx", 1), kHaystack + 9);
+    EXPECT_TRUE(strings_internal::memmatch(kHaystack, 10, "9xx", 3) == nullptr);
+    EXPECT_TRUE(strings_internal::memmatch(kHaystack, 10, "xxx", 1) == nullptr);
 }
+} // namespace pegasus

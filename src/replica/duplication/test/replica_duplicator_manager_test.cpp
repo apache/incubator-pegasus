@@ -34,7 +34,7 @@
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/test/mock_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_duplicator_manager_test : public duplication_test_base
@@ -220,4 +220,4 @@ TEST_F(replica_duplicator_manager_test, update_checkpoint_prepared)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

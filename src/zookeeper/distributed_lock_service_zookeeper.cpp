@@ -49,7 +49,7 @@
 #include "zookeeper_error.h"
 #include "zookeeper_session.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 DSN_DECLARE_int32(timeout_ms);

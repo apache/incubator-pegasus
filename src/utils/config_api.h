@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 
+namespace pegasus {
 /// load a ini configuration file, and replace specific strings in file with arguments.
 ///
 /// the rules of replacement is as follows:
@@ -131,3 +132,4 @@ void dsn_config_get_all_keys(const char *section, /*out*/ std::vector<const char
 ///
 /// any of dsn_config_get_xxx may corrupt if called concurrently with dsn_config_set
 void dsn_config_set(const char *section, const char *key, const char *value, const char *dsptr);
+} // namespace pegasus

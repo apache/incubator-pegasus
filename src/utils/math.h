@@ -20,10 +20,10 @@
 #include <vector>
 #include <cstdint>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 double mean_stddev(const std::vector<uint32_t> &result_set, bool partial_sample);
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

@@ -26,7 +26,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 
-namespace dsn {
+namespace pegasus {
 
 /* extern */ void *cacheline_aligned_alloc(size_t size)
 {
@@ -52,6 +52,6 @@ namespace dsn {
 
 /* extern */ void cacheline_aligned_free(void *mem_block) { free(mem_block); }
 
-} // namespace dsn
+} // namespace pegasus
 
 #endif // CACHELINE_SIZE

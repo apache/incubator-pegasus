@@ -51,7 +51,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 struct replica_base;
 
@@ -59,46 +59,46 @@ struct replica_base;
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
     replica_base *, string_view, string_view)>
     mutation_duplicator::creator = [](replica_base *r, string_view remote, string_view app) {
-        return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
+        return std::make_unique<server::pegasus_mutation_duplicator>(r, remote, app);
     };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
 
-using namespace dsn::literals::chrono_literals;
+using namespace literals::chrono_literals;
 
-/*extern*/ uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
+/*extern*/ uint64_t get_hash_from_request(task_code tc, const blob &data)
 {
-    if (tc == dsn::apps::RPC_RRDB_RRDB_PUT) {
-        dsn::apps::update_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+    if (tc == apps::RPC_RRDB_RRDB_PUT) {
+        apps::update_request thrift_request;
+        from_blob_to_thrift(data, thrift_request);
         return pegasus_key_hash(thrift_request.key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
-        dsn::blob raw_key;
-        dsn::from_blob_to_thrift(data, raw_key);
+    if (tc == apps::RPC_RRDB_RRDB_REMOVE) {
+        blob raw_key;
+        from_blob_to_thrift(data, raw_key);
         return pegasus_key_hash(raw_key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        dsn::apps::multi_put_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+    if (tc == apps::RPC_RRDB_RRDB_MULTI_PUT) {
+        apps::multi_put_request thrift_request;
+        from_blob_to_thrift(data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
-        dsn::apps::multi_remove_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+    if (tc == apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
+        apps::multi_remove_request thrift_request;
+        from_blob_to_thrift(data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
     LOG_FATAL("unexpected task code: {}", tc);
     __builtin_unreachable();
 }
 
-pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::replica_base *r,
-                                                         dsn::string_view remote_cluster,
-                                                         dsn::string_view app)
+pegasus_mutation_duplicator::pegasus_mutation_duplicator(replication::replica_base *r,
+                                                         string_view remote_cluster,
+                                                         string_view app)
     : mutation_duplicator(r), _remote_cluster(remote_cluster)
 {
     // initialize pegasus-client when this class is first time used.
@@ -107,7 +107,7 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     pegasus_client *client = pegasus_client_factory::get_client(remote_cluster.data(), app.data());
     _client = static_cast<client::pegasus_client_impl *>(client);
 
-    auto ret = dsn::replication::get_duplication_cluster_id(remote_cluster.data());
+    auto ret = replication::get_duplication_cluster_id(remote_cluster.data());
     CHECK_PREFIX_MSG(ret.is_ok(), // never possible, meta server disallows such remote_cluster.
                      "invalid remote cluster: {}, err_ret: {}",
                      remote_cluster,
@@ -140,13 +140,13 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
 {
     duplicate_rpc rpc;
     {
-        dsn::zauto_lock _(_lock);
+        zauto_lock _(_lock);
         rpc = _inflights[hash].front();
         _inflights[hash].pop_front();
     }
 
     _client->async_duplicate(rpc,
-                             [hash, cb, rpc, this](dsn::error_code err) mutable {
+                             [hash, cb, rpc, this](error_code err) mutable {
                                  on_duplicate_reply(hash, std::move(cb), std::move(rpc), err);
                              },
                              _env.__conf.tracker);
@@ -155,23 +155,23 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
 void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
                                                      mutation_duplicator::callback cb,
                                                      duplicate_rpc rpc,
-                                                     dsn::error_code err)
+                                                     error_code err)
 {
     int perr = PERR_OK;
-    if (err == dsn::ERR_OK) {
+    if (err == ERR_OK) {
         perr = client::pegasus_client_impl::get_client_error(
             client::pegasus_client_impl::get_rocksdb_server_error(rpc.response().error));
     }
 
-    if (perr != PERR_OK || err != dsn::ERR_OK) {
+    if (perr != PERR_OK || err != ERR_OK) {
         _failed_shipping_ops->increment();
 
         // randomly log the 1% of the failed duplicate rpc, because minor number of
         // errors are acceptable.
         // TODO(wutao1): print the entire request for future debugging.
-        if (dsn::rand::next_double01() <= 0.01) {
+        if (rand::next_double01() <= 0.01) {
             LOG_ERROR_PREFIX("duplicate_rpc failed: {} [size:{}]",
-                             err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string(),
+                             err == ERR_OK ? _client->get_error_string(perr) : err.to_string(),
                              rpc.request().entries.size());
         }
         // duplicating an illegal write to server is unacceptable, fail fast.
@@ -183,8 +183,8 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
     }
 
     {
-        dsn::zauto_lock _(_lock);
-        if (perr != PERR_OK || err != dsn::ERR_OK) {
+        zauto_lock _(_lock);
+        if (perr != PERR_OK || err != ERR_OK) {
             // retry this rpc
             _inflights[hash].push_front(rpc);
             _env.schedule([hash, cb, this]() { send(hash, cb); }, 1_s);
@@ -208,23 +208,23 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
 {
     _total_shipped_size = 0;
 
-    auto batch_request = std::make_unique<dsn::apps::duplicate_request>();
+    auto batch_request = std::make_unique<apps::duplicate_request>();
     uint batch_count = 0;
     uint batch_bytes = 0;
     for (auto mut : muts) {
         // mut: 0=timestamp, 1=rpc_code, 2=raw_message
         batch_count++;
-        dsn::task_code rpc_code = std::get<1>(mut);
-        dsn::blob raw_message = std::get<2>(mut);
-        auto dreq = std::make_unique<dsn::apps::duplicate_request>();
+        task_code rpc_code = std::get<1>(mut);
+        blob raw_message = std::get<2>(mut);
+        auto dreq = std::make_unique<apps::duplicate_request>();
 
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
+        if (rpc_code == apps::RPC_RRDB_RRDB_DUPLICATE) {
             // ignore if it is a DUPLICATE
             // Because DUPLICATE comes from other clusters should not be forwarded to any other
             // destinations. A DUPLICATE is meant to be targeting only one cluster.
             continue;
         } else {
-            dsn::apps::duplicate_entry entry;
+            apps::duplicate_entry entry;
             entry.__set_raw_message(raw_message);
             entry.__set_task_code(rpc_code);
             entry.__set_timestamp(std::get<0>(mut));
@@ -233,18 +233,17 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             batch_bytes += raw_message.length();
         }
 
-        if (batch_count == muts.size() ||
-            batch_bytes >= dsn::replication::FLAGS_duplicate_log_batch_bytes) {
+        if (batch_count == muts.size() || batch_bytes >= FLAGS_duplicate_log_batch_bytes) {
             // since all the plog's mutations of replica belong to same gpid though the hash of
             // mutation is different, use the last mutation of one batch to get and represents the
             // current hash value, it will still send to remote correct replica
             uint64_t hash = get_hash_from_request(rpc_code, raw_message);
             duplicate_rpc rpc(std::move(batch_request),
-                              dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
+                              apps::RPC_RRDB_RRDB_DUPLICATE,
                               100_s, // TODO(wutao1): configurable timeout.
                               hash);
             _inflights[hash].push_back(std::move(rpc));
-            batch_request = std::make_unique<dsn::apps::duplicate_request>();
+            batch_request = std::make_unique<apps::duplicate_request>();
             batch_bytes = 0;
         }
     }

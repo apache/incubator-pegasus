@@ -43,7 +43,7 @@
 #include "utils/link.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 
 class rpc_engine;
 class service_node;
@@ -89,7 +89,7 @@ public:
     //
     // the named address
     //
-    virtual ::dsn::rpc_address address() = 0;
+    virtual rpc_address address() = 0;
 
     //
     // this is where the upper rpc engine calls down for a RPC call
@@ -159,13 +159,13 @@ public:
     virtual ~connection_oriented_network() {}
 
     // server session management
-    rpc_session_ptr get_server_session(::dsn::rpc_address ep);
+    rpc_session_ptr get_server_session(rpc_address ep);
     void on_server_session_accepted(rpc_session_ptr &s);
     void on_server_session_disconnected(rpc_session_ptr &s);
 
     // Checks if IP of the incoming session has too much connections.
     // Related config: [network] conn_threshold_per_ip. No limit if the value is 0.
-    bool check_if_conn_threshold_exceeded(::dsn::rpc_address ep);
+    bool check_if_conn_threshold_exceeded(rpc_address ep);
 
     // client session management
     void on_client_session_connected(rpc_session_ptr &s);
@@ -178,14 +178,14 @@ public:
     virtual void inject_drop_message(message_ex *msg, bool is_send) override;
 
     // to be defined
-    virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
+    virtual rpc_session_ptr create_client_session(rpc_address server_addr) = 0;
 
 protected:
-    typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> client_sessions;
+    typedef std::unordered_map<rpc_address, rpc_session_ptr> client_sessions;
     client_sessions _clients; // to_address => rpc_session
     utils::rw_lock_nr _clients_lock;
 
-    typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> server_sessions;
+    typedef std::unordered_map<rpc_address, rpc_session_ptr> server_sessions;
     server_sessions _servers; // from_address => rpc_session
     typedef std::unordered_map<uint32_t, uint32_t> ip_connection_count;
     ip_connection_count _ip_conn_count; // from_ip => connection count
@@ -213,7 +213,7 @@ public:
     /*@}*/
 public:
     rpc_session(connection_oriented_network &net,
-                ::dsn::rpc_address remote_addr,
+                rpc_address remote_addr,
                 message_parser_ptr &parser,
                 bool is_client);
     virtual ~rpc_session();
@@ -224,7 +224,7 @@ public:
     // Whether this session is launched on client side.
     bool is_client() const { return _is_client; }
 
-    dsn::rpc_address remote_address() const { return _remote_addr; }
+    rpc_address remote_address() const { return _remote_addr; }
     connection_oriented_network &net() const { return _net; }
     message_parser_ptr parser() const { return _parser; }
 
@@ -323,7 +323,7 @@ protected:
 protected:
     // constant info
     connection_oriented_network &_net;
-    dsn::rpc_address _remote_addr;
+    rpc_address _remote_addr;
     int _max_buffer_block_count_per_send;
     message_reader _reader;
     message_parser_ptr _parser;
@@ -352,4 +352,4 @@ inline bool rpc_session::delay_recv(int delay_ms)
 }
 
 /*@}*/
-} // namespace dsn
+} // namespace pegasus

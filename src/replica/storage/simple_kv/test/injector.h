@@ -37,13 +37,13 @@
 
 #include "runtime/tool_api.h"
 
-namespace dsn {
+namespace pegasus {
 struct service_spec;
 
 namespace replication {
 namespace test {
 
-class test_injector : public dsn::tools::toollet
+class test_injector : public tools::toollet
 {
 public:
     test_injector(const char *name);

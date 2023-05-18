@@ -37,7 +37,7 @@ namespace server {
 
 class pegasus_server_impl;
 
-class pegasus_manual_compact_service : public dsn::replication::replica_base
+class pegasus_manual_compact_service : public replication::replica_base
 {
 public:
     explicit pegasus_manual_compact_service(pegasus_server_impl *app);
@@ -49,7 +49,7 @@ public:
     // Called by pegasus_manual_compaction.sh
     std::string query_compact_state() const;
 
-    dsn::replication::manual_compaction_status::type query_compact_status() const;
+    replication::manual_compaction_status::type query_compact_status() const;
 
 private:
     friend class manual_compact_service_test;
@@ -97,8 +97,8 @@ private:
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
     std::atomic<uint64_t> _manual_compact_last_time_used_ms;
 
-    ::dsn::perf_counter_wrapper _pfc_manual_compact_enqueue_count;
-    ::dsn::perf_counter_wrapper _pfc_manual_compact_running_count;
+    perf_counter_wrapper _pfc_manual_compact_enqueue_count;
+    perf_counter_wrapper _pfc_manual_compact_running_count;
 };
 
 } // namespace server

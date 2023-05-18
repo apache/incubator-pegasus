@@ -24,10 +24,10 @@
  * THE SOFTWARE.
  */
 
-include "dsn.thrift"
-include "dsn.layer2.thrift"
+include "pegasus.thrift"
+include "pegasus.layer2.thrift"
 
-namespace cpp dsn.replication
+namespace cpp pegasus.replication
 namespace go admin
 namespace java org.apache.pegasus.replication
 
@@ -79,9 +79,9 @@ struct file_meta
 
 struct replica_configuration
 {
-    1:dsn.gpid            pid;
+    1:pegasus.gpid        pid;
     2:i64                 ballot;
-    3:dsn.rpc_address     primary;
+    3:pegasus.rpc_address primary;
     4:partition_status    status = partition_status.PS_INVALID;
     5:i64                 learner_signature;
     // Used for bulk load
@@ -97,7 +97,7 @@ struct replica_configuration
 
 struct replica_info
 {
-    1:dsn.gpid                          pid;
+    1:pegasus.gpid                      pid;
     2:i64                               ballot;
     3:partition_status                  status;
     4:i64                               last_committed_decree;

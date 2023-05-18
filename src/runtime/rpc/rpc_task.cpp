@@ -42,7 +42,7 @@
 #include "utils/join_point.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 
 rpc_request_task::rpc_request_task(message_ex *request, rpc_request_handler &&h, service_node *node)
     : task(request->rpc_code(), request->header->client.thread_hash, node),
@@ -149,4 +149,4 @@ void rpc_response_task::enqueue()
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

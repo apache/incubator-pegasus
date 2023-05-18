@@ -38,18 +38,15 @@
 #include "meta/meta_data.h"
 #include "runtime/rpc/rpc_address.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 namespace replication {
 class configuration_proposal_action;
 class fs_manager;
-} // namespace replication
-} // namespace dsn
 
-typedef std::map<dsn::rpc_address, std::shared_ptr<dsn::replication::fs_manager>> nodes_fs_manager;
+typedef std::map<rpc_address, std::shared_ptr<fs_manager>> nodes_fs_manager;
 
-inline dsn::replication::fs_manager *get_fs_manager(nodes_fs_manager &nfm,
-                                                    const dsn::rpc_address &node)
+inline fs_manager *get_fs_manager(nodes_fs_manager &nfm, const rpc_address &node)
 {
     auto iter = nfm.find(node);
     if (nfm.end() == iter)
@@ -57,19 +54,16 @@ inline dsn::replication::fs_manager *get_fs_manager(nodes_fs_manager &nfm,
     return iter->second.get();
 }
 
-// Generates a random number between [min, max]
-uint32_t random32(uint32_t min, uint32_t max);
-
 // Generates a random number [min_count, max_count] of node addresses
 // each node is given a random port value in range of [min_count, max_count]
-void generate_node_list(/*out*/ std::vector<dsn::rpc_address> &output_list,
+void generate_node_list(/*out*/ std::vector<rpc_address> &output_list,
                         int min_count,
                         int max_count);
 
 // Generates `size` of node addresses, each with port value in range [start_port, start_port + size]
-inline std::vector<dsn::rpc_address> generate_node_list(size_t size, int start_port = 12321)
+inline std::vector<rpc_address> generate_node_list(size_t size, int start_port = 12321)
 {
-    std::vector<dsn::rpc_address> result;
+    std::vector<rpc_address> result;
     result.resize(size);
     for (int i = 0; i < size; ++i)
         result[i].assign_ipv4("127.0.0.1", static_cast<uint16_t>(start_port + i + 1));
@@ -80,24 +74,23 @@ inline std::vector<dsn::rpc_address> generate_node_list(size_t size, int start_p
 // For each partition, it picks one node as primary, the others as secondaries.
 // REQUIRES: node_list.size() >= 3
 void generate_app(
-    /*out*/ std::shared_ptr<dsn::replication::app_state> &app,
-    const std::vector<dsn::rpc_address> &node_list);
+    /*out*/ std::shared_ptr<app_state> &app, const std::vector<rpc_address> &node_list);
 
 void generate_node_mapper(
-    /*out*/ dsn::replication::node_mapper &output_nodes,
-    const dsn::replication::app_mapper &input_apps,
-    const std::vector<dsn::rpc_address> &input_node_list);
+    /*out*/ node_mapper &output_nodes,
+    const app_mapper &input_apps,
+    const std::vector<rpc_address> &input_node_list);
 
-void generate_app_serving_replica_info(/*out*/ std::shared_ptr<dsn::replication::app_state> &app,
-                                       int total_disks);
+void generate_app_serving_replica_info(
+    /*out*/ std::shared_ptr<app_state> &app, int total_disks);
 
-void generate_node_fs_manager(const dsn::replication::app_mapper &apps,
-                              const dsn::replication::node_mapper &nodes,
+void generate_node_fs_manager(const app_mapper &apps,
+                              const node_mapper &nodes,
                               /*out*/ nodes_fs_manager &nfm,
                               int total_disks);
 
-void generate_apps(/*out*/ dsn::replication::app_mapper &apps,
-                   const std::vector<dsn::rpc_address> &node_list,
+void generate_apps(/*out*/ app_mapper &apps,
+                   const std::vector<rpc_address> &node_list,
                    int apps_count,
                    int disks_per_node,
                    std::pair<uint32_t, uint32_t> partitions_range,
@@ -107,29 +100,30 @@ void generate_apps(/*out*/ dsn::replication::app_mapper &apps,
 // the check_apply routine will modify it accordingly.
 // if track disk info is not necessary, please input a nullptr.
 void migration_check_and_apply(
-    /*in-out*/ dsn::replication::app_mapper &apps,
-    /*in-out*/ dsn::replication::node_mapper &nodes,
-    /*in-out*/ dsn::replication::migration_list &ml,
+    /*in-out*/ app_mapper &apps,
+    /*in-out*/ node_mapper &nodes,
+    /*in-out*/ migration_list &ml,
     /*in-out*/ nodes_fs_manager *manager);
 
 // when the test need to track the disk info, please input the fs_manager of all disks,
 // the check_apply routine will modify it accordingly.
 // if track disk info is not necessary, please input a nullptr.
-void proposal_action_check_and_apply(const dsn::replication::configuration_proposal_action &act,
-                                     const dsn::gpid &pid,
-                                     dsn::replication::app_mapper &apps,
-                                     dsn::replication::node_mapper &nodes,
+void proposal_action_check_and_apply(const configuration_proposal_action &act,
+                                     const gpid &pid,
+                                     app_mapper &apps,
+                                     node_mapper &nodes,
                                      nodes_fs_manager *manager);
 
-void track_disk_info_check_and_apply(const dsn::replication::configuration_proposal_action &act,
-                                     const dsn::gpid &pid,
-                                     /*in-out*/ dsn::replication::app_mapper &apps,
-                                     /*in-out*/ dsn::replication::node_mapper &nodes,
+void track_disk_info_check_and_apply(const configuration_proposal_action &act,
+                                     const gpid &pid,
+                                     /*in-out*/ app_mapper &apps,
+                                     /*in-out*/ node_mapper &nodes,
                                      /*in-out*/ nodes_fs_manager &manager);
 
-void app_mapper_compare(const dsn::replication::app_mapper &mapper1,
-                        const dsn::replication::app_mapper &mapper2);
+void app_mapper_compare(const app_mapper &mapper1, const app_mapper &mapper2);
 
-void verbose_apps(const dsn::replication::app_mapper &input_apps);
+void verbose_apps(const app_mapper &input_apps);
 
 bool spin_wait_condition(const std::function<bool()> &pred, int seconds);
+} // namespace replication
+} // namespace pegasus

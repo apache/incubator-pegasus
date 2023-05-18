@@ -29,8 +29,11 @@
 // IWYU pragma: no_include <string>
 
 #include "disk_engine.h"
+#include "utils/factory_store.h"
 
-namespace dsn {
+using pegasus::provider_type;
+using pegasus::utils::factory_store;
+namespace pegasus {
 class aio_task;
 
 aio_provider::aio_provider(disk_engine *disk) : _engine(disk) {}
@@ -42,10 +45,10 @@ void aio_provider::complete_io(aio_task *aio, error_code err, uint64_t bytes)
 
 namespace tools {
 namespace internal_use_only {
-bool register_component_provider(const char *name, aio_provider::factory f, dsn::provider_type type)
+bool register_component_provider(const char *name, aio_provider::factory f, provider_type type)
 {
-    return dsn::utils::factory_store<aio_provider>::register_factory(name, f, type);
+    return factory_store<aio_provider>::register_factory(name, f, type);
 }
 } // namespace internal_use_only
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

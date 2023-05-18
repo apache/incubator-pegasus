@@ -34,7 +34,7 @@
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class meta_service;
 
@@ -193,4 +193,4 @@ private:
     FRIEND_TEST(cluster_balance_policy, execute_balance);
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -32,7 +32,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace dsn {
+namespace pegasus {
 
 class join_point_test : public ::testing::Test
 {
@@ -89,4 +89,4 @@ TEST_F(join_point_test, with_return_value)
     ASSERT_EQ(expected_str, "abc");
 }
 
-} // namespace dsn
+} // namespace pegasus

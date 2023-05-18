@@ -24,7 +24,7 @@
 #include "runtime/serverlet.h"
 #include "utils/singleton.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 class message_ex;
 class rpc_session;
@@ -64,4 +64,4 @@ private:
 
 void init_join_point();
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

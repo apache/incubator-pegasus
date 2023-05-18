@@ -47,10 +47,10 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class message_ex;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
@@ -174,8 +174,8 @@ pegasus_write_service::~pegasus_write_service() {}
 int pegasus_write_service::empty_put(int64_t decree) { return _impl->empty_put(decree); }
 
 int pegasus_write_service::multi_put(const db_write_context &ctx,
-                                     const dsn::apps::multi_put_request &update,
-                                     dsn::apps::update_response &resp)
+                                     const apps::multi_put_request &update,
+                                     apps::update_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_put_qps->increment();
@@ -190,8 +190,8 @@ int pegasus_write_service::multi_put(const db_write_context &ctx,
 }
 
 int pegasus_write_service::multi_remove(int64_t decree,
-                                        const dsn::apps::multi_remove_request &update,
-                                        dsn::apps::multi_remove_response &resp)
+                                        const apps::multi_remove_request &update,
+                                        apps::multi_remove_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_multi_remove_qps->increment();
@@ -206,8 +206,8 @@ int pegasus_write_service::multi_remove(int64_t decree,
 }
 
 int pegasus_write_service::incr(int64_t decree,
-                                const dsn::apps::incr_request &update,
-                                dsn::apps::incr_response &resp)
+                                const apps::incr_request &update,
+                                apps::incr_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_incr_qps->increment();
@@ -222,8 +222,8 @@ int pegasus_write_service::incr(int64_t decree,
 }
 
 int pegasus_write_service::check_and_set(int64_t decree,
-                                         const dsn::apps::check_and_set_request &update,
-                                         dsn::apps::check_and_set_response &resp)
+                                         const apps::check_and_set_request &update,
+                                         apps::check_and_set_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_check_and_set_qps->increment();
@@ -242,8 +242,8 @@ int pegasus_write_service::check_and_set(int64_t decree,
 }
 
 int pegasus_write_service::check_and_mutate(int64_t decree,
-                                            const dsn::apps::check_and_mutate_request &update,
-                                            dsn::apps::check_and_mutate_response &resp)
+                                            const apps::check_and_mutate_request &update,
+                                            apps::check_and_mutate_response &resp)
 {
     uint64_t start_time = dsn_now_ns();
     _pfc_check_and_mutate_qps->increment();
@@ -267,8 +267,8 @@ void pegasus_write_service::batch_prepare(int64_t decree)
 }
 
 int pegasus_write_service::batch_put(const db_write_context &ctx,
-                                     const dsn::apps::update_request &update,
-                                     dsn::apps::update_response &resp)
+                                     const apps::update_request &update,
+                                     apps::update_response &resp)
 {
     CHECK_GT_MSG(_batch_start_time, 0, "batch_put must be called after batch_prepare");
 
@@ -284,8 +284,8 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
 }
 
 int pegasus_write_service::batch_remove(int64_t decree,
-                                        const dsn::blob &key,
-                                        dsn::apps::update_response &resp)
+                                        const blob &key,
+                                        apps::update_response &resp)
 {
     CHECK_GT_MSG(_batch_start_time, 0, "batch_remove must be called after batch_prepare");
 
@@ -323,9 +323,9 @@ void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_t
 void pegasus_write_service::clear_up_batch_states()
 {
     uint64_t latency = dsn_now_ns() - _batch_start_time;
-    for (dsn::perf_counter *pfc : _batch_qps_perfcounters)
+    for (perf_counter *pfc : _batch_qps_perfcounters)
         pfc->increment();
-    for (dsn::perf_counter *pfc : _batch_latency_perfcounters)
+    for (perf_counter *pfc : _batch_latency_perfcounters)
         pfc->set(latency);
 
     _batch_qps_perfcounters.clear();
@@ -334,12 +334,12 @@ void pegasus_write_service::clear_up_batch_states()
 }
 
 int pegasus_write_service::duplicate(int64_t decree,
-                                     const dsn::apps::duplicate_request &requests,
-                                     dsn::apps::duplicate_response &resp)
+                                     const apps::duplicate_request &requests,
+                                     apps::duplicate_response &resp)
 {
     // Verifies the cluster_id.
     for (const auto &request : requests.entries) {
-        if (!dsn::replication::is_cluster_id_configured(request.cluster_id)) {
+        if (!replication::is_cluster_id_configured(request.cluster_id)) {
             resp.__set_error(rocksdb::Status::kInvalidArgument);
             resp.__set_error_hint("request cluster id is unconfigured");
             return empty_put(decree);
@@ -351,22 +351,21 @@ int pegasus_write_service::duplicate(int64_t decree,
         }
 
         _pfc_duplicate_qps->increment();
-        auto cleanup = dsn::defer([this, &request]() {
+        auto cleanup = defer([this, &request]() {
             uint64_t latency_ms = (dsn_now_us() - request.timestamp) / 1000;
             if (latency_ms > FLAGS_dup_lagging_write_threshold_ms) {
                 _pfc_dup_lagging_writes->increment();
             }
             _pfc_dup_time_lag->set(latency_ms);
         });
-        dsn::message_ex *write =
-            dsn::from_blob_to_received_msg(request.task_code, request.raw_message);
-        bool is_delete = request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE ||
-                         request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE;
+        message_ex *write = from_blob_to_received_msg(request.task_code, request.raw_message);
+        bool is_delete = request.task_code == apps::RPC_RRDB_RRDB_MULTI_REMOVE ||
+                         request.task_code == apps::RPC_RRDB_RRDB_REMOVE;
         auto remote_timetag = generate_timetag(request.timestamp, request.cluster_id, is_delete);
         auto ctx =
             db_write_context::create_duplicate(decree, remote_timetag, request.verify_timetag);
 
-        if (request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
+        if (request.task_code == apps::RPC_RRDB_RRDB_MULTI_PUT) {
             multi_put_rpc rpc(write);
             resp.__set_error(_impl->multi_put(ctx, rpc.request(), rpc.response()));
             if (resp.error != rocksdb::Status::kOk) {
@@ -374,7 +373,7 @@ int pegasus_write_service::duplicate(int64_t decree,
             }
             continue;
         }
-        if (request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
+        if (request.task_code == apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
             multi_remove_rpc rpc(write);
             resp.__set_error(_impl->multi_remove(ctx.decree, rpc.request(), rpc.response()));
             if (resp.error != rocksdb::Status::kOk) {
@@ -384,14 +383,14 @@ int pegasus_write_service::duplicate(int64_t decree,
         }
         put_rpc put;
         remove_rpc remove;
-        if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT ||
-            request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+        if (request.task_code == apps::RPC_RRDB_RRDB_PUT ||
+            request.task_code == apps::RPC_RRDB_RRDB_REMOVE) {
             int err = rocksdb::Status::kOk;
-            if (request.task_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
+            if (request.task_code == apps::RPC_RRDB_RRDB_PUT) {
                 put = put_rpc(write);
                 err = _impl->batch_put(ctx, put.request(), put.response());
             }
-            if (request.task_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+            if (request.task_code == apps::RPC_RRDB_RRDB_REMOVE) {
                 remove = remove_rpc(write);
                 err = _impl->batch_remove(ctx.decree, remove.request(), remove.response());
             }
@@ -414,29 +413,29 @@ int pegasus_write_service::duplicate(int64_t decree,
 }
 
 int pegasus_write_service::ingest_files(int64_t decree,
-                                        const dsn::replication::ingestion_request &req,
-                                        dsn::replication::ingestion_response &resp)
+                                        const replication::ingestion_request &req,
+                                        replication::ingestion_response &resp)
 {
     // TODO(heyuchen): consider cu
 
-    resp.err = dsn::ERR_OK;
+    resp.err = ERR_OK;
     // write empty put to flush decree
     resp.rocksdb_error = empty_put(decree);
     if (resp.rocksdb_error != rocksdb::Status::kOk) {
-        resp.err = dsn::ERR_TRY_AGAIN;
+        resp.err = ERR_TRY_AGAIN;
         return resp.rocksdb_error;
     }
 
     // ingest files asynchronously
-    _server->set_ingestion_status(dsn::replication::ingestion_status::IS_RUNNING);
-    dsn::tasking::enqueue(LPC_INGESTION, &_server->_tracker, [this, decree, req]() {
+    _server->set_ingestion_status(replication::ingestion_status::IS_RUNNING);
+    tasking::enqueue(LPC_INGESTION, &_server->_tracker, [this, decree, req]() {
         const auto &err =
             _impl->ingest_files(decree, _server->bulk_load_dir(), req, _server->get_ballot());
-        auto status = dsn::replication::ingestion_status::IS_SUCCEED;
-        if (err == dsn::ERR_INVALID_VERSION) {
-            status = dsn::replication::ingestion_status::IS_INVALID;
-        } else if (err != dsn::ERR_OK) {
-            status = dsn::replication::ingestion_status::IS_FAILED;
+        auto status = replication::ingestion_status::IS_SUCCEED;
+        if (err == ERR_INVALID_VERSION) {
+            status = replication::ingestion_status::IS_INVALID;
+        } else if (err != ERR_OK) {
+            status = replication::ingestion_status::IS_FAILED;
         }
         _server->set_ingestion_status(status);
     });

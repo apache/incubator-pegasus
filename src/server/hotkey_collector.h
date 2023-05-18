@@ -50,7 +50,7 @@ struct detect_hotkey_result
     }
 };
 
-extern int get_bucket_id(dsn::string_view data, int bucket_num);
+extern int get_bucket_id(string_view data, int bucket_num);
 extern bool
 find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index);
 
@@ -91,23 +91,22 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 //    |                    |  |                     Hotkey                         |
 //    +--------------------+  +----------------------------------------------------+
 
-class hotkey_collector : public dsn::replication::replica_base
+class hotkey_collector : public replication::replica_base
 {
 public:
-    hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
-                     dsn::replication::replica_base *r_base);
+    hotkey_collector(replication::hotkey_type::type hotkey_type, replication::replica_base *r_base);
     // TODO: (Tangyanzhao) capture_*_key should be consistent with hotspot detection
     // weight: calculate the weight according to the specific situation
-    void capture_raw_key(const dsn::blob &raw_key, int64_t weight);
-    void capture_hash_key(const dsn::blob &hash_key, int64_t weight);
+    void capture_raw_key(const blob &raw_key, int64_t weight);
+    void capture_hash_key(const blob &hash_key, int64_t weight);
     void analyse_data();
-    void handle_rpc(const dsn::replication::detect_hotkey_request &req,
-                    /*out*/ dsn::replication::detect_hotkey_response &resp);
+    void handle_rpc(const replication::detect_hotkey_request &req,
+                    /*out*/ replication::detect_hotkey_response &resp);
 
 private:
-    void on_start_detect(dsn::replication::detect_hotkey_response &resp);
-    void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
-    void query_result(dsn::replication::detect_hotkey_response &resp);
+    void on_start_detect(replication::detect_hotkey_response &resp);
+    void on_stop_detect(replication::detect_hotkey_response &resp);
+    void query_result(replication::detect_hotkey_response &resp);
 
     void change_state_to_stopped();
     void change_state_to_coarse_detecting();
@@ -118,7 +117,7 @@ private:
     std::shared_ptr<internal_collector_base> get_internal_collector_by_state();
     void change_state_by_result();
 
-    const dsn::replication::hotkey_type::type _hotkey_type;
+    const replication::hotkey_type::type _hotkey_type;
     detect_hotkey_result _result;
     std::atomic<hotkey_collector_state> _state;
     std::atomic<uint64_t> _collector_start_time_second;
@@ -131,13 +130,13 @@ private:
 };
 
 // Be sure every function in internal_collector_base should be thread safe
-class internal_collector_base : public dsn::replication::replica_base
+class internal_collector_base : public replication::replica_base
 {
 public:
     explicit internal_collector_base(replica_base *base) : replica_base(base){};
     virtual ~internal_collector_base() = default;
 
-    virtual void capture_data(const dsn::blob &hash_key, uint64_t weight) = 0;
+    virtual void capture_data(const blob &hash_key, uint64_t weight) = 0;
     virtual void analyse_data(detect_hotkey_result &result) = 0;
     virtual void clear() = 0;
 };
@@ -147,7 +146,7 @@ class hotkey_empty_data_collector : public internal_collector_base
 {
 public:
     explicit hotkey_empty_data_collector(replica_base *base) : internal_collector_base(base) {}
-    void capture_data(const dsn::blob &hash_key, uint64_t weight) override {}
+    void capture_data(const blob &hash_key, uint64_t weight) override {}
     void analyse_data(detect_hotkey_result &result) override {}
     void clear() override {}
 };
@@ -157,7 +156,7 @@ class hotkey_coarse_data_collector : public internal_collector_base
 {
 public:
     explicit hotkey_coarse_data_collector(replica_base *base, uint32_t hotkey_buckets_num);
-    void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
+    void capture_data(const blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
     void clear() override;
 
@@ -176,7 +175,7 @@ public:
     hotkey_fine_data_collector(replica_base *base,
                                uint32_t hotkey_buckets_num,
                                uint32_t max_queue_size = 1000);
-    void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
+    void capture_data(const blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
     void change_target_bucket(int target_bucket_index);
     void clear() override;
@@ -187,7 +186,7 @@ private:
     const uint32_t _max_queue_size;
     std::atomic<int32_t> _target_bucket_index;
     // ConcurrentQueue is a lock-free queue to capture keys
-    moodycamel::ConcurrentQueue<std::pair<dsn::blob, uint64_t>> _capture_key_queue;
+    moodycamel::ConcurrentQueue<std::pair<blob, uint64_t>> _capture_key_queue;
     const uint32_t _hash_bucket_num;
 
     friend class fine_collector_test;

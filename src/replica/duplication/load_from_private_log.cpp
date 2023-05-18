@@ -35,7 +35,7 @@
 #include "utils/ports.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 /*static*/ constexpr int load_from_private_log::MAX_ALLOWED_BLOCK_REPEATS;
@@ -292,4 +292,4 @@ void load_from_private_log::start_from_log_file(log_file_ptr f)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

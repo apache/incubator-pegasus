@@ -35,7 +35,7 @@
 #include "utils/singleton.h"
 #include "utils/work_queue.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 
 class disk_write_queue : public work_queue<aio_task>
@@ -92,4 +92,4 @@ private:
     friend class utils::singleton<disk_engine>;
 };
 
-} // namespace dsn
+} // namespace pegasus

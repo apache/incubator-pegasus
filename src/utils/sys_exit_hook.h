@@ -19,7 +19,7 @@
 
 #include "utils/enum_helper.h"
 
-namespace dsn {
+namespace pegasus {
 
 enum sys_exit_type
 {
@@ -40,4 +40,4 @@ namespace tools {
 extern join_point<void, sys_exit_type> sys_exit;
 }
 
-} // namespace dsn
+} // namespace pegasus

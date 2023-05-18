@@ -52,7 +52,7 @@
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
@@ -73,7 +73,7 @@
 #include "utils/flags.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class command_deregister;
 class message_ex;
 class nfs_node;
@@ -115,12 +115,12 @@ class replica_split_manager;
 
 typedef std::unordered_map<gpid, replica_ptr> replicas;
 typedef std::function<void(
-    ::dsn::rpc_address /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
+    rpc_address /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
     replica_state_subscriber;
 
 class replica_stub;
 
-typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
+typedef ref_ptr<replica_stub> replica_stub_ptr;
 
 class duplication_sync_timer;
 class replica_backup_server;
@@ -148,8 +148,8 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(gpid id, dsn::message_ex *request);
-    void on_client_read(gpid id, dsn::message_ex *request);
+    void on_client_write(gpid id, message_ex *request);
+    void on_client_read(gpid id, message_ex *request);
 
     //
     //    messages from meta server
@@ -167,8 +167,8 @@ public:
     //        - learn
     //        - bulk_load
     //
-    void on_prepare(dsn::message_ex *request);
-    void on_learn(dsn::message_ex *msg);
+    void on_prepare(message_ex *request);
+    void on_learn(message_ex *msg);
     void on_learn_completion_notification(learn_completion_notification_rpc rpc);
     void on_add_learner(const group_check_request &request);
     void on_remove(const replica_configuration &request);
@@ -226,7 +226,7 @@ public:
     //
 
     // called by parent partition, executed by child partition
-    void create_child_replica(dsn::rpc_address primary_address,
+    void create_child_replica(rpc_address primary_address,
                               app_info app,
                               ballot init_ballot,
                               gpid child_gpid,
@@ -244,7 +244,7 @@ public:
     // parent/child may want child/parent to execute function during partition split
     // if replica `pid` exists, will execute function `handler` and return ERR_OK, otherwise return
     // ERR_OBJECT_NOT_FOUND
-    dsn::error_code split_replica_exec(dsn::task_code code, gpid pid, local_execution handler);
+    error_code split_replica_exec(task_code code, gpid pid, local_execution handler);
 
     // This function is used for partition split error handler
     void split_replica_error_handler(gpid pid, local_execution handler);
@@ -276,8 +276,8 @@ public:
 
     template <typename TReqType, typename TRespType>
     bool check_status_and_authz_with_reply(const TReqType &request,
-                                           ::dsn::rpc_replier<TRespType> &reply,
-                                           const ::dsn::ranger::access_type &ac_type) const
+                                           rpc_replier<TRespType> &reply,
+                                           const ranger::access_type &ac_type) const
     {
         if (!_access_controller->is_enable_ranger_acl()) {
             return true;
@@ -291,7 +291,7 @@ public:
             reply(resp);
             return false;
         }
-        dsn::message_ex *msg = reply.response_message();
+        message_ex *msg = reply.response_message();
         if (!rep->access_controller_allowed(msg, ac_type)) {
             TRespType resp;
             resp.error = ERR_ACL_DENY;
@@ -301,11 +301,11 @@ public:
         return true;
     }
 
-    void on_nfs_copy(const ::dsn::service::copy_request &request,
-                     ::dsn::rpc_replier<::dsn::service::copy_response> &reply);
+    void on_nfs_copy(const service::copy_request &request,
+                     rpc_replier<service::copy_response> &reply);
 
-    void on_nfs_get_file_size(const ::dsn::service::get_file_size_request &request,
-                              ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply);
+    void on_nfs_get_file_size(const service::get_file_size_request &request,
+                              rpc_replier<service::get_file_size_response> &reply);
 
 private:
     enum replica_node_state
@@ -327,7 +327,7 @@ private:
     void initialize_start();
     void query_configuration_by_node();
     void on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid id);
-    void on_node_query_reply(error_code err, dsn::message_ex *request, dsn::message_ex *response);
+    void on_node_query_reply(error_code err, message_ex *request, message_ex *response);
     void on_node_query_reply_scatter(replica_stub_ptr this_,
                                      const configuration_update_request &config);
     void on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id);
@@ -358,7 +358,7 @@ private:
     void handle_log_failure(error_code err);
 
     void install_perf_counters();
-    dsn::error_code on_kill_replica(gpid id);
+    error_code on_kill_replica(gpid id);
 
     void get_replica_info(/*out*/ replica_info &info, /*in*/ replica_ptr r);
     void get_local_replicas(/*out*/ std::vector<replica_info> &replicas);
@@ -367,7 +367,7 @@ private:
 
     void response_client(gpid id,
                          bool is_read,
-                         dsn::message_ex *request,
+                         message_ex *request,
                          partition_status::type status,
                          error_code error);
     void update_disk_holding_replicas();
@@ -403,10 +403,10 @@ private:
     void wait_closing_replicas_finished();
 
 private:
-    friend class ::dsn::replication::test::test_checker;
-    friend class ::dsn::replication::replica;
-    friend class ::dsn::replication::potential_secondary_context;
-    friend class ::dsn::replication::cold_backup_context;
+    friend class replication::test::test_checker;
+    friend class replication::replica;
+    friend class replication::potential_secondary_context;
+    friend class replication::cold_backup_context;
 
     friend class replica_duplicator;
     friend class replica_http_service;
@@ -430,7 +430,7 @@ private:
     FRIEND_TEST(replica_test, test_clear_on_failure);
     FRIEND_TEST(replica_test, test_auto_trash);
 
-    typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
+    typedef std::unordered_map<gpid, task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
         closing_replicas; // <gpid, <close_task, replica, app_info, replica_info> >
     typedef std::map<gpid, std::pair<app_info, replica_info>>
@@ -443,10 +443,10 @@ private:
     closed_replicas _closed_replicas;
 
     mutation_log_ptr _log;
-    ::dsn::rpc_address _primary_address;
+    rpc_address _primary_address;
     char _primary_address_str[64];
 
-    std::shared_ptr<dsn::dist::slave_failure_detector_with_multimaster> _failure_detector;
+    std::shared_ptr<dist::slave_failure_detector_with_multimaster> _failure_detector;
     mutable zlock _state_lock;
     volatile replica_node_state _state;
 
@@ -456,11 +456,11 @@ private:
     bool _is_long_subscriber;
 
     // temproal states
-    ::dsn::task_ptr _config_query_task;
-    ::dsn::timer_task_ptr _config_sync_timer_task;
-    ::dsn::task_ptr _gc_timer_task;
-    ::dsn::task_ptr _disk_stat_timer_task;
-    ::dsn::task_ptr _mem_release_timer_task;
+    task_ptr _config_query_task;
+    timer_task_ptr _config_sync_timer_task;
+    task_ptr _gc_timer_task;
+    task_ptr _disk_stat_timer_task;
+    task_ptr _mem_release_timer_task;
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
     std::unique_ptr<replica_backup_server> _backup_server;
@@ -487,7 +487,7 @@ private:
     dist::block_service::block_service_manager _block_service_manager;
 
     // nfs_node
-    std::unique_ptr<dsn::nfs_node> _nfs;
+    std::unique_ptr<nfs_node> _nfs;
 
     // replica count executing bulk load downloading concurrently
     std::atomic_int _bulk_load_downloading_count;
@@ -497,7 +497,7 @@ private:
 
     bool _is_running;
 
-    std::unique_ptr<dsn::security::access_controller> _access_controller;
+    std::unique_ptr<security::access_controller> _access_controller;
 
 #ifdef DSN_ENABLE_GPERF
     std::atomic_bool _is_releasing_memory{false};
@@ -592,7 +592,7 @@ private:
     perf_counter_wrapper _counter_replicas_splitting_recent_split_fail_count;
     perf_counter_wrapper _counter_replicas_splitting_recent_split_succ_count;
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

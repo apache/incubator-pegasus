@@ -23,7 +23,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 DSN_DEFINE_bool(security, enable_acl, false, "whether enable access controller or not");
 DSN_DEFINE_bool(security,
@@ -64,4 +64,4 @@ std::unique_ptr<access_controller> create_replica_access_controller(const std::s
     return std::make_unique<replica_access_controller>(replica_name);
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

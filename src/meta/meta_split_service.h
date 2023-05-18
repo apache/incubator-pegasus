@@ -23,7 +23,7 @@
 #include "runtime/task/task.h"
 #include "server_state.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 class zrwlock_nr;
 
@@ -57,7 +57,7 @@ private:
     void register_child_on_meta(register_child_rpc rpc);
 
     // meta -> remote storage to update child replica config
-    dsn::task_ptr add_child_on_remote_storage(register_child_rpc rpc, bool create_new);
+    task_ptr add_child_on_remote_storage(register_child_rpc rpc, bool create_new);
     void
     on_add_child_on_remote_storage_reply(error_code ec, register_child_rpc rpc, bool create_new);
 
@@ -91,4 +91,4 @@ private:
     zrwlock_nr &app_lock() const { return _state->_lock; }
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

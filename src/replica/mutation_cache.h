@@ -33,7 +33,7 @@
 #include "mutation.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 // mutation_cache is an in-memory array that stores a limited number

@@ -24,7 +24,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 token_bucket_throttling_controller::token_bucket_throttling_controller()
@@ -172,4 +172,4 @@ bool token_bucket_throttling_controller::transform_env_string(const std::string 
 }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

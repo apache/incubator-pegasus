@@ -28,7 +28,7 @@
 
 #include "runtime/tool_api.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 class node_scoper
@@ -45,7 +45,5 @@ public:
 private:
     struct __tls_dsn__ _old;
 };
-
-// ---- inline implementation ------
-}
-} // end namespace dsn::tools
+} // namespace tools
+} // namespace pegasus

@@ -41,6 +41,8 @@
 
 static const int data_count = 10000;
 
+using namespace pegasus;
+
 int main(int argc, char **argv)
 {
     if (argc < 7) {
@@ -54,29 +56,29 @@ int main(int argc, char **argv)
     std::string app_name = argv[2];
     std::string geo_app_name = argv[3];
     double radius = 0.0;
-    if (!dsn::buf2double(argv[4], radius)) {
+    if (!buf2double(argv[4], radius)) {
         std::cerr << "radius is invalid: " << argv[4] << std::endl;
         return -1;
     }
     int test_count = 2000;
-    if (!dsn::buf2int32(argv[5], test_count)) {
+    if (!buf2int32(argv[5], test_count)) {
         std::cerr << "test_count is invalid: " << argv[5] << std::endl;
         return -1;
     }
     int max_level = 16;
-    if (!dsn::buf2int32(argv[6], max_level)) {
+    if (!buf2int32(argv[6], max_level)) {
         std::cerr << "max_level is invalid: " << argv[6] << std::endl;
         return -1;
     }
     bool gen_data = false;
     if (argc >= 8) {
-        if (!dsn::buf2bool(argv[7], gen_data)) {
+        if (!buf2bool(argv[7], gen_data)) {
             std::cerr << "gen_data is invalid: " << argv[7] << std::endl;
             return -1;
         }
     }
 
-    pegasus::geo::geo_client my_geo(
+    geo::geo_client my_geo(
         "config.ini", cluster_name.c_str(), app_name.c_str(), geo_app_name.c_str());
     if (!my_geo.set_max_level(max_level).is_ok()) {
         std::cerr << "set_max_level failed" << std::endl;
@@ -89,14 +91,14 @@ int main(int argc, char **argv)
 
     // generate data for test
     if (gen_data) {
-        const pegasus::geo::latlng_codec &codec = my_geo.get_codec();
+        const geo::latlng_codec &codec = my_geo.get_codec();
         for (int i = 0; i < data_count; ++i) {
             std::string value;
             S2LatLng latlng(S2Testing::SamplePoint(rect));
             bool ok = codec.encode_to_value(latlng.lat().degrees(), latlng.lng().degrees(), value);
             CHECK(ok, "");
             int ret = my_geo.set(std::to_string(i), "", value, 1000);
-            if (ret != pegasus::PERR_OK) {
+            if (ret != PERR_OK) {
                 std::cerr << "set data failed. error=" << ret << std::endl;
             }
         }
@@ -111,7 +113,7 @@ int main(int argc, char **argv)
     rocksdb::Env *env = rocksdb::Env::Default();
     uint64_t start = env->NowNanos();
     std::atomic<uint64_t> count(test_count);
-    dsn::utils::notify_event get_completed;
+    utils::notify_event get_completed;
 
     // test search_radial by lat & lng
     for (int i = 0; i < test_count; ++i) {
@@ -123,9 +125,9 @@ int main(int argc, char **argv)
             latlng.lng().degrees(),
             radius,
             -1,
-            pegasus::geo::geo_client::SortType::random,
+            geo::geo_client::SortType::random,
             500,
-            [&, start_nanos](int error_code, std::list<pegasus::geo::SearchResult> &&results) {
+            [&, start_nanos](int error_code, std::list<geo::SearchResult> &&results) {
                 statistics->measureTime(static_cast<uint32_t>(histogram_type::LATENCY),
                                         env->NowNanos() - start_nanos);
                 statistics->measureTime(static_cast<uint32_t>(histogram_type::RESULT_COUNT),

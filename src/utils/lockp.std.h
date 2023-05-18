@@ -38,7 +38,7 @@
 #include "utils/synchronize.h"
 #include "utils/zlock_provider.h"
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 
 class std_lock_provider : public lock_provider
@@ -100,7 +100,7 @@ public:
     virtual bool wait(int timeout_milliseconds) { return _sema.wait(timeout_milliseconds); }
 
 private:
-    dsn::utils::semaphore _sema;
+    utils::semaphore _sema;
 };
-}
-} // end namespace dsn::tools
+} // namespace tools
+} // namespace pegasus

@@ -28,7 +28,7 @@
 
 #include "task.h"
 
-namespace dsn {
+namespace pegasus {
 class service_node;
 
 /*!

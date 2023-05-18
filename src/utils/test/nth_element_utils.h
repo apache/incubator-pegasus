@@ -34,7 +34,7 @@
 
 #include "perf_counter/perf_counter_atomic.h"
 
-namespace dsn {
+namespace pegasus {
 
 // The generator is used to produce the test cases randomly for unit tests and benchmarks
 // of nth elements.
@@ -161,7 +161,7 @@ public:
     void operator()()
     {
         _perf_counter.calc(
-            std::make_shared<dsn::perf_counter_number_percentile_atomic::compute_context>());
+            std::make_shared<perf_counter_number_percentile_atomic::compute_context>());
         std::copy(_perf_counter._results,
                   _perf_counter._results + COUNTER_PERCENTILE_COUNT,
                   _elements.begin());
@@ -170,10 +170,10 @@ public:
     const container_type &elements() const { return _elements; }
 
 private:
-    dsn::perf_counter_number_percentile_atomic _perf_counter;
+    perf_counter_number_percentile_atomic _perf_counter;
     container_type _elements;
 
     DISALLOW_COPY_AND_ASSIGN(perf_counter_nth_element_finder);
 };
 
-} // namespace dsn
+} // namespace pegasus

@@ -35,7 +35,7 @@
 #include "utils/filesystem.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 const char *cold_backup_status_to_string(cold_backup_status status)
@@ -627,10 +627,10 @@ void cold_backup_context::prepare_upload()
         std::string &file = checkpoint_files[idx];
         file_meta f_meta;
         f_meta.name = file;
-        std::string file_full_path = ::dsn::utils::filesystem::path_combine(checkpoint_dir, file);
+        std::string file_full_path = utils::filesystem::path_combine(checkpoint_dir, file);
         int64_t file_size = checkpoint_file_sizes[idx];
         std::string file_md5;
-        if (::dsn::utils::filesystem::md5sum(file_full_path, file_md5) != ERR_OK) {
+        if (utils::filesystem::md5sum(file_full_path, file_md5) != ERR_OK) {
             LOG_ERROR("{}: get local file size or md5 fail, file = {}", name, file_full_path);
             fail_upload("compute local file size or md5 failed");
             return;
@@ -649,7 +649,7 @@ void cold_backup_context::upload_file(const std::string &local_filename)
     std::string remote_chkpt_dir = cold_backup::get_remote_chkpt_dir(
         backup_root, request.app_name, request.pid, request.backup_id);
     dist::block_service::create_file_request req;
-    req.file_name = ::dsn::utils::filesystem::path_combine(remote_chkpt_dir, local_filename);
+    req.file_name = utils::filesystem::path_combine(remote_chkpt_dir, local_filename);
     req.ignore_metadata = false;
 
     add_ref();
@@ -664,7 +664,7 @@ void cold_backup_context::upload_file(const std::string &local_filename)
                 int64_t local_file_size = _file_infos.at(local_filename).first;
                 std::string md5 = _file_infos.at(local_filename).second;
                 std::string full_path_local_file =
-                    ::dsn::utils::filesystem::path_combine(checkpoint_dir, local_filename);
+                    utils::filesystem::path_combine(checkpoint_dir, local_filename);
                 if (md5 == file_handle->get_md5sum() &&
                     local_file_size == file_handle->get_size()) {
                     LOG_INFO("{}: checkpoint file already exist on remote, file = {}",
@@ -697,8 +697,8 @@ void cold_backup_context::upload_file(const std::string &local_filename)
                                      // upload_checkpoint_to_remote() after it's given back
                                      if (!is_ready_for_upload()) {
                                          std::string full_path_local_file =
-                                             ::dsn::utils::filesystem::path_combine(checkpoint_dir,
-                                                                                    local_filename);
+                                             utils::filesystem::path_combine(checkpoint_dir,
+                                                                             local_filename);
                                          LOG_INFO("{}: backup status has changed to {}, stop "
                                                   "upload checkpoint file to remote, file = {}",
                                                   name,
@@ -742,8 +742,7 @@ void cold_backup_context::on_upload(const dist::block_service::block_file_ptr &f
         [this, file_handle, full_path_local_file](
             const dist::block_service::upload_response &resp) {
             if (resp.err == ERR_OK) {
-                std::string local_filename =
-                    ::dsn::utils::filesystem::get_file_name(full_path_local_file);
+                std::string local_filename = utils::filesystem::get_file_name(full_path_local_file);
                 CHECK_EQ(_file_infos.at(local_filename).first,
                          static_cast<int64_t>(resp.uploaded_size));
                 LOG_INFO(
@@ -755,26 +754,26 @@ void cold_backup_context::on_upload(const dist::block_service::block_file_ptr &f
                           full_path_local_file);
                 add_ref();
 
-                tasking::enqueue(
-                    LPC_BACKGROUND_COLD_BACKUP,
-                    nullptr,
-                    [this, file_handle, full_path_local_file]() {
-                        if (!is_ready_for_upload()) {
-                            LOG_ERROR("{}: backup status has changed to {}, stop upload "
-                                      "checkpoint file to remote, file = {}",
-                                      name,
-                                      cold_backup_status_to_string(status()),
-                                      full_path_local_file);
-                            std::string local_filename =
-                                ::dsn::utils::filesystem::get_file_name(full_path_local_file);
-                            file_upload_uncomplete(local_filename);
-                        } else {
-                            on_upload(file_handle, full_path_local_file);
-                        }
-                        release_ref();
-                    },
-                    0,
-                    std::chrono::seconds(10));
+                tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
+                                 nullptr,
+                                 [this, file_handle, full_path_local_file]() {
+                                     if (!is_ready_for_upload()) {
+                                         LOG_ERROR(
+                                             "{}: backup status has changed to {}, stop upload "
+                                             "checkpoint file to remote, file = {}",
+                                             name,
+                                             cold_backup_status_to_string(status()),
+                                             full_path_local_file);
+                                         std::string local_filename =
+                                             utils::filesystem::get_file_name(full_path_local_file);
+                                         file_upload_uncomplete(local_filename);
+                                     } else {
+                                         on_upload(file_handle, full_path_local_file);
+                                     }
+                                     release_ref();
+                                 },
+                                 0,
+                                 std::chrono::seconds(10));
             } else {
                 LOG_ERROR("{}: upload checkpoint file to remote failed, file = {}, err = {}",
                           name,
@@ -1086,4 +1085,4 @@ void cold_backup_context::file_upload_complete(const std::string &filename)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

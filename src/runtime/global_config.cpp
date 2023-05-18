@@ -47,7 +47,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 
 static bool build_client_network_confs(const char *section,
                                        /*out*/ network_client_configs &nss,
@@ -70,19 +70,19 @@ static bool build_client_network_confs(const char *section,
         if (rpc_channel::is_exist(k2.c_str())) {
             /*
             ;channel = network_provider_name,buffer_block_size
-            network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-            network.client.RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
+            network.client.RPC_CHANNEL_TCP = pegasus::tools::asio_network_provider,65536
+            network.client.RPC_CHANNEL_UDP = pegasus::tools::asio_network_provider,65536
             */
 
             rpc_channel ch = rpc_channel::from_string(k2.c_str(), RPC_CHANNEL_TCP);
 
-            // dsn::tools::asio_network_provider,65536
+            // pegasus::tools::asio_network_provider,65536
             std::list<std::string> vs;
             std::string v = dsn_config_get_value_string(
                 section,
                 k.c_str(),
                 "",
-                "network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
+                "network channel configuration, e.g., pegasus::tools::asio_network_provider,65536");
             utils::split_args(v.c_str(), vs, ',');
 
             if (vs.size() != 2) {
@@ -156,7 +156,7 @@ static bool build_server_network_confs(const char *section,
                 printf("invalid network server configuration '%s'\n", k.c_str());
                 printf("port must be zero in [apps..default]\n");
                 printf(" e.g., network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, "
-                       "dsn::tools::asio_network_provider,65536\n");
+                       "pegasus::tools::asio_network_provider,65536\n");
                 return false;
             }
         } else {
@@ -169,19 +169,19 @@ static bool build_server_network_confs(const char *section,
             /*
             port = 0 for default setting in [apps..default]
             port.channel = network_provider_name,buffer_block_size
-            network.server.port().RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-            network.server.port().RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
+            network.server.port().RPC_CHANNEL_TCP = pegasus::tools::asio_network_provider,65536
+            network.server.port().RPC_CHANNEL_UDP = pegasus::tools::asio_network_provider,65536
             */
 
             rpc_channel ch = rpc_channel::from_string(k3.c_str(), RPC_CHANNEL_TCP);
 
-            // dsn::tools::asio_network_provider,65536
+            // pegasus::tools::asio_network_provider,65536
             std::list<std::string> vs;
             std::string v = dsn_config_get_value_string(
                 section,
                 k.c_str(),
                 "",
-                "network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
+                "network channel configuration, e.g., pegasus::tools::asio_network_provider,65536");
             utils::split_args(v.c_str(), vs, ',');
 
             if (vs.size() != 2) {
@@ -266,19 +266,19 @@ bool service_app_spec::init(const char *section,
 
 network_client_config::network_client_config()
 {
-    factory_name = "dsn::tools::asio_network_provider";
+    factory_name = "pegasus::tools::asio_network_provider";
     message_buffer_block_size = 65536;
 }
 
 network_server_config::network_server_config() : port(0), channel(RPC_CHANNEL_TCP)
 {
-    factory_name = "dsn::tools::asio_network_provider";
+    factory_name = "pegasus::tools::asio_network_provider";
     message_buffer_block_size = 65536;
 }
 
 network_server_config::network_server_config(int p, rpc_channel c) : port(p), channel(c)
 {
-    factory_name = "dsn::tools::asio_network_provider";
+    factory_name = "pegasus::tools::asio_network_provider";
     message_buffer_block_size = 65536;
 }
 
@@ -386,4 +386,4 @@ bool service_spec::init_app_specs()
 
     return true;
 }
-} // end namespace dsn
+} // end namespace pegasus

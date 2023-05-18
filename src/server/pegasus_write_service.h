@@ -29,7 +29,7 @@
 #include "replica/replica_base.h"
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class perf_counter;
 namespace apps {
@@ -51,7 +51,7 @@ namespace replication {
 class ingestion_request;
 class ingestion_response;
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
@@ -59,7 +59,7 @@ namespace server {
 inline uint8_t get_current_cluster_id()
 {
     static const uint8_t cluster_id =
-        dsn::replication::get_duplication_cluster_id(dsn::get_current_cluster_name()).get_value();
+        replication::get_duplication_cluster_id(get_current_cluster_name()).get_value();
     return cluster_id;
 }
 
@@ -124,8 +124,8 @@ class pegasus_server_impl;
 /// Handle the write requests.
 /// As the signatures imply, this class is not responsible for replying the rpc,
 /// the caller(pegasus_server_write) should do.
-/// \see pegasus::server::pegasus_server_write::on_batched_write_requests
-class pegasus_write_service : dsn::replication::replica_base
+/// \see server::pegasus_server_write::on_batched_write_requests
+class pegasus_write_service : replication::replica_base
 {
 public:
     explicit pegasus_write_service(pegasus_server_impl *server);
@@ -139,36 +139,36 @@ public:
 
     // Write MULTI_PUT record.
     int multi_put(const db_write_context &ctx,
-                  const dsn::apps::multi_put_request &update,
-                  dsn::apps::update_response &resp);
+                  const apps::multi_put_request &update,
+                  apps::update_response &resp);
 
     // Write MULTI_REMOVE record.
     int multi_remove(int64_t decree,
-                     const dsn::apps::multi_remove_request &update,
-                     dsn::apps::multi_remove_response &resp);
+                     const apps::multi_remove_request &update,
+                     apps::multi_remove_response &resp);
 
     // Write INCR record.
-    int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp);
+    int incr(int64_t decree, const apps::incr_request &update, apps::incr_response &resp);
 
     // Write CHECK_AND_SET record.
     int check_and_set(int64_t decree,
-                      const dsn::apps::check_and_set_request &update,
-                      dsn::apps::check_and_set_response &resp);
+                      const apps::check_and_set_request &update,
+                      apps::check_and_set_response &resp);
 
     // Write CHECK_AND_MUTATE record.
     int check_and_mutate(int64_t decree,
-                         const dsn::apps::check_and_mutate_request &update,
-                         dsn::apps::check_and_mutate_response &resp);
+                         const apps::check_and_mutate_request &update,
+                         apps::check_and_mutate_response &resp);
 
     // Handles DUPLICATE duplicated from remote.
     int duplicate(int64_t decree,
-                  const dsn::apps::duplicate_request &update,
-                  dsn::apps::duplicate_response &resp);
+                  const apps::duplicate_request &update,
+                  apps::duplicate_response &resp);
 
     // Execute bulk load ingestion
     int ingest_files(int64_t decree,
-                     const dsn::replication::ingestion_request &req,
-                     dsn::replication::ingestion_response &resp);
+                     const replication::ingestion_request &req,
+                     replication::ingestion_response &resp);
 
     /// For batch write.
 
@@ -179,13 +179,13 @@ public:
     // \returns rocksdb::Status::Code.
     // NOTE that `resp` should not be moved or freed while the batch is not committed.
     int batch_put(const db_write_context &ctx,
-                  const dsn::apps::update_request &update,
-                  dsn::apps::update_response &resp);
+                  const apps::update_request &update,
+                  apps::update_response &resp);
 
     // Add REMOVE record in batch write.
     // \returns rocksdb::Status::Code.
     // NOTE that `resp` should not be moved or freed while the batch is not committed.
-    int batch_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp);
+    int batch_remove(int64_t decree, const blob &key, apps::update_response &resp);
 
     // Commit batch write.
     // \returns rocksdb::Status::Code.
@@ -216,28 +216,28 @@ private:
 
     capacity_unit_calculator *_cu_calculator;
 
-    ::dsn::perf_counter_wrapper _pfc_put_qps;
-    ::dsn::perf_counter_wrapper _pfc_multi_put_qps;
-    ::dsn::perf_counter_wrapper _pfc_remove_qps;
-    ::dsn::perf_counter_wrapper _pfc_multi_remove_qps;
-    ::dsn::perf_counter_wrapper _pfc_incr_qps;
-    ::dsn::perf_counter_wrapper _pfc_check_and_set_qps;
-    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_qps;
-    ::dsn::perf_counter_wrapper _pfc_duplicate_qps;
-    ::dsn::perf_counter_wrapper _pfc_dup_time_lag;
-    ::dsn::perf_counter_wrapper _pfc_dup_lagging_writes;
+    perf_counter_wrapper _pfc_put_qps;
+    perf_counter_wrapper _pfc_multi_put_qps;
+    perf_counter_wrapper _pfc_remove_qps;
+    perf_counter_wrapper _pfc_multi_remove_qps;
+    perf_counter_wrapper _pfc_incr_qps;
+    perf_counter_wrapper _pfc_check_and_set_qps;
+    perf_counter_wrapper _pfc_check_and_mutate_qps;
+    perf_counter_wrapper _pfc_duplicate_qps;
+    perf_counter_wrapper _pfc_dup_time_lag;
+    perf_counter_wrapper _pfc_dup_lagging_writes;
 
-    ::dsn::perf_counter_wrapper _pfc_put_latency;
-    ::dsn::perf_counter_wrapper _pfc_multi_put_latency;
-    ::dsn::perf_counter_wrapper _pfc_remove_latency;
-    ::dsn::perf_counter_wrapper _pfc_multi_remove_latency;
-    ::dsn::perf_counter_wrapper _pfc_incr_latency;
-    ::dsn::perf_counter_wrapper _pfc_check_and_set_latency;
-    ::dsn::perf_counter_wrapper _pfc_check_and_mutate_latency;
+    perf_counter_wrapper _pfc_put_latency;
+    perf_counter_wrapper _pfc_multi_put_latency;
+    perf_counter_wrapper _pfc_remove_latency;
+    perf_counter_wrapper _pfc_multi_remove_latency;
+    perf_counter_wrapper _pfc_incr_latency;
+    perf_counter_wrapper _pfc_check_and_set_latency;
+    perf_counter_wrapper _pfc_check_and_mutate_latency;
 
     // Records all requests.
-    std::vector<::dsn::perf_counter *> _batch_qps_perfcounters;
-    std::vector<::dsn::perf_counter *> _batch_latency_perfcounters;
+    std::vector<perf_counter *> _batch_qps_perfcounters;
+    std::vector<perf_counter *> _batch_latency_perfcounters;
 
     // TODO(wutao1): add perf counters for failed rpc.
 };

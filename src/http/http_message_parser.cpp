@@ -39,7 +39,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 
 struct parser_context
 {
@@ -254,4 +254,4 @@ void http_message_parser::reset()
     _parsed_length = 0;
 }
 
-} // namespace dsn
+} // namespace pegasus

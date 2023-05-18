@@ -33,7 +33,7 @@
 #include <unordered_map>
 
 #include "client/partition_resolver.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include "common/serialization_helper/pegasus.layer2_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
@@ -41,7 +41,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace replication {
@@ -67,9 +67,9 @@ private:
     struct partition_info
     {
         int timeout_count;
-        ::dsn::partition_configuration config;
+        partition_configuration config;
     };
-    mutable dsn::zrwlock_nr _config_lock;
+    mutable zrwlock_nr _config_lock;
     std::unordered_map<int, std::unique_ptr<partition_info>> _config_cache;
 
     int _app_id;
@@ -105,7 +105,7 @@ private:
     std::deque<request_context_ptr> _pending_requests_before_partition_count_unknown;
     task_ptr _query_config_task;
 
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
 private:
     // local routines
@@ -116,7 +116,7 @@ private:
 
     // with replica
     void call(request_context_ptr &&request, bool from_meta_ack = false);
-    // void replica_rw_reply(error_code err, dsn::message_ex* request, dsn::message_ex* response,
+    // void replica_rw_reply(error_code err, message_ex* request, message_ex* response,
     // request_context_ptr rc);
     void end_request(request_context_ptr &&request,
                      error_code err,
@@ -127,9 +127,9 @@ private:
     // with meta server
     task_ptr query_config(int partition_index, int timeout_ms);
     void query_config_reply(error_code err,
-                            dsn::message_ex *request,
-                            dsn::message_ex *response,
+                            message_ex *request,
+                            message_ex *response,
                             int partition_index);
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

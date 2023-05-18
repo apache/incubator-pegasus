@@ -41,7 +41,7 @@
 #include "utils/error_code.h"
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 class app_info;
 class blob;
 class message_ex;
@@ -91,7 +91,7 @@ public:
 };
 
 /// The store engine interface of Pegasus.
-/// Inherited by pegasus::pegasus_server_impl
+/// Inherited by pegasus_server_impl
 /// Inherited by apps::rrdb_service
 class replication_app_base : public replica_base
 {
@@ -315,4 +315,4 @@ protected:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

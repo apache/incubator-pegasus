@@ -49,7 +49,7 @@
 #include "utils/process_utils.h"
 #include "utils/safe_strerror_posix.h"
 
-namespace dsn {
+namespace pegasus {
 
 join_point<void, task_worker *> task_worker::on_start("task_worker::on_start");
 join_point<void, task_worker *> task_worker::on_create("task_worker::on_create");
@@ -62,7 +62,7 @@ task_worker::task_worker(task_worker_pool *pool,
     _owner_pool = pool;
     _input_queue = q;
     _index = index;
-    _native_tid = ::dsn::utils::INVALID_TID;
+    _native_tid = utils::INVALID_TID;
 
     char name[256];
     sprintf(name, "%5s.%s.%u", pool->node()->full_name(), pool->spec().name.c_str(), index);
@@ -191,7 +191,7 @@ void task_worker::run_internal()
 
     task::set_tls_dsn_context(pool()->node(), this);
 
-    _native_tid = ::dsn::utils::get_current_tid();
+    _native_tid = utils::get_current_tid();
     set_name(name().c_str());
     set_priority(pool_spec().worker_priority);
 

@@ -33,7 +33,7 @@
 #include "utils/join_point.h"
 #include "utils/sys_exit_hook.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 static void handle_core_dump(int);
@@ -50,7 +50,7 @@ void coredump::write()
     // TODO: not implemented
     //
 
-    ::dsn::tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
+    tools::sys_exit.execute(SYS_EXIT_EXCEPTION);
 }
 
 static void handle_core_dump(int signal_id)
@@ -75,4 +75,4 @@ static void handle_term(int signal_id)
     dsn_exit(0);
 }
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

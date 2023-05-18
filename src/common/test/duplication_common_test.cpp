@@ -33,7 +33,7 @@
 
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 TEST(duplication_common, get_duplication_cluster_id)
@@ -51,4 +51,4 @@ TEST(duplication_common, get_distinct_cluster_id_set)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

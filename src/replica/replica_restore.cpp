@@ -34,7 +34,7 @@
 #include "common/gpid.h"
 #include "common/json_helper.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
@@ -54,9 +54,10 @@
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
 
-using namespace dsn::dist::block_service;
+using namespace pegasus::dist::block_service;
+using namespace pegasus::utils::filesystem;
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
@@ -65,14 +66,13 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
     std::vector<std::string> sub_files;
     // filename --> file_path such as: file --> ***/***/file
     std::map<std::string, std::string> name_to_filepath;
-    if (!::dsn::utils::filesystem::get_subfiles(chkpt_dir, sub_files, false)) {
+    if (!get_subfiles(chkpt_dir, sub_files, false)) {
         LOG_ERROR_PREFIX("get subfile of dir({}) failed", chkpt_dir);
         return false;
     }
 
     for (const auto &file : sub_files) {
-        name_to_filepath.insert(
-            std::make_pair(::dsn::utils::filesystem::get_file_name(file), file));
+        name_to_filepath.insert(std::make_pair(get_file_name(file), file));
     }
 
     for (const auto &f_meta : metadata.files) {
@@ -83,8 +83,7 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
     for (const auto &pair : name_to_filepath) {
         if (pair.first == cold_backup_constant::BACKUP_METADATA)
             continue;
-        if (::dsn::utils::filesystem::file_exists(pair.second) &&
-            !::dsn::utils::filesystem::remove_path(pair.second)) {
+        if (file_exists(pair.second) && !remove_path(pair.second)) {
             LOG_ERROR_PREFIX("remove useless file({}) failed", pair.second);
             return false;
         }
@@ -96,13 +95,13 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
 bool replica::read_cold_backup_metadata(const std::string &file,
                                         cold_backup_metadata &backup_metadata)
 {
-    if (!::dsn::utils::filesystem::file_exists(file)) {
+    if (!file_exists(file)) {
         LOG_ERROR_PREFIX(
             "checkpoint on remote storage media is damaged, coz file({}) doesn't exist", file);
         return false;
     }
     int64_t file_sz = 0;
-    if (!::dsn::utils::filesystem::file_size(file, file_sz)) {
+    if (!file_size(file, file_sz)) {
         LOG_ERROR_PREFIX("get file({}) size failed", file);
         return false;
     }
@@ -126,7 +125,7 @@ bool replica::read_cold_backup_metadata(const std::string &file,
     buf.get()[fin.gcount()] = '\0';
     blob bb;
     bb.assign(std::move(buf), 0, file_sz);
-    if (!::dsn::json::json_forwarder<cold_backup_metadata>::decode(bb, backup_metadata)) {
+    if (!json::json_forwarder<cold_backup_metadata>::decode(bb, backup_metadata)) {
         LOG_ERROR_PREFIX("file({}) under checkpoint is damaged", file);
         return false;
     }
@@ -150,40 +149,42 @@ error_code replica::download_checkpoint(const configuration_restore_request &req
     // download checkpoint files
     task_tracker tracker;
     for (const auto &f_meta : backup_metadata.files) {
-        tasking::enqueue(
-            TASK_CODE_EXEC_INLINED,
-            &tracker,
-            [this, &err, remote_chkpt_dir, local_chkpt_dir, f_meta, fs]() {
-                uint64_t f_size = 0;
-                error_code download_err = _stub->_block_service_manager.download_file(
-                    remote_chkpt_dir, local_chkpt_dir, f_meta.name, fs, f_size);
-                const std::string file_name =
-                    utils::filesystem::path_combine(local_chkpt_dir, f_meta.name);
-                if (download_err == ERR_OK || download_err == ERR_PATH_ALREADY_EXIST) {
-                    if (!utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
-                        download_err = ERR_CORRUPTION;
-                    } else if (download_err == ERR_PATH_ALREADY_EXIST) {
-                        download_err = ERR_OK;
-                        f_size = f_meta.size;
-                    }
-                }
+        tasking::enqueue(TASK_CODE_EXEC_INLINED,
+                         &tracker,
+                         [this, &err, remote_chkpt_dir, local_chkpt_dir, f_meta, fs]() {
+                             uint64_t f_size = 0;
+                             error_code download_err = _stub->_block_service_manager.download_file(
+                                 remote_chkpt_dir, local_chkpt_dir, f_meta.name, fs, f_size);
+                             const std::string file_name =
+                                 path_combine(local_chkpt_dir, f_meta.name);
+                             if (download_err == ERR_OK || download_err == ERR_PATH_ALREADY_EXIST) {
+                                 if (!verify_file(file_name, f_meta.md5, f_meta.size)) {
+                                     download_err = ERR_CORRUPTION;
+                                 } else if (download_err == ERR_PATH_ALREADY_EXIST) {
+                                     download_err = ERR_OK;
+                                     f_size = f_meta.size;
+                                 }
+                             }
 
-                if (download_err != ERR_OK) {
-                    LOG_ERROR_PREFIX(
-                        "failed to download file({}), error = {}", f_meta.name, download_err);
-                    // ERR_CORRUPTION means we should rollback restore, so we can't change err if it
-                    // is ERR_CORRUPTION now, otherwise it will be overridden by other errors
-                    if (err != ERR_CORRUPTION) {
-                        err = download_err;
-                        return;
-                    }
-                }
+                             if (download_err != ERR_OK) {
+                                 LOG_ERROR_PREFIX("failed to download file({}), error = {}",
+                                                  f_meta.name,
+                                                  download_err);
+                                 // ERR_CORRUPTION means we should rollback restore, so we can't
+                                 // change err if it
+                                 // is ERR_CORRUPTION now, otherwise it will be overridden by other
+                                 // errors
+                                 if (err != ERR_CORRUPTION) {
+                                     err = download_err;
+                                     return;
+                                 }
+                             }
 
-                // update progress if download file succeed
-                update_restore_progress(f_size);
-                // report current status to meta server
-                report_restore_status_to_meta();
-            });
+                             // update progress if download file succeed
+                             update_restore_progress(f_size);
+                             // report current status to meta server
+                             report_restore_status_to_meta();
+                         });
     }
     tracker.wait_outstanding_tasks();
 
@@ -212,15 +213,14 @@ error_code replica::get_backup_metadata(block_filesystem *fs,
                                                     download_file_size);
     if (err != ERR_OK && err != ERR_PATH_ALREADY_EXIST) {
         LOG_ERROR_PREFIX("download backup_metadata failed, file({}), reason({})",
-                         utils::filesystem::path_combine(remote_chkpt_dir,
-                                                         cold_backup_constant::BACKUP_METADATA),
+                         path_combine(remote_chkpt_dir, cold_backup_constant::BACKUP_METADATA),
                          err);
         return err;
     }
 
     // parse cold_backup_meta from metadata file
     const std::string local_backup_metada_file =
-        utils::filesystem::path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
+        path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
     if (!read_cold_backup_metadata(local_backup_metada_file, backup_metadata)) {
         LOG_ERROR_PREFIX("read cold_backup_metadata from file({}) failed",
                          local_backup_metada_file);
@@ -247,29 +247,29 @@ void replica::clear_restore_useless_files(const std::string &local_chkpt_dir,
     }
 
     const std::string metadata_file =
-        utils::filesystem::path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
-    if (!utils::filesystem::remove_path(metadata_file)) {
+        path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
+    if (!remove_path(metadata_file)) {
         LOG_WARNING_PREFIX("remove backup_metadata failed, file = {}", metadata_file);
     } else {
         LOG_INFO_PREFIX("remove backup_metadata succeed, file = {}", metadata_file);
     }
 }
 
-dsn::error_code replica::find_valid_checkpoint(const configuration_restore_request &req,
-                                               std::string &remote_chkpt_dir)
+error_code replica::find_valid_checkpoint(const configuration_restore_request &req,
+                                          std::string &remote_chkpt_dir)
 {
     LOG_INFO("{}: start to find valid checkpoint of backup_id {}", name(), req.time_stamp);
 
     // we should base on old gpid to combine the path on cold backup media
-    dsn::gpid old_gpid;
+    gpid old_gpid;
     old_gpid.set_app_id(req.app_id);
     old_gpid.set_partition_index(_config.pid.get_partition_index());
     std::string backup_root = req.cluster_name;
     if (!req.restore_path.empty()) {
-        backup_root = dsn::utils::filesystem::path_combine(req.restore_path, backup_root);
+        backup_root = path_combine(req.restore_path, backup_root);
     }
     if (!req.policy_name.empty()) {
-        backup_root = dsn::utils::filesystem::path_combine(backup_root, req.policy_name);
+        backup_root = path_combine(backup_root, req.policy_name);
     }
     int64_t backup_id = req.time_stamp;
 
@@ -292,7 +292,7 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
           nullptr)
         ->wait();
 
-    if (create_response.err != dsn::ERR_OK) {
+    if (create_response.err != ERR_OK) {
         LOG_ERROR("{}: create file of block_service failed, reason {}",
                   name(),
                   create_response.err.to_string());
@@ -308,7 +308,7 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
                nullptr)
         ->wait();
 
-    if (r.err != dsn::ERR_OK) {
+    if (r.err != ERR_OK) {
         LOG_ERROR("{}: read file {} failed, reason {}",
                   name(),
                   create_response.file_handle->file_name(),
@@ -318,13 +318,13 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
 
     std::string valid_chkpt_entry(r.buffer.data(), r.buffer.length());
     LOG_INFO("{}: got a valid chkpt {}", name(), valid_chkpt_entry);
-    remote_chkpt_dir = ::dsn::utils::filesystem::path_combine(
+    remote_chkpt_dir = path_combine(
         cold_backup::get_replica_backup_path(backup_root, req.app_name, old_gpid, backup_id),
         valid_chkpt_entry);
-    return dsn::ERR_OK;
+    return ERR_OK;
 }
 
-dsn::error_code replica::restore_checkpoint()
+error_code replica::restore_checkpoint()
 {
     // first check the parameter
     configuration_restore_request restore_req;
@@ -380,7 +380,7 @@ dsn::error_code replica::restore_checkpoint()
              _dir);
 
     // then create a local restore dir if it doesn't exist
-    if (!utils::filesystem::directory_exists(_dir) && !utils::filesystem::create_directory(_dir)) {
+    if (!directory_exists(_dir) && !create_directory(_dir)) {
         LOG_ERROR("create dir {} failed", _dir);
         return ERR_FILE_OPERATION_FAILED;
     }
@@ -388,8 +388,7 @@ dsn::error_code replica::restore_checkpoint()
     std::ostringstream os;
     os << _dir << "/restore." << restore_req.policy_name << "." << restore_req.time_stamp;
     std::string restore_dir = os.str();
-    if (!utils::filesystem::directory_exists(restore_dir) &&
-        !utils::filesystem::create_directory(restore_dir)) {
+    if (!directory_exists(restore_dir) && !create_directory(restore_dir)) {
         LOG_ERROR("create restore dir {} failed", restore_dir);
         return ERR_FILE_OPERATION_FAILED;
     }
@@ -415,12 +414,11 @@ dsn::error_code replica::restore_checkpoint()
     return err;
 }
 
-dsn::error_code replica::skip_restore_partition(const std::string &restore_dir)
+error_code replica::skip_restore_partition(const std::string &restore_dir)
 {
     // Attention: when skip restore partition, we should not delete restore_dir, but we must clear
     // it because we use restore_dir to tell storage engine that start an app from restore
-    if (utils::filesystem::remove_path(restore_dir) &&
-        utils::filesystem::create_directory(restore_dir)) {
+    if (remove_path(restore_dir) && create_directory(restore_dir)) {
         LOG_INFO_PREFIX("clear restore_dir({}) succeed", restore_dir);
         _restore_progress.store(cold_backup_constant::PROGRESS_FINISHED);
         return ERR_OK;
@@ -439,27 +437,25 @@ void replica::tell_meta_to_restore_rollback()
     request.app_name = _app_info.app_name;
     request.options = std::move(options);
 
-    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_DROP_APP);
-    ::dsn::marshall(msg, request);
+    message_ex *msg = message_ex::create_request(RPC_CM_DROP_APP);
+    marshall(msg, request);
 
     rpc_address target(_stub->_failure_detector->get_servers());
-    rpc::call(target,
-              msg,
-              &_tracker,
-              [this](error_code err, dsn::message_ex *request, dsn::message_ex *resp) {
-                  if (err == ERR_OK) {
-                      configuration_drop_app_response response;
-                      ::dsn::unmarshall(resp, response);
-                      if (response.err == ERR_OK) {
-                          LOG_INFO_PREFIX("restore rolling backup succeed");
-                          return;
-                      } else {
-                          tell_meta_to_restore_rollback();
-                      }
-                  } else if (err == ERR_TIMEOUT) {
-                      tell_meta_to_restore_rollback();
-                  }
-              });
+    rpc::call(
+        target, msg, &_tracker, [this](error_code err, message_ex *request, message_ex *resp) {
+            if (err == ERR_OK) {
+                configuration_drop_app_response response;
+                unmarshall(resp, response);
+                if (response.err == ERR_OK) {
+                    LOG_INFO_PREFIX("restore rolling backup succeed");
+                    return;
+                } else {
+                    tell_meta_to_restore_rollback();
+                }
+            } else if (err == ERR_TIMEOUT) {
+                tell_meta_to_restore_rollback();
+            }
+        });
 }
 
 void replica::report_restore_status_to_meta()
@@ -469,25 +465,23 @@ void replica::report_restore_status_to_meta()
     request.pid = _config.pid;
     request.progress = _restore_progress.load();
 
-    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_REPORT_RESTORE_STATUS);
-    ::dsn::marshall(msg, request);
+    message_ex *msg = message_ex::create_request(RPC_CM_REPORT_RESTORE_STATUS);
+    marshall(msg, request);
     rpc_address target(_stub->_failure_detector->get_servers());
-    rpc::call(target,
-              msg,
-              &_tracker,
-              [this](error_code err, dsn::message_ex *request, dsn::message_ex *resp) {
-                  if (err == ERR_OK) {
-                      configuration_report_restore_status_response response;
-                      ::dsn::unmarshall(resp, response);
-                      if (response.err == ERR_OK) {
-                          LOG_DEBUG_PREFIX("report restore status succeed");
-                          return;
-                      }
-                  } else if (err == ERR_TIMEOUT) {
-                      // TODO: we should retry to make the result more precisely
-                      // report_restore_status_to_meta();
-                  }
-              });
+    rpc::call(
+        target, msg, &_tracker, [this](error_code err, message_ex *request, message_ex *resp) {
+            if (err == ERR_OK) {
+                configuration_report_restore_status_response response;
+                unmarshall(resp, response);
+                if (response.err == ERR_OK) {
+                    LOG_DEBUG_PREFIX("report restore status succeed");
+                    return;
+                }
+            } else if (err == ERR_TIMEOUT) {
+                // TODO: we should retry to make the result more precisely
+                // report_restore_status_to_meta();
+            }
+        });
 }
 
 void replica::update_restore_progress(uint64_t f_size)

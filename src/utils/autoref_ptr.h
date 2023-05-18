@@ -40,7 +40,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace dsn {
+namespace pegasus {
 class ref_counter
 {
 public:
@@ -178,4 +178,4 @@ private:
     friend class ref_ptr;
 };
 
-} // end namespace dsn
+} // end namespace pegasus

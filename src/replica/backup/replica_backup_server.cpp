@@ -33,7 +33,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace replication {
@@ -99,4 +99,4 @@ void replica_backup_server::on_clear_cold_backup(const backup_clear_request &req
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

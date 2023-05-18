@@ -30,7 +30,7 @@
 #include "utils/factory_store.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 
 class ilock
 {

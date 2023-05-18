@@ -44,6 +44,7 @@
 #include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/utils.h"
 
 using namespace ::pegasus;
 using std::map;
@@ -63,8 +64,8 @@ public:
     void TearDown() override
     {
         test_util::TearDown();
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(source_app_name, 0));
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(destination_app_name, 0));
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(source_app_name, 0));
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(destination_app_name, 0));
     }
 
     void verify_data()
@@ -93,9 +94,9 @@ public:
     void create_table_and_get_client()
     {
         ASSERT_EQ(
-            dsn::ERR_OK,
+            ERR_OK,
             ddl_client_->create_app(source_app_name, "pegasus", default_partitions, 3, {}, false));
-        ASSERT_EQ(dsn::ERR_OK,
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->create_app(
                       destination_app_name, "pegasus", default_partitions, 3, {}, false));
         srouce_client_ =
@@ -175,12 +176,12 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
-    vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
+    vector<pegasus_client::pegasus_scanner *> raw_scanners;
     ASSERT_EQ(PERR_OK, srouce_client_->get_unordered_scanners(INT_MAX, options, raw_scanners));
 
     LOG_INFO("open source app scanner succeed, partition_count = {}", raw_scanners.size());
 
-    vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
+    vector<pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto raw_scanner : raw_scanners) {
         ASSERT_NE(nullptr, raw_scanner);
         scanners.push_back(raw_scanner->get_smart_wrapper());
@@ -204,7 +205,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
                                                            &error_occurred,
                                                            max_multi_set_concurrency);
         contexts.emplace_back(context);
-        dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_multi_data_next, context));
+        tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_multi_data_next, context));
     }
 
     // wait thread complete

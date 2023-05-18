@@ -38,12 +38,13 @@
 #include "utils/ports.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(mandatory_auth);
 
-inline bool is_negotiation_message(dsn::task_code code)
+namespace pegasus {
+namespace security {
+
+inline bool is_negotiation_message(task_code code)
 {
     return code == RPC_NEGOTIATION || code == RPC_NEGOTIATION_ACK;
 }
@@ -72,7 +73,7 @@ void negotiation_manager::on_negotiation_request(negotiation_rpc rpc)
           "only server session receives negotiation request");
 
     // reply SASL_AUTH_DISABLE if auth is not enable
-    if (!security::FLAGS_enable_auth) {
+    if (!FLAGS_enable_auth) {
         rpc.response().status = negotiation_status::type::SASL_AUTH_DISABLE;
         return;
     }
@@ -163,4 +164,4 @@ void init_join_point()
     rpc_session::on_rpc_send_message.put_native(negotiation_manager::on_rpc_send_msg);
 }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

@@ -32,7 +32,7 @@
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "replica/disk_cleaner.h"
 #include "replica/replica_stub.h"
@@ -44,7 +44,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 using query_disk_info_rpc = rpc_holder<query_disk_info_request, query_disk_info_response>;
@@ -103,7 +103,7 @@ TEST_F(replica_disk_test, on_query_disk_info_all_app)
         ASSERT_EQ(disk_infos[i].disk_capacity_mb, 500);
         ASSERT_EQ(disk_infos[i].disk_available_mb, (i + 1) * 50);
         // `holding_primary_replicas` and `holding_secondary_replicas` is std::map<app_id,
-        // std::set<::dsn::gpid>>
+        // std::set<gpid>>
         ASSERT_EQ(disk_infos[i].holding_primary_replicas.size(), 2);
         ASSERT_EQ(disk_infos[i].holding_secondary_replicas.size(), 2);
 
@@ -177,7 +177,7 @@ TEST_F(replica_disk_test, on_query_disk_info_one_app)
             continue;
         }
         // `holding_primary_replicas` and `holding_secondary_replicas` is std::map<app_id,
-        // std::set<::dsn::gpid>>
+        // std::set<gpid>>
         ASSERT_EQ(disk_infos_with_app_1[i].holding_primary_replicas.size(), 1);
         ASSERT_EQ(disk_infos_with_app_1[i].holding_secondary_replicas.size(), 1);
         ASSERT_EQ(disk_infos_with_app_1[i].holding_primary_replicas[app_info_1.app_id].size(),
@@ -217,10 +217,10 @@ TEST_F(replica_disk_test, gc_disk_useless_dir)
 
     std::vector<std::string> data_dirs{"./"};
     disk_cleaning_report report{};
-    dsn::replication::disk_remove_useless_dirs(data_dirs, report);
+    replication::disk_remove_useless_dirs(data_dirs, report);
 
     for (const auto &test : tests) {
-        if (!dsn::replication::is_data_dir_removable(test)) {
+        if (!replication::is_data_dir_removable(test)) {
             ASSERT_TRUE(utils::filesystem::directory_exists(test));
             continue;
         }
@@ -309,4 +309,4 @@ TEST_F(replica_disk_test, add_new_disk_test)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

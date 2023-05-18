@@ -19,7 +19,7 @@
 
 #include "utils/errors.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 // init security(kerberos and sasl)
 bool init(bool is_server);
@@ -27,4 +27,4 @@ bool init(bool is_server);
 // init security only for zookeeper client(kerberos and sasl)
 bool init_for_zookeeper_client();
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

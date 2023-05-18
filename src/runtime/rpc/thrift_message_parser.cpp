@@ -49,7 +49,7 @@
 #include "utils/string_view.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 
 //                 //
 // Request Parsing //
@@ -101,13 +101,13 @@ static int32_t gpid_to_thread_hash(gpid id)
 // and constructs a `message_ex` object.
 static message_ex *create_message_from_request_blob(const blob &body_data)
 {
-    dsn::message_ex *msg = message_ex::create_receive_message_with_standalone_header(body_data);
-    dsn::message_header *dsn_hdr = msg->header;
+    message_ex *msg = message_ex::create_receive_message_with_standalone_header(body_data);
+    message_header *dsn_hdr = msg->header;
 
-    dsn::rpc_read_stream stream(msg);
-    ::dsn::binary_reader_transport binary_transport(stream);
-    boost::shared_ptr<::dsn::binary_reader_transport> trans_ptr(
-        &binary_transport, [](::dsn::binary_reader_transport *) {});
+    rpc_read_stream stream(msg);
+    binary_reader_transport binary_transport(stream);
+    boost::shared_ptr<binary_reader_transport> trans_ptr(&binary_transport,
+                                                         [](binary_reader_transport *) {});
     ::apache::thrift::protocol::TBinaryProtocol iprot(trans_ptr);
 
     std::string fname;
@@ -228,8 +228,8 @@ message_ex *thrift_message_parser::parse_request_body_v0(message_reader *reader,
 
     msg->header->body_length = _meta_v0->body_length;
     CHECK_EQ(msg->header->body_length, msg->buffers[1].size());
-    msg->header->gpid.set_app_id(_meta_v0->app_id);
-    msg->header->gpid.set_partition_index(_meta_v0->partition_index);
+    msg->header->gpid_.set_app_id(_meta_v0->app_id);
+    msg->header->gpid_.set_partition_index(_meta_v0->partition_index);
     msg->header->client.timeout_ms = _meta_v0->client_timeout;
     msg->header->client.thread_hash = _meta_v0->client_thread_hash;
     msg->header->client.partition_hash = _meta_v0->client_partition_hash;
@@ -248,9 +248,9 @@ message_ex *thrift_message_parser::parse_request_body_v1(message_reader *reader,
         }
 
         binary_reader meta_reader(buf);
-        ::dsn::binary_reader_transport trans(meta_reader);
-        boost::shared_ptr<::dsn::binary_reader_transport> transport(
-            &trans, [](::dsn::binary_reader_transport *) {});
+        binary_reader_transport trans(meta_reader);
+        boost::shared_ptr<binary_reader_transport> transport(&trans,
+                                                             [](binary_reader_transport *) {});
         ::apache::thrift::protocol::TBinaryProtocol proto(transport);
         _v1_specific_vars->_meta_v1->read(&proto);
         _v1_specific_vars->_meta_parsed = true;
@@ -277,10 +277,10 @@ message_ex *thrift_message_parser::parse_request_body_v1(message_reader *reader,
 
     msg->header->body_length = _v1_specific_vars->_body_length;
     CHECK_EQ(msg->header->body_length, msg->buffers[1].size());
-    msg->header->gpid.set_app_id(_v1_specific_vars->_meta_v1->app_id);
-    msg->header->gpid.set_partition_index(_v1_specific_vars->_meta_v1->partition_index);
+    msg->header->gpid_.set_app_id(_v1_specific_vars->_meta_v1->app_id);
+    msg->header->gpid_.set_partition_index(_v1_specific_vars->_meta_v1->partition_index);
     msg->header->client.timeout_ms = _v1_specific_vars->_meta_v1->client_timeout;
-    msg->header->client.thread_hash = gpid_to_thread_hash(msg->header->gpid);
+    msg->header->client.thread_hash = gpid_to_thread_hash(msg->header->gpid_);
     msg->header->client.partition_hash = _v1_specific_vars->_meta_v1->client_partition_hash;
     msg->header->context.u.is_backup_request = _v1_specific_vars->_meta_v1->is_backup_request;
     reset();
@@ -427,4 +427,4 @@ thrift_message_parser::thrift_message_parser()
 
 thrift_message_parser::~thrift_message_parser() = default;
 
-} // namespace dsn
+} // namespace pegasus

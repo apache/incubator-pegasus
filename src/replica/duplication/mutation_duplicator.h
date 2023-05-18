@@ -28,12 +28,12 @@
 #include "replica/replica_base.h"
 #include "runtime/pipeline.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 /// \brief Each of the mutation is a tuple made up of
-/// <timestamp, task_code, dsn::blob>.
-/// dsn::blob is the content of the mutation.
+/// <timestamp, task_code, blob>.
+/// blob is the content of the mutation.
 typedef std::tuple<uint64_t, task_code, blob> mutation_tuple;
 
 /// mutations are sorted by timestamp in mutation_tuple_set.
@@ -54,7 +54,7 @@ typedef std::set<mutation_tuple, mutation_tuple_cmp> mutation_tuple_set;
 
 /// \brief This is an interface for handling the mutation logs intended to
 /// be duplicated to remote cluster.
-/// \see dsn::replication::replica_duplicator
+/// \see replication::replica_duplicator
 class mutation_duplicator : public replica_base
 {
 public:
@@ -90,4 +90,4 @@ new_mutation_duplicator(replica_base *r, string_view remote_cluster_address, str
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

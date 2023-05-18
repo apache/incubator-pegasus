@@ -17,25 +17,25 @@
 // File: string_view.h
 // -----------------------------------------------------------------------------
 //
-// This file contains the definition of the `dsn::string_view` class. A
+// This file contains the definition of the `pegasus::string_view` class. A
 // `string_view` points to a contiguous span of characters, often part or all of
 // another `std::string`, double-quoted std::string literal, character array, or even
 // another `string_view`.
 //
-// This `dsn::string_view` abstraction is designed to be a drop-in
+// This `pegasus::string_view` abstraction is designed to be a drop-in
 // replacement for the C++17 `std::string_view` abstraction.
 //
 // --- Update(wutao1) ---
 //
 // This file is copied from abseil, though in order to maintain minimum
-// dependencies, abseil is not an requirement. The dsn::string_view consists of only
+// dependencies, abseil is not an requirement. The pegasus::string_view consists of only
 // a subset of functions that std::string_view and absl::string_view provide, so that
 // we can keep this module lightweight, but reducing the generality.
 //
-// dsn::string_view also supports view of dsn::blob, which can also function as a constant
-// view. However, dsn::blob is not designed to be as lightweight as dsn::string_view
+// pegasus::string_view also supports view of pegasus::blob, which can also function as a constant
+// view. However, pegasus::blob is not designed to be as lightweight as pegasus::string_view
 // since it requires at least one atomic operation to copy the internal std::shared_ptr.
-// So in most cases where data is immutable, using dsn::string_view over dsn::blob will
+// So in most cases where data is immutable, using pegasus::string_view over pegasus::blob will
 // be a more proper choice.
 
 #pragma once
@@ -50,11 +50,11 @@
 
 #include "ports.h"
 
-namespace dsn {
+namespace pegasus {
 
 class blob;
 
-// dsn::string_view
+// pegasus::string_view
 //
 // A `string_view` provides a lightweight view into the std::string data provided by
 // a `std::string`, double-quoted std::string literal, character array, or even
@@ -69,11 +69,11 @@ class blob;
 //
 // Because of its small size, prefer passing `string_view` by value:
 //
-//   void MyFunction(dsn::string_view arg);
+//   void MyFunction(pegasus::string_view arg);
 //
 // If circumstances require, you may also pass one by const reference:
 //
-//   void MyFunction(const dsn::string_view& arg);  // not preferred
+//   void MyFunction(const pegasus::string_view& arg);  // not preferred
 //
 // Passing by value generates slightly smaller code for many architectures.
 //
@@ -86,11 +86,11 @@ class blob;
 // temporary value:
 //
 //   // BAD use of string_view: lifetime problem
-//   dsn::string_view sv = obj.ReturnAString();
+//   pegasus::string_view sv = obj.ReturnAString();
 //
 //   // GOOD use of string_view: str outlives sv
 //   std::string str = obj.ReturnAString();
-//   dsn::string_view sv = str;
+//   pegasus::string_view sv = str;
 //
 // Due to lifetime issues, a `string_view` is sometimes a poor choice for a
 // return value and usually a poor choice for a data member. If you do use a
@@ -98,7 +98,7 @@ class blob;
 // pointed to by the `string_view` outlives the `string_view`.
 //
 // A `string_view` may represent a whole std::string or just part of a std::string. For
-// example, when splitting a std::string, `std::vector<dsn::string_view>` is a
+// example, when splitting a std::string, `std::vector<pegasus::string_view>` is a
 // natural data type for the output.
 //
 //
@@ -112,8 +112,8 @@ class blob;
 //
 // You may create a null `string_view` in two ways:
 //
-//   dsn::string_view sv();
-//   dsn::string_view sv(nullptr, 0);
+//   pegasus::string_view sv();
+//   pegasus::string_view sv(nullptr, 0);
 //
 // For the above, `sv.data() == nullptr`, `sv.length() == 0`, and
 // `sv.empty() == true`. Also, if you create a `string_view` with a non-null
@@ -131,17 +131,17 @@ class blob;
 //
 //   const char* nullcp = nullptr;
 //   // string_view.size() will return 0 in all cases.
-//   dsn::string_view();
-//   dsn::string_view(nullcp, 0);
-//   dsn::string_view("");
-//   dsn::string_view("", 0);
-//   dsn::string_view("abcdef", 0);
-//   dsn::string_view("abcdef" + 6, 0);
+//   pegasus::string_view();
+//   pegasus::string_view(nullcp, 0);
+//   pegasus::string_view("");
+//   pegasus::string_view("", 0);
+//   pegasus::string_view("abcdef", 0);
+//   pegasus::string_view("abcdef" + 6, 0);
 //
 // All empty `string_view` objects whether null or not, are equal:
 //
-//   dsn::string_view() == dsn::string_view("", 0)
-//   dsn::string_view(nullptr, 0) == dsn::string_view("abcdef"+6, 0)
+//   pegasus::string_view() == pegasus::string_view("", 0)
+//   pegasus::string_view(nullptr, 0) == pegasus::string_view("abcdef"+6, 0)
 class string_view
 {
 public:
@@ -343,7 +343,7 @@ public:
     // string_view::compare()
     //
     // Performs a lexicographical comparison between the `string_view` and
-    // another `dsn::string_view), returning -1 if `this` is less than, 0 if
+    // another `pegasus::string_view), returning -1 if `this` is less than, 0 if
     // `this` is equal to, and 1 if `this` is greater than the passed std::string
     // view. Note that in the case of data equality, a further comparison is made
     // on the respective sizes of the two `string_view`s to determine which is
@@ -427,4 +427,4 @@ inline bool operator!=(string_view x, string_view y) noexcept { return !(x == y)
 // IO Insertion Operator
 std::ostream &operator<<(std::ostream &o, string_view piece);
 
-} // namespace dsn
+} // namespace pegasus

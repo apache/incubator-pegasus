@@ -29,7 +29,7 @@
 #include "common/gpid.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 /// Base class for types that are one-instance-per-replica.
@@ -60,4 +60,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

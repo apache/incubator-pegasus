@@ -24,15 +24,15 @@
  * THE SOFTWARE.
  */
 
-include "../../idl/dsn.thrift"
-include "../../idl/dsn.layer2.thrift"
+include "../../idl/pegasus.thrift"
+include "../../idl/pegasus.layer2.thrift"
 include "../../idl/metadata.thrift"
 
-namespace cpp dsn.replication
+namespace cpp pegasus.replication
 
 struct mutation_header
 {
-    1:dsn.gpid             pid;
+    1:pegasus.gpid         pid;
     2:i64                  ballot;
     3:i64                  decree;
     4:i64                  log_offset;
@@ -42,11 +42,11 @@ struct mutation_header
 
 struct mutation_update
 {
-    1:dsn.task_code  code;
+    1:pegasus.task_code  code;
 
     //the serialization type of data, this need to store in log and replicate to secondaries by primary
     2:i32            serialization_type;
-    3:dsn.blob       data;
+    3:pegasus.blob   data;
     4:optional i64   start_time_ns;
 }
 
@@ -72,27 +72,27 @@ enum read_semantic
 
 struct read_request_header
 {
-    1:dsn.gpid pid;
-    2:dsn.task_code       code;
+    1:pegasus.gpid        pid;
+    2:pegasus.task_code   code;
     3:read_semantic       semantic = read_semantic.ReadLastUpdate;
     4:i64                 version_decree = -1;
 }
 
 struct write_request_header
 {
-    1:dsn.gpid pid;
-    2:dsn.task_code       code;
+    1:pegasus.gpid      pid;
+    2:pegasus.task_code code;
 }
 
 struct rw_response_header
 {
-    1:dsn.error_code      err;
+    1:pegasus.error_code      err;
 }
 
 struct prepare_ack
 {
-    1:dsn.gpid pid;
-    2:dsn.error_code      err;
+    1:pegasus.gpid        pid;
+    2:pegasus.error_code  err;
     3:i64                 ballot;
     4:i64                 decree;
     5:i64                 last_committed_decree_in_app;
@@ -113,7 +113,7 @@ struct learn_state
 {
     1:i64            from_decree_excluded;
     2:i64            to_decree_included;
-    3:dsn.blob       meta;
+    3:pegasus.blob   meta;
     4:list<string>   files;
 
     // Used by duplication. Holds the start_decree of this round of learn.
@@ -132,12 +132,12 @@ enum learner_status
 
 struct learn_request
 {
-    1:dsn.gpid pid;
-    2:dsn.rpc_address     learner; // learner's address
+    1:pegasus.gpid        pid;
+    2:pegasus.rpc_address learner; // learner's address
     3:i64                 signature; // learning signature
     4:i64                 last_committed_decree_in_app; // last committed decree of learner's app
     5:i64                 last_committed_decree_in_prepare_list; // last committed decree of learner's prepare list
-    6:dsn.blob            app_specific_learn_request; // learning request data by app.prepare_learn_request()
+    6:pegasus.blob        app_specific_learn_request; // learning request data by app.prepare_learn_request()
 
     // Used by duplication to determine if learner has enough logs on disk to
     // be duplicated (ie. max_gced_decree < confirmed_decree), if not,
@@ -147,50 +147,50 @@ struct learn_request
 
 struct learn_response
 {
-    1:dsn.error_code        err; // error code
+    1:pegasus.error_code             err; // error code
     2:metadata.replica_configuration config; // learner's replica config
-    3:i64                   last_committed_decree; // learnee's last committed decree
-    4:i64                   prepare_start_decree; // prepare start decree
-    5:learn_type            type = learn_type.LT_INVALID; // learning type: CACHE, LOG, APP
-    6:learn_state           state; // learning data, including memory data and files
-    7:dsn.rpc_address       address; // learnee's address
-    8:string                base_local_dir; // base dir of files on learnee
-    9:optional string replica_disk_tag; // the disk tag of learnee located
+    3:i64                            last_committed_decree; // learnee's last committed decree
+    4:i64                            prepare_start_decree; // prepare start decree
+    5:learn_type                     type = learn_type.LT_INVALID; // learning type: CACHE, LOG, APP
+    6:learn_state                    state; // learning data, including memory data and files
+    7:pegasus.rpc_address            address; // learnee's address
+    8:string                         base_local_dir; // base dir of files on learnee
+    9:optional string                replica_disk_tag; // the disk tag of learnee located
 }
 
 struct learn_notify_response
 {
-    1:dsn.gpid pid;
-    2:dsn.error_code        err; // error code
-    3:i64                   signature; // learning signature
+    1:pegasus.gpid       pid;
+    2:pegasus.error_code err; // error code
+    3:i64                signature; // learning signature
 }
 
 struct group_check_request
 {
-    1:dsn.layer2.app_info   app;
-    2:dsn.rpc_address       node;
+    1:pegasus.layer2.app_info        app;
+    2:pegasus.rpc_address            node;
     3:metadata.replica_configuration config;
-    4:i64                   last_committed_decree;
+    4:i64                            last_committed_decree;
 
     // Used to sync duplication progress between primaries
     // and secondaries, so that secondaries can be allowed to GC
     // their WALs after this decree.
-    5:optional i64          confirmed_decree;
+    5:optional i64                   confirmed_decree;
 
     // Used to deliver child gpid and meta_split_status during partition split
-    6:optional dsn.gpid     child_gpid;
+    6:optional pegasus.gpid          child_gpid;
     7:optional metadata.split_status meta_split_status;
 }
 
 struct group_check_response
 {
-    1:dsn.gpid pid;
-    2:dsn.error_code      err;
+    1:pegasus.gpid        pid;
+    2:pegasus.error_code  err;
     3:i64                 last_committed_decree_in_app;
     4:i64                 last_committed_decree_in_prepare_list;
     5:learner_status      learner_status_ = learner_status.LearningInvalid;
     6:i64                 learner_signature;
-    7:dsn.rpc_address     node;
+    7:pegasus.rpc_address node;
     // Used for pause or cancel partition split
     // if secondary pause or cancel split succeed, is_split_stopped = true
     8:optional bool       is_split_stopped;

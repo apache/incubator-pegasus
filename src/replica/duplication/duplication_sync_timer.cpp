@@ -39,7 +39,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DEFINE_TASK_CODE(LPC_DUPLICATION_SYNC_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
@@ -206,4 +206,4 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

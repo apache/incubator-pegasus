@@ -36,9 +36,9 @@ class S2CellId;
 class S2CellUnion;
 class S2LatLng;
 
-namespace dsn {
+namespace pegasus {
 class error_s;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace geo {
@@ -372,7 +372,7 @@ public:
         return _common_data_client->get_error_string(error_code);
     }
 
-    dsn::error_s set_max_level(int level);
+    error_s set_max_level(int level);
 
     // For test.
     const latlng_codec &get_codec() const { return _codec; }
@@ -482,7 +482,7 @@ private:
                  std::list<SearchResult> &result);
 
 private:
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
     latlng_codec _codec;
     pegasus_client *_common_data_client = nullptr;

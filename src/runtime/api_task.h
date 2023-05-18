@@ -40,7 +40,7 @@
 @{
  */
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 typedef std::function<void()> task_handler;
@@ -48,8 +48,8 @@ typedef std::function<void()> task_handler;
 /// A callback to handle rpc requests.
 ///
 /// Parameters:
-///  - dsn::message_ex*: the received rpc request
-typedef std::function<void(dsn::message_ex *)> rpc_request_handler;
+///  - message_ex*: the received rpc request
+typedef std::function<void(message_ex *)> rpc_request_handler;
 
 /// A callback to handle rpc responses.
 ///
@@ -57,25 +57,25 @@ typedef std::function<void(dsn::message_ex *)> rpc_request_handler;
 ///  - error_code
 ///  - message_ex: the sent rpc request
 ///  - message_ex: the received rpc response
-typedef std::function<void(dsn::error_code, dsn::message_ex *, dsn::message_ex *)>
-    rpc_response_handler;
+typedef std::function<void(error_code, message_ex *, message_ex *)> rpc_response_handler;
 
 /// Parameters:
 ///  - error_code
 ///  - size_t: the read or written size of bytes from file.
-typedef std::function<void(dsn::error_code, size_t)> aio_handler;
+typedef std::function<void(error_code, size_t)> aio_handler;
 
 class task;
 class raw_task;
 class rpc_request_task;
 class rpc_response_task;
 class aio_task;
-}
+} // namespace pegasus
+
 /*!
 apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
 the length of a vitual queue (bound to current code + hash) to
 enable customized throttling, see spec of thread pool for more information
 */
-extern volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash = 0);
+extern volatile int *dsn_task_queue_virtual_length_ptr(pegasus::task_code code, int hash = 0);
 
 /*@}*/

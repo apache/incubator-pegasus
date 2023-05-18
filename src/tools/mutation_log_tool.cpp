@@ -40,13 +40,13 @@
 #include "utils/error_code.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 bool mutation_log_tool::dump(
     const std::string &log_dir,
     std::ostream &output,
-    std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)>
+    std::function<void(int64_t decree, int64_t timestamp, message_ex **requests, int count)>
         callback)
 {
     mutation_log_ptr mlog = new mutation_log_shared(log_dir, 32, false);
@@ -69,11 +69,11 @@ bool mutation_log_tool::dump(
                    << "update_count=" << mu->data.updates.size();
             if (callback && mu->data.updates.size() > 0) {
 
-                dsn::message_ex **batched_requests =
-                    (dsn::message_ex **)alloca(sizeof(dsn::message_ex *) * mu->data.updates.size());
+                message_ex **batched_requests =
+                    (message_ex **)alloca(sizeof(message_ex *) * mu->data.updates.size());
                 int batched_count = 0;
                 for (mutation_update &update : mu->data.updates) {
-                    dsn::message_ex *req = dsn::message_ex::create_received_request(
+                    message_ex *req = message_ex::create_received_request(
                         update.code,
                         (dsn_msg_serialize_format)update.serialization_type,
                         (void *)update.data.data(),
@@ -92,7 +92,7 @@ bool mutation_log_tool::dump(
         },
         nullptr);
     mlog->close();
-    if (err != dsn::ERR_OK) {
+    if (err != ERR_OK) {
         output << "ERROR: dump mutation log failed, err = " << err.to_string() << std::endl;
         return false;
     } else {
@@ -100,4 +100,4 @@ bool mutation_log_tool::dump(
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

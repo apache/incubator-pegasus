@@ -34,7 +34,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
@@ -121,4 +121,4 @@ std::string string_md5(const char *buffer, unsigned int length);
 // if there is no prefix or the first character is "separator", it will return "".
 std::string find_string_prefix(const std::string &input, char separator);
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

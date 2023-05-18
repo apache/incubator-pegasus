@@ -41,7 +41,7 @@
 
 #include "utils/rand.h"
 
-using namespace ::dsn;
+namespace pegasus {
 
 TEST(core, env)
 {
@@ -55,3 +55,4 @@ TEST(core, env)
         EXPECT_TRUE(r == x || r == (x + 1));
     }
 }
+} // namespace pegasus

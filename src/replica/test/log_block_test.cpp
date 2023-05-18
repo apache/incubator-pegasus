@@ -32,7 +32,7 @@
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class log_block_test : public replica_test_base
@@ -180,4 +180,4 @@ TEST_F(log_appender_test, read_log_block)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

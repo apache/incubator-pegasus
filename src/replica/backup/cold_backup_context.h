@@ -38,14 +38,13 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-class replication_service_test_app;
-
-namespace dsn {
+namespace pegasus {
 class blob;
 
 namespace replication {
 
 class replica;
+class replication_service_test_app;
 
 //
 //                                  ColdBackupInvalid
@@ -338,7 +337,7 @@ public:
     int64_t checkpoint_file_total_size;
 
 private:
-    friend class ::replication_service_test_app;
+    friend class pegasus::replication::replication_service_test_app;
 
     /// state variables
     std::atomic_int _status;
@@ -384,7 +383,7 @@ private:
     uint64_t _start_time_ms;
 };
 
-typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
+typedef ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

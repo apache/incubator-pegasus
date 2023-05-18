@@ -50,7 +50,7 @@
 #include "utils/rand.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace fail {
 
 static fail_point_registry REGISTRY;
@@ -182,4 +182,4 @@ const std::string *fail_point::eval()
 }
 
 } // namespace fail
-} // namespace dsn
+} // namespace pegasus

@@ -43,7 +43,7 @@
 #include "utils/string_view.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 replica_follower::replica_follower(replica *r) : replica_base(r), _replica(r)
@@ -70,10 +70,10 @@ void replica_follower::init_master_info()
 
     const auto &meta_list_str = envs.at(duplication_constants::kDuplicationEnvMasterMetasKey);
     std::vector<std::string> metas;
-    dsn::utils::split_args(meta_list_str.c_str(), metas, ',');
+    utils::split_args(meta_list_str.c_str(), metas, ',');
     CHECK(!metas.empty(), "master cluster meta list is invalid!");
     for (const auto &meta : metas) {
-        dsn::rpc_address node;
+        rpc_address node;
         CHECK(node.from_string_ipv4(meta.c_str()), "{} is invalid meta address", meta);
         _master_meta_list.emplace_back(std::move(node));
     }
@@ -115,9 +115,9 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
     meta_config_request.partition_indices = {get_gpid().get_partition_index()};
 
     LOG_INFO_PREFIX("query master[{}] replica configuration", master_replica_name());
-    dsn::message_ex *msg = dsn::message_ex::create_request(
+    message_ex *msg = message_ex::create_request(
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, get_gpid().thread_hash());
-    dsn::marshall(msg, meta_config_request);
+    marshall(msg, meta_config_request);
     rpc::call(meta_servers, msg, &_tracker, [&](error_code err, query_cfg_response &&resp) mutable {
         FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](string_view s) -> void {
             _tracker.set_tasks_success();
@@ -187,9 +187,9 @@ void replica_follower::copy_master_replica_checkpoint()
                     master_replica_name());
     learn_request request;
     request.pid = _master_replica_config.pid;
-    dsn::message_ex *msg = dsn::message_ex::create_request(
+    message_ex *msg = message_ex::create_request(
         RPC_QUERY_LAST_CHECKPOINT_INFO, 0, _master_replica_config.pid.thread_hash());
-    dsn::marshall(msg, request);
+    marshall(msg, request);
     rpc::call(_master_replica_config.primary,
               msg,
               &_tracker,
@@ -265,4 +265,4 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

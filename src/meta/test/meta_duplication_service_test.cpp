@@ -46,7 +46,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "duplication_types.h"
 #include "http/http_server.h"
 #include "meta/duplication/duplication_info.h"
@@ -63,8 +63,10 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/time_utils.h"
+#include "utils/rand.h"
 
-namespace dsn {
+using pegasus::rand::next_u32;
+namespace pegasus {
 namespace replication {
 
 class meta_duplication_service_test : public meta_test_base
@@ -548,7 +550,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
 
     // generate all primaries on node[0]
     for (partition_configuration &pc : app->partitions) {
-        pc.ballot = random32(1, 10000);
+        pc.ballot = next_u32(1, 10000);
         pc.primary = server_nodes[0];
         pc.secondaries.push_back(server_nodes[1]);
         pc.secondaries.push_back(server_nodes[2]);
@@ -890,4 +892,4 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

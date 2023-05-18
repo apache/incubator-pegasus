@@ -65,7 +65,7 @@
 #define close_ close
 #define stat_ stat
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 namespace filesystem {
 
@@ -177,7 +177,7 @@ static bool path_exists_internal(const std::string &npath, int type)
     struct stat_ st;
     int err;
 
-    err = dsn::utils::filesystem::get_stat_internal(npath, st);
+    err = get_stat_internal(npath, st);
     if (err != 0) {
         return false;
     }
@@ -214,7 +214,7 @@ bool path_exists(const std::string &path)
         return false;
     }
 
-    return dsn::utils::filesystem::path_exists_internal(npath, FTW_NS);
+    return path_exists_internal(npath, FTW_NS);
 }
 
 bool directory_exists(const std::string &path)
@@ -231,7 +231,7 @@ bool directory_exists(const std::string &path)
         return false;
     }
 
-    return dsn::utils::filesystem::path_exists_internal(npath, FTW_D);
+    return path_exists_internal(npath, FTW_D);
 }
 
 bool file_exists(const std::string &path)
@@ -248,7 +248,7 @@ bool file_exists(const std::string &path)
         return false;
     }
 
-    return dsn::utils::filesystem::path_exists_internal(npath, FTW_F);
+    return path_exists_internal(npath, FTW_F);
 }
 
 static bool get_subpaths(const std::string &path,
@@ -269,48 +269,46 @@ static bool get_subpaths(const std::string &path,
         return false;
     }
 
-    if (!dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
+    if (!path_exists_internal(npath, FTW_D)) {
         return false;
     }
 
     switch (typeflags) {
     case FTW_F:
-        ret = dsn::utils::filesystem::file_tree_walk(
-            npath,
-            [&sub_list](const char *fpath, int typeflag, struct FTW *ftwbuf) {
-                if (typeflag == FTW_F) {
-                    sub_list.push_back(fpath);
-                }
+        ret = file_tree_walk(npath,
+                             [&sub_list](const char *fpath, int typeflag, struct FTW *ftwbuf) {
+                                 if (typeflag == FTW_F) {
+                                     sub_list.push_back(fpath);
+                                 }
 
-                return FTW_CONTINUE;
-            },
-            recursive);
+                                 return FTW_CONTINUE;
+                             },
+                             recursive);
         break;
 
     case FTW_D:
-        ret = dsn::utils::filesystem::file_tree_walk(
-            npath,
-            [&sub_list](const char *fpath, int typeflag, struct FTW *ftwbuf) {
-                if (((typeflag == FTW_D) || (typeflag == FTW_DP)) && (ftwbuf->level > 0)) {
-                    sub_list.push_back(fpath);
-                }
+        ret = file_tree_walk(npath,
+                             [&sub_list](const char *fpath, int typeflag, struct FTW *ftwbuf) {
+                                 if (((typeflag == FTW_D) || (typeflag == FTW_DP)) &&
+                                     (ftwbuf->level > 0)) {
+                                     sub_list.push_back(fpath);
+                                 }
 
-                return FTW_CONTINUE;
-            },
-            recursive);
+                                 return FTW_CONTINUE;
+                             },
+                             recursive);
         break;
 
     case FTW_NS:
-        ret = dsn::utils::filesystem::file_tree_walk(
-            npath,
-            [&sub_list](const char *fpath, int typeflag, struct FTW *ftwbuf) {
-                if (ftwbuf->level > 0) {
-                    sub_list.push_back(fpath);
-                }
+        ret = file_tree_walk(npath,
+                             [&sub_list](const char *fpath, int typeflag, struct FTW *ftwbuf) {
+                                 if (ftwbuf->level > 0) {
+                                     sub_list.push_back(fpath);
+                                 }
 
-                return FTW_CONTINUE;
-            },
-            recursive);
+                                 return FTW_CONTINUE;
+                             },
+                             recursive);
         break;
 
     default:
@@ -323,17 +321,17 @@ static bool get_subpaths(const std::string &path,
 
 bool get_subfiles(const std::string &path, std::vector<std::string> &sub_list, bool recursive)
 {
-    return dsn::utils::filesystem::get_subpaths(path, sub_list, recursive, FTW_F);
+    return get_subpaths(path, sub_list, recursive, FTW_F);
 }
 
 bool get_subdirectories(const std::string &path, std::vector<std::string> &sub_list, bool recursive)
 {
-    return dsn::utils::filesystem::get_subpaths(path, sub_list, recursive, FTW_D);
+    return get_subpaths(path, sub_list, recursive, FTW_D);
 }
 
 bool get_subpaths(const std::string &path, std::vector<std::string> &sub_list, bool recursive)
 {
-    return dsn::utils::filesystem::get_subpaths(path, sub_list, recursive, FTW_NS);
+    return get_subpaths(path, sub_list, recursive, FTW_NS);
 }
 
 static bool remove_directory(const std::string &npath)
@@ -362,14 +360,14 @@ bool remove_path(const std::string &path)
         return false;
     }
 
-    if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
+    if (path_exists_internal(npath, FTW_F)) {
         bool ret = (::remove(npath.c_str()) == 0);
         if (!ret) {
             LOG_WARNING("remove file {} failed, err = {}", path, safe_strerror(errno));
         }
         return ret;
-    } else if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
-        return dsn::utils::filesystem::remove_directory(npath);
+    } else if (path_exists_internal(npath, FTW_D)) {
+        return remove_directory(npath);
     } else {
         return true;
     }
@@ -403,7 +401,7 @@ bool file_size(const std::string &path, int64_t &sz)
         return false;
     }
 
-    err = dsn::utils::filesystem::get_stat_internal(npath, st);
+    err = get_stat_internal(npath, st);
     if (err != 0) {
         return false;
     }
@@ -430,7 +428,7 @@ static int create_directory_component(const std::string &npath)
         return err;
     }
 
-    return (dsn::utils::filesystem::path_exists_internal(npath, FTW_F) ? EEXIST : 0);
+    return (path_exists_internal(npath, FTW_F) ? EEXIST : 0);
 }
 
 bool create_directory(const std::string &path)
@@ -452,7 +450,7 @@ bool create_directory(const std::string &path)
         return false;
     }
 
-    err = dsn::utils::filesystem::create_directory_component(npath);
+    err = create_directory_component(npath);
     if (err == 0) {
         return true;
     } else if (err != ENOENT) {
@@ -470,14 +468,14 @@ bool create_directory(const std::string &path)
         cpath = npath.substr(0, pos++);
         prev = pos;
 
-        err = dsn::utils::filesystem::create_directory_component(cpath);
+        err = create_directory_component(cpath);
         if (err != 0) {
             goto out_error;
         }
     }
 
     if (prev < len) {
-        err = dsn::utils::filesystem::create_directory_component(npath);
+        err = create_directory_component(npath);
         if (err != 0) {
             cpath = npath;
             goto out_error;
@@ -515,18 +513,18 @@ bool create_file(const std::string &path)
         return false;
     }
 
-    if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
+    if (path_exists_internal(npath, FTW_F)) {
         return true;
     }
 
-    if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
+    if (path_exists_internal(npath, FTW_D)) {
         return false;
     }
 
     pos = npath.find_last_of("\\/");
     if ((pos != std::string::npos) && (pos > 0)) {
         auto ppath = npath.substr(0, pos);
-        if (!dsn::utils::filesystem::create_directory(ppath)) {
+        if (!create_directory(ppath)) {
             return false;
         }
     }
@@ -612,15 +610,15 @@ std::string path_combine(const std::string &path1, const std::string &path2)
     std::string npath;
 
     if (path1.empty()) {
-        err = dsn::utils::filesystem::get_normalized_path(path2, npath);
+        err = get_normalized_path(path2, npath);
     } else if (path2.empty()) {
-        err = dsn::utils::filesystem::get_normalized_path(path1, npath);
+        err = get_normalized_path(path1, npath);
     } else {
         path3 = path1;
         path3.append(1, _FS_SLASH);
         path3.append(path2);
 
-        err = dsn::utils::filesystem::get_normalized_path(path3, npath);
+        err = get_normalized_path(path3, npath);
     }
 
     return ((err == 0) ? npath : "");
@@ -653,7 +651,7 @@ bool last_write_time(const std::string &path, time_t &tm)
         return false;
     }
 
-    err = dsn::utils::filesystem::get_stat_internal(npath, st);
+    err = get_stat_internal(npath, st);
     if (err != 0) {
         return false;
     }
@@ -727,7 +725,7 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
 {
     result.clear();
     // if file not exist, we return ERR_OBJECT_NOT_FOUND
-    if (!::dsn::utils::filesystem::file_exists(file_path)) {
+    if (!file_exists(file_path)) {
         LOG_ERROR("md5sum error: file {} not exist", file_path);
         return ERR_OBJECT_NOT_FOUND;
     }
@@ -956,4 +954,4 @@ bool check_dir_rw(const std::string &path, std::string &err_msg)
 
 } // namespace filesystem
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

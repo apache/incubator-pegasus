@@ -44,21 +44,16 @@
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
 #include "test_utils.h"
-#include "utils/enum_helper.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
-class task_queue;
-} // namespace dsn
-
-using namespace ::dsn;
+namespace pegasus {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST_1)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST_2)
 
 TEST(core, task_engine)
 {
-    if (dsn::service_engine::instance().spec().tool == "simulator")
+    if (service_engine::instance().spec().tool == "simulator")
         return;
     service_node *node = task::get_current_node2();
     ASSERT_NE(nullptr, node);
@@ -105,3 +100,4 @@ TEST(core, task_engine)
     std::vector<task_worker *> workers2 = pool2->workers();
     ASSERT_EQ(2u, workers2.size());
 }
+} // namespace pegasus

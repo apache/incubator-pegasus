@@ -21,7 +21,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 const std::string cold_backup_constant::APP_METADATA("app_metadata");
 const std::string cold_backup_constant::APP_BACKUP_STATUS("app_backup_status");
@@ -126,4 +126,4 @@ std::string get_remote_chkpt_meta_file(const std::string &root,
 
 } // namespace cold_backup
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

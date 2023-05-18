@@ -26,7 +26,7 @@
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
 
-namespace dsn {
+namespace pegasus {
 
 TEST(perf_counter_http_service_test, get_perf_counter)
 {
@@ -75,4 +75,4 @@ TEST(perf_counter_http_service_test, get_perf_counter)
         ASSERT_EQ(fake_resp.body, fake_json);
     }
 }
-} // namespace dsn
+} // namespace pegasus

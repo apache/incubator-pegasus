@@ -49,10 +49,9 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/shared_io_service.h"
 
-using namespace dsn;
-using namespace dsn::tools;
+namespace pegasus {
+namespace tools {
 
 const int count_times = 10000;
 
@@ -179,3 +178,5 @@ TEST(perf_counter, print_type)
         dsn_percentile_type_from_string(dsn_percentile_type_to_string(COUNTER_PERCENTILE_999)));
     ASSERT_EQ(COUNTER_PERCENTILE_INVALID, dsn_percentile_type_from_string("afafda"));
 }
+} // namespace tools
+} // namespace pegasus

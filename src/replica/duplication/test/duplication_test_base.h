@@ -23,7 +23,7 @@
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/duplication/duplication_sync_timer.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DEFINE_STORAGE_WRITE_RPC_CODE(RPC_DUPLICATION_IDEMPOTENT_WRITE, NOT_ALLOW_BATCH, IS_IDEMPOTENT)
@@ -34,7 +34,7 @@ class duplication_test_base : public replica_test_base
 public:
     duplication_test_base()
     {
-        mutation_duplicator::creator = [](replica_base *r, dsn::string_view, dsn::string_view) {
+        mutation_duplicator::creator = [](replica_base *r, string_view, string_view) {
             return std::make_unique<mock_mutation_duplicator>(r);
         };
         stub->_duplication_sync_timer = std::make_unique<duplication_sync_timer>(stub.get());
@@ -91,4 +91,4 @@ public:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

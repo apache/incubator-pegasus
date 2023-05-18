@@ -56,7 +56,7 @@
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
@@ -83,7 +83,7 @@
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 bool get_bool_envs(const std::map<std::string, std::string> &envs,
@@ -246,7 +246,7 @@ void replica::add_potential_secondary(configuration_update_request &proposal)
         proposal.node, RPC_LEARN_ADD_LEARNER, request, get_gpid().thread_hash());
 }
 
-void replica::upgrade_to_secondary_on_primary(::dsn::rpc_address node)
+void replica::upgrade_to_secondary_on_primary(rpc_address node)
 {
     LOG_INFO_PREFIX("upgrade potential secondary {} to secondary", node);
 
@@ -355,7 +355,7 @@ void replica::on_remove(const replica_configuration &request)
 }
 
 void replica::update_configuration_on_meta_server(config_type::type type,
-                                                  ::dsn::rpc_address node,
+                                                  rpc_address node,
                                                   partition_configuration &newConfig)
 {
     // type should never be `CT_REGISTER_CHILD`
@@ -383,7 +383,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
     update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);
     set_inactive_state_transient(true);
 
-    dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
+    message_ex *msg = message_ex::create_request(RPC_CM_UPDATE_PARTITION_CONFIGURATION);
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->info = _app_info;
@@ -392,7 +392,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
     request->type = type;
     request->node = node;
 
-    ::dsn::marshall(msg, *request);
+    marshall(msg, *request);
 
     if (nullptr != _primary_states.reconfiguration_task) {
         _primary_states.reconfiguration_task->cancel(true);
@@ -409,7 +409,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
         rpc::call(target,
                   msg,
                   &_tracker,
-                  [=](error_code err, dsn::message_ex *reqmsg, dsn::message_ex *response) {
+                  [=](error_code err, message_ex *reqmsg, message_ex *response) {
                       on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
                   },
                   get_gpid().thread_hash());
@@ -417,8 +417,8 @@ void replica::update_configuration_on_meta_server(config_type::type type,
 
 void replica::on_update_configuration_on_meta_server_reply(
     error_code err,
-    dsn::message_ex *request,
-    dsn::message_ex *response,
+    message_ex *request,
+    message_ex *response,
     std::shared_ptr<configuration_update_request> req)
 {
     _checker.only_one_thread_access();
@@ -430,7 +430,7 @@ void replica::on_update_configuration_on_meta_server_reply(
 
     configuration_update_response resp;
     if (err == ERR_OK) {
-        ::dsn::unmarshall(response, resp);
+        unmarshall(response, resp);
         err = resp.err;
     }
 
@@ -449,8 +449,7 @@ void replica::on_update_configuration_on_meta_server_reply(
                     rpc_response_task_ptr t = rpc::create_rpc_response_task(
                         request,
                         &_tracker,
-                        [this, req2](
-                            error_code err, dsn::message_ex *request, dsn::message_ex *response) {
+                        [this, req2](error_code err, message_ex *request, message_ex *response) {
                             on_update_configuration_on_meta_server_reply(
                                 err, request, response, std::move(req2));
                         },
@@ -663,7 +662,7 @@ bool replica::is_same_ballot_status_change_allowed(partition_status::type olds,
 bool replica::update_local_configuration(const replica_configuration &config,
                                          bool same_ballot /* = false*/)
 {
-    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](dsn::string_view) -> bool {
+    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](string_view) -> bool {
         auto old_status = status();
         _config = config;
         LOG_INFO_PREFIX(
@@ -728,7 +727,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
             config.status != partition_status::PS_ERROR) {
             if (!_secondary_states.cleanup(false)) {
                 // TODO(sunweijie): totally remove this
-                dsn::task *native_handle;
+                task *native_handle;
                 if (_secondary_states.checkpoint_task)
                     native_handle = _secondary_states.checkpoint_task.get();
                 else if (_secondary_states.checkpoint_completed_task)
@@ -767,8 +766,8 @@ bool replica::update_local_configuration(const replica_configuration &config,
     _config = config;
     // we should durable the new ballot to prevent the inconsistent state
     if (_config.ballot > old_ballot) {
-        dsn::error_code result = _app->update_init_info_ballot_and_decree(this);
-        if (result == dsn::ERR_OK) {
+        error_code result = _app->update_init_info_ballot_and_decree(this);
+        if (result == ERR_OK) {
             LOG_INFO_PREFIX(
                 "update ballot to init file from {} to {} OK", old_ballot, _config.ballot);
         } else {
@@ -1161,4 +1160,4 @@ error_code replica::update_init_info_ballot_and_decree()
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

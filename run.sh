@@ -261,13 +261,13 @@ function run_build()
         rm -rf $BUILD_DIR
         rm -f ${ROOT}/src/base/rrdb_types.cpp
         rm -f ${ROOT}/src/include/rrdb/rrdb_types.h
-        rm -f ${ROOT}/src/common/serialization_helper/dsn.layer2_types.h
-        rm -f ${ROOT}/src/runtime/dsn.layer2_types.cpp
+        rm -f ${ROOT}/src/common/serialization_helper/pegasus.layer2_types.h
+        rm -f ${ROOT}/src/runtime/pegasus.layer2_types.cpp
         rm -f ${ROOT}/src/include/pegasus/git_commit.h
     fi
 
     pushd ${ROOT}
-    if [ ! -f "${ROOT}/src/common/serialization_helper/dsn.layer2_types.h" ]; then
+    if [ ! -f "${ROOT}/src/common/serialization_helper/pegasus.layer2_types.h" ]; then
         echo "Gen thrift"
         # TODO(yingchun): should be optimized
         python3 $ROOT/scripts/compile_thrift.py

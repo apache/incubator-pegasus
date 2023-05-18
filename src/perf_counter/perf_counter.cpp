@@ -28,6 +28,8 @@
 
 #include "utils/strings.h"
 
+namespace pegasus {
+
 static const char *ctypes[] = {
     "NUMBER", "VOLATILE_NUMBER", "RATE", "PERCENTILE", "INVALID_COUNTER"};
 const char *dsn_counter_type_to_string(dsn_perf_counter_type_t t)
@@ -40,7 +42,7 @@ const char *dsn_counter_type_to_string(dsn_perf_counter_type_t t)
 dsn_perf_counter_type_t dsn_counter_type_from_string(const char *str)
 {
     for (int i = 0; i < COUNTER_TYPE_COUNT; ++i) {
-        if (dsn::utils::equals(str, ctypes[i]))
+        if (utils::equals(str, ctypes[i]))
             return (dsn_perf_counter_type_t)i;
     }
     return COUNTER_TYPE_INVALID;
@@ -57,8 +59,9 @@ const char *dsn_percentile_type_to_string(dsn_perf_counter_percentile_type_t t)
 dsn_perf_counter_percentile_type_t dsn_percentile_type_from_string(const char *str)
 {
     for (int i = 0; i < COUNTER_PERCENTILE_COUNT; ++i) {
-        if (dsn::utils::equals(str, ptypes[i]))
+        if (utils::equals(str, ptypes[i]))
             return (dsn_perf_counter_percentile_type_t)i;
     }
     return COUNTER_PERCENTILE_INVALID;
 }
+} // namespace pegasus

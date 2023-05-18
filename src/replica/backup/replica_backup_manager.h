@@ -22,7 +22,7 @@
 #include "replica/replica_base.h"
 #include "runtime/task/task.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 
 namespace replication {
@@ -46,11 +46,11 @@ private:
     void collect_backup_info();
 
     replica *_replica;
-    dsn::task_ptr _collect_info_timer;
+    task_ptr _collect_info_timer;
 
     friend class replica;
     friend class replica_backup_manager_test;
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

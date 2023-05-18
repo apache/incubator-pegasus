@@ -24,7 +24,7 @@
 #include <thread>
 #include <vector>
 
-namespace dsn {
+namespace pegasus {
 
 TEST(random, sanity)
 {
@@ -84,4 +84,4 @@ TEST(random, multi_threaded)
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

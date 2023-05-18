@@ -25,7 +25,7 @@
 #include "runtime/ranger/ranger_resource_policy.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace security {
@@ -71,4 +71,4 @@ private:
     friend class replica_access_controller_test;
 };
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

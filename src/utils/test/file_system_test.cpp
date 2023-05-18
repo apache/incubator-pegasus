@@ -23,7 +23,7 @@
 
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 namespace filesystem {
 
@@ -45,4 +45,4 @@ TEST(verify_file, verify_file_test)
 
 } // namespace filesystem
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

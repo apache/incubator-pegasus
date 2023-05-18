@@ -52,7 +52,7 @@
 #include "utils/threadpool_code.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
+namespace pegasus {
 
 //
 // channel and header format are specified per task-code
@@ -110,7 +110,7 @@ struct service_app_spec
     std::string type; // registered type name, alse named as "app_type"
     std::string arguments;
     std::vector<int> ports;
-    std::list<dsn::threadpool_code> pools;
+    std::list<threadpool_code> pools;
     int delay_seconds;
     bool run;
     int count;     // index = 1,2,...,count
@@ -204,4 +204,4 @@ CONFIG_FLD_STRING(rwlock_nr_factory_name, "", "non-recurisve rwlock provider")
 CONFIG_FLD_STRING(semaphore_factory_name, "", "semaphore provider")
 CONFIG_FLD_STRING(logging_factory_name, "", "logging provider")
 CONFIG_END
-} // namespace dsn
+} // namespace pegasus

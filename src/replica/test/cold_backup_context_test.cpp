@@ -44,6 +44,10 @@
 #include "utils/blob.h"
 #include "utils/filesystem.h"
 
+using namespace pegasus::utils::filesystem;
+
+namespace pegasus {
+namespace replication {
 ref_ptr<block_file_mock> current_chkpt_file = new block_file_mock("", 0, "");
 ref_ptr<block_file_mock> backup_metadata_file = new block_file_mock("", 0, "");
 ref_ptr<block_file_mock> regular_file = new block_file_mock("", 0, "");
@@ -173,8 +177,7 @@ void replication_service_test_app::remote_chkpt_dir_exist_test()
         entries.emplace_back(ls_entry{std::string(dir_name), true});
         // remote_chkpt_dir_exist() function judge whether the dir-A is exist through listing
         //      the dir-A's parent path
-        block_service->dir_files.insert(
-            std::make_pair(::dsn::utils::filesystem::get_file_name(parent_dir), entries));
+        block_service->dir_files.insert(std::make_pair(get_file_name(parent_dir), entries));
         backup_context->remote_chkpt_dir_exist(dir_name);
         ASSERT_TRUE(backup_context->status() == cold_backup_status::ColdBackupCompleted);
         current_chkpt_file->clear_file_exist();
@@ -271,7 +274,7 @@ void replication_service_test_app::read_backup_metadata_test()
     {
         std::cout << "testing read_backup_metadata_file, with context of metadata is valid..."
                   << std::endl;
-        blob buf = ::json::json_forwarder<cold_backup_metadata>::encode(backup_context->_metadata);
+        blob buf = json::json_forwarder<cold_backup_metadata>::encode(backup_context->_metadata);
         std::string context(buf.data(), buf.length());
         backup_metadata_file->set_context(context);
         backup_metadata_file->file_exist("test_md5", 10);
@@ -413,8 +416,7 @@ void replication_service_test_app::write_backup_metadata_test()
         f_meta.size = 11;
         backup_context->_metadata.files.emplace_back(f_meta);
 
-        blob result =
-            ::json::json_forwarder<cold_backup_metadata>::encode(backup_context->_metadata);
+        blob result = json::json_forwarder<cold_backup_metadata>::encode(backup_context->_metadata);
         std::string value(result.data(), result.length());
         current_chkpt_file->enable_write_fail = true;
         backup_context->write_backup_metadata();
@@ -457,3 +459,5 @@ void replication_service_test_app::write_current_chkpt_file_test()
     ASSERT_TRUE(backup_metadata_file->get_count() == 1);
     ASSERT_TRUE(regular_file->get_count() == 1);
 }
+} // namespace replication
+} // namespace pegasus

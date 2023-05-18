@@ -35,7 +35,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 #define CHECK_NULL_PTR(lhs, rhs)                                                                   \
@@ -425,4 +425,4 @@ std::string find_string_prefix(const std::string &input, char separator)
     return input.substr(0, current);
 }
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

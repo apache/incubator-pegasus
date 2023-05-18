@@ -35,7 +35,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 namespace fd {
 class beacon_ack;
@@ -43,43 +43,40 @@ class beacon_ack;
 
 namespace dist {
 
-class slave_failure_detector_with_multimaster : public dsn::fd::failure_detector
+class slave_failure_detector_with_multimaster : public fd::failure_detector
 {
 public:
-    slave_failure_detector_with_multimaster(std::vector<::dsn::rpc_address> &meta_servers,
+    slave_failure_detector_with_multimaster(std::vector<rpc_address> &meta_servers,
                                             std::function<void()> &&master_disconnected_callback,
                                             std::function<void()> &&master_connected_callback);
     virtual ~slave_failure_detector_with_multimaster() {}
 
-    void end_ping(::dsn::error_code err, const fd::beacon_ack &ack, void *context) override;
+    void end_ping(error_code err, const fd::beacon_ack &ack, void *context) override;
 
     // client side
-    void on_master_disconnected(const std::vector<::dsn::rpc_address> &nodes) override;
-    void on_master_connected(::dsn::rpc_address node) override;
+    void on_master_disconnected(const std::vector<rpc_address> &nodes) override;
+    void on_master_connected(rpc_address node) override;
 
     // server side
-    void on_worker_disconnected(const std::vector<::dsn::rpc_address> &nodes) override
+    void on_worker_disconnected(const std::vector<rpc_address> &nodes) override
     {
         CHECK(false, "invalid execution flow");
     }
-    void on_worker_connected(::dsn::rpc_address node) override
-    {
-        CHECK(false, "invalid execution flow");
-    }
+    void on_worker_connected(rpc_address node) override { CHECK(false, "invalid execution flow"); }
 
-    ::dsn::rpc_address current_server_contact() const;
-    ::dsn::rpc_address get_servers() const { return _meta_servers; }
+    rpc_address current_server_contact() const;
+    rpc_address get_servers() const { return _meta_servers; }
 
-    void set_leader_for_test(dsn::rpc_address meta);
+    void set_leader_for_test(rpc_address meta);
 
 private:
-    dsn::rpc_address _meta_servers;
+    rpc_address _meta_servers;
     std::function<void()> _master_disconnected_callback;
     std::function<void()> _master_connected_callback;
 };
 
 //------------------ inline implementation --------------------------------
-inline ::dsn::rpc_address slave_failure_detector_with_multimaster::current_server_contact() const
+inline rpc_address slave_failure_detector_with_multimaster::current_server_contact() const
 {
     zauto_lock l(failure_detector::_lock);
     return _meta_servers.group_address()->leader();

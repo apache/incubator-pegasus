@@ -41,7 +41,7 @@
 #include "utils/string_view.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 const std::string replica_disk_migrator::kReplicaDirTempSuffix = ".disk.migrate.tmp";
@@ -324,7 +324,7 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
 }
 
 // THREAD_POOL_REPLICATION_LONG
-dsn::task_ptr replica_disk_migrator::close_current_replica(const replica_disk_migrate_request &req)
+task_ptr replica_disk_migrator::close_current_replica(const replica_disk_migrate_request &req)
 {
     if (_replica->status() != partition_status::type::PS_SECONDARY) {
         LOG_ERROR_PREFIX(
@@ -345,7 +345,7 @@ void replica_disk_migrator::update_replica_dir()
 {
     // origin_tmp_dir: /root/origin/gpid.app_type.disk.migrate.ori
     std::string origin_temp_dir = fmt::format("{}{}", _replica->dir(), kReplicaDirOriginSuffix);
-    if (!dsn::utils::filesystem::rename_path(_replica->dir(), origin_temp_dir)) {
+    if (!utils::filesystem::rename_path(_replica->dir(), origin_temp_dir)) {
         reset_status();
         utils::filesystem::remove_path(_target_replica_dir);
         return;
@@ -355,11 +355,11 @@ void replica_disk_migrator::update_replica_dir()
     // update _target_replica_dir /root/gpid.app_type.disk.migrate.tmp/ to
     // /root/target/gpid.app_type/
     boost::replace_first(_target_replica_dir, kReplicaDirTempSuffix, "");
-    if (!dsn::utils::filesystem::rename_path(target_temp_dir, _target_replica_dir)) {
+    if (!utils::filesystem::rename_path(target_temp_dir, _target_replica_dir)) {
         reset_status();
         // rename failed, delete tmp dir and revert origin dir
         utils::filesystem::remove_path(target_temp_dir);
-        dsn::utils::filesystem::rename_path(origin_temp_dir, _replica->dir());
+        utils::filesystem::rename_path(origin_temp_dir, _replica->dir());
         return;
     }
 
@@ -376,4 +376,4 @@ void replica_disk_migrator::update_replica_dir()
                     enum_to_string(status()));
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

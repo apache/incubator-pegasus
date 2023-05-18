@@ -42,7 +42,8 @@
 #include "utils/string_conv.h"
 #include "utils/token_buckets.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 namespace service {
 static uint32_t current_max_copy_rate_megabytes = 0;
 
@@ -150,11 +151,11 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
                             req->file_size_req.source);
 }
 
-void nfs_client_impl::end_get_file_size(::dsn::error_code err,
-                                        const ::dsn::service::get_file_size_response &resp,
+void nfs_client_impl::end_get_file_size(error_code err,
+                                        const service::get_file_size_response &resp,
                                         const user_request_ptr &ureq)
 {
-    if (err != ::dsn::ERR_OK) {
+    if (err != ERR_OK) {
         LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
                   ureq->file_size_req.source,
                   ureq->file_size_req.source_dir,
@@ -163,8 +164,8 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
         return;
     }
 
-    err = dsn::error_code(resp.error);
-    if (err != ::dsn::ERR_OK) {
+    err = error_code(resp.error);
+    if (err != ERR_OK) {
         LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
                   ureq->file_size_req.source,
                   ureq->file_size_req.source_dir,
@@ -303,7 +304,7 @@ void nfs_client_impl::continue_copy()
                                        // reset task to release memory quickly.
                                        // should do this after end_copy() done.
                                        if (req->is_ready_for_write) {
-                                           ::dsn::task_ptr tsk;
+                                           task_ptr tsk;
                                            zauto_lock l(req->lock);
                                            tsk = std::move(req->remote_copy_task);
                                        }
@@ -325,7 +326,7 @@ void nfs_client_impl::continue_copy()
     }
 }
 
-void nfs_client_impl::end_copy(::dsn::error_code err,
+void nfs_client_impl::end_copy(error_code err,
                                const copy_response &resp,
                                const copy_request_ex_ptr &reqc)
 {
@@ -338,7 +339,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
         err = resp.error;
     }
 
-    if (err != ::dsn::ERR_OK) {
+    if (err != ERR_OK) {
         _recent_copy_fail_count->increment();
 
         if (!fc->user_req->is_finished) {
@@ -451,10 +452,9 @@ void nfs_client_impl::continue_write()
 
     // real write
     const file_context_ptr &fc = reqc->file_ctx;
-    std::string file_path =
-        dsn::utils::filesystem::path_combine(fc->user_req->file_size_req.dst_dir, fc->file_name);
-    std::string path = dsn::utils::filesystem::remove_file_name(file_path.c_str());
-    CHECK(dsn::utils::filesystem::create_directory(path), "create directory {} failed", path);
+    std::string file_path = path_combine(fc->user_req->file_size_req.dst_dir, fc->file_name);
+    std::string path = remove_file_name(file_path.c_str());
+    CHECK(utils::filesystem::create_directory(path), "create directory {} failed", path);
 
     if (!fc->file_holder->file_handle) {
         // double check
@@ -484,7 +484,7 @@ void nfs_client_impl::continue_write()
                                                      // should do this after local_write_callback()
                                                      // done.
                                                      {
-                                                         ::dsn::task_ptr tsk;
+                                                         task_ptr tsk;
                                                          zauto_lock l(reqc->lock);
                                                          tsk = std::move(reqc->local_write_task);
                                                      }
@@ -575,7 +575,7 @@ void nfs_client_impl::register_cli_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _nfs_max_copy_rate_megabytes_cmd = dsn::command_manager::instance().register_command(
+        _nfs_max_copy_rate_megabytes_cmd = command_manager::instance().register_command(
             {"nfs.max_copy_rate_megabytes_per_disk"},
             "nfs.max_copy_rate_megabytes_per_disk [num]",
             "control the max rate(MB/s) for one disk to copy file from remote node",
@@ -587,8 +587,7 @@ void nfs_client_impl::register_cli_commands()
                 }
 
                 int32_t max_copy_rate_megabytes = 0;
-                if (!dsn::buf2int32(args[0], max_copy_rate_megabytes) ||
-                    max_copy_rate_megabytes <= 0) {
+                if (!buf2int32(args[0], max_copy_rate_megabytes) || max_copy_rate_megabytes <= 0) {
                     return std::string("ERR: invalid arguments");
                 }
 
@@ -605,4 +604,4 @@ void nfs_client_impl::register_cli_commands()
     });
 }
 } // namespace service
-} // namespace dsn
+} // namespace pegasus

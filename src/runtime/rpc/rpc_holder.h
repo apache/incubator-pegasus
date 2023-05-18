@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "client/partition_resolver.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "rpc_address.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
@@ -41,7 +41,7 @@
 #include "utils/function_traits.h"
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
 
 using literals::chrono_literals::operator"" _ms;
@@ -129,7 +129,7 @@ public:
         return _i->thrift_response;
     }
 
-    dsn::error_code &error() const
+    error_code &error() const
     {
         CHECK(_i, "rpc_holder is uninitialized");
         return _i->rpc_error;
@@ -326,7 +326,7 @@ private:
         message_ex *dsn_request;
         std::unique_ptr<TRequest> thrift_request;
         TResponse thrift_response;
-        dsn::error_code rpc_error = dsn::ERR_OK;
+        error_code rpc_error = ERR_OK;
 
         bool auto_reply;
     };
@@ -389,8 +389,8 @@ struct rpc_mock_wrapper
 };
 
 #define RPC_MOCKING(__rpc_type__)                                                                  \
-    for (::dsn::rpc_mock_wrapper<__rpc_type__> __rpc_type__##_mocking__;                           \
+    for (rpc_mock_wrapper<__rpc_type__> __rpc_type__##_mocking__;                                  \
          __rpc_type__##_mocking__.counter != 1;                                                    \
          __rpc_type__##_mocking__.counter++)
 
-} // namespace dsn
+} // namespace pegasus

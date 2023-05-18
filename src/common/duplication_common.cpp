@@ -31,14 +31,14 @@
 #include "utils/singleton.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_uint32(replication,
                   duplicate_log_batch_bytes,
                   4096,
                   "send mutation log batch bytes size per rpc");
 DSN_TAG_VARIABLE(duplicate_log_batch_bytes, FT_MUTABLE);
+
+namespace pegasus {
+namespace replication {
 
 const std::string duplication_constants::kDuplicationCheckpointRootDir /*NOLINT*/ = "duplication";
 const std::string duplication_constants::kClustersSectionName /*NOLINT*/ = "pegasus.clusters";
@@ -181,4 +181,4 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

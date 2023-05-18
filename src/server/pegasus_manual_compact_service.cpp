@@ -107,7 +107,7 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
         extract_manual_compact_opts(envs, compact_rule, options);
 
         _pfc_manual_compact_enqueue_count->increment();
-        dsn::tasking::enqueue(LPC_MANUAL_COMPACT, &_app->_tracker, [this, options]() {
+        tasking::enqueue(LPC_MANUAL_COMPACT, &_app->_tracker, [this, options]() {
             _pfc_manual_compact_enqueue_count->decrement();
             manual_compact(options);
         });
@@ -145,7 +145,7 @@ int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
 {
     int new_count = INT_MAX;
     auto find = envs.find(MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY);
-    if (find != envs.end() && !dsn::buf2int32(find->second, new_count)) {
+    if (find != envs.end() && !buf2int32(find->second, new_count)) {
         LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
     }
 
@@ -168,7 +168,7 @@ bool pegasus_manual_compact_service::check_once_compact(
     }
 
     int64_t trigger_time = 0;
-    if (!dsn::buf2int64(find->second, trigger_time) || trigger_time <= 0) {
+    if (!buf2int64(find->second, trigger_time) || trigger_time <= 0) {
         LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
         return false;
     }
@@ -185,7 +185,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
     }
 
     std::list<std::string> trigger_time_strs;
-    dsn::utils::split_args(find->second.c_str(), trigger_time_strs, ',');
+    utils::split_args(find->second.c_str(), trigger_time_strs, ',');
     if (trigger_time_strs.empty()) {
         LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
         return false;
@@ -193,7 +193,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
 
     std::set<int64_t> trigger_time;
     for (auto &tts : trigger_time_strs) {
-        int64_t tt = dsn::utils::hh_mm_today_to_unix_sec(tts);
+        int64_t tt = utils::hh_mm_today_to_unix_sec(tts);
         if (tt != -1) {
             trigger_time.emplace(tt);
         }
@@ -235,7 +235,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     auto find = envs.find(key_prefix + MANUAL_COMPACT_TARGET_LEVEL_KEY);
     if (find != envs.end()) {
         int32_t target_level;
-        if (dsn::buf2int32(find->second, target_level) &&
+        if (buf2int32(find->second, target_level) &&
             (target_level == -1 ||
              (target_level >= 1 && target_level <= _app->_data_cf_opts.num_levels))) {
             options.target_level = target_level;
@@ -337,7 +337,7 @@ std::string pegasus_manual_compact_service::query_compact_state() const
     std::stringstream state;
     if (last_finish_time_ms > 0) {
         char str[24] = {0};
-        dsn::utils::time_ms_to_string(last_finish_time_ms, str);
+        utils::time_ms_to_string(last_finish_time_ms, str);
         state << "last finish at [" << str << "]";
     } else {
         state << "last finish at [-]";
@@ -349,19 +349,19 @@ std::string pegasus_manual_compact_service::query_compact_state() const
 
     if (enqueue_time_ms > 0) {
         char str[24] = {0};
-        dsn::utils::time_ms_to_string(enqueue_time_ms, str);
+        utils::time_ms_to_string(enqueue_time_ms, str);
         state << ", recent enqueue at [" << str << "]";
     }
 
     if (start_time_ms > 0) {
         char str[24] = {0};
-        dsn::utils::time_ms_to_string(start_time_ms, str);
+        utils::time_ms_to_string(start_time_ms, str);
         state << ", recent start at [" << str << "]";
     }
     return state.str();
 }
 
-dsn::replication::manual_compaction_status::type
+replication::manual_compaction_status::type
 pegasus_manual_compact_service::query_compact_status() const
 {
     // Case1. last finish at [-]
@@ -378,13 +378,13 @@ pegasus_manual_compact_service::query_compact_status() const
     uint64_t last_time_used_ms = _manual_compact_last_time_used_ms.load();
 
     if (start_time_ms > 0) {
-        return dsn::replication::manual_compaction_status::RUNNING;
+        return replication::manual_compaction_status::RUNNING;
     } else if (enqueue_time_ms > 0) {
-        return dsn::replication::manual_compaction_status::QUEUING;
+        return replication::manual_compaction_status::QUEUING;
     } else if (last_time_used_ms > 0 && last_finish_time_ms > 0) {
-        return dsn::replication::manual_compaction_status::FINISHED;
+        return replication::manual_compaction_status::FINISHED;
     } else {
-        return dsn::replication::manual_compaction_status::IDLE;
+        return replication::manual_compaction_status::IDLE;
     }
 }
 

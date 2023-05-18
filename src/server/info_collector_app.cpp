@@ -29,30 +29,30 @@
 namespace pegasus {
 namespace server {
 
-class collector_http_service : public ::dsn::http_server_base
+class collector_http_service : public http_server_base
 {
 };
 
-info_collector_app::info_collector_app(const dsn::service_app_info *info)
+info_collector_app::info_collector_app(const service_app_info *info)
     : service_app(info), _updater_started(false)
 {
     register_http_service(new collector_http_service());
-    dsn::start_http_server();
+    start_http_server();
 }
 
 info_collector_app::~info_collector_app() {}
 
-::dsn::error_code info_collector_app::start(const std::vector<std::string> &args)
+error_code info_collector_app::start(const std::vector<std::string> &args)
 {
     pegasus_counter_reporter::instance().start();
     _updater_started = true;
 
     _collector.start();
     _detector.start();
-    return ::dsn::ERR_OK;
+    return ERR_OK;
 }
 
-::dsn::error_code info_collector_app::stop(bool cleanup)
+error_code info_collector_app::stop(bool cleanup)
 {
     if (_updater_started) {
         pegasus_counter_reporter::instance().stop();
@@ -60,7 +60,7 @@ info_collector_app::~info_collector_app() {}
 
     _collector.stop();
     _detector.stop();
-    return ::dsn::ERR_OK;
+    return ERR_OK;
 }
 }
 } // namespace

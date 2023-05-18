@@ -22,7 +22,7 @@
 
 #include "runtime/rpc/rpc_holder.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class bulk_load_request;
 class bulk_load_response;
@@ -52,4 +52,4 @@ public:
     static const int32_t PROGRESS_FINISHED;
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

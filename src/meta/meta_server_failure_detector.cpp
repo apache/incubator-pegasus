@@ -60,7 +60,7 @@ DSN_DEFINE_string(meta_server,
                   "distributed_lock_service_simple",
                   "dist lock provider");
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 meta_server_failure_detector::meta_server_failure_detector(meta_service *svc)
@@ -71,7 +71,7 @@ meta_server_failure_detector::meta_server_failure_detector(meta_service *svc)
       _election_moment(0)
 {
     _fd_opts = &(svc->get_meta_options()._fd_opts);
-    _lock_svc = dsn::utils::factory_store<dist::distributed_lock_service>::create(
+    _lock_svc = utils::factory_store<dist::distributed_lock_service>::create(
         FLAGS_distributed_lock_service_type, PROVIDER_TYPE_MAIN);
     error_code err = _lock_svc->initialize(_fd_opts->distributed_lock_service_args);
     CHECK_EQ_MSG(err, ERR_OK, "init distributed_lock_service failed");
@@ -101,7 +101,7 @@ void meta_server_failure_detector::on_worker_connected(rpc_address node)
 
 bool meta_server_failure_detector::get_leader(rpc_address *leader)
 {
-    FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](dsn::string_view str) {
+    FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](string_view str) {
         /// the format of str is : true#{ip}:{port} or false#{ip}:{port}
         auto pos = str.find("#");
         // get leader addr
@@ -110,16 +110,17 @@ bool meta_server_failure_detector::get_leader(rpc_address *leader)
             CHECK(false, "parse {} to rpc_address failed", addr_part);
         }
 
-        // get the return value which implies whether the current node is primary or not
+        // get the return value which implies whether the current node is
+        // primary or not
         bool is_leader = true;
         auto is_leader_part = str.substr(0, pos);
-        if (!dsn::buf2bool(is_leader_part, is_leader)) {
+        if (!buf2bool(is_leader_part, is_leader)) {
             CHECK(false, "parse {} to bool failed", is_leader_part);
         }
         return is_leader;
     });
 
-    dsn::rpc_address holder;
+    rpc_address holder;
     if (leader == nullptr) {
         leader = &holder;
     }
@@ -134,7 +135,7 @@ bool meta_server_failure_detector::get_leader(rpc_address *leader)
         std::string lock_owner;
         uint64_t version;
         error_code err = _lock_svc->query_cache(_primary_lock_id, lock_owner, version);
-        if (err == dsn::ERR_OK && leader->from_string_ipv4(lock_owner.c_str())) {
+        if (err == ERR_OK && leader->from_string_ipv4(lock_owner.c_str())) {
             return (*leader) == dsn_primary_address();
         } else {
             LOG_WARNING("query leader from cache got error({})", err);
@@ -150,7 +151,7 @@ void meta_server_failure_detector::acquire_leader_lock()
     //
     // try to get the leader lock until it is done
     //
-    dsn::dist::distributed_lock_service::lock_options opt = {true, true};
+    dist::distributed_lock_service::lock_options opt = {true, true};
     while (true) {
         error_code err;
         auto tasks = _lock_svc->lock(
@@ -164,7 +165,7 @@ void meta_server_failure_detector::acquire_leader_lock()
                          owner,
                          version);
                 err = ec;
-                if (err == dsn::ERR_OK) {
+                if (err == ERR_OK) {
                     leader_initialize(owner);
                 }
             },
@@ -212,7 +213,7 @@ void meta_server_failure_detector::reset_stability_stat(const rpc_address &node)
 
 void meta_server_failure_detector::leader_initialize(const std::string &lock_service_owner)
 {
-    dsn::rpc_address addr;
+    rpc_address addr;
     CHECK(addr.from_string_ipv4(lock_service_owner.c_str()),
           "parse {} to rpc_address failed",
           lock_service_owner);
@@ -281,7 +282,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
         return;
     }
 
-    dsn::rpc_address leader;
+    rpc_address leader;
     if (!get_leader(&leader)) {
         ack.is_master = false;
         ack.primary_node = leader;

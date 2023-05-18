@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-namespace cpp dsn.dist.cmd
+namespace cpp pegasus.dist.cmd
 namespace go cmd
 
 struct command

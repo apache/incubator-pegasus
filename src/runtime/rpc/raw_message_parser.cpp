@@ -48,7 +48,7 @@
 #include "utils/join_point.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 
 DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_SESSION_DISCONNECT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE_RPC(RPC_CALL_RAW_MESSAGE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
@@ -58,11 +58,11 @@ void raw_message_parser::notify_rpc_session_disconnected(rpc_session *sp)
 {
     if (!sp->is_client()) {
         message_ex *special_msg = message_ex::create_receive_message_with_standalone_header(blob());
-        dsn::message_header *header = special_msg->header;
+        message_header *header = special_msg->header;
         header->context.u.is_request = 1;
         header->context.u.is_forwarded = 0;
         header->from_address = sp->remote_address();
-        header->gpid.set_value(0);
+        header->gpid_.set_value(0);
 
         strncpy(header->rpc_name, "RPC_CALL_RAW_SESSION_DISCONNECT", sizeof(header->rpc_name) - 1);
         header->rpc_name[sizeof(header->rpc_name) - 1] = '\0';
@@ -96,7 +96,7 @@ message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
         return nullptr;
     } else {
         auto msg_length = reader->_buffer_occupied;
-        dsn::blob msg_blob = reader->_buffer.range(0, msg_length);
+        blob msg_blob = reader->_buffer.range(0, msg_length);
         message_ex *new_message =
             message_ex::create_receive_message_with_standalone_header(msg_blob);
         message_header *header = new_message->header;
@@ -105,7 +105,7 @@ message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
         header->body_length = msg_length;
         strncpy(header->rpc_name, "RPC_CALL_RAW_MESSAGE", sizeof(header->rpc_name) - 1);
         header->rpc_name[sizeof(header->rpc_name) - 1] = '\0';
-        header->gpid.set_value(0);
+        header->gpid_.set_value(0);
         header->context.u.is_request = 1;
         header->context.u.is_forwarded = 0;
         header->context.u.is_forward_supported = 0;

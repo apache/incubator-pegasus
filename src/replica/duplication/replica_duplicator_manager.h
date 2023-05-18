@@ -33,7 +33,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 /// replica_duplicator_manager manages the set of duplications on this replica.
@@ -124,4 +124,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

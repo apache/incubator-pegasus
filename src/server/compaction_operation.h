@@ -28,6 +28,7 @@
 
 #include "common/json_helper.h"
 #include "compaction_filter_rule.h"
+#include "pegasus_value_schema.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"
 #include "utils/factory_store.h"
@@ -63,8 +64,8 @@ public:
     template <typename T>
     static void register_component(const char *name)
     {
-        dsn::utils::factory_store<compaction_operation>::register_factory(
-            name, create<T>, dsn::PROVIDER_TYPE_MAIN);
+        utils::factory_store<compaction_operation>::register_factory(
+            name, create<T>, PROVIDER_TYPE_MAIN);
     }
 
     compaction_operation(filter_rules &&rules, uint32_t data_version)
@@ -74,18 +75,17 @@ public:
     explicit compaction_operation(uint32_t data_version) : data_version(data_version) {}
     virtual ~compaction_operation() = 0;
 
-    bool all_rules_match(dsn::string_view hash_key,
-                         dsn::string_view sort_key,
-                         dsn::string_view existing_value) const;
+    bool
+    all_rules_match(string_view hash_key, string_view sort_key, string_view existing_value) const;
     void set_rules(filter_rules &&rules);
     /**
      * @return false indicates that this key-value should be removed
      * If you want to modify the existing_value, you can pass it back through new_value and
      * value_changed needs to be set to true in this case.
      */
-    virtual bool filter(dsn::string_view hash_key,
-                        dsn::string_view sort_key,
-                        dsn::string_view existing_value,
+    virtual bool filter(string_view hash_key,
+                        string_view sort_key,
+                        string_view existing_value,
                         std::string *new_value,
                         bool *value_changed) const = 0;
 
@@ -105,9 +105,9 @@ public:
     delete_key(filter_rules &&rules, uint32_t data_version);
     explicit delete_key(uint32_t data_version);
 
-    bool filter(dsn::string_view hash_key,
-                dsn::string_view sort_key,
-                dsn::string_view existing_value,
+    bool filter(string_view hash_key,
+                string_view sort_key,
+                string_view existing_value,
                 std::string *new_value,
                 bool *value_changed) const;
 
@@ -142,8 +142,8 @@ public:
     static compaction_operation *creator(const std::string &params, uint32_t data_version)
     {
         update_ttl *operation = new update_ttl(data_version);
-        if (!dsn::json::json_forwarder<update_ttl>::decode(
-                dsn::blob::create_from_bytes(params.data(), params.size()), *operation)) {
+        if (!json::json_forwarder<update_ttl>::decode(
+                blob::create_from_bytes(params.data(), params.size()), *operation)) {
             delete operation;
             return nullptr;
         }
@@ -153,9 +153,9 @@ public:
     update_ttl(filter_rules &&rules, uint32_t data_version);
     explicit update_ttl(uint32_t data_version);
 
-    bool filter(dsn::string_view hash_key,
-                dsn::string_view sort_key,
-                dsn::string_view existing_value,
+    bool filter(string_view hash_key,
+                string_view sort_key,
+                string_view existing_value,
                 std::string *new_value,
                 bool *value_changed) const;
     DEFINE_JSON_SERIALIZATION(type, value)

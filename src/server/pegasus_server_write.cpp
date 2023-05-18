@@ -59,7 +59,7 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
     init_non_batch_write_handlers();
 }
 
-int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
+int pegasus_server_write::on_batched_write_requests(message_ex **requests,
                                                     int count,
                                                     int64_t decree,
                                                     uint64_t timestamp)
@@ -93,7 +93,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
 
 void pegasus_server_write::set_default_ttl(uint32_t ttl) { _write_svc->set_default_ttl(ttl); }
 
-int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int count)
+int pegasus_server_write::on_batched_writes(message_ex **requests, int count)
 {
     int err = rocksdb::Status::kOk;
     {
@@ -107,12 +107,12 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
             // and respond for all RPCs regardless of their result.
             int local_err = rocksdb::Status::kOk;
             try {
-                dsn::task_code rpc_code(requests[i]->rpc_code());
-                if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
+                task_code rpc_code(requests[i]->rpc_code());
+                if (rpc_code == apps::RPC_RRDB_RRDB_PUT) {
                     auto rpc = put_rpc::auto_reply(requests[i]);
                     local_err = on_single_put_in_batch(rpc);
                     _put_rpc_batch.emplace_back(std::move(rpc));
-                } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+                } else if (rpc_code == apps::RPC_RRDB_RRDB_REMOVE) {
                     auto rpc = remove_rpc::auto_reply(requests[i]);
                     local_err = on_single_remove_in_batch(rpc);
                     _remove_rpc_batch.emplace_back(std::move(rpc));
@@ -150,9 +150,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
     return err;
 }
 
-void pegasus_server_write::request_key_check(int64_t decree,
-                                             dsn::message_ex *msg,
-                                             const dsn::blob &key)
+void pegasus_server_write::request_key_check(int64_t decree, message_ex *msg, const blob &key)
 {
     // TODO(wutao1): server should not assert when client's hash is incorrect.
     if (msg->header->client.partition_hash != 0) {
@@ -164,7 +162,7 @@ void pegasus_server_write::request_key_check(int64_t decree,
     }
 
     if (FLAGS_rocksdb_verbose_log) {
-        ::dsn::blob hash_key, sort_key;
+        blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
 
         LOG_INFO_ROCKSDB("Write",
@@ -179,38 +177,38 @@ void pegasus_server_write::request_key_check(int64_t decree,
 void pegasus_server_write::init_non_batch_write_handlers()
 {
     _non_batch_write_handlers = {
-        {dsn::apps::RPC_RRDB_RRDB_MULTI_PUT,
-         [this](dsn::message_ex *request) -> int {
+        {apps::RPC_RRDB_RRDB_MULTI_PUT,
+         [this](message_ex *request) -> int {
              auto rpc = multi_put_rpc::auto_reply(request);
              return _write_svc->multi_put(_write_ctx, rpc.request(), rpc.response());
          }},
-        {dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE,
-         [this](dsn::message_ex *request) -> int {
+        {apps::RPC_RRDB_RRDB_MULTI_REMOVE,
+         [this](message_ex *request) -> int {
              auto rpc = multi_remove_rpc::auto_reply(request);
              return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
          }},
-        {dsn::apps::RPC_RRDB_RRDB_INCR,
-         [this](dsn::message_ex *request) -> int {
+        {apps::RPC_RRDB_RRDB_INCR,
+         [this](message_ex *request) -> int {
              auto rpc = incr_rpc::auto_reply(request);
              return _write_svc->incr(_decree, rpc.request(), rpc.response());
          }},
-        {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
-         [this](dsn::message_ex *request) -> int {
+        {apps::RPC_RRDB_RRDB_DUPLICATE,
+         [this](message_ex *request) -> int {
              auto rpc = duplicate_rpc::auto_reply(request);
              return _write_svc->duplicate(_decree, rpc.request(), rpc.response());
          }},
-        {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
-         [this](dsn::message_ex *request) -> int {
+        {apps::RPC_RRDB_RRDB_CHECK_AND_SET,
+         [this](message_ex *request) -> int {
              auto rpc = check_and_set_rpc::auto_reply(request);
              return _write_svc->check_and_set(_decree, rpc.request(), rpc.response());
          }},
-        {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
-         [this](dsn::message_ex *request) -> int {
+        {apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
+         [this](message_ex *request) -> int {
              auto rpc = check_and_mutate_rpc::auto_reply(request);
              return _write_svc->check_and_mutate(_decree, rpc.request(), rpc.response());
          }},
-        {dsn::apps::RPC_RRDB_RRDB_BULK_LOAD,
-         [this](dsn::message_ex *request) -> int {
+        {apps::RPC_RRDB_RRDB_BULK_LOAD,
+         [this](message_ex *request) -> int {
              auto rpc = ingestion_rpc::auto_reply(request);
              return _write_svc->ingest_files(_decree, rpc.request(), rpc.response());
          }},

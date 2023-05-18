@@ -18,8 +18,8 @@
 #include "perf_counter_wrapper.h"
 #include "utils/singleton.h"
 
-namespace dsn {
-class builtin_counters : public dsn::utils::singleton<builtin_counters>
+namespace pegasus {
+class builtin_counters : public utils::singleton<builtin_counters>
 {
 public:
     builtin_counters();
@@ -27,7 +27,7 @@ public:
     void update_counters();
 
 private:
-    dsn::perf_counter_wrapper _memused_virt;
-    dsn::perf_counter_wrapper _memused_res;
+    perf_counter_wrapper _memused_virt;
+    perf_counter_wrapper _memused_res;
 };
-}
+} // namespace pegasus

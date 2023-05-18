@@ -25,7 +25,7 @@
 
 #include "http_server.h"
 
-namespace dsn {
+namespace pegasus {
 
 class pprof_http_service : public http_service
 {
@@ -80,6 +80,6 @@ private:
     std::atomic_bool _in_pprof_action{false};
 };
 
-} // namespace dsn
+} // namespace pegasus
 
 #endif // DSN_ENABLE_GPERF

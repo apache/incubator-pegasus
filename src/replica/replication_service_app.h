@@ -34,7 +34,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 class message_ex;
 
@@ -44,27 +44,26 @@ namespace test {
 class test_checker;
 }
 
-typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
+typedef ref_ptr<replica_stub> replica_stub_ptr;
 
-class replication_service_app : public ::dsn::service_app
+class replication_service_app : public service_app
 {
 public:
     static void register_all();
 
-    replication_service_app(const dsn::service_app_info *info);
+    replication_service_app(const service_app_info *info);
 
     virtual ~replication_service_app(void);
 
-    virtual ::dsn::error_code start(const std::vector<std::string> &args) override;
+    virtual error_code start(const std::vector<std::string> &args) override;
 
-    virtual ::dsn::error_code stop(bool cleanup = false) override;
+    virtual error_code stop(bool cleanup = false) override;
 
-    virtual void
-    on_intercepted_request(dsn::gpid gpid, bool is_write, dsn::message_ex *msg) override;
+    virtual void on_intercepted_request(gpid gpid, bool is_write, message_ex *msg) override;
 
 private:
-    friend class ::dsn::replication::test::test_checker;
+    friend class replication::test::test_checker;
     replica_stub_ptr _stub;
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

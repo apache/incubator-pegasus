@@ -128,13 +128,13 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 
 // TODO: (Tangyanzhao) replace it to xxhash
 
-/*extern*/ int get_bucket_id(dsn::string_view data, int bucket_num)
+/*extern*/ int get_bucket_id(string_view data, int bucket_num)
 {
     return static_cast<int>(boost::hash_range(data.begin(), data.end()) % bucket_num);
 }
 
-hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
-                                   dsn::replication::replica_base *r_base)
+hotkey_collector::hotkey_collector(replication::hotkey_type::type hotkey_type,
+                                   replication::replica_base *r_base)
     : replica_base(r_base), _hotkey_type(hotkey_type)
 {
     int now_hash_bucket_num = FLAGS_hotkey_buckets_num;
@@ -195,8 +195,7 @@ inline void hotkey_collector::change_state_by_result()
     case hotkey_collector_state::FINE_DETECTING:
         if (!_result.hot_hash_key.empty()) {
             change_state_to_finished();
-            LOG_ERROR_PREFIX("Find the hotkey: {}",
-                             pegasus::utils::c_escape_string(_result.hot_hash_key));
+            LOG_ERROR_PREFIX("Find the hotkey: {}", utils::c_escape_string(_result.hot_hash_key));
         }
         break;
     default:
@@ -204,35 +203,35 @@ inline void hotkey_collector::change_state_by_result()
     }
 }
 
-void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
-                                  dsn::replication::detect_hotkey_response &resp)
+void hotkey_collector::handle_rpc(const replication::detect_hotkey_request &req,
+                                  replication::detect_hotkey_response &resp)
 {
     switch (req.action) {
-    case dsn::replication::detect_action::START:
+    case replication::detect_action::START:
         on_start_detect(resp);
         return;
-    case dsn::replication::detect_action::STOP:
+    case replication::detect_action::STOP:
         on_stop_detect(resp);
         return;
-    case dsn::replication::detect_action::QUERY:
+    case replication::detect_action::QUERY:
         query_result(resp);
         return;
     default:
         std::string hint = fmt::format("{}: can't find this detect action", req.action);
-        resp.err = dsn::ERR_INVALID_STATE;
+        resp.err = ERR_INVALID_STATE;
         resp.__set_err_hint(hint);
         LOG_ERROR_PREFIX(hint);
     }
 }
 
-void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
+void hotkey_collector::capture_raw_key(const blob &raw_key, int64_t weight)
 {
-    dsn::blob hash_key, sort_key;
+    blob hash_key, sort_key;
     pegasus_restore_key(raw_key, hash_key, sort_key);
     capture_hash_key(hash_key, weight);
 }
 
-void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
+void hotkey_collector::capture_hash_key(const blob &hash_key, int64_t weight)
 {
     // TODO: (Tangyanzhao) add a unit test to ensure data integrity
     switch (_state.load()) {
@@ -260,33 +259,33 @@ void hotkey_collector::analyse_data()
     }
 }
 
-void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response &resp)
+void hotkey_collector::on_start_detect(replication::detect_hotkey_response &resp)
 {
     auto now_state = _state.load();
     std::string hint;
     switch (now_state) {
     case hotkey_collector_state::COARSE_DETECTING:
     case hotkey_collector_state::FINE_DETECTING:
-        resp.err = dsn::ERR_BUSY;
+        resp.err = ERR_BUSY;
         hint = fmt::format("still detecting {} hotkey, state is {}",
-                           dsn::enum_to_string(_hotkey_type),
-                           enum_to_string(now_state));
+                           pegasus::enum_to_string(_hotkey_type),
+                           server::enum_to_string(now_state));
         break;
     case hotkey_collector_state::FINISHED:
-        resp.err = dsn::ERR_BUSY;
+        resp.err = ERR_BUSY;
         hint = fmt::format("{} hotkey result has been found: {}, you can send a stop rpc to "
                            "restart hotkey detection",
-                           dsn::enum_to_string(_hotkey_type),
-                           pegasus::utils::c_escape_string(_result.hot_hash_key));
+                           pegasus::enum_to_string(_hotkey_type),
+                           utils::c_escape_string(_result.hot_hash_key));
         break;
     case hotkey_collector_state::STOPPED:
         change_state_to_coarse_detecting();
-        resp.err = dsn::ERR_OK;
-        hint = fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));
+        resp.err = ERR_OK;
+        hint = fmt::format("starting to detect {} hotkey", pegasus::enum_to_string(_hotkey_type));
         break;
     default:
         hint = "invalid collector state";
-        resp.err = dsn::ERR_INVALID_STATE;
+        resp.err = ERR_INVALID_STATE;
         resp.__set_err_hint(hint);
         LOG_ERROR_PREFIX(hint);
         CHECK(false, "invalid collector state");
@@ -295,26 +294,26 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
     LOG_WARNING_PREFIX(hint);
 }
 
-void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &resp)
+void hotkey_collector::on_stop_detect(replication::detect_hotkey_response &resp)
 {
     change_state_to_stopped();
-    resp.err = dsn::ERR_OK;
+    resp.err = ERR_OK;
     std::string hint =
-        fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
+        fmt::format("{} hotkey stopped, cache cleared", pegasus::enum_to_string(_hotkey_type));
     LOG_INFO_PREFIX(hint);
 }
 
-void hotkey_collector::query_result(dsn::replication::detect_hotkey_response &resp)
+void hotkey_collector::query_result(replication::detect_hotkey_response &resp)
 {
     if (_state != hotkey_collector_state::FINISHED) {
-        resp.err = dsn::ERR_BUSY;
-        std::string hint =
-            fmt::format("Can't get hotkey now, now state: {}", enum_to_string(_state.load()));
+        resp.err = ERR_BUSY;
+        std::string hint = fmt::format("Can't get hotkey now, now state: {}",
+                                       server::enum_to_string(_state.load()));
         resp.__set_err_hint(hint);
         LOG_INFO_PREFIX(hint);
     } else {
-        resp.err = dsn::ERR_OK;
-        resp.__set_hotkey_result(pegasus::utils::c_escape_string(_result.hot_hash_key));
+        resp.err = ERR_OK;
+        resp.__set_hotkey_result(utils::c_escape_string(_result.hot_hash_key));
     }
 }
 
@@ -339,7 +338,7 @@ hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base,
     }
 }
 
-void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
+void hotkey_coarse_data_collector::capture_data(const blob &hash_key, uint64_t weight)
 {
     _hash_buckets[get_bucket_id(hash_key, _hash_bucket_num)].fetch_add(weight);
 }
@@ -381,7 +380,7 @@ void hotkey_fine_data_collector::change_target_bucket(int target_bucket_index)
     _target_bucket_index.store(target_bucket_index);
 }
 
-void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
+void hotkey_fine_data_collector::capture_data(const blob &hash_key, uint64_t weight)
 {
     if (get_bucket_id(hash_key, _hash_bucket_num) != _target_bucket_index.load()) {
         return;
@@ -392,26 +391,26 @@ void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_
 
 struct blob_hash
 {
-    std::size_t operator()(const dsn::blob &str) const
+    std::size_t operator()(const blob &str) const
     {
-        dsn::string_view cp(str);
+        string_view cp(str);
         return boost::hash_range(cp.begin(), cp.end());
     }
 };
 
 struct blob_equal
 {
-    std::size_t operator()(const dsn::blob &lhs, const dsn::blob &rhs) const
+    std::size_t operator()(const blob &lhs, const blob &rhs) const
     {
-        return dsn::string_view(lhs) == dsn::string_view(rhs);
+        return string_view(lhs) == string_view(rhs);
     }
 };
 
 void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
 {
     // hashkey -> weight
-    std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_keys_weight;
-    std::pair<dsn::blob, uint64_t> key_weight_pair;
+    std::unordered_map<blob, uint64_t, blob_hash, blob_equal> hash_keys_weight;
+    std::pair<blob, uint64_t> key_weight_pair;
     // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
     uint32_t dequeue_cnt = 0;
     while (++dequeue_cnt <= _max_queue_size && _capture_key_queue.try_dequeue(key_weight_pair)) {
@@ -425,8 +424,8 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     // the weight of all the collected hash keys
     std::vector<uint64_t> weights;
     weights.reserve(hash_keys_weight.size());
-    dsn::string_view weight_max_key; // the hashkey with the max weight
-    uint64_t weight_max = 0;         // the max weight by far
+    string_view weight_max_key; // the hashkey with the max weight
+    uint64_t weight_max = 0;    // the max weight by far
     for (const auto &iter : hash_keys_weight) {
         weights.push_back(iter.second);
         if (iter.second > weight_max) {
@@ -451,7 +450,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
 void hotkey_fine_data_collector::clear()
 {
     _target_bucket_index.store(-1);
-    std::pair<dsn::blob, uint64_t> key_weight_pair;
+    std::pair<blob, uint64_t> key_weight_pair;
     while (_capture_key_queue.try_dequeue(key_weight_pair)) {
     }
 }

@@ -28,7 +28,7 @@
 #include "common/gpid.h"
 #include "utils/fixed_size_buffer_pool.h"
 
-namespace dsn {
+namespace pegasus {
 
 bool gpid::parse_from(const char *str)
 {

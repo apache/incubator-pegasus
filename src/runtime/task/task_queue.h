@@ -33,7 +33,7 @@
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
 
-namespace dsn {
+namespace pegasus {
 
 class task;
 class task_worker_pool;
@@ -93,11 +93,11 @@ private:
     std::string _name;
     int _index;
     std::atomic<int> _queue_length;
-    dsn::perf_counter_wrapper _queue_length_counter;
-    dsn::perf_counter_wrapper _delay_task_counter;
-    dsn::perf_counter_wrapper _reject_task_counter;
+    perf_counter_wrapper _queue_length_counter;
+    perf_counter_wrapper _delay_task_counter;
+    perf_counter_wrapper _reject_task_counter;
     threadpool_spec *_spec;
     volatile int _virtual_queue_length;
 };
 /*@}*/
-} // namespace dsn
+} // namespace pegasus

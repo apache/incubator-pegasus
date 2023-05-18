@@ -24,7 +24,7 @@
 
 #include "runtime/task/task.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 class rpc_address;
 
@@ -43,4 +43,4 @@ bool register_remote_command_rpc();
 
 } // namespace cmd
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

@@ -14,7 +14,7 @@
 
 #include <cstddef>
 
-namespace dsn {
+namespace pegasus {
 namespace strings_internal {
 
 // This is significantly faster for case-sensitive matches with very
@@ -22,4 +22,4 @@ namespace strings_internal {
 const char *memmatch(const char *phaystack, size_t haylen, const char *pneedle, size_t neelen);
 
 } // namespace strings_internal
-} // namespace dsn
+} // namespace pegasus

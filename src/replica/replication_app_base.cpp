@@ -41,7 +41,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
 #include "consensus_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "mutation.h"
 #include "replica.h"
 #include "replica/replication_app_base.h"
@@ -66,7 +66,7 @@
 #include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
-namespace dsn {
+namespace pegasus {
 class disk_file;
 
 namespace replication {
@@ -526,4 +526,4 @@ error_code replication_app_base::update_init_info_ballot_and_decree(replica *r)
 const app_info *replication_app_base::get_app_info() const { return _replica->get_app_info(); }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

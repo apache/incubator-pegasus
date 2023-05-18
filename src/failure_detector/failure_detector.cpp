@@ -45,12 +45,12 @@
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace fd {
 
 failure_detector::failure_detector()
 {
-    dsn::threadpool_code pool = task_spec::get(LPC_BEACON_CHECK.code())->pool_code;
+    threadpool_code pool = task_spec::get(LPC_BEACON_CHECK.code())->pool_code;
     task_spec::get(RPC_FD_FAILURE_DETECTOR_PING.code())->pool_code = pool;
     task_spec::get(RPC_FD_FAILURE_DETECTOR_PING_ACK.code())->pool_code = pool;
 
@@ -69,7 +69,7 @@ void failure_detector::register_ctrl_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _get_allow_list = dsn::command_manager::instance().register_command(
+        _get_allow_list = command_manager::instance().register_command(
             {"fd.allow_list"},
             "fd.allow_list",
             "show allow list of failure detector",
@@ -120,7 +120,7 @@ void failure_detector::stop()
     _workers.clear();
 }
 
-void failure_detector::register_master(::dsn::rpc_address target)
+void failure_detector::register_master(rpc_address target)
 {
     bool setup_timer = false;
 
@@ -154,9 +154,7 @@ void failure_detector::register_master(::dsn::rpc_address target)
     }
 }
 
-bool failure_detector::switch_master(::dsn::rpc_address from,
-                                     ::dsn::rpc_address to,
-                                     uint32_t delay_milliseconds)
+bool failure_detector::switch_master(rpc_address from, rpc_address to, uint32_t delay_milliseconds)
 {
     /* the caller of switch master shoud lock necessarily to protect _masters */
     auto it = _masters.find(from);
@@ -193,7 +191,7 @@ bool failure_detector::switch_master(::dsn::rpc_address from,
 
 bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base) { return ts > base; }
 
-void failure_detector::report(::dsn::rpc_address node, bool is_master, bool is_connected)
+void failure_detector::report(rpc_address node, bool is_master, bool is_connected)
 {
     LOG_INFO(
         "{} {}connected: {}", is_master ? "master" : "worker", is_connected ? "" : "dis", node);
@@ -303,13 +301,13 @@ void failure_detector::check_all_records()
     }
 }
 
-void failure_detector::add_allow_list(::dsn::rpc_address node)
+void failure_detector::add_allow_list(rpc_address node)
 {
     zauto_lock l(_lock);
     _allow_list.insert(node);
 }
 
-bool failure_detector::remove_from_allow_list(::dsn::rpc_address node)
+bool failure_detector::remove_from_allow_list(rpc_address node)
 {
     zauto_lock l(_lock);
     return _allow_list.erase(node) > 0;
@@ -340,7 +338,7 @@ std::string failure_detector::get_allow_list(const std::vector<std::string> &arg
         return "error: FD is not started";
 
     std::stringstream oss;
-    dsn::zauto_lock l(_lock);
+    zauto_lock l(_lock);
     oss << "get ok: allow list " << (_use_allow_list ? "enabled. list: " : "disabled.");
     for (auto iter = _allow_list.begin(); iter != _allow_list.end(); ++iter) {
         if (iter != _allow_list.begin())
@@ -398,19 +396,19 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
     }
 }
 
-void failure_detector::on_ping(const beacon_msg &beacon, ::dsn::rpc_replier<beacon_ack> &reply)
+void failure_detector::on_ping(const beacon_msg &beacon, rpc_replier<beacon_ack> &reply)
 {
     beacon_ack ack;
     on_ping_internal(beacon, ack);
     reply(ack);
 }
 
-void failure_detector::end_ping(::dsn::error_code err, const beacon_ack &ack, void *)
+void failure_detector::end_ping(error_code err, const beacon_ack &ack, void *)
 {
     end_ping_internal(err, ack);
 }
 
-bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack &ack)
+bool failure_detector::end_ping_internal(error_code err, const beacon_ack &ack)
 {
     /*
      * the caller of the end_ping_internal should lock necessarily!!!
@@ -488,7 +486,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     return true;
 }
 
-bool failure_detector::unregister_master(::dsn::rpc_address node)
+bool failure_detector::unregister_master(rpc_address node)
 {
     zauto_lock l(_lock);
     auto it = _masters.find(node);
@@ -504,7 +502,7 @@ bool failure_detector::unregister_master(::dsn::rpc_address node)
     }
 }
 
-bool failure_detector::is_master_connected(::dsn::rpc_address node) const
+bool failure_detector::is_master_connected(rpc_address node) const
 {
     zauto_lock l(_lock);
     auto it = _masters.find(node);
@@ -514,7 +512,7 @@ bool failure_detector::is_master_connected(::dsn::rpc_address node) const
         return false;
 }
 
-void failure_detector::register_worker(::dsn::rpc_address target, bool is_connected)
+void failure_detector::register_worker(rpc_address target, bool is_connected)
 {
     /*
      * callers should use the fd::_lock necessarily
@@ -530,7 +528,7 @@ void failure_detector::register_worker(::dsn::rpc_address target, bool is_connec
     }
 }
 
-bool failure_detector::unregister_worker(::dsn::rpc_address node)
+bool failure_detector::unregister_worker(rpc_address node)
 {
     /*
      * callers should use the fd::_lock necessarily
@@ -556,7 +554,7 @@ void failure_detector::clear_workers()
     _workers.clear();
 }
 
-bool failure_detector::is_worker_connected(::dsn::rpc_address node) const
+bool failure_detector::is_worker_connected(rpc_address node) const
 {
     zauto_lock l(_lock);
     auto it = _workers.find(node);
@@ -566,35 +564,35 @@ bool failure_detector::is_worker_connected(::dsn::rpc_address node) const
         return false;
 }
 
-void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
+void failure_detector::send_beacon(rpc_address target, uint64_t time)
 {
     beacon_msg beacon;
     beacon.time = time;
     beacon.from_addr = dsn_primary_address();
     beacon.to_addr = target;
-    beacon.__set_start_time(static_cast<int64_t>(dsn::utils::process_start_millis()));
+    beacon.__set_start_time(static_cast<int64_t>(utils::process_start_millis()));
 
     LOG_INFO(
         "send ping message, from[{}], to[{}], time[{}]", beacon.from_addr, beacon.to_addr, time);
 
-    ::dsn::rpc::call(target,
-                     RPC_FD_FAILURE_DETECTOR_PING,
-                     beacon,
-                     &_tracker,
-                     [=](error_code err, beacon_ack &&resp) {
-                         if (err != ::dsn::ERR_OK) {
-                             beacon_ack ack;
-                             ack.time = beacon.time;
-                             ack.this_node = beacon.to_addr;
-                             ack.primary_node.set_invalid();
-                             ack.is_master = false;
-                             ack.allowed = true;
-                             end_ping(err, ack, nullptr);
-                         } else {
-                             end_ping(err, std::move(resp), nullptr);
-                         }
-                     },
-                     std::chrono::milliseconds(_beacon_timeout_milliseconds));
+    rpc::call(target,
+              RPC_FD_FAILURE_DETECTOR_PING,
+              beacon,
+              &_tracker,
+              [=](error_code err, beacon_ack &&resp) {
+                  if (err != ERR_OK) {
+                      beacon_ack ack;
+                      ack.time = beacon.time;
+                      ack.this_node = beacon.to_addr;
+                      ack.primary_node.set_invalid();
+                      ack.is_master = false;
+                      ack.allowed = true;
+                      end_ping(err, ack, nullptr);
+                  } else {
+                      end_ping(err, std::move(resp), nullptr);
+                  }
+              },
+              std::chrono::milliseconds(_beacon_timeout_milliseconds));
 }
 }
 } // end namespace

@@ -37,17 +37,15 @@ class value_schema_v1 : public value_schema
 public:
     value_schema_v1() = default;
 
-    std::unique_ptr<value_field> extract_field(dsn::string_view value,
-                                               value_field_type type) override;
-    dsn::blob extract_user_data(std::string &&value) override;
+    std::unique_ptr<value_field> extract_field(string_view value, value_field_type type) override;
+    blob extract_user_data(std::string &&value) override;
     void update_field(std::string &value, std::unique_ptr<value_field> field) override;
     rocksdb::SliceParts generate_value(const value_params &params) override;
     data_version version() const override { return data_version::VERSION_1; }
 
 private:
-    std::unique_ptr<value_field> extract_timestamp(dsn::string_view value);
-    std::unique_ptr<value_field> extract_time_tag(dsn::string_view value);
+    std::unique_ptr<value_field> extract_timestamp(string_view value);
+    std::unique_ptr<value_field> extract_time_tag(string_view value);
     void update_expire_ts(std::string &value, std::unique_ptr<value_field> field);
 };
-
 } // namespace pegasus

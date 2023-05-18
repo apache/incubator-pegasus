@@ -53,10 +53,10 @@ DSN_DEFINE_uint64(pegasus.benchmark,
                   "Seed base for random number generators. When 0 it is deterministic");
 DSN_DEFINE_string(pegasus.benchmark, pegasus_cluster_name, "onebox", "The Pegasus cluster name");
 DSN_DEFINE_validator(pegasus_cluster_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 DSN_DEFINE_string(pegasus.benchmark, pegasus_app_name, "temp", "pegasus app name");
 DSN_DEFINE_validator(pegasus_app_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 DSN_DEFINE_string(
     pegasus.benchmark,
     benchmarks,
@@ -68,8 +68,7 @@ DSN_DEFINE_string(
     "\tmultisetrandom_pegasus   -- pegasus write N random values with multi_count hash keys list\n"
     "\tmultigetrandom_pegasus   -- pegasus read N random keys with multi_count hash list\n");
 
-DSN_DEFINE_validator(benchmarks,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+DSN_DEFINE_validator(benchmarks, [](const char *value) -> bool { return !utils::is_empty(value); });
 
 DSN_DEFINE_int32(pegasus.benchmark,
                  pegasus_timeout_ms,
@@ -183,11 +182,11 @@ void benchmark::write_random(thread_arg *thread)
         while (true) {
             try_count++;
             int ret = _client->set(hashkey, sortkey, value, FLAGS_pegasus_timeout_ms);
-            if (ret == ::pegasus::PERR_OK) {
+            if (ret == PERR_OK) {
                 bytes += FLAGS_value_size + FLAGS_hashkey_size + FLAGS_sortkey_size;
                 count++;
                 break;
-            } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
+            } else if (ret != PERR_TIMEOUT || try_count > 3) {
                 fmt::print(stderr, "Set returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
             } else {
@@ -225,12 +224,12 @@ void benchmark::multi_set_random(thread_arg *thread)
         while (true) {
             try_count++;
             int ret = _client->multi_set(hashkey, kvs, FLAGS_pegasus_timeout_ms);
-            if (ret == ::pegasus::PERR_OK) {
+            if (ret == PERR_OK) {
                 bytes += (FLAGS_value_size + FLAGS_hashkey_size + FLAGS_sortkey_size) *
                          FLAGS_multi_count;
                 break;
             }
-            if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
+            if (ret != PERR_TIMEOUT || try_count > 3) {
                 fmt::print(
                     stderr, "multi_set returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
@@ -261,13 +260,13 @@ void benchmark::read_random(thread_arg *thread)
         while (true) {
             try_count++;
             int ret = _client->get(hashkey, sortkey, value, FLAGS_pegasus_timeout_ms);
-            if (ret == ::pegasus::PERR_OK) {
+            if (ret == PERR_OK) {
                 found++;
                 bytes += hashkey.size() + sortkey.size() + value.size();
                 break;
-            } else if (ret == ::pegasus::PERR_NOT_FOUND) {
+            } else if (ret == PERR_NOT_FOUND) {
                 break;
-            } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
+            } else if (ret != PERR_TIMEOUT || try_count > 3) {
                 fmt::print(stderr, "Get returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
             } else {
@@ -312,7 +311,7 @@ void benchmark::multi_get_random(thread_arg *thread)
             try_count++;
             int ret = _client->multi_get(
                 hashkey, sortkeys, kvs, max_fetch_count, max_fetch_size, FLAGS_pegasus_timeout_ms);
-            if (ret == ::pegasus::PERR_OK) {
+            if (ret == PERR_OK) {
                 found += kvs.size();
                 bytes += FLAGS_multi_count * hashkey.size();
                 for (const auto &kv : kvs) {
@@ -320,10 +319,10 @@ void benchmark::multi_get_random(thread_arg *thread)
                 }
                 break;
             }
-            if (ret == ::pegasus::PERR_NOT_FOUND) {
+            if (ret == PERR_NOT_FOUND) {
                 break;
             }
-            if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
+            if (ret != PERR_TIMEOUT || try_count > 3) {
                 fmt::print(
                     stderr, "multi_get returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
@@ -354,9 +353,9 @@ void benchmark::delete_random(thread_arg *thread)
         while (true) {
             try_count++;
             int ret = _client->del(hashkey, sortkey, FLAGS_pegasus_timeout_ms);
-            if (ret == ::pegasus::PERR_OK) {
+            if (ret == PERR_OK) {
                 break;
-            } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
+            } else if (ret != PERR_TIMEOUT || try_count > 3) {
                 fmt::print(stderr, "Del returned an error: {}\n", _client->get_error_string(ret));
                 dsn_exit(1);
             } else {

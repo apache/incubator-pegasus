@@ -55,7 +55,7 @@
 #include "zookeeper/zookeeper.jute.h"
 #include "zookeeper_session.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 static const char *states[] = {

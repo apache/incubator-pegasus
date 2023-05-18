@@ -30,26 +30,23 @@
 
 namespace pegasus {
 
-using multi_put_rpc = dsn::rpc_holder<dsn::apps::multi_put_request, dsn::apps::update_response>;
+using multi_put_rpc = rpc_holder<apps::multi_put_request, apps::update_response>;
 
-using put_rpc = dsn::rpc_holder<dsn::apps::update_request, dsn::apps::update_response>;
+using put_rpc = rpc_holder<apps::update_request, apps::update_response>;
 
-using multi_remove_rpc =
-    dsn::rpc_holder<dsn::apps::multi_remove_request, dsn::apps::multi_remove_response>;
+using multi_remove_rpc = rpc_holder<apps::multi_remove_request, apps::multi_remove_response>;
 
-using remove_rpc = dsn::rpc_holder<dsn::blob, dsn::apps::update_response>;
+using remove_rpc = rpc_holder<blob, apps::update_response>;
 
-using incr_rpc = dsn::rpc_holder<dsn::apps::incr_request, dsn::apps::incr_response>;
+using incr_rpc = rpc_holder<apps::incr_request, apps::incr_response>;
 
-using check_and_set_rpc =
-    dsn::rpc_holder<dsn::apps::check_and_set_request, dsn::apps::check_and_set_response>;
+using check_and_set_rpc = rpc_holder<apps::check_and_set_request, apps::check_and_set_response>;
 
-using duplicate_rpc = dsn::apps::duplicate_rpc;
+using duplicate_rpc = apps::duplicate_rpc;
 
 using check_and_mutate_rpc =
-    dsn::rpc_holder<dsn::apps::check_and_mutate_request, dsn::apps::check_and_mutate_response>;
+    rpc_holder<apps::check_and_mutate_request, apps::check_and_mutate_response>;
 
-using ingestion_rpc =
-    dsn::rpc_holder<dsn::replication::ingestion_request, dsn::replication::ingestion_response>;
+using ingestion_rpc = rpc_holder<replication::ingestion_request, replication::ingestion_response>;
 
 } // namespace pegasus

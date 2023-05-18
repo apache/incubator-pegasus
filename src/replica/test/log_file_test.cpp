@@ -32,7 +32,7 @@
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class log_file_test : public replica_test_base
@@ -97,4 +97,4 @@ TEST_F(log_file_test, commit_log_blocks)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

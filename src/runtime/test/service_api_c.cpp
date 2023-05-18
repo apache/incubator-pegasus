@@ -60,27 +60,27 @@
 
 DSN_DECLARE_string(tool);
 
-using namespace dsn;
+namespace pegasus {
 
 TEST(core, dsn_error)
 {
-    ASSERT_EQ(ERR_OK, dsn::error_code("ERR_OK"));
+    ASSERT_EQ(ERR_OK, error_code("ERR_OK"));
     ASSERT_STREQ("ERR_OK", ERR_OK.to_string());
 }
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST)
 TEST(core, dsn_threadpool_code)
 {
-    ASSERT_FALSE(dsn::threadpool_code::is_exist("THREAD_POOL_NOT_EXIST"));
+    ASSERT_FALSE(threadpool_code::is_exist("THREAD_POOL_NOT_EXIST"));
     ASSERT_STREQ("THREAD_POOL_DEFAULT", THREAD_POOL_DEFAULT.to_string());
-    ASSERT_EQ(THREAD_POOL_DEFAULT, dsn::threadpool_code("THREAD_POOL_DEFAULT"));
-    ASSERT_LE(THREAD_POOL_DEFAULT, dsn::threadpool_code::max());
+    ASSERT_EQ(THREAD_POOL_DEFAULT, threadpool_code("THREAD_POOL_DEFAULT"));
+    ASSERT_LE(THREAD_POOL_DEFAULT, threadpool_code::max());
 
     ASSERT_STREQ("THREAD_POOL_FOR_TEST", THREAD_POOL_FOR_TEST.to_string());
-    ASSERT_EQ(THREAD_POOL_FOR_TEST, dsn::threadpool_code("THREAD_POOL_FOR_TEST"));
-    ASSERT_LE(THREAD_POOL_FOR_TEST, dsn::threadpool_code::max());
+    ASSERT_EQ(THREAD_POOL_FOR_TEST, threadpool_code("THREAD_POOL_FOR_TEST"));
+    ASSERT_LE(THREAD_POOL_FOR_TEST, threadpool_code::max());
 
-    ASSERT_LT(0, dsn::utils::get_current_tid());
+    ASSERT_LT(0, utils::get_current_tid());
 }
 
 DEFINE_TASK_CODE(TASK_CODE_COMPUTE_FOR_TEST, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
@@ -90,53 +90,51 @@ TEST(core, dsn_task_code)
 {
     dsn_task_type_t type;
     dsn_task_priority_t pri;
-    dsn::threadpool_code pool;
+    threadpool_code pool;
 
-    ASSERT_EQ(TASK_CODE_INVALID, dsn::task_code::try_get("TASK_CODE_NOT_EXIST", TASK_CODE_INVALID));
+    ASSERT_EQ(TASK_CODE_INVALID, task_code::try_get("TASK_CODE_NOT_EXIST", TASK_CODE_INVALID));
 
     ASSERT_STREQ("TASK_TYPE_COMPUTE", enum_to_string(TASK_TYPE_COMPUTE));
 
     ASSERT_STREQ("TASK_PRIORITY_HIGH", enum_to_string(TASK_PRIORITY_HIGH));
 
-    ASSERT_STREQ("TASK_CODE_COMPUTE_FOR_TEST",
-                 dsn::task_code(TASK_CODE_COMPUTE_FOR_TEST).to_string());
+    ASSERT_STREQ("TASK_CODE_COMPUTE_FOR_TEST", task_code(TASK_CODE_COMPUTE_FOR_TEST).to_string());
     ASSERT_EQ(TASK_CODE_COMPUTE_FOR_TEST,
-              dsn::task_code::try_get("TASK_CODE_COMPUTE_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LE(TASK_CODE_COMPUTE_FOR_TEST, dsn::task_code::max());
-    dsn::task_spec *spec = dsn::task_spec::get(TASK_CODE_COMPUTE_FOR_TEST.code());
+              task_code::try_get("TASK_CODE_COMPUTE_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_LE(TASK_CODE_COMPUTE_FOR_TEST, task_code::max());
+    task_spec *spec = task_spec::get(TASK_CODE_COMPUTE_FOR_TEST.code());
     ASSERT_EQ(TASK_TYPE_COMPUTE, spec->type);
     ASSERT_EQ(TASK_PRIORITY_HIGH, spec->priority);
     ASSERT_EQ(THREAD_POOL_DEFAULT, spec->pool_code);
 
-    ASSERT_STREQ("TASK_CODE_AIO_FOR_TEST", dsn::task_code(TASK_CODE_AIO_FOR_TEST).to_string());
+    ASSERT_STREQ("TASK_CODE_AIO_FOR_TEST", task_code(TASK_CODE_AIO_FOR_TEST).to_string());
     ASSERT_EQ(TASK_CODE_AIO_FOR_TEST,
-              dsn::task_code::try_get("TASK_CODE_AIO_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LE(TASK_CODE_AIO_FOR_TEST, dsn::task_code::max());
-    spec = dsn::task_spec::get(TASK_CODE_AIO_FOR_TEST.code());
+              task_code::try_get("TASK_CODE_AIO_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_LE(TASK_CODE_AIO_FOR_TEST, task_code::max());
+    spec = task_spec::get(TASK_CODE_AIO_FOR_TEST.code());
     ASSERT_EQ(TASK_TYPE_AIO, spec->type);
     ASSERT_EQ(TASK_PRIORITY_COMMON, spec->priority);
     ASSERT_EQ(THREAD_POOL_DEFAULT, spec->pool_code);
 
-    ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST", dsn::task_code(TASK_CODE_RPC_FOR_TEST).to_string());
+    ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST", task_code(TASK_CODE_RPC_FOR_TEST).to_string());
     ASSERT_EQ(TASK_CODE_RPC_FOR_TEST,
-              dsn::task_code::try_get("TASK_CODE_RPC_FOR_TEST", TASK_CODE_INVALID));
-    ASSERT_LE(TASK_CODE_RPC_FOR_TEST, dsn::task_code::max());
-    spec = dsn::task_spec::get(TASK_CODE_RPC_FOR_TEST.code());
+              task_code::try_get("TASK_CODE_RPC_FOR_TEST", TASK_CODE_INVALID));
+    ASSERT_LE(TASK_CODE_RPC_FOR_TEST, task_code::max());
+    spec = task_spec::get(TASK_CODE_RPC_FOR_TEST.code());
     ASSERT_EQ(TASK_TYPE_RPC_REQUEST, spec->type);
     ASSERT_EQ(TASK_PRIORITY_LOW, spec->priority);
     ASSERT_EQ(THREAD_POOL_DEFAULT, spec->pool_code);
 
-    ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST_ACK",
-                 dsn::task_code(TASK_CODE_RPC_FOR_TEST_ACK).to_string());
+    ASSERT_STREQ("TASK_CODE_RPC_FOR_TEST_ACK", task_code(TASK_CODE_RPC_FOR_TEST_ACK).to_string());
     ASSERT_EQ(TASK_CODE_RPC_FOR_TEST_ACK,
-              dsn::task_code::try_get("TASK_CODE_RPC_FOR_TEST_ACK", TASK_CODE_INVALID));
-    ASSERT_LE(TASK_CODE_RPC_FOR_TEST_ACK, dsn::task_code::max());
-    spec = dsn::task_spec::get(TASK_CODE_RPC_FOR_TEST_ACK.code());
+              task_code::try_get("TASK_CODE_RPC_FOR_TEST_ACK", TASK_CODE_INVALID));
+    ASSERT_LE(TASK_CODE_RPC_FOR_TEST_ACK, task_code::max());
+    spec = task_spec::get(TASK_CODE_RPC_FOR_TEST_ACK.code());
     ASSERT_EQ(TASK_TYPE_RPC_RESPONSE, spec->type);
     ASSERT_EQ(TASK_PRIORITY_LOW, spec->priority);
     ASSERT_EQ(THREAD_POOL_DEFAULT, spec->pool_code);
 
-    spec = dsn::task_spec::get(TASK_CODE_COMPUTE_FOR_TEST.code());
+    spec = task_spec::get(TASK_CODE_COMPUTE_FOR_TEST.code());
     spec->pool_code = THREAD_POOL_FOR_TEST;
     spec->priority = TASK_PRIORITY_COMMON;
     ASSERT_EQ(TASK_TYPE_COMPUTE, spec->type);
@@ -163,18 +161,18 @@ TEST(core, dsn_config)
 
 TEST(core, dsn_exlock)
 {
-    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
+    if (service_engine::instance().spec().semaphore_factory_name ==
+        "pegasus::tools::sim_semaphore_provider")
         return;
     {
-        dsn::zlock l(false);
+        zlock l(false);
         ASSERT_TRUE(l.try_lock());
         l.unlock();
         l.lock();
         l.unlock();
     }
     {
-        dsn::zlock l(true);
+        zlock l(true);
         ASSERT_TRUE(l.try_lock());
         ASSERT_TRUE(l.try_lock());
         l.unlock();
@@ -188,10 +186,10 @@ TEST(core, dsn_exlock)
 
 TEST(core, dsn_rwlock)
 {
-    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
+    if (service_engine::instance().spec().semaphore_factory_name ==
+        "pegasus::tools::sim_semaphore_provider")
         return;
-    dsn::zrwlock_nr l;
+    zrwlock_nr l;
     l.lock_read();
     l.unlock_read();
     l.lock_write();
@@ -200,10 +198,10 @@ TEST(core, dsn_rwlock)
 
 TEST(core, dsn_semaphore)
 {
-    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
+    if (service_engine::instance().spec().semaphore_factory_name ==
+        "pegasus::tools::sim_semaphore_provider")
         return;
-    dsn::zsemaphore s(2);
+    zsemaphore s(2);
     s.wait();
     ASSERT_TRUE(s.wait(10));
     ASSERT_FALSE(s.wait(10));
@@ -213,7 +211,7 @@ TEST(core, dsn_semaphore)
 
 TEST(core, dsn_env)
 {
-    if (dsn::service_engine::instance().spec().tool == "simulator")
+    if (service_engine::instance().spec().tool == "simulator")
         return;
     uint64_t now1 = dsn_now_ns();
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -250,3 +248,4 @@ TEST(core, dsn_system)
         ASSERT_EQ(5, type_to_count["test"]);
     }
 }
+} // namespace pegasus

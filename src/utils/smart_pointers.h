@@ -17,7 +17,7 @@
 #include <stddef.h>
 #include <memory>
 
-namespace dsn {
+namespace pegasus {
 
 namespace memory_internal {
 
@@ -129,4 +129,4 @@ typename memory_internal::MakeUniqueResult<T>::invalid
 std::make_unique(Args &&... /* args */) = delete;
 #endif
 
-} // namespace dsn
+} // namespace pegasus

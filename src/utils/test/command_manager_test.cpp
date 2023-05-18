@@ -26,7 +26,7 @@
 using std::string;
 using std::vector;
 
-namespace dsn {
+namespace pegasus {
 
 class command_manager_test : public ::testing::Test
 {
@@ -68,4 +68,4 @@ TEST_F(command_manager_test, not_exist_command)
     ASSERT_EQ(expect_output, output);
 }
 
-} // namespace dsn
+} // namespace pegasus

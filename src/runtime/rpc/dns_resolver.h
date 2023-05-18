@@ -27,7 +27,7 @@
 #include "utils/errors.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 
 // This class provide a way to resolve host_port to rpc_address.
 class dns_resolver
@@ -51,4 +51,4 @@ private:
     std::unordered_map<host_port, rpc_address> _dsn_cache;
 };
 
-} // namespace dsn
+} // namespace pegasus

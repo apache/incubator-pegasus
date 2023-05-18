@@ -31,7 +31,7 @@
 #include "utils.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 int binary_writer::_reserved_size_per_buffer_static = 256;
 
 binary_writer::binary_writer(int reserveBufferSize)
@@ -75,7 +75,7 @@ void binary_writer::create_buffer(size_t size)
 
 void binary_writer::create_new_buffer(size_t size, /*out*/ blob &bb)
 {
-    bb.assign(::dsn::utils::make_shared_array<char>(size), 0, (int)size);
+    bb.assign(utils::make_shared_array<char>(size), 0, (int)size);
 }
 
 void binary_writer::commit()
@@ -97,7 +97,7 @@ blob binary_writer::get_buffer()
     } else if (_total_size == 0) {
         return blob();
     } else {
-        std::shared_ptr<char> bptr(::dsn::utils::make_shared_array<char>(_total_size));
+        std::shared_ptr<char> bptr(utils::make_shared_array<char>(_total_size));
         blob bb(bptr, _total_size);
         const char *ptr = bb.data();
 
@@ -114,7 +114,7 @@ blob binary_writer::get_current_buffer()
     if (_buffers.size() == 1) {
         return _current_offset > 0 ? _buffers[0].range(0, _current_offset) : _buffers[0];
     } else {
-        std::shared_ptr<char> bptr(::dsn::utils::make_shared_array<char>(_total_size));
+        std::shared_ptr<char> bptr(utils::make_shared_array<char>(_total_size));
         blob bb(bptr, _total_size);
         const char *ptr = bb.data();
 

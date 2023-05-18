@@ -45,7 +45,7 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace application {
 class simple_kv_client;
@@ -53,28 +53,28 @@ class simple_kv_client;
 
 namespace test {
 
-class simple_kv_client_app : public ::dsn::service_app
+class simple_kv_client_app : public service_app
 {
 public:
     simple_kv_client_app(const service_app_info *info);
     virtual ~simple_kv_client_app();
 
-    virtual ::dsn::error_code start(const std::vector<std::string> &args) override;
-    virtual ::dsn::error_code stop(bool cleanup = false) override;
+    virtual error_code start(const std::vector<std::string> &args) override;
+    virtual error_code stop(bool cleanup = false) override;
 
     void run();
 
     void begin_read(int id, const std::string &key, int timeout_ms);
     void begin_write(int id, const std::string &key, const std::string &value, int timeout_ms);
     void send_config_to_meta(const rpc_address &receiver,
-                             dsn::replication::config_type::type type,
+                             replication::config_type::type type,
                              const rpc_address &node);
 
 private:
     std::unique_ptr<application::simple_kv_client> _simple_kv_client;
     rpc_address _meta_server_group;
     rpc_address _service_addr;
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 }
 }

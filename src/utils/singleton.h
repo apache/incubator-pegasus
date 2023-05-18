@@ -19,7 +19,7 @@
 
 #include <boost/noncopyable.hpp>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 /**
@@ -42,4 +42,4 @@ public:
 };
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

@@ -33,7 +33,7 @@
 #include "utils/error_code.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace replication {
 class meta_service;
@@ -67,7 +67,7 @@ using access_type_of_rpc_code = std::unordered_map<int, ranger::access_type>;
 class ranger_resource_policy_manager
 {
 public:
-    ranger_resource_policy_manager(dsn::replication::meta_service *meta_svc);
+    ranger_resource_policy_manager(replication::meta_service *meta_svc);
 
     ~ranger_resource_policy_manager() = default;
 
@@ -83,10 +83,10 @@ private:
                                          std::vector<policy_item> &policies);
 
     // Update policies from Ranger service.
-    dsn::error_code update_policies_from_ranger_service();
+    error_code update_policies_from_ranger_service();
 
     // Load policies from JSON formated string.
-    dsn::error_code load_policies_from_json(const std::string &data);
+    error_code load_policies_from_json(const std::string &data);
 
     // Create the path to save policies in remote storage, and update using resources policies.
     void start_to_dump_and_sync_policies();
@@ -101,7 +101,7 @@ private:
     void update_cached_policies();
 
     // Sync policies to app_envs(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES).
-    dsn::error_code sync_policies_to_app_envs();
+    error_code sync_policies_to_app_envs();
 
 protected:
     // The cache of the global resources policies, it's a subset of '_all_resource_policies'.
@@ -111,7 +111,7 @@ protected:
     resource_policies _database_policies_cache;
 
 private:
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
     // The path where policies to be saved in remote storage.
     std::string _ranger_policy_meta_root;
@@ -147,4 +147,4 @@ std::string get_database_name_from_app_name(const std::string &app_name);
 // Return 'app_name' if 'app_name' is not a valid Ranger rule table name.
 std::string get_table_name_from_app_name(const std::string &app_name);
 } // namespace ranger
-} // namespace dsn
+} // namespace pegasus

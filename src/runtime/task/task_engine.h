@@ -45,7 +45,7 @@
 #include "utils/command_manager.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
+namespace pegasus {
 
 class service_node;
 class task;
@@ -112,7 +112,7 @@ public:
     //
     // service management routines
     //
-    void create(const std::list<dsn::threadpool_code> &pools);
+    void create(const std::list<threadpool_code> &pools);
     void start();
     void stop();
 
@@ -124,7 +124,7 @@ public:
 
     bool is_started() const { return _is_running; }
 
-    volatile int *get_task_queue_virtual_length_ptr(dsn::task_code code, int hash);
+    volatile int *get_task_queue_virtual_length_ptr(task_code code, int hash);
 
     service_node *node() const { return _node; }
     void get_runtime_info(const std::string &indent,
@@ -143,4 +143,4 @@ private:
 
 // -------------------- inline implementation ----------------------------
 
-} // namespace dsn
+} // namespace pegasus

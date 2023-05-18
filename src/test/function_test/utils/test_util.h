@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "runtime/rpc/rpc_address.h"
 
 // TODO(yingchun): it's too tricky, but I don't know how does it happen, we can fix it later.
@@ -36,14 +36,12 @@
         pegasus_client_factory::get_client("", "");                                                \
     } while (false)
 
-namespace dsn {
+namespace pegasus {
+class pegasus_client;
+
 namespace replication {
 class replication_ddl_client;
 } // namespace replication
-} // namespace dsn
-
-namespace pegasus {
-class pegasus_client;
 
 class test_util : public ::testing::Test
 {
@@ -69,9 +67,9 @@ protected:
     const std::map<std::string, std::string> create_envs_;
     int32_t app_id_;
     int32_t partition_count_ = 8;
-    std::vector<dsn::partition_configuration> partitions_;
+    std::vector<partition_configuration> partitions_;
     pegasus_client *client_ = nullptr;
-    std::vector<dsn::rpc_address> meta_list_;
-    std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client_;
+    std::vector<rpc_address> meta_list_;
+    std::shared_ptr<replication::replication_ddl_client> ddl_client_;
 };
 } // namespace pegasus

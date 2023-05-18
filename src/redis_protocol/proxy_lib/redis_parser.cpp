@@ -84,7 +84,7 @@ redis_parser::redis_call_handler redis_parser::get_handler(const char *command, 
     return iter->second;
 }
 
-redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
+redis_parser::redis_parser(proxy_stub *op, message_ex *first_msg)
     : proxy_session(op, first_msg),
       _current_msg(new message_entry()),
       _status(kStartArray),
@@ -94,18 +94,18 @@ redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
       _current_buffer_length(0),
       _current_cursor(0)
 {
-    ::dsn::apps::rrdb_client *r;
+    apps::rrdb_client *r;
     if (op) {
-        std::vector<dsn::rpc_address> meta_list;
-        dsn::replication::replica_helper::load_meta_servers(
+        std::vector<rpc_address> meta_list;
+        replication::replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), op->get_cluster());
-        r = new ::dsn::apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
-        if (!dsn::utils::is_empty(op->get_geo_app())) {
+        r = new apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
+        if (!utils::is_empty(op->get_geo_app())) {
             _geo_client = std::make_unique<geo::geo_client>(
                 "config.ini", op->get_cluster(), op->get_app(), op->get_geo_app());
         }
     } else {
-        r = new ::dsn::apps::rrdb_client();
+        r = new apps::rrdb_client();
     }
     client.reset(r);
 }
@@ -121,16 +121,17 @@ void redis_parser::prepare_current_buffer()
 {
     void *msg_buffer;
     if (_current_buffer == nullptr) {
-        dsn::message_ex *first_msg = _recv_buffers.front();
+        message_ex *first_msg = _recv_buffers.front();
         CHECK(first_msg->read_next(&msg_buffer, &_current_buffer_length),
-              "read dsn::message_ex* failed, msg from_address = {}, to_address = {}, rpc_name = {}",
+              "read message_ex* failed, msg from_address = {}, to_address = {}, rpc_name "
+              "= {}",
               first_msg->header->from_address.to_string(),
               first_msg->to_address.to_string(),
               first_msg->header->rpc_name);
         _current_buffer = static_cast<char *>(msg_buffer);
         _current_cursor = 0;
     } else if (_current_cursor >= _current_buffer_length) {
-        dsn::message_ex *first_msg = _recv_buffers.front();
+        message_ex *first_msg = _recv_buffers.front();
         first_msg->read_commit(_current_buffer_length);
         if (first_msg->read_next(&msg_buffer, &_current_buffer_length)) {
             _current_buffer = static_cast<char *>(msg_buffer);
@@ -206,7 +207,7 @@ void redis_parser::eat_all(char *dest, size_t length)
 bool redis_parser::end_array_size()
 {
     int32_t count = 0;
-    if (dsn_unlikely(!dsn::buf2int32(dsn::string_view(_current_size), count))) {
+    if (dsn_unlikely(!buf2int32(string_view(_current_size), count))) {
         LOG_ERROR(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
         return false;
@@ -244,8 +245,8 @@ void redis_parser::append_current_bulk_string()
 bool redis_parser::end_bulk_string_size()
 {
     int32_t length = 0;
-    if (dsn_unlikely(!dsn::buf2int32(
-            dsn::string_view(_current_size.c_str(), _current_size.length()), length))) {
+    if (dsn_unlikely(
+            !buf2int32(string_view(_current_size.c_str(), _current_size.length()), length))) {
         LOG_ERROR(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
         return false;
@@ -270,7 +271,7 @@ bool redis_parser::end_bulk_string_size()
     return false;
 }
 
-void redis_parser::append_message(dsn::message_ex *msg)
+void redis_parser::append_message(message_ex *msg)
 {
     msg->add_ref();
     _recv_buffers.push(msg);
@@ -318,7 +319,7 @@ bool redis_parser::parse_stream()
                 if (_current_str.length > 0) {
                     std::string str_data(_current_str.length, '\0');
                     eat_all(const_cast<char *>(str_data.data()), _current_str.length);
-                    _current_str.data = dsn::blob::create_from_bytes(std::move(str_data));
+                    _current_str.data = blob::create_from_bytes(std::move(str_data));
                 }
                 dverify(eat(CR));
                 dverify(eat(LF));
@@ -334,7 +335,7 @@ bool redis_parser::parse_stream()
     return true;
 }
 
-bool redis_parser::parse(dsn::message_ex *msg)
+bool redis_parser::parse(message_ex *msg)
 {
     append_message(msg);
     if (parse_stream()) {
@@ -349,17 +350,16 @@ bool redis_parser::parse(dsn::message_ex *msg)
 
 void redis_parser::enqueue_pending_response(std::unique_ptr<message_entry> &&entry)
 {
-    dsn::zauto_lock l(response_lock);
+    zauto_lock l(response_lock);
     pending_response.emplace_back(std::move(entry));
 }
 
-void redis_parser::fetch_and_dequeue_messages(std::vector<dsn::message_ex *> &msgs,
-                                              bool only_ready_ones)
+void redis_parser::fetch_and_dequeue_messages(std::vector<message_ex *> &msgs, bool only_ready_ones)
 {
-    dsn::zauto_lock l(response_lock);
+    zauto_lock l(response_lock);
     while (!pending_response.empty()) {
         message_entry *entry = pending_response.front().get();
-        dsn::message_ex *r = entry->response.load(std::memory_order_acquire);
+        message_ex *r = entry->response.load(std::memory_order_acquire);
         if (only_ready_ones && r == nullptr) {
             break;
         } else {
@@ -372,9 +372,9 @@ void redis_parser::fetch_and_dequeue_messages(std::vector<dsn::message_ex *> &ms
 void redis_parser::clear_reply_queue()
 {
     // clear the response pipeline
-    std::vector<dsn::message_ex *> all_responses;
+    std::vector<message_ex *> all_responses;
     fetch_and_dequeue_messages(all_responses, false);
-    for (dsn::message_ex *m : all_responses) {
+    for (message_ex *m : all_responses) {
         if (m != nullptr) {
             m->release_ref();
         }
@@ -383,11 +383,11 @@ void redis_parser::clear_reply_queue()
 
 void redis_parser::reply_all_ready()
 {
-    std::vector<dsn::message_ex *> ready_responses;
+    std::vector<message_ex *> ready_responses;
     fetch_and_dequeue_messages(ready_responses, true);
-    for (dsn::message_ex *m : ready_responses) {
+    for (message_ex *m : ready_responses) {
         CHECK(m, "");
-        dsn_rpc_reply(m, ::dsn::ERR_OK);
+        dsn_rpc_reply(m, ERR_OK);
         // added when message is created
         m->release_ref();
     }
@@ -396,9 +396,9 @@ void redis_parser::reply_all_ready()
 std::shared_ptr<redis_parser::redis_bulk_string> redis_parser::construct_bulk_string(double data)
 {
     std::string data_str(std::to_string(data));
-    std::shared_ptr<char> buf = dsn::utils::make_shared_array<char>(data_str.size());
+    std::shared_ptr<char> buf = utils::make_shared_array<char>(data_str.size());
     memcpy(buf.get(), data_str.data(), data_str.size());
-    return std::make_shared<redis_bulk_string>(dsn::blob(std::move(buf), (int)data_str.size()));
+    return std::make_shared<redis_bulk_string>(blob(std::move(buf), (int)data_str.size()));
 }
 
 void redis_parser::simple_ok_reply(message_entry &entry)
@@ -423,7 +423,7 @@ void redis_parser::simple_integer_reply(message_entry &entry, int64_t value)
 
 void redis_parser::default_handler(redis_parser::message_entry &entry)
 {
-    ::dsn::blob &cmd = entry.request.sub_requests[0].data;
+    blob &cmd = entry.request.sub_requests[0].data;
     std::string message = "unknown command '" + std::string(cmd.data(), cmd.length()) + "'";
     LOG_INFO_PREFIX("{} with seqid {}", message, entry.sequence_id);
     simple_error_reply(entry, message);
@@ -451,40 +451,40 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
         // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         LOG_DEBUG_PREFIX("send SET command({})", entry.sequence_id);
-        auto on_set_reply = [ref_this, this, &entry](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
-            // when the "is_session_reset" flag is set, the socket may be broken.
-            // so continue to reply the message is not necessary
-            if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO_PREFIX("SET command seqid({}) got reply, but session has reset",
-                                entry.sequence_id);
-                return;
-            }
-
-            // the message_enry "entry" is stored in the queue "pending_response".
-            // please ensure that "entry" hasn't been released right now.
-            //
-            // currently we only clear an entry when it is replied or
-            // in the redis_parser's destructor
-            LOG_DEBUG_PREFIX("SET command seqid({}) got reply", entry.sequence_id);
-            if (::dsn::ERR_OK != ec) {
-                LOG_INFO_PREFIX(
-                    "SET command seqid({}) got reply with error = {}", entry.sequence_id, ec);
-                simple_error_reply(entry, ec.to_string());
-            } else {
-                ::dsn::apps::update_response rrdb_response;
-                ::dsn::unmarshall(response, rrdb_response);
-                if (rrdb_response.error != 0) {
-                    simple_error_reply(entry,
-                                       "internal error " + std::to_string(rrdb_response.error));
-                } else {
-                    simple_ok_reply(entry);
+        auto on_set_reply =
+            [ref_this, this, &entry](error_code ec, message_ex *, message_ex *response) {
+                // when the "is_session_reset" flag is set, the socket may be broken.
+                // so continue to reply the message is not necessary
+                if (_is_session_reset.load(std::memory_order_acquire)) {
+                    LOG_INFO_PREFIX("SET command seqid({}) got reply, but session has reset",
+                                    entry.sequence_id);
+                    return;
                 }
-            }
-        };
 
-        ::dsn::apps::update_request req;
-        ::dsn::blob null_blob;
+                // the message_enry "entry" is stored in the queue "pending_response".
+                // please ensure that "entry" hasn't been released right now.
+                //
+                // currently we only clear an entry when it is replied or
+                // in the redis_parser's destructor
+                LOG_DEBUG_PREFIX("SET command seqid({}) got reply", entry.sequence_id);
+                if (ERR_OK != ec) {
+                    LOG_INFO_PREFIX(
+                        "SET command seqid({}) got reply with error = {}", entry.sequence_id, ec);
+                    simple_error_reply(entry, ec.to_string());
+                } else {
+                    apps::update_response rrdb_response;
+                    unmarshall(response, rrdb_response);
+                    if (rrdb_response.error != 0) {
+                        simple_error_reply(entry,
+                                           "internal error " + std::to_string(rrdb_response.error));
+                    } else {
+                        simple_ok_reply(entry);
+                    }
+                }
+            };
+
+        apps::update_request req;
+        blob null_blob;
         pegasus_generate_key(req.key, request.sub_requests[1].data, null_blob);
         req.value = request.sub_requests[2].data;
         if (ttl_seconds == 0)
@@ -545,9 +545,9 @@ void redis_parser::setex(message_entry &entry)
         simple_error_reply(entry, "wrong number of arguments for 'setex' command");
     } else {
         LOG_DEBUG_PREFIX("send SETEX command seqid({})", entry.sequence_id);
-        ::dsn::blob &ttl_blob = redis_req.sub_requests[2].data;
+        blob &ttl_blob = redis_req.sub_requests[2].data;
         int ttl_seconds;
-        if (!dsn::buf2int32(ttl_blob, ttl_seconds)) {
+        if (!buf2int32(ttl_blob, ttl_seconds)) {
             simple_error_reply(entry, "value is not an integer or out of range");
             return;
         }
@@ -558,22 +558,22 @@ void redis_parser::setex(message_entry &entry)
 
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_setex_reply = [ref_this, this, &entry](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+            error_code ec, message_ex *, message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
                 LOG_INFO_PREFIX("SETEX command seqid({}) got reply, but session has reset",
                                 entry.sequence_id);
                 return;
             }
 
-            if (::dsn::ERR_OK != ec) {
+            if (ERR_OK != ec) {
                 LOG_INFO_PREFIX(
                     "SETEX command seqid({}) got reply with error = {}", entry.sequence_id, ec);
                 simple_error_reply(entry, ec.to_string());
                 return;
             }
 
-            ::dsn::apps::update_response rrdb_response;
-            ::dsn::unmarshall(response, rrdb_response);
+            apps::update_response rrdb_response;
+            unmarshall(response, rrdb_response);
             if (rrdb_response.error != 0) {
                 simple_error_reply(entry, "internal error " + std::to_string(rrdb_response.error));
                 return;
@@ -582,12 +582,12 @@ void redis_parser::setex(message_entry &entry)
             simple_ok_reply(entry);
         };
 
-        ::dsn::apps::update_request req;
-        ::dsn::blob null_blob;
+        apps::update_request req;
+        blob null_blob;
 
         pegasus_generate_key(req.key, redis_req.sub_requests[1].data, null_blob);
         req.value = redis_req.sub_requests[3].data;
-        req.expire_ts_seconds = pegasus::utils::epoch_now() + ttl_seconds;
+        req.expire_ts_seconds = utils::epoch_now() + ttl_seconds;
 
         auto partition_hash = pegasus_key_hash(req.key);
 
@@ -606,20 +606,20 @@ void redis_parser::get(message_entry &entry)
         LOG_DEBUG_PREFIX("send GET command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_get_reply = [ref_this, this, &entry](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+            error_code ec, message_ex *, message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
                 LOG_INFO_PREFIX("GET command({}) got reply, but session has reset",
                                 entry.sequence_id);
                 return;
             }
 
-            if (::dsn::ERR_OK != ec) {
+            if (ERR_OK != ec) {
                 LOG_INFO_PREFIX(
                     "GET command seqid({}) got reply with error = {}", entry.sequence_id, ec);
                 simple_error_reply(entry, ec.to_string());
             } else {
-                ::dsn::apps::read_response rrdb_response;
-                ::dsn::unmarshall(response, rrdb_response);
+                apps::read_response rrdb_response;
+                unmarshall(response, rrdb_response);
                 if (rrdb_response.error != 0) {
                     if (rrdb_response.error == rocksdb::Status::kNotFound) {
                         reply_message(entry, redis_bulk_string());
@@ -632,8 +632,8 @@ void redis_parser::get(message_entry &entry)
                 }
             }
         };
-        ::dsn::blob req;
-        ::dsn::blob null_blob;
+        blob req;
+        blob null_blob;
         pegasus_generate_key(req, redis_req.sub_requests[1].data, null_blob);
         auto partition_hash = pegasus_key_hash(req);
         // TODO: set the timeout
@@ -659,37 +659,38 @@ void redis_parser::del_internal(message_entry &entry)
     } else {
         LOG_DEBUG_PREFIX("send DEL command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
-        auto on_del_reply = [ref_this, this, &entry](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
-            if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO_PREFIX("DEL command seqid({}) got reply, but session has reset",
-                                entry.sequence_id);
-                return;
-            }
-
-            LOG_DEBUG_PREFIX("DEL command seqid({}) got reply", entry.sequence_id);
-            if (::dsn::ERR_OK != ec) {
-                LOG_INFO_PREFIX(
-                    "DEL command seqid({}) got reply with error = {}", entry.sequence_id, ec);
-                simple_error_reply(entry, ec.to_string());
-            } else {
-                ::dsn::apps::read_response rrdb_response;
-                ::dsn::unmarshall(response, rrdb_response);
-                if (rrdb_response.error != 0) {
-                    simple_error_reply(entry,
-                                       "internal error " + std::to_string(rrdb_response.error));
-                } else {
-                    // NOTE: Deleting a non-existed key returns 1 too. But standard Redis returns 0.
-                    // Pegasus behaves
-                    // differently in this case intentionally for performance.
-                    // Because if we need to check the existence, we should use check_and_mutate
-                    // instead.
-                    simple_integer_reply(entry, 1);
+        auto on_del_reply =
+            [ref_this, this, &entry](error_code ec, message_ex *, message_ex *response) {
+                if (_is_session_reset.load(std::memory_order_acquire)) {
+                    LOG_INFO_PREFIX("DEL command seqid({}) got reply, but session has reset",
+                                    entry.sequence_id);
+                    return;
                 }
-            }
-        };
-        ::dsn::blob req;
-        ::dsn::blob null_blob;
+
+                LOG_DEBUG_PREFIX("DEL command seqid({}) got reply", entry.sequence_id);
+                if (ERR_OK != ec) {
+                    LOG_INFO_PREFIX(
+                        "DEL command seqid({}) got reply with error = {}", entry.sequence_id, ec);
+                    simple_error_reply(entry, ec.to_string());
+                } else {
+                    apps::read_response rrdb_response;
+                    unmarshall(response, rrdb_response);
+                    if (rrdb_response.error != 0) {
+                        simple_error_reply(entry,
+                                           "internal error " + std::to_string(rrdb_response.error));
+                    } else {
+                        // NOTE: Deleting a non-existed key returns 1 too. But standard Redis
+                        // returns 0.
+                        // Pegasus behaves
+                        // differently in this case intentionally for performance.
+                        // Because if we need to check the existence, we should use check_and_mutate
+                        // instead.
+                        simple_integer_reply(entry, 1);
+                    }
+                }
+            };
+        blob req;
+        blob null_blob;
         pegasus_generate_key(req, redis_req.sub_requests[1].data, null_blob);
         auto partition_hash = pegasus_key_hash(req);
         // TODO: set the timeout
@@ -745,7 +746,7 @@ void redis_parser::ttl(message_entry &entry)
         LOG_DEBUG_PREFIX("send PTTL/TTL command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_ttl_reply = [ref_this, this, &entry, is_ttl](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+            error_code ec, message_ex *, message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
                 LOG_INFO_PREFIX("TTL/PTTL command seqid({}) got reply, but session has reset",
                                 entry.sequence_id);
@@ -753,13 +754,13 @@ void redis_parser::ttl(message_entry &entry)
             }
 
             LOG_DEBUG_PREFIX("TTL/PTTL command seqid({}) got reply", entry.sequence_id);
-            if (::dsn::ERR_OK != ec) {
+            if (ERR_OK != ec) {
                 LOG_INFO_PREFIX(
                     "DEL command seqid({}) got reply with error = {}", entry.sequence_id, ec);
                 simple_error_reply(entry, ec.to_string());
             } else {
-                ::dsn::apps::ttl_response rrdb_response;
-                ::dsn::unmarshall(response, rrdb_response);
+                apps::ttl_response rrdb_response;
+                unmarshall(response, rrdb_response);
                 if (rrdb_response.error != 0) {
                     if (rrdb_response.error == rocksdb::Status::kNotFound) {
                         simple_integer_reply(entry, -2);
@@ -774,8 +775,8 @@ void redis_parser::ttl(message_entry &entry)
                 }
             }
         };
-        ::dsn::blob req;
-        ::dsn::blob null_blob;
+        blob req;
+        blob null_blob;
         pegasus_generate_key(req, redis_req.sub_requests[1].data, null_blob);
         auto partition_hash = pegasus_key_hash(req);
         // TODO: set the timeout
@@ -807,13 +808,13 @@ void redis_parser::geo_radius(message_entry &entry)
     // longitude latitude
     double lng_degrees = 0.0;
     const std::string &str_lng_degrees = redis_request.sub_requests[2].data.to_string();
-    LOG_WARNING_IF(!dsn::buf2double(str_lng_degrees, lng_degrees),
+    LOG_WARNING_IF(!buf2double(str_lng_degrees, lng_degrees),
                    "longitude parameter '{}' is error, use {}",
                    str_lng_degrees,
                    lng_degrees);
     double lat_degrees = 0.0;
     const std::string &str_lat_degrees = redis_request.sub_requests[3].data.to_string();
-    LOG_WARNING_IF(!dsn::buf2double(str_lat_degrees, lat_degrees),
+    LOG_WARNING_IF(!buf2double(str_lat_degrees, lat_degrees),
                    "latitude parameter '{}' is error, use {}",
                    str_lat_degrees,
                    lat_degrees);
@@ -915,7 +916,7 @@ void redis_parser::counter_internal(message_entry &entry)
     CHECK_GT(entry.request.sub_requests[0].length, 0);
     const char *command = entry.request.sub_requests[0].data.data();
     int64_t increment = 1;
-    if (dsn::utils::iequals(command, "INCR") || dsn::utils::iequals(command, "DECR")) {
+    if (utils::iequals(command, "INCR") || utils::iequals(command, "DECR")) {
         if (entry.request.sub_requests.size() != 2) {
             LOG_WARNING("{}: command {} seqid({}) with invalid arguments count: {}",
                         _remote_address,
@@ -925,7 +926,7 @@ void redis_parser::counter_internal(message_entry &entry)
             simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
-    } else if (dsn::utils::iequals(command, "INCRBY") || dsn::utils::iequals(command, "DECRBY")) {
+    } else if (utils::iequals(command, "INCRBY") || utils::iequals(command, "DECRBY")) {
         if (entry.request.sub_requests.size() != 3) {
             LOG_WARNING("{}: command {} seqid({}) with invalid arguments count: {}",
                         _remote_address,
@@ -935,7 +936,7 @@ void redis_parser::counter_internal(message_entry &entry)
             simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
-        if (!dsn::buf2int64(entry.request.sub_requests[2].data, increment)) {
+        if (!buf2int64(entry.request.sub_requests[2].data, increment)) {
             LOG_WARNING("{}: command {} seqid({}) with invalid 'increment': {}",
                         _remote_address,
                         command,
@@ -948,40 +949,40 @@ void redis_parser::counter_internal(message_entry &entry)
     } else {
         LOG_FATAL("command not support: {}", command);
     }
-    if (dsn::utils::iequals(command, "DECR", 4)) {
+    if (utils::iequals(command, "DECR", 4)) {
         increment = -increment;
     }
 
     std::shared_ptr<proxy_session> ref_this = shared_from_this();
-    auto on_incr_reply = [ref_this, this, command, &entry](
-        ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
-        if (_is_session_reset.load(std::memory_order_acquire)) {
-            LOG_WARNING("{}: command {} seqid({}) got reply, but session has reset",
-                        _remote_address,
-                        command,
-                        entry.sequence_id);
-            return;
-        }
-
-        if (::dsn::ERR_OK != ec) {
-            LOG_WARNING("{}: command {} seqid({}) got reply with error = {}",
-                        _remote_address,
-                        command,
-                        entry.sequence_id,
-                        ec);
-            simple_error_reply(entry, ec.to_string());
-        } else {
-            ::dsn::apps::incr_response incr_resp;
-            ::dsn::unmarshall(response, incr_resp);
-            if (incr_resp.error != 0) {
-                simple_error_reply(entry, "internal error " + std::to_string(incr_resp.error));
-            } else {
-                simple_integer_reply(entry, incr_resp.new_value);
+    auto on_incr_reply =
+        [ref_this, this, command, &entry](error_code ec, message_ex *, message_ex *response) {
+            if (_is_session_reset.load(std::memory_order_acquire)) {
+                LOG_WARNING("{}: command {} seqid({}) got reply, but session has reset",
+                            _remote_address,
+                            command,
+                            entry.sequence_id);
+                return;
             }
-        }
-    };
-    dsn::apps::incr_request req;
-    pegasus_generate_key(req.key, entry.request.sub_requests[1].data, dsn::blob());
+
+            if (ERR_OK != ec) {
+                LOG_WARNING("{}: command {} seqid({}) got reply with error = {}",
+                            _remote_address,
+                            command,
+                            entry.sequence_id,
+                            ec);
+                simple_error_reply(entry, ec.to_string());
+            } else {
+                apps::incr_response incr_resp;
+                unmarshall(response, incr_resp);
+                if (incr_resp.error != 0) {
+                    simple_error_reply(entry, "internal error " + std::to_string(incr_resp.error));
+                } else {
+                    simple_integer_reply(entry, incr_resp.new_value);
+                }
+            }
+        };
+    apps::incr_request req;
+    pegasus_generate_key(req.key, entry.request.sub_requests[1].data, blob());
     req.increment = increment;
     client->incr(req, on_incr_reply, std::chrono::milliseconds(2000), 0, pegasus_key_hash(req.key));
 }
@@ -993,9 +994,9 @@ void redis_parser::parse_set_parameters(const std::vector<redis_bulk_string> &op
     ttl_seconds = 0;
     for (int i = 3; i < opts.size(); ++i) {
         const std::string &opt = opts[i].data.to_string();
-        if (dsn::utils::iequals(opt, "EX") && i + 1 < opts.size()) {
+        if (utils::iequals(opt, "EX") && i + 1 < opts.size()) {
             const std::string &str_ttl_seconds = opts[i + 1].data.to_string();
-            if (!dsn::buf2int32(str_ttl_seconds, ttl_seconds)) {
+            if (!buf2int32(str_ttl_seconds, ttl_seconds)) {
                 LOG_WARNING("'EX {}' option is error, use {}", str_ttl_seconds, ttl_seconds);
             }
         } else {
@@ -1019,7 +1020,7 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
         return;
     }
     const std::string &str_radius = opts[base_index++].data.to_string();
-    if (!dsn::buf2double(str_radius, radius_m)) {
+    if (!buf2double(str_radius, radius_m)) {
         LOG_WARNING("radius parameter '{}' is error, use {}", str_radius, radius_m);
     }
 
@@ -1043,21 +1044,21 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
     // [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count] [ASC|DESC]
     while (base_index < opts.size()) {
         const std::string &opt = opts[base_index].data.to_string();
-        if (dsn::utils::iequals(opt, "WITHCOORD")) {
+        if (utils::iequals(opt, "WITHCOORD")) {
             WITHCOORD = true;
-        } else if (dsn::utils::iequals(opt, "WITHDIST")) {
+        } else if (utils::iequals(opt, "WITHDIST")) {
             WITHDIST = true;
-        } else if (dsn::utils::iequals(opt, "WITHHASH")) {
+        } else if (utils::iequals(opt, "WITHHASH")) {
             WITHHASH = true;
-        } else if (dsn::utils::iequals(opt, "COUNT") && base_index + 1 < opts.size()) {
+        } else if (utils::iequals(opt, "COUNT") && base_index + 1 < opts.size()) {
             const std::string &str_count = opts[base_index + 1].data.to_string();
-            LOG_ERROR_IF(!dsn::buf2int32(str_count, count),
+            LOG_ERROR_IF(!buf2int32(str_count, count),
                          "'COUNT {}' option is error, use {}",
                          str_count,
                          count);
-        } else if (dsn::utils::iequals(opt, "ASC")) {
+        } else if (utils::iequals(opt, "ASC")) {
             sort_type = geo::geo_client::SortType::asc;
-        } else if (dsn::utils::iequals(opt, "DESC")) {
+        } else if (utils::iequals(opt, "DESC")) {
             sort_type = geo::geo_client::SortType::desc;
         }
         base_index++;
@@ -1177,12 +1178,11 @@ void redis_parser::geo_add(message_entry &entry)
     };
 
     for (int i = 0; i < member_count; ++i) {
-        dsn::string_view lng_degree_str(redis_request.sub_requests[2 + i * 3].data);
-        dsn::string_view lat_degree_str(redis_request.sub_requests[2 + i * 3 + 1].data);
+        string_view lng_degree_str(redis_request.sub_requests[2 + i * 3].data);
+        string_view lat_degree_str(redis_request.sub_requests[2 + i * 3 + 1].data);
         double lng_degree;
         double lat_degree;
-        if (dsn::buf2double(lng_degree_str, lng_degree) &&
-            dsn::buf2double(lat_degree_str, lat_degree)) {
+        if (buf2double(lng_degree_str, lng_degree) && buf2double(lat_degree_str, lat_degree)) {
             const std::string &hashkey = redis_request.sub_requests[2 + i * 3 + 2].data.to_string();
             _geo_client->async_set(hashkey, "", lat_degree, lng_degree, set_latlng_callback, 2000);
         } else if (set_count->fetch_sub(1) == 1) {
@@ -1301,12 +1301,12 @@ void redis_parser::handle_command(std::unique_ptr<message_entry> &&entry)
     enqueue_pending_response(std::move(entry));
 
     CHECK_GT_MSG(request.sub_request_count, 0, "invalid request");
-    ::dsn::blob &command = request.sub_requests[0].data;
+    blob &command = request.sub_requests[0].data;
     redis_call_handler handler = redis_parser::get_handler(command.data(), command.length());
     handler(this, e);
 }
 
-void redis_parser::redis_integer::marshalling(::dsn::binary_writer &write_stream) const
+void redis_parser::redis_integer::marshalling(binary_writer &write_stream) const
 {
     write_stream.write_pod(':');
     std::string result = std::to_string(value);
@@ -1315,7 +1315,7 @@ void redis_parser::redis_integer::marshalling(::dsn::binary_writer &write_stream
     write_stream.write_pod(LF);
 }
 
-void redis_parser::redis_simple_string::marshalling(::dsn::binary_writer &write_stream) const
+void redis_parser::redis_simple_string::marshalling(binary_writer &write_stream) const
 {
     write_stream.write_pod(is_error ? '-' : '+');
     write_stream.write(message.c_str(), (int)message.length());
@@ -1323,7 +1323,7 @@ void redis_parser::redis_simple_string::marshalling(::dsn::binary_writer &write_
     write_stream.write_pod(LF);
 }
 
-void redis_parser::redis_bulk_string::marshalling(::dsn::binary_writer &write_stream) const
+void redis_parser::redis_bulk_string::marshalling(binary_writer &write_stream) const
 {
     CHECK((-1 == length && data.length() == 0) || data.length() == length,
           "{} VS {}",
@@ -1341,7 +1341,7 @@ void redis_parser::redis_bulk_string::marshalling(::dsn::binary_writer &write_st
     }
 }
 
-void redis_parser::redis_array::marshalling(::dsn::binary_writer &write_stream) const
+void redis_parser::redis_array::marshalling(binary_writer &write_stream) const
 {
     CHECK((-1 == count && array.size() == 0) || array.size() == count,
           "{} VS {}",

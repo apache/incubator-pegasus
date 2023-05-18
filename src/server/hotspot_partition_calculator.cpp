@@ -24,7 +24,8 @@
 
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
-#include "common/serialization_helper/dsn.layer2_types.h"
+#include "common/serialization_helper/pegasus.layer2_types.h"
+#include "pegasus_value_schema.h"
 #include "perf_counter/perf_counter.h"
 #include "runtime/rpc/rpc_address.h"
 #include "server/hotspot_partition_stat.h"
@@ -35,8 +36,12 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_view.h"
 
+namespace pegasus {
 struct row_data;
+} // namespace pegasus
 
+using pegasus::replication::hotkey_type;
+using pegasus::replication::detect_action;
 namespace pegasus {
 namespace server {
 
@@ -194,10 +199,10 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
                           index);
                 send_detect_hotkey_request(_app_name,
                                            index,
-                                           (data_type == dsn::replication::hotkey_type::type::READ)
-                                               ? dsn::replication::hotkey_type::type::READ
-                                               : dsn::replication::hotkey_type::type::WRITE,
-                                           dsn::replication::detect_action::type::START);
+                                           (data_type == hotkey_type::type::READ)
+                                               ? hotkey_type::type::READ
+                                               : hotkey_type::type::WRITE,
+                                           detect_action::type::START);
             }
         } else {
             _hotpartition_counter[index][data_type] =
@@ -206,42 +211,41 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
     }
 }
 
-void hotspot_partition_calculator::send_detect_hotkey_request(
-    const std::string &app_name,
-    const uint64_t partition_index,
-    const dsn::replication::hotkey_type::type hotkey_type,
-    const dsn::replication::detect_action::type action)
+void hotspot_partition_calculator::send_detect_hotkey_request(const std::string &app_name,
+                                                              const uint64_t partition_index,
+                                                              const hotkey_type::type hotkey_type,
+                                                              const detect_action::type action)
 {
-    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](string_view) {});
 
     int app_id = -1;
     int partition_count = -1;
-    std::vector<dsn::partition_configuration> partitions;
+    std::vector<partition_configuration> partitions;
     _shell_context->ddl_client->list_app(app_name, app_id, partition_count, partitions);
 
     auto target_address = partitions[partition_index].primary;
-    dsn::replication::detect_hotkey_response resp;
-    dsn::replication::detect_hotkey_request req;
+    replication::detect_hotkey_response resp;
+    replication::detect_hotkey_request req;
     req.type = hotkey_type;
     req.action = action;
-    req.pid = dsn::gpid(app_id, partition_index);
+    req.pid = gpid(app_id, partition_index);
     auto error = _shell_context->ddl_client->detect_hotkey(target_address, req, resp);
 
     LOG_INFO("{} {} hotkey detection in {}.{}, server address: {}",
-             (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
-             (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
+             (action == detect_action::STOP) ? "Stop" : "Start",
+             (hotkey_type == hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index,
              target_address.to_string());
 
-    if (error != dsn::ERR_OK) {
+    if (error != ERR_OK) {
         LOG_ERROR("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
                   app_name,
                   partition_index,
                   error.to_string());
     }
 
-    if (resp.err != dsn::ERR_OK) {
+    if (resp.err != ERR_OK) {
         LOG_ERROR("Hotkey detect rpc executing failed, in {}.{}, error_hint:{} {}",
                   app_name,
                   partition_index,

@@ -25,7 +25,7 @@
 #include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
 
-namespace dsn {
+namespace pegasus {
 namespace ranger {
 
 TEST(ranger_resource_policy_test, policy_item_match)
@@ -83,4 +83,4 @@ TEST(ranger_resource_policy_test, acl_policies_allowed)
     }
 }
 } // namespace ranger
-} // namespace dsn
+} // namespace pegasus

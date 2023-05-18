@@ -27,6 +27,9 @@
 
 #include "base/pegasus_key_schema.h"
 #include "utils/blob.h"
+#include "utils/string_view.h"
+
+using namespace pegasus;
 
 // User define SliceTransform must obey the 4 rules of ColumnFamilyOptions.prefix_extractor:
 // 1) key.starts_with(prefix(key))
@@ -35,14 +38,14 @@
 // 4) prefix(prefix(key)) == prefix(key)
 TEST(HashkeyTransformTest, Basic)
 {
-    pegasus::server::HashkeyTransform prefix_extractor;
+    server::HashkeyTransform prefix_extractor;
     const rocksdb::Comparator *comp = rocksdb::BytewiseComparator();
 
-    dsn::blob bkey1, bkey2, bkey3, bkey4;
-    pegasus::pegasus_generate_key(bkey1, std::string("h1"), std::string("s1"));
-    pegasus::pegasus_generate_key(bkey2, std::string("h2"), std::string("s1"));
-    pegasus::pegasus_generate_key(bkey3, std::string("h1"), std::string("s2"));
-    pegasus::pegasus_generate_key(bkey4, std::string("h1"), std::string(""));
+    blob bkey1, bkey2, bkey3, bkey4;
+    pegasus_generate_key(bkey1, std::string("h1"), std::string("s1"));
+    pegasus_generate_key(bkey2, std::string("h2"), std::string("s1"));
+    pegasus_generate_key(bkey3, std::string("h1"), std::string("s2"));
+    pegasus_generate_key(bkey4, std::string("h1"), std::string(""));
     rocksdb::Slice skey1(bkey1.data(), bkey1.size());
     rocksdb::Slice skey2(bkey2.data(), bkey2.size());
     rocksdb::Slice skey3(bkey3.data(), bkey3.size());

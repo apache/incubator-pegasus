@@ -23,7 +23,7 @@
 #include "common/json_helper.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 template <typename Writer>
@@ -39,18 +39,18 @@ void json_encode(Writer &writer, const table_printer &tp)
     if (tp._mode == table_printer::data_mode::kMultiColumns) {
         // The 1st row elements are column names, skip it.
         for (size_t row = 1; row < tp._matrix_data.size(); ++row) {
-            dsn::json::json_encode(writer, tp._matrix_data[row][0]); // row name
+            json::json_encode(writer, tp._matrix_data[row][0]); // row name
             writer.StartObject();
             for (int col = 0; col < tp._matrix_data[row].size(); col++) {
-                dsn::json::json_encode(writer, tp._matrix_data[0][col]);   // column name
-                dsn::json::json_encode(writer, tp._matrix_data[row][col]); // column data
+                json::json_encode(writer, tp._matrix_data[0][col]);   // column name
+                json::json_encode(writer, tp._matrix_data[row][col]); // column data
             }
             writer.EndObject();
         }
     } else if (tp._mode == table_printer::data_mode::kSingleColumn) {
         for (size_t row = 0; row < tp._matrix_data.size(); ++row) {
-            dsn::json::json_encode(writer, tp._matrix_data[row][0]); // row name
-            dsn::json::json_encode(writer, tp._matrix_data[row][1]); // row data
+            json::json_encode(writer, tp._matrix_data[row][0]); // row name
+            json::json_encode(writer, tp._matrix_data[row][1]); // row data
         }
     } else {
         CHECK(false, "Unknown mode");
@@ -101,10 +101,10 @@ void table_printer::output(std::ostream &out, output_format format) const
         output_in_tabular(out);
         break;
     case output_format::kJsonCompact:
-        output_in_json<dsn::json::JsonWriter>(out);
+        output_in_json<json::JsonWriter>(out);
         break;
     case output_format::kJsonPretty:
-        output_in_json<dsn::json::PrettyJsonWriter>(out);
+        output_in_json<json::PrettyJsonWriter>(out);
         break;
     default:
         CHECK(false, "Unknown format");
@@ -170,10 +170,10 @@ void multi_table_printer::output(std::ostream &out,
         output_in_tabular(out);
         break;
     case table_printer::output_format::kJsonCompact:
-        output_in_json<dsn::json::JsonWriter>(out);
+        output_in_json<json::JsonWriter>(out);
         break;
     case table_printer::output_format::kJsonPretty:
-        output_in_json<dsn::json::PrettyJsonWriter>(out);
+        output_in_json<json::PrettyJsonWriter>(out);
         break;
     default:
         CHECK(false, "Unknown format");
@@ -189,4 +189,4 @@ void multi_table_printer::output_in_tabular(std::ostream &out) const
 }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

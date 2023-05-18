@@ -29,7 +29,7 @@
 #include <cstdint>
 #include <string>
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_envs
@@ -67,4 +67,4 @@ public:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

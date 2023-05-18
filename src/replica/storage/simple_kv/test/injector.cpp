@@ -43,7 +43,7 @@
 #include "runtime/task/task_spec.h"
 #include "utils/join_point.h"
 
-namespace dsn {
+namespace pegasus {
 class aio_task;
 class message_ex;
 class rpc_request_task;
@@ -184,7 +184,7 @@ static bool inject_on_rpc_response_enqueue(rpc_response_task *resp)
 
 void test_injector::install(service_spec &svc_spec)
 {
-    for (int i = 0; i <= dsn::task_code::max(); i++) {
+    for (int i = 0; i <= task_code::max(); i++) {
         if (i == TASK_CODE_INVALID)
             continue;
 

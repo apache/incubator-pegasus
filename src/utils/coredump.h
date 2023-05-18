@@ -37,7 +37,7 @@
 
 #include <string>
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 class coredump
@@ -47,4 +47,4 @@ public:
     static void write();
 };
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

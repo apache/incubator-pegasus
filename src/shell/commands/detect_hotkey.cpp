@@ -36,36 +36,42 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
+using pegasus::replication::detect_action;
+using pegasus::replication::detect_hotkey_request;
+using pegasus::replication::detect_hotkey_response;
+using pegasus::replication::hotkey_type;
+
+namespace pegasus {
+bool generate_hotkey_request(detect_hotkey_request &req,
                              const std::string &hotkey_action,
                              const std::string &hotkey_type,
                              int app_id,
                              int partition_index,
                              std::string &err_info)
 {
-    if (dsn::utils::iequals(hotkey_type, "read")) {
-        req.type = dsn::replication::hotkey_type::type::READ;
-    } else if (dsn::utils::iequals(hotkey_type, "write")) {
-        req.type = dsn::replication::hotkey_type::type::WRITE;
+    if (utils::iequals(hotkey_type, "read")) {
+        req.type = hotkey_type::type::READ;
+    } else if (utils::iequals(hotkey_type, "write")) {
+        req.type = hotkey_type::type::WRITE;
     } else {
         err_info = fmt::format("\"{}\" is an invalid hotkey type (should be 'read' or 'write')\n",
                                hotkey_type);
         return false;
     }
 
-    if (dsn::utils::iequals(hotkey_action, "start")) {
-        req.action = dsn::replication::detect_action::START;
-    } else if (dsn::utils::iequals(hotkey_action, "stop")) {
-        req.action = dsn::replication::detect_action::STOP;
-    } else if (dsn::utils::iequals(hotkey_action, "query")) {
-        req.action = dsn::replication::detect_action::QUERY;
+    if (utils::iequals(hotkey_action, "start")) {
+        req.action = detect_action::START;
+    } else if (utils::iequals(hotkey_action, "stop")) {
+        req.action = detect_action::STOP;
+    } else if (utils::iequals(hotkey_action, "query")) {
+        req.action = detect_action::QUERY;
     } else {
         err_info =
             fmt::format("\"{}\" is an invalid hotkey detect action (should be 'start' or 'stop')\n",
                         hotkey_action);
         return false;
     }
-    req.pid = dsn::gpid(app_id, partition_index);
+    req.pid = gpid(app_id, partition_index);
     return true;
 }
 
@@ -92,18 +98,18 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     }
 
     int app_id;
-    if (!dsn::buf2int32(cmd({"-a", "--app_id"}).str(), app_id)) {
+    if (!buf2int32(cmd({"-a", "--app_id"}).str(), app_id)) {
         fmt::print(stderr, "\"{}\" is an invalid num\n", cmd({"-a", "--app_id"}).str());
         return false;
     }
 
     int partition_index;
-    if (!dsn::buf2int32(cmd({"-p", "--partition_index"}).str(), partition_index)) {
+    if (!buf2int32(cmd({"-p", "--partition_index"}).str(), partition_index)) {
         fmt::print(stderr, "\"{}\" is an invalid num\n", cmd({"-p", "--partition_index"}).str());
         return false;
     }
 
-    dsn::rpc_address target_address;
+    rpc_address target_address;
     std::string err_info;
     std::string ip_str = cmd({"-d", "--address"}).str();
     if (!validate_ip(sc, ip_str, target_address, err_info)) {
@@ -113,7 +119,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 
     std::string hotkey_action = cmd({"-c", "--hotkey_action"}).str();
     std::string hotkey_type = cmd({"-t", "--hotkey_type"}).str();
-    dsn::replication::detect_hotkey_request req;
+    detect_hotkey_request req;
     if (!generate_hotkey_request(
             req, hotkey_action, hotkey_type, app_id, partition_index, err_info)) {
         fmt::print(stderr, err_info);
@@ -121,8 +127,8 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     }
 
     detect_hotkey_response resp;
-    auto err = sc->ddl_client->detect_hotkey(dsn::rpc_address(target_address), req, resp);
-    if (err != dsn::ERR_OK) {
+    auto err = sc->ddl_client->detect_hotkey(rpc_address(target_address), req, resp);
+    if (err != ERR_OK) {
         fmt::print(stderr,
                    "Hotkey detection rpc sending failed, in {}.{}, error_hint:{}\n",
                    app_id,
@@ -131,7 +137,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    if (resp.err != dsn::ERR_OK) {
+    if (resp.err != ERR_OK) {
         fmt::print(stderr,
                    "Hotkey detection performed failed, in {}.{}, error_hint:{} {}\n",
                    app_id,
@@ -142,7 +148,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     }
 
     switch (req.action) {
-    case dsn::replication::detect_action::START:
+    case detect_action::START:
         fmt::print("Hotkey detection is starting, using 'detect_hotkey -a {} -p {} -t {} -c "
                    "query -d {}' to get the result later\n",
                    app_id,
@@ -150,10 +156,10 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
                    hotkey_type,
                    ip_str);
         break;
-    case dsn::replication::detect_action::STOP:
+    case detect_action::STOP:
         fmt::print("Hotkey detection is stopped now\n");
         break;
-    case dsn::replication::detect_action::QUERY:
+    case detect_action::QUERY:
         fmt::print("Find {} hotkey in {}.{} result:{}\n",
                    hotkey_type,
                    app_id,
@@ -164,3 +170,4 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 
     return true;
 }
+} // namespace pegasus

@@ -45,8 +45,8 @@
 #include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
-using namespace dsn;
-using namespace dsn::dist::block_service;
+using namespace pegasus;
+using namespace pegasus::dist::block_service;
 
 DSN_DEFINE_uint64(fds_concurrent_test, min_size, 64, "");
 DSN_DEFINE_uint64(fds_concurrent_test, max_size, 64, "");
@@ -62,7 +62,7 @@ static std::string bucket_name = "<test-bucket-name>";
 static void file_eq_compare(const std::string &fname1, const std::string &fname2)
 {
     static const int length = 4096;
-    std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(length * 2));
+    std::shared_ptr<char> buffer(utils::make_shared_array<char>(length * 2));
     char *buf1 = buffer.get(), *buf2 = buffer.get() + length;
 
     std::ifstream ifile1(fname1.c_str(), std::ios::in | std::ios::binary);
@@ -82,7 +82,7 @@ static void file_eq_compare(const std::string &fname1, const std::string &fname2
         int up_to_bytes = length < (l - i) ? length : (l - i);
         ifile1.read(buf1, up_to_bytes);
         ifile2.read(buf2, up_to_bytes);
-        ASSERT_TRUE(dsn::utils::mequals(buf1, buf2, up_to_bytes));
+        ASSERT_TRUE(utils::mequals(buf1, buf2, up_to_bytes));
     }
 }
 
@@ -145,7 +145,7 @@ void FDSClientTest::SetUp()
 
 void FDSClientTest::TearDown() {}
 
-DEFINE_TASK_CODE(lpc_btest, TASK_PRIORITY_HIGH, dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(lpc_btest, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
 
 TEST_F(FDSClientTest, test_basic_operation)
 {
@@ -203,7 +203,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                            [&rem_resp](const remove_path_response &resp) { rem_resp = resp; },
                            nullptr)
                 ->wait();
-            ASSERT_TRUE(dsn::ERR_OK == rem_resp.err || dsn::ERR_OBJECT_NOT_FOUND == rem_resp.err);
+            ASSERT_TRUE(ERR_OK == rem_resp.err || ERR_OBJECT_NOT_FOUND == rem_resp.err);
         }
     }
 
@@ -217,7 +217,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                            [&cf_resp](const create_file_response &r) { cf_resp = r; },
                            nullptr)
                 ->wait();
-            ASSERT_EQ(cf_resp.err, dsn::ERR_OK);
+            ASSERT_EQ(cf_resp.err, ERR_OK);
 
             cf_resp.file_handle
                 ->upload(upload_request{FDSClientTest::f1.filename},
@@ -226,7 +226,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                          nullptr)
                 ->wait();
 
-            ASSERT_EQ(dsn::ERR_OK, u_resp.err);
+            ASSERT_EQ(ERR_OK, u_resp.err);
             ASSERT_EQ(FDSClientTest::f1.length, cf_resp.file_handle->get_size());
             ASSERT_EQ(FDSClientTest::f1.md5, cf_resp.file_handle->get_md5sum());
         }
@@ -240,7 +240,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                            nullptr)
                 ->wait();
 
-            ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+            ASSERT_EQ(ERR_OK, cf_resp.err);
             ASSERT_TRUE(cf_resp.file_handle->get_md5sum().empty());
         }
 
@@ -253,7 +253,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                            nullptr)
                 ->wait();
 
-            ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+            ASSERT_EQ(ERR_OK, cf_resp.err);
             ASSERT_EQ(FDSClientTest::f1.md5, cf_resp.file_handle->get_md5sum());
 
             cf_resp.file_handle
@@ -263,7 +263,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                          nullptr)
                 ->wait();
 
-            ASSERT_EQ(dsn::ERR_OK, u_resp.err);
+            ASSERT_EQ(ERR_OK, u_resp.err);
             ASSERT_EQ(FDSClientTest::f2.length, cf_resp.file_handle->get_size());
             ASSERT_EQ(FDSClientTest::f2.md5, cf_resp.file_handle->get_md5sum());
 
@@ -274,7 +274,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                          [&u_resp](const upload_response &r) { u_resp = r; },
                          nullptr)
                 ->wait();
-            ASSERT_EQ(dsn::ERR_FILE_OPERATION_FAILED, u_resp.err);
+            ASSERT_EQ(ERR_FILE_OPERATION_FAILED, u_resp.err);
 
             // upload an local file which we don't have read-permission
             cf_resp.file_handle
@@ -283,7 +283,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                          [&u_resp](const upload_response &r) { u_resp = r; },
                          nullptr)
                 ->wait();
-            ASSERT_EQ(dsn::ERR_FILE_OPERATION_FAILED, u_resp.err);
+            ASSERT_EQ(ERR_FILE_OPERATION_FAILED, u_resp.err);
         }
     }
 
@@ -302,7 +302,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                     [&l_resp](const ls_response &resp) { l_resp = resp; },
                     nullptr)
             ->wait();
-        ASSERT_EQ(dsn::ERR_OK, l_resp.err);
+        ASSERT_EQ(ERR_OK, l_resp.err);
         std::sort(l_resp.entries->begin(), l_resp.entries->end(), entry_cmp);
         entry_vec_eq(root, *l_resp.entries);
 
@@ -339,7 +339,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                     [&l_resp](const ls_response &resp) { l_resp = resp; },
                     nullptr)
             ->wait();
-        ASSERT_EQ(dsn::ERR_OBJECT_NOT_FOUND, l_resp.err);
+        ASSERT_EQ(ERR_OBJECT_NOT_FOUND, l_resp.err);
 
         // list a regular file
         std::cout << "list a regular file /fds_rootfile" << std::endl;
@@ -348,7 +348,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                     [&l_resp](const ls_response &resp) { l_resp = resp; },
                     nullptr)
             ->wait();
-        ASSERT_EQ(dsn::ERR_INVALID_PARAMETERS, l_resp.err);
+        ASSERT_EQ(ERR_INVALID_PARAMETERS, l_resp.err);
     }
 
     // then test download files
@@ -361,7 +361,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                            [&cf_resp](const create_file_response &resp) { cf_resp = resp; },
                            nullptr)
                 ->wait();
-            ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+            ASSERT_EQ(ERR_OK, cf_resp.err);
             ASSERT_NE(nullptr, cf_resp.file_handle.get());
             ASSERT_EQ(f1.length, cf_resp.file_handle->get_size());
             ASSERT_EQ(f1.md5, cf_resp.file_handle->get_md5sum());
@@ -372,7 +372,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                            [&d_resp](const download_response &resp) { d_resp = resp; },
                            nullptr)
                 ->wait();
-            ASSERT_EQ(dsn::ERR_OK, d_resp.err);
+            ASSERT_EQ(ERR_OK, d_resp.err);
             ASSERT_EQ(cf_resp.file_handle->get_size(), d_resp.downloaded_size);
             ASSERT_EQ(cf_resp.file_handle->get_md5sum(), d_resp.file_md5);
             file_eq_compare(f1.filename, local_file_for_download);
@@ -385,7 +385,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                        nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+        ASSERT_EQ(ERR_OK, cf_resp.err);
         ASSERT_NE(nullptr, cf_resp.file_handle.get());
         ASSERT_TRUE(cf_resp.file_handle->get_md5sum().empty());
 
@@ -407,7 +407,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                        nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_OK, d_resp.err);
+        ASSERT_EQ(ERR_OK, d_resp.err);
         ASSERT_EQ(32, d_resp.downloaded_size);
         {
             std::shared_ptr<FILE> f(fopen("tmp_generate", "wb"), [](FILE *p) { fclose(p); });
@@ -425,7 +425,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                        nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+        ASSERT_EQ(ERR_OK, cf_resp.err);
         ASSERT_NE(nullptr, cf_resp.file_handle.get());
         ASSERT_TRUE(cf_resp.file_handle->get_md5sum().empty());
 
@@ -435,7 +435,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                    [&r_resp](const read_response &r) { r_resp = r; },
                    nullptr)
             ->wait();
-        ASSERT_EQ(dsn::ERR_OBJECT_NOT_FOUND, r_resp.err);
+        ASSERT_EQ(ERR_OBJECT_NOT_FOUND, r_resp.err);
 
         // now file handle has been synced from remote
         cf_resp.file_handle
@@ -444,9 +444,9 @@ TEST_F(FDSClientTest, test_basic_operation)
                        [&d_resp](const download_response &r) { d_resp = r; },
                        nullptr)
             ->wait();
-        ASSERT_EQ(dsn::ERR_OBJECT_NOT_FOUND, d_resp.err);
+        ASSERT_EQ(ERR_OBJECT_NOT_FOUND, d_resp.err);
         // so we expect the file doesn't create
-        ASSERT_FALSE(dsn::utils::filesystem::file_exists("local_file"));
+        ASSERT_FALSE(utils::filesystem::file_exists("local_file"));
     }
 
     // try to download to a path where we can't create the file
@@ -458,7 +458,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                        nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+        ASSERT_EQ(ERR_OK, cf_resp.err);
         ASSERT_NE(nullptr, cf_resp.file_handle.get());
         ASSERT_EQ(cf_resp.file_handle->get_size(), f1.length);
         ASSERT_EQ(cf_resp.file_handle->get_md5sum(), f1.md5);
@@ -470,7 +470,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                        nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_FILE_OPERATION_FAILED, d_resp.err);
+        ASSERT_EQ(ERR_FILE_OPERATION_FAILED, d_resp.err);
         ASSERT_EQ(0, d_resp.downloaded_size);
 
         cf_resp.file_handle
@@ -480,7 +480,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                        nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_FILE_OPERATION_FAILED, d_resp.err);
+        ASSERT_EQ(ERR_FILE_OPERATION_FAILED, d_resp.err);
         ASSERT_EQ(0, d_resp.downloaded_size);
     }
 
@@ -493,14 +493,14 @@ TEST_F(FDSClientTest, test_basic_operation)
                        nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+        ASSERT_EQ(ERR_OK, cf_resp.err);
         ASSERT_NE(nullptr, cf_resp.file_handle.get());
         ASSERT_EQ(cf_resp.file_handle->get_size(), f1.length);
         ASSERT_EQ(cf_resp.file_handle->get_md5sum(), f1.md5);
 
         const char *test_buffer = "1234567890qwertyuiopasdfghjklzxcvbnm";
         int length = strlen(test_buffer);
-        dsn::blob bb(test_buffer, 0, length);
+        blob bb(test_buffer, 0, length);
 
         cf_resp.file_handle
             ->write(write_request{bb},
@@ -509,7 +509,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                     nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_OK, w_resp.err);
+        ASSERT_EQ(ERR_OK, w_resp.err);
         ASSERT_EQ(length, w_resp.written_size);
         ASSERT_EQ(length, cf_resp.file_handle->get_size());
         ASSERT_NE(f1.md5, cf_resp.file_handle->get_md5sum());
@@ -522,9 +522,9 @@ TEST_F(FDSClientTest, test_basic_operation)
                    nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_OK, r_resp.err);
+        ASSERT_EQ(ERR_OK, r_resp.err);
         ASSERT_EQ(length, r_resp.buffer.length());
-        ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer, length));
+        ASSERT_TRUE(utils::mequals(r_resp.buffer.data(), test_buffer, length));
 
         // partitial read
         cf_resp.file_handle
@@ -534,9 +534,9 @@ TEST_F(FDSClientTest, test_basic_operation)
                    nullptr)
             ->wait();
 
-        ASSERT_EQ(dsn::ERR_OK, r_resp.err);
+        ASSERT_EQ(ERR_OK, r_resp.err);
         ASSERT_EQ(10, r_resp.buffer.length());
-        ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer + 5, 10));
+        ASSERT_TRUE(utils::mequals(r_resp.buffer.data(), test_buffer + 5, 10));
     }
 
     // then test remove path
@@ -580,7 +580,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                                nullptr)
                     ->wait();
 
-                ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+                ASSERT_EQ(ERR_OK, cf_resp.err);
                 ASSERT_TRUE(cf_resp.file_handle->get_md5sum().empty());
             }
         }
@@ -612,7 +612,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                                [&cf_resp](const create_file_response &r) { cf_resp = r; },
                                nullptr)
                     ->wait();
-                ASSERT_EQ(cf_resp.err, dsn::ERR_OK);
+                ASSERT_EQ(cf_resp.err, ERR_OK);
 
                 cf_resp.file_handle
                     ->upload(upload_request{FDSClientTest::f1.filename},
@@ -621,7 +621,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                              nullptr)
                     ->wait();
 
-                ASSERT_EQ(dsn::ERR_OK, u_resp.err);
+                ASSERT_EQ(ERR_OK, u_resp.err);
                 ASSERT_EQ(FDSClientTest::f1.length, cf_resp.file_handle->get_size());
                 ASSERT_EQ(FDSClientTest::f1.md5, cf_resp.file_handle->get_md5sum());
             }
@@ -708,7 +708,7 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
         generate_file(filename.c_str(), random_size, block, 1024);
 
         std::string md5result;
-        dsn::utils::filesystem::md5sum(filename, md5result);
+        utils::filesystem::md5sum(filename, md5result);
         md5.push_back(md5result);
     }
 
@@ -739,24 +739,23 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
                               [&cf_resp](const create_file_response &r) { cf_resp = r; },
                               nullptr)
                 ->wait();
-            ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+            ASSERT_EQ(ERR_OK, cf_resp.err);
             ASSERT_NE(nullptr, cf_resp.file_handle.get());
             block_files.push_back(cf_resp.file_handle);
         }
 
-        std::vector<dsn::task_ptr> callbacks;
+        std::vector<task_ptr> callbacks;
         for (unsigned int i = 0; i < total_files; ++i) {
             block_file_ptr p = block_files[i];
-            dsn::task_ptr t =
-                p->upload(upload_request{filenames[i]},
-                          lpc_btest,
-                          [p, &filenames, &filesize, &md5, i](const upload_response &ur) {
-                              printf("file %s upload finished\n", filenames[i].c_str());
-                              ASSERT_EQ(dsn::ERR_OK, ur.err);
-                              ASSERT_EQ(filesize[i], ur.uploaded_size);
-                              ASSERT_EQ(filesize[i], p->get_size());
-                              ASSERT_EQ(md5[i], p->get_md5sum());
-                          });
+            task_ptr t = p->upload(upload_request{filenames[i]},
+                                   lpc_btest,
+                                   [p, &filenames, &filesize, &md5, i](const upload_response &ur) {
+                                       printf("file %s upload finished\n", filenames[i].c_str());
+                                       ASSERT_EQ(ERR_OK, ur.err);
+                                       ASSERT_EQ(filesize[i], ur.uploaded_size);
+                                       ASSERT_EQ(filesize[i], p->get_size());
+                                       ASSERT_EQ(md5[i], p->get_md5sum());
+                                   });
             callbacks.push_back(t);
         }
 
@@ -776,20 +775,20 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
                               [&cf_resp](const create_file_response &r) { cf_resp = r; },
                               nullptr)
                 ->wait();
-            ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+            ASSERT_EQ(ERR_OK, cf_resp.err);
             ASSERT_NE(nullptr, cf_resp.file_handle.get());
             block_files.push_back(cf_resp.file_handle);
         }
 
-        std::vector<dsn::task_ptr> callbacks;
+        std::vector<task_ptr> callbacks;
         for (unsigned int i = 0; i < total_files; ++i) {
             block_file_ptr p = block_files[i];
-            dsn::task_ptr t =
+            task_ptr t =
                 p->download(download_request{filenames[i] + ".b", 0, -1},
                             lpc_btest,
                             [&filenames, &filesize, &md5, i, p](const download_response &dr) {
                                 printf("file %s download finished\n", filenames[i].c_str());
-                                ASSERT_EQ(dsn::ERR_OK, dr.err);
+                                ASSERT_EQ(ERR_OK, dr.err);
                                 ASSERT_EQ(filesize[i], dr.downloaded_size);
                                 ASSERT_EQ(filesize[i], p->get_size());
                                 ASSERT_EQ(md5[i], p->get_md5sum());

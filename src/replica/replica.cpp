@@ -67,7 +67,7 @@
 #include "utils/rand.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_bool(replication,
@@ -243,7 +243,7 @@ replica::~replica(void)
     LOG_DEBUG_PREFIX("replica destroyed");
 }
 
-void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
+void replica::on_client_read(message_ex *request, bool ignore_throttling)
 {
     if (!_access_controller->allowed(request, ranger::access_type::kRead)) {
         response_client_read(request, ERR_ACL_DENY);
@@ -321,12 +321,12 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
     }
 }
 
-void replica::response_client_read(dsn::message_ex *request, error_code error)
+void replica::response_client_read(message_ex *request, error_code error)
 {
     _stub->response_client(get_gpid(), true, request, status(), error);
 }
 
-void replica::response_client_write(dsn::message_ex *request, error_code error)
+void replica::response_client_write(message_ex *request, error_code error)
 {
     _stub->response_client(get_gpid(), false, request, status(), error);
 }
@@ -514,7 +514,7 @@ void replica::close()
     if (_app != nullptr) {
         std::unique_ptr<replication_app_base> tmp_app = std::move(_app);
         error_code err = tmp_app->close(false);
-        if (err != dsn::ERR_OK) {
+        if (err != ERR_OK) {
             LOG_WARNING_PREFIX("close app failed, err = {}", err);
         }
     }
@@ -568,7 +568,7 @@ void replica::init_table_level_latency_counters()
             std::string counter_str = fmt::format(
                 "table.level.{}.latency(ns)@{}", task_code(code).to_string(), _app_info.app_name);
             _counters_table_level_latency[code] =
-                dsn::perf_counters::instance()
+                perf_counters::instance()
                     .get_app_counter("eon.replica",
                                      counter_str.c_str(),
                                      COUNTER_TYPE_NUMBER_PERCENTILES,
@@ -592,8 +592,8 @@ uint32_t replica::query_data_version() const
 
 void replica::init_disk_tag()
 {
-    dsn::error_code err = _stub->_fs_manager.get_disk_tag(dir(), _disk_tag);
-    if (dsn::ERR_OK != err) {
+    error_code err = _stub->_fs_manager.get_disk_tag(dir(), _disk_tag);
+    if (ERR_OK != err) {
         LOG_ERROR_PREFIX("get disk tag of {} failed: {}, init it to empty ", dir(), err);
     }
 }
@@ -615,4 +615,4 @@ bool replica::access_controller_allowed(message_ex *msg, const ranger::access_ty
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

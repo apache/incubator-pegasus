@@ -46,7 +46,9 @@
 #include "utils/strings.h"
 #include "utils/utils.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+
+namespace pegasus {
 namespace dist {
 // path: /, /n1/n2, /n1/n2/, /n2/n2/n3
 std::string meta_state_service_simple::normalize_path(const std::string &s)
@@ -240,7 +242,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
         args.empty() ? service_app::current_service_app_info().data_dir.c_str() : args[0].c_str();
 
     _offset = 0;
-    std::string log_path = dsn::utils::filesystem::path_combine(work_dir, "meta_state_service.log");
+    std::string log_path = path_combine(work_dir, "meta_state_service.log");
     if (utils::filesystem::file_exists(log_path)) {
         if (FILE *fd = fopen(log_path.c_str(), "rb")) {
             for (;;) {
@@ -251,7 +253,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
                 if (header.magic != log_header::default_magic) {
                     break;
                 }
-                std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(header.size));
+                std::shared_ptr<char> buffer(utils::make_shared_array<char>(header.size));
                 if (fread(buffer.get(), header.size, 1, fd) != 1) {
                     break;
                 }
@@ -311,7 +313,7 @@ task_ptr meta_state_service_simple::submit_transaction(
     /*in-out*/ const std::shared_ptr<meta_state_service::transaction_entries> &t_entries,
     task_code cb_code,
     const err_callback &cb_transaction,
-    dsn::task_tracker *tracker)
+    task_tracker *tracker)
 {
     // when checking the snapshot, we block all write operations which come later
     zauto_lock l(_log_lock);
@@ -396,7 +398,7 @@ task_ptr meta_state_service_simple::submit_transaction(
             cb_code, tracker, [=]() { cb_transaction(ERR_INCONSISTENT_STATE); });
     } else {
         // apply
-        std::shared_ptr<char> batch(dsn::utils::make_shared_array<char>(total_size));
+        std::shared_ptr<char> batch(utils::make_shared_array<char>(total_size));
         char *dest = batch.get();
         std::for_each(batch_buffer.begin(), batch_buffer.end(), [&dest](const blob &entry) {
             memcpy(dest, entry.data(), entry.length());
@@ -416,7 +418,7 @@ task_ptr meta_state_service_simple::create_node(const std::string &node,
                                                 task_code cb_code,
                                                 const err_callback &cb_create,
                                                 const blob &value,
-                                                dsn::task_tracker *tracker)
+                                                task_tracker *tracker)
 {
     task_ptr task(new error_code_future(cb_code, cb_create, 0));
     task->set_tracker(tracker);
@@ -430,7 +432,7 @@ task_ptr meta_state_service_simple::delete_node(const std::string &node,
                                                 bool recursively_delete,
                                                 task_code cb_code,
                                                 const err_callback &cb_delete,
-                                                dsn::task_tracker *tracker)
+                                                task_tracker *tracker)
 {
     task_ptr task(new error_code_future(cb_code, cb_delete, 0));
     task->set_tracker(tracker);
@@ -443,7 +445,7 @@ task_ptr meta_state_service_simple::delete_node(const std::string &node,
 task_ptr meta_state_service_simple::node_exist(const std::string &node,
                                                task_code cb_code,
                                                const err_callback &cb_exist,
-                                               dsn::task_tracker *tracker)
+                                               task_tracker *tracker)
 {
     error_code err;
     {
@@ -457,7 +459,7 @@ task_ptr meta_state_service_simple::node_exist(const std::string &node,
 task_ptr meta_state_service_simple::get_data(const std::string &node,
                                              task_code cb_code,
                                              const err_value_callback &cb_get_data,
-                                             dsn::task_tracker *tracker)
+                                             task_tracker *tracker)
 {
     auto path = normalize_path(node);
     zauto_lock _(_state_lock);
@@ -475,7 +477,7 @@ task_ptr meta_state_service_simple::set_data(const std::string &node,
                                              const blob &value,
                                              task_code cb_code,
                                              const err_callback &cb_set_data,
-                                             dsn::task_tracker *tracker)
+                                             task_tracker *tracker)
 {
     task_ptr task(new error_code_future(cb_code, cb_set_data, 0));
     task->set_tracker(tracker);
@@ -487,7 +489,7 @@ task_ptr meta_state_service_simple::set_data(const std::string &node,
 task_ptr meta_state_service_simple::get_children(const std::string &node,
                                                  task_code cb_code,
                                                  const err_stringv_callback &cb_get_children,
-                                                 dsn::task_tracker *tracker)
+                                                 task_tracker *tracker)
 {
     auto path = normalize_path(node);
     zauto_lock _(_state_lock);
@@ -519,4 +521,4 @@ meta_state_service_simple::~meta_state_service_simple()
 }
 
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

@@ -23,21 +23,20 @@
 #include <memory>
 #include <vector>
 
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class replication_ddl_client;
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace test {
 using namespace std;
-using ::dsn::partition_configuration;
-using ::dsn::replication::replication_ddl_client;
+using replication::replication_ddl_client;
 
 class kill_testor
 {
@@ -57,14 +56,14 @@ protected:
     // generate one number belong to [a, b]
     int generate_one_number(int a, int b);
 
-    dsn::error_code get_partition_info(bool debug_unhealthy,
-                                       int &healthy_partition_cnt,
-                                       int &unhealthy_partition_cnt);
+    error_code get_partition_info(bool debug_unhealthy,
+                                  int &healthy_partition_cnt,
+                                  int &unhealthy_partition_cnt);
     bool check_cluster_status();
 
 protected:
     shared_ptr<replication_ddl_client> ddl_client;
-    vector<dsn::rpc_address> meta_list;
+    vector<rpc_address> meta_list;
 
     std::vector<partition_configuration> partitions;
 };

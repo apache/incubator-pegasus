@@ -107,7 +107,7 @@ TEST_F(basic, multi_get)
 
     // [null, null)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         ASSERT_TRUE(options.start_inclusive);
         ASSERT_FALSE(options.stop_inclusive);
         std::map<std::string, std::string> new_values;
@@ -117,7 +117,7 @@ TEST_F(basic, multi_get)
 
     // [null, null]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         std::map<std::string, std::string> new_values;
@@ -127,7 +127,7 @@ TEST_F(basic, multi_get)
 
     // (null, null)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = false;
         std::map<std::string, std::string> new_values;
@@ -139,7 +139,7 @@ TEST_F(basic, multi_get)
 
     // (null, null]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = true;
         std::map<std::string, std::string> new_values;
@@ -151,7 +151,7 @@ TEST_F(basic, multi_get)
 
     // [null, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         std::map<std::string, std::string> new_values;
@@ -163,7 +163,7 @@ TEST_F(basic, multi_get)
 
     // [null, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = false;
         std::map<std::string, std::string> new_values;
@@ -175,7 +175,7 @@ TEST_F(basic, multi_get)
 
     // (null, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = true;
         std::map<std::string, std::string> new_values;
@@ -187,7 +187,7 @@ TEST_F(basic, multi_get)
 
     // (null, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = false;
         std::map<std::string, std::string> new_values;
@@ -198,7 +198,7 @@ TEST_F(basic, multi_get)
 
     // [1, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         std::map<std::string, std::string> new_values;
@@ -210,7 +210,7 @@ TEST_F(basic, multi_get)
 
     // [1, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = false;
         std::map<std::string, std::string> new_values;
@@ -221,7 +221,7 @@ TEST_F(basic, multi_get)
 
     // (1, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = true;
         std::map<std::string, std::string> new_values;
@@ -232,7 +232,7 @@ TEST_F(basic, multi_get)
 
     // (1, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = false;
         std::map<std::string, std::string> new_values;
@@ -243,7 +243,7 @@ TEST_F(basic, multi_get)
 
     // [2, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         std::map<std::string, std::string> new_values;
@@ -254,8 +254,8 @@ TEST_F(basic, multi_get)
 
     // match-anywhere("-")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_ANYWHERE;
         options.sort_key_filter_pattern = "-";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -271,8 +271,8 @@ TEST_F(basic, multi_get)
 
     // match-anywhere("1")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_ANYWHERE;
         options.sort_key_filter_pattern = "1";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -282,8 +282,8 @@ TEST_F(basic, multi_get)
 
     // match-anywhere("1-")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_ANYWHERE;
         options.sort_key_filter_pattern = "1-";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -293,8 +293,8 @@ TEST_F(basic, multi_get)
 
     // match-anywhere("abc")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_ANYWHERE;
         options.sort_key_filter_pattern = "abc";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -305,8 +305,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("1")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -318,8 +318,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("1") in [0, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = true;
         options.stop_inclusive = false;
@@ -331,8 +331,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("1") in [0, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = true;
         options.stop_inclusive = true;
@@ -345,8 +345,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("1") in [1, 2]
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = true;
         options.stop_inclusive = true;
@@ -359,8 +359,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("1") in (1, 2]
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = false;
         options.stop_inclusive = true;
@@ -373,8 +373,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("1") in (1-abcdefg, 2]
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = false;
         options.stop_inclusive = true;
@@ -387,8 +387,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("1-")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1-";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -398,8 +398,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("1-x")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1-x";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -408,8 +408,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("abc")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "abc";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -418,8 +418,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("efg")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "efg";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -428,8 +428,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("ijk")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "ijk";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -438,8 +438,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("lmn")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "lmn";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -448,8 +448,8 @@ TEST_F(basic, multi_get)
 
     // match-prefix("5-hijklmn")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "5-hijklmn";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -459,8 +459,8 @@ TEST_F(basic, multi_get)
 
     // match-postfix("1")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "1";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -470,8 +470,8 @@ TEST_F(basic, multi_get)
 
     // match-postfix("1-")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "1-";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -480,8 +480,8 @@ TEST_F(basic, multi_get)
 
     // match-postfix("1-x")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "1-x";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -490,8 +490,8 @@ TEST_F(basic, multi_get)
 
     // match-postfix("abc")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "abc";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -500,8 +500,8 @@ TEST_F(basic, multi_get)
 
     // match-postfix("efg")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "efg";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -512,8 +512,8 @@ TEST_F(basic, multi_get)
 
     // match-postfix("ijk")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "ijk";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -523,8 +523,8 @@ TEST_F(basic, multi_get)
 
     // match-postfix("lmn")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "lmn";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -535,8 +535,8 @@ TEST_F(basic, multi_get)
 
     // match-postfix("5-hijklmn")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "5-hijklmn";
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
@@ -546,7 +546,7 @@ TEST_F(basic, multi_get)
 
     // maxCount = 4
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_INCOMPLETE,
                   client_->multi_get("basic_test_multi_get", "", "", options, new_values, 4, -1));
@@ -557,7 +557,7 @@ TEST_F(basic, multi_get)
 
     // maxCount = 1
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         std::map<std::string, std::string> new_values;
@@ -569,7 +569,7 @@ TEST_F(basic, multi_get)
 
     // set a expired value
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         ASSERT_EQ(PERR_OK, client_->set("basic_test_multi_get", "", "expire_value", 5000, 1));
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::map<std::string, std::string> new_values;
@@ -629,7 +629,7 @@ TEST_F(basic, multi_get_reverse)
 
     // [null, null)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         ASSERT_TRUE(options.start_inclusive);
         ASSERT_FALSE(options.stop_inclusive);
         options.reverse = true;
@@ -642,7 +642,7 @@ TEST_F(basic, multi_get_reverse)
 
     // [null, null]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         options.reverse = true;
@@ -655,7 +655,7 @@ TEST_F(basic, multi_get_reverse)
 
     // (null, null)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = false;
         options.reverse = true;
@@ -669,7 +669,7 @@ TEST_F(basic, multi_get_reverse)
 
     // (null, null]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = true;
         options.reverse = true;
@@ -683,7 +683,7 @@ TEST_F(basic, multi_get_reverse)
 
     // [null, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         options.reverse = true;
@@ -696,7 +696,7 @@ TEST_F(basic, multi_get_reverse)
 
     // [null, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = false;
         options.reverse = true;
@@ -709,7 +709,7 @@ TEST_F(basic, multi_get_reverse)
 
     // (null, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = true;
         options.reverse = true;
@@ -722,7 +722,7 @@ TEST_F(basic, multi_get_reverse)
 
     // (null, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = false;
         options.reverse = true;
@@ -734,7 +734,7 @@ TEST_F(basic, multi_get_reverse)
 
     // [1, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         options.reverse = true;
@@ -748,7 +748,7 @@ TEST_F(basic, multi_get_reverse)
 
     // [1, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = false;
         options.reverse = true;
@@ -761,7 +761,7 @@ TEST_F(basic, multi_get_reverse)
 
     // (1, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = true;
         options.reverse = true;
@@ -774,7 +774,7 @@ TEST_F(basic, multi_get_reverse)
 
     // (1, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = false;
         options.stop_inclusive = false;
         options.reverse = true;
@@ -787,7 +787,7 @@ TEST_F(basic, multi_get_reverse)
 
     // [2, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         options.reverse = true;
@@ -800,8 +800,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-anywhere("-")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_ANYWHERE;
         options.sort_key_filter_pattern = "-";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -817,8 +817,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-anywhere("1")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_ANYWHERE;
         options.sort_key_filter_pattern = "1";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -830,8 +830,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-anywhere("1-")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_ANYWHERE;
         options.sort_key_filter_pattern = "1-";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -843,8 +843,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-anywhere("abc")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_ANYWHERE;
         options.sort_key_filter_pattern = "abc";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -857,8 +857,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("1")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -870,8 +870,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("1") in [0, 1)
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = true;
         options.stop_inclusive = false;
@@ -885,8 +885,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("1") in [0, 1]
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = true;
         options.stop_inclusive = true;
@@ -901,8 +901,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("1") in [1, 2]
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = true;
         options.stop_inclusive = true;
@@ -917,8 +917,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("1") in (1, 2]
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = false;
         options.stop_inclusive = true;
@@ -933,8 +933,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("1") in (1-abcdefg, 2]
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1";
         options.start_inclusive = false;
         options.stop_inclusive = true;
@@ -948,8 +948,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("1-")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1-";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -961,8 +961,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("1-x")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "1-x";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -973,8 +973,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("abc")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "abc";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -985,8 +985,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("efg")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "efg";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -997,8 +997,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("ijk")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "ijk";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1009,8 +1009,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("lmn")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "lmn";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1021,8 +1021,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-prefix("5-hijklmn")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_PREFIX;
         options.sort_key_filter_pattern = "5-hijklmn";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1034,8 +1034,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-postfix("1")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "1";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1047,8 +1047,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-postfix("1-")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "1-";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1059,8 +1059,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-postfix("1-x")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "1-x";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1071,8 +1071,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-postfix("abc")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "abc";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1083,8 +1083,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-postfix("efg")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "efg";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1097,8 +1097,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-postfix("ijk")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "ijk";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1110,8 +1110,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-postfix("lmn")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "lmn";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1124,8 +1124,8 @@ TEST_F(basic, multi_get_reverse)
 
     // match-postfix("5-hijklmn")
     {
-        pegasus::pegasus_client::multi_get_options options;
-        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus_client::FT_MATCH_POSTFIX;
         options.sort_key_filter_pattern = "5-hijklmn";
         options.reverse = true;
         std::map<std::string, std::string> new_values;
@@ -1137,7 +1137,7 @@ TEST_F(basic, multi_get_reverse)
 
     // maxCount = 4
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.reverse = true;
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(
@@ -1150,7 +1150,7 @@ TEST_F(basic, multi_get_reverse)
 
     // maxCount = 1
     {
-        pegasus::pegasus_client::multi_get_options options;
+        pegasus_client::multi_get_options options;
         options.start_inclusive = true;
         options.stop_inclusive = true;
         options.reverse = true;

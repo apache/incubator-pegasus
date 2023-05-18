@@ -28,7 +28,7 @@
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
 #include "common/json_helper.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"
@@ -38,7 +38,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class replica_bulk_loader_test : public replica_test_base
@@ -926,4 +926,4 @@ TEST_F(replica_bulk_loader_test, validate_status_test)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

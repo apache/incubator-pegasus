@@ -35,7 +35,7 @@ class error_code;
 } // namespace system
 } // namespace boost
 
-namespace dsn {
+namespace pegasus {
 
 #pragma pack(push)
 #pragma pack(8)

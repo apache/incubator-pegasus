@@ -36,7 +36,7 @@
 
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 
 std::unique_ptr<command_deregister>
 command_manager::register_command(const std::vector<std::string> &commands,
@@ -185,4 +185,4 @@ command_manager::~command_manager()
           _handlers.begin()->first);
 }
 
-} // namespace dsn
+} // namespace pegasus

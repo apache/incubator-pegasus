@@ -29,7 +29,7 @@
 #include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "include/pegasus/client.h"
 #include "include/pegasus/error.h"
 #include "runtime/rpc/rpc_address.h"
@@ -37,9 +37,8 @@
 #include "utils/errors.h"
 #include "utils/utils.h"
 
-using namespace dsn;
-using namespace dsn::replication;
 using namespace pegasus;
+using namespace pegasus::replication;
 
 // TODO(yingchun): backup & restore festure is on refactoring, we can refactor the related function
 // test later.
@@ -78,8 +77,8 @@ public:
 
     bool write_data()
     {
-        pegasus::pegasus_client *client = pegasus::pegasus_client_factory::get_client(
-            _cluster_name.c_str(), _old_app_name.c_str());
+        pegasus_client *client =
+            pegasus_client_factory::get_client(_cluster_name.c_str(), _old_app_name.c_str());
         if (client == nullptr) {
             std::cout << "get pegasus client failed" << std::endl;
             return false;
@@ -89,7 +88,7 @@ public:
             int ret = client->set("hashkey_" + std::to_string(i),
                                   "sortkey_" + std::to_string(i),
                                   "value_" + std::to_string(i));
-            if (ret != pegasus::PERR_OK) {
+            if (ret != PERR_OK) {
                 std::cout << "write data failed. " << std::endl;
                 return false;
             }
@@ -99,8 +98,8 @@ public:
 
     bool verify_data(const std::string &app_name)
     {
-        pegasus::pegasus_client *client =
-            pegasus::pegasus_client_factory::get_client(_cluster_name.c_str(), app_name.c_str());
+        pegasus_client *client =
+            pegasus_client_factory::get_client(_cluster_name.c_str(), app_name.c_str());
         if (client == nullptr) {
             std::cout << "get pegasus client failed" << std::endl;
             return false;
@@ -111,7 +110,7 @@ public:
             std::string value;
             int ret =
                 client->get("hashkey_" + std::to_string(i), "sortkey_" + std::to_string(i), value);
-            if (ret != pegasus::PERR_OK) {
+            if (ret != PERR_OK) {
                 return false;
             }
             if (value != expected_value) {

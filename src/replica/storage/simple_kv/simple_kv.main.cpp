@@ -42,18 +42,20 @@
 // apps
 #include "simple_kv.app.example.h"
 #include "simple_kv.server.impl.h"
+#include "utils/enum_helper.h"
+
+using namespace pegasus;
 
 static void dsn_app_registration_simple_kv()
 {
-    dsn::FLAGS_enable_http_server = false; // disable http server
+    FLAGS_enable_http_server = false; // disable http server
 
-    dsn::replication::application::simple_kv_service_impl::register_service();
+    replication::application::simple_kv_service_impl::register_service();
 
-    dsn::service::meta_service_app::register_all();
-    dsn::replication::replication_service_app::register_all();
+    service::meta_service_app::register_all();
+    replication::replication_service_app::register_all();
 
-    dsn::service_app::register_factory<dsn::replication::application::simple_kv_client_app>(
-        "client");
+    service_app::register_factory<replication::application::simple_kv_client_app>("client");
 }
 
 int main(int argc, char **argv)

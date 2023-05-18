@@ -26,17 +26,17 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
 #include "runtime/rpc/rpc_address.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 TEST(ford_fulkerson, build_failure)
 {
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
@@ -48,7 +48,7 @@ TEST(ford_fulkerson, build_failure)
     nodes[rpc_address(2, 2)] = ns;
     nodes[rpc_address(3, 3)] = ns;
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::unordered_map<rpc_address, int> address_id;
     auto ff = ford_fulkerson::builder(app, nodes, address_id).build();
     ASSERT_EQ(ff, nullptr);
 }
@@ -56,12 +56,12 @@ TEST(ford_fulkerson, build_failure)
 TEST(ford_fulkerson, add_edge)
 {
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::unordered_map<rpc_address, int> address_id;
     auto addr1 = rpc_address(1, 1);
     auto addr2 = rpc_address(1, 2);
     auto addr3 = rpc_address(1, 3);
@@ -93,7 +93,7 @@ TEST(ford_fulkerson, update_decree)
     auto addr3 = rpc_address(3, 3);
 
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 1;
     std::shared_ptr<app_state> app = app_state::create(info);
@@ -111,7 +111,7 @@ TEST(ford_fulkerson, update_decree)
     nodes[addr2] = ns;
     nodes[addr3] = ns;
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::unordered_map<rpc_address, int> address_id;
     address_id[addr1] = 1;
     address_id[addr2] = 2;
     address_id[addr3] = 3;
@@ -130,7 +130,7 @@ TEST(ford_fulkerson, find_shortest_path)
     auto addr3 = rpc_address(3, 3);
 
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 2;
     std::shared_ptr<app_state> app = app_state::create(info);
@@ -154,7 +154,7 @@ TEST(ford_fulkerson, find_shortest_path)
     nodes[addr2] = ns2;
     nodes[addr3] = ns2;
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::unordered_map<rpc_address, int> address_id;
     address_id[addr1] = 1;
     address_id[addr2] = 2;
     address_id[addr3] = 3;
@@ -217,12 +217,12 @@ TEST(ford_fulkerson, find_shortest_path)
 TEST(ford_fulkerson, max_value_pos)
 {
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::unordered_map<rpc_address, int> address_id;
     auto addr1 = rpc_address(1, 1);
     auto addr2 = rpc_address(1, 2);
     auto addr3 = rpc_address(1, 3);
@@ -255,12 +255,12 @@ TEST(ford_fulkerson, max_value_pos)
 TEST(ford_fulkerson, select_node)
 {
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::unordered_map<rpc_address, int> address_id;
     auto addr1 = rpc_address(1, 1);
     auto addr2 = rpc_address(1, 2);
     auto addr3 = rpc_address(1, 3);
@@ -292,4 +292,4 @@ TEST(ford_fulkerson, select_node)
     ASSERT_EQ(visit[pos], true);
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

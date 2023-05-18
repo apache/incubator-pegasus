@@ -35,7 +35,7 @@
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 namespace ranger {
 
 TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
@@ -159,13 +159,12 @@ TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test
     all_resource_policies fake_all_resource_policies{
         {resource_type_name, {fake_ranger_resource_policy}}};
     // 2.Encode 'fake_all_resource_policies' into a string 'value'
-    dsn::blob value =
-        json::json_forwarder<all_resource_policies>::encode(fake_all_resource_policies);
+    blob value = json::json_forwarder<all_resource_policies>::encode(fake_all_resource_policies);
     std::string fake_all_resource_policies_str = value.to_string();
     all_resource_policies fake_all_resource_policies_serialized;
     // 3. Decode the string 'value' into 'fake_all_resource_policies_serialized'
-    dsn::json::json_forwarder<all_resource_policies>::decode(
-        dsn::blob::create_from_bytes(std::move(fake_all_resource_policies_str)),
+    json::json_forwarder<all_resource_policies>::decode(
+        blob::create_from_bytes(std::move(fake_all_resource_policies_str)),
         fake_all_resource_policies_serialized);
 
     // 4. Verify the correctness of serialization by checking the data content of
@@ -359,4 +358,4 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
 }
 
 } // namespace ranger
-} // namespace dsn
+} // namespace pegasus

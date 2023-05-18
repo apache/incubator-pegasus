@@ -40,7 +40,7 @@
 
 #include "common/gpid.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "meta/meta_state_service.h"
@@ -55,8 +55,10 @@
 #include "utils/flags.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils/rand.h"
 
-namespace dsn {
+using pegasus::rand::next_u32;
+namespace pegasus {
 namespace replication {
 class meta_options;
 
@@ -64,26 +66,26 @@ DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
 
 static void random_assign_partition_config(std::shared_ptr<app_state> &app,
-                                           const std::vector<dsn::rpc_address> &server_list,
+                                           const std::vector<rpc_address> &server_list,
                                            int max_replica_count)
 {
     auto get_server = [&server_list](int indice) {
         if (indice % 2 != 0)
-            return dsn::rpc_address();
+            return rpc_address();
         return server_list[indice / 2];
     };
 
     int max_servers = (server_list.size() - 1) * 2 - 1;
-    for (dsn::partition_configuration &pc : app->partitions) {
+    for (partition_configuration &pc : app->partitions) {
         int start = 0;
         std::vector<int> indices;
         for (int i = 0; i < max_replica_count && start <= max_servers; ++i) {
-            indices.push_back(random32(start, max_servers));
+            indices.push_back(next_u32(start, max_servers));
             start = indices.back() + 1;
         }
         pc.primary = get_server(indices[0]);
         for (int i = 1; i < indices.size(); ++i) {
-            dsn::rpc_address addr = get_server(indices[i]);
+            rpc_address addr = get_server(indices[i]);
             if (!addr.is_invalid())
                 pc.secondaries.push_back(addr);
         }
@@ -94,7 +96,7 @@ static void random_assign_partition_config(std::shared_ptr<app_state> &app,
 static void file_data_compare(const char *fname1, const char *fname2)
 {
     static const int length = 4096;
-    std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(length * 2));
+    std::shared_ptr<char> buffer(utils::make_shared_array<char>(length * 2));
     char *buf1 = buffer.get(), *buf2 = buffer.get() + length;
 
     std::ifstream ifile1(fname1, std::ios::in | std::ios::binary);
@@ -122,7 +124,7 @@ void meta_service_test_app::state_sync_test()
 {
     int apps_count = 15;
     int drop_ratio = 5;
-    std::vector<dsn::rpc_address> server_list;
+    std::vector<rpc_address> server_list;
     std::vector<int> drop_set;
     generate_node_list(server_list, 10, 10);
 
@@ -144,19 +146,19 @@ void meta_service_test_app::state_sync_test()
 
         drop_set.clear();
         for (int i = 1; i <= apps_count; ++i) {
-            dsn::app_info info;
+            app_info info;
             info.is_stateful = true;
             info.app_id = i;
             info.app_type = "simple_kv";
             info.app_name = "test_app" + boost::lexical_cast<std::string>(i);
             info.max_replica_count = 3;
-            info.partition_count = random32(100, 10000);
-            info.status = dsn::app_status::AS_CREATING;
+            info.partition_count = next_u32(100, 10000);
+            info.status = app_status::AS_CREATING;
             std::shared_ptr<app_state> app = app_state::create(info);
 
             ss->_all_apps.emplace(app->app_id, app);
-            if (i < apps_count && random32(1, apps_count) <= drop_ratio) {
-                app->status = dsn::app_status::AS_DROPPING;
+            if (i < apps_count && next_u32(1, apps_count) <= drop_ratio) {
+                app->status = app_status::AS_DROPPING;
                 drop_set.push_back(i);
                 app->app_name = "test_app" + boost::lexical_cast<std::string>(apps_count);
             }
@@ -164,15 +166,15 @@ void meta_service_test_app::state_sync_test()
         for (int i = 1; i <= apps_count; ++i) {
             std::shared_ptr<app_state> app = ss->get_app(i);
             random_assign_partition_config(app, server_list, 3);
-            if (app->status == dsn::app_status::AS_DROPPING) {
+            if (app->status == app_status::AS_DROPPING) {
                 for (int j = 0; j < app->partition_count; ++j) {
                     app->partitions[j].partition_flags = pc_flags::dropped;
                 }
             }
         }
 
-        dsn::error_code ec = ss->sync_apps_to_remote_storage();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        error_code ec = ss->sync_apps_to_remote_storage();
+        ASSERT_EQ(ec, ERR_OK);
         ss->spin_wait_staging();
     }
 
@@ -181,8 +183,8 @@ void meta_service_test_app::state_sync_test()
     {
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
         ss2->initialize(svc, apps_root);
-        dsn::error_code ec = ss2->sync_apps_from_remote_storage();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        error_code ec = ss2->sync_apps_from_remote_storage();
+        ASSERT_EQ(ec, ERR_OK);
 
         for (int i = 1; i <= apps_count; ++i) {
             std::shared_ptr<app_state> app = ss2->get_app(i);
@@ -193,7 +195,7 @@ void meta_service_test_app::state_sync_test()
             }
         }
         ec = ss2->dump_from_remote_storage("meta_state.dump1", false);
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(ec, ERR_OK);
     }
 
     // dump another way
@@ -201,9 +203,9 @@ void meta_service_test_app::state_sync_test()
     {
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
         ss2->initialize(svc, apps_root);
-        dsn::error_code ec = ss2->dump_from_remote_storage("meta_state.dump2", true);
+        error_code ec = ss2->dump_from_remote_storage("meta_state.dump2", true);
 
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(ec, ERR_OK);
         file_data_compare("meta_state.dump1", "meta_state.dump2");
     }
 
@@ -212,16 +214,16 @@ void meta_service_test_app::state_sync_test()
     // first clean up
     std::cerr << "start to clean up zookeeper storage" << std::endl;
     {
-        dsn::error_code ec;
-        dsn::dist::meta_state_service *storage = svc->get_remote_storage();
+        error_code ec;
+        dist::meta_state_service *storage = svc->get_remote_storage();
         storage
             ->delete_node(apps_root,
                           true,
                           LPC_META_CALLBACK,
-                          [&ec](dsn::error_code error) { ec = error; },
+                          [&ec](error_code error) { ec = error; },
                           nullptr)
             ->wait();
-        ASSERT_TRUE(dsn::ERR_OK == ec || dsn::ERR_OBJECT_NOT_FOUND == ec);
+        ASSERT_TRUE(ERR_OK == ec || ERR_OBJECT_NOT_FOUND == ec);
     }
 
     std::cerr << "test sync to zookeeper's remote storage" << std::endl;
@@ -230,8 +232,8 @@ void meta_service_test_app::state_sync_test()
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
 
         ss2->initialize(svc, apps_root);
-        dsn::error_code ec = ss2->restore_from_local_storage("meta_state.dump2");
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        error_code ec = ss2->restore_from_local_storage("meta_state.dump2");
+        ASSERT_EQ(ec, ERR_OK);
     }
 
     // then sync from zookeeper
@@ -240,8 +242,8 @@ void meta_service_test_app::state_sync_test()
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
         ss2->initialize(svc, apps_root);
 
-        dsn::error_code ec = ss2->initialize_data_structure();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        error_code ec = ss2->initialize_data_structure();
+        ASSERT_EQ(ec, ERR_OK);
 
         app_mapper_compare(ss1->_all_apps, ss2->_all_apps);
         ASSERT_EQ(ss1->_exist_apps.size(), ss2->_exist_apps.size());
@@ -252,7 +254,7 @@ void meta_service_test_app::state_sync_test()
         // then we dump the content to local file with binary format
         std::cerr << "test dump to local file from zookeeper's storage" << std::endl;
         ec = ss2->dump_from_remote_storage("meta_state.dump3", false);
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(ec, ERR_OK);
     }
 
     // then we restore from local storage and restore to remote
@@ -260,8 +262,8 @@ void meta_service_test_app::state_sync_test()
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
 
         ss2->initialize(svc, apps_root);
-        dsn::error_code ec = ss2->restore_from_local_storage("meta_state.dump3");
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        error_code ec = ss2->restore_from_local_storage("meta_state.dump3");
+        ASSERT_EQ(ec, ERR_OK);
 
         app_mapper_compare(ss1->_all_apps, ss2->_all_apps);
         ASSERT_TRUE(ss1->_exist_apps.size() == ss2->_exist_apps.size());
@@ -272,25 +274,25 @@ void meta_service_test_app::state_sync_test()
 
         // then let's test the query configuration calls
         // 1.1. normal gpid
-        dsn::gpid gpid = {15, 0};
-        dsn::partition_configuration pc;
-        ASSERT_TRUE(ss2->query_configuration_by_gpid(gpid, pc));
+        gpid pid = {15, 0};
+        partition_configuration pc;
+        ASSERT_TRUE(ss2->query_configuration_by_gpid(pid, pc));
         ASSERT_EQ(ss1->_all_apps[15]->partitions[0], pc);
         // 1.2 dropped app
         if (!drop_set.empty()) {
-            gpid.set_app_id(drop_set[0]);
-            ASSERT_FALSE(ss2->query_configuration_by_gpid(gpid, pc));
+            pid.set_app_id(drop_set[0]);
+            ASSERT_FALSE(ss2->query_configuration_by_gpid(pid, pc));
         }
 
         // 2.1 query configuration by index
-        dsn::query_cfg_request req;
-        dsn::query_cfg_response resp;
+        query_cfg_request req;
+        query_cfg_response resp;
         req.app_name = "test_app15";
         req.partition_indices = {-1, 1, 2, 3, 0x7fffffff};
 
         std::shared_ptr<app_state> app_created = ss1->get_app(15);
         ss2->query_configuration_by_index(req, resp);
-        ASSERT_EQ(dsn::ERR_OK, resp.err);
+        ASSERT_EQ(ERR_OK, resp.err);
         ASSERT_EQ(15, resp.app_id);
         ASSERT_EQ(app_created->partition_count, resp.partition_count);
         ASSERT_EQ(resp.partitions.size(), 3);
@@ -300,62 +302,60 @@ void meta_service_test_app::state_sync_test()
         // 2.2 no exist app
         req.app_name = "make_no_sense";
         ss2->query_configuration_by_index(req, resp);
-        ASSERT_EQ(dsn::ERR_OBJECT_NOT_FOUND, resp.err);
+        ASSERT_EQ(ERR_OBJECT_NOT_FOUND, resp.err);
 
         // 2.3 app is dropping/creating/recalling
         std::shared_ptr<app_state> app = ss2->get_app(15);
         req.app_name = app->app_name;
 
         ss2->query_configuration_by_index(req, resp);
-        ASSERT_EQ(dsn::ERR_OK, resp.err);
+        ASSERT_EQ(ERR_OK, resp.err);
 
-        app->status = dsn::app_status::AS_DROPPING;
+        app->status = app_status::AS_DROPPING;
         ss2->query_configuration_by_index(req, resp);
-        ASSERT_EQ(dsn::ERR_BUSY_DROPPING, resp.err);
+        ASSERT_EQ(ERR_BUSY_DROPPING, resp.err);
 
-        app->status = dsn::app_status::AS_RECALLING;
+        app->status = app_status::AS_RECALLING;
         ss2->query_configuration_by_index(req, resp);
-        ASSERT_EQ(dsn::ERR_BUSY_CREATING, resp.err);
+        ASSERT_EQ(ERR_BUSY_CREATING, resp.err);
 
-        app->status = dsn::app_status::AS_CREATING;
+        app->status = app_status::AS_CREATING;
         ss2->query_configuration_by_index(req, resp);
-        ASSERT_EQ(dsn::ERR_BUSY_CREATING, resp.err);
+        ASSERT_EQ(ERR_BUSY_CREATING, resp.err);
 
         // client unknown state
-        app->status = dsn::app_status::AS_DROP_FAILED;
+        app->status = app_status::AS_DROP_FAILED;
         ss2->query_configuration_by_index(req, resp);
-        ASSERT_EQ(dsn::ERR_UNKNOWN, resp.err);
+        ASSERT_EQ(ERR_UNKNOWN, resp.err);
     }
 
     // simulate the half creating
     std::cerr << "test some node for a app is not create on remote storage" << std::endl;
     {
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
-        dsn::error_code ec;
+        error_code ec;
         ss2->initialize(svc, apps_root);
 
-        dsn::dist::meta_state_service *storage = svc->get_remote_storage();
+        dist::meta_state_service *storage = svc->get_remote_storage();
         storage
-            ->delete_node(ss2->get_partition_path(dsn::gpid{apps_count, 0}),
+            ->delete_node(ss2->get_partition_path(gpid{apps_count, 0}),
                           false,
                           LPC_META_CALLBACK,
-                          [&ec](dsn::error_code error) { ec = error; },
+                          [&ec](error_code error) { ec = error; },
                           nullptr)
             ->wait();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(ec, ERR_OK);
 
         ec = ss2->sync_apps_from_remote_storage();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(ec, ERR_OK);
         ASSERT_TRUE(ss2->spin_wait_staging(30));
     }
 }
 
-static dsn::app_info create_app_info(dsn::app_status::type status,
-                                     std::string app_name,
-                                     int32_t id,
-                                     int32_t partition_count)
+static app_info
+create_app_info(app_status::type status, std::string app_name, int32_t id, int32_t partition_count)
 {
-    dsn::app_info info;
+    app_info info;
     info.status = status;
     info.app_type = "pegasus";
     info.app_name = app_name;
@@ -370,18 +370,17 @@ static dsn::app_info create_app_info(dsn::app_status::type status,
 
 void meta_service_test_app::construct_apps_test()
 {
-    std::vector<dsn::app_info> apps = {
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test__4", 2, 10),
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test", 4, 20),
-        create_app_info(dsn::app_status::AS_AVAILABLE, "test", 6, 30)};
+    std::vector<app_info> apps = {create_app_info(app_status::AS_AVAILABLE, "test__4", 2, 10),
+                                  create_app_info(app_status::AS_AVAILABLE, "test", 4, 20),
+                                  create_app_info(app_status::AS_AVAILABLE, "test", 6, 30)};
 
     query_app_info_response resp;
     resp.apps = apps;
-    resp.err = dsn::ERR_OK;
+    resp.err = ERR_OK;
 
     std::shared_ptr<meta_service> svc(new meta_service());
 
-    std::vector<dsn::rpc_address> nodes;
+    std::vector<rpc_address> nodes;
     std::string hint_message;
     generate_node_list(nodes, 1, 1);
     svc->_state->construct_apps({resp}, nodes, hint_message);
@@ -390,13 +389,13 @@ void meta_service_test_app::construct_apps_test()
     const app_mapper &mapper = *(mv.apps);
     ASSERT_EQ(6, mv.apps->size());
 
-    std::vector<dsn::app_info> result_apps = {
-        create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__1", 1, 1),
-        create_app_info(dsn::app_status::AS_CREATING, "test__4__2", 2, 10),
-        create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__3", 3, 1),
-        create_app_info(dsn::app_status::AS_CREATING, "test__4", 4, 20),
-        create_app_info(dsn::app_status::AS_DROPPING, "__drop_holder__5", 5, 1),
-        create_app_info(dsn::app_status::AS_CREATING, "test", 6, 30)};
+    std::vector<app_info> result_apps = {
+        create_app_info(app_status::AS_DROPPING, "__drop_holder__1", 1, 1),
+        create_app_info(app_status::AS_CREATING, "test__4__2", 2, 10),
+        create_app_info(app_status::AS_DROPPING, "__drop_holder__3", 3, 1),
+        create_app_info(app_status::AS_CREATING, "test__4", 4, 20),
+        create_app_info(app_status::AS_DROPPING, "__drop_holder__5", 5, 1),
+        create_app_info(app_status::AS_CREATING, "test", 6, 30)};
 
     int i = 0;
     for (const auto &kv_pair : mapper) {
@@ -411,4 +410,4 @@ void meta_service_test_app::construct_apps_test()
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

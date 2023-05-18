@@ -36,7 +36,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace security {
 DSN_DECLARE_bool(enable_acl);
 DSN_DECLARE_bool(enable_ranger_acl);
@@ -104,8 +104,8 @@ void replica_access_controller::update_ranger_policies(const std::string &polici
     }
     ranger::acl_policies tmp_policies;
     auto tmp_policies_str = policies;
-    dsn::json::json_forwarder<ranger::acl_policies>::decode(
-        dsn::blob::create_from_bytes(std::move(tmp_policies_str)), tmp_policies);
+    json::json_forwarder<ranger::acl_policies>::decode(
+        blob::create_from_bytes(std::move(tmp_policies_str)), tmp_policies);
     {
         utils::auto_write_lock l(_lock);
         _env_policies = policies;
@@ -121,4 +121,4 @@ void replica_access_controller::check_allowed_users_valid() const
 }
 
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

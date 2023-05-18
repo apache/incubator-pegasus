@@ -22,7 +22,7 @@
 #include "block_service/block_service.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -43,10 +43,10 @@ public:
 
     virtual const std::string &get_md5sum() { return md5; }
 
-    virtual dsn::task_ptr write(const write_request &req,
-                                dsn::task_code code,
-                                const write_callback &cb,
-                                dsn::task_tracker *tracker = nullptr)
+    virtual task_ptr write(const write_request &req,
+                           task_code code,
+                           const write_callback &cb,
+                           task_tracker *tracker = nullptr)
     {
         write_response resp;
         if (enable_write_fail) {
@@ -60,10 +60,10 @@ public:
         return task_ptr();
     }
 
-    virtual dsn::task_ptr read(const read_request &req,
-                               dsn::task_code code,
-                               const read_callback &cb,
-                               dsn::task_tracker *tracker = nullptr)
+    virtual task_ptr read(const read_request &req,
+                          task_code code,
+                          const read_callback &cb,
+                          task_tracker *tracker = nullptr)
     {
         read_response resp;
         if (enable_read_fail) {
@@ -80,10 +80,10 @@ public:
         return task_ptr();
     }
 
-    virtual dsn::task_ptr upload(const upload_request &req,
-                                 dsn::task_code code,
-                                 const upload_callback &cb,
-                                 dsn::task_tracker *tracker = nullptr)
+    virtual task_ptr upload(const upload_request &req,
+                            task_code code,
+                            const upload_callback &cb,
+                            task_tracker *tracker = nullptr)
     {
         upload_response resp;
         if (enable_upload_fail) {
@@ -97,10 +97,10 @@ public:
         return task_ptr();
     }
 
-    virtual dsn::task_ptr download(const download_request &req,
-                                   dsn::task_code code,
-                                   const download_callback &cb,
-                                   dsn::task_tracker *tracker = nullptr)
+    virtual task_ptr download(const download_request &req,
+                              task_code code,
+                              const download_callback &cb,
+                              task_tracker *tracker = nullptr)
     {
         download_response resp;
         resp.err = ERR_OK;
@@ -150,17 +150,17 @@ public:
     }
     virtual error_code initialize(const std::vector<std::string> &args) { return ERR_OK; }
 
-    virtual dsn::task_ptr list_dir(const ls_request &req,
-                                   dsn::task_code code,
-                                   const ls_callback &callback,
-                                   dsn::task_tracker *tracker = nullptr)
+    virtual task_ptr list_dir(const ls_request &req,
+                              task_code code,
+                              const ls_callback &callback,
+                              task_tracker *tracker = nullptr)
     {
         ls_response resp;
         if (enable_list_dir_fail) {
             resp.err = ERR_MOCK_INTERNAL;
         } else {
             resp.err = ERR_OK;
-            std::string dir_name = ::dsn::utils::filesystem::get_file_name(req.dir_name);
+            std::string dir_name = utils::filesystem::get_file_name(req.dir_name);
             if (dir_files.find(dir_name) != dir_files.end()) {
                 resp.entries = std::make_shared<std::vector<ls_entry>>();
                 (*resp.entries) = dir_files[dir_name];
@@ -172,10 +172,10 @@ public:
         return task_ptr();
     }
 
-    virtual dsn::task_ptr create_file(const create_file_request &req,
-                                      dsn::task_code code,
-                                      const create_file_callback &cb,
-                                      dsn::task_tracker *tracker = nullptr)
+    virtual task_ptr create_file(const create_file_request &req,
+                                 task_code code,
+                                 const create_file_callback &cb,
+                                 task_tracker *tracker = nullptr)
     {
         create_file_response resp;
         if (enable_create_file_fail) {
@@ -196,10 +196,10 @@ public:
         return task_ptr();
     }
 
-    dsn::task_ptr remove_path(const remove_path_request &req,
-                              dsn::task_code code,
-                              const remove_path_callback &cb,
-                              dsn::task_tracker *tracker)
+    task_ptr remove_path(const remove_path_request &req,
+                         task_code code,
+                         const remove_path_callback &cb,
+                         task_tracker *tracker)
     {
         return task_ptr();
     }
@@ -213,4 +213,4 @@ public:
 
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus

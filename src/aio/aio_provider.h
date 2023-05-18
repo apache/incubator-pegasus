@@ -29,9 +29,9 @@
 #include <stdint.h>
 
 #include "utils/error_code.h"
-#include "utils/factory_store.h"
+#include "utils/factory_store.h" // IWYU pragma: keep
 
-namespace dsn {
+namespace pegasus {
 
 class aio_context;
 class aio_task;
@@ -82,10 +82,8 @@ private:
 
 namespace tools {
 namespace internal_use_only {
-bool register_component_provider(const char *name,
-                                 aio_provider::factory f,
-                                 dsn::provider_type type);
+bool register_component_provider(const char *name, aio_provider::factory f, provider_type type);
 } // namespace internal_use_only
 } // namespace tools
 
-} // namespace dsn
+} // namespace pegasus

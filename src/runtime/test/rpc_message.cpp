@@ -43,7 +43,7 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "runtime/message_utils.cpp"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_address.h"
@@ -56,9 +56,9 @@
 #include "utils/crc.h"
 #include "utils/threadpool_code.h"
 
-using namespace ::dsn;
+namespace pegasus {
 
-DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 TEST(core, message_ex)
 {
@@ -86,8 +86,8 @@ TEST(core, message_ex)
         ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(next_id, h.id);
         ASSERT_EQ(0, h.trace_id); ///////////////////
-        ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST).to_string(), h.rpc_name);
-        ASSERT_EQ(0, h.gpid.value());
+        ASSERT_STREQ(task_code(RPC_CODE_FOR_TEST).to_string(), h.rpc_name);
+        ASSERT_EQ(0, h.gpid_.value());
         ASSERT_EQ(ctx0.context, h.context.context);
         ASSERT_EQ(100, h.client.timeout_ms);
         ASSERT_EQ(1, h.client.thread_hash);
@@ -118,8 +118,8 @@ TEST(core, message_ex)
         ASSERT_EQ(CRC_INVALID, h.body_crc32);
         ASSERT_EQ(request->header->id, h.id);
         ASSERT_EQ(request->header->trace_id, h.trace_id); ///////////////////
-        ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST_ACK).to_string(), h.rpc_name);
-        ASSERT_EQ(0, h.gpid.value());
+        ASSERT_STREQ(task_code(RPC_CODE_FOR_TEST_ACK).to_string(), h.rpc_name);
+        ASSERT_EQ(0, h.gpid_.value());
         ASSERT_EQ(ctx1.context, h.context.context);
         ASSERT_EQ(0, h.server.error_code.local_code);
 
@@ -186,7 +186,7 @@ TEST(core, message_ex)
             request->header->client.partition_hash);
         ASSERT_EQ(2u, receive->buffers.size());
 
-        ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST).to_string(), receive->header->rpc_name);
+        ASSERT_STREQ(task_code(RPC_CODE_FOR_TEST).to_string(), receive->header->rpc_name);
 
         ASSERT_TRUE(receive->read_next(&ptr, &sz));
         ASSERT_EQ(data_size, sz);
@@ -205,7 +205,6 @@ TEST(core, message_ex)
 
 TEST(rpc_message, restore_read)
 {
-    using namespace dsn;
     query_cfg_request request, result;
     message_ptr msg = from_thrift_request_to_received_message(request, RPC_CODE_FOR_TEST);
     for (int i = 0; i < 10; i++) {
@@ -240,3 +239,4 @@ TEST(rpc_message, copy_message_no_reply)
     // so we only need to call release_ref here.
     msg->release_ref();
 }
+} // namespace pegasus

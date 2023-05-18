@@ -60,13 +60,13 @@
 #include <functional>
 #include <utility>
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 typedef std::function<void(error_code ec, const std::string &owner_id, uint64_t version)>
     lock_callback;
 typedef future_task<error_code, std::string, uint64_t> lock_future;
-typedef dsn::ref_ptr<lock_future> lock_future_ptr;
+typedef ref_ptr<lock_future> lock_future_ptr;
 
 class distributed_lock_service
 {

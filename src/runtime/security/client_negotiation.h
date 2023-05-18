@@ -24,7 +24,7 @@
 #include "security_types.h"
 #include "utils/blob.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 
 namespace security {
@@ -52,4 +52,4 @@ private:
 };
 
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

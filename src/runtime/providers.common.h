@@ -26,7 +26,7 @@
 
 #pragma once
 
-namespace dsn {
+namespace pegasus {
 namespace tools {
 extern void register_common_providers();
 }

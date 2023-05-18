@@ -40,7 +40,7 @@
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 TEST(DDLClientTest, RetryMetaRequest)
@@ -74,37 +74,31 @@ TEST(DDLClientTest, RetryMetaRequest)
     // times until retry is not allowed
     struct test_case
     {
-        std::vector<dsn::error_code> mock_errors;
+        std::vector<error_code> mock_errors;
         uint64_t expected_sleep_ms;
-        dsn::error_code final_send_error;
-        dsn::error_code final_resp_error;
+        error_code final_send_error;
+        error_code final_resp_error;
     } tests[] = {
-        {{dsn::ERR_OK, dsn::ERR_OK}, 0, dsn::ERR_OK, dsn::ERR_OK},
-        {{dsn::ERR_NETWORK_FAILURE, dsn::ERR_NETWORK_FAILURE, dsn::ERR_NETWORK_FAILURE},
+        {{ERR_OK, ERR_OK}, 0, ERR_OK, ERR_OK},
+        {{ERR_NETWORK_FAILURE, ERR_NETWORK_FAILURE, ERR_NETWORK_FAILURE},
          0,
-         dsn::ERR_NETWORK_FAILURE,
-         dsn::ERR_UNKNOWN},
-        {{dsn::ERR_OK, dsn::ERR_INVALID_PARAMETERS}, 0, dsn::ERR_OK, dsn::ERR_INVALID_PARAMETERS},
-        {{dsn::ERR_TIMEOUT,
-          dsn::ERR_OK,
-          dsn::ERR_BUSY_CREATING,
-          dsn::ERR_OK,
-          dsn::ERR_BUSY_CREATING,
-          dsn::ERR_OK,
-          dsn::ERR_OK},
+         ERR_NETWORK_FAILURE,
+         ERR_UNKNOWN},
+        {{ERR_OK, ERR_INVALID_PARAMETERS}, 0, ERR_OK, ERR_INVALID_PARAMETERS},
+        {{ERR_TIMEOUT, ERR_OK, ERR_BUSY_CREATING, ERR_OK, ERR_BUSY_CREATING, ERR_OK, ERR_OK},
          FLAGS_ddl_client_retry_interval_ms * 2,
-         dsn::ERR_OK,
-         dsn::ERR_OK},
-        {{dsn::ERR_TIMEOUT,
-          dsn::ERR_OK,
-          dsn::ERR_BUSY_CREATING,
-          dsn::ERR_OK,
-          dsn::ERR_BUSY_CREATING,
-          dsn::ERR_OK,
-          dsn::ERR_BUSY_CREATING},
+         ERR_OK,
+         ERR_OK},
+        {{ERR_TIMEOUT,
+          ERR_OK,
+          ERR_BUSY_CREATING,
+          ERR_OK,
+          ERR_BUSY_CREATING,
+          ERR_OK,
+          ERR_BUSY_CREATING},
          FLAGS_ddl_client_retry_interval_ms * 2,
-         dsn::ERR_OK,
-         dsn::ERR_BUSY_CREATING},
+         ERR_OK,
+         ERR_BUSY_CREATING},
     };
 
     std::vector<rpc_address> meta_list = {{"127.0.0.1", 34601}};
@@ -115,8 +109,8 @@ TEST(DDLClientTest, RetryMetaRequest)
 
         // ERR_UNKNOWN should be the only left error after all errors in sequence have been
         // accepted.
-        std::vector<dsn::error_code> mock_errors(test.mock_errors);
-        mock_errors.push_back(dsn::ERR_UNKNOWN);
+        std::vector<error_code> mock_errors(test.mock_errors);
+        mock_errors.push_back(ERR_UNKNOWN);
 
         auto ddl_client = std::make_unique<replication_ddl_client>(meta_list);
         ddl_client->set_mock_errors(mock_errors);
@@ -132,7 +126,7 @@ TEST(DDLClientTest, RetryMetaRequest)
 
         // Check if all the errors have been traversed in sequence and accepted except the last
         // ERR_UNKNOWN.
-        EXPECT_EQ(std::deque<dsn::error_code>({dsn::ERR_UNKNOWN}), ddl_client->_mock_errors);
+        EXPECT_EQ(std::deque<error_code>({ERR_UNKNOWN}), ddl_client->_mock_errors);
 
         // For busy error it should have slept for enough time.
         EXPECT_LE(test.expected_sleep_ms, duration_ms);
@@ -151,4 +145,4 @@ TEST(DDLClientTest, RetryMetaRequest)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -46,7 +46,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/math.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 
 namespace replication {
@@ -90,7 +90,7 @@ greedy_load_balancer::~greedy_load_balancer() {}
 
 void greedy_load_balancer::register_ctrl_commands()
 {
-    _get_balance_operation_count = dsn::command_manager::instance().register_command(
+    _get_balance_operation_count = command_manager::instance().register_command(
         {"meta.lb.get_balance_operation_count"},
         "meta.lb.get_balance_operation_count [total | move_pri | copy_pri | copy_sec | detail]",
         "get balance operation count",
@@ -163,8 +163,8 @@ void greedy_load_balancer::score(meta_view view, double &primary_stddev, double 
 
 bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 {
-    dsn::rpc_address n = ns.addr();
-    return ns.for_each_partition([this, n](const dsn::gpid &pid) {
+    rpc_address n = ns.addr();
+    return ns.for_each_partition([this, n](const gpid &pid) {
         config_context &cc = *get_config_context(*(t_global_view->apps), pid);
         if (cc.find_from_serving(n) == cc.serving.end()) {
             LOG_INFO("meta server hasn't collected gpid({})'s info of {}", pid, n);
@@ -225,8 +225,7 @@ bool greedy_load_balancer::check(meta_view view, migration_list &list)
     return !t_migration_result->empty();
 }
 
-void greedy_load_balancer::report(const dsn::replication::migration_list &list,
-                                  bool balance_checker)
+void greedy_load_balancer::report(const replication::migration_list &list, bool balance_checker)
 {
     int counters[MAX_COUNT];
     ::memset(counters, 0, sizeof(counters));
@@ -258,4 +257,4 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

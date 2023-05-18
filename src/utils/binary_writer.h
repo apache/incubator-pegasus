@@ -34,7 +34,7 @@
 
 #include "blob.h"
 
-namespace dsn {
+namespace pegasus {
 
 class binary_writer
 {

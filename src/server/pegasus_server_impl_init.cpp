@@ -56,11 +56,11 @@
 #include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class replica;
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace server {
@@ -381,7 +381,7 @@ DSN_DEFINE_string(pegasus.server,
                   "prefix",
                   "Bloom filter type, should be either 'common' or 'prefix'");
 DSN_DEFINE_validator(rocksdb_filter_type, [](const char *value) -> bool {
-    return dsn::utils::equals(value, "common") || dsn::utils::equals(value, "prefix");
+    return utils::equals(value, "common") || utils::equals(value, "prefix");
 });
 
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
@@ -393,7 +393,7 @@ static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::In
         {"binary_search_with_first_key",
          rocksdb::BlockBasedTableOptions::IndexType::kBinarySearchWithFirstKey}};
 
-pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
+pegasus_server_impl::pegasus_server_impl(replication::replica *r)
     : pegasus_read_service(r),
       _db(nullptr),
       _data_cf(nullptr),
@@ -405,16 +405,16 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _manual_compact_svc(this),
       _partition_version(0)
 {
-    _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
+    _primary_address = rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
 
     _read_hotkey_collector =
-        std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::READ, this);
+        std::make_shared<hotkey_collector>(replication::hotkey_type::READ, this);
     _write_hotkey_collector =
-        std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::WRITE, this);
+        std::make_shared<hotkey_collector>(replication::hotkey_type::WRITE, this);
 
     _read_size_throttling_controller =
-        std::make_shared<dsn::utils::token_bucket_throttling_controller>();
+        std::make_shared<utils::token_bucket_throttling_controller>();
     _slow_query_threshold_ns = FLAGS_rocksdb_slow_query_threshold_ns;
     _rng_rd_opts.multi_get_max_iteration_count = FLAGS_rocksdb_multi_get_max_iteration_count;
     _rng_rd_opts.multi_get_max_iteration_size = FLAGS_rocksdb_multi_get_max_iteration_size;
@@ -588,7 +588,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         tbl_opts.filter_policy.reset(
             rocksdb::NewBloomFilterPolicy(FLAGS_rocksdb_bloom_filter_bits_per_key, false));
 
-        if (dsn::utils::equals(FLAGS_rocksdb_filter_type, "prefix")) {
+        if (utils::equals(FLAGS_rocksdb_filter_type, "prefix")) {
             _data_cf_opts.prefix_extractor.reset(new HashkeyTransform());
             _data_cf_opts.memtable_prefix_bloom_size_ratio = 0.1;
 

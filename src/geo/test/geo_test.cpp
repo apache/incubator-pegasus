@@ -60,18 +60,18 @@ class geo_client_test : public ::testing::Test
 public:
     geo_client_test()
     {
-        std::vector<dsn::rpc_address> meta_list;
-        bool ok = dsn::replication::replica_helper::load_meta_servers(
+        std::vector<rpc_address> meta_list;
+        bool ok = replication::replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "onebox");
         CHECK(ok, "load_meta_servers failed");
-        auto ddl_client = new dsn::replication::replication_ddl_client(meta_list);
-        dsn::error_code error = ddl_client->create_app("temp_geo", "pegasus", 4, 3, {}, false);
-        CHECK_EQ(dsn::ERR_OK, error);
-        _geo_client.reset(new pegasus::geo::geo_client("config.ini", "onebox", "temp", "temp_geo"));
+        auto ddl_client = new replication::replication_ddl_client(meta_list);
+        error_code error = ddl_client->create_app("temp_geo", "pegasus", 4, 3, {}, false);
+        CHECK_EQ(ERR_OK, error);
+        _geo_client.reset(new geo::geo_client("config.ini", "onebox", "temp", "temp_geo"));
     }
 
     pegasus_client *common_data_client() { return _geo_client->_common_data_client; }
-    pegasus::geo::geo_client *geo_client() { return _geo_client.get(); }
+    geo::geo_client *geo_client() { return _geo_client.get(); }
 
     bool generate_geo_keys(const std::string &hash_key,
                            const std::string &sort_key,
@@ -110,7 +110,7 @@ public:
     }
 
 public:
-    std::shared_ptr<pegasus::geo::geo_client> _geo_client;
+    std::shared_ptr<geo::geo_client> _geo_client;
 };
 
 inline bool operator==(const SearchResult &l, const SearchResult &r)
@@ -130,18 +130,18 @@ TEST_F(geo_client_test, set_and_del)
 
     // geo set
     int ret = _geo_client->set(test_hash_key, test_sort_key, test_value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // get from common db
     std::string value;
     ret = common_data_client()->get(test_hash_key, test_sort_key, value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_EQ(value, test_value);
 
     double got_lat_degrees;
     double got_lng_degrees;
     ret = geo_client()->get(test_hash_key, test_sort_key, got_lat_degrees, got_lng_degrees);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_DOUBLE_EQ(expect_lat_degrees, got_lat_degrees);
     ASSERT_DOUBLE_EQ(expect_lng_degrees, got_lng_degrees);
 
@@ -150,7 +150,7 @@ TEST_F(geo_client_test, set_and_del)
         std::list<geo::SearchResult> result;
         ret = _geo_client->search_radial(
             test_hash_key, test_sort_key, 1, 1, geo::geo_client::SortType::random, 500, result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_EQ(result.size(), 1);
         ASSERT_NEAR(result.front().distance, 0.0, 1e-6);
         ASSERT_EQ(result.front().hash_key, test_hash_key);
@@ -167,7 +167,7 @@ TEST_F(geo_client_test, set_and_del)
                                          geo::geo_client::SortType::random,
                                          500,
                                          result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_EQ(result.size(), 1);
         ASSERT_NEAR(result.front().distance, 0.0, 1e-6);
         ASSERT_EQ(result.front().hash_key, test_hash_key);
@@ -177,21 +177,21 @@ TEST_F(geo_client_test, set_and_del)
 
     // del
     ret = _geo_client->del(test_hash_key, test_sort_key);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // get from common db
     ret = common_data_client()->get(test_hash_key, test_sort_key, value);
-    ASSERT_EQ(ret, pegasus::PERR_NOT_FOUND);
+    ASSERT_EQ(ret, PERR_NOT_FOUND);
 
     ret = geo_client()->get(test_hash_key, test_sort_key, got_lat_degrees, got_lng_degrees);
-    ASSERT_NE(ret, pegasus::PERR_OK);
+    ASSERT_NE(ret, PERR_OK);
 
     // search the inserted data
     {
         std::list<geo::SearchResult> result;
         ret = _geo_client->search_radial(
             test_hash_key, test_sort_key, 1, 1, geo::geo_client::SortType::random, 500, result);
-        ASSERT_EQ(ret, pegasus::PERR_NOT_FOUND);
+        ASSERT_EQ(ret, PERR_NOT_FOUND);
         ASSERT_TRUE(result.empty());
     }
 
@@ -204,7 +204,7 @@ TEST_F(geo_client_test, set_and_del)
                                          geo::geo_client::SortType::random,
                                          500,
                                          result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_TRUE(result.empty());
     }
 }
@@ -220,23 +220,23 @@ TEST_F(geo_client_test, set_and_del_on_undecoded_data)
 
     // set undecoded value into common data db
     int ret = common_data_client()->set(test_hash_key, test_sort_key, test_undecoded_value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // geo set
     ret = _geo_client->set(test_hash_key, test_sort_key, test_value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // geo del
     ret = _geo_client->del(test_hash_key, test_sort_key);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // set undecoded value into common data db
     ret = common_data_client()->set(test_hash_key, test_sort_key, test_undecoded_value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // geo del
     ret = _geo_client->del(test_hash_key, test_sort_key);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 }
 
 TEST_F(geo_client_test, set_geo_data)
@@ -249,22 +249,22 @@ TEST_F(geo_client_test, set_geo_data)
 
     // geo set_geo_data
     int ret = _geo_client->set_geo_data(test_hash_key, test_sort_key, test_value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // get from common db
     std::string value;
     ret = common_data_client()->get(test_hash_key, test_sort_key, value);
-    ASSERT_EQ(ret, pegasus::PERR_NOT_FOUND);
+    ASSERT_EQ(ret, PERR_NOT_FOUND);
 
     // search the inserted data
     std::list<geo::SearchResult> result;
     ret = _geo_client->search_radial(
         test_hash_key, test_sort_key, 1, 1, geo::geo_client::SortType::random, 500, result);
-    ASSERT_EQ(ret, pegasus::PERR_NOT_FOUND);
+    ASSERT_EQ(ret, PERR_NOT_FOUND);
 
     ret = _geo_client->search_radial(
         lat_degrees, lng_degrees, 1, 1, geo::geo_client::SortType::random, 500, result);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_EQ(result.size(), 1);
     ASSERT_NEAR(result.front().distance, 0.0, 1e-6);
     ASSERT_EQ(result.front().hash_key, test_hash_key);
@@ -283,17 +283,17 @@ TEST_F(geo_client_test, same_point_diff_hash_key)
 
     // geo set
     int ret = _geo_client->set(test_hash_key + "1", test_sort_key, test_value1);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ret = _geo_client->set(test_hash_key + "2", test_sort_key, test_value2);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // get from common db
     std::string value;
     ret = common_data_client()->get(test_hash_key + "1", test_sort_key, value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_EQ(value, test_value1);
     ret = common_data_client()->get(test_hash_key + "2", test_sort_key, value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_EQ(value, test_value2);
 
     // search the inserted data
@@ -306,7 +306,7 @@ TEST_F(geo_client_test, same_point_diff_hash_key)
                                          geo::geo_client::SortType::random,
                                          500,
                                          result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_EQ(result.size(), 2);
         for (auto &r : result) {
             ASSERT_DOUBLE_EQ(r.distance, 0.0);
@@ -321,7 +321,7 @@ TEST_F(geo_client_test, same_point_diff_hash_key)
         std::list<geo::SearchResult> result;
         ret = _geo_client->search_radial(
             lat_degrees, lng_degrees, 1, 2, geo::geo_client::SortType::random, 500, result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_EQ(result.size(), 2);
         for (auto &r : result) {
             ASSERT_DOUBLE_EQ(r.distance, 0.0);
@@ -334,9 +334,9 @@ TEST_F(geo_client_test, same_point_diff_hash_key)
 
     // del
     ret = _geo_client->del(test_hash_key + "1", test_sort_key);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ret = _geo_client->del(test_hash_key + "2", test_sort_key);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 }
 
 TEST_F(geo_client_test, same_point_diff_sort_key)
@@ -350,17 +350,17 @@ TEST_F(geo_client_test, same_point_diff_sort_key)
 
     // geo set
     int ret = _geo_client->set(test_hash_key, test_sort_key + "1", test_value1);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ret = _geo_client->set(test_hash_key, test_sort_key + "2", test_value2);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 
     // get from common db
     std::string value;
     ret = common_data_client()->get(test_hash_key, test_sort_key + "1", value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_EQ(value, test_value1);
     ret = common_data_client()->get(test_hash_key, test_sort_key + "2", value);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_EQ(value, test_value2);
 
     // search the inserted data
@@ -373,7 +373,7 @@ TEST_F(geo_client_test, same_point_diff_sort_key)
                                          geo::geo_client::SortType::random,
                                          500,
                                          result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_EQ(result.size(), 2);
         for (auto &r : result) {
             ASSERT_DOUBLE_EQ(r.distance, 0.0);
@@ -388,7 +388,7 @@ TEST_F(geo_client_test, same_point_diff_sort_key)
         std::list<geo::SearchResult> result;
         ret = _geo_client->search_radial(
             lat_degrees, lng_degrees, 1, 2, geo::geo_client::SortType::random, 500, result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_EQ(result.size(), 2);
         for (auto &r : result) {
             ASSERT_DOUBLE_EQ(r.distance, 0.0);
@@ -401,9 +401,9 @@ TEST_F(geo_client_test, same_point_diff_sort_key)
 
     // del
     ret = _geo_client->del(test_hash_key, test_sort_key + "1");
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ret = _geo_client->del(test_hash_key, test_sort_key + "2");
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
 }
 
 TEST_F(geo_client_test, generate_and_restore_geo_keys)
@@ -429,13 +429,12 @@ TEST_F(geo_client_test, generate_and_restore_geo_keys)
     ASSERT_EQ(leaf_cell_id.substr(geo_hash_key.length()),
               geo_sort_key.substr(0, leaf_cell_id.length() - geo_hash_key.length()));
 
-    dsn::blob hash_key_bb, sort_key_bb;
+    blob hash_key_bb, sort_key_bb;
     int skip_length = (int)(32 - geo_hash_key.length()) + 1; // postfix of cell id and ':'
-    pegasus_restore_key(dsn::blob(geo_sort_key.data(),
-                                  skip_length,
-                                  (unsigned int)(geo_sort_key.length() - skip_length)),
-                        hash_key_bb,
-                        sort_key_bb);
+    pegasus_restore_key(
+        blob(geo_sort_key.data(), skip_length, (unsigned int)(geo_sort_key.length() - skip_length)),
+        hash_key_bb,
+        sort_key_bb);
     ASSERT_EQ(hash_key_bb.to_string(), test_hash_key);
     ASSERT_EQ(sort_key_bb.to_string(), test_sort_key);
 
@@ -544,7 +543,7 @@ TEST_F(geo_client_test, distance)
         std::string test_sort_key = "test_sort_key1";
         std::string test_value = gen_value(lat_degrees, lng_degrees);
         int ret = _geo_client->set(test_hash_key, test_sort_key, test_value);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
     }
 
     {
@@ -554,18 +553,18 @@ TEST_F(geo_client_test, distance)
         std::string test_sort_key = "test_sort_key2";
         std::string test_value = gen_value(lat_degrees, lng_degrees);
         int ret = _geo_client->set(test_hash_key, test_sort_key, test_value);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
     }
 
     double distance = 0.0;
     int ret = _geo_client->distance(
         "test_hash_key1", "test_sort_key1", "test_hash_key2", "test_sort_key2", 2000, distance);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_DOUBLE_EQ(distance, 1000 * S2Earth::RadiusKm() * M_PI / 4);
 
     ret = _geo_client->distance(
         "test_hash_key1", "test_sort_key1", "test_hash_key1", "test_sort_key1", 2000, distance);
-    ASSERT_EQ(ret, pegasus::PERR_OK);
+    ASSERT_EQ(ret, PERR_OK);
     ASSERT_DOUBLE_EQ(distance, 0.0);
 }
 
@@ -587,7 +586,7 @@ TEST_F(geo_client_test, large_cap)
                             std::to_string(latlng.lat().degrees()) + "|123.456|456.789|0|-1";
 
         int ret = _geo_client->set(id, "", value, 5000);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
     }
 
     {
@@ -595,13 +594,13 @@ TEST_F(geo_client_test, large_cap)
         std::list<geo::SearchResult> result;
         int ret = _geo_client->search_radial(
             "0", "", radius_m * 2, -1, geo::geo_client::SortType::asc, 5000, result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_GE(result.size(), test_data_count);
         geo::SearchResult last;
         for (const auto &r : result) {
             ASSERT_LE(last.distance, r.distance);
             uint64_t val;
-            ASSERT_TRUE(dsn::buf2uint64(r.hash_key.c_str(), val)) << r.hash_key;
+            ASSERT_TRUE(buf2uint64(r.hash_key.c_str(), val)) << r.hash_key;
             ASSERT_LE(0, val);
             ASSERT_LE(val, test_data_count);
             ASSERT_NE(last.hash_key, r.hash_key);
@@ -609,7 +608,7 @@ TEST_F(geo_client_test, large_cap)
 
             double distance = 0.0;
             ret = _geo_client->distance("0", "", r.hash_key, r.sort_key, 2000, distance);
-            ASSERT_EQ(ret, pegasus::PERR_OK);
+            ASSERT_EQ(ret, PERR_OK);
             ASSERT_DOUBLE_EQ(distance, r.distance);
 
             last = r;
@@ -621,20 +620,20 @@ TEST_F(geo_client_test, large_cap)
         std::list<geo::SearchResult> result;
         int ret = _geo_client->search_radial(
             lat_degrees, lng_degrees, radius_m, -1, geo::geo_client::SortType::asc, 5000, result);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
         ASSERT_GE(result.size(), test_data_count);
 
         std::string test_hash_key = "test_hash_key_large_cap";
         std::string test_sort_key = "test_sort_key_large_cap";
         std::string test_value = gen_value(lat_degrees, lng_degrees);
         ret = _geo_client->set(test_hash_key, test_sort_key, test_value);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
 
         geo::SearchResult last;
         for (const auto &r : result) {
             ASSERT_LE(last.distance, r.distance);
             uint64_t val;
-            ASSERT_TRUE(dsn::buf2uint64(r.hash_key.c_str(), val));
+            ASSERT_TRUE(buf2uint64(r.hash_key.c_str(), val));
             ASSERT_LE(0, val);
             ASSERT_LE(val, test_data_count);
             ASSERT_NE(last.hash_key, r.hash_key);
@@ -643,7 +642,7 @@ TEST_F(geo_client_test, large_cap)
             double distance = 0.0;
             ret = _geo_client->distance(
                 test_hash_key, test_sort_key, r.hash_key, r.sort_key, 2000, distance);
-            ASSERT_EQ(ret, pegasus::PERR_OK);
+            ASSERT_EQ(ret, PERR_OK);
             ASSERT_DOUBLE_EQ(distance, r.distance);
 
             last = r;
@@ -651,7 +650,7 @@ TEST_F(geo_client_test, large_cap)
 
         // del
         ret = _geo_client->del(test_hash_key, test_sort_key);
-        ASSERT_EQ(ret, pegasus::PERR_OK);
+        ASSERT_EQ(ret, PERR_OK);
     }
 }
 } // namespace geo

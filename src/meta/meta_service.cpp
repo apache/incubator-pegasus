@@ -40,7 +40,7 @@
 #include "common/common.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "duplication_types.h"
 #include "meta/duplication/meta_duplication_service.h"
 #include "meta/meta_backup_service.h"
@@ -70,7 +70,7 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 DSN_DECLARE_string(hosts_list);
 } // namespace dist
@@ -199,9 +199,8 @@ bool meta_service::check_freeze() const
 error_code meta_service::remote_storage_initialize()
 {
     // create storage
-    dsn::dist::meta_state_service *storage =
-        dsn::utils::factory_store<::dsn::dist::meta_state_service>::create(
-            FLAGS_meta_state_service_type, PROVIDER_TYPE_MAIN);
+    dist::meta_state_service *storage = utils::factory_store<dist::meta_state_service>::create(
+        FLAGS_meta_state_service_type, PROVIDER_TYPE_MAIN);
     error_code err = storage->initialize(_meta_opts.meta_state_service_args);
     if (err != ERR_OK) {
         LOG_ERROR("init meta_state_service failed, err = {}", err);
@@ -291,30 +290,29 @@ void meta_service::unlock_meta_op_status()
 
 void meta_service::register_ctrl_commands()
 {
-    _ctrl_node_live_percentage_threshold_for_update =
-        dsn::command_manager::instance().register_command(
-            {"meta.live_percentage"},
-            "meta.live_percentage [num | DEFAULT]",
-            "node live percentage threshold for update",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    result = std::to_string(_node_live_percentage_threshold_for_update);
+    _ctrl_node_live_percentage_threshold_for_update = command_manager::instance().register_command(
+        {"meta.live_percentage"},
+        "meta.live_percentage [num | DEFAULT]",
+        "node live percentage threshold for update",
+        [this](const std::vector<std::string> &args) {
+            std::string result("OK");
+            if (args.empty()) {
+                result = std::to_string(_node_live_percentage_threshold_for_update);
+            } else {
+                if (args[0] == "DEFAULT") {
+                    _node_live_percentage_threshold_for_update =
+                        FLAGS_node_live_percentage_threshold_for_update;
                 } else {
-                    if (args[0] == "DEFAULT") {
-                        _node_live_percentage_threshold_for_update =
-                            FLAGS_node_live_percentage_threshold_for_update;
+                    int32_t v = 0;
+                    if (!buf2int32(args[0], v) || v < 0) {
+                        result = std::string("ERR: invalid arguments");
                     } else {
-                        int32_t v = 0;
-                        if (!dsn::buf2int32(args[0], v) || v < 0) {
-                            result = std::string("ERR: invalid arguments");
-                        } else {
-                            _node_live_percentage_threshold_for_update = v;
-                        }
+                        _node_live_percentage_threshold_for_update = v;
                     }
                 }
-                return result;
-            });
+            }
+            return result;
+        });
 }
 
 void meta_service::start_service()
@@ -329,7 +327,7 @@ void meta_service::start_service()
 
     _alive_nodes_count->set(_alive_set.size());
 
-    for (const dsn::rpc_address &node : _alive_set) {
+    for (const rpc_address &node : _alive_set) {
         // sync alive set and the failure_detector
         _failure_detector->unregister_worker(node);
         _failure_detector->register_worker(node, true);
@@ -341,13 +339,13 @@ void meta_service::start_service()
     _access_controller = security::create_meta_access_controller(_ranger_resource_policy_manager);
 
     _started = true;
-    for (const dsn::rpc_address &node : _alive_set) {
+    for (const rpc_address &node : _alive_set) {
         tasking::enqueue(LPC_META_STATE_HIGH,
                          nullptr,
                          std::bind(&server_state::on_change_node_state, _state.get(), node, true),
                          server_state::sStateHash);
     }
-    for (const dsn::rpc_address &node : _dead_set) {
+    for (const rpc_address &node : _dead_set) {
         tasking::enqueue(LPC_META_STATE_HIGH,
                          nullptr,
                          std::bind(&server_state::on_change_node_state, _state.get(), node, false),
@@ -450,7 +448,7 @@ error_code meta_service::start()
             LOG_INFO("can't find apps from remote storage, and "
                      "[meta_server].recover_from_replica_server = true, "
                      "administrator should recover this cluster manually later");
-            return dsn::ERR_OK;
+            return ERR_OK;
         }
         LOG_ERROR("initialize server state from remote storage failed, err = {}, retry ...", err);
     }
@@ -560,10 +558,9 @@ void meta_service::register_rpc_handlers()
                                          &meta_service::on_set_max_replica_count);
 }
 
-meta_leader_state meta_service::check_leader(dsn::message_ex *req,
-                                             dsn::rpc_address *forward_address)
+meta_leader_state meta_service::check_leader(message_ex *req, rpc_address *forward_address)
 {
-    dsn::rpc_address leader;
+    rpc_address leader;
     if (!_failure_detector->get_leader(&leader)) {
         if (!req->header->context.u.is_forward_supported) {
             if (forward_address != nullptr)
@@ -585,7 +582,7 @@ meta_leader_state meta_service::check_leader(dsn::message_ex *req,
 }
 
 // table operations
-void meta_service::on_create_app(dsn::message_ex *req)
+void meta_service::on_create_app(message_ex *req)
 {
     if (!check_status_and_authz_with_reply<configuration_create_app_request,
                                            configuration_create_app_response>(req)) {
@@ -599,7 +596,7 @@ void meta_service::on_create_app(dsn::message_ex *req)
                      server_state::sStateHash);
 }
 
-void meta_service::on_drop_app(dsn::message_ex *req)
+void meta_service::on_drop_app(message_ex *req)
 {
     if (!check_status_and_authz_with_reply<configuration_drop_app_request,
                                            configuration_drop_app_response>(req)) {
@@ -625,12 +622,12 @@ void meta_service::on_rename_app(configuration_rename_app_rpc rpc)
                      server_state::sStateHash);
 }
 
-void meta_service::on_recall_app(dsn::message_ex *req)
+void meta_service::on_recall_app(message_ex *req)
 {
     configuration_recall_app_request request;
     configuration_recall_app_response response;
-    dsn::message_ex *copied_req = message_ex::copy_message_no_reply(*req);
-    dsn::unmarshall(copied_req, request);
+    message_ex *copied_req = message_ex::copy_message_no_reply(*req);
+    unmarshall(copied_req, request);
     auto target_app = _state->get_app(request.app_id);
     if (!target_app) {
         response.err = ERR_APP_NOT_EXIST;
@@ -669,7 +666,7 @@ void meta_service::on_list_apps(configuration_list_apps_rpc rpc)
         return;
     }
 
-    dsn::message_ex *msg = nullptr;
+    message_ex *msg = nullptr;
     if (_access_controller->is_enable_ranger_acl()) {
         msg = rpc.dsn_request();
     }
@@ -686,7 +683,7 @@ void meta_service::on_list_nodes(configuration_list_nodes_rpc rpc)
     const configuration_list_nodes_request &request = rpc.request();
     {
         zauto_lock l(_failure_detector->_lock);
-        dsn::replication::node_info info;
+        replication::node_info info;
         if (request.status == node_status::NS_INVALID || request.status == node_status::NS_ALIVE) {
             info.status = node_status::NS_ALIVE;
             for (auto &node : _alive_set) {
@@ -702,7 +699,7 @@ void meta_service::on_list_nodes(configuration_list_nodes_rpc rpc)
                 response.infos.push_back(info);
             }
         }
-        response.err = dsn::ERR_OK;
+        response.err = ERR_OK;
     }
 }
 
@@ -725,7 +722,7 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
     response.keys.push_back("primary_meta_server");
     response.values.push_back(dsn_primary_address().to_std_string());
     response.keys.push_back("zookeeper_hosts");
-    response.values.push_back(dsn::dist::FLAGS_hosts_list);
+    response.values.push_back(dist::FLAGS_hosts_list);
     response.keys.push_back("zookeeper_root");
     response.values.push_back(_cluster_root);
     response.keys.push_back("meta_function_level");
@@ -743,7 +740,7 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
     response.values.push_back(fmt::format("{:.{}f}", total_stddev, 2));
     response.keys.push_back("cluster_name");
     response.values.push_back(get_current_cluster_name());
-    response.err = dsn::ERR_OK;
+    response.err = ERR_OK;
 }
 
 // client => meta server
@@ -793,7 +790,7 @@ void meta_service::on_config_sync(configuration_query_by_node_rpc rpc)
     }
 }
 
-void meta_service::on_update_configuration(dsn::message_ex *req)
+void meta_service::on_update_configuration(message_ex *req)
 {
     configuration_update_response response;
     if (!check_status_and_authz_with_reply(req, response)) {
@@ -802,7 +799,7 @@ void meta_service::on_update_configuration(dsn::message_ex *req)
 
     std::shared_ptr<configuration_update_request> request =
         std::make_shared<configuration_update_request>();
-    dsn::unmarshall(req, *request);
+    unmarshall(req, *request);
 
     meta_function_level::type level = get_function_level();
     if (level <= meta_function_level::fl_freezed) {
@@ -875,7 +872,7 @@ void meta_service::on_start_recovery(configuration_recovery_rpc rpc)
             response.err = ERR_SERVICE_ALREADY_RUNNING;
         } else {
             _state->on_start_recovery(rpc.request(), response);
-            if (response.err == dsn::ERR_OK) {
+            if (response.err == ERR_OK) {
                 _recovering = false;
                 start_service();
             }
@@ -883,7 +880,7 @@ void meta_service::on_start_recovery(configuration_recovery_rpc rpc)
     }
 }
 
-void meta_service::on_start_restore(dsn::message_ex *req)
+void meta_service::on_start_restore(message_ex *req)
 {
     if (!check_status_and_authz_with_reply<configuration_restore_request,
                                            configuration_create_app_response>(req)) {
@@ -895,7 +892,7 @@ void meta_service::on_start_restore(dsn::message_ex *req)
         LPC_RESTORE_BACKGROUND, nullptr, std::bind(&server_state::restore_app, _state.get(), req));
 }
 
-void meta_service::on_add_backup_policy(dsn::message_ex *req)
+void meta_service::on_add_backup_policy(message_ex *req)
 {
     configuration_add_backup_policy_response response;
     if (!check_status_and_authz_with_reply(req, response)) {
@@ -1324,4 +1321,4 @@ void meta_service::on_set_max_replica_count(configuration_set_max_replica_count_
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

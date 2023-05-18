@@ -19,7 +19,7 @@
 
 #include <string>
 
-namespace dsn {
+namespace pegasus {
 
 struct service_version
 {
@@ -29,4 +29,4 @@ struct service_version
 
 extern service_version app_version;
 
-} // namespace dsn
+} // namespace pegasus

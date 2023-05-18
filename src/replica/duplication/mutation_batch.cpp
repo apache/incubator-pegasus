@@ -40,7 +40,7 @@
 #include "utils/smart_pointers.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 /*static*/ constexpr int64_t mutation_batch::PREPARE_LIST_NUM_ENTRIES;
@@ -194,4 +194,4 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -35,7 +35,7 @@
         return array[index];                                                                       \
     } while (0);
 
-namespace dsn {
+namespace pegasus {
 
 namespace {
 
@@ -102,6 +102,6 @@ void je_dump_stats(je_stats_type type, std::string &stats)
     je_dump_stats(type, je_stats_type_to_default_buf_sz(type), stats);
 }
 
-} // namespace dsn
+} // namespace pegasus
 
 #endif // DSN_USE_JEMALLOC

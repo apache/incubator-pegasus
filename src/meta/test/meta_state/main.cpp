@@ -47,12 +47,13 @@
 int g_test_count = 0;
 int g_test_ret = 0;
 
-class test_client : public ::dsn::service_app
+namespace pegasus {
+class test_client : public service_app
 {
 public:
-    test_client(const dsn::service_app_info *info) : ::dsn::service_app(info) {}
+    test_client(const service_app_info *info) : service_app(info) {}
 
-    ::dsn::error_code start(const std::vector<std::string> &args)
+    error_code start(const std::vector<std::string> &args)
     {
         int argc = args.size();
         char *argv[20];
@@ -70,18 +71,19 @@ public:
                 kill(getpid(), SIGKILL);
         # endif
         */
-        return ::dsn::ERR_OK;
+        return ERR_OK;
     }
 
-    ::dsn::error_code stop(bool cleanup = false) { return ::dsn::ERR_OK; }
+    error_code stop(bool cleanup = false) { return ERR_OK; }
 };
+} // namespace pegasus
 
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
     // register all possible services
-    dsn::service_app::register_factory<test_client>("test");
+    pegasus::service_app::register_factory<pegasus::test_client>("test");
 
     // specify what services and tools will run in config file, then run
     if (argc < 2)

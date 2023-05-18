@@ -39,7 +39,7 @@
 #include <vector>
 #include <cassert>
 
-namespace dsn {
+namespace pegasus {
 #define DELAY_COUNT 6
 const double s_default_delay_points[DELAY_COUNT] = {1.0, 1.2, 1.4, 1.6, 1.8, 2.0};
 const int s_default_delay[DELAY_COUNT] = {0, 0, 1, 2, 5, 10}; // millieseconds

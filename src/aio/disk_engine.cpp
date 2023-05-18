@@ -46,10 +46,10 @@
 #include "utils/link.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 DEFINE_TASK_CODE_AIO(LPC_AIO_BATCH_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-const char *native_aio_provider = "dsn::tools::native_aio_provider";
+const char *native_aio_provider = "pegasus::tools::native_aio_provider";
 DSN_REGISTER_COMPONENT_PROVIDER(native_linux_aio_provider, native_aio_provider);
 
 struct disk_engine_initializer
@@ -159,8 +159,8 @@ aio_task *disk_file::on_write_completed(aio_task *wk, void *ctx, error_code err,
 //----------------- disk_engine ------------------------
 disk_engine::disk_engine()
 {
-    aio_provider *provider = utils::factory_store<aio_provider>::create(
-        native_aio_provider, dsn::PROVIDER_TYPE_MAIN, this);
+    aio_provider *provider =
+        utils::factory_store<aio_provider>::create(native_aio_provider, PROVIDER_TYPE_MAIN, this);
     _provider.reset(provider);
 }
 
@@ -280,4 +280,4 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint64_t bytes)
         }
     }
 }
-} // namespace dsn
+} // namespace pegasus

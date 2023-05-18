@@ -35,8 +35,9 @@
 #include "utils/string_view.h"
 #include "value_field.h"
 
-namespace pegasus {
+using pegasus::string_view;
 
+namespace pegasus {
 constexpr int PEGASUS_DATA_VERSION_MAX = 1u;
 
 /// Generates timetag in host endian.
@@ -55,28 +56,27 @@ inline uint64_t extract_timestamp_from_timetag(uint64_t timetag)
 /// Extracts expire_ts from rocksdb value with given version.
 /// The value schema must be in v0 or v1.
 /// \return expire_ts in host endian
-inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view value)
+inline uint32_t pegasus_extract_expire_ts(uint32_t version, string_view value)
 {
     CHECK_LE(version, PEGASUS_DATA_VERSION_MAX);
-    return dsn::data_input(value).read_u32();
+    return data_input(value).read_u32();
 }
 
 /// Extracts user value from a raw rocksdb value.
 /// In order to avoid data copy, the ownership of `raw_value` will be transferred
 /// into `user_data`.
 /// \param user_data: the result.
-inline void
-pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob &user_data)
+inline void pegasus_extract_user_data(uint32_t version, std::string &&raw_value, blob &user_data)
 {
     CHECK_LE(version, PEGASUS_DATA_VERSION_MAX);
 
     auto *s = new std::string(std::move(raw_value));
-    dsn::data_input input(*s);
+    data_input input(*s);
     input.skip(sizeof(uint32_t));
     if (version == 1) {
         input.skip(sizeof(uint64_t));
     }
-    dsn::string_view view = input.read_str();
+    string_view view = input.read_str();
 
     // tricky code to avoid memory copy
     std::shared_ptr<char> buf(const_cast<char *>(view.data()), [s](char *) { delete s; });
@@ -84,11 +84,11 @@ pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob
 }
 
 /// Extracts timetag from a v1 value.
-inline uint64_t pegasus_extract_timetag(int version, dsn::string_view value)
+inline uint64_t pegasus_extract_timetag(int version, string_view value)
 {
     CHECK_EQ(version, 1);
 
-    dsn::data_input input(value);
+    data_input input(value);
     input.skip(sizeof(uint32_t));
 
     return input.read_u64();
@@ -101,7 +101,7 @@ inline void pegasus_update_expire_ts(uint32_t version, std::string &value, uint3
     if (version == 0 || version == 1) {
         CHECK_GE_MSG(value.length(), sizeof(uint32_t), "value must include 'expire_ts' header");
 
-        new_expire_ts = dsn::endian::hton(new_expire_ts);
+        new_expire_ts = endian::hton(new_expire_ts);
         memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));
     } else {
         LOG_FATAL("unsupported value schema version: {}", version);
@@ -116,9 +116,8 @@ inline bool check_if_ts_expired(uint32_t epoch_now, uint32_t expire_ts)
 }
 
 /// \return true if expired
-inline bool check_if_record_expired(uint32_t value_schema_version,
-                                    uint32_t epoch_now,
-                                    dsn::string_view raw_value)
+inline bool
+check_if_record_expired(uint32_t value_schema_version, uint32_t epoch_now, string_view raw_value)
 {
     return check_if_ts_expired(epoch_now,
                                pegasus_extract_expire_ts(value_schema_version, raw_value));
@@ -136,7 +135,7 @@ public:
     /// A higher level utility for generating value with given version.
     /// The value schema must be in v0 or v1.
     rocksdb::SliceParts generate_value(uint32_t value_schema_version,
-                                       dsn::string_view user_data,
+                                       string_view user_data,
                                        uint32_t expire_ts,
                                        uint64_t timetag)
     {
@@ -151,18 +150,18 @@ public:
     }
 
     /// The heading expire_ts is encoded to support TTL, and the record will be
-    /// automatically cleared (by \see pegasus::server::KeyWithTTLCompactionFilter)
+    /// automatically cleared (by \see server::KeyWithTTLCompactionFilter)
     /// after expiration reached. The expired record will be invisible even though
     /// they are not yet compacted.
     ///
     /// rocksdb value (ver 0) = [expire_ts(uint32_t)] [user_data(bytes)]
     /// \internal
-    rocksdb::SliceParts generate_value_v0(uint32_t expire_ts, dsn::string_view user_data)
+    rocksdb::SliceParts generate_value_v0(uint32_t expire_ts, string_view user_data)
     {
         _write_buf.resize(sizeof(uint32_t));
         _write_slices.clear();
 
-        dsn::data_output(_write_buf).write_u32(expire_ts);
+        data_output(_write_buf).write_u32(expire_ts);
         _write_slices.emplace_back(_write_buf.data(), _write_buf.size());
 
         if (user_data.length() > 0) {
@@ -210,12 +209,12 @@ public:
     ///
     /// \internal
     rocksdb::SliceParts
-    generate_value_v1(uint32_t expire_ts, uint64_t timetag, dsn::string_view user_data)
+    generate_value_v1(uint32_t expire_ts, uint64_t timetag, string_view user_data)
     {
         _write_buf.resize(sizeof(uint32_t) + sizeof(uint64_t));
         _write_slices.clear();
 
-        dsn::data_output(_write_buf).write_u32(expire_ts).write_u64(timetag);
+        data_output(_write_buf).write_u32(expire_ts).write_u64(timetag);
         _write_slices.emplace_back(_write_buf.data(), _write_buf.size());
 
         if (user_data.length() > 0) {
@@ -258,12 +257,12 @@ class value_schema
 public:
     virtual ~value_schema() = default;
 
-    virtual std::unique_ptr<value_field> extract_field(dsn::string_view value,
+    virtual std::unique_ptr<value_field> extract_field(string_view value,
                                                        value_field_type type) = 0;
     /// Extracts user value from the raw rocksdb value.
     /// In order to avoid data copy, the ownership of `raw_value` will be transferred
     /// into the returned blob value.
-    virtual dsn::blob extract_user_data(std::string &&value) = 0;
+    virtual blob extract_user_data(std::string &&value) = 0;
     virtual void update_field(std::string &value, std::unique_ptr<value_field> field) = 0;
     virtual rocksdb::SliceParts generate_value(const value_params &params) = 0;
 

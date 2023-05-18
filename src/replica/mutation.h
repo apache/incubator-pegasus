@@ -52,7 +52,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/link.h"
 
-namespace dsn {
+namespace pegasus {
 class binary_reader;
 class binary_writer;
 class blob;
@@ -65,7 +65,7 @@ namespace replication {
 
 class mutation;
 
-typedef dsn::ref_ptr<mutation> mutation_ptr;
+typedef ref_ptr<mutation> mutation_ptr;
 
 // mutation is the 2pc unit of PacificA, which wraps one or more client requests and add
 // header informations related to PacificA algorithm for them.
@@ -85,8 +85,8 @@ public:
     const uint64_t tid() const { return _tid; }
     bool is_logged() const { return _not_logged == 0; }
     bool is_ready_for_commit() const { return _private0 == 0; }
-    const std::vector<dsn::message_ex *> &prepare_requests() const { return _prepare_requests; }
-    void add_prepare_request(dsn::message_ex *request)
+    const std::vector<message_ex *> &prepare_requests() const { return _prepare_requests; }
+    void add_prepare_request(message_ex *request)
     {
         if (nullptr != request) {
             _prepare_requests.push_back(request);
@@ -100,7 +100,7 @@ public:
     }
     bool is_child_acked() const { return !_wait_child; }
     bool is_error_acked() const { return _is_error_acked; }
-    ::dsn::task_ptr &log_task() { return _log_task; }
+    task_ptr &log_task() { return _log_task; }
     node_tasks &remote_tasks() { return _prepare_or_commit_tasks; }
     bool is_prepare_close_to_timeout(int gap_ms, int timeout_ms)
     {
@@ -113,7 +113,7 @@ public:
     // state change
     void set_id(ballot b, decree c);
     void set_timestamp(int64_t timestamp) { data.header.timestamp = timestamp; }
-    void add_client_request(task_code code, dsn::message_ex *request);
+    void add_client_request(task_code code, message_ex *request);
     void copy_from(mutation_ptr &old);
     void set_logged()
     {
@@ -149,8 +149,8 @@ public:
     //   - the private log may be transfered to other node with different program
     //   - the private/shared log may be replayed by different program when server restart
     void write_to(const std::function<void(const blob &)> &inserter) const;
-    void write_to(binary_writer &writer, dsn::message_ex *to) const;
-    static mutation_ptr read_from(binary_reader &reader, dsn::message_ex *from);
+    void write_to(binary_writer &writer, message_ex *to) const;
+    static mutation_ptr read_from(binary_reader &reader, message_ex *from);
 
     static void write_mutation_header(binary_writer &writer, const mutation_header &header);
     static void read_mutation_header(binary_reader &reader, mutation_header &header);
@@ -159,12 +159,12 @@ public:
     mutation_data data;
 
     // user requests
-    std::vector<dsn::message_ex *> client_requests;
+    std::vector<message_ex *> client_requests;
 
     // used by pending mutation queue only
     mutation *next;
 
-    std::shared_ptr<dsn::utils::latency_tracer> _tracer;
+    std::shared_ptr<utils::latency_tracer> _tracer;
 
     void set_is_sync_to_child(bool sync_to_child) { _is_sync_to_child = sync_to_child; }
     bool is_sync_to_child() { return _is_sync_to_child; }
@@ -190,10 +190,10 @@ private:
     };
 
     uint64_t _prepare_ts_ms;
-    ::dsn::task_ptr _log_task;
+    task_ptr _log_task;
     node_tasks _prepare_or_commit_tasks;
-    std::vector<dsn::message_ex *> _prepare_requests; // may combine duplicate requests
-    char _name[60];                                   // app_id.partition_index.ballot.decree
+    std::vector<message_ex *> _prepare_requests; // may combine duplicate requests
+    char _name[60];                              // app_id.partition_index.ballot.decree
     int _appro_data_bytes;
     uint64_t _create_ts_ns; // for profiling
     uint64_t _tid;          // trace id, unique in process
@@ -227,7 +227,7 @@ public:
               _current_op_count);
     }
 
-    mutation_ptr add_work(task_code code, dsn::message_ex *request, replica *r);
+    mutation_ptr add_work(task_code code, message_ex *request, replica *r);
 
     void clear();
     // called when you want to clear the mutation_queue and want to get the remaining messages

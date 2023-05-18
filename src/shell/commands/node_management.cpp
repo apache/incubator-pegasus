@@ -35,7 +35,7 @@
 #include "client/replication_ddl_client.h"
 #include "common/json_helper.h"
 #include "common/replication_enums.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta_admin_types.h"
 #include "perf_counter/perf_counter_utils.h"
 #include "runtime/rpc/rpc_address.h"
@@ -49,6 +49,8 @@
 #include "utils/output_utils.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+
+namespace pegasus {
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
@@ -82,8 +84,8 @@ bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    ::dsn::error_code err = sc->ddl_client->cluster_info(out_file, resolve_ip, json);
-    if (err != ::dsn::ERR_OK) {
+    error_code err = sc->ddl_client->cluster_info(out_file, resolve_ip, json);
+    if (err != ERR_OK) {
         std::cout << "get cluster info failed, error=" << err.to_string() << std::endl;
     }
     return true;
@@ -143,9 +145,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    dsn::utils::multi_table_printer mtp;
+    utils::multi_table_printer mtp;
     if (!(status.empty() && output_file.empty())) {
-        dsn::utils::table_printer tp("parameters");
+        utils::table_printer tp("parameters");
         if (!status.empty())
             tp.add_row_name_and_data("status", status);
         if (!output_file.empty())
@@ -153,42 +155,42 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         mtp.add(std::move(tp));
     }
 
-    ::dsn::replication::node_status::type s = ::dsn::replication::node_status::NS_INVALID;
+    replication::node_status::type s = replication::node_status::NS_INVALID;
     if (!status.empty() && status != "all") {
-        s = type_from_string(dsn::replication::_node_status_VALUES_TO_NAMES,
+        s = type_from_string(replication::_node_status_VALUES_TO_NAMES,
                              std::string("ns_") + status,
-                             ::dsn::replication::node_status::NS_INVALID);
-        verify_logged(s != ::dsn::replication::node_status::NS_INVALID,
+                             replication::node_status::NS_INVALID);
+        verify_logged(s != replication::node_status::NS_INVALID,
                       "parse %s as node_status::type failed",
                       status.c_str());
     }
 
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
+    std::map<rpc_address, replication::node_status::type> nodes;
     auto r = sc->ddl_client->list_nodes(s, nodes);
-    if (r != dsn::ERR_OK) {
+    if (r != ERR_OK) {
         std::cout << "list nodes failed, error=" << r.to_string() << std::endl;
         return true;
     }
 
-    std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
+    std::map<rpc_address, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
     for (auto &kv : nodes) {
-        if (kv.second == dsn::replication::node_status::NS_ALIVE)
+        if (kv.second == replication::node_status::NS_ALIVE)
             alive_node_count++;
-        std::string status_str = dsn::enum_to_string(kv.second);
+        std::string status_str = enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
         std::string node_name = kv.first.to_std_string();
         if (resolve_ip) {
             // TODO: put hostname_from_ip_port into common utils
-            dsn::utils::hostname_from_ip_port(node_name.c_str(), &node_name);
+            utils::hostname_from_ip_port(node_name.c_str(), &node_name);
         }
         tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
 
     if (detailed) {
-        std::vector<::dsn::app_info> apps;
-        r = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
-        if (r != dsn::ERR_OK) {
+        std::vector<app_info> apps;
+        r = sc->ddl_client->list_apps(app_status::AS_AVAILABLE, apps);
+        if (r != ERR_OK) {
             std::cout << "list apps failed, error=" << r.to_string() << std::endl;
             return true;
         }
@@ -196,22 +198,22 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         for (auto &app : apps) {
             int32_t app_id;
             int32_t partition_count;
-            std::vector<dsn::partition_configuration> partitions;
+            std::vector<partition_configuration> partitions;
             r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, partitions);
-            if (r != dsn::ERR_OK) {
+            if (r != ERR_OK) {
                 std::cout << "list app " << app.app_name << " failed, error=" << r.to_string()
                           << std::endl;
                 return true;
             }
 
-            for (const dsn::partition_configuration &p : partitions) {
+            for (const partition_configuration &p : partitions) {
                 if (!p.primary.is_invalid()) {
                     auto find = tmp_map.find(p.primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (const dsn::rpc_address &addr : p.secondaries) {
+                for (const rpc_address &addr : p.secondaries) {
                     auto find = tmp_map.find(addr);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;
@@ -240,7 +242,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                                  "replica*app.pegasus*rdb.index_and_filter_blocks.memory_usage"});
 
         for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
+            rpc_address node_addr = nodes[i].address;
             auto tmp_it = tmp_map.find(node_addr);
             if (tmp_it == tmp_map.end())
                 continue;
@@ -249,9 +251,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                           << " failed" << std::endl;
                 return true;
             }
-            dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+            perf_counter_info info;
+            blob bb(results[i].second.data(), 0, results[i].second.size());
+            if (!json::json_forwarder<perf_counter_info>::decode(bb, info)) {
                 std::cout << "decode perf counter info from node " << node_addr.to_string()
                           << " failed, result = " << results[i].second << std::endl;
                 return true;
@@ -262,7 +264,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 return true;
             }
             list_nodes_helper &h = tmp_it->second;
-            for (dsn::perf_counter_metric &m : info.counters) {
+            for (perf_counter_metric &m : info.counters) {
                 if (m.name.find("memused.res(MB)") != std::string::npos)
                     h.memused_res_mb += m.value;
                 else if (m.name.find("rdb.block_cache.memory_usage") != std::string::npos)
@@ -300,7 +302,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                                  "replica*app.pegasus*recent.write.cu"});
 
         for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
+            rpc_address node_addr = nodes[i].address;
             auto tmp_it = tmp_map.find(node_addr);
             if (tmp_it == tmp_map.end())
                 continue;
@@ -309,9 +311,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                           << " failed" << std::endl;
                 return true;
             }
-            dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+            perf_counter_info info;
+            blob bb(results[i].second.data(), 0, results[i].second.size());
+            if (!json::json_forwarder<perf_counter_info>::decode(bb, info)) {
                 std::cout << "decode perf counter info from node " << node_addr.to_string()
                           << " failed, result = " << results[i].second << std::endl;
                 return true;
@@ -322,7 +324,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 return true;
             }
             list_nodes_helper &h = tmp_it->second;
-            for (dsn::perf_counter_metric &m : info.counters) {
+            for (perf_counter_metric &m : info.counters) {
                 if (m.name.find("replica*app.pegasus*get_qps") != std::string::npos)
                     h.get_qps += m.value;
                 else if (m.name.find("replica*app.pegasus*multi_get_qps") != std::string::npos)
@@ -359,7 +361,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                                  "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server"});
 
         for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
+            rpc_address node_addr = nodes[i].address;
             auto tmp_it = tmp_map.find(node_addr);
             if (tmp_it == tmp_map.end())
                 continue;
@@ -368,9 +370,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                           << " failed" << std::endl;
                 return true;
             }
-            dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+            perf_counter_info info;
+            blob bb(results[i].second.data(), 0, results[i].second.size());
+            if (!json::json_forwarder<perf_counter_info>::decode(bb, info)) {
                 std::cout << "decode perf counter info from node " << node_addr.to_string()
                           << " failed, result = " << results[i].second << std::endl;
                 return true;
@@ -381,7 +383,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 return true;
             }
             list_nodes_helper &h = tmp_it->second;
-            for (dsn::perf_counter_metric &m : info.counters) {
+            for (perf_counter_metric &m : info.counters) {
                 if (m.name.find("RPC_RRDB_RRDB_GET.latency.server") != std::string::npos)
                     h.get_p99 = m.value;
                 else if (m.name.find("RPC_RRDB_RRDB_PUT.latency.server") != std::string::npos)
@@ -408,7 +410,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    dsn::utils::table_printer tp("details");
+    utils::table_printer tp("details");
     tp.add_title("address");
     tp.add_column("status");
     if (detailed) {
@@ -475,7 +477,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     }
     mtp.add(std::move(tp));
 
-    dsn::utils::table_printer tp_count("summary");
+    utils::table_printer tp_count("summary");
     tp_count.add_row_name_and_data("total_node_count", nodes.size());
     tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
     tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
@@ -573,14 +575,14 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
     } else {
         std::vector<std::string> tokens;
-        dsn::utils::split_args(nodes.c_str(), tokens, ',');
+        utils::split_args(nodes.c_str(), tokens, ',');
         if (tokens.empty()) {
             fprintf(stderr, "can't parse node from node_list\n");
             return true;
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node;
+            rpc_address node;
             if (!node.from_string_ipv4(token.c_str())) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
@@ -605,7 +607,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         node_desc &n = node_list[i];
         std::string hostname;
         if (resolve_ip) {
-            dsn::utils::hostname_from_ip_port(n.address.to_string(), &hostname);
+            utils::hostname_from_ip_port(n.address.to_string(), &hostname);
         } else {
             hostname = n.address.to_string();
         }
@@ -635,3 +637,4 @@ bool flush_log(command_executor *e, shell_context *sc, arguments args)
     new_args.argv = argv;
     return remote_command(e, sc, new_args);
 }
+} // namespace pegasus

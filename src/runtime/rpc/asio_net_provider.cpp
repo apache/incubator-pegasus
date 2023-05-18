@@ -64,7 +64,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_engine;
 
 namespace tools {
@@ -110,7 +110,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
 
-            const char *name = ::dsn::tools::get_service_node_name(node());
+            const char *name = tools::get_service_node_name(node());
             char buffer[128];
             sprintf(buffer, "%s.asio.%d", name, i);
             task_worker::set_name(buffer);
@@ -163,7 +163,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
     return ERR_OK;
 }
 
-rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
+rpc_session_ptr asio_network_provider::create_client_session(rpc_address server_addr)
 {
     auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
     message_parser_ptr parser(new_message_parser(_client_hdr_format));
@@ -182,7 +182,7 @@ void asio_network_provider::do_accept()
             } else {
                 auto ip = remote.address().to_v4().to_ulong();
                 auto port = remote.port();
-                ::dsn::rpc_address client_addr(ip, port);
+                rpc_address client_addr(ip, port);
 
                 message_parser_ptr null_parser;
                 rpc_session_ptr s =
@@ -410,7 +410,7 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
 
-            const char *name = ::dsn::tools::get_service_node_name(node());
+            const char *name = tools::get_service_node_name(node());
             char buffer[128];
             sprintf(buffer, "%s.asio.udp.%d.%d", name, (int)(this->address().port()), i);
             task_worker::set_name(buffer);
@@ -434,4 +434,4 @@ boost::asio::io_service &asio_network_provider::get_io_service()
 }
 
 } // namespace tools
-} // namespace dsn
+} // namespace pegasus

@@ -29,7 +29,7 @@
 inline sds *scanfCommand(int *argc)
 {
     char *line = nullptr;
-    auto _ = dsn::defer([line]() {
+    auto _ = pegasus::defer([line]() {
         if (line) {
             linenoiseFree(line);
         }

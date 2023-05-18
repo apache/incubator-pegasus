@@ -52,11 +52,12 @@
 
 #define log_error_and_return(buffer, length)                                                       \
     do {                                                                                           \
-        ::dsn::utils::safe_strerror_r(errno, buffer, length);                                      \
+        pegasus::utils::safe_strerror_r(errno, buffer, length);                                    \
         LOG_ERROR("append file failed, reason({})", buffer);                                       \
         return -1;                                                                                 \
     } while (0)
 
+namespace pegasus {
 struct block_header
 {
     uint32_t length;
@@ -90,7 +91,7 @@ public:
         CHECK(_is_write, "call append when open file with read mode");
 
         block_header hdr = {data_length, 0};
-        hdr.crc32 = dsn::utils::crc32_calc(data, data_length, _crc);
+        hdr.crc32 = utils::crc32_calc(data, data_length, _crc);
         _crc = hdr.crc32;
         size_t len = fwrite(&hdr, sizeof(hdr), 1, _file_handle);
         if (len < 1) {
@@ -107,9 +108,9 @@ public:
         }
         return 0;
     }
-    int append_buffer(const dsn::blob &data) { return append_buffer(data.data(), data.length()); }
+    int append_buffer(const blob &data) { return append_buffer(data.data(), data.length()); }
     int append_buffer(const std::string &data) { return append_buffer(data.c_str(), data.size()); }
-    int read_next_buffer(/*out*/ dsn::blob &output)
+    int read_next_buffer(/*out*/ blob &output)
     {
         static __thread char msg_buffer[128];
         CHECK(!_is_write, "call read next buffer when open file with write mode");
@@ -124,7 +125,7 @@ public:
             }
         }
 
-        std::shared_ptr<char> ptr(dsn::utils::make_shared_array<char>(hdr.length));
+        std::shared_ptr<char> ptr(utils::make_shared_array<char>(hdr.length));
         char *raw_mem = ptr.get();
         len = 0;
         while (len < hdr.length) {
@@ -140,7 +141,7 @@ public:
             }
             len += cnt;
         }
-        _crc = dsn::utils::crc32_calc(raw_mem, len, _crc);
+        _crc = utils::crc32_calc(raw_mem, len, _crc);
         if (_crc != hdr.crc32) {
             LOG_ERROR("file {} data error, block offset({})",
                       _filename,
@@ -159,3 +160,4 @@ private:
     std::string _filename;
     uint32_t _crc;
 };
+} // namespace pegasus

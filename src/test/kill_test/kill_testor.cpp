@@ -53,7 +53,7 @@ kill_testor::kill_testor(const char *config_file)
     }
 
     // load meta_list
-    dsn::replication::replica_helper::load_meta_servers(
+    replication::replica_helper::load_meta_servers(
         meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), FLAGS_pegasus_cluster_name);
     if (meta_list.empty()) {
         LOG_ERROR("Should config the meta address for killer");
@@ -96,21 +96,21 @@ int kill_testor::generate_one_number(int a, int b)
     return ((rand() % (b - a + 1)) + a);
 }
 
-dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
-                                                int &healthy_partition_cnt,
-                                                int &unhealthy_partition_cnt)
+error_code kill_testor::get_partition_info(bool debug_unhealthy,
+                                           int &healthy_partition_cnt,
+                                           int &unhealthy_partition_cnt)
 {
     healthy_partition_cnt = 0, unhealthy_partition_cnt = 0;
     int32_t app_id;
     int32_t partition_count;
     partitions.clear();
-    dsn::error_code err =
+    error_code err =
         ddl_client->list_app(FLAGS_verify_app_name, app_id, partition_count, partitions);
 
-    if (err == ::dsn::ERR_OK) {
+    if (err == ERR_OK) {
         LOG_DEBUG("access meta and query partition status success");
         for (int i = 0; i < partitions.size(); i++) {
-            const dsn::partition_configuration &p = partitions[i];
+            const partition_configuration &p = partitions[i];
             int replica_count = 0;
             if (!p.primary.is_invalid()) {
                 replica_count++;
@@ -154,11 +154,11 @@ bool kill_testor::check_cluster_status()
     int unhealthy_partition_cnt = 0;
     int try_count = 1;
     while (try_count <= FLAGS_max_seconds_for_all_partitions_to_recover) {
-        dsn::error_code err =
+        error_code err =
             get_partition_info(try_count == FLAGS_max_seconds_for_all_partitions_to_recover,
                                healthy_partition_cnt,
                                unhealthy_partition_cnt);
-        if (err == dsn::ERR_OK) {
+        if (err == ERR_OK) {
             if (unhealthy_partition_cnt > 0) {
                 LOG_DEBUG("query partition status success, but still have unhealthy partition, "
                           "healthy_partition_count = {}, unhealthy_partition_count = {}",

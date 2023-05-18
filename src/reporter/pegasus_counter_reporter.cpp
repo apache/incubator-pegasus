@@ -144,25 +144,25 @@ void pegasus_counter_reporter::falcon_initialize()
 
 void pegasus_counter_reporter::start()
 {
-    ::dsn::utils::auto_write_lock l(_lock);
+    utils::auto_write_lock l(_lock);
     if (_report_timer != nullptr)
         return;
 
-    dsn::rpc_address addr(dsn_primary_address());
+    rpc_address addr(dsn_primary_address());
     char buf[1000];
-    pegasus::utils::addr2host(addr, buf, 1000);
+    utils::addr2host(addr, buf, 1000);
     _local_host = buf;
     _local_port = addr.port();
 
-    _app_name = dsn::service_app::current_service_app_info().full_name;
+    _app_name = service_app::current_service_app_info().full_name;
 
-    _cluster_name = dsn::get_current_cluster_name();
+    _cluster_name = get_current_cluster_name();
 
     _last_report_time_ms = dsn_now_ms();
 
-    if (dsn::utils::iequals("prometheus", FLAGS_perf_counter_sink)) {
+    if (utils::iequals("prometheus", FLAGS_perf_counter_sink)) {
         _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
-    } else if (dsn::utils::iequals("falcon", FLAGS_perf_counter_sink)) {
+    } else if (utils::iequals("falcon", FLAGS_perf_counter_sink)) {
         _perf_counter_sink = perf_counter_sink_t::FALCON;
     } else {
         _perf_counter_sink = perf_counter_sink_t::INVALID;
@@ -187,7 +187,7 @@ void pegasus_counter_reporter::start()
 
 void pegasus_counter_reporter::stop()
 {
-    ::dsn::utils::auto_write_lock l(_lock);
+    utils::auto_write_lock l(_lock);
     if (_report_timer != nullptr) {
         _report_timer->cancel();
     }
@@ -211,14 +211,14 @@ void pegasus_counter_reporter::update()
     uint64_t now = dsn_now_ms();
     int64_t timestamp = now / 1000;
 
-    dsn::perf_counters::instance().take_snapshot();
+    perf_counters::instance().take_snapshot();
 
     if (FLAGS_perf_counter_enable_logging) {
         std::stringstream oss;
         oss << "logging perf counter(name, type, value):" << std::endl;
         oss << std::fixed << std::setprecision(2);
-        dsn::perf_counters::instance().iterate_snapshot(
-            [&oss](const dsn::perf_counters::counter_snapshot &cs) {
+        perf_counters::instance().iterate_snapshot(
+            [&oss](const perf_counters::counter_snapshot &cs) {
                 oss << "[" << cs.name << ", " << dsn_counter_type_to_string(cs.type) << ", "
                     << cs.value << "]" << std::endl;
             });
@@ -232,8 +232,8 @@ void pegasus_counter_reporter::update()
         bool first_append = true;
         _falcon_metric.timestamp = timestamp;
 
-        dsn::perf_counters::instance().iterate_snapshot(
-            [&oss, &first_append, this](const dsn::perf_counters::counter_snapshot &cs) {
+        perf_counters::instance().iterate_snapshot(
+            [&oss, &first_append, this](const perf_counters::counter_snapshot &cs) {
                 _falcon_metric.metric = cs.name;
                 _falcon_metric.value = cs.value;
                 _falcon_metric.counterType = "GAUGE";
@@ -249,8 +249,8 @@ void pegasus_counter_reporter::update()
 
     if (perf_counter_sink_t::PROMETHEUS == _perf_counter_sink) {
         const std::string hostname = get_hostname();
-        dsn::perf_counters::instance().iterate_snapshot([&hostname, this](
-            const dsn::perf_counters::counter_snapshot &cs) {
+        perf_counters::instance().iterate_snapshot([&hostname, this](
+            const perf_counters::counter_snapshot &cs) {
             std::string metrics_name = cs.name;
 
             // Splits metric_name like:
@@ -261,10 +261,10 @@ void pegasus_counter_reporter::update()
             // app[2] = "p999" or "" which represent the percent
             std::string app[3] = {"", "", ""};
             std::list<std::string> lv;
-            ::dsn::utils::split_args(metrics_name.c_str(), lv, '@');
+            utils::split_args(metrics_name.c_str(), lv, '@');
             if (lv.size() > 1) {
                 std::list<std::string> lv1;
-                ::dsn::utils::split_args(lv.back().c_str(), lv1, '.');
+                utils::split_args(lv.back().c_str(), lv1, '.');
                 CHECK_LE(lv1.size(), 3);
                 int i = 0;
                 for (auto &v : lv1) {

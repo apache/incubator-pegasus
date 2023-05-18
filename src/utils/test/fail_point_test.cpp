@@ -36,7 +36,7 @@
 #include "utils/fail_point_impl.h"
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 namespace fail {
 
 TEST(fail_point, off)
@@ -169,4 +169,4 @@ TEST(fail_point, return_void)
 }
 
 } // namespace fail
-} // namespace dsn
+} // namespace pegasus

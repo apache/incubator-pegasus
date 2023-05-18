@@ -51,7 +51,7 @@
 #include "utils/filesystem.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace replication {
@@ -203,4 +203,4 @@ TEST_F(mutation_log_test, learn)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

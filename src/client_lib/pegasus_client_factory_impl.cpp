@@ -35,11 +35,11 @@ namespace client {
 
 std::unordered_map<std::string, pegasus_client_factory_impl::app_to_client_map>
     pegasus_client_factory_impl::_cluster_to_clients;
-dsn::zlock *pegasus_client_factory_impl::_map_lock;
+zlock *pegasus_client_factory_impl::_map_lock;
 
 bool pegasus_client_factory_impl::initialize(const char *config_file)
 {
-    bool is_initialized = ::dsn::tools::is_engine_ready();
+    bool is_initialized = tools::is_engine_ready();
     if (config_file == nullptr) {
         CHECK(is_initialized, "rdsn engine not started, please specify a valid config file");
     } else {
@@ -55,7 +55,7 @@ bool pegasus_client_factory_impl::initialize(const char *config_file)
         }
     }
     pegasus_client_impl::init_error();
-    _map_lock = new ::dsn::zlock();
+    _map_lock = new zlock();
     return true;
 }
 
@@ -71,7 +71,7 @@ pegasus_client *pegasus_client_factory_impl::get_client(const char *cluster_name
         return nullptr;
     }
 
-    ::dsn::zauto_lock l(*_map_lock);
+    zauto_lock l(*_map_lock);
     auto it = _cluster_to_clients.find(cluster_name);
     if (it == _cluster_to_clients.end()) {
         it = _cluster_to_clients

@@ -53,8 +53,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-using namespace ::dsn;
-
 #ifndef TEST_PORT_BEGIN
 #define TEST_PORT_BEGIN 20201
 #define TEST_PORT_END 20203
@@ -79,27 +77,28 @@ inline void exec_tests()
     g_test_count++;
 }
 
-class test_client : public ::dsn::serverlet<test_client>, public ::dsn::service_app
+namespace pegasus {
+class test_client : public serverlet<test_client>, public service_app
 {
 public:
     test_client(const service_app_info *info)
-        : ::dsn::serverlet<test_client>("test-server"), ::dsn::service_app(info)
+        : serverlet<test_client>("test-server"), service_app(info)
     {
     }
 
-    void on_rpc_test(const int &test_id, ::dsn::rpc_replier<std::string> &replier)
+    void on_rpc_test(const int &test_id, rpc_replier<std::string> &replier)
     {
-        std::string r = ::dsn::task::get_current_worker()->name();
+        std::string r = task::get_current_worker()->name();
         replier(r);
     }
 
-    void on_rpc_string_test(dsn::message_ex *message)
+    void on_rpc_string_test(message_ex *message)
     {
         std::string command;
-        ::dsn::unmarshall(message, command);
+        unmarshall(message, command);
 
         if (command == "expect_talk_to_others") {
-            dsn::rpc_address next_addr = dsn::service_app::primary_address();
+            rpc_address next_addr = service_app::primary_address();
             if (next_addr.port() != TEST_PORT_END) {
                 next_addr.assign_ipv4(next_addr.ip(), next_addr.port() + 1);
                 LOG_INFO("test_client_server, talk_to_others: {}", next_addr);
@@ -109,10 +108,9 @@ public:
                 reply(message, next_addr.to_std_string());
             }
         } else if (command == "expect_no_reply") {
-            if (dsn::service_app::primary_address().port() == TEST_PORT_END) {
-                LOG_INFO("test_client_server, talk_with_reply: {}",
-                         dsn::service_app::primary_address());
-                reply(message, dsn::service_app::primary_address().to_std_string());
+            if (service_app::primary_address().port() == TEST_PORT_END) {
+                LOG_INFO("test_client_server, talk_with_reply: {}", service_app::primary_address());
+                reply(message, service_app::primary_address().to_std_string());
             }
         } else if (command.substr(0, 5) == "echo ") {
             reply(message, command.substr(5));
@@ -121,7 +119,7 @@ public:
         }
     }
 
-    ::dsn::error_code start(const std::vector<std::string> &args)
+    error_code start(const std::vector<std::string> &args)
     {
         // server
         if (args.size() == 1) {
@@ -148,8 +146,9 @@ public:
             exec_tests();
         }
 
-        return ::dsn::ERR_OK;
+        return ERR_OK;
     }
 
-    ::dsn::error_code stop(bool cleanup = false) { return ERR_OK; }
+    error_code stop(bool cleanup = false) { return ERR_OK; }
 };
+} // namespace pegasus

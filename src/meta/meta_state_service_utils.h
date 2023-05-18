@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class task_tracker;
 namespace dist {
@@ -80,9 +80,9 @@ private:
     friend struct operation;
 
     dist::meta_state_service *_remote;
-    dsn::task_tracker *_tracker;
+    task_tracker *_tracker;
 };
 
 } // namespace mss
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

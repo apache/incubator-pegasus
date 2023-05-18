@@ -43,7 +43,8 @@
 #include "utils/filesystem.h"
 #include "utils/strings.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+namespace pegasus {
 
 configuration::configuration() { _warning = false; }
 
@@ -70,7 +71,7 @@ bool configuration::load(const char *file_name, const char *arguments)
     FILE *fd = ::fopen(file_name, "rb");
     if (fd == nullptr) {
         std::string cdir;
-        dsn::utils::filesystem::get_current_directory(cdir);
+        get_current_directory(cdir);
         printf("ERROR: cannot open file %s in %s, err = %s\n",
                file_name,
                cdir.c_str(),

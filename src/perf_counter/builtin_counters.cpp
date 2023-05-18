@@ -24,7 +24,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
 
-namespace dsn {
+namespace pegasus {
 
 builtin_counters::builtin_counters()
 {
@@ -54,4 +54,4 @@ void builtin_counters::update_counters()
     LOG_INFO("memused_virt = {} MB, memused_res = {} MB", memused_virt, memused_res);
 }
 
-} // namespace dsn
+} // namespace pegasus

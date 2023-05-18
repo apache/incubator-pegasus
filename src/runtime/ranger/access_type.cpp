@@ -17,7 +17,7 @@
 
 #include "access_type.h"
 
-namespace dsn {
+namespace pegasus {
 namespace ranger {
 
 access_type operator|(access_type lhs, access_type rhs)
@@ -33,4 +33,4 @@ access_type operator&(access_type lhs, access_type rhs)
 access_type &operator|=(access_type &lhs, access_type rhs) { return lhs = lhs | rhs; }
 
 } // namespace ranger
-} // namespace dsn
+} // namespace pegasus

@@ -33,14 +33,14 @@
 #include "replica_http_service.h"
 #include "replica_stub.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 
 namespace replication {
 
 void replication_service_app::register_all()
 {
-    dsn::service_app::register_factory<replication_service_app>("replica");
+    service_app::register_factory<replication_service_app>("replica");
 }
 
 replication_service_app::replication_service_app(const service_app_info *info) : service_app(info)
@@ -80,9 +80,7 @@ error_code replication_service_app::stop(bool cleanup)
     return ERR_OK;
 }
 
-void replication_service_app::on_intercepted_request(dsn::gpid gpid,
-                                                     bool is_write,
-                                                     dsn::message_ex *msg)
+void replication_service_app::on_intercepted_request(gpid gpid, bool is_write, message_ex *msg)
 {
     if (is_write) {
         _stub->on_client_write(gpid, msg);
@@ -91,4 +89,4 @@ void replication_service_app::on_intercepted_request(dsn::gpid gpid,
     }
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

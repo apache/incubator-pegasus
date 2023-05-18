@@ -36,7 +36,7 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/task/task.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class configuration_update_app_env_request;
 class configuration_update_app_env_response;
@@ -45,8 +45,8 @@ class query_app_info_response;
 class query_replica_info_request;
 class query_replica_info_response;
 
-typedef std::unordered_map<::dsn::rpc_address, partition_status::type> node_statuses;
-typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;
+typedef std::unordered_map<rpc_address, partition_status::type> node_statuses;
+typedef std::unordered_map<rpc_address, task_ptr> node_tasks;
 
 typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
     update_app_env_rpc;
@@ -56,7 +56,7 @@ typedef rpc_holder<query_replica_info_request, query_replica_info_response> quer
 class replication_options
 {
 public:
-    std::vector<::dsn::rpc_address> meta_servers;
+    std::vector<rpc_address> meta_servers;
 
     std::string app_name;
     std::string app_dir;
@@ -84,4 +84,4 @@ public:
                                        const std::string &dir);
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

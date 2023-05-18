@@ -26,7 +26,7 @@
 #include "meta/meta_data.h"
 #include "utils/command_manager.h"
 
-namespace dsn {
+namespace pegasus {
 class gpid;
 class rpc_address;
 
@@ -59,8 +59,8 @@ public:
     copy_secondary_operation(const std::shared_ptr<app_state> app,
                              const app_mapper &apps,
                              node_mapper &nodes,
-                             const std::vector<dsn::rpc_address> &address_vec,
-                             const std::unordered_map<dsn::rpc_address, int> &address_id,
+                             const std::vector<rpc_address> &address_vec,
+                             const std::unordered_map<rpc_address, int> &address_id,
                              int replicas_low);
     ~copy_secondary_operation() = default;
 
@@ -76,4 +76,4 @@ private:
     FRIEND_TEST(copy_secondary_operation, misc);
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

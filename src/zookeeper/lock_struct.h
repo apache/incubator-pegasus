@@ -44,7 +44,7 @@
 #include "utils/distributed_lock_service.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 
 enum lock_state

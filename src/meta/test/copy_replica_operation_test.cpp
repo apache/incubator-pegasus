@@ -29,20 +29,20 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/app_balance_policy.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 TEST(copy_primary_operation, misc)
 {
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
@@ -66,8 +66,8 @@ TEST(copy_primary_operation, misc)
     ns3.put_partition(gpid(app_id, 2), false);
     nodes[addr3] = ns3;
 
-    std::vector<dsn::rpc_address> address_vec{addr1, addr2, addr3};
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::vector<rpc_address> address_vec{addr1, addr2, addr3};
+    std::unordered_map<rpc_address, int> address_id;
     address_id[addr1] = 0;
     address_id[addr2] = 1;
     address_id[addr3] = 2;
@@ -169,8 +169,8 @@ TEST(copy_primary_operation, can_select)
 {
     app_mapper apps;
     node_mapper nodes;
-    std::vector<dsn::rpc_address> address_vec;
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::vector<rpc_address> address_vec;
+    std::unordered_map<rpc_address, int> address_id;
     copy_primary_operation op(nullptr, apps, nodes, address_vec, address_id, false, false);
 
     gpid cannot_select_gpid(1, 1);
@@ -186,8 +186,8 @@ TEST(copy_primary_operation, only_copy_primary)
 {
     app_mapper apps;
     node_mapper nodes;
-    std::vector<dsn::rpc_address> address_vec;
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::vector<rpc_address> address_vec;
+    std::unordered_map<rpc_address, int> address_id;
     copy_primary_operation op(nullptr, apps, nodes, address_vec, address_id, false, false);
 
     ASSERT_TRUE(op.only_copy_primary());
@@ -196,7 +196,7 @@ TEST(copy_primary_operation, only_copy_primary)
 TEST(copy_secondary_operation, misc)
 {
     int32_t app_id = 1;
-    dsn::app_info info;
+    app_info info;
     info.app_id = app_id;
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
@@ -219,8 +219,8 @@ TEST(copy_secondary_operation, misc)
     node_state ns3;
     nodes[addr3] = ns3;
 
-    std::vector<dsn::rpc_address> address_vec{addr1, addr2, addr3};
-    std::unordered_map<dsn::rpc_address, int> address_id;
+    std::vector<rpc_address> address_vec{addr1, addr2, addr3};
+    std::unordered_map<rpc_address, int> address_id;
     address_id[addr1] = 0;
     address_id[addr2] = 1;
     address_id[addr3] = 2;
@@ -287,4 +287,4 @@ TEST(copy_secondary_operation, misc)
     ASSERT_FALSE(op.only_copy_primary());
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

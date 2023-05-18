@@ -42,7 +42,7 @@
 #include "simple_kv.code.definition.h"
 #include "simple_kv_types.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 namespace application {
 class simple_kv_service : public replication_app_base, public storage_serverlet<simple_kv_service>
@@ -51,7 +51,7 @@ public:
     simple_kv_service(replica *r) : replication_app_base(r) {}
     virtual ~simple_kv_service() {}
 
-    virtual int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
+    virtual int on_request(message_ex *request) override WARN_UNUSED_RESULT
     {
         return handle_request(request);
     }
@@ -59,21 +59,21 @@ public:
 protected:
     // all service handlers to be implemented further
     // RPC_SIMPLE_KV_SIMPLE_KV_READ
-    virtual void on_read(const std::string &key, ::dsn::rpc_replier<std::string> &reply)
+    virtual void on_read(const std::string &key, rpc_replier<std::string> &reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_READ ... (not implemented) " << std::endl;
         std::string resp;
         reply(resp);
     }
     // RPC_SIMPLE_KV_SIMPLE_KV_WRITE
-    virtual void on_write(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
+    virtual void on_write(const kv_pair &pr, rpc_replier<int32_t> &reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_WRITE ... (not implemented) " << std::endl;
         int32_t resp = 0;
         reply(resp);
     }
     // RPC_SIMPLE_KV_SIMPLE_KV_APPEND
-    virtual void on_append(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
+    virtual void on_append(const kv_pair &pr, rpc_replier<int32_t> &reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_APPEND ... (not implemented) " << std::endl;
         int32_t resp = 0;
@@ -89,17 +89,15 @@ protected:
 
 private:
     static void
-    on_read(simple_kv_service *svc, const std::string &key, dsn::rpc_replier<std::string> &reply)
+    on_read(simple_kv_service *svc, const std::string &key, rpc_replier<std::string> &reply)
     {
         svc->on_read(key, reply);
     }
-    static void
-    on_write(simple_kv_service *svc, const kv_pair &pr, dsn::rpc_replier<int32_t> &reply)
+    static void on_write(simple_kv_service *svc, const kv_pair &pr, rpc_replier<int32_t> &reply)
     {
         svc->on_write(pr, reply);
     }
-    static void
-    on_append(simple_kv_service *svc, const kv_pair &pr, dsn::rpc_replier<int32_t> &reply)
+    static void on_append(simple_kv_service *svc, const kv_pair &pr, rpc_replier<int32_t> &reply)
     {
         svc->on_append(pr, reply);
     }

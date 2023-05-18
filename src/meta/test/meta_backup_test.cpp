@@ -43,7 +43,9 @@
 #include "utils/filesystem.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+using namespace pegasus::utils::filesystem;
+
+namespace pegasus {
 namespace replication {
 
 class backup_service_test : public meta_test_base
@@ -101,14 +103,13 @@ public:
                                 int64_t backup_id,
                                 const std::string &user_specified_path)
     {
-        std::string backup_root = dsn::utils::filesystem::path_combine(
-            user_specified_path, _backup_service->backup_root());
+        std::string backup_root = path_combine(user_specified_path, _backup_service->backup_root());
         auto app = _ms->_state->get_app(app_id);
         std::string metadata_file =
             cold_backup::get_app_metadata_file(backup_root, app->app_name, app_id, backup_id);
 
         int64_t metadata_file_size = 0;
-        if (!dsn::utils::filesystem::file_size(metadata_file, metadata_file_size)) {
+        if (!file_size(metadata_file, metadata_file_size)) {
             return false;
         }
         return metadata_file_size > 0;
@@ -369,4 +370,4 @@ TEST_F(backup_engine_test, test_write_backup_info_failed)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

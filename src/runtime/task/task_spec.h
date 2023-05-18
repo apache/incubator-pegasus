@@ -59,7 +59,7 @@ ENUM_REG(LOG_LEVEL_ERROR)
 ENUM_REG(LOG_LEVEL_FATAL)
 ENUM_END(dsn_log_level_t)
 
-namespace dsn {
+namespace pegasus {
 
 enum task_state
 {
@@ -140,31 +140,31 @@ class rpc_request_task;
 class rpc_response_task;
 class task;
 
-std::set<dsn::task_code> &get_storage_rpc_req_codes();
+std::set<task_code> &get_storage_rpc_req_codes();
 
 class task_spec : public extensible_object<task_spec, 4>
 {
 public:
     static task_spec *get(int ec);
-    static void register_task_code(dsn::task_code code,
+    static void register_task_code(task_code code,
                                    dsn_task_type_t type,
                                    dsn_task_priority_t pri,
-                                   dsn::threadpool_code pool);
+                                   threadpool_code pool);
 
-    static void register_storage_task_code(dsn::task_code code,
+    static void register_storage_task_code(task_code code,
                                            dsn_task_type_t type,
                                            dsn_task_priority_t pri,
-                                           dsn::threadpool_code pool,
+                                           threadpool_code pool,
                                            bool is_write_operation,
                                            bool allow_batch,
                                            bool is_idempotent);
 
 public:
     // not configurable [
-    dsn::task_code code;
+    task_code code;
     dsn_task_type_t type;
     std::string name;
-    dsn::task_code rpc_paired_code;
+    task_code rpc_paired_code;
     shared_exp_delay rpc_request_delayer;
 
     bool rpc_request_for_storage;
@@ -176,7 +176,7 @@ public:
     // configurable [
     dsn_task_priority_t priority;
     grpc_mode_t grpc_mode; // used when a rpc request is sent to a group address
-    dsn::threadpool_code pool_code;
+    threadpool_code pool_code;
 
     // allow task executed in other thread pools or tasks
     // for TASK_TYPE_COMPUTE - allow-inline allows a task being executed in its caller site
@@ -235,7 +235,7 @@ public:
               const char *name,
               dsn_task_type_t type,
               dsn_task_priority_t pri,
-              dsn::threadpool_code pool);
+              threadpool_code pool);
 
 public:
     static bool init();

@@ -37,7 +37,7 @@
 
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "replica.h"
@@ -47,7 +47,9 @@
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+using pegasus::enum_to_string;
+using pegasus::rpc_address;
+namespace pegasus {
 namespace replication {
 
 void replica::handle_local_failure(error_code error)
@@ -66,7 +68,7 @@ void replica::handle_local_failure(error_code error)
 }
 
 void replica::handle_remote_failure(partition_status::type st,
-                                    ::dsn::rpc_address node,
+                                    rpc_address node,
                                     error_code error,
                                     const std::string &caused_by)
 {

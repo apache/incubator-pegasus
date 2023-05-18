@@ -63,7 +63,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 DSN_DECLARE_uint32(conn_threshold_per_ip);
 
 class asio_network_provider_test : public tools::asio_network_provider
@@ -79,15 +79,12 @@ static int TEST_PORT = 20401;
 DEFINE_TASK_CODE_RPC(RPC_TEST_NETPROVIDER, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 volatile int wait_flag = 0;
-void response_handler(dsn::error_code ec,
-                      dsn::message_ex *req,
-                      dsn::message_ex *resp,
-                      void *request_buf)
+void response_handler(error_code ec, message_ex *req, message_ex *resp, void *request_buf)
 {
     if (ERR_OK == ec) {
         std::string response_string;
         char *request_str = (char *)(request_buf);
-        ::dsn::unmarshall(resp, response_string);
+        unmarshall(resp, response_string);
         ASSERT_EQ(response_string, request_str);
     } else {
         LOG_INFO("error msg: {}", ec);
@@ -95,18 +92,18 @@ void response_handler(dsn::error_code ec,
     wait_flag = 1;
 }
 
-void reject_response_handler(dsn::error_code ec)
+void reject_response_handler(error_code ec)
 {
     wait_flag = 1;
     ASSERT_TRUE(ERR_TIMEOUT == ec);
 }
 
-void rpc_server_response(dsn::message_ex *request)
+void rpc_server_response(message_ex *request)
 {
     std::string str_command;
-    ::dsn::unmarshall(request, str_command);
-    dsn::message_ex *response = request->create_response();
-    ::dsn::marshall(response, str_command);
+    unmarshall(request, str_command);
+    message_ex *response = request->create_response();
+    marshall(response, str_command);
     dsn_rpc_reply(response);
 }
 
@@ -122,7 +119,7 @@ void rpc_client_session_send(rpc_session_ptr client_session, bool reject = false
     std::unique_ptr<char[]> buf(new char[128]);
     memset(buf.get(), 0, 128);
     strcpy(buf.get(), "hello world");
-    ::dsn::marshall(msg, std::string(buf.get()));
+    marshall(msg, std::string(buf.get()));
 
     wait_flag = 0;
     if (!reject) {
@@ -145,8 +142,8 @@ void rpc_client_session_send(rpc_session_ptr client_session, bool reject = false
 
 TEST(tools_common, asio_net_provider)
 {
-    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
+    if (service_engine::instance().spec().semaphore_factory_name ==
+        "pegasus::tools::sim_semaphore_provider")
         return;
 
     ASSERT_TRUE(dsn_rpc_register_handler(
@@ -192,8 +189,8 @@ TEST(tools_common, asio_net_provider)
 
 TEST(tools_common, asio_udp_provider)
 {
-    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
+    if (service_engine::instance().spec().semaphore_factory_name ==
+        "pegasus::tools::sim_semaphore_provider")
         return;
 
     ASSERT_TRUE(dsn_rpc_register_handler(
@@ -213,7 +210,7 @@ TEST(tools_common, asio_udp_provider)
     std::unique_ptr<char[]> buf(new char[128]);
     memset(buf.get(), 0, 128);
     strcpy(buf.get(), "hello world");
-    ::dsn::marshall(msg, std::string(buf.get()));
+    marshall(msg, std::string(buf.get()));
 
     wait_flag = 0;
     rpc_response_task *t = new rpc_response_task(msg,
@@ -235,8 +232,8 @@ TEST(tools_common, asio_udp_provider)
 
 TEST(tools_common, sim_net_provider)
 {
-    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
+    if (service_engine::instance().spec().semaphore_factory_name ==
+        "pegasus::tools::sim_semaphore_provider")
         return;
 
     ASSERT_TRUE(dsn_rpc_register_handler(
@@ -265,8 +262,8 @@ TEST(tools_common, sim_net_provider)
 
 TEST(tools_common, asio_network_provider_connection_threshold)
 {
-    if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
+    if (service_engine::instance().spec().semaphore_factory_name ==
+        "pegasus::tools::sim_semaphore_provider")
         return;
 
     ASSERT_TRUE(dsn_rpc_register_handler(
@@ -315,4 +312,4 @@ TEST(tools_common, asio_network_provider_connection_threshold)
 
     TEST_PORT++;
 }
-} // namespace dsn
+} // namespace pegasus

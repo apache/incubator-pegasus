@@ -66,10 +66,10 @@ DSN_DEFINE_uint32(pegasus.killtest,
                   "Thread count of the getter.");
 DSN_DEFINE_string(pegasus.killtest, pegasus_cluster_name, "onebox", "The Pegasus cluster name");
 DSN_DEFINE_validator(pegasus_cluster_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 DSN_DEFINE_string(pegasus.killtest, verify_app_name, "temp", "verify app name");
 DSN_DEFINE_validator(verify_app_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+                     [](const char *value) -> bool { return !utils::is_empty(value); });
 
 // return time in us.
 long get_time()

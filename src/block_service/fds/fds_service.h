@@ -32,9 +32,9 @@
 #include "utils/error_code.h"
 #include "utils/TokenBucket.h"
 
-namespace dsn {
+namespace pegasus {
 class task_tracker;
-} // namespace dsn
+} // namespace pegasus
 
 namespace folly {
 using DynamicTokenBucket = folly::BasicDynamicTokenBucket<std::chrono::steady_clock>;
@@ -46,7 +46,7 @@ class GalaxyFDSClient;
 }
 } // namespace galaxy
 
-namespace dsn {
+namespace pegasus {
 namespace dist {
 namespace block_service {
 
@@ -64,15 +64,15 @@ public:
 
     virtual ~fds_service() override;
     virtual error_code initialize(const std::vector<std::string> &args) override;
-    virtual dsn::task_ptr list_dir(const ls_request &req,
-                                   dsn::task_code code,
-                                   const ls_callback &callback,
-                                   dsn::task_tracker *tracker) override;
+    virtual task_ptr list_dir(const ls_request &req,
+                              task_code code,
+                              const ls_callback &callback,
+                              task_tracker *tracker) override;
 
-    virtual dsn::task_ptr create_file(const create_file_request &req,
-                                      dsn::task_code code,
-                                      const create_file_callback &cb,
-                                      dsn::task_tracker *tracker) override;
+    virtual task_ptr create_file(const create_file_request &req,
+                                 task_code code,
+                                 const create_file_callback &cb,
+                                 task_tracker *tracker) override;
 
     //
     // Attention：
@@ -80,10 +80,10 @@ public:
     //   -- when req.path is a directory, this operation may consume much time if there are many
     //      files under this directory
     //
-    virtual dsn::task_ptr remove_path(const remove_path_request &req,
-                                      dsn::task_code code,
-                                      const remove_path_callback &cb,
-                                      dsn::task_tracker *tracker) override;
+    virtual task_ptr remove_path(const remove_path_request &req,
+                                 task_code code,
+                                 const remove_path_callback &cb,
+                                 task_tracker *tracker) override;
 
 private:
     std::shared_ptr<galaxy::fds::GalaxyFDSClient> _client;
@@ -103,25 +103,25 @@ public:
     virtual uint64_t get_size() override { return _size; }
     virtual const std::string &get_md5sum() override { return _md5sum; }
 
-    virtual dsn::task_ptr write(const write_request &req,
-                                dsn::task_code code,
-                                const write_callback &cb,
-                                dsn::task_tracker *tracker) override;
+    virtual task_ptr write(const write_request &req,
+                           task_code code,
+                           const write_callback &cb,
+                           task_tracker *tracker) override;
 
-    virtual dsn::task_ptr read(const read_request &req,
-                               dsn::task_code code,
-                               const read_callback &cb,
-                               dsn::task_tracker *tracker) override;
+    virtual task_ptr read(const read_request &req,
+                          task_code code,
+                          const read_callback &cb,
+                          task_tracker *tracker) override;
 
-    virtual dsn::task_ptr upload(const upload_request &req,
-                                 dsn::task_code code,
-                                 const upload_callback &cb,
-                                 dsn::task_tracker *tracker) override;
+    virtual task_ptr upload(const upload_request &req,
+                            task_code code,
+                            const upload_callback &cb,
+                            task_tracker *tracker) override;
 
-    virtual dsn::task_ptr download(const download_request &req,
-                                   dsn::task_code code,
-                                   const download_callback &cb,
-                                   dsn::task_tracker *tracker) override;
+    virtual task_ptr download(const download_request &req,
+                              task_code code,
+                              const download_callback &cb,
+                              task_tracker *tracker) override;
 
     // Possible errors:
     // - ERR_FS_INTERNAL
@@ -152,5 +152,5 @@ private:
 };
 } // namespace block_service
 } // namespace dist
-} // namespace dsn
+} // namespace pegasus
 #endif // FDS_SERVICE_H

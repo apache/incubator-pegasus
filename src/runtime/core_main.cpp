@@ -31,16 +31,19 @@
 #include "runtime/simulator.h"
 #include "runtime/tool_api.h"
 #include "runtime/tracer.h"
+#include "utils/utils.h"
+
+using namespace pegasus;
 
 void dsn_core_init()
 {
     // register all providers
-    dsn::tools::register_common_providers();
+    tools::register_common_providers();
 
     // register all possible tools and toollets
-    dsn::tools::register_tool<dsn::tools::nativerun>("nativerun");
-    dsn::tools::register_tool<dsn::tools::simulator>("simulator");
-    dsn::tools::register_toollet<dsn::tools::tracer>("tracer");
-    dsn::tools::register_toollet<dsn::tools::profiler>("profiler");
-    dsn::tools::register_toollet<dsn::tools::fault_injector>("fault_injector");
+    tools::register_tool<tools::nativerun>("nativerun");
+    tools::register_tool<tools::simulator>("simulator");
+    tools::register_toollet<tools::tracer>("tracer");
+    tools::register_toollet<tools::profiler>("profiler");
+    tools::register_toollet<tools::fault_injector>("fault_injector");
 }

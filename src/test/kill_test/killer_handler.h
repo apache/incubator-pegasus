@@ -34,12 +34,11 @@ public:
     template <typename T>
     static void register_factory(const char *name)
     {
-        dsn::utils::factory_store<killer_handler>::register_factory(
-            name, create<T>, dsn::PROVIDER_TYPE_MAIN);
+        utils::factory_store<killer_handler>::register_factory(name, create<T>, PROVIDER_TYPE_MAIN);
     }
     static killer_handler *new_handler(const char *name)
     {
-        return dsn::utils::factory_store<killer_handler>::create(name, dsn::PROVIDER_TYPE_MAIN);
+        return utils::factory_store<killer_handler>::create(name, PROVIDER_TYPE_MAIN);
     }
 
 public:

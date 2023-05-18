@@ -35,7 +35,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 /*static*/
 partition_resolver_ptr partition_resolver::get_resolver(const char *cluster_name,
@@ -62,10 +62,10 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
     rpc_response_handler old_callback;
     t->fetch_current_handler(old_callback);
     auto new_callback = [ this, deadline_ms, oc = std::move(old_callback) ](
-        dsn::error_code err, dsn::message_ex * req, dsn::message_ex * resp)
+        error_code err, message_ex * req, message_ex * resp)
     {
-        if (req->header->gpid.value() != 0 && err != ERR_OK && error_retry(err)) {
-            on_access_failure(req->header->gpid.get_partition_index(), err);
+        if (req->header->gpid_.value() != 0 && err != ERR_OK && error_retry(err)) {
+            on_access_failure(req->header->gpid_.get_partition_index(), err);
             // still got time, retry
             uint64_t nms = dsn_now_ms();
             uint64_t gap = 8 << req->send_retry_count;
@@ -113,20 +113,20 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                     return;
                 }
 
-                // update gpid when necessary
+                // update gpid_ when necessary
                 auto &hdr = *(t->get_request()->header);
-                if (hdr.gpid.value() != result.pid.value()) {
+                if (hdr.gpid_.value() != result.pid.value()) {
                     if (hdr.client.thread_hash == 0 // thread_hash is not assigned by applications
                         ||
-                        hdr.gpid.value() != 0 // requests set to child redirect to parent
+                        hdr.gpid_.value() != 0 // requests set to child redirect to parent
                         ) {
                         hdr.client.thread_hash = result.pid.thread_hash();
                     }
-                    hdr.gpid = result.pid;
+                    hdr.gpid_ = result.pid;
                 }
                 dsn_rpc_call(result.address, t.get());
             },
             hdr.client.timeout_ms);
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

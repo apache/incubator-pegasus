@@ -23,7 +23,7 @@
 
 #include "utils/defer.h"
 
-namespace dsn {
+namespace pegasus {
 
 TEST(binary_reader_test, inner_read)
 {
@@ -56,7 +56,7 @@ TEST(binary_reader_test, inner_read)
 
         int size = 4;
         char *output_str = new char[size + 1];
-        auto cleanup = dsn::defer([&output_str]() { delete[] output_str; });
+        auto cleanup = defer([&output_str]() { delete[] output_str; });
         auto res = reader.inner_read(output_str, size);
         output_str[size] = '\0';
         ASSERT_EQ(res, size);
@@ -69,9 +69,9 @@ TEST(binary_reader_test, inner_read)
 
         int size = 10;
         char *output_str = new char[size];
-        auto cleanup = dsn::defer([&output_str]() { delete[] output_str; });
+        auto cleanup = defer([&output_str]() { delete[] output_str; });
         auto res = reader.inner_read(output_str, size);
         ASSERT_EQ(res, -1);
     }
 }
-} // namespace dsn
+} // namespace pegasus

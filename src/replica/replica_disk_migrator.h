@@ -26,7 +26,7 @@
 #include "replica_admin_types.h"
 #include "runtime/task/task.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class replica;
 
@@ -51,7 +51,7 @@ private:
     bool migrate_replica_checkpoint(const replica_disk_migrate_request &req);
     bool migrate_replica_app_info(const replica_disk_migrate_request &req);
     /// return nullptr if close failed. The returned value is only used in unit-tests.
-    dsn::task_ptr close_current_replica(const replica_disk_migrate_request &req);
+    task_ptr close_current_replica(const replica_disk_migrate_request &req);
     void update_replica_dir();
 
     void reset_status() { _status = disk_migration_status::IDLE; }
@@ -73,4 +73,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

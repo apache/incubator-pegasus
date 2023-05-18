@@ -47,8 +47,8 @@
 #include "utils/threadpool_code.h"
 #include "zookeeper/distributed_lock_service_zookeeper.h"
 
-using namespace dsn;
-using namespace dsn::dist;
+using namespace pegasus;
+using namespace pegasus::dist;
 
 DEFINE_TASK_CODE(DLOCK_CALLBACK, TASK_PRIORITY_HIGH, THREAD_POOL_DEFAULT)
 
@@ -59,10 +59,10 @@ std::vector<int64_t> q;
 int pos = 0;
 int64_t result = 0;
 
-class simple_adder_server : public dsn::service_app
+class simple_adder_server : public service_app
 {
 public:
-    simple_adder_server(const service_app_info *info) : ::dsn::service_app(info) {}
+    simple_adder_server(const service_app_info *info) : service_app(info) {}
 
     error_code start(const std::vector<std::string> &args)
     {
@@ -239,4 +239,4 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
     tsk->wait();
 }
 
-void lock_test_init() { dsn::service_app::register_factory<simple_adder_server>("adder"); }
+void lock_test_init() { service_app::register_factory<simple_adder_server>("adder"); }

@@ -23,11 +23,14 @@
 #include <unistd.h>
 
 #include "benchmark.h"
+#include "pegasus/error.h"
 #include "runtime/app_model.h"
+
+using namespace pegasus;
 
 int db_bench_tool(const char *config_file)
 {
-    bool init = pegasus::pegasus_client_factory::initialize(config_file);
+    bool init = pegasus_client_factory::initialize(config_file);
     if (!init) {
         fmt::print(stderr, "Init pegasus error\n");
         return -1;
@@ -35,7 +38,7 @@ int db_bench_tool(const char *config_file)
     sleep(1);
     fmt::print(stdout, "Init pegasus succeed\n");
 
-    pegasus::test::benchmark bm;
+    test::benchmark bm;
     bm.run();
     sleep(1); // Sleep a while to exit gracefully.
 

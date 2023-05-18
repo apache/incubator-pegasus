@@ -30,9 +30,9 @@
 
 #include "utils/string_view.h"
 
-namespace dsn {
+namespace pegasus {
 class rpc_address;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 namespace utils {
@@ -42,7 +42,7 @@ const uint32_t epoch_begin = 1451606400;
 inline uint32_t epoch_now() { return time(nullptr) - epoch_begin; }
 
 // extract "host" from rpc_address
-void addr2host(const ::dsn::rpc_address &addr, char *str, int len);
+void addr2host(const rpc_address &addr, char *str, int len);
 
 template <typename elem_type, typename compare = std::less<elem_type>>
 class top_n
@@ -106,9 +106,9 @@ std::string c_escape_string(const T &src, bool always_escape = false)
 // ----------------------------------------------------------------------
 int c_unescape_string(const std::string &src, std::string &dest);
 
-inline dsn::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
+inline string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
 
-inline rocksdb::Slice to_rocksdb_slice(dsn::string_view s) { return {s.data(), s.size()}; }
+inline rocksdb::Slice to_rocksdb_slice(string_view s) { return {s.data(), s.size()}; }
 
 } // namespace utils
 } // namespace pegasus

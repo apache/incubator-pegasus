@@ -38,7 +38,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class meta_service_test : public meta_test_base
@@ -116,11 +116,11 @@ public:
 private:
     app_env_rpc create_fake_rpc()
     {
-        dsn::message_ptr fake_request = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
+        message_ptr fake_request = message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
         configuration_update_app_env_request request;
-        ::dsn::marshall(fake_request, request);
+        marshall(fake_request, request);
 
-        dsn::message_ex *recvd_request = fake_request->copy(true, true);
+        message_ex *recvd_request = fake_request->copy(true, true);
         std::unique_ptr<tools::sim_network_provider> sim_net(
             new tools::sim_network_provider(nullptr, nullptr));
         recvd_request->io_session = sim_net->create_client_session(rpc_address());
@@ -135,4 +135,4 @@ TEST_F(meta_service_test, check_status_success) { check_status_success(); }
 TEST_F(meta_service_test, check_op_status_lock) { check_op_status_lock(); }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

@@ -32,7 +32,7 @@
 #include "replica/replica_http_service.h"
 #include "replica/test/mock_utils.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class dup_replica_http_service_test : public duplication_test_base
@@ -77,4 +77,4 @@ TEST_F(dup_replica_http_service_test, query_duplication_handler)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

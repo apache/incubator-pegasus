@@ -29,7 +29,7 @@
 
 #include "string_view.h"
 
-namespace dsn {
+namespace pegasus {
 
 namespace internal {
 
@@ -168,4 +168,4 @@ inline bool buf2double(string_view buf, double &result)
     result = v;
     return true;
 }
-} // namespace dsn
+} // namespace pegasus

@@ -28,7 +28,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class blob;
 class gpid;
 class rpc_address;
@@ -90,7 +90,7 @@ private:
     FRIEND_TEST(backup_engine_test, test_backup_completed);
     FRIEND_TEST(backup_engine_test, test_write_backup_info_failed);
 
-    error_code write_backup_file(const std::string &file_name, const dsn::blob &write_buffer);
+    error_code write_backup_file(const std::string &file_name, const blob &write_buffer);
     error_code backup_app_meta();
     void backup_app_partition(const gpid &pid);
     void on_backup_reply(error_code err,
@@ -100,7 +100,7 @@ private:
     void write_backup_info();
     void complete_current_backup();
     void handle_replica_backup_failed(const backup_response &response, const gpid pid);
-    void retry_backup(const dsn::gpid pid);
+    void retry_backup(const gpid pid);
 
     const std::string get_policy_name() const
     {
@@ -111,10 +111,10 @@ private:
     dist::block_service::block_filesystem *_block_service;
     std::string _backup_path;
     std::string _provider_type;
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 
     // lock the following variables.
-    mutable dsn::zlock _lock;
+    mutable zlock _lock;
     bool _is_backup_failed;
     app_backup_info _cur_backup;
     // partition_id -> backup_status
@@ -122,4 +122,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

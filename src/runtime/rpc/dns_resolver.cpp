@@ -26,7 +26,7 @@
 #include "runtime/rpc/group_host_port.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 
 void dns_resolver::add_item(const host_port &hp, const rpc_address &addr)
 {
@@ -107,4 +107,4 @@ rpc_address dns_resolver::resolve_address(const host_port &hp)
     }
 }
 
-} // namespace dsn
+} // namespace pegasus

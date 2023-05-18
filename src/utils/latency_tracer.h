@@ -28,7 +28,7 @@
 #include "utils/ports.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 #define ADD_POINT(tracer)                                                                          \
@@ -111,7 +111,7 @@ public:
     latency_tracer(bool is_sub,
                    std::string name,
                    uint64_t threshold,
-                   const dsn::task_code &code = LPC_LATENCY_TRACE);
+                   const task_code &code = LPC_LATENCY_TRACE);
 
     ~latency_tracer();
 
@@ -179,7 +179,7 @@ private:
     uint64_t _last_time;
     std::string _last_stage;
 
-    dsn::task_code _task_code;
+    task_code _task_code;
     bool _enable_trace;
 
     utils::rw_lock_nr _point_lock; //{
@@ -194,4 +194,4 @@ private:
     friend class latency_tracer_test;
 };
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

@@ -48,7 +48,7 @@
 #include "utils/ports.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 class disk_file;
 class task_tracker;
 
@@ -121,7 +121,7 @@ log_file::~log_file() { close(); }
         lf = nullptr;
 
         // rename file on failure
-        dsn::utils::filesystem::rename_path(path, removed);
+        utils::filesystem::rename_path(path, removed);
 
         return nullptr;
     }
@@ -135,7 +135,7 @@ log_file::~log_file() { close(); }
         lf = nullptr;
 
         // rename file on failure
-        dsn::utils::filesystem::rename_path(path, removed);
+        utils::filesystem::rename_path(path, removed);
 
         err = ERR_INVALID_DATA;
         return nullptr;
@@ -150,7 +150,7 @@ log_file::~log_file() { close(); }
     char path[512];
     sprintf(path, "%s/log.%d.%" PRId64, dir, index, start_offset);
 
-    if (dsn::utils::filesystem::path_exists(std::string(path))) {
+    if (utils::filesystem::path_exists(std::string(path))) {
         LOG_WARNING("log file {} already exist", path);
         return nullptr;
     }
@@ -179,7 +179,7 @@ log_file::log_file(
 
     if (is_read) {
         int64_t sz;
-        CHECK(dsn::utils::filesystem::file_size(_path, sz), "fail to get file size of {}.", _path);
+        CHECK(utils::filesystem::file_size(_path, sz), "fail to get file size of {}.", _path);
         _end_offset += sz;
     }
 }
@@ -210,7 +210,7 @@ void log_file::flush() const
     }
 }
 
-error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
+error_code log_file::read_next_log_block(/*out*/ blob &bb)
 {
     CHECK(_is_read, "log file must be of read mode");
     auto err = _stream->read_next(sizeof(log_block_header), bb);
@@ -247,7 +247,7 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
         return err;
     }
 
-    auto crc = dsn::utils::crc32_calc(
+    auto crc = utils::crc32_calc(
         static_cast<const void *>(bb.data()), static_cast<size_t>(hdr.length), _crc32);
     if (crc != hdr.body_crc) {
         LOG_ERROR("crc checking failed");
@@ -260,19 +260,16 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
 
 aio_task_ptr log_file::commit_log_block(log_block &block,
                                         int64_t offset,
-                                        dsn::task_code evt,
-                                        dsn::task_tracker *tracker,
+                                        task_code evt,
+                                        task_tracker *tracker,
                                         aio_handler &&callback,
                                         int hash)
 {
     log_appender pending(offset, block);
     return commit_log_blocks(pending, evt, tracker, std::move(callback), hash);
 }
-aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
-                                         dsn::task_code evt,
-                                         dsn::task_tracker *tracker,
-                                         aio_handler &&callback,
-                                         int hash)
+aio_task_ptr log_file::commit_log_blocks(
+    log_appender &pending, task_code evt, task_tracker *tracker, aio_handler &&callback, int hash)
 {
     CHECK(!_is_read, "log file must be of write mode");
     CHECK_GT(pending.size(), 0);
@@ -302,9 +299,9 @@ aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
 
             // skip block header
             if (i > 0) {
-                hdr->body_crc = dsn::utils::crc32_calc(static_cast<const void *>(blk.data()),
-                                                       static_cast<size_t>(blk.length()),
-                                                       hdr->body_crc);
+                hdr->body_crc = utils::crc32_calc(static_cast<const void *>(blk.data()),
+                                                  static_cast<size_t>(blk.length()),
+                                                  hdr->body_crc);
             }
             buffer_idx++;
         }
@@ -357,7 +354,7 @@ void log_file::reset_stream(size_t offset /*default = 0*/)
     }
 }
 
-decree log_file::previous_log_max_decree(const dsn::gpid &pid)
+decree log_file::previous_log_max_decree(const gpid &pid)
 {
     auto it = _previous_log_max_decrees.find(pid);
     return it == _previous_log_max_decrees.end() ? 0 : it->second.max_decree;
@@ -425,4 +422,4 @@ int log_file::write_file_header(binary_writer &writer, const replica_log_info_ma
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

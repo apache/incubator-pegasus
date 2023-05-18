@@ -45,14 +45,16 @@
 #include "utils/filesystem.h"
 #include "utils/rand.h"
 
-using dsn::partition_configuration;
-using dsn::replication::replica_helper;
-using dsn::replication::replication_ddl_client;
-using dsn::rpc_address;
+using pegasus::partition_configuration;
+using pegasus::replication::replica_helper;
+using pegasus::replication::replication_ddl_client;
+using pegasus::rpc_address;
 using nlohmann::json;
 using std::map;
 using std::string;
 using std::vector;
+
+using namespace pegasus::utils::filesystem;
 
 namespace pegasus {
 
@@ -75,21 +77,21 @@ void test_util::SetUp()
     ASSERT_TRUE(ddl_client_ != nullptr);
     ddl_client_->set_max_wait_app_ready_secs(120);
 
-    dsn::error_code ret =
+    error_code ret =
         ddl_client_->create_app(app_name_, "pegasus", partition_count_, 3, create_envs_, false);
-    if (ret == dsn::ERR_INVALID_PARAMETERS) {
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0));
-        ASSERT_EQ(dsn::ERR_OK,
+    if (ret == ERR_INVALID_PARAMETERS) {
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0));
+        ASSERT_EQ(ERR_OK,
                   ddl_client_->create_app(
                       app_name_, "pegasus", partition_count_, 3, create_envs_, false));
     } else {
-        ASSERT_EQ(dsn::ERR_OK, ret);
+        ASSERT_EQ(ERR_OK, ret);
     }
     client_ = pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
     ASSERT_TRUE(client_ != nullptr);
 
     int32_t partition_count;
-    ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(app_name_, app_id_, partition_count, partitions_));
+    ASSERT_EQ(ERR_OK, ddl_client_->list_app(app_name_, app_id_, partition_count, partitions_));
     ASSERT_NE(0, app_id_);
     ASSERT_EQ(partition_count_, partition_count);
     ASSERT_EQ(partition_count_, partitions_.size());
@@ -103,9 +105,8 @@ void test_util::run_cmd_from_project_root(const string &cmd)
 
 int test_util::get_alive_replica_server_count()
 {
-    const auto json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
-    auto cleanup =
-        dsn::defer([json_filename]() { dsn::utils::filesystem::remove_path(json_filename); });
+    const auto json_filename = fmt::format("test_json_file.{}", rand::next_u32());
+    auto cleanup = defer([json_filename]() { remove_path(json_filename); });
     run_cmd_from_project_root(fmt::format("echo 'nodes -djo {}' | ./run.sh shell", json_filename));
     std::ifstream f(json_filename);
     const auto data = json::parse(f);
@@ -129,9 +130,8 @@ int test_util::get_alive_replica_server_count()
 
 int test_util::get_leader_count(const string &table_name, int replica_server_index)
 {
-    const auto json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
-    auto cleanup =
-        dsn::defer([json_filename]() { dsn::utils::filesystem::remove_path(json_filename); });
+    const auto json_filename = fmt::format("test_json_file.{}", rand::next_u32());
+    auto cleanup = defer([json_filename]() { remove_path(json_filename); });
     run_cmd_from_project_root(
         fmt::format("echo 'app {} -djo {}' | ./run.sh shell", table_name, json_filename));
     std::ifstream f(json_filename);

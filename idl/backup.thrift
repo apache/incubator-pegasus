@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-include "dsn.thrift"
-include "dsn.layer2.thrift"
+include "pegasus.thrift"
+include "pegasus.layer2.thrift"
 
-namespace cpp dsn.replication
+namespace cpp pegasus.replication
 namespace go admin
 namespace java org.apache.pegasus.replication
 
@@ -44,7 +44,7 @@ struct configuration_restore_request
 
 struct backup_request
 {
-    1:dsn.gpid              pid;
+    1:pegasus.gpid          pid;
     2:policy_info           policy;
     3:string                app_name;
     4:i64                   backup_id;
@@ -54,18 +54,18 @@ struct backup_request
 
 struct backup_response
 {
-    1:dsn.error_code    err;
-    2:dsn.gpid          pid;
-    3:i32               progress;  // the progress of the cold_backup
-    4:string            policy_name;
-    5:i64               backup_id;
-    6:i64               checkpoint_total_size;
+    1:pegasus.error_code err;
+    2:pegasus.gpid       pid;
+    3:i32                progress;  // the progress of the cold_backup
+    4:string             policy_name;
+    5:i64                backup_id;
+    6:i64                checkpoint_total_size;
 }
 
 // clear all backup resources (including backup contexts and checkpoint dirs) of this policy.
 struct backup_clear_request
 {
-    1:dsn.gpid          pid;
+    1:pegasus.gpid      pid;
     2:string            policy_name;
 }
 
@@ -82,7 +82,7 @@ struct configuration_modify_backup_policy_request
 
 struct configuration_modify_backup_policy_response
 {
-    1:dsn.error_code        err;
+    1:pegasus.error_code    err;
     2:string                hint_message;
 }
 
@@ -98,7 +98,7 @@ struct configuration_add_backup_policy_request
 
 struct configuration_add_backup_policy_response
 {
-    1:dsn.error_code        err;
+    1:pegasus.error_code    err;
     2:string                hint_message;
 }
 
@@ -129,7 +129,7 @@ struct configuration_query_backup_policy_request
 
 struct configuration_query_backup_policy_response
 {
-    1:dsn.error_code            err;
+    1:pegasus.error_code        err;
     2:list<policy_entry>        policys;
     3:list<list<backup_entry>>  backup_infos;
     4:optional string           hint_msg;
@@ -137,15 +137,15 @@ struct configuration_query_backup_policy_response
 
 struct configuration_report_restore_status_request
 {
-    1:dsn.gpid  pid;
-    2:dsn.error_code    restore_status;
-    3:i32        progress; //[0~1000]
-    4:optional string   reason;
+    1:pegasus.gpid       pid;
+    2:pegasus.error_code restore_status;
+    3:i32                progress; //[0~1000]
+    4:optional string    reason;
 }
 
 struct configuration_report_restore_status_response
 {
-    1:dsn.error_code    err;
+    1:pegasus.error_code    err;
 }
 
 struct configuration_query_restore_request
@@ -155,9 +155,9 @@ struct configuration_query_restore_request
 
 struct configuration_query_restore_response
 {
-    1:dsn.error_code        err;
-    2:list<dsn.error_code>  restore_status;
-    3:list<i32>             restore_progress;
+    1:pegasus.error_code        err;
+    2:list<pegasus.error_code>  restore_status;
+    3:list<i32>                 restore_progress;
 }
 
 struct start_backup_app_request
@@ -174,9 +174,9 @@ struct start_backup_app_response
     // - ERR_INVALID_STATE: app is not available or is backing up
     // - ERR_INVALID_PARAMETERS: backup provider type is invalid
     // - ERR_SERVICE_NOT_ACTIVE: meta doesn't enable backup service
-    1:dsn.error_code    err;
-    2:string            hint_message;
-    3:optional i64      backup_id;
+    1:pegasus.error_code err;
+    2:string             hint_message;
+    3:optional i64       backup_id;
 }
 
 struct backup_item
@@ -202,7 +202,7 @@ struct query_backup_status_response
     // Possible error:
     // - ERR_INVALID_PARAMETERS: no available backup for requested app
     // - ERR_SERVICE_NOT_ACTIVE: meta doesn't enable backup service
-    1:dsn.error_code                 err;
+    1:pegasus.error_code             err;
     2:string                         hint_message;
     3:optional list<backup_item>     backup_items;
 }

@@ -79,7 +79,7 @@ public:
         }
 
         if (!_user_specified_operations.empty()) {
-            dsn::string_view value_view = utils::to_string_view(existing_value);
+            string_view value_view = utils::to_string_view(existing_value);
             if (*value_changed) {
                 value_view = *new_value;
             }
@@ -92,12 +92,12 @@ public:
     }
 
     bool user_specified_operation_filter(const rocksdb::Slice &key,
-                                         dsn::string_view existing_value,
+                                         string_view existing_value,
                                          std::string *new_value,
                                          bool *value_changed) const
     {
         std::string hash_key, sort_key;
-        pegasus_restore_key(dsn::blob(key.data(), 0, key.size()), hash_key, sort_key);
+        pegasus_restore_key(blob(key.data(), 0, key.size()), hash_key, sort_key);
         for (const auto &op : _user_specified_operations) {
             if (op->filter(hash_key, sort_key, existing_value, new_value, value_changed)) {
                 // return true if this data need to be deleted
@@ -142,7 +142,7 @@ public:
     {
         compaction_operations tmp_filter_operations;
         {
-            dsn::utils::auto_read_lock l(_lock);
+            utils::auto_read_lock l(_lock);
             tmp_filter_operations = _user_specified_operations;
         }
 
@@ -179,13 +179,13 @@ public:
     {
         auto operations = create_compaction_operations(env, _pegasus_data_version.load());
         {
-            dsn::utils::auto_write_lock l(_lock);
+            utils::auto_write_lock l(_lock);
             _user_specified_operations.swap(operations);
         }
     }
     void clear_user_specified_ops()
     {
-        dsn::utils::auto_write_lock l(_lock);
+        utils::auto_write_lock l(_lock);
         _user_specified_operations.clear();
     }
 
@@ -197,7 +197,7 @@ private:
     std::atomic<int32_t> _partition_version{-1};
     std::atomic_bool _validate_partition_hash{false};
 
-    dsn::utils::rw_lock_nr _lock; // [
+    utils::rw_lock_nr _lock; // [
     compaction_operations _user_specified_operations;
     // ]
 };

@@ -42,7 +42,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 // TODO(yingchun): add more description for string configs, and add validators
 DSN_DEFINE_string(meta_server,
@@ -96,4 +96,4 @@ void meta_options::initialize()
     utils::split_args(FLAGS_replica_white_list, replica_white_list, ',');
 }
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

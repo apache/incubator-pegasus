@@ -29,7 +29,7 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/serialization.h"
 
-namespace dsn {
+namespace pegasus {
 /*!
 @addtogroup rpc-server
 @{
@@ -39,7 +39,7 @@ namespace dsn {
 // for TRequest/TResponse, we assume that the following routines are defined:
 //    marshall(binary_writer& writer, const T& val);
 //    unmarshall(binary_reader& reader, /*out*/ T& val);
-// either in the namespace of ::dsn or T
+// either in the namespace of ::pegasus or T
 // developers may write these helper functions by their own, or use tools
 // such as protocol-buffer, thrift, or bond to generate these functions automatically
 // for their TRequest and TResponse
@@ -49,7 +49,7 @@ template <typename TResponse>
 class rpc_replier
 {
 public:
-    rpc_replier(dsn::message_ex *response) { _response = response; }
+    rpc_replier(message_ex *response) { _response = response; }
     rpc_replier(rpc_replier &&r)
     {
         _response = r._response;
@@ -73,7 +73,7 @@ public:
     void operator()(const TResponse &resp)
     {
         if (_response != nullptr) {
-            ::dsn::marshall(_response, resp);
+            marshall(_response, resp);
             dsn_rpc_reply(_response);
             _response = nullptr;
         }
@@ -82,7 +82,7 @@ public:
     bool is_empty() const { return _response == nullptr; }
 
     // response message, may be nullptr
-    dsn::message_ex *response_message() const { return _response; }
+    message_ex *response_message() const { return _response; }
 
     // the address where send response to
     rpc_address to_address() const
@@ -99,7 +99,7 @@ private:
             _response = nullptr;
         }
     }
-    dsn::message_ex *_response;
+    message_ex *_response;
 };
 
 template <typename T> // where T : serverlet<T>
@@ -121,7 +121,7 @@ protected:
                               void (T::*handler)(const TRequest &, TResponse &));
 
     template <typename TRpcHolder>
-    bool register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
+    bool register_rpc_handler_with_rpc_holder(task_code rpc_code,
                                               const char *extra_name,
                                               void (T::*handler)(TRpcHolder));
 
@@ -132,12 +132,12 @@ protected:
 
     bool register_rpc_handler(task_code rpc_code,
                               const char *extra_name,
-                              void (T::*handler)(dsn::message_ex *));
+                              void (T::*handler)(message_ex *));
 
     bool unregister_rpc_handler(task_code rpc_code);
 
     template <typename TResponse>
-    void reply(dsn::message_ex *request, const TResponse &resp);
+    void reply(message_ex *request, const TResponse &resp);
 
 public:
     const std::string &name() const { return _name; }
@@ -163,9 +163,9 @@ inline bool serverlet<T>::register_rpc_handler(task_code rpc_code,
                                                const char *extra_name,
                                                void (T::*handler)(const TRequest &))
 {
-    rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+    rpc_request_handler cb = [this, handler](message_ex *request) {
         TRequest req;
-        ::dsn::unmarshall(request, req);
+        unmarshall(request, req);
         (((T *)this)->*(handler))(req);
     };
 
@@ -178,9 +178,9 @@ inline bool serverlet<T>::register_rpc_handler(task_code rpc_code,
                                                const char *extra_name,
                                                void (T::*handler)(const TRequest &, TResponse &))
 {
-    rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+    rpc_request_handler cb = [this, handler](message_ex *request) {
         TRequest req;
-        ::dsn::unmarshall(request, req);
+        unmarshall(request, req);
 
         TResponse resp;
         (((T *)this)->*(handler))(req, resp);
@@ -192,11 +192,11 @@ inline bool serverlet<T>::register_rpc_handler(task_code rpc_code,
 
 template <typename T>
 template <typename TRpcHolder>
-inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
+inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(task_code rpc_code,
                                                                const char *extra_name,
                                                                void (T::*handler)(TRpcHolder))
 {
-    rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+    rpc_request_handler cb = [this, handler](message_ex *request) {
         (((T *)this)->*(handler))(TRpcHolder::auto_reply(request));
     };
 
@@ -210,9 +210,9 @@ inline bool serverlet<T>::register_async_rpc_handler(task_code rpc_code,
                                                      void (T::*handler)(const TRequest &,
                                                                         rpc_replier<TResponse> &))
 {
-    rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+    rpc_request_handler cb = [this, handler](message_ex *request) {
         TRequest req;
-        ::dsn::unmarshall(request, req);
+        unmarshall(request, req);
         rpc_replier<TResponse> replier(request->create_response());
         (((T *)this)->*(handler))(req, replier);
     };
@@ -222,9 +222,9 @@ inline bool serverlet<T>::register_async_rpc_handler(task_code rpc_code,
 template <typename T>
 inline bool serverlet<T>::register_rpc_handler(task_code rpc_code,
                                                const char *extra_name,
-                                               void (T::*handler)(dsn::message_ex *))
+                                               void (T::*handler)(message_ex *))
 {
-    rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+    rpc_request_handler cb = [this, handler](message_ex *request) {
         (((T *)this)->*(handler))(request);
     };
 
@@ -239,10 +239,10 @@ inline bool serverlet<T>::unregister_rpc_handler(task_code rpc_code)
 
 template <typename T>
 template <typename TResponse>
-inline void serverlet<T>::reply(dsn::message_ex *request, const TResponse &resp)
+inline void serverlet<T>::reply(message_ex *request, const TResponse &resp)
 {
     auto msg = request->create_response();
-    ::dsn::marshall(msg, resp);
+    marshall(msg, resp);
     dsn_rpc_reply(msg);
 }
 /*@}*/

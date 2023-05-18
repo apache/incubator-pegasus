@@ -47,7 +47,7 @@
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_server_failure_detector.h"
@@ -65,7 +65,7 @@
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 class meta_split_service_test : public meta_test_base
 {
@@ -164,7 +164,7 @@ public:
     {
         auto req = std::make_unique<notify_stop_split_request>();
         req->__set_app_name(NAME);
-        req->__set_parent_gpid(dsn::gpid(app->app_id, PARENT_INDEX));
+        req->__set_parent_gpid(gpid(app->app_id, PARENT_INDEX));
         req->__set_meta_split_status(req_split_status);
         req->__set_partition_count(PARTITION_COUNT);
 
@@ -179,7 +179,7 @@ public:
     {
         auto req = std::make_unique<query_child_state_request>();
         req->__set_app_name(NAME);
-        req->__set_pid(dsn::gpid(app->app_id, PARENT_INDEX));
+        req->__set_pid(gpid(app->app_id, PARENT_INDEX));
         req->__set_partition_count(PARTITION_COUNT);
 
         query_child_state_rpc rpc(std::move(req), RPC_CM_QUERY_CHILD_STATE);
@@ -239,7 +239,7 @@ public:
         app->helpers->contexts.resize(app->partition_count);
         for (int i = 0; i < app->partition_count; ++i) {
             app->helpers->contexts[i].config_owner = &app->partitions[i];
-            app->partitions[i].pid = dsn::gpid(app->app_id, i);
+            app->partitions[i].pid = gpid(app->app_id, i);
             if (i >= app->partition_count / 2) {
                 app->partitions[i].ballot = invalid_ballot;
             } else {
@@ -847,4 +847,4 @@ TEST_F(meta_split_service_failover_test, half_split_test)
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

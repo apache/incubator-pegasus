@@ -29,7 +29,7 @@
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
 #include "mock_utils.h"
@@ -39,14 +39,14 @@
 #include "runtime/task/task.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 class open_replica_test : public replica_test_base
 {
 public:
     open_replica_test() = default;
-    ~open_replica_test() { dsn::utils::filesystem::remove_path("./tmp_dir"); }
+    ~open_replica_test() { utils::filesystem::remove_path("./tmp_dir"); }
 
     void test_open_replica()
     {
@@ -71,7 +71,7 @@ public:
             gpid gpid(app_info.app_id, i);
             stub->_opening_replicas[gpid] = task_ptr(nullptr);
 
-            dsn::rpc_address node;
+            rpc_address node;
             node.assign_ipv4("127.0.0.11", static_cast<uint16_t>(12321 + i + 1));
 
             if (!tt.is_in_dir_nodes) {
@@ -111,4 +111,4 @@ public:
 TEST_F(open_replica_test, open_replica_add_decree_and_ballot_check) { test_open_replica(); }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

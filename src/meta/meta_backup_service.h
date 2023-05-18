@@ -43,7 +43,7 @@
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class message_ex;
 class rpc_address;
 namespace dist {
@@ -282,14 +282,14 @@ mock_private :
     // before finish backup one app, we write a flag file to represent whether the app's backup is
     // finished
     mock_virtual void write_backup_app_finish_flag_unlocked(int32_t app_id,
-                                                            dsn::task_ptr write_callback);
+                                                            task_ptr write_callback);
     mock_virtual void finish_backup_app_unlocked(int32_t app_id);
     // after finish backup all app, we record the information of policy's backup to block filesystem
     mock_virtual void write_backup_info_unlocked(const backup_info &b_info,
-                                                 dsn::task_ptr write_callback);
+                                                 task_ptr write_callback);
 
     mock_virtual void sync_backup_to_remote_storage_unlocked(const backup_info &b_info,
-                                                             dsn::task_ptr sync_callback,
+                                                             task_ptr sync_callback,
                                                              bool create_new_node);
     mock_virtual void initialize_backup_progress_unlocked();
     mock_virtual void prepare_current_backup_on_new_unlocked();
@@ -299,21 +299,21 @@ mock_private :
     mock_virtual bool should_start_backup_unlocked();
     mock_virtual void continue_current_backup_unlocked();
 
-    mock_virtual void on_backup_reply(dsn::error_code err,
+    mock_virtual void on_backup_reply(error_code err,
                                       backup_response &&response,
                                       gpid pid,
                                       const rpc_address &primary);
 
     mock_virtual void gc_backup_info_unlocked(const backup_info &info_to_gc);
     mock_virtual void issue_gc_backup_info_task_unlocked();
-    mock_virtual void sync_remove_backup_info(const backup_info &info, dsn::task_ptr sync_callback);
+    mock_virtual void sync_remove_backup_info(const backup_info &info, task_ptr sync_callback);
 
 mock_private :
     friend class backup_service;
     backup_service *_backup_service;
 
     // lock the data-structure below
-    dsn::zlock _lock;
+    zlock _lock;
 
     // policy related
     policy _policy;
@@ -329,7 +329,7 @@ mock_private :
 
     perf_counter_wrapper _counter_policy_recent_backup_duration_ms;
 //clang-format on
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 
 class backup_service
@@ -357,7 +357,7 @@ public:
 
     const std::string &backup_root() const { return _backup_root; }
     const std::string &policy_root() const { return _policy_meta_root; }
-    void add_backup_policy(dsn::message_ex* msg);
+    void add_backup_policy(message_ex* msg);
     void query_backup_policy(query_backup_policy_rpc rpc);
     void modify_backup_policy(configuration_modify_backup_policy_rpc rpc);
     void start_backup_app(start_backup_app_rpc rpc);
@@ -384,11 +384,11 @@ private:
     FRIEND_TEST(backup_service_test, test_query_backup_status);
     FRIEND_TEST(meta_backup_service_test, test_add_backup_policy);
 
-    void start_create_policy_meta_root(dsn::task_ptr callback);
+    void start_create_policy_meta_root(task_ptr callback);
     void start_sync_policies();
     error_code sync_policies_from_remote_storage();
 
-    void do_add_policy(dsn::message_ex* req,
+    void do_add_policy(message_ex* req,
                        std::shared_ptr<policy_context> p,
                        const std::string &hint_msg);
     void do_update_policy_to_remote_storage(configuration_modify_backup_policy_rpc rpc,
@@ -416,7 +416,7 @@ private:
 
     backup_opt _opt;
     std::atomic_bool _in_initialize;
-    dsn::task_tracker _tracker;
+    task_tracker _tracker;
 };
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

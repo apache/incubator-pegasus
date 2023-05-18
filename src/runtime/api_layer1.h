@@ -145,7 +145,7 @@ dsn_threadpool_code_register.
   queue_aspects =
 
   ; task queue provider name
-  queue_factory_name = dsn::tools::hpc_concurrent_task_queue
+  queue_factory_name = tools::hpc_concurrent_task_queue
 
   ; throttling: throttling threshold above which rpc requests will be dropped
   queue_length_throttling_threshold = 1000000
@@ -187,7 +187,7 @@ extern void dsn_task_cancel_current_timer();
 
  \return true if it is.
  */
-extern bool dsn_task_is_running_inside(dsn::task *t);
+extern bool dsn_task_is_running_inside(pegasus::task *t);
 
 /*@}*/
 
@@ -213,7 +213,7 @@ replace the underneath implementation of the network (e.g., RDMA, simulated netw
 @{
 */
 
-extern dsn::rpc_address dsn_primary_address();
+extern pegasus::rpc_address dsn_primary_address();
 
 /*!
 @defgroup rpc-server Server-Side RPC Primitives
@@ -223,19 +223,19 @@ Server-Side RPC Primitives
  */
 
 /*! register callback to handle RPC request */
-extern bool dsn_rpc_register_handler(dsn::task_code code,
+extern bool dsn_rpc_register_handler(pegasus::task_code code,
                                      const char *extra_name,
-                                     const dsn::rpc_request_handler &cb);
+                                     const pegasus::rpc_request_handler &cb);
 
 /*! unregister callback to handle RPC request, returns true if unregister ok, false if no handler
     was registered */
-extern bool dsn_rpc_unregiser_handler(dsn::task_code code);
+extern bool dsn_rpc_unregiser_handler(pegasus::task_code code);
 
-/*! reply with a response which is created using dsn::message_ex::create_response */
-extern void dsn_rpc_reply(dsn::message_ex *response, dsn::error_code err = dsn::ERR_OK);
+/*! reply with a response which is created using pegasus::message_ex::create_response */
+extern void dsn_rpc_reply(pegasus::message_ex *response, pegasus::error_code err = pegasus::ERR_OK);
 
 /*! forward the request to another server instead */
-extern void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr);
+extern void dsn_rpc_forward(pegasus::message_ex *request, pegasus::rpc_address addr);
 
 /*@}*/
 
@@ -247,16 +247,17 @@ Client-Side RPC Primitives
 */
 
 /*! client invokes the RPC call */
-extern void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call);
+extern void dsn_rpc_call(pegasus::rpc_address server, pegasus::rpc_response_task *rpc_call);
 
 /*!
    client invokes the RPC call and waits for its response, note
-   returned msg must be explicitly released using \ref dsn::message_ex::release_ref
+   returned msg must be explicitly released using \ref pegasus::message_ex::release_ref
  */
-extern dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *request);
+extern pegasus::message_ex *dsn_rpc_call_wait(pegasus::rpc_address server,
+                                              pegasus::message_ex *request);
 
 /*! one-way RPC from client, no rpc response is expected */
-extern void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request);
+extern void dsn_rpc_call_one_way(pegasus::rpc_address server, pegasus::message_ex *request);
 
 /*@}*/
 

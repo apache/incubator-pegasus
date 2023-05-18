@@ -22,9 +22,9 @@
 #include <string>
 #include <unordered_map>
 
-namespace dsn {
+namespace pegasus {
 class zlock;
-} // namespace dsn
+} // namespace pegasus
 
 namespace pegasus {
 class pegasus_client;
@@ -43,7 +43,7 @@ private:
     typedef std::unordered_map<std::string, pegasus_client_impl *> app_to_client_map;
     typedef std::unordered_map<std::string, app_to_client_map> cluster_to_app_map;
     static cluster_to_app_map _cluster_to_clients;
-    static ::dsn::zlock *_map_lock;
+    static zlock *_map_lock;
 };
 }
 } // namespace

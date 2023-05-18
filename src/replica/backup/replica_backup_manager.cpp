@@ -30,7 +30,7 @@
 #include "cold_backup_context.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "metadata_types.h"
 #include "replica/replica.h"
 #include "replica/replica_context.h"
@@ -44,7 +44,7 @@
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
@@ -218,4 +218,4 @@ void replica_backup_manager::send_clear_request_to_secondaries(const gpid &pid,
 }
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

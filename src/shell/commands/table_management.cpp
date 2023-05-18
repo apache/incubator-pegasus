@@ -38,7 +38,7 @@
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "common/json_helper.h"
-#include "dsn.layer2_types.h"
+#include "pegasus.layer2_types.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
 #include "perf_counter/perf_counter_utils.h"
@@ -58,6 +58,7 @@
 #include "utils/strings.h"
 #include "utils/utils.h"
 
+namespace pegasus {
 double convert_to_ratio(double hit, double total)
 {
     return std::abs(total) < 1e-6 ? 0 : hit / total;
@@ -105,17 +106,15 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    ::dsn::app_status::type s = ::dsn::app_status::AS_INVALID;
+    app_status::type s = app_status::AS_INVALID;
     if (!status.empty() && status != "all") {
-        s = type_from_string(::dsn::_app_status_VALUES_TO_NAMES,
-                             std::string("as_") + status,
-                             ::dsn::app_status::AS_INVALID);
-        verify_logged(s != ::dsn::app_status::AS_INVALID,
-                      "parse %s as app_status::type failed",
-                      status.c_str());
+        s = type_from_string(
+            _app_status_VALUES_TO_NAMES, std::string("as_") + status, app_status::AS_INVALID);
+        verify_logged(
+            s != app_status::AS_INVALID, "parse %s as app_status::type failed", status.c_str());
     }
-    ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
-    if (err != ::dsn::ERR_OK)
+    error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
+    if (err != ERR_OK)
         std::cout << "list apps failed, error=" << err.to_string() << std::endl;
     return true;
 }
@@ -167,9 +166,8 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    ::dsn::error_code err =
-        sc->ddl_client->list_app(app_name, detailed, json, out_file, resolve_ip);
-    if (err != ::dsn::ERR_OK) {
+    error_code err = sc->ddl_client->list_app(app_name, detailed, json, out_file, resolve_ip);
+    if (err != ERR_OK) {
         std::cout << "query app " << app_name << " failed, error=" << err.to_string() << std::endl;
     }
     return true;
@@ -232,8 +230,8 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    dsn::utils::multi_table_printer mtp;
-    dsn::utils::table_printer tp_params("parameters");
+    utils::multi_table_printer mtp;
+    utils::table_printer tp_params("parameters");
     if (!(app_name.empty() && out_file.empty())) {
         if (!app_name.empty())
             tp_params.add_row_name_and_data("app_name", app_name);
@@ -246,10 +244,10 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     int32_t app_id = 0;
     int32_t partition_count = 0;
     int32_t max_replica_count = 0;
-    std::vector<dsn::partition_configuration> partitions;
+    std::vector<partition_configuration> partitions;
 
-    dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
-    if (err != ::dsn::ERR_OK) {
+    error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
+    if (err != ERR_OK) {
         std::cout << "ERROR: list app " << app_name << " failed, error=" << err.to_string()
                   << std::endl;
         return true;
@@ -271,17 +269,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         {fmt::format("replica*app.pegasus*disk.storage.sst(MB)@{}.", app_id),
          fmt::format("replica*app.pegasus*disk.storage.sst.count@{}.", app_id)});
 
-    std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
-    std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
+    std::map<rpc_address, std::map<int32_t, double>> disk_map;
+    std::map<rpc_address, std::map<int32_t, double>> count_map;
     for (int i = 0; i < nodes.size(); ++i) {
         if (!results[i].first) {
             std::cout << "ERROR: query perf counter from node " << nodes[i].address.to_string()
                       << " failed" << std::endl;
             return true;
         }
-        dsn::perf_counter_info info;
-        dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-        if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
+        perf_counter_info info;
+        blob bb(results[i].second.data(), 0, results[i].second.size());
+        if (!json::json_forwarder<perf_counter_info>::decode(bb, info)) {
             std::cout << "ERROR: decode perf counter info from node "
                       << nodes[i].address.to_string() << " failed, result = " << results[i].second
                       << std::endl;
@@ -292,7 +290,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                       << " returns error, error = " << info.result << std::endl;
             return true;
         }
-        for (dsn::perf_counter_metric &m : info.counters) {
+        for (perf_counter_metric &m : info.counters) {
             int32_t app_id_x, partition_index_x;
             std::string counter_name;
             bool parse_ret = parse_app_pegasus_perf_counter_name(
@@ -306,13 +304,13 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    ::dsn::utils::table_printer tp_general("result");
+    utils::table_printer tp_general("result");
     tp_general.add_row_name_and_data("app_name", app_name);
     tp_general.add_row_name_and_data("app_id", app_id);
     tp_general.add_row_name_and_data("partition_count", partition_count);
     tp_general.add_row_name_and_data("max_replica_count", max_replica_count);
 
-    ::dsn::utils::table_printer tp_details("details");
+    utils::table_printer tp_details("details");
     if (detailed) {
         tp_details.add_title("pidx");
         tp_details.add_column("ballot");
@@ -325,7 +323,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     double disk_used_for_all_replicas = 0;
     int all_replicas_count = 0;
     for (int i = 0; i < partitions.size(); i++) {
-        const dsn::partition_configuration &p = partitions[i];
+        const partition_configuration &p = partitions[i];
         int replica_count = 0;
         if (!p.primary.is_invalid()) {
             replica_count++;
@@ -368,7 +366,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             std::stringstream oss;
             std::string hostname;
             std::string ip = p.primary.to_string();
-            if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
+            if (resolve_ip && utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
                 oss << hostname << "(";
             } else {
                 oss << p.primary.to_string() << "(";
@@ -419,7 +417,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
                 std::string hostname;
                 std::string ip = p.secondaries[j].to_string();
-                if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
+                if (resolve_ip && utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
                     oss << hostname << "(";
                 } else {
                     oss << p.secondaries[j].to_string() << "(";
@@ -579,7 +577,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
     std::ostream out(buf);
 
-    ::dsn::utils::table_printer tp("app_stat", 2 /* tabular_width */, 3 /* precision */);
+    utils::table_printer tp("app_stat", 2 /* tabular_width */, 3 /* precision */);
     tp.add_title(app_name.empty() ? "app_name" : "pidx");
     if (app_name.empty()) {
         tp.add_column("app_id", tp_alignment::kRight);
@@ -689,13 +687,13 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 'p':
-            if (!dsn::buf2int32(optarg, pc)) {
+            if (!buf2int32(optarg, pc)) {
                 fprintf(stderr, "parse %s as partition_count failed\n", optarg);
                 return false;
             }
             break;
         case 'r':
-            if (!dsn::buf2int32(optarg, rc)) {
+            if (!buf2int32(optarg, rc)) {
                 fprintf(stderr, "parse %s as replica_count failed\n", optarg);
                 return false;
             }
@@ -704,7 +702,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
             success_if_exist = false;
             break;
         case 'e':
-            if (!::dsn::utils::parse_kv_map(optarg, envs, ',', '=')) {
+            if (!utils::parse_kv_map(optarg, envs, ',', '=')) {
                 fprintf(stderr, "invalid envs: %s\n", optarg);
                 return false;
             }
@@ -714,13 +712,13 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    ::dsn::error_code err =
+    error_code err =
         sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false, success_if_exist);
-    if (err == ::dsn::ERR_OK)
-        std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name) << "\" succeed"
+    if (err == ERR_OK)
+        std::cout << "create app \"" << utils::c_escape_string(app_name) << "\" succeed"
                   << std::endl;
     else
-        std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name)
+        std::cout << "create app \"" << utils::c_escape_string(app_name)
                   << "\" failed, error = " << err.to_string() << std::endl;
     return true;
 }
@@ -745,7 +743,7 @@ bool drop_app(command_executor *e, shell_context *sc, arguments args)
             break;
         switch (c) {
         case 'r':
-            if (!dsn::buf2int32(optarg, reserve_seconds)) {
+            if (!buf2int32(optarg, reserve_seconds)) {
                 fprintf(stderr, "parse %s as reserve_seconds failed\n", optarg);
                 return false;
             }
@@ -756,8 +754,8 @@ bool drop_app(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::cout << "reserve_seconds = " << reserve_seconds << std::endl;
-    ::dsn::error_code err = sc->ddl_client->drop_app(app_name, reserve_seconds);
-    if (err == ::dsn::ERR_OK)
+    error_code err = sc->ddl_client->drop_app(app_name, reserve_seconds);
+    if (err == ERR_OK)
         std::cout << "drop app " << app_name << " succeed" << std::endl;
     else
         std::cout << "drop app " << app_name << " failed, error=" << err.to_string() << std::endl;
@@ -778,7 +776,7 @@ bool rename_app(command_executor *e, shell_context *sc, arguments args)
     const auto &resp = err_resp.get_value();
 
     if (dsn_likely(err.is_ok())) {
-        err = dsn::error_s::make(resp.err);
+        err = error_s::make(resp.err);
     }
 
     if (err.is_ok()) {
@@ -808,7 +806,7 @@ bool recall_app(command_executor *e, shell_context *sc, arguments args)
 
     int id;
     std::string new_name = "";
-    if (!dsn::buf2int32(args.argv[1], id)) {
+    if (!buf2int32(args.argv[1], id)) {
         fprintf(stderr, "ERROR: parse %s as id failed\n", args.argv[1]);
         return false;
     }
@@ -816,8 +814,8 @@ bool recall_app(command_executor *e, shell_context *sc, arguments args)
         new_name = args.argv[2];
     }
 
-    ::dsn::error_code err = sc->ddl_client->recall_app(id, new_name);
-    if (dsn::ERR_OK == err)
+    error_code err = sc->ddl_client->recall_app(id, new_name);
+    if (ERR_OK == err)
         std::cout << "recall app " << id << " succeed" << std::endl;
     else
         std::cout << "recall app " << id << " failed, error=" << err.to_string() << std::endl;
@@ -849,13 +847,13 @@ bool get_app_envs(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::map<std::string, std::string> envs;
-    ::dsn::error_code ret = sc->ddl_client->get_app_envs(sc->current_app_name, envs);
-    if (ret != ::dsn::ERR_OK) {
+    error_code ret = sc->ddl_client->get_app_envs(sc->current_app_name, envs);
+    if (ret != ERR_OK) {
         fprintf(stderr, "get app env failed with err = %s\n", ret.to_string());
         return true;
     }
 
-    ::dsn::utils::table_printer tp("app_envs");
+    utils::table_printer tp("app_envs");
     for (auto &kv : envs) {
         tp.add_row_name_and_data(kv.first, kv.second);
     }
@@ -889,10 +887,10 @@ bool set_app_envs(command_executor *e, shell_context *sc, arguments args)
     }
 
     auto err_resp = sc->ddl_client->set_app_envs(sc->current_app_name, keys, values);
-    dsn::error_s err = err_resp.get_error();
+    error_s err = err_resp.get_error();
     std::string hint_msg;
     if (err.is_ok()) {
-        err = dsn::error_s::make(err_resp.get_value().err);
+        err = error_s::make(err_resp.get_value().err);
         hint_msg = err_resp.get_value().hint_message;
     }
     if (!err.is_ok()) {
@@ -920,9 +918,9 @@ bool del_app_envs(command_executor *e, shell_context *sc, arguments args)
         keys.emplace_back(args.argv[idx]);
     }
 
-    ::dsn::error_code ret = sc->ddl_client->del_app_envs(sc->current_app_name, keys);
+    error_code ret = sc->ddl_client->del_app_envs(sc->current_app_name, keys);
 
-    if (ret != ::dsn::ERR_OK) {
+    if (ret != ERR_OK) {
         fprintf(stderr, "del app env failed with err = %s\n", ret.to_string());
     }
     return true;
@@ -962,8 +960,8 @@ bool clear_app_envs(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "must specify one of --all and --prefix options\n");
         return false;
     }
-    ::dsn::error_code ret = sc->ddl_client->clear_app_envs(sc->current_app_name, clear_all, prefix);
-    if (ret != dsn::ERR_OK) {
+    error_code ret = sc->ddl_client->clear_app_envs(sc->current_app_name, clear_all, prefix);
+    if (ret != ERR_OK) {
         fprintf(stderr, "clear app envs failed with err = %s\n", ret.to_string());
     }
     return true;
@@ -1002,16 +1000,16 @@ bool get_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     const auto &resp = err_resp.get_value();
 
     if (err.is_ok()) {
-        err = dsn::error_s::make(resp.err);
+        err = error_s::make(resp.err);
     }
 
-    std::string escaped_app_name(pegasus::utils::c_escape_string(app_name));
+    std::string escaped_app_name(utils::c_escape_string(app_name));
     if (!err.is_ok()) {
         fmt::print(stderr, "get replica count of app({}) failed: {}\n", escaped_app_name, err);
         return true;
     }
 
-    dsn::utils::table_printer tp("max_replica_count");
+    utils::table_printer tp("max_replica_count");
     tp.add_row_name_and_data("max_replica_count", resp.max_replica_count);
     tp.output(std::cout, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
@@ -1025,7 +1023,7 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     }
 
     int new_max_replica_count;
-    if (!dsn::buf2int32(args.argv[2], new_max_replica_count)) {
+    if (!buf2int32(args.argv[2], new_max_replica_count)) {
         fmt::print(stderr, "parse '{}' as replica count failed\n", args.argv[2]);
         return false;
     }
@@ -1036,7 +1034,7 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     }
 
     std::string app_name(args.argv[1]);
-    std::string escaped_app_name(pegasus::utils::c_escape_string(app_name));
+    std::string escaped_app_name(utils::c_escape_string(app_name));
     std::string action(fmt::format(
         "set the replica count of app({}) to {}", escaped_app_name, new_max_replica_count));
     if (!confirm_unsafe_command(action)) {
@@ -1048,7 +1046,7 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     const auto &resp = err_resp.get_value();
 
     if (dsn_likely(err.is_ok())) {
-        err = dsn::error_s::make(resp.err);
+        err = error_s::make(resp.err);
     }
 
     if (err.is_ok()) {
@@ -1071,3 +1069,4 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
 
     return true;
 }
+} // namespace pegasus

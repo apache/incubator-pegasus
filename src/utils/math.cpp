@@ -24,7 +24,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/math.h"
 
-namespace dsn {
+namespace pegasus {
 namespace utils {
 
 double mean_stddev(const std::vector<uint32_t> &result_set, bool partial_sample)
@@ -50,4 +50,4 @@ double mean_stddev(const std::vector<uint32_t> &result_set, bool partial_sample)
 }
 
 } // namespace utils
-} // namespace dsn
+} // namespace pegasus

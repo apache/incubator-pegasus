@@ -35,7 +35,7 @@
 
 #include "utils/absl/utility/utility.h"
 
-namespace dsn {
+namespace pegasus {
 
 // A join_point instance is a set of lambdas with the identical function signature.
 // It's typically used for creating hooks at the specific execution points,
@@ -129,4 +129,4 @@ public:
     }
 };
 
-} // end namespace dsn
+} // end namespace pegasus

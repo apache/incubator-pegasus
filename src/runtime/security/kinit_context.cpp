@@ -41,12 +41,12 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
-namespace security {
-class kinit_context;
-
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
+
+namespace pegasus {
+namespace security {
+class kinit_context;
 
 #define KRB5_RETURN_NOT_OK(err, msg)                                                               \
     do {                                                                                           \
@@ -244,7 +244,7 @@ error_s kinit_context::get_credentials()
                     err.description());
         return err;
     }
-    auto cleanup = dsn::defer([&]() { krb5_free_cred_contents(_krb5_context, &creds); });
+    auto cleanup = defer([&]() { krb5_free_cred_contents(_krb5_context, &creds); });
 
     // store credentials into _ccache.
     err = wrap_krb5_err(krb5_cc_store_cred(_krb5_context, _ccache, &creds), "store_cred");
@@ -335,4 +335,4 @@ error_s run_kinit() { return kinit_context::instance().kinit(); }
 
 const std::string &get_username() { return kinit_context::instance().username(); }
 } // namespace security
-} // namespace dsn
+} // namespace pegasus

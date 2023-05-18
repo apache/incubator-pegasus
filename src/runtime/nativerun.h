@@ -37,7 +37,7 @@
 
 #include "runtime/tool_api.h"
 
-namespace dsn {
+namespace pegasus {
 struct service_spec;
 
 namespace tools {
@@ -52,4 +52,4 @@ public:
     virtual void run() override;
 };
 }
-} // end namespace dsn::tools
+} // end namespace tools

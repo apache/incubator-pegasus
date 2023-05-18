@@ -29,7 +29,7 @@
 #include "utils/chrono_literals.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
+namespace pegasus {
 class error_code;
 
 namespace replication {
@@ -89,4 +89,4 @@ private:
 };
 
 } // namespace replication
-} // namespace dsn
+} // namespace pegasus

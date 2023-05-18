@@ -48,7 +48,7 @@
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
 
-namespace dsn {
+namespace pegasus {
 class partition_configuration;
 
 namespace replication {

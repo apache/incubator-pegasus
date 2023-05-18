@@ -23,7 +23,7 @@
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
+namespace pegasus {
 namespace uri {
 
 error_with<char> from_hex(const char c)
@@ -84,4 +84,4 @@ error_with<std::string> decode(const string_view &encoded_uri)
 }
 
 } // namespace uri
-} // namespace dsn
+} // namespace pegasus

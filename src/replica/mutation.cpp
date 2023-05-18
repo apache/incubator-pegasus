@@ -54,7 +54,7 @@
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 
-namespace dsn {
+namespace pegasus {
 namespace replication {
 
 DSN_DEFINE_uint64(replication,
@@ -76,7 +76,7 @@ mutation::mutation()
     _create_ts_ns = dsn_now_ns();
     _tid = ++s_tid;
     _is_sync_to_child = false;
-    _tracer = std::make_shared<dsn::utils::latency_tracer>(
+    _tracer = std::make_shared<utils::latency_tracer>(
         false, "mutation", FLAGS_abnormal_write_trace_latency_threshold);
 }
 
@@ -91,7 +91,7 @@ mutation_ptr mutation::copy_no_reply(const mutation_ptr &old_mu)
     // create a new message without client information, it will not rely
     for (auto req : old_mu->client_requests) {
         if (req != nullptr) {
-            dsn::message_ex *new_req = message_ex::copy_message_no_reply(*req);
+            message_ex *new_req = message_ex::copy_message_no_reply(*req);
             mu->client_requests.emplace_back(new_req);
         } else {
             mu->client_requests.emplace_back(req);
@@ -159,7 +159,7 @@ void mutation::copy_from(mutation_ptr &old)
     }
 }
 
-void mutation::add_client_request(task_code code, dsn::message_ex *request)
+void mutation::add_client_request(task_code code, message_ex *request)
 {
     data.updates.push_back(mutation_update());
     mutation_update &update = data.updates.back();
@@ -213,7 +213,7 @@ void mutation::write_to(const std::function<void(const blob &)> &inserter) const
     }
 }
 
-void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
+void mutation::write_to(binary_writer &writer, message_ex * /*to*/) const
 {
     write_mutation_header(writer, data.header);
     writer.write_pod(static_cast<int>(data.updates.size()));
@@ -236,7 +236,7 @@ void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
     }
 }
 
-/*static*/ mutation_ptr mutation::read_from(binary_reader &reader, dsn::message_ex *from)
+/*static*/ mutation_ptr mutation::read_from(binary_reader &reader, message_ex *from)
 {
     mutation_ptr mu(new mutation());
     read_mutation_header(reader, mu->data.header);
@@ -248,7 +248,7 @@ void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
     for (int i = 0; i < size; ++i) {
         std::string name;
         reader.read(name);
-        ::dsn::task_code code = dsn::task_code::try_get(name, TASK_CODE_INVALID);
+        task_code code = task_code::try_get(name, TASK_CODE_INVALID);
         CHECK_NE_MSG(code, TASK_CODE_INVALID, "invalid mutation task code: {}", name);
         mu->data.updates[i].code = code;
 
@@ -350,18 +350,18 @@ void mutation::wait_log_task() const
     }
 }
 
-mutation_queue::mutation_queue(gpid gpid,
+mutation_queue::mutation_queue(gpid pid,
                                int max_concurrent_op /*= 2*/,
                                bool batch_write_disabled /*= false*/)
     : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
 {
     _current_op_count = 0;
     _pending_mutation = nullptr;
-    CHECK_NE_MSG(gpid.get_app_id(), 0, "invalid gpid");
-    _pcount = dsn_task_queue_virtual_length_ptr(RPC_PREPARE, gpid.thread_hash());
+    CHECK_NE_MSG(pid.get_app_id(), 0, "invalid gpid");
+    _pcount = dsn_task_queue_virtual_length_ptr(RPC_PREPARE, pid.thread_hash());
 }
 
-mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request, replica *r)
+mutation_ptr mutation_queue::add_work(task_code code, message_ex *request, replica *r)
 {
     task_spec *spec = task_spec::get(code);
 
