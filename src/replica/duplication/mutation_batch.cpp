@@ -15,16 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <functional>
-#include <iosfwd>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
-#include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "metadata_types.h"

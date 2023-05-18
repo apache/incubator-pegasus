@@ -27,6 +27,7 @@
 #include "replica/prepare_list.h"
 #include "replica/replica_base.h"
 #include "utils/errors.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 namespace replication {

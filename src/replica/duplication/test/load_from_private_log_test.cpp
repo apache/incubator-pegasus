@@ -29,8 +29,6 @@
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "duplication_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/log_file.h"
@@ -49,6 +47,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem/operations.hpp>

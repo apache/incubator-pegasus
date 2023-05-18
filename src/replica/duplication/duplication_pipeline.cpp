@@ -30,6 +30,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 
 METRIC_DEFINE_counter(replica,
                       dup_shipped_bytes,
@@ -37,7 +38,6 @@ METRIC_DEFINE_counter(replica,
                       "The shipped size of private log for dup");
 
 namespace dsn {
-class string_view;
 
 namespace replication {
 

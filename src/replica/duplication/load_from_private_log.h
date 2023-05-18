@@ -30,6 +30,7 @@
 #include "replica/mutation_log.h"
 #include "replica/replica_base.h"
 #include "runtime/pipeline.h"
+#include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/metrics.h"
 
