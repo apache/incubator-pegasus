@@ -47,6 +47,7 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/string_view.h"
 
 namespace dsn {

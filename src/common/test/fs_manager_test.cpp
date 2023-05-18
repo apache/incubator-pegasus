@@ -21,6 +21,7 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <memory>
+#include <string>
 
 #include "common/fs_manager.h"
 #include "metadata_types.h"

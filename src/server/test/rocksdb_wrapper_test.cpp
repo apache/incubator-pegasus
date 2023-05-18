@@ -30,11 +30,13 @@
 #include "pegasus_server_test_base.h"
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
+#include "replica/replica.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service.h"
 #include "server/pegasus_write_service_impl.h"
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
+#include "utils/error_code.h"
 #include "utils/string_view.h"
 
 namespace pegasus {
