@@ -25,7 +25,6 @@
 
 #include "common/replication_other_types.h"
 #include "mutation_batch.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "replica/log_file.h"
 #include "replica/mutation_log.h"
@@ -78,6 +77,7 @@ public:
     void TEST_set_repeat_delay(std::chrono::milliseconds delay) { _repeat_delay = delay; }
 
     METRIC_DEFINE_VALUE(dup_log_file_load_failed_count, int64_t)
+    METRIC_DEFINE_VALUE(dup_log_file_load_skipped_bytes, int64_t)
 
     static constexpr int MAX_ALLOWED_BLOCK_REPEATS{3};
     static constexpr int MAX_ALLOWED_FILE_REPEATS{10};

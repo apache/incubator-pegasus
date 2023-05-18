@@ -32,9 +32,9 @@
 #include "utils/fmt_logging.h"
 
 METRIC_DEFINE_counter(replica,
-                          dup_shipped_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The shipped size of private log for dup");
+                      dup_shipped_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The shipped size of private log for dup");
 
 namespace dsn {
 class string_view;

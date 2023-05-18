@@ -54,7 +54,7 @@ mutation_buffer::mutation_buffer(replica_base *r,
                                  int max_count,
                                  mutation_committer committer)
     : prepare_list(r, init_decree, max_count, committer),
-    METRIC_VAR_INIT_replica(dup_recent_lost_mutations)
+      METRIC_VAR_INIT_replica(dup_recent_lost_mutations)
 {
 }
 

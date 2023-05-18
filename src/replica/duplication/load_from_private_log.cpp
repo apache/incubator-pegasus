@@ -21,7 +21,6 @@
 #include "common/duplication_common.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"
-#include "perf_counter/perf_counter.h"
 #include "replica/duplication/mutation_batch.h"
 #include "replica/mutation.h"
 #include "replica/mutation_log_utils.h"
@@ -36,24 +35,25 @@
 #include "utils/string_view.h"
 
 METRIC_DEFINE_counter(replica,
-                          dup_log_file_load_failed_count,
-                          dsn::metric_unit::kFileLoads,
-                          "The number of times private log files have failed to be loaded during dup");
+                      dup_log_file_load_failed_count,
+                      dsn::metric_unit::kFileLoads,
+                      "The number of times private log files have failed to be loaded during dup");
 
 METRIC_DEFINE_counter(replica,
-                          dup_log_file_load_skipped_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The bytes of mutations that have been skipped due to failed loadings of private log files during dup");
+                      dup_log_file_load_skipped_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The bytes of mutations that have been skipped due to failed loadings of "
+                      "private log files during dup");
 
 METRIC_DEFINE_counter(replica,
-                          dup_log_read_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The size read from private log for dup");
+                      dup_log_read_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size read from private log for dup");
 
 METRIC_DEFINE_counter(replica,
-                          dup_log_read_mutations,
-                          dsn::metric_unit::kMutations,
-                          "The number of mutations read from private log for dup");
+                      dup_log_read_mutations,
+                      dsn::metric_unit::kMutations,
+                      "The number of mutations read from private log for dup");
 
 namespace dsn {
 namespace replication {
@@ -190,17 +190,17 @@ void load_from_private_log::find_log_file_to_start(std::map<int, log_file_ptr> l
 
 void load_from_private_log::replay_log_block()
 {
-    error_s err =
-        mutation_log::replay_block(_current,
-                                   [this](int log_bytes_length, mutation_ptr &mu) -> bool {
-                                       auto es = _mutation_batch.add(std::move(mu));
-                                       CHECK_PREFIX_MSG(es.is_ok(), es.description());
-                                       METRIC_VAR_INCREMENT_BY(dup_log_read_bytes, log_bytes_length);
-                                       METRIC_VAR_INCREMENT(dup_log_read_mutations);
-                                       return true;
-                                   },
-                                   _start_offset,
-                                   _current_global_end_offset);
+    error_s err = mutation_log::replay_block(
+        _current,
+        [this](int log_bytes_length, mutation_ptr &mu) -> bool {
+            auto es = _mutation_batch.add(std::move(mu));
+            CHECK_PREFIX_MSG(es.is_ok(), es.description());
+            METRIC_VAR_INCREMENT_BY(dup_log_read_bytes, log_bytes_length);
+            METRIC_VAR_INCREMENT(dup_log_read_mutations);
+            return true;
+        },
+        _start_offset,
+        _current_global_end_offset);
     if (!err.is_ok() && err.code() != ERR_HANDLE_EOF) {
         // Error handling on loading failure:
         // - If block loading failed for `MAX_ALLOWED_REPEATS` times, it restarts reading the file.
