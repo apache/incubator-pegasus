@@ -226,11 +226,34 @@ bool ranger_resource_policy_manager::allowed(const int rpc_code,
             break;
         }
 
-        // Check if it is allowed by any GLOBAL policy.
+        // Check if it is denied by any GLOBAL policy.
         utils::auto_read_lock l(_global_policies_lock);
         for (const auto &policy : _global_policies_cache) {
-            if (policy.policies.allowed(ac_type->second, user_name)) {
+            auto check_status =
+                policy.policies.policy_check(ac_type->second, user_name, policy_check_type.kDeny);
+            // In a 'deny_policies' and not in any 'deny_policies_exclude'.
+            if (policy_check_status.kDenied == check_status) {
+                return false;
+            }
+            // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
+            if (policy_check_status.kPending == check_status ||
+                policy_check_status.kNotMatched == check_status) {
+                continue;
+            }
+        }
+
+        // Check if it is allowed by any GLOBAL policy.
+        for (const auto &policy : _global_policies_cache) {
+            auto check_status =
+                policy.policies.policy_check(ac_type->second, user_name, policy_check_type.kAllow);
+            // In a 'allow_policies' and not in any 'allow_policies_exclude'.
+            if (policy_check_status.kAllowed == check_status) {
                 return true;
+            }
+            // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
+            if (policy_check_status.kPending == check_status ||
+                policy_check_status.kNotMatched == check_status) {
+                continue;
             }
         }
 
@@ -245,26 +268,56 @@ bool ranger_resource_policy_manager::allowed(const int rpc_code,
             break;
         }
 
-        // Check if it is allowed by any DATABASE policy.
+        // Check if it is denied by any DATABASE policy.
         utils::auto_read_lock l(_database_policies_lock);
         for (const auto &policy : _database_policies_cache) {
-            if (!policy.policies.allowed(ac_type->second, user_name)) {
+            // Lagacy table not match any database.
+            if (database_name.empty() && policy.database_names.count("*") == 0 &&
+                policy.database_names.count(
+                    FLAGS_ranger_legacy_table_database_mapping_policy_name) == 0) {
                 continue;
             }
-            if (database_name.empty()) {
-                // Legacy tables may don't contain database section, the check that does match
-                // defult policy.
-                if (policy.database_names.count(
-                        FLAGS_ranger_legacy_table_database_mapping_policy_name) != 0) {
-                    return true;
-                }
-            } else {
-                // the check that does match 'database_name' policy, or this policy applies to all
-                // databases.
-                if (policy.database_names.count("*") != 0 ||
-                    policy.database_names.count(database_name) != 0) {
-                    return true;
-                }
+            // New table not match any database.
+            if (!database_name.empty() && policy.database_names.count("*") == 0 &&
+                policy.database_names.count(database_name) == 0) {
+                continue;
+            }
+            auto check_status =
+                policy.policies.allowed(ac_type->second, user_name, policy_check_type.kDeny);
+            // In a 'deny_policies' and not in any 'deny_policies_exclude'.
+            if (policy_check_status.kDenied == check_status) {
+                return false;
+            }
+            // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
+            if (policy_check_status.kPending == check_status ||
+                policy_check_status.kNotMatched == check_status) {
+                continue;
+            }
+        }
+
+        // Check if it is allowed by any DATABASE policy.
+        for (const auto &policy : _database_policies_cache) {
+            // Lagacy table not match any database.
+            if (database_name.empty() && policy.database_names.count("*") == 0 &&
+                policy.database_names.count(
+                    FLAGS_ranger_legacy_table_database_mapping_policy_name) == 0) {
+                continue;
+            }
+            // New table not match any database.
+            if (!database_name.empty() && policy.database_names.count("*") == 0 &&
+                policy.database_names.count(database_name) == 0) {
+                continue;
+            }
+            auto check_status =
+                policy.policies.policy_check(ac_type->second, user_name, policy_check_type.kAllow);
+            // In a 'allow_policies' and not in any 'allow_policies_exclude'.
+            if (policy_check_status.kAllowed == check_status) {
+                return true;
+            }
+            // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
+            if (policy_check_status.kPending == check_status ||
+                policy_check_status.kNotMatched == check_status) {
+                continue;
             }
         }
     } while (false);

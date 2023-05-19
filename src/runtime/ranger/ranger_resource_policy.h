@@ -27,6 +27,20 @@
 namespace dsn {
 namespace ranger {
 
+enum class policy_check_status : char
+{
+    kAllowed = 0,
+    kDenied,
+    kNotMatched,
+    kPending
+};
+
+enum class policy_check_type : char
+{
+    kAllow = 0,
+    kDeny
+};
+
 // Ranger policy data structure
 struct policy_item
 {
@@ -56,8 +70,11 @@ struct acl_policies
                               deny_policies,
                               deny_policies_exclude);
 
-    // Check whether the 'user_name' is allowed to access the resource by type of 'ac_type'.
-    bool allowed(const access_type &ac_type, const std::string &user_name) const;
+    // Check if 'allow_policies' or 'deny_policies' allow or deny "user_name" access to resource by
+    // type "ac_type".
+    policy_check_status policy_check(const access_type &ac_type,
+                                     const std::string &user_name,
+                                     policy_check_type check_type) const;
 };
 
 // A policy data structure definition of ranger resources
