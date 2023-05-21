@@ -27,18 +27,27 @@
 namespace dsn {
 namespace ranger {
 
-enum class policy_check_status : char
+// Types of policy checks.
+// kAllow means this checks for 'allow_policies' and 'allow_policies_exclude'.
+// kDeny means this checks for 'deny_policies' and 'deny_policies_exclude'.
+enum class policy_check_type
+{
+    kAllow = 0,
+    kDeny
+};
+
+// The return status code when a policy('kAllow' or 'kDeny' policy_check_type) is checked.
+// kAllowed means in a 'allow_policies' and not in any 'allow_policies_exclude'.
+// kDenied means in a 'deny_policies' and not in any 'deny_policies_exclude'.
+// kNotMatched means not match any 'allow_policies' or 'deny_policies'.
+// kPending means in a 'allow_policies/deny_policies' and in a
+// 'allow_policies_exclude/deny_policies_exclude'.
+enum class policy_check_status
 {
     kAllowed = 0,
     kDenied,
     kNotMatched,
     kPending
-};
-
-enum class policy_check_type : char
-{
-    kAllow = 0,
-    kDeny
 };
 
 // Ranger policy data structure
@@ -72,9 +81,15 @@ struct acl_policies
 
     // Check if 'allow_policies' or 'deny_policies' allow or deny "user_name" access to resource by
     // type "ac_type".
-    policy_check_status policy_check(const access_type &ac_type,
-                                     const std::string &user_name,
-                                     policy_check_type check_type) const;
+    policy_check_status policies_check(const access_type &ac_type,
+                                       const std::string &user_name,
+                                       const policy_check_type &check_type) const;
+
+    policy_check_status do_policies_check(const policy_check_type &check_type,
+                                          const access_type &ac_type,
+                                          const std::string &user_name,
+                                          const std::vector<policy_item> &policies,
+                                          const std::vector<policy_item> &policies_exclude) const;
 };
 
 // A policy data structure definition of ranger resources
@@ -85,8 +100,36 @@ struct ranger_resource_policy
     std::unordered_set<std::string> table_names;
     acl_policies policies;
 
-    DEFINE_JSON_SERIALIZATION(name, database_names, table_names, policies)
+    DEFINE_JSON_SERIALIZATION(name, database_names, table_names, policies);
 };
+
+// A policy data structure definition of the DATABASE_TABLE resource, which will be set in
+// 'app_envs'
+struct matched_database_table_policy
+{
+    std::string matched_database_name;
+    std::string matched_table_name;
+    acl_policies policies;
+
+    DEFINE_JSON_SERIALIZATION(matched_database_name, matched_table_name, policies);
+};
+
+// Returns true if 'policies' allows "user_name" to access "database_name" via "rpc_code".
+// 'is_need_match_database' being true means that the 'policies' needs to be matched to the database
+// first, false means not
+bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
+                                          const access_type &ac_type,
+                                          const std::string &user_name,
+                                          bool is_need_match_database,
+                                          const std::string &database_name,
+                                          const std::string &default_database_name);
+
+// Return true if "policies" allow "user_name" access, this is used for DATABASE_TABLE resource
+// access
+bool check_ranger_database_table_policy_allowed(
+    const std::vector<matched_database_table_policy> &policies,
+    const access_type &ac_type,
+    const std::string &user_name);
 
 } // namespace ranger
 } // namespace dsn
