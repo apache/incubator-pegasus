@@ -28,10 +28,11 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-        dsn_runtime
-        dsn_utils
-        pegasus_base
-        gtest)
+    dsn_http
+    dsn_runtime
+    dsn_utils
+    pegasus_base
+    gtest)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
