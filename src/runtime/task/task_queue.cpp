@@ -130,7 +130,7 @@ void task_queue::enqueue_internal(task *task)
     enqueue(task);
 }
 
-const task_queue::metric_entity_ptr &queue_metric_entity() const
+const metric_entity_ptr &task_queue::queue_metric_entity() const
 {
     CHECK_NOTNULL(_queue_metric_entity,
                   "queue metric entity should has been instantiated: "

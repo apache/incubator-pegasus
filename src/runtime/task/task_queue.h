@@ -30,8 +30,6 @@
 #include <atomic>
 #include <string>
 
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "utils/metrics.h"
 
 namespace dsn {
