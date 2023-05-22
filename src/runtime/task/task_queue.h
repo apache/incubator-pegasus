@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <atomic>
 #include <string>
 
+#include "utils/autoref_ptr.h"
 #include "utils/metrics.h"
 
 namespace dsn {

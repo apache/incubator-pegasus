@@ -34,6 +34,7 @@ set(MY_PROJ_LIBS pegasus.rproxylib
                 pegasus_geo_lib
                 s2
                 pegasus_client_static
+                dsn_http
                 gtest
                 )
 

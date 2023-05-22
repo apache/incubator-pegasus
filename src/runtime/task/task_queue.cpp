@@ -26,12 +26,10 @@
 
 #include "task_queue.h"
 
-#include <stdio.h>
-
+#include "fmt/core.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_engine.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/service_engine.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"
 #include "task_engine.h"
@@ -39,6 +37,7 @@
 #include "utils/error_code.h"
 #include "utils/exp_delay.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 #include "utils/threadpool_spec.h"
 
 METRIC_DEFINE_entity(queue);
