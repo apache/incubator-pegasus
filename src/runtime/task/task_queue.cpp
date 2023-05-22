@@ -49,14 +49,14 @@ METRIC_DEFINE_gauge_int64(queue,
                           "The length of task queue");
 
 METRIC_DEFINE_counter(queue,
-                          queue_delayed_tasks,
-                          dsn::metric_unit::kTasks,
-                          "The accumulative number of delayed tasks by throttling before enqueue");
+                      queue_delayed_tasks,
+                      dsn::metric_unit::kTasks,
+                      "The accumulative number of delayed tasks by throttling before enqueue");
 
 METRIC_DEFINE_counter(queue,
-                          queue_rejected_tasks,
-                          dsn::metric_unit::kTasks,
-                          "The accumulative number of rejeced tasks by throttling before enqueue");
+                      queue_rejected_tasks,
+                      dsn::metric_unit::kTasks,
+                      "The accumulative number of rejeced tasks by throttling before enqueue");
 
 namespace dsn {
 
@@ -66,24 +66,22 @@ metric_entity_ptr instantiate_queue_metric_entity(const std::string &queue_name)
 {
     auto entity_id = fmt::format("queue_{}", queue_name);
 
-    return METRIC_ENTITY_queue.instantiate(
-        entity_id,
-        {{"queue_name", queue_name}});
+    return METRIC_ENTITY_queue.instantiate(entity_id, {{"queue_name", queue_name}});
 }
 
 } // anonymous namespace
 
 task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)
-    : _pool(pool), 
-    _name(fmt::format("{}.{}", pool->spec().name, index)),
-    _index(index),
-    _queue_length(0),
-    _spec(const_cast<threadpool_spec *>(&pool->spec())),
-    _virtual_queue_length(0),
-    _queue_metric_entity(instantiate_queue_metric_entity(_name)),
-    METRIC_VAR_INIT_queue(queue_length),
-    METRIC_VAR_INIT_queue(queue_delayed_tasks),
-    METRIC_VAR_INIT_queue(queue_rejected_tasks)
+    : _pool(pool),
+      _name(fmt::format("{}.{}", pool->spec().name, index)),
+      _index(index),
+      _queue_length(0),
+      _spec(const_cast<threadpool_spec *>(&pool->spec())),
+      _virtual_queue_length(0),
+      _queue_metric_entity(instantiate_queue_metric_entity(_name)),
+      METRIC_VAR_INIT_queue(queue_length),
+      METRIC_VAR_INIT_queue(queue_delayed_tasks),
+      METRIC_VAR_INIT_queue(queue_rejected_tasks)
 {
 }
 
