@@ -29,8 +29,6 @@
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "duplication_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/log_file.h"
@@ -49,6 +47,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem/operations.hpp>
@@ -383,6 +382,8 @@ public:
         load = std::make_unique<load_from_private_log>(_replica.get(), duplicator.get());
         load->TEST_set_repeat_delay(0_ms); // no delay
         load->set_start_decree(duplicator->progress().last_decree + 1);
+        load->METRIC_VAR_NAME(dup_log_file_load_failed_count)->reset();
+        load->METRIC_VAR_NAME(dup_log_file_load_skipped_bytes)->reset();
         end_stage = std::make_unique<end_stage_t>(
             [this, num_entries](decree &&d, mutation_tuple_set &&mutations) {
                 load->set_start_decree(d + 1);
@@ -403,7 +404,7 @@ public:
 TEST_F(load_fail_mode_test, fail_skip)
 {
     duplicator->update_fail_mode(duplication_fail_mode::FAIL_SKIP);
-    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
 
     // will trigger fail-skip and read the subsequent file, some mutations will be lost.
     auto repeats = load->MAX_ALLOWED_BLOCK_REPEATS * load->MAX_ALLOWED_FILE_REPEATS;
@@ -413,16 +414,16 @@ TEST_F(load_fail_mode_test, fail_skip)
     duplicator->wait_all();
     fail::teardown();
 
-    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_failed_count),
               load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
-    ASSERT_GT(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_GT(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
 }
 
 TEST_F(load_fail_mode_test, fail_slow)
 {
     duplicator->update_fail_mode(duplication_fail_mode::FAIL_SLOW);
-    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
-    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(), 0);
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_failed_count), 0);
 
     // will trigger fail-slow and retry infinitely
     auto repeats = load->MAX_ALLOWED_BLOCK_REPEATS * load->MAX_ALLOWED_FILE_REPEATS;
@@ -432,9 +433,9 @@ TEST_F(load_fail_mode_test, fail_slow)
     duplicator->wait_all();
     fail::teardown();
 
-    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_failed_count),
               load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
-    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
 }
 
 TEST_F(load_fail_mode_test, fail_skip_real_corrupted_file)
@@ -454,9 +455,9 @@ TEST_F(load_fail_mode_test, fail_skip_real_corrupted_file)
     duplicator->wait_all();
 
     // ensure the bad file will be skipped
-    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_failed_count),
               load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
-    ASSERT_GT(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_GT(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
 }
 
 } // namespace replication
