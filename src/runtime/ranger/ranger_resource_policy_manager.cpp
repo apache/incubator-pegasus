@@ -586,12 +586,18 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
                 policy.database_names.count("*") == 0) {
                 continue;
             }
+            if (policy.table_names.count(table_name) == 0 && policy.table_names.count("*") == 0) {
+                continue;
+            }
             matched_database_table_policy _matched_database_table_policy(
                 {database_name, table_name, policy.policies});
             // if table name does not conform to the naming rules(database_name.table_name),
             // database is defined by "*" in ranger for acl matching
-            if (policy.table_names.count("*") != 0) {
+            if (policy.database_names.count("*") != 0) {
                 _matched_database_table_policy.matched_database_name = "*";
+            }
+            if (policy.table_names.count("*") != 0) {
+                _matched_database_table_policy.matched_table_name = "*";
             }
             matched_database_table_policies.emplace_back(_matched_database_table_policy);
         }
@@ -613,7 +619,6 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
             dsn::replication::update_app_env_rpc rpc(std::move(req), LPC_USE_RANGER_ACCESS_CONTROL);
             _meta_svc->get_server_state()->set_app_envs(rpc);
             LOG_AND_RETURN_NOT_OK(ERROR, rpc.response().err, "set_app_envs failed.");
-            break;
         }
     }
 
