@@ -20,6 +20,7 @@ set(MY_PROJ_NAME "sample")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+    dsn_http
     pegasus_client_static
     )
 
