@@ -34,6 +34,7 @@
 #include "runtime/ranger/ranger_resource_policy_manager.h"
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
+#include "utils/enum_helper.h"
 #include "utils/flags.h"
 
 namespace dsn {

@@ -22,9 +22,10 @@
 #include <string>
 #include <vector>
 
+#include <fmt/core.h>
 #include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
-
+#include "utils/enum_helper.h"
 namespace dsn {
 namespace ranger {
 
