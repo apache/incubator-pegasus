@@ -32,7 +32,6 @@ set(MY_PROJ_LIBS pegasus.rproxylib
                  event
                  s2
                  pegasus_client_static
-                 dsn_http
                  )
 
 set(MY_BINPLACES "config.ini")
