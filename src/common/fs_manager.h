@@ -74,7 +74,7 @@ public:
     uint64_t replicas_count() const;
     // Construct the replica dir for the given 'app_type' and 'pid'.
     // NOTE: Just construct the string, the directory will not be created.
-    std::string replica_dir(const char *app_type, const dsn::gpid &pid) const;
+    std::string replica_dir(dsn::string_view app_type, const dsn::gpid &pid) const;
     bool has(const dsn::gpid &pid) const;
     uint64_t remove(const dsn::gpid &pid);
     bool update_disk_stat(const bool update_disk_status);
@@ -96,15 +96,16 @@ public:
     dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
     // Find the replica instance directory.
-    dir_node *find_replica_dir(const char *app_type, gpid pid);
+    dir_node *find_replica_dir(dsn::string_view app_type, gpid pid);
     // Similar to the above, but it will create a new directory if not found.
-    dir_node *create_replica_dir_if_necessary(const char *app_type, gpid pid);
+    dir_node *create_replica_dir_if_necessary(dsn::string_view app_type, gpid pid);
     // Similar to the above, and will create a directory for the child on the same dir_node
     // of parent.
     // During partition split, we should guarantee child replica and parent replica share the
     // same data dir.
-    dir_node *
-    create_child_replica_dir(const char *app_type, gpid child_pid, const std::string &parent_dir);
+    dir_node *create_child_replica_dir(dsn::string_view app_type,
+                                       gpid child_pid,
+                                       const std::string &parent_dir);
     void remove_replica(const dsn::gpid &pid);
     bool for_each_dir_node(const std::function<bool(const dir_node &)> &func) const;
     void update_disk_stat(bool check_status_changed = true);

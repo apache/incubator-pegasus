@@ -87,7 +87,7 @@ uint64_t dir_node::replicas_count(app_id id) const
     return iter->second.size();
 }
 
-std::string dir_node::replica_dir(const char *app_type, const dsn::gpid &pid) const
+std::string dir_node::replica_dir(dsn::string_view app_type, const dsn::gpid &pid) const
 {
     return utils::filesystem::path_combine(full_dir, fmt::format("{}.{}", pid, app_type));
 }
@@ -395,7 +395,7 @@ bool fs_manager::is_dir_node_available(const std::string &data_dir, const std::s
     return false;
 }
 
-dir_node *fs_manager::find_replica_dir(const char *app_type, gpid pid)
+dir_node *fs_manager::find_replica_dir(dsn::string_view app_type, gpid pid)
 {
     std::string replica_dir;
     dir_node *replica_dn = nullptr;
@@ -415,10 +415,10 @@ dir_node *fs_manager::find_replica_dir(const char *app_type, gpid pid)
     return replica_dn;
 }
 
-dir_node *fs_manager::create_replica_dir_if_necessary(const char *app_type, gpid pid)
+dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type, gpid pid)
 {
     // Try to find the replica directory.
-    dir_node *replica_dn = find_replica_dir(app_type, pid);
+    auto replica_dn = find_replica_dir(app_type, pid);
     if (replica_dn != nullptr) {
         return replica_dn;
     }
@@ -439,7 +439,7 @@ dir_node *fs_manager::create_replica_dir_if_necessary(const char *app_type, gpid
     return replica_dn;
 }
 
-dir_node *fs_manager::create_child_replica_dir(const char *app_type,
+dir_node *fs_manager::create_child_replica_dir(dsn::string_view app_type,
                                                gpid child_pid,
                                                const std::string &parent_dir)
 {
