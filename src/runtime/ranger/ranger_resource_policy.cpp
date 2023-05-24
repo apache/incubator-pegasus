@@ -35,6 +35,7 @@ policy_check_status acl_policies::policies_check(const access_type &ac_type,
         return do_policies_check(
             check_type, ac_type, user_name, allow_policies, allow_policies_exclude);
     }
+    CHECK_EQ(check_type, policy_check_type::kDeny);
     return do_policies_check(check_type, ac_type, user_name, deny_policies, deny_policies_exclude);
 }
 
@@ -43,48 +44,41 @@ acl_policies::do_policies_check(const policy_check_type &check_type,
                                 const access_type &ac_type,
                                 const std::string &user_name,
                                 const std::vector<policy_item> &policies,
-                                const std::vector<policy_item> &policies_exclude) const
+                                const std::vector<policy_item> &exclude_policies) const
 {
     for (const auto &policy : policies) {
-        // 1.1. Not match a 'allow_policies/deny_policies'.
+        // 1. Doesn't match an allow_policies or a deny_policies.
         if (!policy.match(ac_type, user_name)) {
             continue;
         }
-        // 1.2. A policies has been matched.
-        bool in_policies_exclude = false;
-        // 1.3. In 'allow_policies_exclude/deny_policies_exclude'.
-        for (const auto &policy_exclude : policies_exclude) {
+        // 2. Matches a policy.
+        for (const auto &policy_exclude : exclude_policies) {
             if (policy_exclude.match(ac_type, user_name)) {
-                in_policies_exclude = true;
-                break;
+                // 2.1. Matches an allow/deny_policies_exclude.
+                return policy_check_status::kPending;
             }
         }
-        if (in_policies_exclude) {
-            // 1.5. In any 'policies_exclude'.
-            return policy_check_status::kPending;
+        // 2.2. Doesn't match any allow/deny_exclude_policies.
+        if (check_type == policy_check_type::kAllow) {
+            return policy_check_status::kAllowed;
         } else {
-            // 1.6. Not in any 'policies_exclude'.
-            if (check_type == policy_check_type::kAllow) {
-                return policy_check_status::kAllowed;
-            } else {
-                return policy_check_status::kDenied;
-            }
+            return policy_check_status::kDenied;
         }
     }
-    // 1.7. not match any policy.
+    // 3. Doesn't match any policy.
     return policy_check_status::kNotMatched;
 }
 
 bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
                                           const access_type &ac_type,
                                           const std::string &user_name,
-                                          bool is_need_match_database,
+                                          bool need_match_database,
                                           const std::string &database_name,
                                           const std::string &default_database_name)
 {
     // Check if it is denied by any policy in current resource.
     for (const auto &policy : policies) {
-        if (is_need_match_database) {
+        if (need_match_database) {
             // Lagacy table not match any database.
             if (database_name.empty() && policy.database_names.count("*") == 0 &&
                 policy.database_names.count(default_database_name) == 0) {
@@ -111,7 +105,7 @@ bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_poli
 
     // Check if it is allowed by any policy in current resource.
     for (const auto &policy : policies) {
-        if (is_need_match_database) {
+        if (need_match_database) {
             // Lagacy table not match any database.
             if (database_name.empty() && policy.database_names.count("*") == 0 &&
                 policy.database_names.count(default_database_name) == 0) {

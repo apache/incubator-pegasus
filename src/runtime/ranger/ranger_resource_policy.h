@@ -79,8 +79,8 @@ struct acl_policies
                               deny_policies,
                               deny_policies_exclude);
 
-    // Check if 'allow_policies' or 'deny_policies' allow or deny "user_name" access to resource by
-    // type "ac_type".
+    // Check if 'allow_policies' or 'deny_policies' allow or deny 'user_name' to access the resource
+    // by type 'ac_type'.
     policy_check_status policies_check(const access_type &ac_type,
                                        const std::string &user_name,
                                        const policy_check_type &check_type) const;
@@ -89,7 +89,7 @@ struct acl_policies
                                           const access_type &ac_type,
                                           const std::string &user_name,
                                           const std::vector<policy_item> &policies,
-                                          const std::vector<policy_item> &policies_exclude) const;
+                                          const std::vector<policy_item> &exclude_policies) const;
 };
 
 // A policy data structure definition of ranger resources
@@ -114,18 +114,19 @@ struct matched_database_table_policy
     DEFINE_JSON_SERIALIZATION(matched_database_name, matched_table_name, policies);
 };
 
-// Returns true if 'policies' allows "user_name" to access "database_name" via "rpc_code".
-// 'is_need_match_database' being true means that the 'policies' needs to be matched to the database
-// first, false means not
+// Returns true if 'policies' allows 'user_name' to access 'database_name' via 'ac_type'.
+// 'need_match_database' being true means that the 'policies' needs to be matched to the database
+// first, false means not.
+// If 'ac_type' is DATABASE access type, it needs to match database, if 'ac_type' is a GLOBAL access
+// type, it does not need to match.
 bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
                                           const access_type &ac_type,
                                           const std::string &user_name,
-                                          bool is_need_match_database,
+                                          bool need_match_database,
                                           const std::string &database_name,
                                           const std::string &default_database_name);
 
-// Return true if "policies" allow "user_name" access, this is used for DATABASE_TABLE resource
-// access
+// Return true if 'policies' allow 'user_name' to access, this is used for DATABASE_TABLE resource.
 bool check_ranger_database_table_policy_allowed(
     const std::vector<matched_database_table_policy> &policies,
     const access_type &ac_type,
