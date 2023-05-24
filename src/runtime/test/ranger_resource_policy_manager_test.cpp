@@ -444,7 +444,7 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
         std::string rpc_code;
         std::string user_name;
         std::string database_name;
-        bool expected_result;
+        access_control_result expected_result;
     } tests[] = {
         {"TASK_CODE_INVALID", "user1", "database1", access_control_result::kDenied},
         {"RPC_CM_CREATE_APP", "user1", "database1", access_control_result::kDenied},
