@@ -31,6 +31,7 @@
 #include "perf_counter/perf_counter_wrapper.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/string_view.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -90,7 +91,9 @@ public:
     void initialize(const std::vector<std::string> &data_dirs,
                     const std::vector<std::string> &data_dir_tags);
     // Try to find the best dir_node to place the new replica. The less replica count the
-    // dir_node has, the higher opportunity it will be selected.
+    // dir_node has, which means the load is lower generally, the higher opportunity it
+    // will be selected.
+    // TODO(yingchun): consider the disk capacity and available space.
     // NOTE: the 'pid' must not exist in any dir_nodes.
     dir_node *find_best_dir_for_new_replica(const dsn::gpid &pid) const;
     dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
