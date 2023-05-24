@@ -445,39 +445,40 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
         std::string user_name;
         std::string database_name;
         bool expected_result;
-    } tests[] = {{"TASK_CODE_INVALID", "user1", "database1", false},
-                 {"RPC_CM_CREATE_APP", "user1", "database1", false},
-                 {"RPC_CM_CREATE_APP", "user2", "database1", false},
-                 {"RPC_CM_LIST_APPS", "user1", "database1", true},
-                 {"RPC_CM_LIST_APPS", "user2", "database1", true},
-                 {"RPC_CM_GET_MAX_REPLICA_COUNT", "user1", "database1", true},
-                 {"RPC_CM_GET_MAX_REPLICA_COUNT", "user2", "database1", false},
-                 {"TASK_CODE_INVALID", "user3", "database2", false},
-                 {"RPC_CM_CREATE_APP", "user3", "database2", true},
-                 {"RPC_CM_CREATE_APP", "user4", "database2", true},
-                 {"RPC_CM_START_BACKUP_APP", "user3", "database2", true},
-                 {"RPC_CM_START_BACKUP_APP", "user4", "database2", false},
-                 {"TASK_CODE_INVALID", "user5", "", false},
-                 // Next two case matched to the default database policy and "*" database.
-                 {"RPC_CM_CREATE_APP", "user5", "", true},
-                 {"RPC_CM_CREATE_APP", "user6", "", true},
-                 // Next two case matched to the database policy named "*".
-                 {"RPC_CM_CREATE_APP", "user5", "any_database_name", true},
-                 {"RPC_CM_CREATE_APP", "user6", "any_database_name", false},
-                 {"RPC_CM_CREATE_APP", "user6", "database2", false},
-                 {"TASK_CODE_INVALID", "user7", "database3", false},
-                 {"RPC_CM_LIST_NODES", "user7", "database3", true},
-                 {"RPC_CM_LIST_NODES", "user8", "database3", false},
-                 // RPC_CM_LIST_APPS has been removed from global resources.
-                 {"RPC_CM_LIST_APPS", "user7", "database3", false},
-                 {"RPC_CM_LIST_APPS", "user8", "database3", false},
-                 {"TASK_CODE_INVALID", "user9", "database4", false},
-                 {"RPC_CM_LIST_NODES", "user9", "database4", false},
-                 {"RPC_CM_LIST_NODES", "user10", "database4", false},
-                 {"RPC_CM_LIST_APPS", "user9", "database4", false},
-                 {"RPC_CM_LIST_APPS", "user10", "database4", false},
-                 {"RPC_CM_CONTROL_META", "user9", "database4", true},
-                 {"RPC_CM_CONTROL_META", "user10", "database4", false}};
+    } tests[] = {
+        {"TASK_CODE_INVALID", "user1", "database1", access_control_result::kDenied},
+        {"RPC_CM_CREATE_APP", "user1", "database1", access_control_result::kDenied},
+        {"RPC_CM_CREATE_APP", "user2", "database1", access_control_result::kDenied},
+        {"RPC_CM_LIST_APPS", "user1", "database1", access_control_result::kAllowed},
+        {"RPC_CM_LIST_APPS", "user2", "database1", access_control_result::kAllowed},
+        {"RPC_CM_GET_MAX_REPLICA_COUNT", "user1", "database1", access_control_result::kAllowed},
+        {"RPC_CM_GET_MAX_REPLICA_COUNT", "user2", "database1", access_control_result::kDenied},
+        {"TASK_CODE_INVALID", "user3", "database2", access_control_result::kDenied},
+        {"RPC_CM_CREATE_APP", "user3", "database2", access_control_result::kAllowed},
+        {"RPC_CM_CREATE_APP", "user4", "database2", access_control_result::kAllowed},
+        {"RPC_CM_START_BACKUP_APP", "user3", "database2", access_control_result::kAllowed},
+        {"RPC_CM_START_BACKUP_APP", "user4", "database2", access_control_result::kDenied},
+        {"TASK_CODE_INVALID", "user5", "", access_control_result::kDenied},
+        // Next two case matched to the default database policy and "*" database.
+        {"RPC_CM_CREATE_APP", "user5", "", access_control_result::kAllowed},
+        {"RPC_CM_CREATE_APP", "user6", "", access_control_result::kAllowed},
+        // Next two case matched to the database policy named "*".
+        {"RPC_CM_CREATE_APP", "user5", "any_database_name", access_control_result::kAllowed},
+        {"RPC_CM_CREATE_APP", "user6", "any_database_name", access_control_result::kDenied},
+        {"RPC_CM_CREATE_APP", "user6", "database2", access_control_result::kDenied},
+        {"TASK_CODE_INVALID", "user7", "database3", access_control_result::kDenied},
+        {"RPC_CM_LIST_NODES", "user7", "database3", access_control_result::kAllowed},
+        {"RPC_CM_LIST_NODES", "user8", "database3", access_control_result::kDenied},
+        // RPC_CM_LIST_APPS has been removed from global resources.
+        {"RPC_CM_LIST_APPS", "user7", "database3", access_control_result::kDenied},
+        {"RPC_CM_LIST_APPS", "user8", "database3", access_control_result::kDenied},
+        {"TASK_CODE_INVALID", "user9", "database4", access_control_result::kDenied},
+        {"RPC_CM_LIST_NODES", "user9", "database4", access_control_result::kDenied},
+        {"RPC_CM_LIST_NODES", "user10", "database4", access_control_result::kDenied},
+        {"RPC_CM_LIST_APPS", "user9", "database4", access_control_result::kDenied},
+        {"RPC_CM_LIST_APPS", "user10", "database4", access_control_result::kDenied},
+        {"RPC_CM_CONTROL_META", "user9", "database4", access_control_result::kAllowed},
+        {"RPC_CM_CONTROL_META", "user10", "database4", access_control_result::kDenied}};
     for (const auto &test : tests) {
         auto code = task_code::try_get(test.rpc_code, TASK_CODE_INVALID);
         auto actual_result = allowed(code, test.user_name, test.database_name);

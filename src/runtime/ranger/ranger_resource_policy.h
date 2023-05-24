@@ -57,7 +57,7 @@ enum class policy_check_status
 
 enum class access_control_result
 {
-    kAllowed,
+    kAllowed = 0,
     kDenied
 };
 
