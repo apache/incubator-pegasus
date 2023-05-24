@@ -215,9 +215,9 @@ void ranger_resource_policy_manager::start()
                            std::chrono::milliseconds(1));
 }
 
-bool ranger_resource_policy_manager::allowed(const int rpc_code,
-                                             const std::string &user_name,
-                                             const std::string &database_name)
+access_control_result ranger_resource_policy_manager::allowed(const int rpc_code,
+                                                              const std::string &user_name,
+                                                              const std::string &database_name)
 {
     do {
         const auto &ac_type = _ac_type_of_global_rpcs.find(rpc_code);
@@ -250,7 +250,7 @@ bool ranger_resource_policy_manager::allowed(const int rpc_code,
     } while (false);
 
     // The check that does not match any resource returns false.
-    return false;
+    return access_control_result::kDenied;
 }
 
 void ranger_resource_policy_manager::parse_policies_from_json(const rapidjson::Value &data,

@@ -35,7 +35,7 @@ policy_check_status acl_policies::policies_check(const access_type &ac_type,
         return do_policies_check(
             check_type, ac_type, user_name, allow_policies, allow_policies_exclude);
     }
-    CHECK_EQ(check_type, policy_check_type::kDeny);
+    CHECK(check_type == policy_check_type::kDeny, "");
     return do_policies_check(check_type, ac_type, user_name, deny_policies, deny_policies_exclude);
 }
 
@@ -69,12 +69,13 @@ acl_policies::do_policies_check(const policy_check_type &check_type,
     return policy_check_status::kNotMatched;
 }
 
-bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
-                                          const access_type &ac_type,
-                                          const std::string &user_name,
-                                          bool need_match_database,
-                                          const std::string &database_name,
-                                          const std::string &default_database_name)
+access_control_result
+check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
+                                     const access_type &ac_type,
+                                     const std::string &user_name,
+                                     bool need_match_database,
+                                     const std::string &database_name,
+                                     const std::string &default_database_name)
 {
     // Check if it is denied by any policy in current resource.
     for (const auto &policy : policies) {
@@ -94,7 +95,7 @@ bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_poli
             policy.policies.policies_check(ac_type, user_name, policy_check_type::kDeny);
         // In a 'deny_policies' and not in any 'deny_policies_exclude'.
         if (policy_check_status::kDenied == check_status) {
-            return false;
+            return access_control_result::kDenied;
         }
         // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
         if (policy_check_status::kPending == check_status ||
@@ -121,7 +122,7 @@ bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_poli
             policy.policies.policies_check(ac_type, user_name, policy_check_type::kAllow);
         // In a 'allow_policies' and not in any 'allow_policies_exclude'.
         if (policy_check_status::kAllowed == check_status) {
-            return true;
+            return access_control_result::kAllowed;
         }
         // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
         if (policy_check_status::kPending == check_status ||
@@ -131,10 +132,10 @@ bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_poli
     }
 
     // The check that does not match any policy in current reosource returns false.
-    return false;
+    return access_control_result::kDenied;
 }
 
-bool check_ranger_database_table_policy_allowed(
+access_control_result check_ranger_database_table_policy_allowed(
     const std::vector<matched_database_table_policy> &policies,
     const access_type &ac_type,
     const std::string &user_name)
@@ -145,7 +146,7 @@ bool check_ranger_database_table_policy_allowed(
             policy.policies.policies_check(ac_type, user_name, policy_check_type::kDeny);
         // In a 'deny_policies' and not in any 'deny_policies_exclude'.
         if (policy_check_status::kDenied == check_status) {
-            return false;
+            return access_control_result::kDenied;
         }
         // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
         if (policy_check_status::kPending == check_status ||
@@ -160,7 +161,7 @@ bool check_ranger_database_table_policy_allowed(
             policy.policies.policies_check(ac_type, user_name, policy_check_type::kAllow);
         // In a 'allow_policies' and not in any 'allow_policies_exclude'.
         if (policy_check_status::kAllowed == check_status) {
-            return true;
+            return access_control_result::kAllowed;
         }
         // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
         if (policy_check_status::kPending == check_status ||
@@ -170,7 +171,7 @@ bool check_ranger_database_table_policy_allowed(
     }
 
     // The check that does not match any DATABASE_TABLE policy returns false.
-    return false;
+    return access_control_result::kDenied;
 }
 
 } // namespace ranger

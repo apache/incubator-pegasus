@@ -33,8 +33,13 @@ namespace ranger {
 enum class policy_check_type
 {
     kAllow = 0,
-    kDeny
+    kDeny,
+    kInvalid
 };
+ENUM_BEGIN(policy_check_type, policy_check_type::kInvalid)
+ENUM_REG(policy_check_type::kAllow)
+ENUM_REG(policy_check_type::kDeny)
+ENUM_END(policy_check_type)
 
 // The return status code when a policy('kAllow' or 'kDeny' policy_check_type) is checked.
 // kAllowed means in a 'allow_policies' and not in any 'allow_policies_exclude'.
@@ -48,6 +53,12 @@ enum class policy_check_status
     kDenied,
     kNotMatched,
     kPending
+};
+
+enum class access_control_result
+{
+    kAllowed,
+    kDenied
 };
 
 // Ranger policy data structure
@@ -114,20 +125,23 @@ struct matched_database_table_policy
     DEFINE_JSON_SERIALIZATION(matched_database_name, matched_table_name, policies);
 };
 
-// Returns true if 'policies' allows 'user_name' to access 'database_name' via 'ac_type'.
+// Returns 'access_control_result::kAllowed' if 'policies' allows 'user_name' to access
+// 'database_name' via 'ac_type', returns 'access_control_result::kDenied' means not.
 // 'need_match_database' being true means that the 'policies' needs to be matched to the database
 // first, false means not.
 // If 'ac_type' is DATABASE access type, it needs to match database, if 'ac_type' is a GLOBAL access
 // type, it does not need to match.
-bool check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
-                                          const access_type &ac_type,
-                                          const std::string &user_name,
-                                          bool need_match_database,
-                                          const std::string &database_name,
-                                          const std::string &default_database_name);
+access_control_result
+check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
+                                     const access_type &ac_type,
+                                     const std::string &user_name,
+                                     bool need_match_database,
+                                     const std::string &database_name,
+                                     const std::string &default_database_name);
 
-// Return true if 'policies' allow 'user_name' to access, this is used for DATABASE_TABLE resource.
-bool check_ranger_database_table_policy_allowed(
+// Return 'access_control_result::kAllowed' if 'policies' allow 'user_name' to access, this is used
+// for DATABASE_TABLE resource, returns 'access_control_result::kDenied' means not.
+access_control_result check_ranger_database_table_policy_allowed(
     const std::vector<matched_database_table_policy> &policies,
     const access_type &ac_type,
     const std::string &user_name);
