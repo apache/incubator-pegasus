@@ -55,6 +55,8 @@ public:
     METRIC_DEFINE_SET(avail_disk_capacity_mb, int64_t)
 
 private:
+    const std::string _tag;
+    const std::string _data_dir;
     const metric_entity_ptr _disk_metric_entity;
     METRIC_VAR_DECLARE_gauge_int64(total_disk_capacity_mb);
     METRIC_VAR_DECLARE_gauge_int64(avail_disk_capacity_mb);

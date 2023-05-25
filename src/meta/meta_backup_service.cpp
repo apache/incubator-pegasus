@@ -77,7 +77,8 @@ metric_entity_ptr instantiate_backup_policy_metric_entity(const std::string &pol
 } // anonymous namespace
 
 backup_policy_metrics::backup_policy_metrics(const std::string &policy_name)
-    : _backup_policy_metric_entity(instantiate_backup_policy_metric_entity(policy_name)),
+    : _policy_name(policy_name),
+      _backup_policy_metric_entity(instantiate_backup_policy_metric_entity(policy_name)),
       METRIC_VAR_INIT_backup_policy(backup_recent_duration_ms)
 {
 }
@@ -85,8 +86,9 @@ backup_policy_metrics::backup_policy_metrics(const std::string &policy_name)
 const metric_entity_ptr &backup_policy_metrics::backup_policy_metric_entity() const
 {
     CHECK_NOTNULL(_backup_policy_metric_entity,
-                  "backup_policy metric entity should has been instantiated: "
-                  "uninitialized entity cannot be used to instantiate metric");
+                  "backup_policy metric entity (policy_name={}) should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate metric",
+                  _policy_name);
     return _backup_policy_metric_entity;
 }
 

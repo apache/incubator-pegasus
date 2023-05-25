@@ -93,7 +93,9 @@ metric_entity_ptr instantiate_disk_metric_entity(const std::string &tag,
 } // anonymous namespace
 
 disk_capacity_metrics::disk_capacity_metrics(const std::string &tag, const std::string &data_dir)
-    : _disk_metric_entity(instantiate_disk_metric_entity(tag, data_dir)),
+    : _tag(tag),
+      _data_dir(data_dir),
+      _disk_metric_entity(instantiate_disk_metric_entity(tag, data_dir)),
       METRIC_VAR_INIT_disk(total_disk_capacity_mb),
       METRIC_VAR_INIT_disk(avail_disk_capacity_mb)
 {
@@ -102,9 +104,10 @@ disk_capacity_metrics::disk_capacity_metrics(const std::string &tag, const std::
 const metric_entity_ptr &disk_capacity_metrics::disk_metric_entity() const
 {
     CHECK_NOTNULL(_disk_metric_entity,
-                  "disk metric entity should has been instantiated: "
-                  "uninitialized entity cannot be used to instantiate "
-                  "metric");
+                  "disk metric entity (tag={}, data_dir={}) should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate metric",
+                  _tag,
+                  _data_dir);
     return _disk_metric_entity;
 }
 
