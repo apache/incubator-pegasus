@@ -187,6 +187,7 @@ public:
     METRIC_DEFINE_SET(backup_recent_duration_ms, int64_t)
 
 private:
+    const std::string _policy_name;
     const metric_entity_ptr _backup_policy_metric_entity;
     METRIC_VAR_DECLARE_gauge_int64(backup_recent_duration_ms);
 
