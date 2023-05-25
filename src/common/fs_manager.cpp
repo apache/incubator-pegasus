@@ -110,28 +110,29 @@ uint64_t dir_node::remove(const gpid &pid)
     return iter->second.erase(pid);
 }
 
-bool dir_node::update_disk_stat(const bool update_disk_status)
+void dir_node::update_disk_stat()
 {
-    FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) { return false; });
-    dsn::utils::filesystem::disk_space_info info;
-    if (!dsn::utils::filesystem::get_disk_space_info(full_dir, info)) {
-        LOG_ERROR("update disk space failed: dir = {}", full_dir);
-        return false;
+    FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) { return; });
+
+    // Get disk space info.
+    dsn::utils::filesystem::disk_space_info dsi;
+    if (!dsn::utils::filesystem::get_disk_space_info(full_dir, dsi)) {
+        // TODO(yingchun): it may encounter some IO errors when get_disk_space_info() failed, deal
+        //  with it.
+        LOG_ERROR("update disk space failed, dir = {}", full_dir);
+        return;
     }
-    // update disk space info
-    disk_capacity_mb = info.capacity / 1024 / 1024;
-    disk_available_mb = info.available / 1024 / 1024;
+
+    // Update in-memory disk space info.
+    disk_capacity_mb = dsi.capacity >> 20;
+    disk_available_mb = dsi.available >> 20;
     disk_available_ratio = static_cast<int>(
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
-    if (!update_disk_status) {
-        LOG_INFO("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
-                 "available_ratio = {}%",
-                 full_dir,
-                 disk_capacity_mb,
-                 disk_available_mb,
-                 disk_available_ratio);
-        return false;
+    // Update status.
+    // If the disk is already in IO_ERROR status, it will not change to other status.
+    if (status == disk_status::IO_ERROR) {
+        return;
     }
     auto old_status = status;
     auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
@@ -147,7 +148,6 @@ bool dir_node::update_disk_stat(const bool update_disk_status)
              disk_available_mb,
              disk_available_ratio,
              enum_to_string(status));
-    return (old_status != new_status);
 }
 
 fs_manager::fs_manager()
@@ -341,17 +341,16 @@ bool fs_manager::for_each_dir_node(const std::function<bool(const dir_node &)> &
     return true;
 }
 
-void fs_manager::update_disk_stat(bool check_status_changed)
+void fs_manager::update_disk_stat()
 {
+    zauto_read_lock l(_lock);
     reset_disk_stat();
-    for (auto &dir_node : _dir_nodes) {
-        if (dir_node->update_disk_stat(check_status_changed)) {
-            _status_updated_dir_nodes.emplace_back(dir_node);
-        }
-        _total_capacity_mb += dir_node->disk_capacity_mb;
-        _total_available_mb += dir_node->disk_available_mb;
-        _min_available_ratio = std::min(dir_node->disk_available_ratio, _min_available_ratio);
-        _max_available_ratio = std::max(dir_node->disk_available_ratio, _max_available_ratio);
+    for (auto &dn : _dir_nodes) {
+        dn->update_disk_stat();
+        _total_capacity_mb += dn->disk_capacity_mb;
+        _total_available_mb += dn->disk_available_mb;
+        _min_available_ratio = std::min(dn->disk_available_ratio, _min_available_ratio);
+        _max_available_ratio = std::max(dn->disk_available_ratio, _max_available_ratio);
     }
     _total_available_ratio = static_cast<int>(
         _total_capacity_mb == 0 ? 0 : std::round(_total_available_mb * 100.0 / _total_capacity_mb));

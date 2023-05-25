@@ -71,10 +71,6 @@ public:
 
     ~replica_disk_test_base() { fail::teardown(); }
 
-    void update_disk_replica() { stub->on_disk_stat(); }
-
-    void update_disks_status() { stub->update_disks_status(); }
-
     void generate_mock_dir_node(const app_info &app,
                                 const gpid pid,
                                 const std::string &tag,
@@ -106,10 +102,8 @@ public:
                 update_replica_disk_status(pid, old_status);
             }
         }
-        stub->_fs_manager._status_updated_dir_nodes.clear();
         if (old_status != new_status) {
             node->status = new_status;
-            stub->_fs_manager._status_updated_dir_nodes.emplace_back(node);
         }
     }
 
@@ -230,7 +224,6 @@ private:
         if (replica == nullptr) {
             return;
         }
-        replica->set_disk_status(status);
     }
 };
 

@@ -247,7 +247,6 @@ TEST_F(replica_disk_test, disk_status_test)
     for (const auto &test : tests) {
         auto node = stub->get_fs_manager()->get_dir_nodes()[node_index];
         mock_node_status(node_index, test.old_status, test.new_status);
-        update_disks_status();
         for (auto &kv : node->holding_replicas) {
             for (auto &pid : kv.second) {
                 bool flag;
