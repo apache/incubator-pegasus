@@ -111,7 +111,7 @@ public:
                                        const std::string &parent_dir);
     void remove_replica(const dsn::gpid &pid);
     bool for_each_dir_node(const std::function<bool(const dir_node &)> &func) const;
-    void update_disk_stat(bool check_status_changed = true);
+    void update_disk_stat();
 
     void add_new_dir_node(const std::string &data_dir, const std::string &tag);
     const std::vector<std::shared_ptr<dir_node>> &get_dir_nodes() const

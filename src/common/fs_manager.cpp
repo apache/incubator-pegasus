@@ -130,10 +130,6 @@ void dir_node::update_disk_stat()
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
     // Update status.
-    // If the disk is already in IO_ERROR status, it will not change to other status.
-    if (status == disk_status::IO_ERROR) {
-        return;
-    }
     auto old_status = status;
     auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
                           ? disk_status::SPACE_INSUFFICIENT
