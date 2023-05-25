@@ -171,8 +171,9 @@ class error_code;
 #define METRIC_VAR_INIT_table(name, ...) METRIC_VAR_INIT(name, table, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_partition(name, ...) METRIC_VAR_INIT(name, partition, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_backup_policy(name, ...) METRIC_VAR_INIT(name, backup_policy, ##__VA_ARGS__)
+#define METRIC_VAR_INIT_queue(name, ...) METRIC_VAR_INIT(name, queue, ##__VA_ARGS__)
 
-// Perform increment-related operations on gauges and counters.
+// Perform increment_by() operations on gauges and counters.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
     do {                                                                                           \
         const auto v = (x);                                                                        \
@@ -183,6 +184,15 @@ class error_code;
 
 // Perform increment() operations on gauges and counters.
 #define METRIC_VAR_INCREMENT(name) METRIC_VAR_NAME(name)->increment()
+
+// Perform decrement_by() operations on gauges.
+#define METRIC_VAR_DECREMENT_BY(name, x)                                                           \
+    do {                                                                                           \
+        const auto v = (x);                                                                        \
+        if (v != 0) {                                                                              \
+            METRIC_VAR_NAME(name)->decrement_by(v);                                                \
+        }                                                                                          \
+    } while (0)
 
 // Perform decrement() operations on gauges.
 #define METRIC_VAR_DECREMENT(name) METRIC_VAR_NAME(name)->decrement()
