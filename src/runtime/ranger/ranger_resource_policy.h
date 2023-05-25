@@ -132,6 +132,58 @@ struct matched_database_table_policy
 // first, false means not.
 // If 'ac_type' is DATABASE access type, it needs to match database, if 'ac_type' is a GLOBAL access
 // type, it does not need to match.
+/*
+                *** Ranger Policy Evaluation Flow ***
+
+                    +-----------------+
+                     \ Resource access \
+                      \    request      \
+                       +-------+---------+
+                               |
+                         +-----v-------+
+                        /               \
+                       /     Has a       \
+         +-----N------+  resource policy  <----------------N-----------------+
+         |             \  been matched ? /                                   |
+         |              \               /                                    |
+         |               +-----+-------+                                     |
+         |                     |                                             |
+         |                     Y                                             |
+         |                     |                                             |
+         |               +-----v-------+                  +-------------+    |
+         |              /               \                /               \   |
+         |             /    Has more     \              /   Has more      \  |
+         |      +----->   policies with   +---N--+---->+  policies with    +-+
+         |      |      \ Deny Condition? /       |      \ Allow Condition?/
+         |      |       \               /        |       \               /
+         |      |        +------+------+         |        +------+------+
+         |      |               |                |               |
+         |      |               Y                |               Y
+         |      |               |                |               |
+         |      |        +------v------+         |        +------v------+
+         |      |       /    Request    \        |       /    Request    \
+         |      |      / matches a deny  \       |      /matches an allow \
+         |      +--N--+ condition in the  +      +--N--+ condition in the  +
+         |      |      \     policy?     /       |       \    policy?     /
+         |      |       \               /        |        \              /
+         |      |        +------+------+         |         +-----+------+
+         |      |               |                |               |
+         |      |               Y                |               Y
+         |      |               |                |               |
+         |      |        +------v------+         |        +------v------+
+         |      |       /    Request    \        |       /    Request    \
+         |      |      /  matches a deny \       |      / matches an allow\
+         |      +--Y--+   exclude in the  +      +--Y--+   exclude in the  +
+         |             \      policy?    /             \      policy?     /
+         |              \               /               \                /
+         |               +------+------+                 +------+-------+
+         |                      |                                |
+         |                      N                                N
+         |                      |                                |
+  +------v-----+         +------v------+                  +------v------+
+  |     DENY   |         |    DENY     |                  |    ALLOW    |
+  +------------+         +-------------+                  +-------------+
+*/
 access_control_result
 check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
                                      const access_type &ac_type,
