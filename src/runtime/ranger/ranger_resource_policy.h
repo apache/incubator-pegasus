@@ -164,9 +164,9 @@ struct matched_database_table_policy
          |      |       /    Request    \        |       /    Request    \
          |      |      / matches a deny  \       |      /matches an allow \
          |      +--N--+ condition in the  +      +--N--+ condition in the  +
-         |      |      \     policy?     /       |       \    policy?     /
-         |      |       \               /        |        \              /
-         |      |        +------+------+         |         +-----+------+
+         |      |      \     policy?     /       |      \    policy?      /
+         |      |       \               /        |       \               /
+         |      |        +------+------+         |        +------+------+
          |      |               |                |               |
          |      |               Y                |               Y
          |      |               |                |               |
@@ -174,9 +174,9 @@ struct matched_database_table_policy
          |      |       /    Request    \        |       /    Request    \
          |      |      /  matches a deny \       |      / matches an allow\
          |      +--Y--+   exclude in the  +      +--Y--+   exclude in the  +
-         |             \      policy?    /             \      policy?     /
-         |              \               /               \                /
-         |               +------+------+                 +------+-------+
+         |             \      policy?    /              \      policy?    /
+         |              \               /                \               /
+         |               +------+------+                  +------+------+
          |                      |                                |
          |                      N                                N
          |                      |                                |
