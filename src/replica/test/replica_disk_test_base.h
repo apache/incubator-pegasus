@@ -93,9 +93,9 @@ public:
         }
     }
 
-    void mock_node_status(const std::shared_ptr<dir_node> &dn,
-                          disk_status::type old_status,
-                          disk_status::type new_status)
+    void update_node_status(const std::shared_ptr<dir_node> &dn,
+                            disk_status::type old_status,
+                            disk_status::type new_status)
     {
         for (const auto &pids_of_app : dn->holding_replicas) {
             for (const auto &pid : pids_of_app.second) {

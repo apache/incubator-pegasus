@@ -245,7 +245,7 @@ TEST_F(replica_disk_test, disk_status_test)
               {disk_status::SPACE_INSUFFICIENT, disk_status::NORMAL}};
     auto dn = stub->get_fs_manager()->get_dir_nodes()[0];
     for (const auto &test : tests) {
-        mock_node_status(dn, test.old_status, test.new_status);
+        update_node_status(dn, test.old_status, test.new_status);
         for (const auto &pids_of_app : dn->holding_replicas) {
             for (const auto &pid : pids_of_app.second) {
                 replica_ptr rep = stub->get_replica(pid);
@@ -254,7 +254,7 @@ TEST_F(replica_disk_test, disk_status_test)
             }
         }
     }
-    mock_node_status(dn, disk_status::NORMAL, disk_status::NORMAL);
+    update_node_status(dn, disk_status::NORMAL, disk_status::NORMAL);
 }
 
 TEST_F(replica_disk_test, add_new_disk_test)
