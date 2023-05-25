@@ -38,6 +38,7 @@ set(MY_BINPLACES "")
 
 if (APPLE)
     dsn_add_static_library()
+    target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_http)
 else()
     dsn_add_shared_library()
 endif()

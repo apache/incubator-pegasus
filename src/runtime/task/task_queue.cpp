@@ -26,12 +26,10 @@
 
 #include "task_queue.h"
 
-#include <stdio.h>
-
+#include "fmt/core.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_engine.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/service_engine.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"
 #include "task_engine.h"
@@ -39,35 +37,51 @@
 #include "utils/error_code.h"
 #include "utils/exp_delay.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_view.h"
 #include "utils/threadpool_spec.h"
+
+METRIC_DEFINE_entity(queue);
+
+METRIC_DEFINE_gauge_int64(queue,
+                          queue_length,
+                          dsn::metric_unit::kTasks,
+                          "The length of task queue");
+
+METRIC_DEFINE_counter(queue,
+                      queue_delayed_tasks,
+                      dsn::metric_unit::kTasks,
+                      "The accumulative number of delayed tasks by throttling before enqueue");
+
+METRIC_DEFINE_counter(queue,
+                      queue_rejected_tasks,
+                      dsn::metric_unit::kTasks,
+                      "The accumulative number of rejeced tasks by throttling before enqueue");
 
 namespace dsn {
 
-task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)
-    : _pool(pool), _queue_length(0)
+namespace {
+
+metric_entity_ptr instantiate_queue_metric_entity(const std::string &queue_name)
 {
-    char num[30];
-    sprintf(num, "%u", index);
-    _index = index;
-    _name = pool->spec().name + '.';
-    _name.append(num);
-    _queue_length_counter.init_global_counter(_pool->node()->full_name(),
-                                              "engine",
-                                              (_name + ".queue.length").c_str(),
-                                              COUNTER_TYPE_NUMBER,
-                                              "task queue length");
-    _delay_task_counter.init_global_counter(_pool->node()->full_name(),
-                                            "engine",
-                                            (_name + ".queue.delay_task").c_str(),
-                                            COUNTER_TYPE_VOLATILE_NUMBER,
-                                            "delay count of tasks before enqueue");
-    _reject_task_counter.init_global_counter(_pool->node()->full_name(),
-                                             "engine",
-                                             (_name + ".queue.reject_task").c_str(),
-                                             COUNTER_TYPE_VOLATILE_NUMBER,
-                                             "reject count of tasks before enqueue");
-    _virtual_queue_length = 0;
-    _spec = (threadpool_spec *)&pool->spec();
+    auto entity_id = fmt::format("queue_{}", queue_name);
+
+    return METRIC_ENTITY_queue.instantiate(entity_id, {{"queue_name", queue_name}});
+}
+
+} // anonymous namespace
+
+task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)
+    : _pool(pool),
+      _name(fmt::format("{}.{}", pool->spec().name, index)),
+      _index(index),
+      _queue_length(0),
+      _spec(const_cast<threadpool_spec *>(&pool->spec())),
+      _virtual_queue_length(0),
+      _queue_metric_entity(instantiate_queue_metric_entity(_name)),
+      METRIC_VAR_INIT_queue(queue_length),
+      METRIC_VAR_INIT_queue(queue_delayed_tasks),
+      METRIC_VAR_INIT_queue(queue_rejected_tasks)
+{
 }
 
 task_queue::~task_queue() = default;
@@ -94,7 +108,7 @@ void task_queue::enqueue_internal(task *task)
             if (delay_ms > 0) {
                 auto rtask = static_cast<rpc_request_task *>(task);
                 if (rtask->get_request()->io_session->delay_recv(delay_ms)) {
-                    _delay_task_counter->increment();
+                    METRIC_VAR_INCREMENT(queue_delayed_tasks);
                 }
             }
         } else {
@@ -104,7 +118,7 @@ void task_queue::enqueue_internal(task *task)
                 auto rtask = static_cast<rpc_request_task *>(task);
                 auto resp = rtask->get_request()->create_response();
                 task::get_current_rpc()->reply(resp, ERR_BUSY);
-                _reject_task_counter->increment();
+                METRIC_VAR_INCREMENT(queue_rejected_tasks);
                 task->release_ref(); // added in task::enqueue(pool)
                 return;
             }
@@ -114,4 +128,14 @@ void task_queue::enqueue_internal(task *task)
     tls_dsn.last_worker_queue_size = increase_count();
     enqueue(task);
 }
+
+const metric_entity_ptr &task_queue::queue_metric_entity() const
+{
+    CHECK_NOTNULL(_queue_metric_entity,
+                  "queue metric entity (queue_name={}) should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate metric",
+                  _name);
+    return _queue_metric_entity;
+}
+
 } // namespace dsn

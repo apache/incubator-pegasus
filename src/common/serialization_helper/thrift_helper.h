@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
 #include "runtime/rpc/rpc_stream.h"
 
 #include <thrift/Thrift.h>
