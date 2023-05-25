@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,8 @@
 
 namespace dsn {
 namespace replication {
+struct dir_node;
+
 DSN_DECLARE_uint64(gc_disk_error_replica_interval_seconds);
 DSN_DECLARE_uint64(gc_disk_garbage_replica_interval_seconds);
 DSN_DECLARE_uint64(gc_disk_migration_tmp_replica_interval_seconds);
@@ -49,7 +52,7 @@ struct disk_cleaning_report
 };
 
 // Removes the useless data from data directories.
-extern error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
+extern error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &dir_nodes,
                                         /*output*/ disk_cleaning_report &report);
 
 inline bool is_data_dir_removable(const std::string &dir)

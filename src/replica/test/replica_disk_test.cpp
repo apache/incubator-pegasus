@@ -215,9 +215,8 @@ TEST_F(replica_disk_test, gc_disk_useless_dir)
 
     sleep(5);
 
-    std::vector<std::string> data_dirs{"./"};
     disk_cleaning_report report{};
-    dsn::replication::disk_remove_useless_dirs(data_dirs, report);
+    dsn::replication::disk_remove_useless_dirs({std::make_shared<dir_node>("test", "./")}, report);
 
     for (const auto &test : tests) {
         if (!dsn::replication::is_data_dir_removable(test)) {
@@ -246,7 +245,7 @@ TEST_F(replica_disk_test, disk_status_test)
               {disk_status::SPACE_INSUFFICIENT, disk_status::SPACE_INSUFFICIENT},
               {disk_status::SPACE_INSUFFICIENT, disk_status::NORMAL}};
     for (const auto &test : tests) {
-        auto node = get_dir_nodes()[node_index];
+        auto node = stub->get_fs_manager()->get_dir_nodes()[node_index];
         mock_node_status(node_index, test.old_status, test.new_status);
         update_disks_status();
         for (auto &kv : node->holding_replicas) {
@@ -258,24 +257,6 @@ TEST_F(replica_disk_test, disk_status_test)
         }
     }
     mock_node_status(node_index, disk_status::NORMAL, disk_status::NORMAL);
-}
-
-TEST_F(replica_disk_test, broken_disk_test)
-{
-    // Test cases:
-    // create: true, check_rw: true
-    // create: true, check_rw: false
-    // create: false
-    struct broken_disk_test
-    {
-        std::string mock_create_dir;
-        std::string mock_rw_flag;
-        int32_t data_dir_size;
-    } tests[]{{"true", "true", 3}, {"true", "false", 2}, {"false", "false", 2}};
-    for (const auto &test : tests) {
-        ASSERT_EQ(test.data_dir_size,
-                  ignore_broken_disk_test(test.mock_create_dir, test.mock_rw_flag));
-    }
 }
 
 TEST_F(replica_disk_test, add_new_disk_test)

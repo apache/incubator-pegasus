@@ -16,6 +16,7 @@
 // under the License.
 
 #include <boost/filesystem/path.hpp>
+#include <boost/system/error_code.hpp>
 #include <fcntl.h>
 #include <fmt/core.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
@@ -319,15 +320,21 @@ TEST_F(load_from_private_log_test, handle_real_private_log)
     };
 
     for (auto tt : tests) {
-        boost::filesystem::path file(tt.fname);
-        boost::filesystem::copy_file(
-            file, _log_dir + "/log.1.0", boost::filesystem::copy_option::overwrite_if_exists);
-
         // reset replica to specified gpid
         duplicator.reset(nullptr);
-        _replica = create_mock_replica(
-            stub.get(), tt.id.get_app_id(), tt.id.get_partition_index(), _log_dir.c_str());
+        _replica = create_mock_replica(stub.get(), tt.id.get_app_id(), tt.id.get_partition_index());
 
+        // Update '_log_dir' to the corresponding replica created above.
+        _log_dir = _replica->dir();
+
+        // Copy the log file to '_log_dir'
+        boost::filesystem::path file(tt.fname);
+        boost::system::error_code ec;
+        boost::filesystem::copy_file(
+            file, _log_dir + "/log.1.0", boost::filesystem::copy_option::overwrite_if_exists, ec);
+        ASSERT_TRUE(!ec);
+
+        // Start to verify.
         load_and_wait_all_entries_loaded(tt.puts, tt.total, tt.id, 1, 0);
     }
 }

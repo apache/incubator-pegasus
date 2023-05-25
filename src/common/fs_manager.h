@@ -31,6 +31,7 @@
 #include "perf_counter/perf_counter_wrapper.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/string_view.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -72,6 +73,9 @@ public:
     // and protected by the lock in fs_manager.
     uint64_t replicas_count(app_id id) const;
     uint64_t replicas_count() const;
+    // Construct the replica dir for the given 'app_type' and 'pid'.
+    // NOTE: Just construct the string, the directory will not be created.
+    std::string replica_dir(dsn::string_view app_type, const dsn::gpid &pid) const;
     bool has(const dsn::gpid &pid) const;
     uint64_t remove(const dsn::gpid &pid);
     bool update_disk_stat(const bool update_disk_status);
@@ -86,23 +90,36 @@ public:
     // NOTE: 'data_dirs' and 'data_dir_tags' must have the same size and in the same order.
     void initialize(const std::vector<std::string> &data_dirs,
                     const std::vector<std::string> &data_dir_tags);
-
+    // Try to find the best dir_node to place the new replica. The less replica count the
+    // dir_node has, which means the load is lower generally, the higher opportunity it
+    // will be selected.
+    // TODO(yingchun): consider the disk capacity and available space.
+    // NOTE: the 'pid' must not exist in any dir_nodes.
+    dir_node *find_best_dir_for_new_replica(const dsn::gpid &pid) const;
     dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
-    void allocate_dir(const dsn::gpid &pid,
-                      const std::string &type,
-                      /*out*/ std::string &dir);
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
+    // Find the replica instance directory.
+    dir_node *find_replica_dir(dsn::string_view app_type, gpid pid);
+    // Similar to the above, but it will create a new directory if not found.
+    dir_node *create_replica_dir_if_necessary(dsn::string_view app_type, gpid pid);
+    // Similar to the above, and will create a directory for the child on the same dir_node
+    // of parent.
+    // During partition split, we should guarantee child replica and parent replica share the
+    // same data dir.
+    dir_node *create_child_replica_dir(dsn::string_view app_type,
+                                       gpid child_pid,
+                                       const std::string &parent_dir);
     void remove_replica(const dsn::gpid &pid);
     bool for_each_dir_node(const std::function<bool(const dir_node &)> &func) const;
     void update_disk_stat(bool check_status_changed = true);
 
     void add_new_dir_node(const std::string &data_dir, const std::string &tag);
-    bool is_dir_node_available(const std::string &data_dir, const std::string &tag) const;
-    const std::vector<std::string> &get_available_data_dirs() const
+    const std::vector<std::shared_ptr<dir_node>> &get_dir_nodes() const
     {
         zauto_read_lock l(_lock);
-        return _available_data_dirs;
+        return _dir_nodes;
     }
+    bool is_dir_node_available(const std::string &data_dir, const std::string &tag) const;
 
 private:
     void reset_disk_stat()
@@ -128,7 +145,6 @@ private:
     int _max_available_ratio = 0;
 
     std::vector<std::shared_ptr<dir_node>> _dir_nodes;
-    std::vector<std::string> _available_data_dirs;
 
     // Used for disk available space check
     // disk status will be updated periodically, this vector record nodes whose disk_status changed
@@ -147,7 +163,9 @@ private:
     friend class replica_disk_migrator;
     friend class replica_disk_test_base;
     friend class open_replica_test;
+    FRIEND_TEST(fs_manager, find_best_dir_for_new_replica);
     FRIEND_TEST(fs_manager, get_dir_node);
+    FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_test, test_auto_trash);
 };
 } // replication
