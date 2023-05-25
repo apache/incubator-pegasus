@@ -553,9 +553,13 @@ jobs:
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc
           ccache -s
       - name: Pack Server
-        run: ./run.sh pack_server -j
+        run: |
+          ./run.sh pack_server -j
+          rm -rf pegasus-server-*
       - name: Pack Tools
-        run: ./run.sh pack_tools -j
+        run:
+          ./run.sh pack_tools -j
+          rm -rf pegasus-tools-*
       - name: Tar files
         run: |
           mv thirdparty/hadoop-bin ./
