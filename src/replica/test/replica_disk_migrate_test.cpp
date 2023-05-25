@@ -375,16 +375,14 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_open)
     request.target_disk = "tag_empty_1";
 
     // Remove the gpid 1.4 dir which is created in constructor.
-    const std::string kReplicaOriginDir =
-        fmt::format("./{}/{}.replica", request.origin_disk, request.pid.to_string());
+    const auto kReplicaOriginDir = fmt::format("./{}/{}.replica", request.origin_disk, request.pid);
     utils::filesystem::remove_path(kReplicaOriginDir);
     stub->get_fs_manager()->remove_replica(test_pid);
 
     // Create the related dirs.
-    const std::string kReplicaOriginSuffixDir = fmt::format(
-        "./{}/{}.replica.disk.migrate.ori/", request.origin_disk, request.pid.to_string());
-    const std::string kReplicaNewDir =
-        fmt::format("./{}/{}.replica/", request.target_disk, request.pid.to_string());
+    const auto kReplicaOriginSuffixDir =
+        fmt::format("./{}/{}.replica.disk.migrate.ori/", request.origin_disk, request.pid);
+    const auto kReplicaNewDir = fmt::format("./{}/{}.replica/", request.target_disk, request.pid);
     utils::filesystem::create_directory(kReplicaOriginSuffixDir);
     utils::filesystem::create_directory(kReplicaNewDir);
 
@@ -394,8 +392,8 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_open)
     open_replica(app_info_1, request.pid);
 
     // Check it works as expected.
-    const std::string kReplicaGarDir =
-        fmt::format("./{}/{}.replica.gar", request.target_disk, request.pid.to_string());
+    const auto kReplicaGarDir =
+        fmt::format("./{}/{}.replica.gar", request.target_disk, request.pid);
     ASSERT_TRUE(utils::filesystem::directory_exists(kReplicaOriginDir));
     ASSERT_TRUE(utils::filesystem::directory_exists(kReplicaGarDir));
 

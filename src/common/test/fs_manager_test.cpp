@@ -134,11 +134,11 @@ TEST(fs_manager, find_replica_dir)
     }
 
     ASSERT_EQ(nullptr, fm.find_replica_dir(app_type, test_pid));
-    dir_node *dn = fm.create_replica_dir_if_necessary(app_type, test_pid);
+    auto dn = fm.create_replica_dir_if_necessary(app_type, test_pid);
     ASSERT_NE(nullptr, dn);
     const auto dir = dn->replica_dir(app_type, test_pid);
     ASSERT_TRUE(directory_exists(dir));
-    dir_node *dn1 = fm.find_replica_dir(app_type, test_pid);
+    auto dn1 = fm.find_replica_dir(app_type, test_pid);
     ASSERT_EQ(dn, dn1);
 }
 
@@ -172,7 +172,7 @@ TEST(fs_manager, create_child_replica_dir)
     ASSERT_NE(nullptr, dn);
     const auto dir = dn->replica_dir(app_type, test_pid);
 
-    dir_node *child_dn = fm.create_child_replica_dir(app_type, test_child_pid, dir);
+    auto child_dn = fm.create_child_replica_dir(app_type, test_child_pid, dir);
     ASSERT_EQ(dn, child_dn);
     const auto child_dir = child_dn->replica_dir(app_type, test_child_pid);
     ASSERT_TRUE(directory_exists(child_dir));
@@ -196,7 +196,7 @@ TEST(fs_manager, find_best_dir_for_new_replica)
     fm._dir_nodes = {dn1, dn2, dn3};
 
     gpid pid_1_5(1, 5);
-    dir_node *dn = fm.find_best_dir_for_new_replica(pid_1_5);
+    auto dn = fm.find_best_dir_for_new_replica(pid_1_5);
     ASSERT_EQ(dn3.get(), dn);
     dn->holding_replicas[pid_1_5.get_app_id()].emplace(pid_1_5);
 

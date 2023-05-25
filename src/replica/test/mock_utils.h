@@ -239,10 +239,10 @@ create_mock_replica(replica_stub *stub, int appid = 1, int partition_index = 1)
     app_info.app_type = "replica";
     app_info.app_name = "temp";
 
-    dir_node *dn =
-        stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type.c_str(), gpid);
+    const auto *const dn =
+        stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, gpid);
     CHECK_NOTNULL(dn, "");
-    const auto replica_path = dn->replica_dir(app_info.app_type.c_str(), gpid);
+    const auto replica_path = dn->replica_dir(app_info.app_type, gpid);
     CHECK(
         dsn::utils::filesystem::directory_exists(replica_path), "dir({}) not exist", replica_path);
     return std::make_unique<mock_replica>(stub, gpid, app_info, replica_path.c_str());
@@ -317,9 +317,9 @@ public:
         config.pid = pid;
         config.status = status;
 
-        auto dn = _fs_manager.create_replica_dir_if_necessary(info.app_type.c_str(), pid);
+        auto dn = _fs_manager.create_replica_dir_if_necessary(info.app_type, pid);
         CHECK_NOTNULL(dn, "");
-        const auto &dir = dn->replica_dir(info.app_type.c_str(), pid);
+        const auto &dir = dn->replica_dir(info.app_type, pid);
         CHECK(dsn::utils::filesystem::directory_exists(dir), "dir({}) not exist", dir);
         auto *rep =
             new mock_replica(this, pid, info, dir.c_str(), need_restore, is_duplication_follower);

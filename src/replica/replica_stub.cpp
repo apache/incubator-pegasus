@@ -1749,14 +1749,14 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
     }
     _fs_manager.remove_replica(id);
 
-    const auto dn = _fs_manager.find_replica_dir(closed_info.first.app_type.c_str(), id);
+    const auto *const dn = _fs_manager.find_replica_dir(closed_info.first.app_type, id);
     if (dn == nullptr) {
         LOG_WARNING(
             "gc closed replica({}.{}) failed, no exist data", id, closed_info.first.app_type);
         return;
     }
 
-    const auto replica_path = dn->replica_dir(closed_info.first.app_type.c_str(), id);
+    const auto replica_path = dn->replica_dir(closed_info.first.app_type, id);
     CHECK(
         dsn::utils::filesystem::directory_exists(replica_path), "dir({}) not exist", replica_path);
     LOG_INFO("start to move replica({}) as garbage, path: {}", id, replica_path);
@@ -2071,9 +2071,9 @@ void replica_stub::open_replica(
 {
     replica_ptr rep;
     std::string dir;
-    auto dn = _fs_manager.find_replica_dir(app.app_type.c_str(), id);
+    auto dn = _fs_manager.find_replica_dir(app.app_type, id);
     if (dn != nullptr) {
-        dir = dn->replica_dir(app.app_type.c_str(), id);
+        dir = dn->replica_dir(app.app_type, id);
         CHECK(dsn::utils::filesystem::directory_exists(dir), "dir({}) not exist", dir);
         // NOTICE: if partition is DDD, and meta select one replica as primary, it will execute the
         // load-process because of a.b.pegasus is exist, so it will never execute the restore
@@ -2090,9 +2090,9 @@ void replica_stub::open_replica(
         if (rep == nullptr) {
             const auto origin_dir_type =
                 fmt::format("{}{}", app.app_type, replica_disk_migrator::kReplicaDirOriginSuffix);
-            const auto origin_dn = _fs_manager.find_replica_dir(origin_dir_type.c_str(), id);
+            const auto origin_dn = _fs_manager.find_replica_dir(origin_dir_type, id);
             if (origin_dn != nullptr) {
-                const auto origin_tmp_dir = origin_dn->replica_dir(origin_dir_type.c_str(), id);
+                const auto origin_tmp_dir = origin_dn->replica_dir(origin_dir_type, id);
                 CHECK(dsn::utils::filesystem::directory_exists(origin_tmp_dir),
                       "dir({}) not exist",
                       origin_tmp_dir);
@@ -2211,15 +2211,15 @@ replica *replica_stub::new_replica(gpid gpid,
 {
     dir_node *dn = nullptr;
     if (parent_dir.empty()) {
-        dn = _fs_manager.create_replica_dir_if_necessary(app.app_type.c_str(), gpid);
+        dn = _fs_manager.create_replica_dir_if_necessary(app.app_type, gpid);
     } else {
-        dn = _fs_manager.create_child_replica_dir(app.app_type.c_str(), gpid, parent_dir);
+        dn = _fs_manager.create_child_replica_dir(app.app_type, gpid, parent_dir);
     }
     if (dn == nullptr) {
         LOG_ERROR("could not allocate a new directory for replica {}", gpid);
         return nullptr;
     }
-    const auto &dir = dn->replica_dir(app.app_type.c_str(), gpid);
+    const auto &dir = dn->replica_dir(app.app_type, gpid);
     CHECK(dsn::utils::filesystem::directory_exists(dir), "dir({}) not exist", dir);
     auto *rep =
         new replica(this, gpid, app, dir.c_str(), restore_if_necessary, is_duplication_follower);

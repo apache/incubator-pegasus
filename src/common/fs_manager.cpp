@@ -301,7 +301,7 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
             }
         }
     }
-    if (selected) {
+    if (selected != nullptr) {
         LOG_INFO(
             "{}: put pid({}) to dir({}), which has {} replicas of current app, {} replicas totally",
             dsn_primary_address(),
