@@ -18,6 +18,7 @@
 #include "ranger_resource_policy.h"
 
 #include "runtime/ranger/access_type.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace ranger {

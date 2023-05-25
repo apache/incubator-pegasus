@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -22,10 +23,9 @@
 #include <string>
 #include <vector>
 
-#include <fmt/core.h>
 #include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
-#include "utils/enum_helper.h"
+
 namespace dsn {
 namespace ranger {
 

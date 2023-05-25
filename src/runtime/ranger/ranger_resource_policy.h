@@ -23,6 +23,7 @@
 
 #include "access_type.h"
 #include "common/json_helper.h"
+#include "utils/enum_helper.h"
 
 namespace dsn {
 namespace ranger {
