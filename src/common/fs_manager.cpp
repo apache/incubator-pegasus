@@ -119,7 +119,7 @@ void dir_node::update_disk_stat()
     if (!dsn::utils::filesystem::get_disk_space_info(full_dir, dsi)) {
         // TODO(yingchun): it may encounter some IO errors when get_disk_space_info() failed, deal
         //  with it.
-        LOG_ERROR("update disk space failed, dir = {}", full_dir);
+        LOG_ERROR("get disk space info failed, dir = {}", full_dir);
         return;
     }
 
@@ -339,7 +339,7 @@ bool fs_manager::for_each_dir_node(const std::function<bool(const dir_node &)> &
 
 void fs_manager::update_disk_stat()
 {
-    zauto_read_lock l(_lock);
+    zauto_write_lock l(_lock);
     reset_disk_stat();
     for (auto &dn : _dir_nodes) {
         dn->update_disk_stat();
