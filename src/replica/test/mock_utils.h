@@ -344,14 +344,14 @@ public:
         return rep;
     }
 
-    void generate_replicas_base_dir_nodes_for_app(app_info mock_app,
+    void generate_replicas_base_dir_nodes_for_app(const app_info &ai,
                                                   int primary_count_per_disk,
                                                   int secondary_count_per_disk)
     {
         int partition_index = 0;
         for (const auto &dn : _fs_manager.get_dir_nodes()) {
             // Create 'partition_count' count of replicas.
-            if (partition_index >= mock_app.partition_count) {
+            if (partition_index >= ai.partition_count) {
                 break;
             }
             int replica_count_per_disk = primary_count_per_disk + secondary_count_per_disk;
@@ -359,23 +359,23 @@ public:
             int secondary_count = secondary_count_per_disk;
             // Create 'replica_count_per_disk' count of replicas on 'dn'.
             while (replica_count_per_disk-- > 0) {
-                gpid new_gpid(mock_app.app_id, partition_index++);
-                _fs_manager.specify_dir_for_new_replica_for_test(dn.get(), new_gpid);
+                gpid new_gpid(ai.app_id, partition_index++);
+                _fs_manager.specify_dir_for_new_replica_for_test(dn.get(), ai.app_type, new_gpid);
                 if (primary_count-- > 0) {
                     // Create 'primary_count' count of primary replicas on 'dn'.
-                    add_replica(generate_replica_ptr(mock_app,
+                    add_replica(generate_replica_ptr(ai,
                                                      new_gpid,
                                                      partition_status::PS_PRIMARY,
-                                                     mock_app.app_id,
+                                                     ai.app_id,
                                                      false,
                                                      false,
                                                      dn.get()));
                 } else if (secondary_count-- > 0) {
                     // Create 'secondary_count' count of secondary replicas on 'dn'.
-                    add_replica(generate_replica_ptr(mock_app,
+                    add_replica(generate_replica_ptr(ai,
                                                      new_gpid,
                                                      partition_status::PS_SECONDARY,
-                                                     mock_app.app_id,
+                                                     ai.app_id,
                                                      false,
                                                      false,
                                                      dn.get()));

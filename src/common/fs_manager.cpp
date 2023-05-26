@@ -296,6 +296,7 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
 }
 
 void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
+                                                      dsn::string_view app_type,
                                                       const dsn::gpid &pid) const
 {
     bool dn_found = false;
@@ -307,7 +308,7 @@ void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
         }
     }
     CHECK(dn_found, "dir_node({}) is not exist", specified_dn->tag);
-    const auto dir = specified_dn->replica_dir("replica", pid);
+    const auto dir = specified_dn->replica_dir(app_type, pid);
     CHECK_TRUE(dsn::utils::filesystem::create_directory(dir));
     specified_dn->holding_replicas[pid.get_app_id()].emplace(pid);
 }
@@ -418,7 +419,16 @@ dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type,
     // Try to find the replica directory.
     auto replica_dn = find_replica_dir(app_type, pid);
     if (replica_dn != nullptr) {
-        CHECK_EQ_MSG(1, replica_dn->holding_replicas[pid.get_app_id()].count(pid), "{}", pid);
+        CHECK_EQ_MSG(1,
+                     replica_dn->holding_replicas.count(pid.get_app_id()),
+                     "replica({}) directory({}) exists but not in management.",
+                     pid,
+                     replica_dn->tag);
+        CHECK_EQ_MSG(1,
+                     replica_dn->holding_replicas[pid.get_app_id()].count(pid),
+                     "replica({}) directory({}) exists but not in management.",
+                     pid,
+                     replica_dn->tag);
         return replica_dn;
     }
 
