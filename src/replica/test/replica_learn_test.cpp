@@ -42,21 +42,30 @@ namespace replication {
 class replica_learn_test : public duplication_test_base
 {
 public:
-    replica_learn_test() = default;
+    replica_learn_test() : _pid(gpid(1, 0))
+    {
+        _app_info.app_type = "replica";
+        _app_info.duplicating = true;
+    }
 
     std::unique_ptr<mock_replica> create_duplicating_replica()
     {
-        gpid gpid(1, 1);
-        app_info app_info;
-        app_info.app_type = "replica";
-        app_info.duplicating = true;
-
         dir_node *dn =
-            stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, gpid);
+            stub->get_fs_manager()->create_replica_dir_if_necessary(_app_info.app_type, _pid);
         CHECK_NOTNULL(dn, "");
-        auto r = std::make_unique<mock_replica>(stub.get(), gpid, app_info, dn);
+        auto r = std::make_unique<mock_replica>(stub.get(), _pid, _app_info, dn);
         r->as_primary();
         return r;
+    }
+
+    void TearDown() override
+    {
+        auto *dn = stub->get_fs_manager()->find_replica_dir(_app_info.app_type, _pid);
+        if (dn != nullptr) {
+            const auto replica_path = dn->replica_dir(_app_info.app_type, _pid);
+            stub->get_fs_manager()->remove_replica(_pid);
+            dsn::utils::filesystem::remove_path(replica_path);
+        }
     }
 
     void test_get_learn_start_decree()
@@ -179,6 +188,10 @@ public:
             ASSERT_EQ(_replica->get_max_gced_decree_for_learn(), tt.want);
         }
     }
+
+private:
+    app_info _app_info;
+    dsn::gpid _pid;
 };
 
 TEST_F(replica_learn_test, get_learn_start_decree) { test_get_learn_start_decree(); }

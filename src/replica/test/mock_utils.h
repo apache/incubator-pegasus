@@ -239,14 +239,7 @@ create_mock_replica(replica_stub *stub, int app_id = 1, int partition_index = 1)
     app_info.app_type = "replica";
     app_info.app_name = "temp";
 
-    auto *dn = stub->get_fs_manager()->find_replica_dir(app_info.app_type, pid);
-    if (dn != nullptr) {
-        const auto replica_path = dn->replica_dir(app_info.app_type, pid);
-        stub->get_fs_manager()->remove_replica(pid);
-        dsn::utils::filesystem::remove_path(replica_path);
-    }
-
-    dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, pid);
+    auto *dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, pid);
     CHECK_NOTNULL(dn, "");
     const auto replica_path = dn->replica_dir(app_info.app_type, pid);
     CHECK(
