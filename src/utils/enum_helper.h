@@ -66,6 +66,10 @@
 
 #define ENUM_END(type) ENUM_END2(type, type)
 
+#define ENUM_CONST(str) k##str
+#define ENUM_CONST_DEF(str) ENUM_CONST(str),
+#define ENUM_CONST_REG_STR(enum_class, str) helper->register_enum(#str, enum_class::ENUM_CONST(str));
+
 namespace dsn {
 
 template <typename TEnum>

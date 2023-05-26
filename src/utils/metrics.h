@@ -644,20 +644,21 @@ private:
 // On the other hand, it is also needed when some special operation should be done
 // for a metric type. For example, percentile should be closed while it's no longer
 // used.
+#define FOREACH_metric_type(def) \
+        def(Gauge)   \
+        def(Counter)  \
+        def(VolatileCounter)   \
+        def(Percentile)  
+
 enum class metric_type
 {
-    kGauge,
-    kCounter,
-    kVolatileCounter,
-    kPercentile,
-    kInvalidUnit,
+    FOREACH_metric_type(ENUM_CONST_DEF)
+    kInvalidType,
 };
 
-ENUM_BEGIN(metric_type, metric_type::kInvalidUnit)
-ENUM_REG_WITH_CUSTOM_NAME(metric_type::kGauge, gauge)
-ENUM_REG_WITH_CUSTOM_NAME(metric_type::kCounter, counter)
-ENUM_REG_WITH_CUSTOM_NAME(metric_type::kVolatileCounter, volatile_counter)
-ENUM_REG_WITH_CUSTOM_NAME(metric_type::kPercentile, percentile)
+#define ENUM_CONST_REG_STR_metric_type(str) ENUM_CONST_REG_STR(metric_type, str)
+ENUM_BEGIN(metric_type, metric_type::kInvalidType)
+FOREACH_metric_type(ENUM_CONST_REG_STR_metric_type)
 ENUM_END(metric_type)
 
 enum class metric_unit : size_t
