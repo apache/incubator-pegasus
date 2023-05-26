@@ -94,18 +94,17 @@ TEST_F(replica_disk_test, on_query_disk_info_all_app)
     ASSERT_EQ(disk_infos.size(), 6);
 
     int info_size = disk_infos.size();
-    int app_id_1_partition_index = 1;
-    int app_id_2_partition_index = 1;
+    int app_id_1_partition_index = 0;
+    int app_id_2_partition_index = 0;
     for (int i = 0; i < info_size; i++) {
-        if (disk_infos[i].tag == "tag_empty_1") {
+        if (disk_infos[i].holding_primary_replicas.empty() &&
+            disk_infos[i].holding_secondary_replicas.empty()) {
             continue;
         }
         ASSERT_EQ(disk_infos[i].tag, "tag_" + std::to_string(i + 1));
         ASSERT_EQ(disk_infos[i].full_dir, "./tag_" + std::to_string(i + 1));
         ASSERT_EQ(disk_infos[i].disk_capacity_mb, 500);
         ASSERT_EQ(disk_infos[i].disk_available_mb, (i + 1) * 50);
-        // `holding_primary_replicas` and `holding_secondary_replicas` is std::map<app_id,
-        // std::set<::dsn::gpid>>
         ASSERT_EQ(disk_infos[i].holding_primary_replicas.size(), 2);
         ASSERT_EQ(disk_infos[i].holding_secondary_replicas.size(), 2);
 
@@ -172,24 +171,21 @@ TEST_F(replica_disk_test, on_query_disk_info_one_app)
     request.app_name = app_info_1.app_name;
     stub->on_query_disk_info(fake_query_disk_rpc);
 
-    auto &disk_infos_with_app_1 = fake_query_disk_rpc.response().disk_infos;
-    int info_size = disk_infos_with_app_1.size();
-    for (int i = 0; i < info_size; i++) {
-        if (disk_infos_with_app_1[i].tag == "tag_empty_1") {
+    for (auto disk_info : fake_query_disk_rpc.response().disk_infos) {
+        if (disk_info.holding_primary_replicas.empty() &&
+            disk_info.holding_secondary_replicas.empty()) {
             continue;
         }
-        // `holding_primary_replicas` and `holding_secondary_replicas` is std::map<app_id,
-        // std::set<::dsn::gpid>>
-        ASSERT_EQ(disk_infos_with_app_1[i].holding_primary_replicas.size(), 1);
-        ASSERT_EQ(disk_infos_with_app_1[i].holding_secondary_replicas.size(), 1);
-        ASSERT_EQ(disk_infos_with_app_1[i].holding_primary_replicas[app_info_1.app_id].size(),
+        ASSERT_EQ(disk_info.holding_primary_replicas.size(), 1);
+        ASSERT_EQ(disk_info.holding_secondary_replicas.size(), 1);
+        ASSERT_EQ(disk_info.holding_primary_replicas[app_info_1.app_id].size(),
                   app_id_1_primary_count_for_disk);
-        ASSERT_EQ(disk_infos_with_app_1[i].holding_secondary_replicas[app_info_1.app_id].size(),
+        ASSERT_EQ(disk_info.holding_secondary_replicas[app_info_1.app_id].size(),
                   app_id_1_secondary_count_for_disk);
-        ASSERT_TRUE(disk_infos_with_app_1[i].holding_primary_replicas.find(app_info_2.app_id) ==
-                    disk_infos_with_app_1[i].holding_primary_replicas.end());
-        ASSERT_TRUE(disk_infos_with_app_1[i].holding_secondary_replicas.find(app_info_2.app_id) ==
-                    disk_infos_with_app_1[i].holding_secondary_replicas.end());
+        ASSERT_TRUE(disk_info.holding_primary_replicas.find(app_info_2.app_id) ==
+                    disk_info.holding_primary_replicas.end());
+        ASSERT_TRUE(disk_info.holding_secondary_replicas.find(app_info_2.app_id) ==
+                    disk_info.holding_secondary_replicas.end());
     }
 }
 
@@ -247,16 +243,16 @@ TEST_F(replica_disk_test, disk_status_test)
               {disk_status::SPACE_INSUFFICIENT, disk_status::NORMAL}};
     auto dn = stub->get_fs_manager()->get_dir_nodes()[0];
     for (const auto &test : tests) {
-        update_node_status(dn, test.old_status, test.new_status);
+        dn->status = test.new_status;
         for (const auto &pids_of_app : dn->holding_replicas) {
             for (const auto &pid : pids_of_app.second) {
                 replica_ptr rep = stub->get_replica(pid);
                 ASSERT_NE(nullptr, rep);
-                ASSERT_EQ(test.new_status, rep->disk_space_insufficient());
+                ASSERT_EQ(test.new_status, rep->get_dir_node()->status);
             }
         }
     }
-    update_node_status(dn, disk_status::NORMAL, disk_status::NORMAL);
+    dn->status = disk_status::NORMAL;
 }
 
 TEST_F(replica_disk_test, add_new_disk_test)

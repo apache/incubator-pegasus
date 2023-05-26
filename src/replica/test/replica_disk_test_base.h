@@ -39,16 +39,23 @@ public:
     //  tag_5            100*5             50*5              50%
     //  total            2500              750               30%
     // replica info, for example:
-    //   dir_node             primary/secondary
-    //
-    //   tag_empty_1
-    //   tag_1                1.1 | 1.2,1.3
-    //                        2.1,2.2 | 2.3,2.4,2.5,2.6
-    //
-    //   tag_2                1.4 | 1.5,1.6
-    //                        2.7,2.8 | 2.9,2.10,2.11,2.12,2.13
-    //            ...
-    //            ...
+    //   dir_node             primary    | secondary
+    //   --------------------------------+---------------------------
+    //   tag_1                1.0        | 1.1 1.2
+    //                        2.0 2.1    | 2.2 2.3 2.4 2.5
+    //   --------------------------------+---------------------------
+    //   tag_2                1.3        | 1.4 1.5
+    //                        2.6 2.7    | 2.8 2.9 2.10 2.11
+    //   --------------------------------+---------------------------
+    //   tag_3                1.6        | 1.7 1.8
+    //                        2.12 2.13  | 2.14 2.15 2.16 2.17
+    //   --------------------------------+---------------------------
+    //   tag_4                           |
+    //   --------------------------------+---------------------------
+    //   tag_5                           |
+    //   --------------------------------+---------------------------
+    //   tag_empty_1                     |
+    //   --------------------------------+---------------------------
     replica_disk_test_base()
     {
         fail::setup();
@@ -90,22 +97,6 @@ public:
                 stub->_fs_manager._dir_nodes.erase(iter);
                 break;
             }
-        }
-    }
-
-    void update_node_status(const std::shared_ptr<dir_node> &dn,
-                            disk_status::type old_status,
-                            disk_status::type new_status)
-    {
-        for (const auto &pids_of_app : dn->holding_replicas) {
-            for (const auto &pid : pids_of_app.second) {
-                replica_ptr rep = stub->get_replica(pid);
-                ASSERT_NE(nullptr, rep);
-                rep->set_disk_status(new_status);
-            }
-        }
-        if (old_status != new_status) {
-            dn->status = new_status;
         }
     }
 
@@ -169,14 +160,6 @@ private:
 
     void generate_mock_dir_nodes(int num)
     {
-        int app_id_1_disk_holding_replica_count =
-            app_id_1_primary_count_for_disk + app_id_1_secondary_count_for_disk;
-        int app_id_2_disk_holding_replica_count =
-            app_id_2_primary_count_for_disk + app_id_2_secondary_count_for_disk;
-
-        int app_id_1_partition_index = 1;
-        int app_id_2_partition_index = 1;
-
         int64_t disk_capacity_mb = num * 100;
         int count = 0;
         while (count++ < num) {
@@ -193,18 +176,6 @@ private:
             stub->_options.data_dirs.push_back(
                 node_disk->full_dir); // open replica need the options
             utils::filesystem::create_directory(node_disk->full_dir);
-
-            int app_1_replica_count_per_disk = app_id_1_disk_holding_replica_count;
-            while (app_1_replica_count_per_disk-- > 0) {
-                node_disk->holding_replicas[app_info_1.app_id].emplace(
-                    gpid(app_info_1.app_id, app_id_1_partition_index++));
-            }
-
-            int app_2_replica_count_per_disk = app_id_2_disk_holding_replica_count;
-            while (app_2_replica_count_per_disk-- > 0) {
-                node_disk->holding_replicas[app_info_2.app_id].emplace(
-                    gpid(app_info_2.app_id, app_id_2_partition_index++));
-            }
 
             stub->_fs_manager._dir_nodes.emplace_back(node_disk);
         }

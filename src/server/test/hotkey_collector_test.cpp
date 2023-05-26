@@ -221,7 +221,7 @@ TEST_F(fine_collector_test, fine_collector)
 class hotkey_collector_test : public pegasus_server_test_base
 {
 public:
-    hotkey_collector_test() { start(); }
+    hotkey_collector_test() { CHECK_EQ(::dsn::ERR_OK, start()); }
 
     std::shared_ptr<pegasus::server::hotkey_collector> get_read_collector()
     {

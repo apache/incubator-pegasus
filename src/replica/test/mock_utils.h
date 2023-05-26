@@ -115,10 +115,10 @@ public:
     mock_replica(replica_stub *stub,
                  gpid gpid,
                  const app_info &app,
-                 const char *dir,
+                 dir_node *dn,
                  bool need_restore = false,
                  bool is_duplication_follower = false)
-        : replica(stub, gpid, app, dir, need_restore, is_duplication_follower)
+        : replica(stub, gpid, app, dn, need_restore, is_duplication_follower)
     {
         _app = std::make_unique<replication::mock_replication_app_base>(this);
     }
@@ -239,19 +239,19 @@ create_mock_replica(replica_stub *stub, int appid = 1, int partition_index = 1)
     app_info.app_type = "replica";
     app_info.app_name = "temp";
 
-    const auto *const dn =
-        stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, gpid);
+    auto *dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, gpid);
     CHECK_NOTNULL(dn, "");
     const auto replica_path = dn->replica_dir(app_info.app_type, gpid);
     CHECK(
         dsn::utils::filesystem::directory_exists(replica_path), "dir({}) not exist", replica_path);
-    return std::make_unique<mock_replica>(stub, gpid, app_info, replica_path.c_str());
+    return std::make_unique<mock_replica>(stub, gpid, app_info, dn);
 }
 
 class mock_replica_stub : public replica_stub
 {
 public:
-    mock_replica_stub() { _fs_manager.initialize({"./"}, {"tag"}); }
+    // mock_replica_stub() { _fs_manager.initialize({"./"}, {"tag"}); }
+    mock_replica_stub() { _fs_manager.initialize({"test_dir"}, {"test"}); }
 
     ~mock_replica_stub() override = default;
 
@@ -290,15 +290,20 @@ public:
                          partition_status::type status = partition_status::PS_INACTIVE,
                          ballot b = 5,
                          bool need_restore = false,
-                         bool is_duplication_follower = false)
+                         bool is_duplication_follower = false,
+                         dir_node *dn = nullptr)
     {
         replica_configuration config;
         config.ballot = b;
         config.pid = pid;
         config.status = status;
 
+        if (dn == nullptr) {
+            dn = _fs_manager.create_replica_dir_if_necessary("replica", pid);
+        }
+        CHECK_NOTNULL(dn, "");
         mock_replica_ptr rep =
-            new mock_replica(this, pid, info, "./", need_restore, is_duplication_follower);
+            new mock_replica(this, pid, info, dn, need_restore, is_duplication_follower);
         rep->set_replica_config(config);
         _replicas[pid] = rep;
 
@@ -321,33 +326,46 @@ public:
         CHECK_NOTNULL(dn, "");
         const auto &dir = dn->replica_dir(info.app_type, pid);
         CHECK(dsn::utils::filesystem::directory_exists(dir), "dir({}) not exist", dir);
-        auto *rep =
-            new mock_replica(this, pid, info, dir.c_str(), need_restore, is_duplication_follower);
+        auto *rep = new mock_replica(this, pid, info, dn, need_restore, is_duplication_follower);
         rep->set_replica_config(config);
         return rep;
     }
 
     void generate_replicas_base_dir_nodes_for_app(app_info mock_app,
-                                                  int primary_count_for_disk = 1,
-                                                  int secondary_count_for_disk = 2)
+                                                  int primary_count_per_disk,
+                                                  int secondary_count_per_disk)
     {
-        const auto &dir_nodes = _fs_manager._dir_nodes;
-        for (auto &dir_node : dir_nodes) {
-            const auto &replica_iter = dir_node->holding_replicas.find(mock_app.app_id);
-            if (replica_iter == dir_node->holding_replicas.end()) {
-                continue;
+        int partition_index = 0;
+        for (const auto &dn : _fs_manager.get_dir_nodes()) {
+            // Create 'partition_count' count of replicas.
+            if (partition_index >= mock_app.partition_count) {
+                break;
             }
-            const std::set<gpid> &pids = replica_iter->second;
-            int primary_count = primary_count_for_disk;
-            int secondary_count = secondary_count_for_disk;
-            for (const gpid &pid : pids) {
-                // generate primary replica and secondary replica.
+            int replica_count_per_disk = primary_count_per_disk + secondary_count_per_disk;
+            int primary_count = primary_count_per_disk;
+            int secondary_count = secondary_count_per_disk;
+            // Create 'replica_count_per_disk' count of replicas on 'dn'.
+            while (replica_count_per_disk-- > 0) {
+                gpid new_gpid(mock_app.app_id, partition_index++);
+                _fs_manager.specify_dir_for_new_replica_for_test(dn.get(), new_gpid);
                 if (primary_count-- > 0) {
-                    add_replica(generate_replica_ptr(
-                        mock_app, pid, partition_status::PS_PRIMARY, mock_app.app_id));
+                    // Create 'primary_count' count of primary replicas on 'dn'.
+                    add_replica(generate_replica_ptr(mock_app,
+                                                     new_gpid,
+                                                     partition_status::PS_PRIMARY,
+                                                     mock_app.app_id,
+                                                     false,
+                                                     false,
+                                                     dn.get()));
                 } else if (secondary_count-- > 0) {
-                    add_replica(generate_replica_ptr(
-                        mock_app, pid, partition_status::PS_SECONDARY, mock_app.app_id));
+                    // Create 'secondary_count' count of secondary replicas on 'dn'.
+                    add_replica(generate_replica_ptr(mock_app,
+                                                     new_gpid,
+                                                     partition_status::PS_SECONDARY,
+                                                     mock_app.app_id,
+                                                     false,
+                                                     false,
+                                                     dn.get()));
                 }
             }
         }

@@ -58,7 +58,7 @@ public:
 
     replica_test_base()
     {
-        _replica = create_mock_replica(stub.get(), 1, 1);
+        _replica = create_mock_replica(stub.get(), 1, 0);
         _log_dir = _replica->dir();
     }
 

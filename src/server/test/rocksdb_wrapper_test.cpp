@@ -25,12 +25,12 @@
 #include <string>
 #include <utility>
 
+#include "common/fs_manager.h"
 #include "dsn.layer2_types.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
-#include "replica/replica.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service.h"
 #include "server/pegasus_write_service_impl.h"
@@ -83,8 +83,14 @@ public:
         app_info.app_type = "pegasus";
         app_info.duplicating = true;
 
-        _replica =
-            new dsn::replication::replica(_replica_stub, _gpid, app_info, "./", false, false);
+        auto *dn = _replica_stub->get_fs_manager()->create_replica_dir_if_necessary(
+            app_info.app_type, _gpid);
+        CHECK_NOTNULL(dn, "");
+        _replica = new dsn::replication::replica(_replica_stub, _gpid, app_info, dn, false, false);
+        const auto dir_data = dsn::utils::filesystem::path_combine(_replica->dir(), "data");
+        CHECK(dsn::utils::filesystem::create_directory(dir_data),
+              "create data dir {} failed",
+              dir_data);
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
 
         SetUp();

@@ -248,7 +248,7 @@ public:
 
     mutation_log_ptr create_private_log(gpid id) { return create_private_log(1, id); }
 
-    mutation_log_ptr create_private_log(int private_log_size_mb = 1, gpid id = gpid(1, 1))
+    mutation_log_ptr create_private_log(int private_log_size_mb = 1, gpid id = gpid(1, 0))
     {
         std::map<gpid, decree> replay_condition;
         replay_condition[id] = 0; // duplicating

@@ -48,7 +48,11 @@ public:
         app_info app_info;
         app_info.app_type = "replica";
         app_info.duplicating = true;
-        auto r = std::make_unique<mock_replica>(stub.get(), gpid, app_info, "./");
+
+        dir_node *dn =
+            stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, gpid);
+        CHECK_NOTNULL(dn, "");
+        auto r = std::make_unique<mock_replica>(stub.get(), gpid, app_info, dn);
         r->as_primary();
         return r;
     }
