@@ -101,7 +101,6 @@ public:
     // dir_nodes.
     // NOTE: only used in test.
     void specify_dir_for_new_replica_for_test(dir_node *specified_dn, const dsn::gpid &pid) const;
-    dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
     // Find the replica instance directory.
     dir_node *find_replica_dir(dsn::string_view app_type, gpid pid);
