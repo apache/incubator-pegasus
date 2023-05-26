@@ -52,7 +52,6 @@
 #include <utility>
 #include <vector>
 
-#include "common/fs_manager.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
@@ -121,6 +120,7 @@ class replica_split_manager;
 class replica_stub;
 class replication_app_base;
 class replication_options;
+struct dir_node;
 
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 

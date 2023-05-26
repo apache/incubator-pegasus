@@ -23,6 +23,7 @@
 #include <string>
 #include <utility>
 
+#include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
@@ -31,6 +32,7 @@
 #include "replica/duplication/test/duplication_test_base.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

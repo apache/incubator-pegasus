@@ -2316,8 +2316,8 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
 
 void replica_stub::clear_on_failure(replica *rep)
 {
-    std::string rep_dir = rep->dir();
-    auto pid = rep->get_gpid();
+    const auto rep_dir = rep->dir();
+    const auto pid = rep->get_gpid();
 
     rep->close();
     delete rep;

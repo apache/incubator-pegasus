@@ -38,6 +38,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_common.h"

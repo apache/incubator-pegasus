@@ -27,6 +27,7 @@
 #include <utility>
 
 #include "common/duplication_common.h"
+#include "common/fs_manager.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "nfs/nfs_node.h"

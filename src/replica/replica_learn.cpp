@@ -47,6 +47,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
+#include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
