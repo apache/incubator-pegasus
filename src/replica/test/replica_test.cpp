@@ -72,7 +72,7 @@ class replica_test : public replica_test_base
 {
 public:
     replica_test()
-        : pid(gpid(2, 1)),
+        : _pid(gpid(2, 1)),
           _backup_id(dsn_now_ms()),
           _provider_name("local_service"),
           _policy_name("mock_policy")
@@ -84,7 +84,8 @@ public:
         FLAGS_enable_http_server = false;
         stub->install_perf_counters();
         mock_app_info();
-        _mock_replica = stub->generate_replica_ptr(_app_info, pid, partition_status::PS_PRIMARY, 1);
+        _mock_replica =
+            stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
 
         // set FLAGS_cold_backup_root manually.
         // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
@@ -94,10 +95,10 @@ public:
 
     void TearDown() override
     {
-        auto *dn = _fs_manager.find_replica_dir(info.app_type, pid);
+        auto *dn = stub->get_fs_manager()->find_replica_dir(_app_info.app_type, _pid);
         if (dn != nullptr) {
-            const auto replica_path = dn->replica_dir(info.app_type, pid);
-            _fs_manager.remove_replica(pid);
+            const auto replica_path = dn->replica_dir(_app_info.app_type, _pid);
+            stub->get_fs_manager()->remove_replica(_pid);
             dsn::utils::filesystem::remove_path(replica_path);
         }
     }
@@ -164,7 +165,7 @@ public:
     void test_on_cold_backup(const std::string user_specified_path = "")
     {
         backup_request req;
-        req.pid = pid;
+        req.pid = _pid;
         policy_info backup_policy_info;
         backup_policy_info.__set_backup_provider_type(_provider_name);
         backup_policy_info.__set_policy_name(_policy_name);
@@ -262,7 +263,7 @@ public:
 
 public:
     dsn::app_info _app_info;
-    dsn::gpid pid;
+    dsn::gpid _pid;
     mock_replica_ptr _mock_replica;
 
 private:
@@ -285,7 +286,7 @@ TEST_F(replica_test, write_size_limited)
     write_request->io_session = sim_net->create_client_session(rpc_address());
 
     for (int i = 0; i < count; i++) {
-        stub->on_client_write(pid, write_request);
+        stub->on_client_write(_pid, write_request);
     }
 
     ASSERT_EQ(get_write_size_exceed_threshold_count(), count);
@@ -484,14 +485,14 @@ TEST_F(replica_test, test_clear_on_failure)
     FLAGS_fd_disabled = true;
 
     replica *rep =
-        stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
+        stub->generate_replica(_app_info, _pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
-    ASSERT_TRUE(has_gpid(pid));
+    ASSERT_TRUE(has_gpid(_pid));
 
     stub->clear_on_failure(rep);
 
     ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
-    ASSERT_FALSE(has_gpid(pid));
+    ASSERT_FALSE(has_gpid(_pid));
 }
 
 TEST_F(replica_test, test_auto_trash)
@@ -500,9 +501,9 @@ TEST_F(replica_test, test_auto_trash)
     FLAGS_fd_disabled = true;
 
     replica *rep =
-        stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
+        stub->generate_replica(_app_info, _pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
-    ASSERT_TRUE(has_gpid(pid));
+    ASSERT_TRUE(has_gpid(_pid));
 
     rep->handle_local_failure(ERR_RDB_CORRUPTION);
     stub->wait_closing_replicas_finished();
@@ -527,7 +528,7 @@ TEST_F(replica_test, test_auto_trash)
         }
     }
     ASSERT_TRUE(found);
-    ASSERT_FALSE(has_gpid(pid));
+    ASSERT_FALSE(has_gpid(_pid));
 }
 
 TEST_F(replica_test, update_deny_client_test)
