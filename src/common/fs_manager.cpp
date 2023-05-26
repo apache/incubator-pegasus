@@ -114,7 +114,6 @@ void dir_node::update_disk_stat()
 {
     FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) { return; });
 
-    // Get disk space info.
     dsn::utils::filesystem::disk_space_info dsi;
     if (!dsn::utils::filesystem::get_disk_space_info(full_dir, dsi)) {
         // TODO(yingchun): it may encounter some IO errors when get_disk_space_info() failed, deal
@@ -123,13 +122,11 @@ void dir_node::update_disk_stat()
         return;
     }
 
-    // Update in-memory disk space info.
     disk_capacity_mb = dsi.capacity >> 20;
     disk_available_mb = dsi.available >> 20;
     disk_available_ratio = static_cast<int>(
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
-    // Update status.
     auto old_status = status;
     auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
                           ? disk_status::SPACE_INSUFFICIENT
