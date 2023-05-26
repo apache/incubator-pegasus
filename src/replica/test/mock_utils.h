@@ -250,7 +250,6 @@ create_mock_replica(replica_stub *stub, int appid = 1, int partition_index = 1)
 class mock_replica_stub : public replica_stub
 {
 public:
-    // mock_replica_stub() { _fs_manager.initialize({"./"}, {"tag"}); }
     mock_replica_stub() { _fs_manager.initialize({"test_dir"}, {"test"}); }
 
     ~mock_replica_stub() override = default;
