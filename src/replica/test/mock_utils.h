@@ -321,17 +321,8 @@ public:
         config.pid = pid;
         config.status = status;
 
-        auto *dn = _fs_manager.find_replica_dir(info.app_type, pid);
-        if (dn != nullptr) {
-            const auto replica_path = dn->replica_dir(info.app_type, pid);
-            _fs_manager.remove_replica(pid);
-            dsn::utils::filesystem::remove_path(replica_path);
-        }
-
-        dn = _fs_manager.create_replica_dir_if_necessary(info.app_type, pid);
+        auto dn = _fs_manager.create_replica_dir_if_necessary(info.app_type, pid);
         CHECK_NOTNULL(dn, "");
-        const auto &dir = dn->replica_dir(info.app_type, pid);
-        CHECK(dsn::utils::filesystem::directory_exists(dir), "dir({}) not exist", dir);
         auto *rep = new mock_replica(this, pid, info, dn, need_restore, is_duplication_follower);
         rep->set_replica_config(config);
         return rep;
