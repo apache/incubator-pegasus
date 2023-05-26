@@ -419,16 +419,10 @@ dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type,
     // Try to find the replica directory.
     auto replica_dn = find_replica_dir(app_type, pid);
     if (replica_dn != nullptr) {
-        CHECK_EQ_MSG(1,
-                     replica_dn->holding_replicas.count(pid.get_app_id()),
-                     "replica({}) directory({}) exists but not in management.",
-                     pid,
-                     replica_dn->tag);
-        CHECK_EQ_MSG(1,
-                     replica_dn->holding_replicas[pid.get_app_id()].count(pid),
-                     "replica({}) directory({}) exists but not in management.",
-                     pid,
-                     replica_dn->tag);
+        CHECK(replica_dn->has(pid),
+              "replica({})'s directory({}) exists but not in management",
+              pid,
+              replica_dn->tag);
         return replica_dn;
     }
 
