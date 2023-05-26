@@ -45,10 +45,8 @@ public:
     pegasus_server_test_base()
     {
         // Remove rdb to prevent rocksdb recovery from last test.
-        // dsn::utils::filesystem::remove_path("./data/rdb");
         dsn::utils::filesystem::remove_path("./test_dir");
         _replica_stub = new dsn::replication::replica_stub();
-        //_replica_stub->get_fs_manager()->initialize({"./"}, {"test_tag"});
         _replica_stub->get_fs_manager()->initialize({"test_dir"}, {"test_tag"});
 
         _gpid = dsn::gpid(100, 1);

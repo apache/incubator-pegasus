@@ -127,6 +127,7 @@ replica::replica(replica_stub *stub,
     CHECK_NOTNULL(dn, "");
     _dir_node = dn;
     _dir = dn->replica_dir(_app_info.app_type, gpid);
+    // The replica's directory must exists when creating a replica.
     CHECK(dsn::utils::filesystem::directory_exists(_dir), "dir({}) not exist", _dir);
     _options = &stub->options();
     init_state();

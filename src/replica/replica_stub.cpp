@@ -633,7 +633,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         const auto dn = dn_dirs.first;
         for (const auto &dir : dn_dirs.second) {
             if (dsn::replication::is_data_dir_invalid(dir)) {
-                LOG_INFO("ignore dir {}", dir);
+                LOG_WARNING("ignore dir {}", dir);
                 continue;
             }
 
