@@ -57,7 +57,6 @@ public:
         generate_mock_app_info();
 
         stub->_fs_manager._dir_nodes.clear();
-        // stub->_fs_manager.reset_disk_stat();
         generate_mock_dir_nodes(dir_nodes_count);
         generate_mock_empty_dir_node(empty_dir_nodes_count);
 
