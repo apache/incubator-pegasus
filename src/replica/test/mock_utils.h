@@ -232,19 +232,26 @@ private:
 typedef dsn::ref_ptr<mock_replica> mock_replica_ptr;
 
 inline std::unique_ptr<mock_replica>
-create_mock_replica(replica_stub *stub, int appid = 1, int partition_index = 1)
+create_mock_replica(replica_stub *stub, int app_id = 1, int partition_index = 1)
 {
-    gpid gpid(appid, partition_index);
+    gpid pid(app_id, partition_index);
     app_info app_info;
     app_info.app_type = "replica";
     app_info.app_name = "temp";
 
-    auto *dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, gpid);
+    auto *dn = stub->get_fs_manager()->find_replica_dir(app_info.app_type, pid);
+    if (dn != nullptr) {
+        const auto replica_path = dn->replica_dir(app_info.app_type, pid);
+        stub->get_fs_manager()->remove_replica(pid);
+        dsn::utils::filesystem::remove_path(replica_path);
+    }
+
+    dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, pid);
     CHECK_NOTNULL(dn, "");
-    const auto replica_path = dn->replica_dir(app_info.app_type, gpid);
+    const auto replica_path = dn->replica_dir(app_info.app_type, pid);
     CHECK(
         dsn::utils::filesystem::directory_exists(replica_path), "dir({}) not exist", replica_path);
-    return std::make_unique<mock_replica>(stub, gpid, app_info, dn);
+    return std::make_unique<mock_replica>(stub, pid, app_info, dn);
 }
 
 class mock_replica_stub : public replica_stub
@@ -321,7 +328,14 @@ public:
         config.pid = pid;
         config.status = status;
 
-        auto dn = _fs_manager.create_replica_dir_if_necessary(info.app_type, pid);
+        auto *dn = _fs_manager.find_replica_dir(info.app_type, pid);
+        if (dn != nullptr) {
+            const auto replica_path = dn->replica_dir(info.app_type, pid);
+            _fs_manager.remove_replica(pid);
+            dsn::utils::filesystem::remove_path(replica_path);
+        }
+
+        dn = _fs_manager.create_replica_dir_if_necessary(info.app_type, pid);
         CHECK_NOTNULL(dn, "");
         const auto &dir = dn->replica_dir(info.app_type, pid);
         CHECK(dsn::utils::filesystem::directory_exists(dir), "dir({}) not exist", dir);

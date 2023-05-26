@@ -418,9 +418,11 @@ dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type,
     // Try to find the replica directory.
     auto replica_dn = find_replica_dir(app_type, pid);
     if (replica_dn != nullptr) {
+        CHECK_EQ_MSG(1, replica_dn->holding_replicas[pid.get_app_id()].count(pid), "{}", pid);
         return replica_dn;
     }
 
+//    CHECK(0 == replica_dn->holding_replicas.count(pid.get_app_id()) || 0 == replica_dn->holding_replicas[pid.get_app_id()].count(pid), "");
     // Find a dir_node for the new replica.
     replica_dn = find_best_dir_for_new_replica(pid);
     if (replica_dn == nullptr) {
