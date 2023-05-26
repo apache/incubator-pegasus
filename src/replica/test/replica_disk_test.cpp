@@ -35,11 +35,13 @@
 #include "dsn.layer2_types.h"
 #include "metadata_types.h"
 #include "replica/disk_cleaner.h"
+#include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica/test/mock_utils.h"
 #include "replica_admin_types.h"
 #include "replica_disk_test_base.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
@@ -235,7 +237,6 @@ TEST_F(replica_disk_test, gc_disk_useless_dir)
 
 TEST_F(replica_disk_test, disk_status_test)
 {
-    int32_t node_index = 0;
     struct disk_status_test
     {
         disk_status::type old_status;
@@ -244,19 +245,18 @@ TEST_F(replica_disk_test, disk_status_test)
               {disk_status::NORMAL, disk_status::SPACE_INSUFFICIENT},
               {disk_status::SPACE_INSUFFICIENT, disk_status::SPACE_INSUFFICIENT},
               {disk_status::SPACE_INSUFFICIENT, disk_status::NORMAL}};
+    auto dn = stub->get_fs_manager()->get_dir_nodes()[0];
     for (const auto &test : tests) {
-        auto node = stub->get_fs_manager()->get_dir_nodes()[node_index];
-        mock_node_status(node_index, test.old_status, test.new_status);
-        update_disks_status();
-        for (auto &kv : node->holding_replicas) {
-            for (auto &pid : kv.second) {
-                bool flag;
-                ASSERT_EQ(replica_disk_space_insufficient(pid, flag), ERR_OK);
-                ASSERT_EQ(flag, test.new_status == disk_status::SPACE_INSUFFICIENT);
+        update_node_status(dn, test.old_status, test.new_status);
+        for (const auto &pids_of_app : dn->holding_replicas) {
+            for (const auto &pid : pids_of_app.second) {
+                replica_ptr rep = stub->get_replica(pid);
+                ASSERT_NE(nullptr, rep);
+                ASSERT_EQ(test.new_status, rep->disk_space_insufficient());
             }
         }
     }
-    mock_node_status(node_index, disk_status::NORMAL, disk_status::NORMAL);
+    update_node_status(dn, disk_status::NORMAL, disk_status::NORMAL);
 }
 
 TEST_F(replica_disk_test, add_new_disk_test)

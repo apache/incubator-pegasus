@@ -78,7 +78,7 @@ public:
     std::string replica_dir(dsn::string_view app_type, const dsn::gpid &pid) const;
     bool has(const dsn::gpid &pid) const;
     uint64_t remove(const dsn::gpid &pid);
-    bool update_disk_stat(const bool update_disk_status);
+    void update_disk_stat();
 };
 
 class fs_manager
@@ -111,7 +111,7 @@ public:
                                        const std::string &parent_dir);
     void remove_replica(const dsn::gpid &pid);
     bool for_each_dir_node(const std::function<bool(const dir_node &)> &func) const;
-    void update_disk_stat(bool check_status_changed = true);
+    void update_disk_stat();
 
     void add_new_dir_node(const std::string &data_dir, const std::string &tag);
     const std::vector<std::shared_ptr<dir_node>> &get_dir_nodes() const
@@ -129,15 +129,13 @@ private:
         _total_available_ratio = 0;
         _min_available_ratio = 100;
         _max_available_ratio = 0;
-        _status_updated_dir_nodes.clear();
     }
 
     dir_node *get_dir_node(const std::string &subdir) const;
 
     // when visit the tag/storage of the _dir_nodes map, there's no need to protect by the lock.
     // but when visit the holding_replicas, you must take care.
-    mutable zrwlock_nr _lock;
-
+    mutable zrwlock_nr _lock; // [ lock
     int64_t _total_capacity_mb = 0;
     int64_t _total_available_mb = 0;
     int _total_available_ratio = 0;
@@ -145,11 +143,7 @@ private:
     int _max_available_ratio = 0;
 
     std::vector<std::shared_ptr<dir_node>> _dir_nodes;
-
-    // Used for disk available space check
-    // disk status will be updated periodically, this vector record nodes whose disk_status changed
-    // in this round
-    std::vector<std::shared_ptr<dir_node>> _status_updated_dir_nodes;
+    // ] end of lock
 
     perf_counter_wrapper _counter_total_capacity_mb;
     perf_counter_wrapper _counter_total_available_mb;

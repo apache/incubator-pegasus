@@ -71,10 +71,6 @@ public:
 
     ~replica_disk_test_base() { fail::teardown(); }
 
-    void update_disk_replica() { stub->on_disk_stat(); }
-
-    void update_disks_status() { stub->update_disks_status(); }
-
     void generate_mock_dir_node(const app_info &app,
                                 const gpid pid,
                                 const std::string &tag,
@@ -97,30 +93,20 @@ public:
         }
     }
 
-    void
-    mock_node_status(int32_t node_index, disk_status::type old_status, disk_status::type new_status)
+    void update_node_status(const std::shared_ptr<dir_node> &dn,
+                            disk_status::type old_status,
+                            disk_status::type new_status)
     {
-        auto node = stub->_fs_manager.get_dir_nodes()[node_index];
-        for (const auto &kv : node->holding_replicas) {
-            for (const auto &pid : kv.second) {
-                update_replica_disk_status(pid, old_status);
+        for (const auto &pids_of_app : dn->holding_replicas) {
+            for (const auto &pid : pids_of_app.second) {
+                replica_ptr rep = stub->get_replica(pid);
+                ASSERT_NE(nullptr, rep);
+                rep->set_disk_status(new_status);
             }
         }
-        stub->_fs_manager._status_updated_dir_nodes.clear();
         if (old_status != new_status) {
-            node->status = new_status;
-            stub->_fs_manager._status_updated_dir_nodes.emplace_back(node);
+            dn->status = new_status;
         }
-    }
-
-    error_code replica_disk_space_insufficient(const gpid &pid, bool &flag)
-    {
-        replica_ptr replica = stub->get_replica(pid);
-        if (replica == nullptr) {
-            return ERR_OBJECT_NOT_FOUND;
-        }
-        flag = replica->disk_space_insufficient();
-        return ERR_OK;
     }
 
     void prepare_before_add_new_disk_test(const std::string &create_dir,
@@ -222,15 +208,6 @@ private:
 
             stub->_fs_manager._dir_nodes.emplace_back(node_disk);
         }
-    }
-
-    void update_replica_disk_status(const gpid &pid, const disk_status::type status)
-    {
-        replica_ptr replica = stub->get_replica(pid);
-        if (replica == nullptr) {
-            return;
-        }
-        replica->set_disk_status(status);
     }
 };
 
