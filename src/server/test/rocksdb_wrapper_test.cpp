@@ -39,7 +39,6 @@
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
-#include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_view.h"
 
@@ -91,10 +90,6 @@ public:
             app_info.app_type, _gpid);
         CHECK_NOTNULL(dn, "");
         _replica = new dsn::replication::replica(_replica_stub, _gpid, app_info, dn, false, false);
-        const auto dir_data = dsn::utils::filesystem::path_combine(_replica->dir(), "data");
-        CHECK(dsn::utils::filesystem::create_directory(dir_data),
-              "create data dir {} failed",
-              dir_data);
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
 
         SetUp();
