@@ -463,7 +463,7 @@ TEST_F(replica_test, test_query_last_checkpoint_info)
     _mock_replica->set_last_committed_decree(200);
     _mock_replica->on_query_last_checkpoint(resp);
     ASSERT_EQ(resp.last_committed_decree, 200);
-    ASSERT_STR_CONTAINS(resp.base_local_dir, "/data/checkpoint.100");
+    ASSERT_EQ(resp.base_local_dir, "./data/checkpoint.100");
 }
 
 TEST_F(replica_test, test_clear_on_failure)

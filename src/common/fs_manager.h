@@ -96,6 +96,7 @@ public:
     // TODO(yingchun): consider the disk capacity and available space.
     // NOTE: the 'pid' must not exist in any dir_nodes.
     dir_node *find_best_dir_for_new_replica(const dsn::gpid &pid) const;
+    void specify_dir_for_new_replica_for_test(dir_node *specified_dn, const dsn::gpid &pid) const;
     dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
     // Find the replica instance directory.

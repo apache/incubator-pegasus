@@ -235,17 +235,6 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
     update_disk_stat();
 }
 
-dsn::error_code fs_manager::get_disk_tag(const std::string &dir, std::string &tag)
-{
-    dir_node *n = get_dir_node(dir);
-    if (nullptr == n) {
-        return dsn::ERR_OBJECT_NOT_FOUND;
-    } else {
-        tag = n->tag;
-        return dsn::ERR_OK;
-    }
-}
-
 void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
 {
     const auto &dn = get_dir_node(pid_dir);
@@ -304,6 +293,23 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
             least_total_replicas_count);
     }
     return selected;
+}
+
+void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
+                                                      const dsn::gpid &pid) const
+{
+    bool dn_found = false;
+    zauto_write_lock l(_lock);
+    for (const auto &dn : _dir_nodes) {
+        CHECK(!dn->has(pid), "gpid({}) already exists in dir_node({})", pid, dn->tag);
+        if (dn.get() == specified_dn) {
+            dn_found = true;
+        }
+    }
+    CHECK(dn_found, "dir_node({}) is not exist", specified_dn->tag);
+    const auto dir = specified_dn->replica_dir("replica", pid);
+    CHECK_TRUE(dsn::utils::filesystem::create_directory(dir));
+    specified_dn->holding_replicas[pid.get_app_id()].emplace(pid);
 }
 
 void fs_manager::remove_replica(const gpid &pid)
