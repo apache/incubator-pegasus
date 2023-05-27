@@ -25,7 +25,7 @@ export BUILD_ROOT_DIR=${ROOT}/build
 export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
-export LD_LIBRARY_PATH=${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 
 function usage()
 {
