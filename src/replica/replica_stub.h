@@ -417,7 +417,6 @@ private:
     friend class replica_follower;
     friend class replica_follower_test;
     friend class replica_http_service_test;
-    friend class replica_test_base;
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_test, test_clear_on_failure);
     FRIEND_TEST(replica_test, test_auto_trash);
