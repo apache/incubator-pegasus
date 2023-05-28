@@ -50,22 +50,11 @@ public:
 
     std::unique_ptr<mock_replica> create_duplicating_replica()
     {
-        dir_node *dn =
-            stub->get_fs_manager()->create_replica_dir_if_necessary(_app_info.app_type, _pid);
+        dir_node *dn = stub->get_fs_manager()->find_best_dir_for_new_replica(_pid);
         CHECK_NOTNULL(dn, "");
         auto r = std::make_unique<mock_replica>(stub.get(), _pid, _app_info, dn);
         r->as_primary();
         return r;
-    }
-
-    void TearDown() override
-    {
-        auto *dn = stub->get_fs_manager()->find_replica_dir(_app_info.app_type, _pid);
-        if (dn != nullptr) {
-            const auto replica_path = dn->replica_dir(_app_info.app_type, _pid);
-            stub->get_fs_manager()->remove_replica(_pid);
-            dsn::utils::filesystem::remove_path(replica_path);
-        }
     }
 
     void test_get_learn_start_decree()

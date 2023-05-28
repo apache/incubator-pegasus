@@ -52,7 +52,7 @@ linux_fd_t native_linux_aio_provider::open(const char *file_name, int flag, int 
 {
     auto fd = ::open(file_name, flag, pmode);
     if (fd == DSN_INVALID_FILE_HANDLE) {
-        LOG_ERROR("create file failed, err = {}", utils::safe_strerror(errno));
+        LOG_ERROR("create file '{}' failed, err = {}", file_name, utils::safe_strerror(errno));
     }
     return linux_fd_t(fd);
 }

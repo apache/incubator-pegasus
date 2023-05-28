@@ -62,12 +62,6 @@ public:
         _log_dir = _replica->dir();
     }
 
-    ~replica_test_base()
-    {
-        stub->get_fs_manager()->remove_replica(gpid(1, 0));
-        dsn::utils::filesystem::remove_path(_replica->dir());
-    }
-
     virtual mutation_ptr create_test_mutation(int64_t decree, const std::string &data)
     {
         mutation_ptr mu(new mutation());

@@ -45,7 +45,11 @@ class duplication_sync_timer_test : public duplication_test_base
 public:
     void SetUp() override { dup_sync = std::make_unique<duplication_sync_timer>(stub.get()); }
 
-    void TearDown() override { stub.reset(); }
+    void TearDown() override
+    {
+        stub.reset();
+        replica_test_base::TearDown();
+    }
 
     void test_on_duplication_sync_reply()
     {
@@ -151,6 +155,15 @@ public:
                 ASSERT_EQ(dup.dupid, 1);
                 ASSERT_EQ(dup.confirmed_decree, 1500);
             }
+
+            for (int appid = 1; appid <= total_app_num; appid++) {
+                auto *dn = stub->get_fs_manager()->find_replica_dir("replica", gpid(appid, 1));
+                if (dn != nullptr) {
+                    const auto replica_path = dn->replica_dir("replica", gpid(appid, 1));
+                    stub->get_fs_manager()->remove_replica(gpid(appid, 1));
+                    dsn::utils::filesystem::remove_path(replica_path);
+                }
+            }
         }
     }
 
@@ -244,6 +257,13 @@ public:
         ASSERT_TRUE(stub->mock_replicas[gpid(2, 1)]
                         ->get_replica_duplicator_manager()
                         ._duplications.empty());
+
+        auto *dn = stub->get_fs_manager()->find_replica_dir("replica", gpid(2, 1));
+        if (dn != nullptr) {
+            const auto replica_path = dn->replica_dir("replica", gpid(2, 1));
+            stub->get_fs_manager()->remove_replica(gpid(2, 1));
+            dsn::utils::filesystem::remove_path(replica_path);
+        }
     }
 
     void test_update_confirmed_points()

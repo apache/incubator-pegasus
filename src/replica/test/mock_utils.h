@@ -241,9 +241,6 @@ create_mock_replica(replica_stub *stub, int app_id = 1, int partition_index = 1)
 
     auto *dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, pid);
     CHECK_NOTNULL(dn, "");
-    const auto replica_path = dn->replica_dir(app_info.app_type, pid);
-    CHECK(
-        dsn::utils::filesystem::directory_exists(replica_path), "dir({}) not exist", replica_path);
     return std::make_unique<mock_replica>(stub, pid, app_info, dn);
 }
 
@@ -298,7 +295,7 @@ public:
         config.status = status;
 
         if (dn == nullptr) {
-            dn = _fs_manager.create_replica_dir_if_necessary("replica", pid);
+            dn = _fs_manager.find_best_dir_for_new_replica(pid);
         }
         CHECK_NOTNULL(dn, "");
         mock_replica_ptr rep =

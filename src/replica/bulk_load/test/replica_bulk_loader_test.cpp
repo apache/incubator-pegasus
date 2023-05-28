@@ -44,14 +44,24 @@ namespace replication {
 class replica_bulk_loader_test : public replica_test_base
 {
 public:
-    replica_bulk_loader_test()
+    void SetUp() override
     {
-        _replica = create_mock_replica(stub.get());
+        _replica = create_mock_replica(stub.get(), PID.get_app_id(), PID.get_partition_index());
         _bulk_loader = std::make_unique<replica_bulk_loader>(_replica.get());
         fail::setup();
     }
 
-    ~replica_bulk_loader_test() { fail::teardown(); }
+    void TearDown() override
+    {
+        auto *dn =
+            stub->get_fs_manager()->find_replica_dir(_replica->get_app_info()->app_type, PID);
+        if (dn != nullptr) {
+            const auto replica_path = dn->replica_dir(_replica->get_app_info()->app_type, PID);
+            stub->get_fs_manager()->remove_replica(PID);
+            dsn::utils::filesystem::remove_path(replica_path);
+        }
+        fail::teardown();
+    }
 
     /// bulk load functions
 

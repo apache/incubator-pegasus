@@ -2292,6 +2292,8 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
         return nullptr;
     }
 
+    // The replica's directory must exists when creating a replica.
+    CHECK_EQ(dir, dn->replica_dir(app_type, pid));
     auto *rep = new replica(this, pid, info, dn, false);
     err = rep->initialize_on_load();
     if (err != ERR_OK) {

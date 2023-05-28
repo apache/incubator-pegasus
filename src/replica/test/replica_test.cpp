@@ -94,16 +94,6 @@ public:
         FLAGS_cold_backup_root = "test_cluster";
     }
 
-    void TearDown() override
-    {
-        auto *dn = stub->get_fs_manager()->find_replica_dir(_app_info.app_type, _pid);
-        if (dn != nullptr) {
-            const auto replica_path = dn->replica_dir(_app_info.app_type, _pid);
-            stub->get_fs_manager()->remove_replica(_pid);
-            dsn::utils::filesystem::remove_path(replica_path);
-        }
-    }
-
     int get_write_size_exceed_threshold_count()
     {
         return stub->_counter_recent_write_size_exceed_threshold_count->get_value();
@@ -488,6 +478,7 @@ TEST_F(replica_test, test_clear_on_failure)
     replica *rep =
         stub->generate_replica(_app_info, _pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
+    dsn::utils::filesystem::create_directory(path);
     ASSERT_TRUE(has_gpid(_pid));
 
     stub->clear_on_failure(rep);
@@ -504,6 +495,7 @@ TEST_F(replica_test, test_auto_trash)
     replica *rep =
         stub->generate_replica(_app_info, _pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
+    dsn::utils::filesystem::create_directory(path);
     ASSERT_TRUE(has_gpid(_pid));
 
     rep->handle_local_failure(ERR_RDB_CORRUPTION);
