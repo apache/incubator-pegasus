@@ -161,7 +161,6 @@ private:
     friend class mock_replica_stub;
     friend class replica_disk_migrator;
     friend class replica_disk_test_base;
-    friend class replica_test_base;
     friend class open_replica_test;
     FRIEND_TEST(fs_manager, find_best_dir_for_new_replica);
     FRIEND_TEST(fs_manager, get_dir_node);
