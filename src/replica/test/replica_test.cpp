@@ -405,7 +405,7 @@ TEST_F(replica_test, update_allow_ingest_behind_test)
 
 TEST_F(replica_test, test_replica_backup_and_restore)
 {
-    return;
+    // TODO(yingchun): this test last too long time, optimize it!
     test_on_cold_backup();
     auto err = test_find_valid_checkpoint();
     ASSERT_EQ(ERR_OK, err);
@@ -413,7 +413,7 @@ TEST_F(replica_test, test_replica_backup_and_restore)
 
 TEST_F(replica_test, test_replica_backup_and_restore_with_specific_path)
 {
-    return;
+    // TODO(yingchun): this test last too long time, optimize it!
     std::string user_specified_path = "test/backup";
     test_on_cold_backup(user_specified_path);
     auto err = test_find_valid_checkpoint(user_specified_path);
@@ -472,13 +472,19 @@ TEST_F(replica_test, test_query_last_checkpoint_info)
 
 TEST_F(replica_test, test_clear_on_failure)
 {
+    // Clear up the remaining state.
+    auto *dn = stub->get_fs_manager()->find_replica_dir(_app_info.app_type, _pid);
+    if (dn != nullptr) {
+        dsn::utils::filesystem::remove_path(dn->replica_dir(_app_info.app_type, _pid));
+    }
+    dn->holding_replicas.clear();
+
     // Disable failure detector to avoid connecting with meta server which is not started.
     FLAGS_fd_disabled = true;
 
     replica *rep =
         stub->generate_replica(_app_info, _pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
-    dsn::utils::filesystem::create_directory(path);
     ASSERT_TRUE(has_gpid(_pid));
 
     stub->clear_on_failure(rep);
@@ -489,20 +495,26 @@ TEST_F(replica_test, test_clear_on_failure)
 
 TEST_F(replica_test, test_auto_trash)
 {
+    // Clear up the remaining state.
+    auto *dn = stub->get_fs_manager()->find_replica_dir(_app_info.app_type, _pid);
+    if (dn != nullptr) {
+        dsn::utils::filesystem::remove_path(dn->replica_dir(_app_info.app_type, _pid));
+    }
+    dn->holding_replicas.clear();
+
     // Disable failure detector to avoid connecting with meta server which is not started.
     FLAGS_fd_disabled = true;
 
     replica *rep =
         stub->generate_replica(_app_info, _pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
-    dsn::utils::filesystem::create_directory(path);
     ASSERT_TRUE(has_gpid(_pid));
 
     rep->handle_local_failure(ERR_RDB_CORRUPTION);
     stub->wait_closing_replicas_finished();
 
     ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
-    dir_node *dn = stub->get_fs_manager()->get_dir_node(path);
+    dn = stub->get_fs_manager()->get_dir_node(path);
     ASSERT_NE(dn, nullptr);
     std::vector<std::string> subs;
     ASSERT_TRUE(dsn::utils::filesystem::get_subdirectories(dn->full_dir, subs, false));

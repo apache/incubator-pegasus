@@ -295,7 +295,7 @@ public:
         config.status = status;
 
         if (dn == nullptr) {
-            dn = _fs_manager.find_best_dir_for_new_replica(pid);
+            dn = _fs_manager.create_replica_dir_if_necessary(info.app_type, pid);
         }
         CHECK_NOTNULL(dn, "");
         mock_replica_ptr rep =

@@ -326,13 +326,15 @@ TEST_F(load_from_private_log_test, handle_real_private_log)
 
         // Update '_log_dir' to the corresponding replica created above.
         _log_dir = _replica->dir();
+        ASSERT_TRUE(utils::filesystem::path_exists(_log_dir)) << _log_dir;
 
         // Copy the log file to '_log_dir'
         boost::filesystem::path file(tt.fname);
+        ASSERT_TRUE(dsn::utils::filesystem::file_exists(tt.fname)) << tt.fname;
         boost::system::error_code ec;
         boost::filesystem::copy_file(
             file, _log_dir + "/log.1.0", boost::filesystem::copy_option::overwrite_if_exists, ec);
-        ASSERT_TRUE(!ec);
+        ASSERT_TRUE(!ec) << ec.value() << ", " << ec.category().name() << ", " << ec.message();
 
         // Start to verify.
         load_and_wait_all_entries_loaded(tt.puts, tt.total, tt.id, 1, 0);
