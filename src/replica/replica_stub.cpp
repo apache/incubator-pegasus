@@ -637,33 +637,34 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                 continue;
             }
 
-            load_tasks.push_back(tasking::create_task(
-                LPC_REPLICATION_INIT_LOAD,
-                &_tracker,
-                [this, dn, dir, &rps, &rps_lock] {
-                    LOG_INFO("process dir {}", dir);
+            load_tasks.push_back(
+                tasking::create_task(LPC_REPLICATION_INIT_LOAD,
+                                     &_tracker,
+                                     [this, dn, dir, &rps, &rps_lock] {
+                                         LOG_INFO("process dir {}", dir);
 
-                    auto r = load_replica(dn, dir.c_str());
-                    if (r != nullptr) {
-                        LOG_INFO("{}@{}: load replica '{}' success, <durable, "
-                                 "commit> = <{}, {}>, last_prepared_decree = {}",
-                                 r->get_gpid(),
-                                 dsn_primary_address(),
-                                 dir,
-                                 r->last_durable_decree(),
-                                 r->last_committed_decree(),
-                                 r->last_prepared_decree());
+                                         auto r = load_replica(dn, dir.c_str());
+                                         if (r == nullptr) {
+                                             return;
+                                         }
+                                         LOG_INFO("{}@{}: load replica '{}' success, <durable, "
+                                                  "commit> = <{}, {}>, last_prepared_decree = {}",
+                                                  r->get_gpid(),
+                                                  dsn_primary_address(),
+                                                  dir,
+                                                  r->last_durable_decree(),
+                                                  r->last_committed_decree(),
+                                                  r->last_prepared_decree());
 
-                        utils::auto_lock<utils::ex_lock> l(rps_lock);
-                        CHECK(rps.find(r->get_gpid()) == rps.end(),
-                              "conflict replica dir: {} <--> {}",
-                              r->dir(),
-                              rps[r->get_gpid()]->dir());
+                                         utils::auto_lock<utils::ex_lock> l(rps_lock);
+                                         CHECK(rps.find(r->get_gpid()) == rps.end(),
+                                               "conflict replica dir: {} <--> {}",
+                                               r->dir(),
+                                               rps[r->get_gpid()]->dir());
 
-                        rps[r->get_gpid()] = r;
-                    }
-                },
-                load_tasks.size()));
+                                         rps[r->get_gpid()] = r;
+                                     },
+                                     load_tasks.size()));
             load_tasks.back()->enqueue();
         }
     }

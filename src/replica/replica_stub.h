@@ -403,7 +403,6 @@ private:
     friend class replica_bulk_loader;
     friend class replica_split_manager;
     friend class replica_disk_migrator;
-    friend class mock_replica;
     friend class mock_replica_stub;
     friend class duplication_sync_timer;
     friend class duplication_sync_timer_test;
