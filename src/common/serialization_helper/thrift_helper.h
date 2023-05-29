@@ -339,18 +339,20 @@ inline uint32_t host_port::read(apache::thrift::protocol::TProtocol *iprot)
     _host = host;
     _port = static_cast<uint16_t>(port);
     _type = static_cast<dsn_host_type_t>(type_enum_number);
+    CHECK(_type == HOST_TYPE_INVALID || _type == HOST_TYPE_IPV4,
+          "only invalid or ipv4 can be serialized.");
 
     return xfer;
 }
 
 inline uint32_t host_port::write(apache::thrift::protocol::TProtocol *oprot) const
 {
+    CHECK(_type == HOST_TYPE_INVALID || _type == HOST_TYPE_IPV4,
+          "only invalid or ipv4 can be serialized.");
     uint32_t xfer = 0;
     auto binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol *>(oprot);
     if (binary_proto != nullptr) {
         // the protocol is binary protocol
-        CHECK(_type == HOST_TYPE_INVALID || _type == HOST_TYPE_IPV4,
-              "only invalid or ipv4 can be serialized to binary");
         xfer += oprot->writeString(_host);
         xfer += oprot->writeI16(static_cast<int16_t>(_port));
         xfer += oprot->writeByte(static_cast<int8_t>(_type));
