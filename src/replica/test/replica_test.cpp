@@ -24,6 +24,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -35,6 +36,7 @@
 #include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
+#include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "http/http_server.h"
