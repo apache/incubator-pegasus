@@ -63,7 +63,7 @@ class mutation_log_test : public replica_test_base
 TEST_F(mutation_log_test, learn)
 {
     std::chrono::steady_clock clock;
-    gpid gpid(1, 0);
+    gpid gpid(1, 1);
     std::string str = "hello, world!";
     std::string logp = _log_dir;
 

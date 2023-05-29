@@ -42,17 +42,18 @@ namespace replication {
 class replica_learn_test : public duplication_test_base
 {
 public:
-    replica_learn_test() : _pid(gpid(1, 0))
-    {
-        _app_info.app_type = "replica";
-        _app_info.duplicating = true;
-    }
+    replica_learn_test() = default;
 
     std::unique_ptr<mock_replica> create_duplicating_replica()
     {
-        dir_node *dn = stub->get_fs_manager()->find_best_dir_for_new_replica(_pid);
+        gpid pid(1, 0);
+        app_info ai;
+        ai.app_type = "replica";
+        ai.duplicating = true;
+
+        dir_node *dn = stub->get_fs_manager()->find_best_dir_for_new_replica(pid);
         CHECK_NOTNULL(dn, "");
-        auto r = std::make_unique<mock_replica>(stub.get(), _pid, _app_info, dn);
+        auto r = std::make_unique<mock_replica>(stub.get(), pid, ai, dn);
         r->as_primary();
         return r;
     }
@@ -177,10 +178,6 @@ public:
             ASSERT_EQ(_replica->get_max_gced_decree_for_learn(), tt.want);
         }
     }
-
-private:
-    app_info _app_info;
-    dsn::gpid _pid;
 };
 
 TEST_F(replica_learn_test, get_learn_start_decree) { test_get_learn_start_decree(); }
