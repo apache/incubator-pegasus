@@ -156,9 +156,13 @@ jobs:
           rm -rf pegasus-tools-*
       - name: Tar files
         run: |
+          mv build/latest/src/server/test/config.ini ./
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
+          rm -rf build/latest/src
+          mkdir -p build/latest/src/server/test
+          mv config.ini build/latest/src/server/test/
           tar --exclude='*CMakeFiles*' -zcvhf release__builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
@@ -285,9 +289,13 @@ jobs:
           ccache -s
       - name: Tar files
         run: |
+          mv build/latest/src/server/test/config.ini ./
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
+          rm -rf build/latest/src
+          mkdir -p build/latest/src/server/test
+          mv config.ini build/latest/src/server/test/
           tar --exclude='*CMakeFiles*' -zcvhf release_address_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
@@ -554,9 +562,13 @@ jobs:
           rm -rf pegasus-tools-*
       - name: Tar files
         run: |
+          mv build/latest/src/server/test/config.ini ./
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
+          rm -rf build/latest/src
+          mkdir -p build/latest/src/server/test
+          mv config.ini build/latest/src/server/test/
           tar --exclude='*CMakeFiles*' -zcvhf release_jemalloc_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
