@@ -1151,6 +1151,9 @@ void server_state::create_app(dsn::message_ex *msg)
                !validate_target_max_replica_count(request.options.replica_count)) {
         response.err = ERR_INVALID_PARAMETERS;
         will_create_app = false;
+    } else if (!validate_app_envs(request.options.envs)) {
+        response.err = ERR_INVALID_PARAMETERS;
+        will_create_app = false;
     } else {
         zauto_write_lock l(_lock);
         app = get_app(request.app_name);
@@ -2754,6 +2757,12 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
             return;
         }
 
+        if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(keys[i]) !=
+            replica_envs::ROCKSDB_STATIC_OPTIONS.end()) {
+            env_rpc.response().err = ERR_INVALID_PARAMETERS;
+            env_rpc.response().hint_message = "static rocksdb option only can set by create app";
+            return;
+        }
         os << keys[i] << "=" << values[i];
     }
     LOG_INFO("set app envs for app({}) from remote({}): kvs = {}",

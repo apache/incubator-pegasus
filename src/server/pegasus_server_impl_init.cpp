@@ -466,7 +466,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     CHECK(parse_compression_types("none", _meta_cf_opts.compression_per_level),
           "parse rocksdb_compression_type failed.");
 
-    rocksdb::BlockBasedTableOptions tbl_opts;
     tbl_opts.read_amp_bytes_per_bit = FLAGS_read_amp_bytes_per_bit;
 
     if (FLAGS_rocksdb_disable_table_block_cache) {

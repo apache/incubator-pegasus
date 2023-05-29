@@ -31,6 +31,23 @@
 
 namespace dsn {
 namespace replication {
+bool validate_app_envs(const std::map<std::string, std::string> &envs)
+{
+    if (envs.size() == 0)
+        return true;
+    // check app envs information
+    std::string hint_message;
+    bool all_envs_vaild = true;
+    for (auto &it : envs) {
+        if (!validate_app_env(it.first, it.second, hint_message)) {
+            LOG_WARNING(
+                "app env {}={} is invaild, hint_message:{}", it.first, it.second, hint_message);
+            all_envs_vaild = false;
+            break;
+        }
+    }
+    return all_envs_vaild;
+}
 
 bool validate_app_env(const std::string &env_name,
                       const std::string &env_value,
@@ -151,6 +168,36 @@ bool check_bool_value(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
+bool check_rocksdb_write_buffer_size(const std::string &env_value, std::string &hint_message)
+{
+    size_t val = 0;
+
+    if (!dsn::buf2uint64(env_value, val)) {
+        hint_message = fmt::format("rocksdb.write_buffer_size cannot set this val: {}", env_value);
+        return false;
+    }
+    if (val < (32 << 20) || val > (512 << 20)) {
+        hint_message =
+            fmt::format("rocksdb.write_buffer_size suggest set val in range [33554432, 536870912]");
+        return false;
+    }
+    return true;
+}
+bool check_rocksdb_num_levels(const std::string &env_value, std::string &hint_message)
+{
+    int32_t val = 0;
+
+    if (!dsn::buf2int32(env_value, val)) {
+        hint_message = fmt::format("rocksdb.num_levels cannot set this val:", env_value);
+        return false;
+    }
+    if (val < 1 || val > 10) {
+        hint_message = fmt::format("rocksdb.num_levels suggest set val in range [1 , 10]");
+        return false;
+    }
+    return true;
+}
+
 bool app_env_validator::validate_app_env(const std::string &env_name,
                                          const std::string &env_value,
                                          std::string &hint_message)
@@ -198,6 +245,10 @@ void app_env_validator::register_all_validators()
          std::bind(&check_bool_value, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::DENY_CLIENT_REQUEST,
          std::bind(&check_deny_client, std::placeholders::_1, std::placeholders::_2)},
+        {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
+         std::bind(&check_rocksdb_write_buffer_size, std::placeholders::_1, std::placeholders::_2)},
+        {replica_envs::ROCKSDB_NUM_LEVELS,
+         std::bind(&check_rocksdb_num_levels, std::placeholders::_1, std::placeholders::_2)},
         // TODO(zhaoliwei): not implemented
         {replica_envs::BUSINESS_INFO, nullptr},
         {replica_envs::TABLE_LEVEL_DEFAULT_TTL, nullptr},
@@ -213,7 +264,9 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, nullptr},
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, nullptr},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr},
-        {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, nullptr}};
+        {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, nullptr},
+        {replica_envs::VALUE_VERSION, nullptr},
+    };
 }
 
 } // namespace replication

@@ -28,6 +28,7 @@
 
 #include <cstdint>
 #include <string>
+#include <set>
 
 namespace dsn {
 namespace replication {
@@ -64,6 +65,12 @@ public:
     static const std::string USER_SPECIFIED_COMPACTION;
     static const std::string ROCKSDB_ALLOW_INGEST_BEHIND;
     static const std::string UPDATE_MAX_REPLICA_COUNT;
+    static const std::string ROCKSDB_WRITE_BUFFER_SIZE;
+    static const std::string ROCKSDB_NUM_LEVELS;
+    static const std::string VALUE_VERSION;
+
+    static const std::set<std::string> ROCKSDB_DYNAMIC_OPTIONS;
+    static const std::set<std::string> ROCKSDB_STATIC_OPTIONS;
 };
 
 } // namespace replication

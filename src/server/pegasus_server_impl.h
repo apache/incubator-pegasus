@@ -22,6 +22,7 @@
 #include <gtest/gtest_prod.h>
 #include <rocksdb/options.h>
 #include <rocksdb/slice.h>
+#include <rocksdb/table.h>
 #include <rrdb/rrdb_types.h>
 #include <stdint.h>
 #include <atomic>
@@ -328,6 +329,11 @@ private:
 
     void update_user_specified_compaction(const std::map<std::string, std::string> &envs);
 
+    void update_rocksdb_dynamic_options(const std::map<std::string, std::string> &envs);
+
+    void
+    update_rocksdb_options_before_create_replica(const std::map<std::string, std::string> &envs);
+
     void update_throttling_controller(const std::map<std::string, std::string> &envs);
 
     bool parse_allow_ingest_behind(const std::map<std::string, std::string> &envs);
@@ -468,6 +474,7 @@ private:
     // Dynamically calculate the value of current data_cf option according to the conf module file
     // and usage scenario
     rocksdb::ColumnFamilyOptions _table_data_cf_opts;
+    rocksdb::BlockBasedTableOptions tbl_opts;
     rocksdb::ColumnFamilyOptions _meta_cf_opts;
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;

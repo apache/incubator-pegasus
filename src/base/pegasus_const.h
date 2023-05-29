@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <set>
 #include <string>
 
 namespace pegasus {
@@ -72,4 +73,12 @@ extern const std::string USER_SPECIFIED_COMPACTION;
 extern const std::string READ_SIZE_THROTTLING;
 
 extern const std::string ROCKSDB_ALLOW_INGEST_BEHIND;
+
+extern const std::string ROCKSDB_WRITE_BUFFER_SIZE;
+
+extern const std::string ROCKSDB_NUM_LEVELS;
+
+extern const std::set<std::string> ROCKSDB_DYNAMIC_OPTIONS;
+
+extern const std::set<std::string> ROCKSDB_STATIC_OPTIONS;
 } // namespace pegasus

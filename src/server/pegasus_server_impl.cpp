@@ -2625,6 +2625,61 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
     return res;
 }
 
+void pegasus_server_impl::update_rocksdb_dynamic_options(
+    const std::map<std::string, std::string> &envs)
+{
+    if (envs.size() == 0)
+        return;
+
+    std::unordered_map<std::string, std::string> new_options;
+    for (auto &option : ROCKSDB_DYNAMIC_OPTIONS) {
+        auto find = envs.find(option);
+        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0 && find != envs.end()) {
+            new_options["write_buffer_size"] = find->second;
+        }
+    }
+
+    // doing set option
+    if (new_options.size() != 0 && !set_options(new_options)) {
+        LOG_WARNING("Set options fails");
+    }
+}
+
+void pegasus_server_impl::update_rocksdb_options_before_create_replica(
+    const std::map<std::string, std::string> &envs)
+{
+    if (envs.size() == 0)
+        return;
+
+    for (auto &option : ROCKSDB_STATIC_OPTIONS) {
+        auto find = envs.find(option);
+        bool is_set = false;
+        if (option.compare(ROCKSDB_NUM_LEVELS) == 0 && find != envs.end()) {
+            dsn::buf2int32(find->second, _data_cf_opts.num_levels);
+            is_set = true;
+        }
+
+        if (is_set)
+            LOG_INFO("Reset {} \"{}\" succeed", find->first, find->second);
+        else
+            LOG_WARNING("Reset {} \"{}\" failed", find->first, find->second);
+    }
+
+    for (auto &option : ROCKSDB_DYNAMIC_OPTIONS) {
+        auto find = envs.find(option);
+        bool is_set = false;
+
+        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0 && find != envs.end()) {
+            dsn::buf2uint64(find->second, _data_cf_opts.write_buffer_size);
+            is_set = true;
+        }
+        if (is_set)
+            LOG_INFO("Reset {} \"{}\" succeed", find->first, find->second);
+        else
+            LOG_WARNING("Reset {} \"{}\" failed", find->first, find->second);
+    }
+}
+
 void pegasus_server_impl::update_app_envs(const std::map<std::string, std::string> &envs)
 {
     update_usage_scenario(envs);
@@ -2637,6 +2692,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 
     update_throttling_controller(envs);
+    update_rocksdb_dynamic_options(envs);
 }
 
 void pegasus_server_impl::update_app_envs_before_open_db(
@@ -2650,6 +2706,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_validate_partition_hash(envs);
     update_user_specified_compaction(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
+    update_rocksdb_options_before_create_replica(envs);
 }
 
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
@@ -3054,6 +3111,7 @@ void pegasus_server_impl::reset_usage_scenario_options(
     target_opts->max_compaction_bytes = base_opts.max_compaction_bytes;
     target_opts->write_buffer_size = base_opts.write_buffer_size;
     target_opts->max_write_buffer_number = base_opts.max_write_buffer_number;
+    target_opts->num_levels = base_opts.num_levels;
 }
 
 void pegasus_server_impl::recalculate_data_cf_options(

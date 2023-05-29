@@ -101,4 +101,15 @@ const std::string USER_SPECIFIED_COMPACTION("user_specified_compaction");
 const std::string READ_SIZE_THROTTLING("replica.read_throttling_by_size");
 
 const std::string ROCKSDB_ALLOW_INGEST_BEHIND("rocksdb.allow_ingest_behind");
+
+const std::string ROCKSDB_WRITE_BUFFER_SIZE("rocksdb.write_buffer_size");
+
+const std::string ROCKSDB_NUM_LEVELS("rocksdb.num_levels");
+
+const std::set<std::string> ROCKSDB_DYNAMIC_OPTIONS = {
+    ROCKSDB_WRITE_BUFFER_SIZE,
+};
+const std::set<std::string> ROCKSDB_STATIC_OPTIONS = {
+    ROCKSDB_NUM_LEVELS,
+};
 } // namespace pegasus
