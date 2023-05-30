@@ -2961,7 +2961,7 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
             const auto dn =
                 _fs_manager.create_child_replica_dir(app->app_type, child_pid, parent_dir);
             CHECK_NOTNULL(dn, "");
-            replica *rep = new replica(this, child_pid, *app, dn, false);
+            auto *rep = new replica(this, child_pid, *app, dn, false);
             rep->_config.status = partition_status::PS_INACTIVE;
             _replicas.insert(replicas::value_type(child_pid, rep));
             LOG_INFO("mock create_child_replica_if_not_found succeed");
