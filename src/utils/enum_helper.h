@@ -52,6 +52,8 @@
 #define ENUM_REG_WITH_CUSTOM_NAME(type, name) helper->register_enum(#name, type);
 #define ENUM_REG(e) helper->register_enum(#e, e);
 
+// Argument `type invalid_value` for enum_from_string, albeit unused, has to be provided due to
+// overloading.
 #define ENUM_END2(type, name)                                                                      \
     return helper;                                                                                 \
     }                                                                                              \
@@ -66,6 +68,7 @@
 
 #define ENUM_END(type) ENUM_END2(type, type)
 
+// UpperCamelCase
 #define ENUM_CONST(str) k##str
 #define ENUM_CONST_DEF(str) ENUM_CONST(str),
 #define ENUM_CONST_REG_STR(enum_class, str)                                                        \
