@@ -179,7 +179,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (FLAGS_reject_write_when_disk_insufficient &&
-        (_dir_node->status == ERR_DISK_INSUFFICIENT ||
+        (_dir_node->status == disk_status::SPACE_INSUFFICIENT ||
          _primary_states.secondary_disk_space_insufficient())) {
         response_client_write(request, ERR_DISK_INSUFFICIENT);
         return;
