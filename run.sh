@@ -24,7 +24,7 @@ LOCAL_HOSTNAME=`hostname -f`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export THIRDPARTY_ROOT=$ROOT/thirdparty
-export LD_LIBRARY_PATH=$DSN_ROOT/lib:$THIRDPARTY_ROOT/output/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$DSN_ROOT/lib:$THIRDPARTY_ROOT/output/lib:$LD_LIBRARY_PATH
 
 function usage()
 {
