@@ -256,6 +256,11 @@ function run_build()
     echo "INFO: start build Pegasus..."
     BUILD_DIR="${BUILD_ROOT_DIR}/${BUILD_TYPE}_${SANITIZER}"
     BUILD_DIR=${BUILD_DIR%_*}
+
+    if [ ! -z "${IWYU}" ]; then
+        BUILD_DIR="${BUILD_DIR}_iwyu"
+    fi
+
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
