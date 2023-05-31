@@ -52,7 +52,7 @@ METRIC_DEFINE_counter(server,
 namespace dsn {
 namespace fd {
 
-failure_detector::failure_detector(): METRIC_VAR_INIT_server(beacon_failed_count)
+failure_detector::failure_detector() : METRIC_VAR_INIT_server(beacon_failed_count)
 {
     dsn::threadpool_code pool = task_spec::get(LPC_BEACON_CHECK.code())->pool_code;
     task_spec::get(RPC_FD_FAILURE_DETECTOR_PING.code())->pool_code = pool;
