@@ -644,62 +644,65 @@ private:
 // On the other hand, it is also needed when some special operation should be done
 // for a metric type. For example, percentile should be closed while it's no longer
 // used.
+#define ENUM_FOREACH_METRIC_TYPE(DEF)                                                              \
+    DEF(Gauge)                                                                                     \
+    DEF(Counter)                                                                                   \
+    DEF(VolatileCounter)                                                                           \
+    DEF(Percentile)
+
 enum class metric_type
 {
-    kGauge,
-    kCounter,
-    kVolatileCounter,
-    kPercentile,
-    kInvalidUnit,
+    ENUM_FOREACH_METRIC_TYPE(ENUM_CONST_DEF) kInvalidType,
 };
 
-ENUM_BEGIN(metric_type, metric_type::kInvalidUnit)
-ENUM_REG_WITH_CUSTOM_NAME(metric_type::kGauge, gauge)
-ENUM_REG_WITH_CUSTOM_NAME(metric_type::kCounter, counter)
-ENUM_REG_WITH_CUSTOM_NAME(metric_type::kVolatileCounter, volatile_counter)
-ENUM_REG_WITH_CUSTOM_NAME(metric_type::kPercentile, percentile)
+#define ENUM_CONST_REG_STR_METRIC_TYPE(str) ENUM_CONST_REG_STR(metric_type, str)
+
+ENUM_BEGIN(metric_type, metric_type::kInvalidType)
+ENUM_FOREACH_METRIC_TYPE(ENUM_CONST_REG_STR_METRIC_TYPE)
 ENUM_END(metric_type)
+
+#define ENUM_FOREACH_METRIC_UNIT(DEF)                                                              \
+    DEF(NanoSeconds)                                                                               \
+    DEF(MicroSeconds)                                                                              \
+    DEF(MilliSeconds)                                                                              \
+    DEF(Seconds)                                                                                   \
+    DEF(Bytes)                                                                                     \
+    DEF(MegaBytes)                                                                                 \
+    DEF(CapacityUnits)                                                                             \
+    DEF(Percent)                                                                                   \
+    DEF(Replicas)                                                                                  \
+    DEF(Partitions)                                                                                \
+    DEF(PartitionSplittings)                                                                       \
+    DEF(Servers)                                                                                   \
+    DEF(Requests)                                                                                  \
+    DEF(Responses)                                                                                 \
+    DEF(Seeks)                                                                                     \
+    DEF(PointLookups)                                                                              \
+    DEF(Values)                                                                                    \
+    DEF(Keys)                                                                                      \
+    DEF(Files)                                                                                     \
+    DEF(Dirs)                                                                                      \
+    DEF(Amplification)                                                                             \
+    DEF(Checkpoints)                                                                               \
+    DEF(Flushes)                                                                                   \
+    DEF(Compactions)                                                                               \
+    DEF(Mutations)                                                                                 \
+    DEF(Writes)                                                                                    \
+    DEF(Changes)                                                                                   \
+    DEF(Operations)                                                                                \
+    DEF(Tasks)                                                                                     \
+    DEF(Disconnections)                                                                            \
+    DEF(Learns)                                                                                    \
+    DEF(Rounds)                                                                                    \
+    DEF(Resets)                                                                                    \
+    DEF(Backups)                                                                                   \
+    DEF(FileLoads)                                                                                 \
+    DEF(FileUploads)                                                                               \
+    DEF(BulkLoads)
 
 enum class metric_unit : size_t
 {
-    kNanoSeconds,
-    kMicroSeconds,
-    kMilliSeconds,
-    kSeconds,
-    kBytes,
-    kMegaBytes,
-    kCapacityUnits,
-    kPercent,
-    kReplicas,
-    kPartitions,
-    kPartitionSplittings,
-    kServers,
-    kRequests,
-    kResponses,
-    kSeeks,
-    kPointLookups,
-    kValues,
-    kKeys,
-    kFiles,
-    kDirs,
-    kAmplification,
-    kCheckpoints,
-    kFlushes,
-    kCompactions,
-    kMutations,
-    kWrites,
-    kChanges,
-    kOperations,
-    kTasks,
-    kDisconnections,
-    kLearns,
-    kRounds,
-    kResets,
-    kBackups,
-    kFileLoads,
-    kFileUploads,
-    kBulkLoads,
-    kInvalidUnit,
+    ENUM_FOREACH_METRIC_UNIT(ENUM_CONST_DEF) kInvalidUnit,
 };
 
 #define METRIC_ASSERT_UNIT_LATENCY(unit, index)                                                    \
@@ -727,12 +730,10 @@ inline uint64_t convert_metric_latency_from_ns(uint64_t latency_ns, metric_unit 
     return latency_ns / kMetricLatencyConverterFromNS[index];
 }
 
+#define ENUM_CONST_REG_STR_METRIC_UNIT(str) ENUM_CONST_REG_STR(metric_unit, str)
+
 ENUM_BEGIN(metric_unit, metric_unit::kInvalidUnit)
-ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kNanoSeconds, nanoseconds)
-ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kMicroSeconds, microseconds)
-ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kMilliSeconds, milliseconds)
-ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kSeconds, seconds)
-ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kRequests, requests)
+ENUM_FOREACH_METRIC_UNIT(ENUM_CONST_REG_STR_METRIC_UNIT)
 ENUM_END(metric_unit)
 
 class metric_prototype
