@@ -35,7 +35,6 @@
 
 #include "failure_detector/fd.code.definition.h"
 #include "fd_types.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/api_layer1.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/async_calls.h"
@@ -45,20 +44,19 @@
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
 
+METRIC_DEFINE_counter(server,
+                      beacon_failed_count,
+                      dsn::metric_unit::kBeacons,
+                      "The number of failed beacons sent by failure detector");
+
 namespace dsn {
 namespace fd {
 
-failure_detector::failure_detector()
+failure_detector::failure_detector(): METRIC_VAR_INIT_server(beacon_failed_count)
 {
     dsn::threadpool_code pool = task_spec::get(LPC_BEACON_CHECK.code())->pool_code;
     task_spec::get(RPC_FD_FAILURE_DETECTOR_PING.code())->pool_code = pool;
     task_spec::get(RPC_FD_FAILURE_DETECTOR_PING_ACK.code())->pool_code = pool;
-
-    _recent_beacon_fail_count.init_app_counter(
-        "eon.failure_detector",
-        "recent_beacon_fail_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "failure detector beacon fail count in the recent period");
 
     _is_started = false;
 }
@@ -423,7 +421,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
                     node,
                     _beacon_timeout_milliseconds,
                     err);
-        _recent_beacon_fail_count->increment();
+        METRIC_VAR_INCREMENT(beacon_failed_count);
     }
 
     master_map::iterator itr = _masters.find(node);

@@ -70,12 +70,12 @@
 
 #include "failure_detector/fd.client.h"
 #include "failure_detector/fd.server.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
+#include "utils/metrics.h"
 #include "utils/threadpool_code.h"
 #include "utils/zlocks.h"
 
@@ -238,7 +238,7 @@ private:
     bool _use_allow_list;
     allow_list _allow_list;
 
-    perf_counter_wrapper _recent_beacon_fail_count;
+    METRIC_VAR_DECLARE_counter(beacon_failed_count);
 
     std::unique_ptr<command_deregister> _get_allow_list;
 
