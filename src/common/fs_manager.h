@@ -29,7 +29,6 @@
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/string_view.h"
 #include "utils/zlocks.h"
@@ -96,7 +95,13 @@ public:
     // TODO(yingchun): consider the disk capacity and available space.
     // NOTE: the 'pid' must not exist in any dir_nodes.
     dir_node *find_best_dir_for_new_replica(const dsn::gpid &pid) const;
-    dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
+    // Similar to the above, but will specify the dir_node for the new replica.
+    // NOTE: the 'pid' must not exist in any dir_nodes and the 'specified_dn' must be in the
+    // dir_nodes.
+    // NOTE: only used in test.
+    void specify_dir_for_new_replica_for_test(dir_node *specified_dn,
+                                              dsn::string_view app_type,
+                                              const dsn::gpid &pid) const;
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
     // Find the replica instance directory.
     dir_node *find_replica_dir(dsn::string_view app_type, gpid pid);

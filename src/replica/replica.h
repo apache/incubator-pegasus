@@ -120,6 +120,7 @@ class replica_split_manager;
 class replica_stub;
 class replication_app_base;
 class replication_options;
+struct dir_node;
 
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
@@ -291,11 +292,7 @@ public:
 
     // routine for get extra envs from replica
     const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }
-
-    void set_disk_status(disk_status::type status) { _disk_status = status; }
-    bool disk_space_insufficient() { return _disk_status == disk_status::SPACE_INSUFFICIENT; }
-    disk_status::type get_disk_status() { return _disk_status; }
-    std::string get_replica_disk_tag() const { return _disk_tag; }
+    const dir_node *get_dir_node() const { return _dir_node; }
 
     static const std::string kAppInfo;
 
@@ -315,7 +312,7 @@ private:
     replica(replica_stub *stub,
             gpid gpid,
             const app_info &app,
-            const char *dir,
+            dir_node *dn,
             bool need_restore,
             bool is_duplication_follower = false);
     error_code initialize_on_new();
@@ -523,8 +520,6 @@ private:
     // update envs to deny client request
     void update_deny_client(const std::map<std::string, std::string> &envs);
 
-    void init_disk_tag();
-
     // store `info` into a file under `path` directory
     // path = "" means using the default directory (`_dir`/.app_info)
     error_code store_app_info(app_info &info, const std::string &path = "");
@@ -582,7 +577,6 @@ private:
     // constants
     replica_stub *_stub;
     std::string _dir;
-    std::string _disk_tag;
     replication_options *_options;
     app_info _app_info;
     std::map<std::string, std::string> _extra_envs;
@@ -678,7 +672,8 @@ private:
 
     std::unique_ptr<security::access_controller> _access_controller;
 
-    disk_status::type _disk_status{disk_status::NORMAL};
+    // The dir_node where the replica data is placed.
+    dir_node *_dir_node{nullptr};
 
     bool _allow_ingest_behind{false};
     // Indicate where the storage engine data is corrupted and unrecoverable.

@@ -339,10 +339,10 @@ private:
                          bool restore_if_necessary,
                          bool is_duplication_follower,
                          const std::string &parent_dir = "");
-    // Load an existing replica from 'dir'.
-    replica *load_replica(const char *dir);
+    // Load an existing replica which is located in 'dn' with 'dir' directory.
+    replica *load_replica(dir_node *dn, const char *dir);
     // Clean up the memory state and on disk data if creating replica failed.
-    void clear_on_failure(replica *rep, const std::string &path, const gpid &pid);
+    void clear_on_failure(replica *rep);
     task_ptr begin_close_replica(replica_ptr r);
     void close_replica(replica_ptr r);
     void notify_replica_state_update(const replica_configuration &config, bool is_closing);
@@ -403,7 +403,6 @@ private:
     friend class replica_bulk_loader;
     friend class replica_split_manager;
     friend class replica_disk_migrator;
-
     friend class mock_replica_stub;
     friend class duplication_sync_timer;
     friend class duplication_sync_timer_test;

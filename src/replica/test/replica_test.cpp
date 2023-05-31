@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <gmock/gmock-matchers.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -23,6 +24,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -34,6 +36,7 @@
 #include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
+#include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "http/http_server.h"
@@ -61,6 +64,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
+#include "utils/test_macros.h"
 
 namespace dsn {
 namespace replication {
@@ -71,7 +75,7 @@ class replica_test : public replica_test_base
 {
 public:
     replica_test()
-        : pid(gpid(2, 1)),
+        : _pid(gpid(2, 1)),
           _backup_id(dsn_now_ms()),
           _provider_name("local_service"),
           _policy_name("mock_policy")
@@ -83,7 +87,8 @@ public:
         FLAGS_enable_http_server = false;
         stub->install_perf_counters();
         mock_app_info();
-        _mock_replica = stub->generate_replica_ptr(_app_info, pid, partition_status::PS_PRIMARY, 1);
+        _mock_replica =
+            stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
 
         // set FLAGS_cold_backup_root manually.
         // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
@@ -153,7 +158,7 @@ public:
     void test_on_cold_backup(const std::string user_specified_path = "")
     {
         backup_request req;
-        req.pid = pid;
+        req.pid = _pid;
         policy_info backup_policy_info;
         backup_policy_info.__set_backup_provider_type(_provider_name);
         backup_policy_info.__set_policy_name(_policy_name);
@@ -205,10 +210,10 @@ public:
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
 
-    bool has_gpid(gpid &gpid) const
+    bool has_gpid(gpid &pid) const
     {
-        for (const auto &node : stub->_fs_manager._dir_nodes) {
-            if (node->has(gpid)) {
+        for (const auto &node : stub->_fs_manager.get_dir_nodes()) {
+            if (node->has(pid)) {
                 return true;
             }
         }
@@ -251,7 +256,7 @@ public:
 
 public:
     dsn::app_info _app_info;
-    dsn::gpid pid;
+    dsn::gpid _pid;
     mock_replica_ptr _mock_replica;
 
 private:
@@ -274,7 +279,7 @@ TEST_F(replica_test, write_size_limited)
     write_request->io_session = sim_net->create_client_session(rpc_address());
 
     for (int i = 0; i < count; i++) {
-        stub->on_client_write(pid, write_request);
+        stub->on_client_write(_pid, write_request);
     }
 
     ASSERT_EQ(get_write_size_exceed_threshold_count(), count);
@@ -402,6 +407,7 @@ TEST_F(replica_test, update_allow_ingest_behind_test)
 
 TEST_F(replica_test, test_replica_backup_and_restore)
 {
+    // TODO(yingchun): this test last too long time, optimize it!
     test_on_cold_backup();
     auto err = test_find_valid_checkpoint();
     ASSERT_EQ(ERR_OK, err);
@@ -409,6 +415,7 @@ TEST_F(replica_test, test_replica_backup_and_restore)
 
 TEST_F(replica_test, test_replica_backup_and_restore_with_specific_path)
 {
+    // TODO(yingchun): this test last too long time, optimize it!
     std::string user_specified_path = "test/backup";
     test_on_cold_backup(user_specified_path);
     auto err = test_find_valid_checkpoint(user_specified_path);
@@ -462,42 +469,54 @@ TEST_F(replica_test, test_query_last_checkpoint_info)
     _mock_replica->set_last_committed_decree(200);
     _mock_replica->on_query_last_checkpoint(resp);
     ASSERT_EQ(resp.last_committed_decree, 200);
-    ASSERT_EQ(resp.base_local_dir, "./data/checkpoint.100");
+    ASSERT_STR_CONTAINS(resp.base_local_dir, "/data/checkpoint.100");
 }
 
 TEST_F(replica_test, test_clear_on_failure)
 {
+    // Clear up the remaining state.
+    auto *dn = stub->get_fs_manager()->find_replica_dir(_app_info.app_type, _pid);
+    if (dn != nullptr) {
+        dsn::utils::filesystem::remove_path(dn->replica_dir(_app_info.app_type, _pid));
+    }
+    dn->holding_replicas.clear();
+
     // Disable failure detector to avoid connecting with meta server which is not started.
     FLAGS_fd_disabled = true;
 
     replica *rep =
-        stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
+        stub->generate_replica(_app_info, _pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
-    dsn::utils::filesystem::create_directory(path);
-    ASSERT_TRUE(has_gpid(pid));
+    ASSERT_TRUE(has_gpid(_pid));
 
-    stub->clear_on_failure(rep, path, pid);
+    stub->clear_on_failure(rep);
 
     ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
-    ASSERT_FALSE(has_gpid(pid));
+    ASSERT_FALSE(has_gpid(_pid));
 }
 
 TEST_F(replica_test, test_auto_trash)
 {
+    // Clear up the remaining state.
+    auto *dn = stub->get_fs_manager()->find_replica_dir(_app_info.app_type, _pid);
+    if (dn != nullptr) {
+        dsn::utils::filesystem::remove_path(dn->replica_dir(_app_info.app_type, _pid));
+    }
+    dn->holding_replicas.clear();
+
     // Disable failure detector to avoid connecting with meta server which is not started.
     FLAGS_fd_disabled = true;
 
     replica *rep =
-        stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
+        stub->generate_replica(_app_info, _pid, partition_status::PS_PRIMARY, 1, false, true);
     auto path = rep->dir();
-    dsn::utils::filesystem::create_directory(path);
-    ASSERT_TRUE(has_gpid(pid));
+    ASSERT_TRUE(has_gpid(_pid));
 
     rep->handle_local_failure(ERR_RDB_CORRUPTION);
     stub->wait_closing_replicas_finished();
 
     ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
-    dir_node *dn = stub->get_fs_manager()->get_dir_node(path);
+    dn = stub->get_fs_manager()->get_dir_node(path);
     ASSERT_NE(dn, nullptr);
     std::vector<std::string> subs;
     ASSERT_TRUE(dsn::utils::filesystem::get_subdirectories(dn->full_dir, subs, false));
@@ -516,7 +535,7 @@ TEST_F(replica_test, test_auto_trash)
         }
     }
     ASSERT_TRUE(found);
-    ASSERT_FALSE(has_gpid(pid));
+    ASSERT_FALSE(has_gpid(_pid));
 }
 
 TEST_F(replica_test, update_deny_client_test)

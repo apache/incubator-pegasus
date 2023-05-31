@@ -27,6 +27,7 @@
 #include <utility>
 
 #include "common/duplication_common.h"
+#include "common/fs_manager.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "nfs/nfs_node.h"
@@ -236,7 +237,7 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
     request->source_disk_tag = remote_disk;
     request->source_dir = remote_dir;
     request->files = file_list;
-    request->dest_disk_tag = _replica->get_replica_disk_tag();
+    request->dest_disk_tag = _replica->get_dir_node()->tag;
     request->dest_dir = dest_dir;
     request->overwrite = true;
     request->high_priority = false;

@@ -38,6 +38,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
@@ -210,7 +211,7 @@ void replica::on_group_check(const group_check_request &request,
         }
         // the group check may trigger start/finish/cancel/pause a split on the secondary.
         _split_mgr->trigger_secondary_parent_split(request, response);
-        response.__set_disk_status(_disk_status);
+        response.__set_disk_status(_dir_node->status);
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         init_learn(request.config.learner_signature);

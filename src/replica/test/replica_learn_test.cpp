@@ -23,6 +23,7 @@
 #include <string>
 #include <utility>
 
+#include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
@@ -31,6 +32,7 @@
 #include "replica/duplication/test/duplication_test_base.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -44,11 +46,14 @@ public:
 
     std::unique_ptr<mock_replica> create_duplicating_replica()
     {
-        gpid gpid(1, 1);
-        app_info app_info;
-        app_info.app_type = "replica";
-        app_info.duplicating = true;
-        auto r = std::make_unique<mock_replica>(stub.get(), gpid, app_info, "./");
+        gpid pid(1, 0);
+        app_info ai;
+        ai.app_type = "replica";
+        ai.duplicating = true;
+
+        dir_node *dn = stub->get_fs_manager()->find_best_dir_for_new_replica(pid);
+        CHECK_NOTNULL(dn, "");
+        auto r = std::make_unique<mock_replica>(stub.get(), pid, ai, dn);
         r->as_primary();
         return r;
     }
