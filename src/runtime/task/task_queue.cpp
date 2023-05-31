@@ -55,7 +55,7 @@ METRIC_DEFINE_counter(queue,
 METRIC_DEFINE_counter(queue,
                       queue_rejected_tasks,
                       dsn::metric_unit::kTasks,
-                      "The accumulative number of rejeced tasks by throttling before enqueue");
+                      "The accumulative number of rejected tasks by throttling before enqueue");
 
 namespace dsn {
 
