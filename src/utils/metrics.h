@@ -155,6 +155,7 @@ class error_code;
 // instead of a single fixed argument to represent a type.
 #define METRIC_VAR_NAME(name) _metric_##name
 #define METRIC_VAR_DECLARE(name, ...) __VA_ARGS__ METRIC_VAR_NAME(name)
+// Following variadic arguments are used to input the possible qualifiers, such as `static`.
 #define METRIC_VAR_DECLARE_gauge_int64(name, ...)                                                  \
     METRIC_VAR_DECLARE(name, __VA_ARGS__ dsn::gauge_ptr<int64_t>)
 #define METRIC_VAR_DECLARE_counter(name, ...)                                                      \
@@ -172,9 +173,12 @@ class error_code;
     METRIC_VAR_DEFINE(name, clazz, __VA_ARGS__ dsn::percentile_ptr<int64_t>)
 
 // Initialize a metric variable in user class.
-#define METRIC_VAR_INIT(name, entity, ...)                                                         \
-    METRIC_VAR_NAME(name)(METRIC_##name.instantiate(entity##_metric_entity(), ##__VA_ARGS__))
+#define METRIC_VAR_INSTANTIATE(name, entity, op, ...)                                              \
+    METRIC_VAR_NAME(name) op(METRIC_##name.instantiate(entity##_metric_entity(), ##__VA_ARGS__))
+#define METRIC_VAR_ASSIGN(name, entity, ...) METRIC_VAR_INSTANTIATE(name, entity, =, ##__VA_ARGS__)
+#define METRIC_VAR_INIT(name, entity, ...) METRIC_VAR_INSTANTIATE(name, entity, , ##__VA_ARGS__)
 #define METRIC_VAR_INIT_replica(name, ...) METRIC_VAR_INIT(name, replica, ##__VA_ARGS__)
+#define METRIC_VAR_ASSIGN_server(name, ...) METRIC_VAR_ASSIGN(name, server, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_server(name, ...) METRIC_VAR_INIT(name, server, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_disk(name, ...) METRIC_VAR_INIT(name, disk, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_table(name, ...) METRIC_VAR_INIT(name, table, ##__VA_ARGS__)

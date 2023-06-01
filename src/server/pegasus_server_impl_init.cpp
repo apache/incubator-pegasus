@@ -825,6 +825,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     // them only once.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
+        METRIC_VAR_ASSIGN_server(rdb_block_cache_mem_usage_bytes);
         _pfc_rdb_write_limiter_rate_bytes.init_global_counter(
             "replica",
             "app.pegasus",
