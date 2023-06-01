@@ -129,7 +129,7 @@ METRIC_DEFINE_gauge_int64(replica,
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_total_sst_size_mb,
                           dsn::metric_unit::kMegaBytes,
-                          "The total size of rocksdb sst files in MB");
+                          "The total size of rocksdb sst files");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_estimated_keys,
@@ -139,12 +139,12 @@ METRIC_DEFINE_gauge_int64(replica,
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_index_and_filter_blocks_mem_usage_bytes,
                           dsn::metric_unit::kBytes,
-                          "The memory usage of rocksdb index and filter blocks in bytes");
+                          "The memory usage of rocksdb index and filter blocks");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_memtable_mem_usage_bytes,
                           dsn::metric_unit::kBytes,
-                          "The memory usage of rocksdb memtables in bytes");
+                          "The memory usage of rocksdb memtables");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_block_cache_hit_count,
@@ -237,6 +237,16 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kPointLookups,
                           "The number of times full bloom filter has not avoided the reads and "
                           "data actually exist, used by rocksdb");
+
+METRIC_DEFINE_gauge_int64(server,
+                          rdb_block_cache_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb block cache");
+
+METRIC_DEFINE_gauge_int64(server,
+                          rdb_block_cache_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb block cache");
 
 namespace pegasus {
 namespace server {
@@ -820,13 +830,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     // them only once.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _pfc_rdb_block_cache_mem_usage.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.block_cache.memory_usage",
-            COUNTER_TYPE_NUMBER,
-            "statistic the memory usage of rocksdb block cache");
-
         _pfc_rdb_write_limiter_rate_bytes.init_global_counter(
             "replica",
             "app.pegasus",

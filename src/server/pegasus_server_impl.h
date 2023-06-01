@@ -544,10 +544,9 @@ private:
     METRIC_VAR_DECLARE_counter(abnormal_read_requests);
     METRIC_VAR_DECLARE_counter(throttling_rejected_read_requests);
 
-    // rocksdb internal statistics
-    // server level
+    // Server-level metrics for rocksdb.
+    METRIC_VAR_DECLARE_gauge_int64(rdb_block_cache_mem_usage_bytes, static);
     static ::dsn::perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
-    static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
 
     // Replica-level metrics for rocksdb.
     METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_files);
