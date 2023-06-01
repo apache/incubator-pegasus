@@ -698,7 +698,8 @@ ENUM_END(metric_type)
     DEF(Backups)                                                                                   \
     DEF(FileLoads)                                                                                 \
     DEF(FileUploads)                                                                               \
-    DEF(BulkLoads)
+    DEF(BulkLoads)                                                                                 \
+    DEF(Beacons)
 
 enum class metric_unit : size_t
 {
