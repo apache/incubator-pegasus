@@ -156,20 +156,20 @@ class error_code;
 #define METRIC_VAR_NAME(name) _metric_##name
 #define METRIC_VAR_DECLARE(name, ...) __VA_ARGS__ METRIC_VAR_NAME(name)
 #define METRIC_VAR_DECLARE_gauge_int64(name, ...)                                                  \
-    METRIC_VAR_DECLARE(name, ##__VA_ARGS__, dsn::gauge_ptr<int64_t>)
+    METRIC_VAR_DECLARE(name, __VA_ARGS__ dsn::gauge_ptr<int64_t>)
 #define METRIC_VAR_DECLARE_counter(name, ...)                                                      \
-    METRIC_VAR_DECLARE(name, ##__VA_ARGS__, dsn::counter_ptr<dsn::striped_long_adder, false>)
+    METRIC_VAR_DECLARE(name, __VA_ARGS__ dsn::counter_ptr<dsn::striped_long_adder, false>)
 #define METRIC_VAR_DECLARE_percentile_int64(name, ...)                                             \
-    METRIC_VAR_DECLARE(name, ##__VA_ARGS__, dsn::percentile_ptr<int64_t>)
+    METRIC_VAR_DECLARE(name, __VA_ARGS__ dsn::percentile_ptr<int64_t>)
 
 // Macro METRIC_VAR_DEFINE* are used for metrics as static members of classes.
 #define METRIC_VAR_DEFINE(name, clazz, ...) __VA_ARGS__ clazz::METRIC_VAR_NAME(name)
 #define METRIC_VAR_DEFINE_gauge_int64(name, clazz, ...)                                            \
-    METRIC_VAR_DEFINE(name, clazz, ##__VA_ARGS__, dsn::gauge_ptr<int64_t>)
+    METRIC_VAR_DEFINE(name, clazz, __VA_ARGS__ dsn::gauge_ptr<int64_t>)
 #define METRIC_VAR_DEFINE_counter(name, clazz, ...)                                                \
-    METRIC_VAR_DEFINE(name, clazz, ##__VA_ARGS__, dsn::counter_ptr<dsn::striped_long_adder, false>)
+    METRIC_VAR_DEFINE(name, clazz, __VA_ARGS__ dsn::counter_ptr<dsn::striped_long_adder, false>)
 #define METRIC_VAR_DEFINE_percentile_int64(name, clazz, ...)                                       \
-    METRIC_VAR_DEFINE(name, clazz, ##__VA_ARGS__, dsn::percentile_ptr<int64_t>)
+    METRIC_VAR_DEFINE(name, clazz, __VA_ARGS__ dsn::percentile_ptr<int64_t>)
 
 // Initialize a metric variable in user class.
 #define METRIC_VAR_INIT(name, entity, ...)                                                         \
