@@ -692,7 +692,7 @@ ENUM_END(metric_type)
     DEF(Operations)                                                                                \
     DEF(Tasks)                                                                                     \
     DEF(Disconnections)                                                                            \
-    DEF(Sessions)                                                                            \
+    DEF(Sessions)                                                                                  \
     DEF(Learns)                                                                                    \
     DEF(Rounds)                                                                                    \
     DEF(Resets)                                                                                    \

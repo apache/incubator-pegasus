@@ -601,8 +601,8 @@ uint32_t network::get_local_ipv4()
 
 connection_oriented_network::connection_oriented_network(rpc_engine *srv, network *inner_provider)
     : network(srv, inner_provider),
-    METRIC_VAR_INIT_server(network_client_sessions),
-    METRIC_VAR_INIT_server(network_server_sessions)
+      METRIC_VAR_INIT_server(network_client_sessions),
+      METRIC_VAR_INIT_server(network_server_sessions)
 {
 }
 
