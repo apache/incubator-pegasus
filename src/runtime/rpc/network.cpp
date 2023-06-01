@@ -33,7 +33,6 @@
 #include <utility>
 
 #include "message_parser_manager.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/api_task.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
@@ -45,8 +44,19 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
+
+METRIC_DEFINE_gauge_int64(server,
+                          network_client_sessions,
+                          dsn::metric_unit::kSessions,
+                          "The number of sessions from client side");
+
+METRIC_DEFINE_gauge_int64(server,
+                          network_server_sessions,
+                          dsn::metric_unit::kSessions,
+                          "The number of sessions from server side");
 
 namespace dsn {
 DSN_DEFINE_uint32(network,
@@ -590,13 +600,10 @@ uint32_t network::get_local_ipv4()
 }
 
 connection_oriented_network::connection_oriented_network(rpc_engine *srv, network *inner_provider)
-    : network(srv, inner_provider)
+    : network(srv, inner_provider),
+      METRIC_VAR_INIT_server(network_client_sessions),
+      METRIC_VAR_INIT_server(network_server_sessions)
 {
-    _client_session_count.init_global_counter("server",
-                                              "network",
-                                              "client_session_count",
-                                              COUNTER_TYPE_NUMBER,
-                                              "current session count on server");
 }
 
 void connection_oriented_network::inject_drop_message(message_ex *msg, bool is_send)
@@ -654,7 +661,7 @@ void connection_oriented_network::send_message(message_ex *request)
         LOG_INFO("client session created, remote_server = {}, current_count = {}",
                  client->remote_address(),
                  ip_count);
-        _client_session_count->set(ip_count);
+        METRIC_VAR_SET(network_client_sessions, ip_count);
         client->connect();
     }
 
@@ -702,7 +709,7 @@ void connection_oriented_network::on_server_session_accepted(rpc_session_ptr &s)
              s->remote_address(),
              ip_conn_count);
 
-    _client_session_count->set(ip_count);
+    METRIC_VAR_SET(network_server_sessions, ip_count);
 }
 
 void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr &s)
@@ -738,7 +745,7 @@ void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr
         LOG_INFO("session {} disconnected, the total client sessions count remains {}",
                  s->remote_address(),
                  ip_count);
-        _client_session_count->set(ip_count);
+        METRIC_VAR_SET(network_server_sessions, ip_count);
     }
 
     if (ip_conn_count == 0) {
@@ -800,7 +807,7 @@ void connection_oriented_network::on_client_session_connected(rpc_session_ptr &s
         LOG_INFO("client session connected, remote_server = {}, current_count = {}",
                  s->remote_address(),
                  ip_count);
-        _client_session_count->set(ip_count);
+        METRIC_VAR_SET(network_client_sessions, ip_count);
     }
 }
 
@@ -822,7 +829,7 @@ void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr
         LOG_INFO("client session disconnected, remote_server = {}, current_count = {}",
                  s->remote_address(),
                  ip_count);
-        _client_session_count->set(ip_count);
+        METRIC_VAR_SET(network_client_sessions, ip_count);
     }
 }
 
