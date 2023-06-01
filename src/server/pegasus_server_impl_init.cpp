@@ -243,11 +243,6 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kBytes,
                           "The memory usage of rocksdb block cache");
 
-METRIC_DEFINE_gauge_int64(server,
-                          rdb_block_cache_mem_usage_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The memory usage of rocksdb block cache");
-
 namespace pegasus {
 namespace server {
 
