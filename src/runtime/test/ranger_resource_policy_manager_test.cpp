@@ -338,7 +338,8 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
                  {"TASK_CODE_INVALID", "user7", "database3", false},
                  {"RPC_CM_LIST_NODES", "user7", "database3", true},
                  {"RPC_CM_LIST_NODES", "user8", "database3", false},
-                 {"RPC_CM_LIST_APPS", "user7", "database3", true},
+                 // RPC_CM_LIST_APPS has been removed from global resources.
+                 {"RPC_CM_LIST_APPS", "user7", "database3", false},
                  {"RPC_CM_LIST_APPS", "user8", "database3", false},
                  {"TASK_CODE_INVALID", "user9", "database4", false},
                  {"RPC_CM_LIST_NODES", "user9", "database4", false},
