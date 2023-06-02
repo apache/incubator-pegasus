@@ -75,7 +75,8 @@ DSN_DEFINE_string(ranger,
 DSN_DEFINE_string(ranger,
                   legacy_table_database_mapping_policy_name,
                   "__default__",
-                  "The name of the Ranger database policy matched by the legacy table");
+                  "The name of the Ranger database policy matched by the legacy table(The table "
+                  "name does not follow the naming rules of {database}.{tablename})");
 
 #define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
     do {                                                                                           \
@@ -256,7 +257,8 @@ bool ranger_resource_policy_manager::allowed(const int rpc_code,
                 continue;
             }
             // "*" can match any table, including legacy table and new table.
-            if (policy.database_names.count("*") != 0 || policy.database_names.count(db_name)) {
+            if (policy.database_names.count("*") != 0 ||
+                policy.database_names.count(db_name) != 0) {
                 return true;
             }
         }
@@ -599,7 +601,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
             {dsn::replication::replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES});
         bool is_policy_matched = false;
         for (const auto &policy : table_policies->second) {
-            // this table does not match any database, app Ranger policy will be cleaned up
+            // IF this table does not match any database, its Ranger policies will be cleaned up.
             if (policy.database_names.count(database_name) == 0 &&
                 policy.database_names.count("*") == 0) {
                 continue;
@@ -616,7 +618,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
             break;
         }
 
-        // There is no matched policy, clear app Ranger policy
+        // There is no matched policy, clear the table's Ranger policies.
         if (!is_policy_matched) {
             req->__set_op(dsn::replication::app_env_operation::type::APP_ENV_OP_DEL);
 
