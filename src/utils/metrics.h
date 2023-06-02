@@ -101,9 +101,9 @@ class error_code;
         {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 
 // There are 2 kinds of counters:
-// - `counter` is the general type of counter that is implemented by striped_long_adder, which can
+// * `counter` is the general type of counter that is implemented by striped_long_adder, which can
 //   achieve high performance while consuming less memory if it's not updated very frequently.
-// - `concurrent_counter` uses concurrent_long_adder as the underlying implementation. It has
+// * `concurrent_counter` uses concurrent_long_adder as the underlying implementation. It has
 //   higher performance while consuming more memory if it's updated very frequently.
 // See also include/dsn/utility/long_adder.h for details.
 #define METRIC_DEFINE_counter(entity_type, name, unit, desc, ...)                                  \
@@ -144,7 +144,7 @@ class error_code;
 #define METRIC_DECLARE_percentile_double(name)                                                     \
     extern dsn::floating_percentile_prototype<double> METRIC_##name
 
-// Following METRIC_*VAR* macros are introduced so that:
+// Following METRIC_VAR* macros are introduced so that:
 // * only need to use prototype name to operate each metric variable;
 // * uniformly name each variable in user class;
 // * differentiate operations on metrics significantly from main logic, improving code readability.
@@ -155,7 +155,8 @@ class error_code;
 // instead of a single fixed argument to represent a type.
 #define METRIC_VAR_NAME(name) _metric_##name
 #define METRIC_VAR_DECLARE(name, ...) __VA_ARGS__ METRIC_VAR_NAME(name)
-// Following variadic arguments are used to input the possible qualifiers, such as `static`.
+
+// Variadic arguments are possible qualifiers for the variable, such as `static`.
 #define METRIC_VAR_DECLARE_gauge_int64(name, ...)                                                  \
     METRIC_VAR_DECLARE(name, __VA_ARGS__ dsn::gauge_ptr<int64_t>)
 #define METRIC_VAR_DECLARE_counter(name, ...)                                                      \
@@ -163,7 +164,9 @@ class error_code;
 #define METRIC_VAR_DECLARE_percentile_int64(name, ...)                                             \
     METRIC_VAR_DECLARE(name, __VA_ARGS__ dsn::percentile_ptr<int64_t>)
 
-// Macro METRIC_VAR_DEFINE* are used for metrics as static members of classes.
+// Macro METRIC_VAR_DEFINE* are used for the metric that is a static member of a class:
+// * `clazz` is the name of the class;
+// * variadic arguments are possible qualifiers for the variable.
 #define METRIC_VAR_DEFINE(name, clazz, ...) __VA_ARGS__ clazz::METRIC_VAR_NAME(name)
 #define METRIC_VAR_DEFINE_gauge_int64(name, clazz, ...)                                            \
     METRIC_VAR_DEFINE(name, clazz, __VA_ARGS__ dsn::gauge_ptr<int64_t>)
@@ -172,7 +175,11 @@ class error_code;
 #define METRIC_VAR_DEFINE_percentile_int64(name, clazz, ...)                                       \
     METRIC_VAR_DEFINE(name, clazz, __VA_ARGS__ dsn::percentile_ptr<int64_t>)
 
-// Initialize a metric variable in user class.
+// Initialize a metric variable in user class:
+// * macros METRIC_VAR_INIT* could be used to initialize metric variables in member initializer
+//   lists of the constructor of user class;
+// * macros METRIC_VAR_ASSIGN* could be used to initialize metric variables by assignment operator
+//   (=).
 #define METRIC_VAR_INSTANTIATE(name, entity, op, ...)                                              \
     METRIC_VAR_NAME(name) op(METRIC_##name.instantiate(entity##_metric_entity(), ##__VA_ARGS__))
 #define METRIC_VAR_ASSIGN(name, entity, ...) METRIC_VAR_INSTANTIATE(name, entity, =, ##__VA_ARGS__)
