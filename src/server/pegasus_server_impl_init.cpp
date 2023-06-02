@@ -40,8 +40,6 @@
 #include "pegasus_event_listener.h"
 #include "pegasus_server_impl.h"
 #include "pegasus_value_schema.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
@@ -130,7 +128,7 @@ METRIC_DEFINE_gauge_int64(replica,
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_total_sst_size_mb,
                           dsn::metric_unit::kMegaBytes,
-                          "The total size of rocksdb sst files in MB");
+                          "The total size of rocksdb sst files");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_estimated_keys,
@@ -140,12 +138,12 @@ METRIC_DEFINE_gauge_int64(replica,
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_index_and_filter_blocks_mem_usage_bytes,
                           dsn::metric_unit::kBytes,
-                          "The memory usage of rocksdb index and filter blocks in bytes");
+                          "The memory usage of rocksdb index and filter blocks");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_memtable_mem_usage_bytes,
                           dsn::metric_unit::kBytes,
-                          "The memory usage of rocksdb memtables in bytes");
+                          "The memory usage of rocksdb memtables");
 
 METRIC_DEFINE_gauge_int64(replica,
                           rdb_block_cache_hit_count,
@@ -238,6 +236,17 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kPointLookups,
                           "The number of times full bloom filter has not avoided the reads and "
                           "data actually exist, used by rocksdb");
+
+METRIC_DEFINE_gauge_int64(server,
+                          rdb_block_cache_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb block cache");
+
+METRIC_DEFINE_gauge_int64(server,
+                          rdb_write_rate_limiter_through_bytes_per_sec,
+                          dsn::metric_unit::kBytesPerSec,
+                          "The through bytes per second that go through the rate limiter which "
+                          "takes control of the write rate of flush and compaction of rocksdb");
 
 namespace pegasus {
 namespace server {
@@ -821,19 +830,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     // them only once.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _pfc_rdb_block_cache_mem_usage.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.block_cache.memory_usage",
-            COUNTER_TYPE_NUMBER,
-            "statistic the memory usage of rocksdb block cache");
-
-        _pfc_rdb_write_limiter_rate_bytes.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.write_limiter_rate_bytes",
-            COUNTER_TYPE_NUMBER,
-            "statistic the through bytes of rocksdb write rate limiter");
+        METRIC_VAR_ASSIGN_server(rdb_block_cache_mem_usage_bytes);
+        METRIC_VAR_ASSIGN_server(rdb_write_rate_limiter_through_bytes_per_sec);
     });
 }
 
