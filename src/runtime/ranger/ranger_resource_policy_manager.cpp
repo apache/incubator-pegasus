@@ -76,7 +76,7 @@ DSN_DEFINE_string(ranger,
                   legacy_table_database_mapping_policy_name,
                   "__default__",
                   "The name of the Ranger database policy matched by the legacy table(The table "
-                  "name does not follow the naming rules of {database}.{tablename})");
+                  "name does not follow the naming rules of {database_name}.{table_name})");
 
 #define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
     do {                                                                                           \
