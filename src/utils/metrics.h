@@ -682,6 +682,7 @@ ENUM_END(metric_type)
     DEF(Seconds)                                                                                   \
     DEF(Bytes)                                                                                     \
     DEF(MegaBytes)                                                                                 \
+    DEF(BytesPerSec)                                                                               \
     DEF(CapacityUnits)                                                                             \
     DEF(Percent)                                                                                   \
     DEF(Replicas)                                                                                  \

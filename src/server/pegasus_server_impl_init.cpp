@@ -40,8 +40,6 @@
 #include "pegasus_event_listener.h"
 #include "pegasus_server_impl.h"
 #include "pegasus_value_schema.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
@@ -242,6 +240,12 @@ METRIC_DEFINE_gauge_int64(server,
                           rdb_block_cache_mem_usage_bytes,
                           dsn::metric_unit::kBytes,
                           "The memory usage of rocksdb block cache");
+
+METRIC_DEFINE_gauge_int64(server,
+                          rdb_write_rate_limiter_through_bytes_per_sec,
+                          dsn::metric_unit::kBytesPerSec,
+                          "The through bytes per second that go through the rate limiter which "
+                          "takes control of the write rate of flush and compaction of rocksdb");
 
 namespace pegasus {
 namespace server {
@@ -826,12 +830,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         METRIC_VAR_ASSIGN_server(rdb_block_cache_mem_usage_bytes);
-        _pfc_rdb_write_limiter_rate_bytes.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.write_limiter_rate_bytes",
-            COUNTER_TYPE_NUMBER,
-            "statistic the through bytes of rocksdb write rate limiter");
+        METRIC_VAR_ASSIGN_server(rdb_write_rate_limiter_through_bytes_per_sec);
     });
 }
 
