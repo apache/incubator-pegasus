@@ -58,8 +58,6 @@
 #include "pegasus_const.h"
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica_admin_types.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
@@ -142,8 +140,8 @@ int64_t pegasus_server_impl::_rocksdb_limiter_last_total_through;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_s_block_cache;
 std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffer_manager;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
+METRIC_VAR_DEFINE_gauge_int64(rdb_block_cache_mem_usage_bytes, pegasus_server_impl);
+METRIC_VAR_DEFINE_gauge_int64(rdb_write_rate_limiter_through_bytes_per_sec, pegasus_server_impl);
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
 const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
@@ -1872,7 +1870,6 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         METRIC_VAR_SET(rdb_memtable_mem_usage_bytes, 0);
         METRIC_VAR_SET(rdb_block_cache_hit_count, 0);
         METRIC_VAR_SET(rdb_block_cache_total_count, 0);
-        _pfc_rdb_block_cache_mem_usage->set(0);
     }
 
     LOG_INFO_PREFIX("close app succeed, clear_state = {}", clear_state ? "true" : "false");
@@ -2542,19 +2539,17 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
 {
-    // Update _pfc_rdb_block_cache_mem_usage
     if (_s_block_cache) {
         uint64_t val = _s_block_cache->GetUsage();
-        _pfc_rdb_block_cache_mem_usage->set(val);
+        METRIC_VAR_SET(rdb_block_cache_mem_usage_bytes, val);
     }
 
-    // Update _pfc_rdb_write_limiter_rate_bytes
     if (_s_rate_limiter) {
         uint64_t current_total_through = _s_rate_limiter->GetTotalBytesThrough();
         uint64_t through_bytes_per_sec =
             (current_total_through - _rocksdb_limiter_last_total_through) /
             kServerStatUpdateTimeSec.count();
-        _pfc_rdb_write_limiter_rate_bytes->set(through_bytes_per_sec);
+        METRIC_VAR_SET(rdb_write_rate_limiter_through_bytes_per_sec, through_bytes_per_sec);
         _rocksdb_limiter_last_total_through = current_total_through;
     }
 }

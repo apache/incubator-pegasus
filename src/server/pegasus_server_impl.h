@@ -71,7 +71,6 @@ class WriteBufferManager;
 namespace dsn {
 class blob;
 class message_ex;
-class perf_counter_wrapper;
 class rpc_address;
 
 namespace replication {
@@ -561,10 +560,9 @@ private:
     METRIC_VAR_DECLARE_counter(abnormal_read_requests);
     METRIC_VAR_DECLARE_counter(throttling_rejected_read_requests);
 
-    // rocksdb internal statistics
-    // server level
-    static ::dsn::perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
-    static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
+    // Server-level metrics for rocksdb.
+    METRIC_VAR_DECLARE_gauge_int64(rdb_block_cache_mem_usage_bytes, static);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_write_rate_limiter_through_bytes_per_sec, static);
 
     // Replica-level metrics for rocksdb.
     METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_files);
