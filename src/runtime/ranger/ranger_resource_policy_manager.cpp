@@ -72,6 +72,10 @@ DSN_DEFINE_string(ranger,
                   ranger_service_name,
                   "",
                   "The name of the policies defined in the Ranger service.");
+DSN_DEFINE_string(ranger,
+                  legacy_table_database_mapping_policy_name,
+                  "__default__",
+                  "The name of the Ranger database policy matched by the legacy table");
 
 #define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
     do {                                                                                           \
@@ -241,20 +245,24 @@ bool ranger_resource_policy_manager::allowed(const int rpc_code,
             break;
         }
 
+        // legacy table belongs to the default database.
+        std::string db_name =
+            database_name.empty() ? FLAGS_legacy_table_database_mapping_policy_name : database_name;
+
         // Check if it is allowed by any DATABASE policy.
         utils::auto_read_lock l(_database_policies_lock);
         for (const auto &policy : _database_policies_cache) {
             if (!policy.policies.allowed(ac_type->second, user_name)) {
                 continue;
             }
-            // Legacy tables may don't contain database section.
-            if (database_name.empty() && policy.database_names.count("*") != 0) {
-                return true;
-            }
-            if (policy.database_names.count(database_name) != 0) {
+            // "*" can match any table, including legacy table and new table.
+            if (policy.database_names.count("*") != 0 || policy.database_names.count(db_name)) {
                 return true;
             }
         }
+
+        // The check that does not match any DATABASE policy returns false.
+        return false;
     } while (false);
 
     // The check that does not match any policy returns false.
@@ -578,9 +586,10 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
     LOG_AND_RETURN_NOT_OK(ERROR, list_resp.err, "list_apps failed.");
     for (const auto &app : list_resp.infos) {
         std::string database_name = get_database_name_from_app_name(app.app_name);
-        // Use "*" for table name of invalid Ranger rules to match datdabase resources.
+        // Use 'legacy_table_database_mapping_policy_name' for table name of invalid Ranger rules to
+        // match datdabase resources.
         if (database_name.empty()) {
-            database_name = "*";
+            database_name = FLAGS_legacy_table_database_mapping_policy_name;
         }
         std::string table_name = get_table_name_from_app_name(app.app_name);
 
@@ -590,24 +599,21 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
             {dsn::replication::replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES});
         bool is_policy_matched = false;
         for (const auto &policy : table_policies->second) {
-            if (policy.database_names.count(database_name) == 0) {
+            // this table does not match any database, app Ranger policy will be cleaned up
+            if (policy.database_names.count(database_name) == 0 &&
+                policy.database_names.count("*") == 0) {
                 continue;
             }
 
-            // if table name does not conform to the naming rules(database_name.table_name),
-            // database is defined by "*" in ranger for acl matching
-            if (policy.table_names.count("*") != 0 || policy.table_names.count(table_name) != 0) {
-                is_policy_matched = true;
-                req->__set_op(dsn::replication::app_env_operation::type::APP_ENV_OP_SET);
-                req->__set_values(
-                    {json::json_forwarder<acl_policies>::encode(policy.policies).to_string()});
+            is_policy_matched = true;
+            req->__set_op(dsn::replication::app_env_operation::type::APP_ENV_OP_SET);
+            req->__set_values(
+                {json::json_forwarder<acl_policies>::encode(policy.policies).to_string()});
 
-                dsn::replication::update_app_env_rpc rpc(std::move(req),
-                                                         LPC_USE_RANGER_ACCESS_CONTROL);
-                _meta_svc->get_server_state()->set_app_envs(rpc);
-                LOG_AND_RETURN_NOT_OK(ERROR, rpc.response().err, "set_app_envs failed.");
-                break;
-            }
+            dsn::replication::update_app_env_rpc rpc(std::move(req), LPC_USE_RANGER_ACCESS_CONTROL);
+            _meta_svc->get_server_state()->set_app_envs(rpc);
+            LOG_AND_RETURN_NOT_OK(ERROR, rpc.response().err, "set_app_envs failed.");
+            break;
         }
 
         // There is no matched policy, clear app Ranger policy
