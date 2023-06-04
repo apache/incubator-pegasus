@@ -27,6 +27,7 @@
 #include <fmt/core.h>
 #include <inttypes.h>
 #include <stddef.h>
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -179,8 +180,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (FLAGS_reject_write_when_disk_insufficient &&
-        (_dir_node->status == disk_status::SPACE_INSUFFICIENT ||
-         _primary_states.secondary_disk_space_insufficient())) {
+        (_dir_node->status != disk_status::NORMAL || _primary_states.secondary_disk_abnormal())) {
         response_client_write(request, ERR_DISK_INSUFFICIENT);
         return;
     }

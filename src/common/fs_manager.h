@@ -19,7 +19,7 @@
 
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
-#include <functional>
+#include <atomic>
 #include <map>
 #include <memory>
 #include <set>
@@ -48,7 +48,7 @@ public:
     int64_t disk_capacity_mb;
     int64_t disk_available_mb;
     int disk_available_ratio;
-    disk_status::type status;
+    std::atomic<disk_status::type> status;
     std::map<app_id, std::set<gpid>> holding_replicas;
     std::map<app_id, std::set<gpid>> holding_primary_replicas;
     std::map<app_id, std::set<gpid>> holding_secondary_replicas;
@@ -147,6 +147,8 @@ private:
     int _min_available_ratio = 100;
     int _max_available_ratio = 0;
 
+    // Once dir_node has been added to '_dir_nodes', it will not be removed, it will be marked
+    // as non-NORMAL status if it is not available.
     std::vector<std::shared_ptr<dir_node>> _dir_nodes;
     // ] end of lock
 

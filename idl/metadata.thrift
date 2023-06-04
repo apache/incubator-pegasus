@@ -58,7 +58,8 @@ enum split_status
 enum disk_status
 {
     NORMAL = 0,
-    SPACE_INSUFFICIENT
+    SPACE_INSUFFICIENT,
+    IO_ERROR
 }
 
 enum manual_compaction_status

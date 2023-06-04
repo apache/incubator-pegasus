@@ -618,6 +618,10 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     LOG_INFO("start to load replicas");
     std::map<dir_node *, std::vector<std::string>> dirs_by_dn;
     for (const auto &dn : _fs_manager.get_dir_nodes()) {
+        // Skip IO error dir_node.
+        if (dn->status == disk_status::IO_ERROR) {
+            continue;
+        }
         std::vector<std::string> sub_directories;
         CHECK(dsn::utils::filesystem::get_subdirectories(dn->full_dir, sub_directories, false),
               "fail to get sub_directories in {}",

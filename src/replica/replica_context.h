@@ -115,7 +115,7 @@ public:
 
     void cleanup_split_states();
 
-    bool secondary_disk_space_insufficient() const;
+    bool secondary_disk_abnormal() const;
 
 public:
     // membership mgr, including learners

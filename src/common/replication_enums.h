@@ -152,6 +152,7 @@ ENUM_END2(replication::disk_migration_status::type, disk_migration_status)
 ENUM_BEGIN2(replication::disk_status::type, disk_status, replication::disk_status::NORMAL)
 ENUM_REG(replication::disk_status::NORMAL)
 ENUM_REG(replication::disk_status::SPACE_INSUFFICIENT)
+ENUM_REG(replication::disk_status::IO_ERROR)
 ENUM_END2(replication::disk_status::type, disk_status)
 
 ENUM_BEGIN2(replication::manual_compaction_status::type,

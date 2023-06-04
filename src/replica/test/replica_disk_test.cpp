@@ -21,6 +21,7 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <unistd.h>
+#include <atomic>
 #include <cstdint>
 #include <map>
 #include <memory>
