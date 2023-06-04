@@ -129,7 +129,7 @@ void dir_node::update_disk_stat()
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
     // It's able to change status from NORMAL to SPACE_INSUFFICIENT, and vice versa.
-    auto old_status = status;
+    disk_status::type old_status = status;
     auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
                           ? disk_status::SPACE_INSUFFICIENT
                           : disk_status::NORMAL;
