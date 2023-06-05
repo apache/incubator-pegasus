@@ -20,6 +20,7 @@
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <atomic>
+#include <functional>
 #include <map>
 #include <memory>
 #include <set>

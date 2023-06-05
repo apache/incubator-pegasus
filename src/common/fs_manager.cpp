@@ -36,7 +36,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
 #include <iosfwd>
 #include <utility>
 
@@ -45,8 +44,8 @@
 #include "fmt/core.h"
 #include "fmt/ostream.h"
 #include "perf_counter/perf_counter.h"
-#include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
