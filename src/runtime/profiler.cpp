@@ -90,54 +90,6 @@ std::unique_ptr<task_spec_profiler[]> s_spec_profilers;
 
 int s_task_code_max = 0;
 
-counter_info *counter_info_ptr[] = {
-    new counter_info({"queue.time", "qt"},
-                     TASK_QUEUEING_TIME_NS,
-                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                     "QUEUE(ns)",
-                     "ns"),
-    new counter_info(
-        {"exec.time", "et"}, TASK_EXEC_TIME_NS, COUNTER_TYPE_NUMBER_PERCENTILES, "EXEC(ns)", "ns"),
-    new counter_info({"throughput", "tp"}, TASK_THROUGHPUT, COUNTER_TYPE_RATE, "THP(#/s)", "#/s"),
-    new counter_info({"cancelled", "cc"}, TASK_CANCELLED, COUNTER_TYPE_NUMBER, "CANCEL(#)", "#"),
-    new counter_info({"aio.latency", "al"},
-                     AIO_LATENCY_NS,
-                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                     "AIO.LATENCY(ns)",
-                     "ns"),
-    new counter_info({"rpc.server.latency", "rpcsl"},
-                     RPC_SERVER_LATENCY_NS,
-                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                     "RPC.SERVER(ns)",
-                     "ns"),
-    new counter_info({"rpc.server.size.request", "rpcssreq"},
-                     RPC_SERVER_SIZE_PER_REQUEST_IN_BYTES,
-                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                     "RPC.SERVER.SIZE.REQUEST(bytes)",
-                     "bytes"),
-    new counter_info({"rpc.server.size.response", "rpcssresp"},
-                     RPC_SERVER_SIZE_PER_RESPONSE_IN_BYTES,
-                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                     "RPC.SERVER.SIZE.RESPONSE(bytes)",
-                     "bytes"),
-    new counter_info({"rpc.client.latency", "rpccl"},
-                     RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,
-                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                     "RPC.CLIENT(ns)",
-                     "ns"),
-    new counter_info({"rpc.client.timeout", "rpcto"},
-                     RPC_CLIENT_TIMEOUT_THROUGHPUT,
-                     COUNTER_TYPE_RATE,
-                     "TIMEOUT(#/s)",
-                     "#/s"),
-    new counter_info(
-        {"task.inqueue", "tiq"}, TASK_IN_QUEUE, COUNTER_TYPE_NUMBER, "InQueue(#)", "#"),
-    new counter_info({"rpc.dropped", "rdit"},
-                     RPC_DROPPED_IF_TIMEOUT,
-                     COUNTER_TYPE_VOLATILE_NUMBER,
-                     "RPC.DROPPED(#)",
-                     "#")};
-
 // call normal task
 static void profiler_on_task_create(task *caller, task *callee)
 {
@@ -371,7 +323,6 @@ void profiler::install(service_spec &)
     s_spec_profilers.reset(new task_spec_profiler[s_task_code_max + 1]);
     task_ext_for_profiler::register_ext();
     message_ext_for_profiler::register_ext();
-    CHECK_EQ(sizeof(counter_info_ptr) / sizeof(counter_info *), PERF_COUNTER_COUNT);
 
     for (int i = 0; i <= s_task_code_max; i++) {
         if (i == TASK_CODE_INVALID)
