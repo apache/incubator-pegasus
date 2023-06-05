@@ -42,17 +42,6 @@ fi
 
 cd "$INSTALL_DIR" || exit
 
-# if [ ! -d zookeeper-3.4.10 ]; then
-#     echo "Decompressing zookeeper..."
-#     cp ${ZOOKEEPER_PKG} .
-#     tar xf zookeeper-3.4.10.tar.gz
-#     if [ $? -ne 0 ]; then
-#         echo "ERROR: decompress zookeeper failed"
-#         exit 1
-#     fi
-# fi
-
-
 ZOOKEEPER_ROOT=zookeeper-3.4.10
 ZOOKEEPER_TAR_NAME=${ZOOKEEPER_ROOT}.tar.gz
 ZOOKEEPER_TAR_MD5_VALUE="e4cf1b1593ca870bf1c7a75188f09678"
