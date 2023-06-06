@@ -32,7 +32,9 @@
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "runtime/task/task_spec.h"
 #include "runtime/task/task_code.h"
+#include "test_utils.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
@@ -41,8 +43,6 @@
 
 
 namespace dsn {
-
-DEFINE_TASK_CODE_RPC(RPC_TEST_THRIFT_HOST_PORT_PARSER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 TEST(host_port_test, host_port_to_string)
 {
@@ -212,32 +212,17 @@ TEST(host_port_test, dns_resolver)
     }
 }
 
-shared_ptr<binary_writer_transport> get_binary_writer_transport()
-{
-    /// write rpc message
-    size_t body_length = 0;
-    message_ptr msg = message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER, 1000, 64, 5000000000);
-    rpc_write_stream stream(msg);
-    binary_writer_transport binary_transport(stream);
-    shared_ptr<binary_writer_transport> trans_ptr(&binary_transport, [](binary_writer_transport *) {});
-    return trans_ptr;
-}
-
 TEST(host_port_test, thrift_parser)
 {
-    ::apache::thrift::protocol::TBinaryProtocol oprot_binary(get_binary_writer_transport());
+    dsn::message_ptr mesg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);
+    mesg_ptr->header.context.u.serialize_format = DSF_THRIFT_BINARY;
 
     host_port hp1 = host_port("localhost", 8080);
-    hp.write(&oprot_binary);
-    host_port hp2;
-    hp2.read(&oprot_binary);
-    ASSERT_EQ(hp1, hp2);
+    ::dsn::marshall(mesg_ptr.get(), hp1);
 
-    ::apache::thrift::protocol::TJSONProtocol oprot_json(trans_ptr);
-    hp.write(&oprot_binary);
-    host_port hp3;
-    hp3.read(&oprot_binary);
-    ASSERT_EQ(hp1, hp2);
+    host_port hp2;
+    ::dsn::unmarshall(mesg_ptr, hp2);
+    ASSERT_EQ(hp, hp1);
 }
 
 } // namespace dsn
