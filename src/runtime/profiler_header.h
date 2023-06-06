@@ -25,8 +25,12 @@
  */
 
 #pragma once
+
 #include <iomanip>
 #include "perf_counter/perf_counter_wrapper.h"
+
+#include "utils/autoref_ptr.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 namespace tools {
@@ -57,13 +61,13 @@ struct task_spec_profiler
     bool is_profile;
     std::atomic<int64_t> *call_counts;
 
-    task_spec_profiler()
-    {
-        collect_call_count = false;
-        is_profile = false;
-        call_counts = nullptr;
-        memset((void *)ptr, 0, sizeof(ptr));
-    }
+    task_spec_profiler(const std::string &task_name);
+    const metric_entity_ptr &profiler_metric_entity() const;
+
+private:
+    std::string _task_name;
+    const metric_entity_ptr _profiler_metric_entity;
 };
+
 } // namespace tools
 } // namespace dsn

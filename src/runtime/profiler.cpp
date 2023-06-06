@@ -55,6 +55,7 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "aio/aio_task.h"
 #include "perf_counter/perf_counter.h"
@@ -71,6 +72,8 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include "utils/flags.h"
 #include "utils/join_point.h"
 
+METRIC_DEFINE_entity(profiler);
+
 namespace dsn {
 struct service_spec;
 
@@ -86,7 +89,7 @@ DSN_DEFINE_bool(task..default,
 typedef uint64_extension_helper<task_spec_profiler, task> task_ext_for_profiler;
 typedef uint64_extension_helper<task_spec_profiler, message_ex> message_ext_for_profiler;
 
-std::unique_ptr<task_spec_profiler[]> s_spec_profilers;
+std::vector<task_spec_profiler> s_spec_profilers;
 
 int s_task_code_max = 0;
 
@@ -317,10 +320,40 @@ static void profiler_on_rpc_response_enqueue(rpc_response_task *resp)
         ptr->increment();
 }
 
+namespace {
+
+metric_entity_ptr instantiate_profiler_metric_entity(const std::string &task_name)
+{
+    auto entity_id = fmt::format("task_{}", task_name);
+
+    return METRIC_ENTITY_profiler.instantiate(entity_id, {{"task_name", task_name}});
+}
+
+} // anonymous namespace
+
+task_spec_profiler::task_spec_profiler(const std::string &task_name)
+    : collect_call_count(false),
+      is_profile(false),
+      call_counts(nullptr),
+      _task_name(task_name),
+      _profiler_metric_entity(instantiate_profiler_metric_entity(task_name))
+{
+    memset((void *)ptr, 0, sizeof(ptr));
+}
+
+const metric_entity_ptr &task_spec_profiler::profiler_metric_entity() const
+{
+    CHECK_NOTNULL(_profiler_metric_entity,
+                  "queue metric entity (queue_name={}) should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate metric",
+                  _name);
+    return _profiler_metric_entity;
+}
+
 void profiler::install(service_spec &)
 {
     s_task_code_max = dsn::task_code::max();
-    s_spec_profilers.reset(new task_spec_profiler[s_task_code_max + 1]);
+    s_spec_profilers.reserve(s_task_code_max + 1);
     task_ext_for_profiler::register_ext();
     message_ext_for_profiler::register_ext();
 
@@ -332,6 +365,8 @@ void profiler::install(service_spec &)
         std::string section_name = std::string("task.") + name;
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
+
+        s_spec_profilers.emplace_back();
 
         s_spec_profilers[i].collect_call_count = dsn_config_get_value_bool(
             section_name.c_str(),
