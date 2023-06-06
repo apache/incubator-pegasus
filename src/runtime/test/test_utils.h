@@ -48,6 +48,7 @@
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_worker.h"
 #include <gtest/gtest.h>
@@ -122,6 +123,13 @@ public:
         }
     }
 
+    void on_rpc_host_port_test(dsn::message_ex *message)
+    {
+        host_port hp;
+        ::dsn::unmarshall(message, hp);
+        reply(message, hp.to_string());
+    }
+
     ::dsn::error_code start(const std::vector<std::string> &args)
     {
         // server
@@ -136,6 +144,9 @@ public:
             register_rpc_handler(RPC_TEST_STRING_COMMAND,
                                  "rpc.test.string.command",
                                  &test_client::on_rpc_string_test);
+            register_rpc_handler(RPC_TEST_THRIFT_HOST_PORT_PARSER,
+                                 "rpc.test.host_port",
+                                 &test_client::on_rpc_host_port_test);
         }
 
         // client

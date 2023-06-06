@@ -34,6 +34,7 @@
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task_spec.h"
 #include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
 #include "test_utils.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
@@ -214,14 +215,21 @@ TEST(host_port_test, dns_resolver)
 
 TEST(host_port_test, thrift_parser)
 {
+    host_port hp = host_port("localhost", 8080);
+    auto hp_str = hp.to_string();
+    ::dsn::rpc_address server("localhost", 20101);
+
     dsn::message_ptr mesg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);
-    mesg_ptr->header.context.u.serialize_format = DSF_THRIFT_BINARY;
+    mesg_ptr->header->context.u.serialize_format = DSF_THRIFT_BINARY;
+    
+    ::dsn::marshall(mesg_ptr.get(), hp);
 
-    host_port hp1 = host_port("localhost", 8080);
-    ::dsn::marshall(mesg_ptr.get(), hp1);
-
-    host_port hp2;
-    ::dsn::unmarshall(mesg_ptr, hp2);
+    dsn::task_tracker _tracker;
+    call(server, mesg_ptr.get(), &_tracker, [hp_str](error_code ec, std::string &&resp) {
+                                                    if (ERR_OK == ec) {
+                                                        EXPECT_TRUE(resp, hp_str);
+                                                    }
+                                                });
     ASSERT_EQ(hp, hp1);
 }
 
