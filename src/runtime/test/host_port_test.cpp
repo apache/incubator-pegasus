@@ -227,10 +227,10 @@ TEST(host_port_test, thrift_parser)
     dsn::task_tracker _tracker;
     call(server, mesg_ptr.get(), &_tracker, [hp_str](error_code ec, std::string &&resp) {
                                                     if (ERR_OK == ec) {
-                                                        EXPECT_TRUE(resp, hp_str);
+                                                        ASSERT_EQ(resp, hp_str);
                                                     }
-                                                });
-    ASSERT_EQ(hp, hp1);
+                                                }) -> wait();
+
 }
 
 } // namespace dsn
