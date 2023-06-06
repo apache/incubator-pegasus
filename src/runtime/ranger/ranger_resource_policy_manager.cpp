@@ -601,7 +601,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
             {dsn::replication::replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES});
         bool is_policy_matched = false;
         for (const auto &policy : table_policies->second) {
-            // IF this table does not match any database, its Ranger policies will be cleaned up.
+            // If this table does not match any database, its Ranger policies will be cleaned up.
             if (policy.database_names.count(database_name) == 0 &&
                 policy.database_names.count("*") == 0) {
                 continue;
