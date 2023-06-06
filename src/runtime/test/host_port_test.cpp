@@ -32,6 +32,7 @@
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "runtime/task/async_calls.h"
 #include "runtime/task/task_spec.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
@@ -41,7 +42,6 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/threadpool_code.h"
-
 
 namespace dsn {
 
@@ -221,16 +221,15 @@ TEST(host_port_test, thrift_parser)
 
     dsn::message_ptr mesg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);
     mesg_ptr->header->context.u.serialize_format = DSF_THRIFT_BINARY;
-    
+
     ::dsn::marshall(mesg_ptr.get(), hp);
 
     dsn::task_tracker _tracker;
-    call(server, mesg_ptr.get(), &_tracker, [hp_str](error_code ec, std::string &&resp) {
-                                                    if (ERR_OK == ec) {
-                                                        ASSERT_EQ(resp, hp_str);
-                                                    }
-                                                }) -> wait();
-
+    rpc::call(server, mesg_ptr.get(), &_tracker, [hp_str](error_code ec, std::string &&resp) {
+        if (ERR_OK == ec) {
+            ASSERT_EQ(resp, hp_str);
+        }
+    })->wait();
 }
 
 } // namespace dsn
