@@ -117,6 +117,21 @@ DSN_DEFINE_uint64(
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
 DSN_DECLARE_int32(staleness_for_commit);
 
+namespace {
+error_code disk_status_to_error_code(disk_status::type ds)
+{
+    switch (ds) {
+    case disk_status::SPACE_INSUFFICIENT:
+        return dsn::ERR_DISK_INSUFFICIENT;
+    case disk_status::IO_ERROR:
+        return dsn::ERR_DISK_IO_ERROR;
+    default:
+        CHECK_EQ(disk_status::NORMAL, ds);
+        return dsn::ERR_OK;
+    }
+}
+} // anonymous namespace
+
 void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 {
     _checker.only_one_thread_access();
@@ -181,7 +196,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 
     if (FLAGS_reject_write_when_disk_insufficient &&
         (_dir_node->status != disk_status::NORMAL || _primary_states.secondary_disk_abnormal())) {
-        response_client_write(request, ERR_DISK_INSUFFICIENT);
+        response_client_write(request, disk_status_to_error_code(_dir_node->status));
         return;
     }
 
