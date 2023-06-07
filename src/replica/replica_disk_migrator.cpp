@@ -37,8 +37,6 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 #include "utils/thread_access_checker.h"
 
 namespace dsn {

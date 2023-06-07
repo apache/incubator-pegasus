@@ -75,6 +75,7 @@
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
+#include "utils/error_code.h"
 
 namespace pegasus {
 namespace server {
