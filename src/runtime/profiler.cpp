@@ -344,9 +344,9 @@ task_spec_profiler::task_spec_profiler(const std::string &task_name)
 const metric_entity_ptr &task_spec_profiler::profiler_metric_entity() const
 {
     CHECK_NOTNULL(_profiler_metric_entity,
-                  "queue metric entity (queue_name={}) should has been instantiated: "
+                  "profiler metric entity (task_name={}) should has been instantiated: "
                   "uninitialized entity cannot be used to instantiate metric",
-                  _name);
+                  _task_name);
     return _profiler_metric_entity;
 }
 
