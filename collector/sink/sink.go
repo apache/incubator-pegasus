@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package metrics
+package sink
 
 import (
 	"github.com/pegasus-kv/collector/aggregate"
