@@ -26,8 +26,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pegasus-kv/collector/aggregate"
-	"github.com/pegasus-kv/collector/usage"
+	"github.com/pegasus-kv/collector/avail"
+	"github.com/pegasus-kv/collector/metrics"
 	"github.com/pegasus-kv/collector/webui"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -88,12 +88,14 @@ func main() {
 		tom.Kill(errors.New("collector terminates")) // kill other goroutines
 	})
 	tom.Go(func() error {
-		aggregate.Start(tom)
-		return nil
+		// Set detect inteverl and detect timeout 10s.
+		return avail.NewDetector(10000000000, 10000000000, 16).Start(tom)
 	})
 	tom.Go(func() error {
-		usage.NewTableUsageRecorder().Start(tom)
-		return nil
+		return metrics.NewMetaServerMetricCollector().Start(tom)
+	})
+	tom.Go(func() error {
+		return metrics.NewReplicaServerMetricCollector().Start(tom)
 	})
 	<-tom.Dead() // gracefully wait until all goroutines dead
 }
