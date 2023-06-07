@@ -353,6 +353,7 @@ const metric_entity_ptr &task_spec_profiler::profiler_metric_entity() const
 void profiler::install(service_spec &)
 {
     s_task_code_max = dsn::task_code::max();
+    s_spec_profilers.reserve(s_task_code_max + 1);
     task_ext_for_profiler::register_ext();
     message_ext_for_profiler::register_ext();
 
