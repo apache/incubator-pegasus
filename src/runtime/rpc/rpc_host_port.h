@@ -35,9 +35,9 @@ namespace apache {
 namespace thrift {
 namespace protocol {
 class TProtocol;
-}  // namespace protocol
-}  // namespace thrift
-}  // namespace apache
+} // namespace protocol
+} // namespace thrift
+} // namespace apache
 
 namespace dsn {
 
