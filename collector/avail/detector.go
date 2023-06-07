@@ -19,106 +19,134 @@ package avail
 
 import (
 	"context"
-	"sync/atomic"
+	"math/rand"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/admin"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"gopkg.in/tomb.v2"
 )
 
 // Detector periodically checks the service availability of the Pegasus cluster.
 type Detector interface {
-
-	// Start detection until the ctx cancelled. This method will block the current thread.
-	Start(ctx context.Context) error
+	Start(tom *tomb.Tomb) error
 }
 
 // NewDetector returns a service-availability detector.
-func NewDetector(client pegasus.Client) Detector {
-	return &pegasusDetector{client: client}
+func NewDetector(detectInterval time.Duration,
+	detectTimeout time.Duration, partitionCount int) Detector {
+	metaServers := viper.GetStringSlice("meta_servers")
+	tableName := viper.GetStringMapString("availablity_detect")["table_name"]
+	// Create detect table.
+	adminClient := admin.NewClient(admin.Config{MetaServers: metaServers})
+	error := adminClient.CreateTable(context.Background(), tableName, partitionCount)
+	if error != nil {
+		log.Errorf("Create detect table %s failed, error: %s", tableName, error)
+	}
+	pegasusClient := pegasus.NewClient(pegasus.Config{MetaServers: metaServers})
+	return &pegasusDetector{
+		client:          pegasusClient,
+		detectTableName: tableName,
+		detectInterval:  detectInterval,
+		detectTimeout:   detectTimeout,
+		partitionCount:  partitionCount,
+	}
 }
+
+var (
+	DetectTimes = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "detect_times",
+		Help: "The times of availability detecting",
+	})
+
+	ReadFailureTimes = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "read_failure_detect_times",
+		Help: "The failure times of read detecting",
+	})
+
+	WriteFailureTimes = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "write_failure_detect_times",
+		Help: "The failure times of write detecting",
+	})
+
+	ReadLatency = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "read_latency_ms",
+		Help: "The latency of read data in milliseconds",
+	})
+
+	WriteLatency = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "write_latency_ms",
+		Help: "The latency of write data in milliseconds",
+	})
+)
 
 type pegasusDetector struct {
-	// client reads and writes periodically to a specified table.
-	client      pegasus.Client
-	detectTable pegasus.TableConnector
-
-	detectInterval  time.Duration
+	client          pegasus.Client
+	detectTable     pegasus.TableConnector
 	detectTableName string
-
-	// timeout of a single detect
-	detectTimeout time.Duration
-
-	detectHashKeys [][]byte
-
-	recentMinuteDetectTimes  uint64
-	recentMinuteFailureTimes uint64
-
-	recentHourDetectTimes  uint64
-	recentHourFailureTimes uint64
-
-	recentDayDetectTimes  uint64
-	recentDayFailureTimes uint64
+	detectInterval  time.Duration
+	// timeout of a single detect.
+	detectTimeout	time.Duration
+	// partition count.
+	partitionCount	int
 }
 
-func (d *pegasusDetector) Start(rootCtx context.Context) error {
+func (d *pegasusDetector) Start(tom *tomb.Tomb) error {
 	var err error
-	ctx, cancel := context.WithTimeout(rootCtx, 10*time.Second)
-	defer cancel()
-	d.detectTable, err = d.client.OpenTable(ctx, d.detectTableName)
+	// Open the detect table.
+	d.detectTable, err = d.client.OpenTable(context.Background(), d.detectTableName)
 	if err != nil {
+		log.Errorf("Open detect table %s failed, error: %s", d.detectTable, err)
 		return err
 	}
-
 	ticker := time.NewTicker(d.detectInterval)
 	for {
 		select {
-		case <-rootCtx.Done(): // check if context cancelled
+		case <-tom.Dying():
 			return nil
 		case <-ticker.C:
-			return nil
-		default:
+			d.detectPartition()
 		}
-
-		// periodically set/get a configured Pegasus table.
-		d.detect(ctx)
 	}
 }
 
-func (d *pegasusDetector) detect(rootCtx context.Context) {
-	// TODO(yingchun): doesn't work, just to mute lint errors.
-	d.detectPartition(rootCtx, 1)
-}
-
-func (d *pegasusDetector) detectPartition(rootCtx context.Context, partitionIdx int) {
-	d.incrDetectTimes()
+func (d *pegasusDetector) detectPartition() {
+	DetectTimes.Inc()
 
 	go func() {
-		ctx, cancel := context.WithTimeout(rootCtx, d.detectTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), d.detectTimeout)
 		defer cancel()
-
-		hashkey := d.detectHashKeys[partitionIdx]
-		value := []byte("")
-
+		value := []byte("test")
+		// Select a partition randomly to be detected. That will ensure every partition
+		// be detected.
+		hashkey := []byte(RandStringBytes(d.partitionCount))
+		now := time.Now().UnixMilli()
 		if err := d.detectTable.Set(ctx, hashkey, []byte(""), value); err != nil {
-			d.incrFailureTimes()
-			log.Errorf("set partition [%d] failed, hashkey=\"%s\": %s", partitionIdx, hashkey, err)
+			WriteFailureTimes.Inc()
+			log.Errorf("Set hashkey \"%s\" failed, error: %s", hashkey, err)
 		}
+		ReadLatency.Set(float64(time.Now().UnixMilli() - now))
+		now = time.Now().UnixMilli()
 		if _, err := d.detectTable.Get(ctx, hashkey, []byte("")); err != nil {
-			d.incrFailureTimes()
-			log.Errorf("get partition [%d] failed, hashkey=\"%s\": %s", partitionIdx, hashkey, err)
+			ReadFailureTimes.Inc()
+			log.Errorf("Get hashkey \"%s\" failed, error: %s", hashkey, err)
 		}
+		WriteLatency.Set(float64(time.Now().UnixMilli() - now))
 	}()
 }
 
-func (d *pegasusDetector) incrDetectTimes() {
-	atomic.AddUint64(&d.recentMinuteDetectTimes, 1)
-	atomic.AddUint64(&d.recentHourDetectTimes, 1)
-	atomic.AddUint64(&d.recentDayDetectTimes, 1)
-}
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func (d *pegasusDetector) incrFailureTimes() {
-	atomic.AddUint64(&d.recentMinuteFailureTimes, 1)
-	atomic.AddUint64(&d.recentHourFailureTimes, 1)
-	atomic.AddUint64(&d.recentDayFailureTimes, 1)
+// Generate a random string.
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
