@@ -170,7 +170,7 @@ bool check_bool_value(const std::string &env_value, std::string &hint_message)
 
 bool check_rocksdb_write_buffer_size(const std::string &env_value, std::string &hint_message)
 {
-    size_t val = 0;
+    uint64_t val = 0;
 
     if (!dsn::buf2uint64(env_value, val)) {
         hint_message = fmt::format("rocksdb.write_buffer_size cannot set this val: {}", env_value);

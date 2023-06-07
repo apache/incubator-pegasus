@@ -2651,7 +2651,7 @@ void pegasus_server_impl::update_rocksdb_options_before_create_replica(
     if (envs.size() == 0)
         return;
 
-    for (auto &option : ROCKSDB_STATIC_OPTIONS) {
+    for (auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
         auto find = envs.find(option);
         bool is_set = false;
         if (option.compare(ROCKSDB_NUM_LEVELS) == 0 && find != envs.end()) {
@@ -2661,11 +2661,9 @@ void pegasus_server_impl::update_rocksdb_options_before_create_replica(
 
         if (is_set)
             LOG_INFO("Reset {} \"{}\" succeed", find->first, find->second);
-        else
-            LOG_WARNING("Reset {} \"{}\" failed", find->first, find->second);
     }
 
-    for (auto &option : ROCKSDB_DYNAMIC_OPTIONS) {
+    for (auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
         auto find = envs.find(option);
         bool is_set = false;
 
@@ -2675,8 +2673,6 @@ void pegasus_server_impl::update_rocksdb_options_before_create_replica(
         }
         if (is_set)
             LOG_INFO("Reset {} \"{}\" succeed", find->first, find->second);
-        else
-            LOG_WARNING("Reset {} \"{}\" failed", find->first, find->second);
     }
 }
 
