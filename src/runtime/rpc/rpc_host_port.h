@@ -28,9 +28,16 @@
 #include <vector>
 
 #include "runtime/rpc/rpc_address.h"
-#include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+
+namespace apache {
+namespace thrift {
+namespace protocol {
+class TProtocol;
+}  // namespace protocol
+}  // namespace thrift
+}  // namespace apache
 
 namespace dsn {
 

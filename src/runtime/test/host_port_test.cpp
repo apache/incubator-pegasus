@@ -20,11 +20,9 @@
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <thrift/protocol/TBinaryProtocol.h>
-#include <thrift/protocol/TBinaryProtocol.tcc>
-#include <thrift/protocol/TProtocol.h>
 #include <string.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "runtime/rpc/dns_resolver.h"
@@ -32,16 +30,16 @@
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"
-#include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "test_utils.h"
-#include "utils/binary_writer.h"
-#include "utils/blob.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/threadpool_code.h"
 
 namespace dsn {
 
@@ -213,14 +211,14 @@ TEST(host_port_test, dns_resolver)
     }
 }
 
-TEST(host_port_test, thrift_parser)
+void send_and_check_host_port_by_different_serialize(dsn_msg_serialize_format t)
 {
     host_port hp = host_port("localhost", 8080);
     auto hp_str = hp.to_string();
     ::dsn::rpc_address server("localhost", 20101);
 
     dsn::message_ptr mesg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);
-    mesg_ptr->header->context.u.serialize_format = DSF_THRIFT_BINARY;
+    mesg_ptr->header->context.u.serialize_format = t;
 
     ::dsn::marshall(mesg_ptr.get(), hp);
 
@@ -230,6 +228,12 @@ TEST(host_port_test, thrift_parser)
             ASSERT_EQ(resp, hp_str);
         }
     })->wait();
+}
+
+TEST(host_port_test, thrift_parser)
+{
+    send_and_check_host_port_by_different_serialize(DSF_THRIFT_BINARY);
+    send_and_check_host_port_by_different_serialize(DSF_THRIFT_JSON);
 }
 
 } // namespace dsn
