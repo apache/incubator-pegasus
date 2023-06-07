@@ -74,6 +74,37 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 
 METRIC_DEFINE_entity(profiler);
 
+METRIC_DEFINE_gauge_int64(profiler,
+                          profiler_queued_tasks,
+                          dsn::metric_unit::kTasks,
+                          "The number of tasks in all queues");
+
+METRIC_DEFINE_percentile_int64(profiler,
+                          profiler_queued_latency_ns,
+                          dsn::metric_unit::kNanoSeconds,
+                          "The latency it takes for each task to wait in each queue "
+                          "before beginning to be executed");
+
+METRIC_DEFINE_percentile_int64(profiler,
+                          profiler_executed_latency_ns,
+                          dsn::metric_unit::kNanoSeconds,
+                          "The latency it takes for each task to be executed");
+
+METRIC_DEFINE_counter(profiler,
+                          profiler_executed_tasks,
+                          dsn::metric_unit::kTasks,
+                          "The number of tasks that have been executed");
+
+METRIC_DEFINE_counter(profiler,
+                          profiler_cancelled_tasks,
+                          dsn::metric_unit::kTasks,
+                          "The number of cancelled tasks");
+
+METRIC_DEFINE_percentile_int64(profiler,
+                          profiler_server_latency_ns,
+                          dsn::metric_unit::kNanoSeconds,
+                          "The latency it takes for each task to be executed");
+
 namespace dsn {
 struct service_spec;
 
@@ -358,8 +389,9 @@ void profiler::install(service_spec &)
     message_ext_for_profiler::register_ext();
 
     for (int i = 0; i <= s_task_code_max; i++) {
-        if (i == TASK_CODE_INVALID)
+        if (i == TASK_CODE_INVALID) {
             continue;
+        }
 
         std::string name(dsn::task_code(i).to_string());
         std::string section_name = std::string("task.") + name;
@@ -384,8 +416,9 @@ void profiler::install(service_spec &)
                                       FLAGS_is_profile,
                                       "whether to profile this kind of task");
 
-        if (!s_spec_profilers[i].is_profile)
+        if (!s_spec_profilers[i].is_profile) {
             continue;
+        }
 
         if (dsn_config_get_value_bool(
                 section_name.c_str(),
