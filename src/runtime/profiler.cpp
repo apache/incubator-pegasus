@@ -366,7 +366,7 @@ void profiler::install(service_spec &)
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
 
-        s_spec_profilers.emplace_back();
+        s_spec_profilers.emplace_back(name);
 
         s_spec_profilers[i].collect_call_count = dsn_config_get_value_bool(
             section_name.c_str(),
