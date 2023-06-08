@@ -554,7 +554,7 @@ private:
     friend class replica_follower;
     friend class ::pegasus::server::pegasus_server_test_base;
     friend class ::pegasus::server::rocksdb_wrapper_test;
-    FRIEND_TEST(replica_test, test_auto_trash);
+    FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
