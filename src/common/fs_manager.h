@@ -20,7 +20,6 @@
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <atomic>
-#include <functional>
 #include <map>
 #include <memory>
 #include <set>
@@ -30,6 +29,7 @@
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/string_view.h"
 #include "utils/zlocks.h"
