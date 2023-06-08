@@ -361,7 +361,7 @@ inline uint32_t host_port::write(apache::thrift::protocol::TProtocol *oprot) con
         // the protocol is json protocol
         xfer += oprot->writeStructBegin("host_port");
 
-        xfer += oprot->writeFieldBegin("_host", ::apache::thrift::protocol::T_STRING, 1);
+        xfer += oprot->writeFieldBegin("host", ::apache::thrift::protocol::T_STRING, 1);
         xfer += oprot->writeString(_host);
         xfer += oprot->writeFieldEnd();
 
