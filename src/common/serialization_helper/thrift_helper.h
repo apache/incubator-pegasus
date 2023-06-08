@@ -341,7 +341,7 @@ inline uint32_t host_port::read(apache::thrift::protocol::TProtocol *iprot)
     _port = static_cast<uint16_t>(port);
     _type = static_cast<dsn_host_type_t>(type_enum_number);
     CHECK(_type == HOST_TYPE_INVALID || _type == HOST_TYPE_IPV4,
-          "only invalid or ipv4 can be serialized.");
+          "only invalid or ipv4 can be deserialized.");
 
     return xfer;
 }
