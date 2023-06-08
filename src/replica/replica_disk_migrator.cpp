@@ -19,10 +19,6 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <fmt/core.h>
-#include <fmt/ostream.h>
-#include <iosfwd>
-#include <memory>
-#include <vector>
 
 #include "common/fs_manager.h"
 #include "common/gpid.h"
@@ -126,56 +122,12 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
         return false;
     }
 
-    bool valid_origin_disk = false;
-    bool valid_target_disk = false;
-    // _dir_nodes: std::vector<std::shared_ptr<dir_node>>
-    // TODO(yingchun): skip disks which are SPACE_INSUFFICIENT or IO_ERROR.
-    for (const auto &dir_node : _replica->get_replica_stub()->_fs_manager._dir_nodes) {
-        if (dir_node->tag == req.origin_disk) {
-            valid_origin_disk = true;
-            if (!dir_node->has(req.pid)) {
-                std::string err_msg =
-                    fmt::format("Invalid replica(replica({}) doesn't exist on origin disk({}))",
-                                req.pid,
-                                req.origin_disk);
-                LOG_ERROR_PREFIX(
-                    "received replica disk migrate request(origin={}, target={}), err = {}",
-                    req.origin_disk,
-                    req.target_disk,
-                    err_msg);
-                resp.err = ERR_OBJECT_NOT_FOUND;
-                resp.__set_hint(err_msg);
-                return false;
-            }
-        }
-
-        if (dir_node->tag == req.target_disk) {
-            valid_target_disk = true;
-            if (dir_node->has(get_gpid())) {
-                std::string err_msg =
-                    fmt::format("Invalid replica(replica({}) has existed on target disk({}))",
-                                req.pid,
-                                req.target_disk);
-                LOG_ERROR_PREFIX(
-                    "received replica disk migrate request(origin={}, target={}), err = {}",
-                    req.origin_disk,
-                    req.target_disk,
-                    err_msg);
-                resp.err = ERR_PATH_ALREADY_EXIST;
-                resp.__set_hint(err_msg);
-                return false;
-            }
-        }
-    }
-
-    if (!valid_origin_disk || !valid_target_disk) {
-        std::string invalid_disk_tag = !valid_origin_disk ? req.origin_disk : req.target_disk;
-        std::string err_msg = fmt::format("Invalid disk tag({} doesn't exist)", invalid_disk_tag);
-        LOG_ERROR_PREFIX("received replica disk migrate request(origin={}, target={}), err = {}",
-                         req.origin_disk,
-                         req.target_disk,
-                         err_msg);
-        resp.err = ERR_OBJECT_NOT_FOUND;
+    std::string err_msg;
+    auto ec = _replica->get_replica_stub()->_fs_manager.validate_migrate_op(
+        req.pid, req.origin_disk, req.target_disk, err_msg);
+    if (ec != ERR_OK) {
+        LOG_ERROR_PREFIX(err_msg);
+        resp.err = ec;
         resp.__set_hint(err_msg);
         return false;
     }

@@ -38,8 +38,11 @@ namespace dsn {
 class gpid;
 
 namespace replication {
+class disk_info;
 
 DSN_DECLARE_int32(disk_min_available_space_ratio);
+
+error_code disk_status_to_error_code(disk_status::type ds);
 
 struct dir_node
 {
@@ -116,16 +119,20 @@ public:
                                        gpid child_pid,
                                        const std::string &parent_dir);
     void remove_replica(const dsn::gpid &pid);
-    bool for_each_dir_node(const std::function<bool(const dir_node &)> &func) const;
     void update_disk_stat();
 
     void add_new_dir_node(const std::string &data_dir, const std::string &tag);
+    bool is_dir_node_exist(const std::string &data_dir, const std::string &tag) const;
     const std::vector<std::shared_ptr<dir_node>> &get_dir_nodes() const
     {
         zauto_read_lock l(_lock);
         return _dir_nodes;
     }
-    bool is_dir_node_available(const std::string &data_dir, const std::string &tag) const;
+    error_code validate_migrate_op(gpid pid,
+                                   const std::string &origin_disk,
+                                   const std::string &target_disk,
+                                   std::string &err_msg) const;
+    std::vector<disk_info> get_disk_infos(int app_id) const;
 
 private:
     void reset_disk_stat()
