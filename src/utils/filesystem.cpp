@@ -94,6 +94,7 @@ static inline int get_stat_internal(const std::string &npath, struct stat_ &st)
     return err;
 }
 
+// TODO(yingchun): remove the return value because it's always 0.
 int get_normalized_path(const std::string &path, std::string &npath)
 {
     char sep;

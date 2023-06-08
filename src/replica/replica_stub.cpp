@@ -1105,34 +1105,10 @@ void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
         }
     }
 
-    for (const auto &dir_node : _fs_manager._dir_nodes) {
-        disk_info info;
-        // app_name empty means query all app replica_count
-        if (req.app_name.empty()) {
-            info.holding_primary_replicas = dir_node->holding_primary_replicas;
-            info.holding_secondary_replicas = dir_node->holding_secondary_replicas;
-        } else {
-            const auto &primary_iter = dir_node->holding_primary_replicas.find(app_id);
-            if (primary_iter != dir_node->holding_primary_replicas.end()) {
-                info.holding_primary_replicas[app_id] = primary_iter->second;
-            }
-
-            const auto &secondary_iter = dir_node->holding_secondary_replicas.find(app_id);
-            if (secondary_iter != dir_node->holding_secondary_replicas.end()) {
-                info.holding_secondary_replicas[app_id] = secondary_iter->second;
-            }
-        }
-        info.tag = dir_node->tag;
-        info.full_dir = dir_node->full_dir;
-        info.disk_capacity_mb = dir_node->disk_capacity_mb;
-        info.disk_available_mb = dir_node->disk_available_mb;
-
-        resp.disk_infos.emplace_back(info);
-    }
-
-    resp.total_capacity_mb = _fs_manager._total_capacity_mb;
-    resp.total_available_mb = _fs_manager._total_available_mb;
-
+    resp.disk_infos = _fs_manager.get_disk_infos(app_id);
+    // Get the statistics from fs_manager's metrics, they are thread-safe.
+    resp.total_capacity_mb = _fs_manager._counter_total_capacity_mb->get_integer_value();
+    resp.total_available_mb = _fs_manager._counter_total_available_mb->get_integer_value();
     resp.err = ERR_OK;
 }
 
@@ -1203,11 +1179,12 @@ void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
     }
 
     for (auto i = 0; i < data_dir_tags.size(); ++i) {
+        // TODO(yingchun): move the following code to fs_manager.
         auto dir = data_dirs[i];
-        if (_fs_manager.is_dir_node_available(dir, data_dir_tags[i])) {
+        if (_fs_manager.is_dir_node_exist(dir, data_dir_tags[i])) {
             resp.err = ERR_NODE_ALREADY_EXIST;
             resp.__set_err_hint(
-                fmt::format("data_dir({}) tag({}) already available", dir, data_dir_tags[i]));
+                fmt::format("data_dir({}) tag({}) already exist", dir, data_dir_tags[i]));
             return;
         }
 
