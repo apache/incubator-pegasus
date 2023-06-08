@@ -211,29 +211,32 @@ TEST(host_port_test, dns_resolver)
     }
 }
 
-void send_and_check_host_port_by_different_serialize(dsn_msg_serialize_format t)
+void send_and_check_host_port_by_serialize(const host_port &hp, dsn_msg_serialize_format t)
 {
-    host_port hp = host_port("localhost", 8080);
     auto hp_str = hp.to_string();
     ::dsn::rpc_address server("localhost", 20101);
 
-    dsn::message_ptr mesg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);
-    mesg_ptr->header->context.u.serialize_format = t;
+    dsn::message_ptr msg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);
+    msg_ptr->header->context.u.serialize_format = t;
 
-    ::dsn::marshall(mesg_ptr.get(), hp);
+    ::dsn::marshall(msg_ptr.get(), hp);
 
-    dsn::task_tracker _tracker;
-    rpc::call(server, mesg_ptr.get(), &_tracker, [hp_str](error_code ec, std::string &&resp) {
-        if (ERR_OK == ec) {
-            ASSERT_EQ(resp, hp_str);
-        }
+    dsn::task_tracker tracker;
+    rpc::call(server, msg_ptr.get(), &tracker, [hp_str](error_code ec, std::string &&resp) {
+        ASSERT_EQ(ERR_OK, ec);
+        ASSERT_EQ(resp, hp_str);
     })->wait();
 }
 
 TEST(host_port_test, thrift_parser)
 {
-    send_and_check_host_port_by_different_serialize(DSF_THRIFT_BINARY);
-    send_and_check_host_port_by_different_serialize(DSF_THRIFT_JSON);
+    host_port hp1 = host_port("localhost", 8080);
+    send_and_check_host_port_by_serialize(hp1, DSF_THRIFT_BINARY);
+    send_and_check_host_port_by_serialize(hp1, DSF_THRIFT_JSON);
+
+    host_port hp2 = host_port("localhost", 1010);
+    send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_BINARY);
+    send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_JSON);
 }
 
 } // namespace dsn
