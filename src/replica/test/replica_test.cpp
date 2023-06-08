@@ -16,6 +16,7 @@
 // under the License.
 
 #include <gmock/gmock-matchers.h>
+#include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -550,7 +551,7 @@ TEST_P(replica_error_test, test_auto_trash_of_corruption)
         }
     }
     ASSERT_EQ(moved_to_err_path, found_err_path);
-    ASSERT_EQ(has_gpid(_pid));
+    ASSERT_FALSE(has_gpid(_pid));
 
     // It's safe to cleanup the .err path after been found.
     if (!err_path.empty()) {
