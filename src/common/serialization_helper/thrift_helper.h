@@ -369,7 +369,7 @@ inline uint32_t host_port::write(apache::thrift::protocol::TProtocol *oprot) con
         xfer += oprot->writeI16(static_cast<int16_t>(_port));
         xfer += oprot->writeFieldEnd();
 
-        xfer += oprot->writeFieldBegin("_type", ::apache::thrift::protocol::T_BYTE, 3);
+        xfer += oprot->writeFieldBegin("type", ::apache::thrift::protocol::T_BYTE, 3);
         xfer += oprot->writeByte(static_cast<int8_t>(_type));
         xfer += oprot->writeFieldEnd();
 
