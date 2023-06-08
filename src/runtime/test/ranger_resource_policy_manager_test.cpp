@@ -34,9 +34,11 @@
 #include "runtime/ranger/ranger_resource_policy_manager.h"
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace ranger {
+DSN_DECLARE_string(legacy_table_database_mapping_policy_name);
 
 TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
 {
@@ -286,8 +288,17 @@ public:
               {{access_type::kCreate, {"user6"}}},
               {},
               {}}});
+        ranger_resource_policy fake_default_ranger_resource_policy(
+            {"",
+             {FLAGS_legacy_table_database_mapping_policy_name},
+             {},
+             {{{access_type::kCreate, {"user5", "user6"}}},
+              {{access_type::kCreate, {"user5"}}},
+              {},
+              {}}});
         _database_policies_cache = {fake_ranger_resource_policy_1,
                                     fake_ranger_resource_policy_2,
+                                    fake_default_ranger_resource_policy,
                                     fake_ranger_resource_policy_3};
 
         ranger_resource_policy fake_ranger_resource_policy_4(
@@ -331,9 +342,12 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
                  {"RPC_CM_START_BACKUP_APP", "user3", "database2", true},
                  {"RPC_CM_START_BACKUP_APP", "user4", "database2", false},
                  {"TASK_CODE_INVALID", "user5", "", false},
+                 // Next two case matched to the default database policy and "*" database.
                  {"RPC_CM_CREATE_APP", "user5", "", true},
-                 {"RPC_CM_CREATE_APP", "user5", "database2", false},
-                 {"RPC_CM_CREATE_APP", "user6", "", false},
+                 {"RPC_CM_CREATE_APP", "user6", "", true},
+                 // Next two case matched to the database policy named "*".
+                 {"RPC_CM_CREATE_APP", "user5", "any_database_name", true},
+                 {"RPC_CM_CREATE_APP", "user6", "any_database_name", false},
                  {"RPC_CM_CREATE_APP", "user6", "database2", false},
                  {"TASK_CODE_INVALID", "user7", "database3", false},
                  {"RPC_CM_LIST_NODES", "user7", "database3", true},
