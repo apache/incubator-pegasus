@@ -129,6 +129,7 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
     bool valid_origin_disk = false;
     bool valid_target_disk = false;
     // _dir_nodes: std::vector<std::shared_ptr<dir_node>>
+    // TODO(yingchun): skip disks which are SPACE_INSUFFICIENT or IO_ERROR.
     for (const auto &dir_node : _replica->get_replica_stub()->_fs_manager._dir_nodes) {
         if (dir_node->tag == req.origin_disk) {
             valid_origin_disk = true;

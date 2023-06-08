@@ -23,8 +23,10 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <algorithm>
+#include <atomic>
 
 #include "common/fs_manager.h"
+#include "metadata_types.h"
 #include "runtime/api_layer1.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
@@ -73,6 +75,11 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
 {
     std::vector<std::string> sub_list;
     for (const auto &dn : dir_nodes) {
+        // It's allowed to clear up the directory when it's SPACE_INSUFFICIENT, but not allowed when
+        // it's IO_ERROR.
+        if (dn->status == disk_status::IO_ERROR) {
+            continue;
+        }
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dn->full_dir, tmp_list, false)) {
             LOG_WARNING("gc_disk: failed to get subdirectories in {}", dn->full_dir);

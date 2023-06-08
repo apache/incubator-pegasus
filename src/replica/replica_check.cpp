@@ -33,6 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <unordered_map>
