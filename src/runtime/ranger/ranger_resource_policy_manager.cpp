@@ -614,6 +614,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
 
             dsn::replication::update_app_env_rpc rpc(std::move(req), LPC_USE_RANGER_ACCESS_CONTROL);
             _meta_svc->get_server_state()->set_app_envs(rpc);
+            _meta_svc->get_server_state()->wait_all_task();
             LOG_AND_RETURN_NOT_OK(ERROR, rpc.response().err, "set_app_envs failed.");
             break;
         }
@@ -624,6 +625,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
 
             dsn::replication::update_app_env_rpc rpc(std::move(req), LPC_USE_RANGER_ACCESS_CONTROL);
             _meta_svc->get_server_state()->del_app_envs(rpc);
+            _meta_svc->get_server_state()->wait_all_task();
             LOG_AND_RETURN_NOT_OK(ERROR, rpc.response().err, "del_app_envs failed.");
         }
     }
