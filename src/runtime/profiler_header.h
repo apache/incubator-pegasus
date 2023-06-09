@@ -45,17 +45,17 @@ struct task_spec_profiler
 
     METRIC_DEFINE_INCREMENT_NOTNULL(profiler_queued_tasks)
     METRIC_DEFINE_DECREMENT_NOTNULL(profiler_queued_tasks)
-    METRIC_DEFINE_SET_NOTNULL(profiler_queue_latency_ns)
-    METRIC_DEFINE_SET_NOTNULL(profiler_execute_latency_ns)
+    METRIC_DEFINE_SET_NOTNULL(profiler_queue_latency_ns, int64_t)
+    METRIC_DEFINE_SET_NOTNULL(profiler_execute_latency_ns, int64_t)
     METRIC_DEFINE_INCREMENT_NOTNULL(profiler_executed_tasks)
     METRIC_DEFINE_INCREMENT_NOTNULL(profiler_cancelled_tasks)
-    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_latency_ns)
-    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_request_bytes)
-    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_response_bytes)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_latency_ns, int64_t)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_request_bytes, int64_t)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_response_bytes, int64_t)
     METRIC_DEFINE_INCREMENT_NOTNULL(profiler_dropped_timeout_rpcs)
-    METRIC_DEFINE_SET_NOTNULL(profiler_client_rpc_latency_ns)
+    METRIC_DEFINE_SET_NOTNULL(profiler_client_rpc_latency_ns, int64_t)
     METRIC_DEFINE_INCREMENT_NOTNULL(profiler_client_timeout_rpcs)
-    METRIC_DEFINE_SET_NOTNULL(profiler_aio_latency_ns)
+    METRIC_DEFINE_SET_NOTNULL(profiler_aio_latency_ns, int64_t)
 
 private:
     const std::string _task_name;
