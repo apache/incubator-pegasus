@@ -238,59 +238,63 @@ class error_code;
 #define METRIC_VAR_AUTO_COUNT(name, ...)                                                           \
     dsn::auto_count __##name##_auto_count(METRIC_VAR_NAME(name), ##__VA_ARGS__)
 
-#define METRIC_DEFINE_NO_ARG(method, name)                                                           \
+#define METRIC_DEFINE_NO_ARG(method, name)                                                         \
     void METRIC_FUNC_NAME_##method(name)() { METRIC_VAR_##method(name); }
 
-#define METRIC_DEFINE_NO_ARG_NOTNULL(method, name)                                                           \
-    void METRIC_FUNC_NAME_##method(name)() { if (METRIC_VAR_NAME(name) != nullptr) {METRIC_VAR_##method(name);}  }
+#define METRIC_DEFINE_NO_ARG_NOTNULL(method, name)                                                 \
+    void METRIC_FUNC_NAME_##method(name)()                                                         \
+    {                                                                                              \
+        if (METRIC_VAR_NAME(name) != nullptr) {                                                    \
+            METRIC_VAR_##method(name);                                                             \
+        }                                                                                          \
+    }
 
-#define METRIC_DEFINE_RET_AND_NO_ARG(ret_type, method, name)                                                           \
+#define METRIC_DEFINE_RET_AND_NO_ARG(ret_type, method, name)                                       \
     ret_type METRIC_FUNC_NAME_##method(name)() { return METRIC_VAR_##method(name); }
 
-#define METRIC_DEFINE_ONE_ARG(method, name, arg_type)                                                           \
+#define METRIC_DEFINE_ONE_ARG(method, name, arg_type)                                              \
     void METRIC_FUNC_NAME_##method(name)(arg_type arg) { METRIC_VAR_##method(name, arg); }
 
-#define METRIC_DEFINE_ONE_ARG_NOTNULL(method, name, arg_type)                                                           \
-    void METRIC_FUNC_NAME_##method(name)(arg_type arg) { if (METRIC_VAR_NAME(name) != nullptr) {METRIC_VAR_##method(name, arg);} }
+#define METRIC_DEFINE_ONE_ARG_NOTNULL(method, name, arg_type)                                      \
+    void METRIC_FUNC_NAME_##method(name)(arg_type arg)                                             \
+    {                                                                                              \
+        if (METRIC_VAR_NAME(name) != nullptr) {                                                    \
+            METRIC_VAR_##method(name, arg);                                                        \
+        }                                                                                          \
+    }
 
 #define METRIC_CALL(obj, method, name, ...) (obj).METRIC_FUNC_NAME_##method(name)(__VA_ARGS__)
 
 #define METRIC_FUNC_NAME_INCREMENT_BY(name) increment_##name##_by
 
-#define METRIC_DEFINE_INCREMENT_BY(name)                                                           \
-    METRIC_DEFINE_ONE_ARG(INCREMENT_BY, name, int64_t)
+#define METRIC_DEFINE_INCREMENT_BY(name) METRIC_DEFINE_ONE_ARG(INCREMENT_BY, name, int64_t)
 
 // To be adaptive to self-defined `increment_by` methods, arguments are declared as variadic.
 #define METRIC_INCREMENT_BY(obj, name, ...) METRIC_CALL(obj, INCREMENT_BY, name, ##__VA_ARGS__)
 
 #define METRIC_FUNC_NAME_INCREMENT(name) increment_##name
 
-#define METRIC_DEFINE_INCREMENT(name)                                                              \
-    METRIC_DEFINE_NO_ARG(INCREMENT, name) 
+#define METRIC_DEFINE_INCREMENT(name) METRIC_DEFINE_NO_ARG(INCREMENT, name)
 
-#define METRIC_DEFINE_INCREMENT_NOTNULL(name)                                                              \
-    METRIC_DEFINE_NO_ARG_NOTNULL(INCREMENT, name)
+#define METRIC_DEFINE_INCREMENT_NOTNULL(name) METRIC_DEFINE_NO_ARG_NOTNULL(INCREMENT, name)
 
 // To be adaptive to self-defined `increment` methods, arguments are declared as variadic.
 #define METRIC_INCREMENT(obj, name, ...) METRIC_CALL(obj, INCREMENT, name, ##__VA_ARGS__)
 
 #define METRIC_FUNC_NAME_DECREMENT(name) decrement_##name
 
-#define METRIC_DEFINE_DECREMENT(name)                                                              \
-    METRIC_DEFINE_NO_ARG(DECREMENT, name)
+#define METRIC_DEFINE_DECREMENT(name) METRIC_DEFINE_NO_ARG(DECREMENT, name)
 
-#define METRIC_DEFINE_DECREMENT_NOTNULL(name)                                                              \
-    METRIC_DEFINE_NO_ARG_NOTNULL(DECREMENT, name)
+#define METRIC_DEFINE_DECREMENT_NOTNULL(name) METRIC_DEFINE_NO_ARG_NOTNULL(DECREMENT, name)
 
 // To be adaptive to self-defined `decrement` methods, arguments are declared as variadic.
 #define METRIC_DECREMENT(obj, name, ...) METRIC_CALL(obj, DECREMENT, name, ##__VA_ARGS__)
 
 #define METRIC_FUNC_NAME_SET(name) set_##name
 
-#define METRIC_DEFINE_SET(name, value_type)                                                        \
-    METRIC_DEFINE_ONE_ARG(SET, name, value_type)
+#define METRIC_DEFINE_SET(name, value_type) METRIC_DEFINE_ONE_ARG(SET, name, value_type)
 
-#define METRIC_DEFINE_SET_NOTNULL(name, value_type)                                                        \
+#define METRIC_DEFINE_SET_NOTNULL(name, value_type)                                                \
     METRIC_DEFINE_ONE_ARG_NOTNULL(SET, name, value_type)
 
 // To be adaptive to self-defined `set` methods, arguments are declared as variadic.
@@ -298,8 +302,7 @@ class error_code;
 
 #define METRIC_FUNC_NAME_VALUE(name) get_##name
 
-#define METRIC_DEFINE_VALUE(name, value_type)                                                      \
-    METRIC_DEFINE_RET_AND_NO_ARG(value_type, VALUE, name)
+#define METRIC_DEFINE_VALUE(name, value_type) METRIC_DEFINE_RET_AND_NO_ARG(value_type, VALUE, name)
 
 // To be adaptive to self-defined `value` methods, arguments are declared as variadic.
 #define METRIC_VALUE(obj, name, ...) METRIC_CALL(obj, VALUE, name, ##__VA_ARGS__)

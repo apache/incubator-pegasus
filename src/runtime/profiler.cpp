@@ -80,66 +80,66 @@ METRIC_DEFINE_gauge_int64(profiler,
                           "The number of tasks in all queues");
 
 METRIC_DEFINE_percentile_int64(profiler,
-                          profiler_queued_latency_ns,
-                          dsn::metric_unit::kNanoSeconds,
-                          "The latency it takes for each task to wait in each queue "
-                          "before beginning to be executed");
+                               profiler_queued_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency it takes for each task to wait in each queue "
+                               "before beginning to be executed");
 
 METRIC_DEFINE_percentile_int64(profiler,
-                          profiler_executed_latency_ns,
-                          dsn::metric_unit::kNanoSeconds,
-                          "The latency it takes for each task to be executed");
+                               profiler_executed_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency it takes for each task to be executed");
 
 METRIC_DEFINE_counter(profiler,
-                          profiler_executed_tasks,
-                          dsn::metric_unit::kTasks,
-                          "The number of tasks that have been executed");
+                      profiler_executed_tasks,
+                      dsn::metric_unit::kTasks,
+                      "The number of tasks that have been executed");
 
 METRIC_DEFINE_counter(profiler,
-                          profiler_cancelled_tasks,
-                          dsn::metric_unit::kTasks,
-                          "The number of cancelled tasks");
+                      profiler_cancelled_tasks,
+                      dsn::metric_unit::kTasks,
+                      "The number of cancelled tasks");
 
 METRIC_DEFINE_percentile_int64(profiler,
-                          profiler_server_rpc_latency_ns,
-                          dsn::metric_unit::kNanoSeconds,
-                          "The latency from enqueue point to reply point on the server side "
-                          "for each RPC task");
+                               profiler_server_rpc_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency from enqueue point to reply point on the server side "
+                               "for each RPC task");
 
 METRIC_DEFINE_percentile_int64(profiler,
-                          profiler_server_rpc_request_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The body length of request received on the server side for each "
-                          "RPC task");
+                               profiler_server_rpc_request_bytes,
+                               dsn::metric_unit::kBytes,
+                               "The body length of request received on the server side for each "
+                               "RPC task");
 
 METRIC_DEFINE_percentile_int64(profiler,
-                          profiler_server_rpc_response_bytes,
-                          dsn::metric_unit::kBytes,
-                          "The body length of response replied on the server side for each "
-                          "RPC task");
+                               profiler_server_rpc_response_bytes,
+                               dsn::metric_unit::kBytes,
+                               "The body length of response replied on the server side for each "
+                               "RPC task");
 
 METRIC_DEFINE_counter(profiler,
-                          profiler_dropped_timeout_rpcs,
-                          dsn::metric_unit::kTasks,
-                          "The accumulative number of dropped RPC tasks on the server side "
-                          "due to timeout");
+                      profiler_dropped_timeout_rpcs,
+                      dsn::metric_unit::kTasks,
+                      "The accumulative number of dropped RPC tasks on the server side "
+                      "due to timeout");
 
 METRIC_DEFINE_percentile_int64(profiler,
-                          profiler_client_rpc_latency_ns,
-                          dsn::metric_unit::kNanoSeconds,
-                          "The non-timeout latency from call point to enqueue point on "
-                          "the client side for each RPC task");
+                               profiler_client_rpc_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The non-timeout latency from call point to enqueue point on "
+                               "the client side for each RPC task");
 
 METRIC_DEFINE_counter(profiler,
-                          profiler_client_timeout_rpcs,
-                          dsn::metric_unit::kTasks,
-                          "The accumulative number of timeout RPC tasks on the client side");
+                      profiler_client_timeout_rpcs,
+                      dsn::metric_unit::kTasks,
+                      "The accumulative number of timeout RPC tasks on the client side");
 
 METRIC_DEFINE_percentile_int64(profiler,
-                          profiler_aio_latency_ns,
-                          dsn::metric_unit::kNanoSeconds,
-                          "The duration of the whole AIO operation (begin to exec aio -> "
-                          "executing -> finished -> callback is put into queue");
+                               profiler_aio_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The duration of the whole AIO operation (begin to exec aio -> "
+                               "executing -> finished -> callback is put into queue");
 
 namespace dsn {
 struct service_spec;
