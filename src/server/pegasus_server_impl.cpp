@@ -42,6 +42,7 @@
 #include <list>
 #include <mutex>
 #include <ostream>
+#include <set>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
@@ -2655,8 +2656,11 @@ void pegasus_server_impl::update_rocksdb_options_before_create_replica(
         auto find = envs.find(option);
         bool is_set = false;
         if (option.compare(ROCKSDB_NUM_LEVELS) == 0 && find != envs.end()) {
-            dsn::buf2int32(find->second, _data_cf_opts.num_levels);
+            int32_t val = 0;
+            if (!dsn::buf2int32(find->second, val))
+                continue;
             is_set = true;
+            _data_cf_opts.num_levels = val;
         }
 
         if (is_set)
@@ -2666,10 +2670,11 @@ void pegasus_server_impl::update_rocksdb_options_before_create_replica(
     for (auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
         auto find = envs.find(option);
         bool is_set = false;
-
         if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0 && find != envs.end()) {
-            dsn::buf2uint64(find->second, _data_cf_opts.write_buffer_size);
-            is_set = true;
+            uint64_t val = 0;
+            if (!dsn::buf2uint64(find->second, val))
+                continue;
+            _data_cf_opts.write_buffer_size = static_cast<size_t>(val);
         }
         if (is_set)
             LOG_INFO("Reset {} \"{}\" succeed", find->first, find->second);

@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <set>
 
 #include "common/gpid.h"
 #include "common/replica_envs.h"

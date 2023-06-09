@@ -35,10 +35,15 @@ bool validate_app_envs(const std::map<std::string, std::string> &envs)
 {
     if (envs.size() == 0)
         return true;
-    // check app envs information
+    // check rocksdb app envs information
     std::string hint_message;
     bool all_envs_vaild = true;
     for (auto &it : envs) {
+        if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(it.first) ==
+                replica_envs::ROCKSDB_STATIC_OPTIONS.end() &&
+            replica_envs::ROCKSDB_DYNAMIC_OPTIONS.find(it.first) ==
+                replica_envs::ROCKSDB_DYNAMIC_OPTIONS.end())
+            continue;
         if (!validate_app_env(it.first, it.second, hint_message)) {
             LOG_WARNING(
                 "app env {}={} is invaild, hint_message:{}", it.first, it.second, hint_message);

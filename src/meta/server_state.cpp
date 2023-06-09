@@ -2757,12 +2757,6 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
             return;
         }
 
-        if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(keys[i]) !=
-            replica_envs::ROCKSDB_STATIC_OPTIONS.end()) {
-            env_rpc.response().err = ERR_INVALID_PARAMETERS;
-            env_rpc.response().hint_message = "static rocksdb option only can set by create app";
-            return;
-        }
         os << keys[i] << "=" << values[i];
     }
     LOG_INFO("set app envs for app({}) from remote({}): kvs = {}",
