@@ -370,7 +370,7 @@ metric_entity_ptr instantiate_profiler_metric_entity(const std::string &task_nam
 task_spec_profiler::task_spec_profiler(int code)
     : collect_call_count(false),
       is_profile(false),
-      call_counts(new std::atomic<int64_t>[s_task_code_max + 1]),
+      call_counts(new std::atomic<int64_t>[ s_task_code_max + 1 ]),
       _task_name(dsn::task_code(code).to_string()),
       _profiler_metric_entity(instantiate_profiler_metric_entity(_task_name))
 {
