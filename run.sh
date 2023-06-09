@@ -216,12 +216,11 @@ function run_build()
                    -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
                    -DBoost_NO_SYSTEM_PATHS=ON"
 
+    echo "BUILD_TYPE=$BUILD_TYPE"
     if [ "$BUILD_TYPE" == "debug" ]
     then
-        echo "BUILD_TYPE=debug"
         CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
     else
-        echo "BUILD_TYPE=release"
         CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Release"
     fi
 
