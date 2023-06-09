@@ -371,8 +371,8 @@ task_spec_profiler::task_spec_profiler(int code)
     : collect_call_count(false),
       is_profile(false),
       call_counts(s_task_code_max + 1),
-      _task_name(dsn::task_code(i).to_string()),
-      _profiler_metric_entity(instantiate_profiler_metric_entity(task_name))
+      _task_name(dsn::task_code(code).to_string()),
+      _profiler_metric_entity(instantiate_profiler_metric_entity(_task_name))
 {
     const auto &section_name = fmt::format("task.{}", _task_name);
     auto spec = task_spec::get(code);
