@@ -295,7 +295,9 @@ static void profiler_on_rpc_request_enqueue(rpc_request_task *callee)
 
     METRIC_INCREMENT(s_spec_profilers[callee_code], profiler_queued_tasks);
 
-    METRIC_SET(s_spec_profilers[callee_code], profiler_server_rpc_request_bytes, callee->get_request()->header->body_length);
+    METRIC_SET(s_spec_profilers[callee_code],
+               profiler_server_rpc_request_bytes,
+               callee->get_request()->header->body_length);
 }
 
 static void profile_on_rpc_task_dropped(rpc_request_task *callee)
@@ -332,7 +334,8 @@ static void profiler_on_rpc_reply(task *caller, message_ex *msg)
 
     METRIC_SET(s_spec_profilers[code], profiler_server_rpc_latency_ns, now - qts);
 
-    METRIC_SET(s_spec_profilers[code], profiler_server_rpc_response_bytes, msg->header->body_length);
+    METRIC_SET(
+        s_spec_profilers[code], profiler_server_rpc_response_bytes, msg->header->body_length);
 }
 
 static void profiler_on_rpc_response_enqueue(rpc_response_task *resp)
@@ -371,130 +374,126 @@ task_spec_profiler::task_spec_profiler(int code)
       _task_name(dsn::task_code(i).to_string()),
       _profiler_metric_entity(instantiate_profiler_metric_entity(task_name))
 {
-        const auto &section_name = fmt::format("task.{}", _task_name);
-        auto spec = task_spec::get(code);
-        CHECK_NOTNULL(spec, "spec should be non-null: task_code={}, task_name={}", code, _task_name);
+    const auto &section_name = fmt::format("task.{}", _task_name);
+    auto spec = task_spec::get(code);
+    CHECK_NOTNULL(spec, "spec should be non-null: task_code={}, task_name={}", code, _task_name);
 
-        collect_call_count = dsn_config_get_value_bool(
+    collect_call_count = dsn_config_get_value_bool(
+        section_name.c_str(),
+        "collect_call_count",
+        FLAGS_collect_call_count,
+        "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
+
+    for (auto &count : call_counts) {
+        count.store(0);
+    }
+
+    is_profile = dsn_config_get_value_bool(section_name.c_str(),
+                                           "is_profile",
+                                           FLAGS_is_profile,
+                                           "whether to profile this kind of task");
+
+    if (!is_profile) {
+        return;
+    }
+
+    if (dsn_config_get_value_bool(
             section_name.c_str(),
-            "collect_call_count",
-            FLAGS_collect_call_count,
-            "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
+            "profiler::inqueue",
+            true,
+            "whether to profile the number of this kind of tasks in all queues")) {
+        METRIC_VAR_ASSIGN_profiler(profiler_queued_tasks);
+    }
 
-        for (auto &count : call_counts) {
-            count.store(0);
-        }
+    if (dsn_config_get_value_bool(section_name.c_str(),
+                                  "profiler::queue",
+                                  true,
+                                  "whether to profile the queuing time of a task")) {
+        METRIC_VAR_ASSIGN_profiler(profiler_queue_latency_ns);
+    }
 
-        is_profile =
-            dsn_config_get_value_bool(section_name.c_str(),
-                                      "is_profile",
-                                      FLAGS_is_profile,
-                                      "whether to profile this kind of task");
+    if (dsn_config_get_value_bool(section_name.c_str(),
+                                  "profiler::exec",
+                                  true,
+                                  "whether to profile the executing time of a task")) {
+        METRIC_VAR_ASSIGN_profiler(profiler_execute_latency_ns);
+    }
 
-        if (!is_profile) {
-            return;
-        }
+    if (dsn_config_get_value_bool(
+            section_name.c_str(), "profiler::qps", true, "whether to profile the qps of a task")) {
+        METRIC_VAR_ASSIGN_profiler(profiler_executed_tasks);
+    }
 
-        if (dsn_config_get_value_bool(
-                section_name.c_str(),
-                "profiler::inqueue",
-                true,
-                "whether to profile the number of this kind of tasks in all queues")) {
-            METRIC_VAR_ASSIGN_profiler(profiler_queued_tasks);
-        }
+    if (dsn_config_get_value_bool(section_name.c_str(),
+                                  "profiler::cancelled",
+                                  true,
+                                  "whether to profile the cancelled times of a task")) {
+        METRIC_VAR_ASSIGN_profiler(profiler_cancelled_tasks);
+    }
 
+    if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_REQUEST) {
         if (dsn_config_get_value_bool(section_name.c_str(),
-                                      "profiler::queue",
+                                      "profiler::latency.server",
                                       true,
-                                      "whether to profile the queuing time of a task")) {
-            METRIC_VAR_ASSIGN_profiler(profiler_queue_latency_ns);
+                                      "whether to profile the server latency of a task")) {
+            METRIC_VAR_ASSIGN_profiler(profiler_server_rpc_latency_ns);
         }
-
         if (dsn_config_get_value_bool(section_name.c_str(),
-                                      "profiler::exec",
-                                      true,
-                                      "whether to profile the executing time of a task")) {
-            METRIC_VAR_ASSIGN_profiler(profiler_execute_latency_ns);
+                                      "profiler::size.request.server",
+                                      false,
+                                      "whether to profile the size per request")) {
+            METRIC_VAR_ASSIGN_profiler(profiler_server_rpc_request_bytes);
         }
-
         if (dsn_config_get_value_bool(section_name.c_str(),
-                                      "profiler::qps",
-                                      true,
-                                      "whether to profile the qps of a task")) {
-            METRIC_VAR_ASSIGN_profiler(profiler_executed_tasks);
+                                      "profiler::size.response.server",
+                                      false,
+                                      "whether to profile the size per response")) {
+            METRIC_VAR_ASSIGN_profiler(profiler_server_rpc_response_bytes);
         }
-
         if (dsn_config_get_value_bool(section_name.c_str(),
-                                      "profiler::cancelled",
+                                      "rpc_request_dropped_before_execution_when_timeout",
+                                      false,
+                                      "whether to profile the number of rpc dropped for timeout")) {
+            METRIC_VAR_ASSIGN_profiler(profiler_dropped_timeout_rpcs);
+        }
+    } else if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_RESPONSE) {
+        if (dsn_config_get_value_bool(section_name.c_str(),
+                                      "profiler::latency.client",
                                       true,
-                                      "whether to profile the cancelled times of a task")) {
-            METRIC_VAR_ASSIGN_profiler(profiler_cancelled_tasks);
+                                      "whether to profile the client latency of a task")) {
+            METRIC_VAR_ASSIGN_profiler(profiler_client_rpc_latency_ns);
         }
-
-        if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_REQUEST) {
-            if (dsn_config_get_value_bool(section_name.c_str(),
-                                          "profiler::latency.server",
-                                          true,
-                                          "whether to profile the server latency of a task")) {
-                METRIC_VAR_ASSIGN_profiler(profiler_server_rpc_latency_ns);
-            }
-            if (dsn_config_get_value_bool(section_name.c_str(),
-                                          "profiler::size.request.server",
-                                          false,
-                                          "whether to profile the size per request")) {
-                METRIC_VAR_ASSIGN_profiler(profiler_server_rpc_request_bytes);
-            }
-            if (dsn_config_get_value_bool(section_name.c_str(),
-                                          "profiler::size.response.server",
-                                          false,
-                                          "whether to profile the size per response")) {
-                METRIC_VAR_ASSIGN_profiler(profiler_server_rpc_response_bytes);
-            }
-            if (dsn_config_get_value_bool(
-                    section_name.c_str(),
-                    "rpc_request_dropped_before_execution_when_timeout",
-                    false,
-                    "whether to profile the number of rpc dropped for timeout")) {
-                METRIC_VAR_ASSIGN_profiler(profiler_dropped_timeout_rpcs);
-            }
-        } else if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_RESPONSE) {
-            if (dsn_config_get_value_bool(section_name.c_str(),
-                                          "profiler::latency.client",
-                                          true,
-                                          "whether to profile the client latency of a task")) {
-                METRIC_VAR_ASSIGN_profiler(profiler_client_rpc_latency_ns);
-            }
-            if (dsn_config_get_value_bool(section_name.c_str(),
-                                          "profiler::timeout.qps",
-                                          true,
-                                          "whether to profile the timeout qps of a task")) {
-                METRIC_VAR_ASSIGN_profiler(profiler_client_timeout_rpcs);
-            }
-        } else if (spec->type == dsn_task_type_t::TASK_TYPE_AIO) {
-            if (dsn_config_get_value_bool(section_name.c_str(),
-                                          "profiler::latency",
-                                          true,
-                                          "whether to profile the latency of an AIO task")) {
-                METRIC_VAR_ASSIGN_profiler(profiler_aio_latency_ns);
-            }
+        if (dsn_config_get_value_bool(section_name.c_str(),
+                                      "profiler::timeout.qps",
+                                      true,
+                                      "whether to profile the timeout qps of a task")) {
+            METRIC_VAR_ASSIGN_profiler(profiler_client_timeout_rpcs);
         }
+    } else if (spec->type == dsn_task_type_t::TASK_TYPE_AIO) {
+        if (dsn_config_get_value_bool(section_name.c_str(),
+                                      "profiler::latency",
+                                      true,
+                                      "whether to profile the latency of an AIO task")) {
+            METRIC_VAR_ASSIGN_profiler(profiler_aio_latency_ns);
+        }
+    }
 
-        spec->on_task_create.put_back(profiler_on_task_create, "profiler");
-        spec->on_task_enqueue.put_back(profiler_on_task_enqueue, "profiler");
-        spec->on_task_begin.put_back(profiler_on_task_begin, "profiler");
-        spec->on_task_end.put_back(profiler_on_task_end, "profiler");
-        spec->on_task_cancelled.put_back(profiler_on_task_cancelled, "profiler");
-        spec->on_task_wait_pre.put_back(profiler_on_task_wait_pre, "profiler");
-        spec->on_task_wait_post.put_back(profiler_on_task_wait_post, "profiler");
-        spec->on_task_cancel_post.put_back(profiler_on_task_cancel_post, "profiler");
-        spec->on_aio_call.put_back(profiler_on_aio_call, "profiler");
-        spec->on_aio_enqueue.put_back(profiler_on_aio_enqueue, "profiler");
-        spec->on_rpc_call.put_back(profiler_on_rpc_call, "profiler");
-        spec->on_rpc_request_enqueue.put_back(profiler_on_rpc_request_enqueue, "profiler");
-        spec->on_rpc_task_dropped.put_back(profile_on_rpc_task_dropped, "profiler");
-        spec->on_rpc_create_response.put_back(profiler_on_rpc_create_response, "profiler");
-        spec->on_rpc_reply.put_back(profiler_on_rpc_reply, "profiler");
-        spec->on_rpc_response_enqueue.put_back(profiler_on_rpc_response_enqueue, "profiler");
+    spec->on_task_create.put_back(profiler_on_task_create, "profiler");
+    spec->on_task_enqueue.put_back(profiler_on_task_enqueue, "profiler");
+    spec->on_task_begin.put_back(profiler_on_task_begin, "profiler");
+    spec->on_task_end.put_back(profiler_on_task_end, "profiler");
+    spec->on_task_cancelled.put_back(profiler_on_task_cancelled, "profiler");
+    spec->on_task_wait_pre.put_back(profiler_on_task_wait_pre, "profiler");
+    spec->on_task_wait_post.put_back(profiler_on_task_wait_post, "profiler");
+    spec->on_task_cancel_post.put_back(profiler_on_task_cancel_post, "profiler");
+    spec->on_aio_call.put_back(profiler_on_aio_call, "profiler");
+    spec->on_aio_enqueue.put_back(profiler_on_aio_enqueue, "profiler");
+    spec->on_rpc_call.put_back(profiler_on_rpc_call, "profiler");
+    spec->on_rpc_request_enqueue.put_back(profiler_on_rpc_request_enqueue, "profiler");
+    spec->on_rpc_task_dropped.put_back(profile_on_rpc_task_dropped, "profiler");
+    spec->on_rpc_create_response.put_back(profiler_on_rpc_create_response, "profiler");
+    spec->on_rpc_reply.put_back(profiler_on_rpc_reply, "profiler");
+    spec->on_rpc_response_enqueue.put_back(profiler_on_rpc_response_enqueue, "profiler");
 }
 
 const metric_entity_ptr &task_spec_profiler::profiler_metric_entity() const
