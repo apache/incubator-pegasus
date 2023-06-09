@@ -34,36 +34,28 @@
 namespace dsn {
 namespace tools {
 
-enum perf_counter_ptr_type
-{
-    TASK_QUEUEING_TIME_NS,
-    TASK_EXEC_TIME_NS,
-    TASK_THROUGHPUT,
-    TASK_CANCELLED,
-    AIO_LATENCY_NS,
-    RPC_SERVER_LATENCY_NS,
-    RPC_SERVER_SIZE_PER_REQUEST_IN_BYTES,
-    RPC_SERVER_SIZE_PER_RESPONSE_IN_BYTES,
-    RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,
-    RPC_CLIENT_TIMEOUT_THROUGHPUT,
-    TASK_IN_QUEUE,
-    RPC_DROPPED_IF_TIMEOUT,
-
-    PERF_COUNTER_COUNT,
-    PERF_COUNTER_INVALID
-};
-
 struct task_spec_profiler
 {
     bool collect_call_count;
     bool is_profile;
-    std::atomic<int64_t> *call_counts;
+    std::vector<std::atomic<int64_t>> call_counts;
 
-    task_spec_profiler(const std::string &task_name);
+    task_spec_profiler(int code);
     const metric_entity_ptr &profiler_metric_entity() const;
 
-    METRIC_DEFINE_INCREMENT(profiler_queued_tasks)
-    METRIC_DEFINE_DECREMENT(profiler_queued_tasks)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_queued_tasks)
+    METRIC_DEFINE_DECREMENT_NOTNULL(profiler_queued_tasks)
+    METRIC_DEFINE_SET_NOTNULL(profiler_queue_latency_ns)
+    METRIC_DEFINE_SET_NOTNULL(profiler_execute_latency_ns)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_executed_tasks)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_cancelled_tasks)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_latency_ns)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_request_bytes)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_response_bytes)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_dropped_timeout_rpcs)
+    METRIC_DEFINE_SET_NOTNULL(profiler_client_rpc_latency_ns)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_client_timeout_rpcs)
+    METRIC_DEFINE_SET_NOTNULL(profiler_aio_latency_ns)
 
 private:
     const std::string _task_name;
