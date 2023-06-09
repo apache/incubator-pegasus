@@ -370,7 +370,7 @@ metric_entity_ptr instantiate_profiler_metric_entity(const std::string &task_nam
 task_spec_profiler::task_spec_profiler(int code)
     : collect_call_count(false),
       is_profile(false),
-      call_counts(s_task_code_max + 1),
+      call_counts(new std::atomic<int64_t>[s_task_code_max + 1]),
       _task_name(dsn::task_code(code).to_string()),
       _profiler_metric_entity(instantiate_profiler_metric_entity(_task_name))
 {
@@ -384,8 +384,8 @@ task_spec_profiler::task_spec_profiler(int code)
         FLAGS_collect_call_count,
         "whether to collect how many time this kind of tasks invoke each of other kinds tasks");
 
-    for (auto &count : call_counts) {
-        count.store(0);
+    for (int i = 0; i <= s_task_code_max; ++i) {
+        call_counts[i].store(0);
     }
 
     is_profile = dsn_config_get_value_bool(section_name.c_str(),

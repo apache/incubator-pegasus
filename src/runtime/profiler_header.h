@@ -38,7 +38,7 @@ struct task_spec_profiler
 {
     bool collect_call_count;
     bool is_profile;
-    std::vector<std::atomic<int64_t>> call_counts;
+    std::unique_ptr<std::atomic<int64_t>[]> call_counts;
 
     task_spec_profiler(int code);
     const metric_entity_ptr &profiler_metric_entity() const;
