@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <gtest/gtest-message.h>
 #include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -57,29 +58,114 @@ TEST(ranger_resource_policy_test, acl_policies_allowed)
 {
     acl_policies policy;
     policy.allow_policies = {{access_type::kRead | access_type::kWrite | access_type::kCreate,
-                              {"user1", "user2", "user3", "user4"}}};
-    policy.allow_policies_exclude = {{access_type::kWrite | access_type::kCreate, {"user2"}}};
-    policy.deny_policies = {{access_type::kRead | access_type::kWrite, {"user3", "user4"}}};
-    policy.deny_policies_exclude = {{access_type::kRead, {"user4"}}};
+                              {"user1", "user2", "user3"}},
+                             {access_type::kRead | access_type::kWrite | access_type::kCreate,
+                              {"user4", "user5", "user6"}}};
+    policy.allow_policies_exclude = {{access_type::kWrite | access_type::kCreate, {"user2"}},
+                                     {access_type::kWrite | access_type::kCreate, {"user5"}}};
+    policy.deny_policies = {{access_type::kRead | access_type::kWrite, {"user3", "user4"}},
+                            {access_type::kRead | access_type::kWrite, {"user5", "user6"}}};
+    policy.deny_policies_exclude = {{access_type::kRead, {"user4"}},
+                                    {access_type::kWrite, {"user6"}}};
     struct test_case
     {
         access_type ac_type;
         std::string user_name;
-        bool expected_result;
-    } tests[] = {{access_type::kRead, "user", false},      {access_type::kRead, "user1", true},
-                 {access_type::kWrite, "user1", true},     {access_type::kCreate, "user1", true},
-                 {access_type::kDrop, "user1", false},     {access_type::kList, "user1", false},
-                 {access_type::kMetadata, "user1", false}, {access_type::kControl, "user1", false},
-                 {access_type::kRead, "user2", true},      {access_type::kWrite, "user2", false},
-                 {access_type::kCreate, "user2", false},   {access_type::kDrop, "user2", false},
-                 {access_type::kList, "user2", false},     {access_type::kMetadata, "user2", false},
-                 {access_type::kControl, "user2", false},  {access_type::kRead, "user3", false},
-                 {access_type::kCreate, "user3", true},    {access_type::kList, "user3", false},
-                 {access_type::kRead, "user4", true},      {access_type::kWrite, "user4", false},
-                 {access_type::kCreate, "user4", true},    {access_type::kList, "user4", false}};
+        policy_check_type check_type;
+        policy_check_status expected_result;
+    } tests[] = {
+        // not in any "allow_policies"
+        {access_type::kRead, "user", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        // not in any "deny_policies"
+        {access_type::kRead, "user", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kRead, "user1", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // not in any 'deny_policies'
+        {access_type::kRead, "user1", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // not in any "allow_policies"
+        {access_type::kList, "user1", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        // not in any "deny_policies"
+        {access_type::kList, "user1", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kRead, "user2", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // not in any "deny_policies"
+        {access_type::kRead, "user2", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // in a 'allow_policies' and in a 'allow_policies_exclude'
+        {access_type::kWrite, "user2", policy_check_type::kAllow, policy_check_status::kPending},
+        // not in any "deny_policies"
+        {access_type::kWrite, "user2", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // in a 'allow_policies' and in a 'allow_policies_exclude'
+        {access_type::kCreate, "user2", policy_check_type::kAllow, policy_check_status::kPending},
+        // not in any "deny_policies"
+        {access_type::kCreate, "user2", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kRead, "user3", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // in a 'deny_policies' and not in any 'deny_policies_exclude'
+        {access_type::kRead, "user3", policy_check_type::kDeny, policy_check_status::kDenied},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kCreate, "user3", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // not in any "deny_policies"
+        {access_type::kCreate, "user3", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // not in any "allow_policies"
+        {access_type::kList, "user3", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        // not in any "deny_policies"
+        {access_type::kList, "user3", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kRead, "user4", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // in a 'deny_policies' and in a 'deny_policies_exclude'
+        {access_type::kRead, "user4", policy_check_type::kDeny, policy_check_status::kPending},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kWrite, "user4", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // in a 'deny_policies' and not in any 'deny_policies_exclude'
+        {access_type::kWrite, "user4", policy_check_type::kDeny, policy_check_status::kDenied},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kCreate, "user4", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // not in any "deny_policies"
+        {access_type::kCreate, "user4", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // not in any "allow_policies"
+        {access_type::kList, "user4", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        // not in any "deny_policies"
+        {access_type::kList, "user4", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kRead, "user5", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // in a 'deny_policies' and  not in any 'deny_policies_exclude'
+        {access_type::kRead, "user5", policy_check_type::kDeny, policy_check_status::kDenied},
+        // in a 'allow_policies' and in a 'allow_policies_exclude'
+        {access_type::kWrite, "user5", policy_check_type::kAllow, policy_check_status::kPending},
+        // in a 'deny_policies' and not in any 'deny_policies_exclude'
+        {access_type::kWrite, "user5", policy_check_type::kDeny, policy_check_status::kDenied},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kCreate, "user5", policy_check_type::kAllow, policy_check_status::kPending},
+        // not in any "deny_policies"
+        {access_type::kCreate, "user5", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // not in any "allow_policies"
+        {access_type::kList, "user5", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        // not in any "deny_policies"
+        {access_type::kList, "user5", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kRead, "user6", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // in a 'deny_policies' and  not in any 'deny_policies_exclude'
+        {access_type::kRead, "user6", policy_check_type::kDeny, policy_check_status::kDenied},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kWrite, "user6", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // in a 'deny_policies' and in a 'deny_policies_exclude'
+        {access_type::kWrite, "user6", policy_check_type::kDeny, policy_check_status::kPending},
+        // in a 'allow_policies' and not in any 'allow_policies_exclude'
+        {access_type::kCreate, "user6", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // not in any "deny_policies"
+        {access_type::kCreate, "user6", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        // not in any "allow_policies"
+        {access_type::kList, "user6", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        // not in any "deny_policies"
+        {access_type::kList, "user6", policy_check_type::kDeny, policy_check_status::kNotMatched},
+    };
     for (const auto &test : tests) {
-        auto actual_result = policy.allowed(test.ac_type, test.user_name);
-        EXPECT_EQ(test.expected_result, actual_result);
+        auto actual_result = policy.policies_check(test.ac_type, test.user_name, test.check_type);
+        EXPECT_EQ(test.expected_result, actual_result)
+            << fmt::format("ac_type: {}, user_name: {}, check_type: {}",
+                           enum_to_string(test.ac_type),
+                           test.user_name,
+                           enum_to_string(test.check_type));
     }
 }
 } // namespace ranger

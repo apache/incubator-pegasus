@@ -74,9 +74,10 @@ public:
     // When using Ranger for ACL, periodically pull policies from Ranger service.
     void start();
 
-    // Return true if the 'user_name' is allowed to access 'database_name' via 'rpc_code'.
-    bool
-    allowed(const int rpc_code, const std::string &user_name, const std::string &database_name);
+    // Return 'access_control_result::kAllowed' if the 'user_name' is allowed to access
+    // 'database_name' via 'rpc_code'.
+    access_control_result
+    allowed(const int rpc_code, const std::string &user_name, const std::string &app_name);
 
 private:
     // Parse Ranger ACL policies from 'data' in JSON format into 'policies'.
