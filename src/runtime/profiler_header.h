@@ -62,6 +62,17 @@ private:
     const metric_entity_ptr _profiler_metric_entity;
 
     METRIC_VAR_DECLARE_gauge_int64(profiler_queued_tasks);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_queue_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_execute_latency_ns);
+    METRIC_VAR_DECLARE_counter(profiler_executed_tasks);
+    METRIC_VAR_DECLARE_counter(profiler_cancelled_tasks);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_server_rpc_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_server_rpc_request_bytes);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_server_rpc_response_bytes);
+    METRIC_VAR_DECLARE_counter(profiler_dropped_timeout_rpcs);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_client_rpc_latency_ns);
+    METRIC_VAR_DECLARE_counter(profiler_client_timeout_rpcs);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_aio_latency_ns);
 };
 
 } // namespace tools
