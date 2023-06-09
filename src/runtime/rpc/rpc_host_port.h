@@ -28,9 +28,16 @@
 #include <vector>
 
 #include "runtime/rpc/rpc_address.h"
-#include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+
+namespace apache {
+namespace thrift {
+namespace protocol {
+class TProtocol;
+} // namespace protocol
+} // namespace thrift
+} // namespace apache
 
 namespace dsn {
 
@@ -74,11 +81,15 @@ public:
     // Trere may be multiple rpc_addresses for one host_port.
     error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
 
+    // for serialization in thrift format
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
 private:
     std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;
-    ref_ptr<rpc_group_host_port> _group_host_port;
+    rpc_group_host_port *_group_host_port = nullptr;
 };
 
 inline bool operator==(const host_port &hp1, const host_port &hp2)
