@@ -27,7 +27,6 @@
 #pragma once
 
 #include <iomanip>
-#include "perf_counter/perf_counter_wrapper.h"
 
 #include "utils/autoref_ptr.h"
 #include "utils/metrics.h"
@@ -56,7 +55,6 @@ enum perf_counter_ptr_type
 
 struct task_spec_profiler
 {
-    perf_counter_wrapper ptr[PERF_COUNTER_COUNT];
     bool collect_call_count;
     bool is_profile;
     std::atomic<int64_t> *call_counts;
@@ -64,9 +62,14 @@ struct task_spec_profiler
     task_spec_profiler(const std::string &task_name);
     const metric_entity_ptr &profiler_metric_entity() const;
 
+    METRIC_DEFINE_INCREMENT(profiler_queued_tasks)
+    METRIC_DEFINE_DECREMENT(profiler_queued_tasks)
+
 private:
-    std::string _task_name;
+    const std::string _task_name;
     const metric_entity_ptr _profiler_metric_entity;
+
+    METRIC_VAR_DECLARE_gauge_int64(profiler_queued_tasks);
 };
 
 } // namespace tools
