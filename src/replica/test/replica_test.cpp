@@ -552,6 +552,10 @@ TEST_P(replica_error_test, test_auto_trash_of_corruption)
     }
     ASSERT_EQ(moved_to_err_path, found_err_path);
     ASSERT_FALSE(has_gpid(_pid));
+    ASSERT_EQ(moved_to_err_path, dn->status == disk_status::NORMAL) << moved_to_err_path << ", "
+                                                                    << enum_to_string(dn->status);
+    ASSERT_EQ(!moved_to_err_path, dn->status == disk_status::IO_ERROR)
+        << moved_to_err_path << ", " << enum_to_string(dn->status);
 
     // It's safe to cleanup the .err path after been found.
     if (!err_path.empty()) {

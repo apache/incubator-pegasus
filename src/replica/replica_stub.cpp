@@ -2140,7 +2140,7 @@ void replica_stub::open_replica(
     }
 
     if (rep == nullptr) {
-        LOG_INFO(
+        LOG_WARNING(
             "{}@{}: open replica failed, erase from opening replicas", id, _primary_address_str);
         zauto_write_lock l(_replicas_lock);
         CHECK_GT_MSG(_opening_replicas.erase(id),

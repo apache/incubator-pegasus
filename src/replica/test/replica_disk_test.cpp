@@ -46,9 +46,13 @@
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "test_util/test_util.h"
+
+using pegasus::AssertEventually;
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_bool(fd_disabled);
 
 using query_disk_info_rpc = rpc_holder<query_disk_info_request, query_disk_info_response>;
 
@@ -283,6 +287,29 @@ TEST_F(replica_disk_test, add_new_disk_test)
         prepare_before_add_new_disk_test(test.create_dir, test.rw_flag);
         ASSERT_EQ(send_add_new_disk_rpc(test.disk_str), test.expected_err);
         reset_after_add_new_disk_test();
+    }
+}
+
+TEST_F(replica_disk_test, disk_io_error_test)
+{
+    // Disable failure detector to avoid connecting with meta server which is not started.
+    FLAGS_fd_disabled = true;
+
+    gpid test_pid(app_info_1.app_id, 0);
+    const auto rep = stub->get_replica(test_pid);
+    auto *old_dn = rep->get_dir_node();
+
+    rep->handle_local_failure(ERR_DISK_IO_ERROR);
+    ASSERT_EVENTUALLY([&] { ASSERT_TRUE(!old_dn->has(test_pid)); });
+
+    // The replica will not be located on the old dir_node.
+    auto *new_dn = stub->get_fs_manager()->find_best_dir_for_new_replica(test_pid);
+    ASSERT_NE(old_dn, new_dn);
+
+    // The replicas will not be located on the old dir_node.
+    for (int i = 0; i < 16; i++) {
+        new_dn = stub->get_fs_manager()->find_best_dir_for_new_replica(gpid(3, i));
+        ASSERT_NE(old_dn, new_dn);
     }
 }
 

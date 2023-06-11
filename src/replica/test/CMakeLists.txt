@@ -46,7 +46,8 @@ set(MY_PROJ_LIBS dsn_meta_server
                  dsn_runtime
                  zookeeper
                  hashtable
-                 gtest)
+                 gtest
+                 test_utils)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
