@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <atomic>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -37,6 +38,7 @@
 #include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
+#include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
