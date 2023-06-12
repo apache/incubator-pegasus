@@ -343,6 +343,7 @@ function usage_test()
     echo "                     e.g., \"pegasus_unit_test,dsn_runtime_tests,dsn_meta_state_tests\","
     echo "                     if not set, then run all tests"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
+    echo "   -o|--onebox_opts  options for starting onebox, e.g. k1=v1,k2=v2"
 }
 function run_test()
 {
@@ -383,6 +384,7 @@ function run_test()
       restore_test
       throttle_test
     )
+    local onebox_opts=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -399,6 +401,10 @@ function run_test()
                 ;;
             --enable_gcov)
                 enable_gcov="yes"
+                ;;
+            -o|--onebox_opts)
+                onebox_opts=$2
+                shift
                 ;;
             *)
                 echo "Error: unknown option \"$key\""
@@ -459,6 +465,7 @@ function run_test()
             if [ "${module}" == "restore_test" ]; then
                 opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=mycluster"
             fi
+            [ -z ${onebox_opts} ] || opts="${opts},${onebox_opts}"
             if ! run_start_onebox -m ${m_count} -w -c --opts ${opts}; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
                 exit 1

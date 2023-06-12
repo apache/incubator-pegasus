@@ -231,7 +231,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
-          ./run.sh test -m ${{ matrix.test_module }}
+          ./run.sh test --onebox_opts "disk_min_available_space_ratio=5" -m ${{ matrix.test_module }}
 
   build_ASAN:
     name: Build ASAN
@@ -357,7 +357,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
-          ./run.sh test -m ${{ matrix.test_module }}
+          ./run.sh test --onebox_opts "disk_min_available_space_ratio=5" -m ${{ matrix.test_module }}
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
 #                 when we are going to release a stable version. So we disable them in regular CI
@@ -482,7 +482,7 @@ jobs:
 #          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
 #          ulimit -s unlimited
 #          . ./scripts/config_hdfs.sh
-#          ./run.sh test -m ${{ matrix.test_module }}
+#          ./run.sh test --onebox_opts "disk_min_available_space_ratio=5" -m ${{ matrix.test_module }}
 
   build_with_jemalloc:
     name: Build with jemalloc
@@ -577,7 +577,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
-          ./run.sh test -m ${{ matrix.test_module }}
+          ./run.sh test --onebox_opts "disk_min_available_space_ratio=5" -m ${{ matrix.test_module }}
 
   build_pegasus_on_macos:
     name: macOS
