@@ -210,12 +210,19 @@ function run_build()
     CMAKE_OPTIONS="-DCMAKE_C_COMPILER=${C_COMPILER}
                    -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
                    -DUSE_JEMALLOC=${USE_JEMALLOC}
-                   -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
                    -DENABLE_GCOV=${ENABLE_GCOV}
                    -DENABLE_GPERF=${ENABLE_GPERF}
                    -DBoost_NO_BOOST_CMAKE=ON
                    -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
                    -DBoost_NO_SYSTEM_PATHS=ON"
+
+    echo "BUILD_TYPE=$BUILD_TYPE"
+    if [ "$BUILD_TYPE" == "debug" ]
+    then
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
+    else
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Release"
+    fi
 
     if [ "$(uname)" == "Darwin" ]; then
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
