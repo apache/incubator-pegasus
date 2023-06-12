@@ -192,6 +192,7 @@ class error_code;
 #define METRIC_VAR_INIT_partition(name, ...) METRIC_VAR_INIT(name, partition, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_backup_policy(name, ...) METRIC_VAR_INIT(name, backup_policy, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_queue(name, ...) METRIC_VAR_INIT(name, queue, ##__VA_ARGS__)
+#define METRIC_VAR_ASSIGN_profiler(name, ...) METRIC_VAR_ASSIGN(name, profiler, ##__VA_ARGS__)
 
 // Perform increment_by() operations on gauges and counters.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \
@@ -238,37 +239,96 @@ class error_code;
 #define METRIC_VAR_AUTO_COUNT(name, ...)                                                           \
     dsn::auto_count __##name##_auto_count(METRIC_VAR_NAME(name), ##__VA_ARGS__)
 
+// Implement a member function that runs `method` on the metric variable, without any argument.
+#define METRIC_DEFINE_NO_ARG(method, name)                                                         \
+    void METRIC_FUNC_NAME_##method(name)() { METRIC_VAR_##method(name); }
+
+// Implement a member function that runs `method` on the metric variable if NOT NULL,
+// without any argument.
+#define METRIC_DEFINE_NO_ARG_NOTNULL(method, name)                                                 \
+    void METRIC_FUNC_NAME_##method(name)()                                                         \
+    {                                                                                              \
+        if (METRIC_VAR_NAME(name) != nullptr) {                                                    \
+            METRIC_VAR_##method(name);                                                             \
+        }                                                                                          \
+    }
+
+// Implement a member function that runs `method` on the metric variable and return `ret_type`,
+// without any argument.
+#define METRIC_DEFINE_RET_AND_NO_ARG(ret_type, method, name)                                       \
+    ret_type METRIC_FUNC_NAME_##method(name)() { return METRIC_VAR_##method(name); }
+
+// Implement a member function that runs `method` on the metric variable, with an argument.
+#define METRIC_DEFINE_ONE_ARG(method, name, arg_type)                                              \
+    void METRIC_FUNC_NAME_##method(name)(arg_type arg) { METRIC_VAR_##method(name, arg); }
+
+// Implement a member function that runs `method` on the metric variable if NOT NULL,
+// with an argument.
+#define METRIC_DEFINE_ONE_ARG_NOTNULL(method, name, arg_type)                                      \
+    void METRIC_FUNC_NAME_##method(name)(arg_type arg)                                             \
+    {                                                                                              \
+        if (METRIC_VAR_NAME(name) != nullptr) {                                                    \
+            METRIC_VAR_##method(name, arg);                                                        \
+        }                                                                                          \
+    }
+
+// Call the member function of `obj` to run `method` on the metric variable.
+#define METRIC_CALL(obj, method, name, ...) (obj).METRIC_FUNC_NAME_##method(name)(__VA_ARGS__)
+
+// The name of the member function that increments the metric variable by some value.
 #define METRIC_FUNC_NAME_INCREMENT_BY(name) increment_##name##_by
 
-#define METRIC_DEFINE_INCREMENT_BY(name)                                                           \
-    void METRIC_FUNC_NAME_INCREMENT_BY(name)(int64_t x) { METRIC_VAR_INCREMENT_BY(name, x); }
+// Implement a member function that increments the metric variable by some value.
+#define METRIC_DEFINE_INCREMENT_BY(name) METRIC_DEFINE_ONE_ARG(INCREMENT_BY, name, int64_t)
 
 // To be adaptive to self-defined `increment_by` methods, arguments are declared as variadic.
-#define METRIC_INCREMENT_BY(obj, name, ...) (obj).METRIC_FUNC_NAME_INCREMENT_BY(name)(__VA_ARGS__)
+#define METRIC_INCREMENT_BY(obj, name, ...) METRIC_CALL(obj, INCREMENT_BY, name, ##__VA_ARGS__)
 
+// The name of the member function that increments the metric variable by one.
 #define METRIC_FUNC_NAME_INCREMENT(name) increment_##name
 
-#define METRIC_DEFINE_INCREMENT(name)                                                              \
-    void METRIC_FUNC_NAME_INCREMENT(name)() { METRIC_VAR_INCREMENT(name); }
+// Implement a member function that increments the metric variable by one.
+#define METRIC_DEFINE_INCREMENT(name) METRIC_DEFINE_NO_ARG(INCREMENT, name)
+
+// Implement a member function that increments the metric variable by one if NOT NULL.
+#define METRIC_DEFINE_INCREMENT_NOTNULL(name) METRIC_DEFINE_NO_ARG_NOTNULL(INCREMENT, name)
 
 // To be adaptive to self-defined `increment` methods, arguments are declared as variadic.
-#define METRIC_INCREMENT(obj, name, ...) (obj).METRIC_FUNC_NAME_INCREMENT(name)(__VA_ARGS__)
+#define METRIC_INCREMENT(obj, name, ...) METRIC_CALL(obj, INCREMENT, name, ##__VA_ARGS__)
 
+// The name of the member function that decrements the metric variable by one.
+#define METRIC_FUNC_NAME_DECREMENT(name) decrement_##name
+
+// Implement a member function that decrements the metric variable by one.
+#define METRIC_DEFINE_DECREMENT(name) METRIC_DEFINE_NO_ARG(DECREMENT, name)
+
+// Implement a member function that decrements the metric variable by one if NOT NULL.
+#define METRIC_DEFINE_DECREMENT_NOTNULL(name) METRIC_DEFINE_NO_ARG_NOTNULL(DECREMENT, name)
+
+// To be adaptive to self-defined `decrement` methods, arguments are declared as variadic.
+#define METRIC_DECREMENT(obj, name, ...) METRIC_CALL(obj, DECREMENT, name, ##__VA_ARGS__)
+
+// The name of the member function that sets the metric variable with some value.
 #define METRIC_FUNC_NAME_SET(name) set_##name
 
-#define METRIC_DEFINE_SET(name, value_type)                                                        \
-    void METRIC_FUNC_NAME_SET(name)(value_type value) { METRIC_VAR_SET(name, value); }
+// Implement a member function that sets the metric variable with some value.
+#define METRIC_DEFINE_SET(name, value_type) METRIC_DEFINE_ONE_ARG(SET, name, value_type)
+
+// Implement a member function that sets the metric variable with some value if NOT NULL.
+#define METRIC_DEFINE_SET_NOTNULL(name, value_type)                                                \
+    METRIC_DEFINE_ONE_ARG_NOTNULL(SET, name, value_type)
 
 // To be adaptive to self-defined `set` methods, arguments are declared as variadic.
-#define METRIC_SET(obj, name, ...) (obj).METRIC_FUNC_NAME_SET(name)(__VA_ARGS__)
+#define METRIC_SET(obj, name, ...) METRIC_CALL(obj, SET, name, ##__VA_ARGS__)
 
+// The name of the member function that gets the value of the metric variable.
 #define METRIC_FUNC_NAME_VALUE(name) get_##name
 
-#define METRIC_DEFINE_VALUE(name, value_type)                                                      \
-    value_type METRIC_FUNC_NAME_VALUE(name)() { return METRIC_VAR_VALUE(name); }
+// Implement a member function that gets the value of the metric variable.
+#define METRIC_DEFINE_VALUE(name, value_type) METRIC_DEFINE_RET_AND_NO_ARG(value_type, VALUE, name)
 
 // To be adaptive to self-defined `value` methods, arguments are declared as variadic.
-#define METRIC_VALUE(obj, name, ...) (obj).METRIC_FUNC_NAME_VALUE(name)(__VA_ARGS__)
+#define METRIC_VALUE(obj, name, ...) METRIC_CALL(obj, VALUE, name, ##__VA_ARGS__)
 
 namespace dsn {
 class metric;                  // IWYU pragma: keep
