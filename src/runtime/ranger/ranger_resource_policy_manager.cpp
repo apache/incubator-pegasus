@@ -229,8 +229,12 @@ access_control_result ranger_resource_policy_manager::allowed(const int rpc_code
 
         // Check if it is denied by any GLOBAL policy.
         utils::auto_read_lock l(_global_policies_lock);
-        return check_ranger_resource_policy_allowed(
-            _global_policies_cache, ac_type->second, user_name, false, "", "");
+        return check_ranger_resource_policy_allowed(_global_policies_cache,
+                                                    ac_type->second,
+                                                    user_name,
+                                                    match_database_type::kNotNeed,
+                                                    "",
+                                                    "");
     } while (false);
 
     do {
@@ -245,7 +249,7 @@ access_control_result ranger_resource_policy_manager::allowed(const int rpc_code
             _database_policies_cache,
             ac_type->second,
             user_name,
-            true,
+            match_database_type::kNeed,
             database_name,
             FLAGS_legacy_table_database_mapping_policy_name);
     } while (false);
@@ -589,18 +593,23 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
                 policy.database_names.count("*") == 0) {
                 continue;
             }
+            // If this table does not match any database table, its Ranger policies will be cleaned
+            // up.
             if (policy.table_names.count(table_name) == 0 && policy.table_names.count("*") == 0) {
                 continue;
             }
-            matched_database_table_policy _matched_database_table_policy(
+            // This table matches a policy.
+            matched_database_table_policy database_table_policy(
                 {database_name, table_name, policy.policies});
+            // This table matches the policy whose database is "*".
             if (policy.database_names.count(database_name) == 0) {
-                _matched_database_table_policy.matched_database_name = "*";
+                database_table_policy.matched_database_name = "*";
             }
+            // This table matches the policy whose database table is "*".
             if (policy.table_names.count(table_name) == 0) {
-                _matched_database_table_policy.matched_table_name = "*";
+                database_table_policy.matched_table_name = "*";
             }
-            matched_database_table_policies.emplace_back(_matched_database_table_policy);
+            matched_database_table_policies.emplace_back(database_table_policy);
         }
         if (matched_database_table_policies.empty()) {
             // There is no matched policy, clear app Ranger policy

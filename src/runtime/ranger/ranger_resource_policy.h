@@ -59,7 +59,17 @@ enum class policy_check_status
 enum class access_control_result
 {
     kAllowed = 0,
-    kDenied
+    kDenied,
+    kPending
+};
+
+// Used to determine whether the policy needs to match the database. kNotNeed means no, kNeed means
+// yes.
+enum class match_database_type
+{
+    kNotNeed = 0,
+    kNeed
+
 };
 
 // Ranger policy data structure
@@ -188,9 +198,18 @@ access_control_result
 check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
                                      const access_type &ac_type,
                                      const std::string &user_name,
-                                     bool need_match_database,
+                                     const match_database_type &md_type,
                                      const std::string &database_name,
                                      const std::string &default_database_name);
+
+access_control_result
+do_check_ranger_resource_policy(const std::vector<ranger_resource_policy> &policies,
+                                const access_type &ac_type,
+                                const std::string &user_name,
+                                const match_database_type &md_type,
+                                const std::string &database_name,
+                                const std::string &default_database_name,
+                                const policy_check_type &check_type);
 
 // Return 'access_control_result::kAllowed' if 'policies' allow 'user_name' to access, this is used
 // for DATABASE_TABLE resource, returns 'access_control_result::kDenied' means not.
@@ -198,6 +217,12 @@ access_control_result check_ranger_database_table_policy_allowed(
     const std::vector<matched_database_table_policy> &policies,
     const access_type &ac_type,
     const std::string &user_name);
+
+access_control_result
+do_check_ranger_database_table_policy(const std::vector<matched_database_table_policy> &policies,
+                                      const access_type &ac_type,
+                                      const std::string &user_name,
+                                      const policy_check_type &check_type);
 
 } // namespace ranger
 } // namespace dsn
