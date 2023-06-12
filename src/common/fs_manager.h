@@ -29,7 +29,6 @@
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
 #include "utils/autoref_ptr.h"
-#include "utils/error_code.h"
 #include "utils/flags.h"
 #include "absl/strings/string_view.h"
 #include "utils/metrics.h"
