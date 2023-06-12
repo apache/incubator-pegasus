@@ -588,13 +588,14 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
             {dsn::replication::replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES});
         std::vector<matched_database_table_policy> matched_database_table_policies;
         for (const auto &policy : table_policies->second) {
-            // If this table does not match any database, its Ranger policies will be cleaned up.
+            // If this table does not match any database, this policy will be skipped and will not
+            // be written into app_envs.
             if (policy.database_names.count(database_name) == 0 &&
                 policy.database_names.count("*") == 0) {
                 continue;
             }
-            // If this table does not match any database table, its Ranger policies will be cleaned
-            // up.
+            // If this table does not match any database table, this policy will be skipped and will
+            // not be written into app_envs.
             if (policy.table_names.count(table_name) == 0 && policy.table_names.count("*") == 0) {
                 continue;
             }

@@ -187,13 +187,13 @@ do_check_ranger_database_table_policy(const std::vector<matched_database_table_p
             policy_check_status::kDenied == check_status) {
             return access_control_result::kDenied;
         }
-        // When policy_check_type is 'kDeny' and in a 'allow_policies' and not in any
+        // When policy_check_type is 'kAllow' and in a 'allow_policies' and not in any
         // 'allow_policies_exclude'.
         if (policy_check_type::kAllow == check_type &&
             policy_check_status::kAllowed == check_status) {
             return access_control_result::kAllowed;
         }
-        // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
+        // In a 'policies' and in a 'policies_exclude' or not match.
         if (policy_check_status::kPending == check_status ||
             policy_check_status::kNotMatched == check_status) {
             continue;
