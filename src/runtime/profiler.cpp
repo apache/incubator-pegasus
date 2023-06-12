@@ -398,6 +398,13 @@ task_spec_profiler::task_spec_profiler(int code)
         return;
     }
 
+    LOG_INFO("register task into profiler: task_code={}, task_name={}, section_name={}, "
+             "task_type={}",
+             code,
+             _task_name,
+             section_name,
+             enum_to_string(spec->type));
+
     if (dsn_config_get_value_bool(
             section_name.c_str(),
             "profiler::inqueue",
@@ -512,13 +519,23 @@ void profiler::install(service_spec &)
     task_ext_for_profiler::register_ext();
     message_ext_for_profiler::register_ext();
 
+    s_spec_profilers.clear();
+    s_spec_profilers.reserve(s_task_code_max + 1);
+    LOG_INFO("begin to choose the tasks that will be registered into profilers among "
+             "all of the {} tasks",
+             s_task_code_max + 1);
     for (int code = 0; code <= s_task_code_max; ++code) {
         if (code == TASK_CODE_INVALID) {
+            // Though the task code `TASK_CODE_INVALID` is meaningless, it should still be pushed
+            // into the `s_spec_profilers` by default constructor of `task_spec_profiler`, since
+            // `task_spec_profiler` is indexed by the task code in `s_spec_profilers`.
+            s_spec_profilers.emplace_back();
             continue;
         }
 
         s_spec_profilers.emplace_back(code);
     }
+    CHECK_EQ(s_spec_profilers.size(), s_task_code_max + 1);
 }
 
 profiler::profiler(const char *name) : toollet(name) {}
