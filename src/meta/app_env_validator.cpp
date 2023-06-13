@@ -36,10 +36,10 @@ bool validate_app_envs(const std::map<std::string, std::string> &envs)
 {
     if (envs.size() == 0)
         return true;
-    // check rocksdb app envs information
+    // only check rocksdb app envs currently
     std::string hint_message;
     bool all_envs_vaild = true;
-    for (auto &it : envs) {
+    for (const auto &it : envs) {
         if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(it.first) ==
                 replica_envs::ROCKSDB_STATIC_OPTIONS.end() &&
             replica_envs::ROCKSDB_DYNAMIC_OPTIONS.find(it.first) ==
@@ -194,7 +194,7 @@ bool check_rocksdb_num_levels(const std::string &env_value, std::string &hint_me
     int32_t val = 0;
 
     if (!dsn::buf2int32(env_value, val)) {
-        hint_message = fmt::format("rocksdb.num_levels cannot set this val:", env_value);
+        hint_message = fmt::format("rocksdb.num_levels cannot set this val: {}", env_value);
         return false;
     }
     if (val < 1 || val > 10) {
@@ -271,7 +271,6 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, nullptr},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, nullptr},
-        {replica_envs::VALUE_VERSION, nullptr},
     };
 }
 

@@ -397,7 +397,6 @@ const std::string replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND("rocksdb.allow_inges
 const std::string replica_envs::UPDATE_MAX_REPLICA_COUNT("max_replica_count.update");
 const std::string replica_envs::ROCKSDB_WRITE_BUFFER_SIZE("rocksdb.write_buffer_size");
 const std::string replica_envs::ROCKSDB_NUM_LEVELS("rocksdb.num_levels");
-const std::string replica_envs::VALUE_VERSION("value_version");
 
 const std::set<std::string> replica_envs::ROCKSDB_DYNAMIC_OPTIONS = {
     replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,

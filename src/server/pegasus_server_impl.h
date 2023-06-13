@@ -331,8 +331,7 @@ private:
 
     void update_rocksdb_dynamic_options(const std::map<std::string, std::string> &envs);
 
-    void
-    update_rocksdb_options_before_create_replica(const std::map<std::string, std::string> &envs);
+    void set_rocksdb_options_before_creating(const std::map<std::string, std::string> &envs);
 
     void update_throttling_controller(const std::map<std::string, std::string> &envs);
 
@@ -364,6 +363,9 @@ private:
 
     void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
                                       rocksdb::ColumnFamilyOptions *target_opts);
+
+    void reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_opts,
+                               rocksdb::ColumnFamilyOptions *target_opts);
 
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
