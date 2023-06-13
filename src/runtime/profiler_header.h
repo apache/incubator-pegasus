@@ -40,6 +40,7 @@ struct task_spec_profiler
     bool is_profile;
     std::unique_ptr<std::atomic<int64_t>[]> call_counts;
 
+    task_spec_profiler() = default;
     task_spec_profiler(int code);
     const metric_entity_ptr &profiler_metric_entity() const;
 
