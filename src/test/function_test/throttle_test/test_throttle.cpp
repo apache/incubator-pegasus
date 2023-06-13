@@ -43,6 +43,7 @@
 #include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
