@@ -50,7 +50,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"

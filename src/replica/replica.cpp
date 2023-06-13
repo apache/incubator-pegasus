@@ -29,11 +29,10 @@
 #include <fmt/core.h>
 #include <fmt/ostream.h>
 #include <inttypes.h>
-#include <algorithm>
+#include <rocksdb/status.h>
 #include <functional>
 #include <iosfwd>
-#include <rocksdb/status.h>
-#include <set>
+#include <vector>
 
 #include "backup/replica_backup_manager.h"
 #include "bulk_load/replica_bulk_loader.h"
@@ -55,8 +54,6 @@
 #include "replica_stub.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/security/access_controller.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
 #include "split/replica_split_manager.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
