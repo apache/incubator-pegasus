@@ -47,8 +47,6 @@
 #include "duplication/replica_follower.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counters.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
