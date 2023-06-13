@@ -51,6 +51,18 @@ using namespace dsn::replication;
 using namespace pegasus;
 using std::string;
 
+static const uint64_t kLimitDurationMs = 10 * 1000;
+
+DSN_DEFINE_int32(function_test.throttle_test,
+                 throttle_test_medium_value_kb,
+                 20,
+                 "The size of generated medium value for test");
+
+DSN_DEFINE_int32(function_test.throttle_test,
+                 throttle_test_large_value_kb,
+                 50,
+                 "The size of generated large value for test");
+
 enum class throttle_type
 {
     read_by_qps,
@@ -80,8 +92,6 @@ struct throttle_test_plan
 
 struct throttle_test_recorder
 {
-    static const uint64_t limit_duration_ms = 10 * 1000;
-
     string test_name;
     uint64_t start_time_ms;
     std::atomic<uint64_t> total_successful_times;
@@ -101,7 +111,7 @@ struct throttle_test_recorder
         total_size_per_sec = 0;
     }
 
-    bool is_time_up() { return dsn_now_ms() - start_time_ms > limit_duration_ms; }
+    bool is_time_up() { return dsn_now_ms() - start_time_ms > kLimitDurationMs; }
 
     void record(uint64_t size, bool is_reject)
     {
@@ -113,8 +123,8 @@ struct throttle_test_recorder
 
     void finalize()
     {
-        total_qps = total_successful_times / (limit_duration_ms / 1000);
-        total_size_per_sec = total_successful_size / (limit_duration_ms / 1000);
+        total_qps = total_successful_times / (kLimitDurationMs / 1000);
+        total_size_per_sec = total_successful_size / (kLimitDurationMs / 1000);
     }
 };
 
@@ -163,7 +173,8 @@ public:
 
     void start_test(const throttle_test_plan &test_plan)
     {
-        std::cout << fmt::format("start test, on {}", test_plan.test_plan_case) << std::endl;
+        fmt::print(
+            "start test, on {}, duration {} ms\n", test_plan.test_plan_case, kLimitDurationMs);
 
         result.reset(test_plan.test_plan_case);
 
@@ -308,9 +319,12 @@ public:
                 ASSERT_EQ(0, ref_count.load());
                 ASSERT_TRUE(last_error == PERR_OK || last_error == PERR_APP_BUSY) << last_error;
             },
-            3 * throttle_test_recorder::limit_duration_ms / 1000);
+            3 * kLimitDurationMs / 1000);
     }
 };
+
+#define TEST_PLAN_DESC_custom_kb(op, sz)                                                           \
+    fmt::format(#op " test / throttle by size / {}kb value size", sz)
 
 TEST_F(throttle_test, test)
 {
@@ -485,7 +499,11 @@ TEST_F(throttle_test, test)
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
     // big value test can't run normally in the function test
-    plan = {"set test / throttle by size / 20kb value size", operation_type::set, 1024 * 20, 1, 50};
+    plan = {TEST_PLAN_DESC_custom_kb(set, FLAGS_throttle_test_medium_value_kb),
+            operation_type::set,
+            1024 * FLAGS_throttle_test_medium_value_kb,
+            1,
+            50};
     ASSERT_NO_FATAL_FAILURE(
         set_throttle(throttle_type::write_by_size,
                      (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -499,7 +517,11 @@ TEST_F(throttle_test, test)
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
-    plan = {"get test / throttle by size / 20kb value size", operation_type::get, 1024 * 20, 1, 50};
+    plan = {TEST_PLAN_DESC_custom_kb(get, FLAGS_throttle_test_medium_value_kb),
+            operation_type::get,
+            1024 * FLAGS_throttle_test_medium_value_kb,
+            1,
+            50};
     ASSERT_NO_FATAL_FAILURE(
         set_throttle(throttle_type::read_by_size,
                      (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -513,7 +535,11 @@ TEST_F(throttle_test, test)
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
-    plan = {"set test / throttle by size / 50kb value size", operation_type::set, 1024 * 50, 1, 50};
+    plan = {TEST_PLAN_DESC_custom_kb(set, FLAGS_throttle_test_large_value_kb),
+            operation_type::set,
+            1024 * FLAGS_throttle_test_large_value_kb,
+            1,
+            50};
     ASSERT_NO_FATAL_FAILURE(
         set_throttle(throttle_type::write_by_size,
                      (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -527,7 +553,11 @@ TEST_F(throttle_test, test)
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
-    plan = {"get test / throttle by size / 50kb value size", operation_type::get, 1024 * 50, 1, 50};
+    plan = {TEST_PLAN_DESC_custom_kb(get, FLAGS_throttle_test_large_value_kb),
+            operation_type::get,
+            1024 * FLAGS_throttle_test_large_value_kb,
+            1,
+            50};
     ASSERT_NO_FATAL_FAILURE(
         set_throttle(throttle_type::read_by_size,
                      (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *

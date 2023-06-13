@@ -343,7 +343,8 @@ function usage_test()
     echo "                     e.g., \"pegasus_unit_test,dsn_runtime_tests,dsn_meta_state_tests\","
     echo "                     if not set, then run all tests"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
-    echo "   -o|--onebox_opts  options for starting onebox, e.g. k1=v1,k2=v2"
+    echo "   --onebox_opts     update configs for onebox, e.g. key1=value1,key2=value2"
+    echo "   --test_opts       update configs for tests, e.g. key1=value1,key2=value2"
 }
 function run_test()
 {
@@ -385,6 +386,7 @@ function run_test()
       throttle_test
     )
     local onebox_opts=""
+    local test_opts=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -402,8 +404,12 @@ function run_test()
             --enable_gcov)
                 enable_gcov="yes"
                 ;;
-            -o|--onebox_opts)
+            --onebox_opts)
                 onebox_opts=$2
+                shift
+                ;;
+            --test_opts)
+                test_opts=$2
                 shift
                 ;;
             *)
@@ -477,7 +483,7 @@ function run_test()
             run_start_zk
         fi
         pushd ${BUILD_LATEST_DIR}/bin/$module
-        REPORT_DIR=$REPORT_DIR TEST_BIN=$module ./run.sh
+        REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
             exit 1
