@@ -343,9 +343,6 @@ replica::replica(replica_stub *stub,
     _disk_migrator = std::make_unique<replica_disk_migrator>(this);
     _replica_follower = std::make_unique<replica_follower>(this);
 
-    // init table level latency perf counters
-    init_table_level_latency_counters();
-
     if (need_restore) {
         // add an extra env for restore
         _extra_envs.insert(
@@ -448,7 +445,6 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
         METRIC_VAR_INCREMENT(backup_requests);
     }
 
-    uint64_t start_time_ns = dsn_now_ns();
     CHECK(_app, "");
     auto storage_error = _app->on_request(request);
     if (dsn_unlikely(storage_error != ERR_OK)) {
@@ -462,12 +458,6 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
             LOG_ERROR_PREFIX("client read encountered an unhandled error: {}", storage_error);
         }
         return;
-    }
-
-    // If the corresponding perf counter exist, count the duration of this operation.
-    // rpc code of request is already checked in message_ex::rpc_code, so it will always be legal
-    if (_counters_table_level_latency[request->rpc_code()] != nullptr) {
-        _counters_table_level_latency[request->rpc_code()]->set(dsn_now_ns() - start_time_ns);
     }
 }
 
@@ -566,26 +556,16 @@ void replica::execute_mutation(mutation_ptr &mu)
         handle_local_failure(err);
     }
 
-    if (status() == partition_status::PS_PRIMARY) {
-        ADD_CUSTOM_POINT(mu->_tracer, "completed");
-        mutation_ptr next = _primary_states.write_queue.check_possible_work(
-            static_cast<int>(_prepare_list->max_decree() - d));
-
-        if (next) {
-            init_prepare(next, false);
-        }
+    if (status() != partition_status::PS_PRIMARY) {
+        return;
     }
 
-    // update table level latency perf-counters for primary partition
-    if (partition_status::PS_PRIMARY == status()) {
-        uint64_t now_ns = dsn_now_ns();
-        for (auto update : mu->data.updates) {
-            // If the corresponding perf counter exist, count the duration of this operation.
-            // code in update will always be legal
-            if (_counters_table_level_latency[update.code] != nullptr) {
-                _counters_table_level_latency[update.code]->set(now_ns - update.start_time_ns);
-            }
-        }
+    ADD_CUSTOM_POINT(mu->_tracer, "completed");
+    auto next = _primary_states.write_queue.check_possible_work(
+        static_cast<int>(_prepare_list->max_decree() - d));
+
+    if (next != nullptr) {
+        init_prepare(next, false);
     }
 }
 
@@ -699,32 +679,6 @@ manual_compaction_status::type replica::get_manual_compact_status() const
 {
     CHECK_PREFIX(_app);
     return _app->query_compact_status();
-}
-
-// Replicas on the server which serves for the same table will share the same perf-counter.
-// For example counter `table.level.RPC_RRDB_RRDB_MULTI_PUT.latency(ns)@test_table` is shared by
-// all the replicas for `test_table`.
-void replica::init_table_level_latency_counters()
-{
-    int max_task_code = task_code::max();
-    _counters_table_level_latency.resize(max_task_code + 1);
-
-    for (int code = 0; code <= max_task_code; code++) {
-        _counters_table_level_latency[code] = nullptr;
-        if (get_storage_rpc_req_codes().find(task_code(code)) !=
-            get_storage_rpc_req_codes().end()) {
-            std::string counter_str = fmt::format(
-                "table.level.{}.latency(ns)@{}", task_code(code).to_string(), _app_info.app_name);
-            _counters_table_level_latency[code] =
-                dsn::perf_counters::instance()
-                    .get_app_counter("eon.replica",
-                                     counter_str.c_str(),
-                                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                                     counter_str.c_str(),
-                                     true)
-                    .get();
-        }
-    }
 }
 
 void replica::on_detect_hotkey(const detect_hotkey_request &req, detect_hotkey_response &resp)
