@@ -398,9 +398,7 @@ typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
 class mutation_log_shared : public mutation_log
 {
 public:
-    mutation_log_shared(const std::string &dir,
-                        int32_t max_log_file_mb,
-                        bool force_flush)
+    mutation_log_shared(const std::string &dir, int32_t max_log_file_mb, bool force_flush)
         : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
           _is_writing(false),
           _force_flush(force_flush)
