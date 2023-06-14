@@ -39,8 +39,6 @@
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "mutation_log_utils.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/log_block.h"
 #include "replica/log_file.h"
@@ -183,10 +181,6 @@ void mutation_log_shared::commit_pending_mutations(log_file_ptr &lf,
                     //
                     // FIXME : the file could have been closed
                     lf->flush();
-                }
-
-                if (_write_size_counter) {
-                    (*_write_size_counter)->add(sz);
                 }
             } else {
                 LOG_ERROR("write shared log failed, err = {}", err);
