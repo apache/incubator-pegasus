@@ -216,9 +216,8 @@ void ranger_resource_policy_manager::start()
                            std::chrono::milliseconds(1));
 }
 
-access_control_result ranger_resource_policy_manager::allowed(const int rpc_code,
-                                                              const std::string &user_name,
-                                                              const std::string &database_name)
+access_control_result ranger_resource_policy_manager::allowed(
+    const int rpc_code, const std::string &user_name, const std::string &database_name) const
 {
     do {
         const auto &ac_type = _ac_type_of_global_rpcs.find(rpc_code);
@@ -604,10 +603,13 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
                 {database_name, table_name, policy.policies});
             // This table matches the policy whose database is "*".
             if (policy.database_names.count(database_name) == 0) {
+                CHECK(policy.database_names.count("*") != 0,
+                      "the list of database_name must contain *");
                 database_table_policy.matched_database_name = "*";
             }
             // This table matches the policy whose database table is "*".
             if (policy.table_names.count(table_name) == 0) {
+                CHECK(policy.table_names.count("*") != 0, "the list of table_name must contain *");
                 database_table_policy.matched_table_name = "*";
             }
             matched_database_table_policies.emplace_back(database_table_policy);

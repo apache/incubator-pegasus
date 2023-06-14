@@ -160,7 +160,20 @@ TEST(ranger_resource_policy_test, acl_policies_allowed)
         {access_type::kList, "user6", policy_check_type::kDeny, policy_check_status::kNotMatched},
     };
     for (const auto &test : tests) {
-        auto actual_result = policy.policies_check(test.ac_type, test.user_name, test.check_type);
+        policy_check_status actual_result = policy_check_status::kInvalid;
+        switch (test.check_type) {
+        case policy_check_type::kAllow:
+            actual_result =
+                policy.policies_check<policy_check_type::kAllow>(test.ac_type, test.user_name);
+            break;
+        case policy_check_type::kDeny:
+            actual_result =
+                policy.policies_check<policy_check_type::kDeny>(test.ac_type, test.user_name);
+            break;
+        case policy_check_type::kInvalid:
+        default:
+            break;
+        }
         EXPECT_EQ(test.expected_result, actual_result)
             << fmt::format("ac_type: {}, user_name: {}, check_type: {}",
                            enum_to_string(test.ac_type),

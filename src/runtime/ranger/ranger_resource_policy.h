@@ -53,7 +53,8 @@ enum class policy_check_status
     kAllowed = 0,
     kDenied,
     kNotMatched,
-    kPending
+    kPending,
+    kInvalid
 };
 
 enum class access_control_result
@@ -103,16 +104,42 @@ struct acl_policies
 
     // Check if 'allow_policies' or 'deny_policies' allow or deny 'user_name' to access the resource
     // by type 'ac_type'.
+    template <policy_check_type check_type>
     policy_check_status policies_check(const access_type &ac_type,
-                                       const std::string &user_name,
-                                       const policy_check_type &check_type) const;
+                                       const std::string &user_name) const;
 
-    policy_check_status do_policies_check(const policy_check_type &check_type,
-                                          const access_type &ac_type,
+    template <policy_check_type check_type, policy_check_status check_status>
+    policy_check_status do_policies_check(const access_type &ac_type,
                                           const std::string &user_name,
                                           const std::vector<policy_item> &policies,
                                           const std::vector<policy_item> &exclude_policies) const;
 };
+
+template <>
+policy_check_status
+acl_policies::policies_check<policy_check_type::kAllow>(const access_type &ac_type,
+                                                        const std::string &user_name) const;
+
+template <>
+policy_check_status
+acl_policies::policies_check<policy_check_type::kDeny>(const access_type &ac_type,
+                                                       const std::string &user_name) const;
+
+template <>
+policy_check_status
+acl_policies::do_policies_check<policy_check_type::kAllow, policy_check_status::kAllowed>(
+    const access_type &ac_type,
+    const std::string &user_name,
+    const std::vector<policy_item> &policies,
+    const std::vector<policy_item> &exclude_policies) const;
+
+template <>
+policy_check_status
+acl_policies::do_policies_check<policy_check_type::kDeny, policy_check_status::kDenied>(
+    const access_type &ac_type,
+    const std::string &user_name,
+    const std::vector<policy_item> &policies,
+    const std::vector<policy_item> &exclude_policies) const;
 
 // A policy data structure definition of ranger resources
 struct ranger_resource_policy
@@ -202,14 +229,32 @@ check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &
                                      const std::string &database_name,
                                      const std::string &default_database_name);
 
+template <policy_check_type check_type>
 access_control_result
 do_check_ranger_resource_policy(const std::vector<ranger_resource_policy> &policies,
                                 const access_type &ac_type,
                                 const std::string &user_name,
                                 const match_database_type &md_type,
                                 const std::string &database_name,
-                                const std::string &default_database_name,
-                                const policy_check_type &check_type);
+                                const std::string &default_database_name);
+
+template <>
+access_control_result do_check_ranger_resource_policy<policy_check_type::kAllow>(
+    const std::vector<ranger_resource_policy> &policies,
+    const access_type &ac_type,
+    const std::string &user_name,
+    const match_database_type &md_type,
+    const std::string &database_name,
+    const std::string &default_database_name);
+
+template <>
+access_control_result do_check_ranger_resource_policy<policy_check_type::kDeny>(
+    const std::vector<ranger_resource_policy> &policies,
+    const access_type &ac_type,
+    const std::string &user_name,
+    const match_database_type &md_type,
+    const std::string &database_name,
+    const std::string &default_database_name);
 
 // Return 'access_control_result::kAllowed' if 'policies' allow 'user_name' to access, this is used
 // for DATABASE_TABLE resource, returns 'access_control_result::kDenied' means not.
@@ -218,11 +263,23 @@ access_control_result check_ranger_database_table_policy_allowed(
     const access_type &ac_type,
     const std::string &user_name);
 
+template <policy_check_type check_type>
 access_control_result
 do_check_ranger_database_table_policy(const std::vector<matched_database_table_policy> &policies,
                                       const access_type &ac_type,
-                                      const std::string &user_name,
-                                      const policy_check_type &check_type);
+                                      const std::string &user_name);
+
+template <>
+access_control_result do_check_ranger_database_table_policy<policy_check_type::kDeny>(
+    const std::vector<matched_database_table_policy> &policies,
+    const access_type &ac_type,
+    const std::string &user_name);
+
+template <>
+access_control_result do_check_ranger_database_table_policy<policy_check_type::kAllow>(
+    const std::vector<matched_database_table_policy> &policies,
+    const access_type &ac_type,
+    const std::string &user_name);
 
 } // namespace ranger
 } // namespace dsn
