@@ -457,10 +457,12 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
         //      an error.
         if (!has_ingestion_request) {
             switch (storage_error) {
-            // TODO(yingchun): Now only kCorruption is dealt, consider to deal with more storage
-            //  engine errors.
+            // TODO(yingchun): Now only kCorruption and kIOError are dealt, consider to deal with
+            //  more storage engine errors.
             case rocksdb::Status::kCorruption:
                 return ERR_RDB_CORRUPTION;
+            case rocksdb::Status::kIOError:
+                return ERR_DISK_IO_ERROR;
             default:
                 return ERR_LOCAL_APP_FAILURE;
             }

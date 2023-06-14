@@ -175,7 +175,7 @@ private:
     FRIEND_TEST(fs_manager, find_best_dir_for_new_replica);
     FRIEND_TEST(fs_manager, get_dir_node);
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
-    FRIEND_TEST(replica_test, test_auto_trash);
+    FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
 };
 } // replication
 } // dsn
