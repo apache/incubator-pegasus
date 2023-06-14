@@ -85,7 +85,7 @@ namespace {
 metric_entity_ptr instantiate_disk_metric_entity(const std::string &tag,
                                                  const std::string &data_dir)
 {
-    auto entity_id = fmt::format("disk_{}", tag);
+    auto entity_id = fmt::format("disk@{}", tag);
 
     return METRIC_ENTITY_disk.instantiate(entity_id, {{"tag", tag}, {"data_dir", data_dir}});
 }

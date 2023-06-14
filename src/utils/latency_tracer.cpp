@@ -29,6 +29,14 @@
 #include "utils/config_api.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
+
+METRIC_DEFINE_entity(latency_tracer);
+
+METRIC_DEFINE_percentile_int64(latency_tracer,
+                               latency_tracer_duration_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The duration between two points(stages)");
 
 namespace dsn {
 namespace utils {
@@ -45,16 +53,36 @@ DSN_DEFINE_bool(replication,
                 "whether open the latency tracer report perf counter");
 DSN_TAG_VARIABLE(enable_latency_tracer_report, FT_MUTABLE);
 
-DSN_DEFINE_string(replication,
-                  latency_tracer_counter_name_prefix,
-                  "trace_latency",
-                  "perf counter common name prefix");
+namespace {
 
-utils::rw_lock_nr counter_lock; //{
-std::unordered_map<std::string, perf_counter_ptr> counters_trace_latency;
+
+metric_entity_ptr instantiate_latency_tracer_metric_entity(const std::string &description, const std::string &starting_point,
+        const std::string &end_point)
+{
+    auto entity_id = fmt::format("latency_tracer@{};{};{}", description, starting_point, end_point);
+
+    return METRIC_ENTITY_latency_tracer.instantiate(
+        entity_id,
+        {{"description", description},
+         {"starting_point", starting_point},
+         {"end_point", end_point}});
+}
+
+class latency_tracer_metrics
+{
+public:
+
+private:
+    mutable utils::rw_lock_nr _lock;
+
+    DISALLOW_COPY_AND_ASSIGN(latency_tracer_metrics);
+};
+
+dsn::utils::rw_lock_nr counter_lock; //{
+std::unordered_map<std::string, dsn::metric_entity_ptr> s_counters_trace_latency;
 // }
 
-utils::rw_lock_nr task_code_lock; //{
+dsn::utils::rw_lock_nr task_code_lock; //{
 std::unordered_map<std::string, bool> task_codes;
 // }
 
@@ -117,6 +145,8 @@ bool is_enable_trace(const dsn::task_code &code)
     task_codes.emplace(code_name, enable_trace);
     return enable_trace;
 }
+
+} // anonymous namespace
 
 latency_tracer::latency_tracer(bool is_sub,
                                std::string name,
