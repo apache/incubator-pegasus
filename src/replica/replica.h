@@ -50,7 +50,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
@@ -85,7 +84,6 @@ class rocksdb_wrapper_test;
 
 namespace dsn {
 class gpid;
-class perf_counter;
 class rpc_address;
 
 namespace dist {
@@ -489,8 +487,6 @@ private:
 
     manual_compaction_status::type get_manual_compact_status() const;
 
-    void init_table_level_latency_counters();
-
     void on_detect_hotkey(const detect_hotkey_request &req, /*out*/ detect_hotkey_response &resp);
 
     uint32_t query_data_version() const;
@@ -669,7 +665,6 @@ private:
     METRIC_VAR_DECLARE_counter(splitting_rejected_read_requests);
     METRIC_VAR_DECLARE_counter(bulk_load_ingestion_rejected_write_requests);
     METRIC_VAR_DECLARE_counter(dup_rejected_non_idempotent_write_requests);
-    std::vector<perf_counter *> _counters_table_level_latency;
 
     METRIC_VAR_DECLARE_counter(learn_count);
     METRIC_VAR_DECLARE_counter(learn_rounds);
