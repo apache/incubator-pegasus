@@ -343,6 +343,8 @@ function usage_test()
     echo "                     e.g., \"pegasus_unit_test,dsn_runtime_tests,dsn_meta_state_tests\","
     echo "                     if not set, then run all tests"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
+    echo "   --onebox_opts     update configs for onebox, e.g. key1=value1,key2=value2"
+    echo "   --test_opts       update configs for tests, e.g. key1=value1,key2=value2"
 }
 function run_test()
 {
@@ -383,6 +385,8 @@ function run_test()
       restore_test
       throttle_test
     )
+    local onebox_opts=""
+    local test_opts=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -399,6 +403,14 @@ function run_test()
                 ;;
             --enable_gcov)
                 enable_gcov="yes"
+                ;;
+            --onebox_opts)
+                onebox_opts=$2
+                shift
+                ;;
+            --test_opts)
+                test_opts=$2
+                shift
                 ;;
             *)
                 echo "Error: unknown option \"$key\""
@@ -459,6 +471,7 @@ function run_test()
             if [ "${module}" == "restore_test" ]; then
                 opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=mycluster"
             fi
+            [ -z ${onebox_opts} ] || opts="${opts},${onebox_opts}"
             if ! run_start_onebox -m ${m_count} -w -c --opts ${opts}; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
                 exit 1
@@ -470,7 +483,7 @@ function run_test()
             run_start_zk
         fi
         pushd ${BUILD_LATEST_DIR}/bin/$module
-        REPORT_DIR=$REPORT_DIR TEST_BIN=$module ./run.sh
+        REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
             exit 1
