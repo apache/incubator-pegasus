@@ -54,7 +54,6 @@
 
 namespace dsn {
 class binary_writer;
-class perf_counter_wrapper;
 
 namespace replication {
 
@@ -241,9 +240,9 @@ public:
     //
     bool get_learn_state(gpid gpid, decree start, /*out*/ learn_state &state) const;
 
-    // only valid for private log
-    // get parent mutations in memory and private log files during partition split
-    // total_file_size is used for split perf-counter
+    // only valid for private log.
+    // get parent mutations in memory and private log files during partition split.
+    // `total_file_size` is used for the metrics of partition split.
     void get_parent_mutations_and_logs(gpid pid,
                                        decree start_decree,
                                        ballot start_ballot,
@@ -399,14 +398,10 @@ typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
 class mutation_log_shared : public mutation_log
 {
 public:
-    mutation_log_shared(const std::string &dir,
-                        int32_t max_log_file_mb,
-                        bool force_flush,
-                        perf_counter_wrapper *write_size_counter = nullptr)
+    mutation_log_shared(const std::string &dir, int32_t max_log_file_mb, bool force_flush)
         : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
           _is_writing(false),
-          _force_flush(force_flush),
-          _write_size_counter(write_size_counter)
+          _force_flush(force_flush)
     {
     }
 
@@ -448,7 +443,6 @@ private:
     std::shared_ptr<log_appender> _pending_write;
 
     bool _force_flush;
-    perf_counter_wrapper *_write_size_counter;
 };
 
 class mutation_log_private : public mutation_log, private replica_base
