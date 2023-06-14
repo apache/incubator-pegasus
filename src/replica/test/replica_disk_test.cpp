@@ -308,8 +308,11 @@ TEST_F(replica_disk_test, disk_io_error_test)
     ASSERT_NE(old_dn, new_dn);
 
     // The replicas will not be located on the old dir_node.
+    const int kNewAppId = 3;
+    // Make sure the app with id 'kNewAppId' is not existed.
+    ASSERT_EQ(nullptr, stub->get_replica(gpid(kNewAppId, 0)));
     for (int i = 0; i < 16; i++) {
-        new_dn = stub->get_fs_manager()->find_best_dir_for_new_replica(gpid(3, i));
+        new_dn = stub->get_fs_manager()->find_best_dir_for_new_replica(gpid(kNewAppId, i));
         ASSERT_NE(old_dn, new_dn);
     }
 }

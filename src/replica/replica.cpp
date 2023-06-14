@@ -304,7 +304,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
     auto storage_error = _app->on_request(request);
     if (dsn_unlikely(storage_error != ERR_OK)) {
         switch (storage_error) {
-        // TODO(yingchun): Now only kCorruption and kIOError is dealt, consider to deal with
+        // TODO(yingchun): Now only kCorruption and kIOError are dealt, consider to deal with
         //  more storage engine errors.
         case rocksdb::Status::kCorruption:
             handle_local_failure(ERR_RDB_CORRUPTION);
