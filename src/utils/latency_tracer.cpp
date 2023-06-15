@@ -22,8 +22,6 @@
 #include <iterator>
 #include <utility>
 
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counters.h"
 #include "runtime/api_layer1.h"
 #include "utils/autoref_ptr.h"
 #include "utils/config_api.h"
@@ -50,7 +48,7 @@ DSN_TAG_VARIABLE(enable_latency_tracer, FT_MUTABLE);
 DSN_DEFINE_bool(replication,
                 enable_latency_tracer_report,
                 false,
-                "whether open the latency tracer report perf counter");
+                "whether open the latency tracer report for metrics");
 DSN_TAG_VARIABLE(enable_latency_tracer_report, FT_MUTABLE);
 
 namespace {
@@ -70,6 +68,7 @@ metric_entity_ptr instantiate_latency_tracer_metric_entity(const std::string &de
                                                      {"end_point", end_point}});
 }
 
+// Maintain each latency-tracer-level metric entity, and all metrics attached to it.
 class latency_tracer_metrics
 {
 public:
@@ -117,6 +116,7 @@ const dsn::metric_entity_ptr &latency_tracer_metrics::latency_tracer_metric_enti
     return _latency_tracer_metric_entity;
 }
 
+// Manage the lifetime of all latency-tracer-level metric entities.
 class latency_tracer_metric_entities
 {
 public:
