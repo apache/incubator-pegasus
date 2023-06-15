@@ -74,9 +74,11 @@ public:
     // When using Ranger for ACL, periodically pull policies from Ranger service.
     void start();
 
-    // Return true if the 'user_name' is allowed to access 'database_name' via 'rpc_code'.
-    bool
-    allowed(const int rpc_code, const std::string &user_name, const std::string &database_name);
+    // Return 'access_control_result::kAllowed' if the 'user_name' is allowed to access
+    // 'database_name' via 'rpc_code'.
+    access_control_result allowed(const int rpc_code,
+                                  const std::string &user_name,
+                                  const std::string &database_name) const;
 
 private:
     // Parse Ranger ACL policies from 'data' in JSON format into 'policies'.
@@ -118,8 +120,8 @@ private:
     std::string _ranger_policy_meta_root;
 
     replication::meta_service *_meta_svc;
-    utils::rw_lock_nr _global_policies_lock;
-    utils::rw_lock_nr _database_policies_lock;
+    mutable utils::rw_lock_nr _global_policies_lock;
+    mutable utils::rw_lock_nr _database_policies_lock;
 
     // The access type of RPCs which access global level resources.
     access_type_of_rpc_code _ac_type_of_global_rpcs;

@@ -193,27 +193,174 @@ TEST(ranger_resource_policy_manager_test, ranger_resource_policy_serialized_test
     {
         access_type ac_type;
         std::string user_name;
-        bool expected_result;
-    } tests[] = {{access_type::kRead, "user", false},      {access_type::kRead, "user1", true},
-                 {access_type::kWrite, "user1", true},     {access_type::kCreate, "user1", false},
-                 {access_type::kDrop, "user1", false},     {access_type::kList, "user1", true},
-                 {access_type::kMetadata, "user1", false}, {access_type::kControl, "user1", false},
-                 {access_type::kRead, "user2", true},      {access_type::kWrite, "user2", false},
-                 {access_type::kCreate, "user2", false},   {access_type::kDrop, "user2", false},
-                 {access_type::kList, "user2", true},      {access_type::kMetadata, "user2", false},
-                 {access_type::kControl, "user2", false},  {access_type::kRead, "user3", false},
-                 {access_type::kWrite, "user3", false},    {access_type::kCreate, "user3", false},
-                 {access_type::kDrop, "user3", false},     {access_type::kList, "user3", true},
-                 {access_type::kMetadata, "user3", false}, {access_type::kControl, "user3", false},
-                 {access_type::kRead, "user4", true},      {access_type::kWrite, "user4", false},
-                 {access_type::kCreate, "user4", false},   {access_type::kDrop, "user4", false},
-                 {access_type::kList, "user4", true},      {access_type::kMetadata, "user4", false},
-                 {access_type::kControl, "user4", false}};
+        policy_check_type check_type;
+        policy_check_status expected_result;
+    } tests[] = {
+        // user does not match any 'user_name' in allow_policies.
+        {access_type::kRead, "user", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        {access_type::kRead, "user1", policy_check_type::kAllow, policy_check_status::kAllowed},
+        {access_type::kWrite, "user1", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // user1: 'kCreate' and 'kDrop' do not match any ACLs in allow_policies.
+        {access_type::kCreate,
+         "user1",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kDrop, "user1", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        {access_type::kList, "user1", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // user1: 'kMetadata' do not match any ACLs in allow_policies.
+        {access_type::kMetadata,
+         "user1",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kControl,
+         "user1",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kRead, "user2", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // user2: in a 'allow_policies' and in 'allow_policies_exclude'
+        {access_type::kWrite, "user2", policy_check_type::kAllow, policy_check_status::kPending},
+        // user2: 'kCreate' and 'kDrop' do not match any ACLs in allow_policies.
+        {access_type::kCreate,
+         "user2",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kDrop, "user2", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        {access_type::kList, "user2", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // user2: 'kMetadata' and 'kControl' do not match any ACLs in allow_policies.
+        {access_type::kMetadata,
+         "user2",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kControl,
+         "user2",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kRead, "user3", policy_check_type::kAllow, policy_check_status::kAllowed},
+        {access_type::kWrite, "user3", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // user3: 'kCreate' and 'kDrop' do not match any ACLs in allow_policies.
+        {access_type::kCreate,
+         "user3",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kDrop, "user3", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        {access_type::kList, "user3", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // user3: 'kMetadata' and 'kControl' do not match any ACLs in allow_policies.
+        {access_type::kMetadata,
+         "user3",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kControl,
+         "user3",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kRead, "user4", policy_check_type::kAllow, policy_check_status::kAllowed},
+        {access_type::kWrite, "user4", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // user4: 'kCreate' and 'kDrop' do not match any ACLs in allow_policies.
+        {access_type::kCreate,
+         "user4",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kDrop, "user4", policy_check_type::kAllow, policy_check_status::kNotMatched},
+        {access_type::kList, "user4", policy_check_type::kAllow, policy_check_status::kAllowed},
+        // user4: 'kMetadata' and 'kControl' do not match any ACLs in allow_policies.
+        {access_type::kMetadata,
+         "user4",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        {access_type::kControl,
+         "user4",
+         policy_check_type::kAllow,
+         policy_check_status::kNotMatched},
+        // user, user1, user2 do not match any 'user_name' in deny_policies.
+        {access_type::kRead, "user", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kRead, "user1", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kWrite, "user1", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kCreate, "user1", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kDrop, "user1", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kList, "user1", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kMetadata,
+         "user1",
+         policy_check_type::kDeny,
+         policy_check_status::kNotMatched},
+        {access_type::kControl,
+         "user1",
+         policy_check_type::kDeny,
+         policy_check_status::kNotMatched},
+        {access_type::kRead, "user2", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kWrite, "user2", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kCreate, "user2", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kDrop, "user2", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kList, "user2", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kMetadata,
+         "user2",
+         policy_check_type::kDeny,
+         policy_check_status::kNotMatched},
+        {access_type::kControl,
+         "user2",
+         policy_check_type::kDeny,
+         policy_check_status::kNotMatched},
+        {access_type::kRead, "user3", policy_check_type::kDeny, policy_check_status::kDenied},
+        {access_type::kWrite, "user3", policy_check_type::kDeny, policy_check_status::kDenied},
+        // user3: 'kCreate', 'kDrop', 'kList', 'kMetadata', 'kControl' do not match any ACLs in
+        // allow_policies.
+        {access_type::kCreate, "user3", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kDrop, "user3", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kList, "user3", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kMetadata,
+         "user3",
+         policy_check_type::kDeny,
+         policy_check_status::kNotMatched},
+        {access_type::kControl,
+         "user3",
+         policy_check_type::kDeny,
+         policy_check_status::kNotMatched},
+        // user4: in a 'deny_policies' and in 'deny_policies_exclude'
+        {access_type::kRead, "user4", policy_check_type::kDeny, policy_check_status::kPending},
+        {access_type::kWrite, "user4", policy_check_type::kDeny, policy_check_status::kDenied},
+        // user4: 'kCreate', 'kDrop', 'kList', 'kMetadata', 'kControl' do not match any ACLs in
+        // allow_policies.
+        {access_type::kCreate, "user4", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kDrop, "user4", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kList, "user4", policy_check_type::kDeny, policy_check_status::kNotMatched},
+        {access_type::kMetadata,
+         "user4",
+         policy_check_type::kDeny,
+         policy_check_status::kNotMatched},
+        {access_type::kControl,
+         "user4",
+         policy_check_type::kDeny,
+         policy_check_status::kNotMatched}};
     for (const auto &test : tests) {
-        auto actual_result = policy.policies.allowed(test.ac_type, test.user_name);
-        EXPECT_EQ(test.expected_result, actual_result);
-        actual_result = policy_serialized.policies.allowed(test.ac_type, test.user_name);
-        EXPECT_EQ(test.expected_result, actual_result);
+        policy_check_status actual_result_1 = policy_check_status::kInvalid;
+        policy_check_status actual_result_2 = policy_check_status::kInvalid;
+        switch (test.check_type) {
+        case policy_check_type::kAllow:
+            actual_result_1 = policy.policies.policies_check<policy_check_type::kAllow>(
+                test.ac_type, test.user_name);
+            actual_result_2 = policy_serialized.policies.policies_check<policy_check_type::kAllow>(
+                test.ac_type, test.user_name);
+            break;
+        case policy_check_type::kDeny:
+            actual_result_1 = policy.policies.policies_check<policy_check_type::kDeny>(
+                test.ac_type, test.user_name);
+            actual_result_2 = policy_serialized.policies.policies_check<policy_check_type::kDeny>(
+                test.ac_type, test.user_name);
+            break;
+        case policy_check_type::kInvalid:
+        default:
+            break;
+        }
+        EXPECT_EQ(test.expected_result, actual_result_1)
+            << fmt::format("ac_type: {}, user_name: {}, check_type: {}",
+                           enum_to_string(test.ac_type),
+                           test.user_name,
+                           enum_to_string(test.check_type));
+
+        EXPECT_EQ(test.expected_result, actual_result_2)
+            << fmt::format("ac_type: {}, user_name: {}, check_type: {}",
+                           enum_to_string(test.ac_type),
+                           test.user_name,
+                           enum_to_string(test.check_type));
     }
 }
 
@@ -328,40 +475,41 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
         std::string rpc_code;
         std::string user_name;
         std::string database_name;
-        bool expected_result;
-    } tests[] = {{"TASK_CODE_INVALID", "user1", "database1", false},
-                 {"RPC_CM_CREATE_APP", "user1", "database1", false},
-                 {"RPC_CM_CREATE_APP", "user2", "database1", false},
-                 {"RPC_CM_LIST_APPS", "user1", "database1", true},
-                 {"RPC_CM_LIST_APPS", "user2", "database1", true},
-                 {"RPC_CM_GET_MAX_REPLICA_COUNT", "user1", "database1", true},
-                 {"RPC_CM_GET_MAX_REPLICA_COUNT", "user2", "database1", false},
-                 {"TASK_CODE_INVALID", "user3", "database2", false},
-                 {"RPC_CM_CREATE_APP", "user3", "database2", true},
-                 {"RPC_CM_CREATE_APP", "user4", "database2", true},
-                 {"RPC_CM_START_BACKUP_APP", "user3", "database2", true},
-                 {"RPC_CM_START_BACKUP_APP", "user4", "database2", false},
-                 {"TASK_CODE_INVALID", "user5", "", false},
-                 // Next two case matched to the default database policy and "*" database.
-                 {"RPC_CM_CREATE_APP", "user5", "", true},
-                 {"RPC_CM_CREATE_APP", "user6", "", true},
-                 // Next two case matched to the database policy named "*".
-                 {"RPC_CM_CREATE_APP", "user5", "any_database_name", true},
-                 {"RPC_CM_CREATE_APP", "user6", "any_database_name", false},
-                 {"RPC_CM_CREATE_APP", "user6", "database2", false},
-                 {"TASK_CODE_INVALID", "user7", "database3", false},
-                 {"RPC_CM_LIST_NODES", "user7", "database3", true},
-                 {"RPC_CM_LIST_NODES", "user8", "database3", false},
-                 // RPC_CM_LIST_APPS has been removed from global resources.
-                 {"RPC_CM_LIST_APPS", "user7", "database3", false},
-                 {"RPC_CM_LIST_APPS", "user8", "database3", false},
-                 {"TASK_CODE_INVALID", "user9", "database4", false},
-                 {"RPC_CM_LIST_NODES", "user9", "database4", false},
-                 {"RPC_CM_LIST_NODES", "user10", "database4", false},
-                 {"RPC_CM_LIST_APPS", "user9", "database4", false},
-                 {"RPC_CM_LIST_APPS", "user10", "database4", false},
-                 {"RPC_CM_CONTROL_META", "user9", "database4", true},
-                 {"RPC_CM_CONTROL_META", "user10", "database4", false}};
+        access_control_result expected_result;
+    } tests[] = {
+        {"TASK_CODE_INVALID", "user1", "database1", access_control_result::kDenied},
+        {"RPC_CM_CREATE_APP", "user1", "database1", access_control_result::kDenied},
+        {"RPC_CM_CREATE_APP", "user2", "database1", access_control_result::kDenied},
+        {"RPC_CM_LIST_APPS", "user1", "database1", access_control_result::kAllowed},
+        {"RPC_CM_LIST_APPS", "user2", "database1", access_control_result::kAllowed},
+        {"RPC_CM_GET_MAX_REPLICA_COUNT", "user1", "database1", access_control_result::kAllowed},
+        {"RPC_CM_GET_MAX_REPLICA_COUNT", "user2", "database1", access_control_result::kDenied},
+        {"TASK_CODE_INVALID", "user3", "database2", access_control_result::kDenied},
+        {"RPC_CM_CREATE_APP", "user3", "database2", access_control_result::kAllowed},
+        {"RPC_CM_CREATE_APP", "user4", "database2", access_control_result::kAllowed},
+        {"RPC_CM_START_BACKUP_APP", "user3", "database2", access_control_result::kAllowed},
+        {"RPC_CM_START_BACKUP_APP", "user4", "database2", access_control_result::kDenied},
+        {"TASK_CODE_INVALID", "user5", "", access_control_result::kDenied},
+        // Next two case matched to the default database policy and "*" database.
+        {"RPC_CM_CREATE_APP", "user5", "", access_control_result::kAllowed},
+        {"RPC_CM_CREATE_APP", "user6", "", access_control_result::kAllowed},
+        // Next two case matched to the database policy named "*".
+        {"RPC_CM_CREATE_APP", "user5", "any_database_name", access_control_result::kAllowed},
+        {"RPC_CM_CREATE_APP", "user6", "any_database_name", access_control_result::kDenied},
+        {"RPC_CM_CREATE_APP", "user6", "database2", access_control_result::kDenied},
+        {"TASK_CODE_INVALID", "user7", "database3", access_control_result::kDenied},
+        {"RPC_CM_LIST_NODES", "user7", "database3", access_control_result::kAllowed},
+        {"RPC_CM_LIST_NODES", "user8", "database3", access_control_result::kDenied},
+        // RPC_CM_LIST_APPS has been removed from global resources.
+        {"RPC_CM_LIST_APPS", "user7", "database3", access_control_result::kDenied},
+        {"RPC_CM_LIST_APPS", "user8", "database3", access_control_result::kDenied},
+        {"TASK_CODE_INVALID", "user9", "database4", access_control_result::kDenied},
+        {"RPC_CM_LIST_NODES", "user9", "database4", access_control_result::kDenied},
+        {"RPC_CM_LIST_NODES", "user10", "database4", access_control_result::kDenied},
+        {"RPC_CM_LIST_APPS", "user9", "database4", access_control_result::kDenied},
+        {"RPC_CM_LIST_APPS", "user10", "database4", access_control_result::kDenied},
+        {"RPC_CM_CONTROL_META", "user9", "database4", access_control_result::kAllowed},
+        {"RPC_CM_CONTROL_META", "user10", "database4", access_control_result::kDenied}};
     for (const auto &test : tests) {
         auto code = task_code::try_get(test.rpc_code, TASK_CODE_INVALID);
         auto actual_result = allowed(code, test.user_name, test.database_name);
