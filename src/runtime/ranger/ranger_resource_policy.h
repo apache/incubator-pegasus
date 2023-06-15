@@ -128,18 +128,12 @@ acl_policies::policies_check<policy_check_type::kDeny>(const access_type &ac_typ
 template <>
 policy_check_status
 acl_policies::do_policies_check<policy_check_type::kAllow, policy_check_status::kAllowed>(
-    const access_type &ac_type,
-    const std::string &user_name,
-    const std::vector<policy_item> &policies,
-    const std::vector<policy_item> &exclude_policies) const;
+    const access_type &ac_type, const std::string &user_name) const;
 
 template <>
 policy_check_status
 acl_policies::do_policies_check<policy_check_type::kDeny, policy_check_status::kDenied>(
-    const access_type &ac_type,
-    const std::string &user_name,
-    const std::vector<policy_item> &policies,
-    const std::vector<policy_item> &exclude_policies) const;
+    const access_type &ac_type, const std::string &user_name) const;
 
 // A policy data structure definition of ranger resources
 struct ranger_resource_policy

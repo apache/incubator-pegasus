@@ -33,8 +33,8 @@ policy_check_status
 acl_policies::policies_check<policy_check_type::kAllow>(const access_type &ac_type,
                                                         const std::string &user_name) const
 {
-    return do_policies_check<policy_check_type::kAllow, policy_check_status::kAllowed>(
-        ac_type, user_name, allow_policies, allow_policies_exclude);
+    return do_policies_check<policy_check_type::kAllow, policy_check_status::kAllowed>(ac_type,
+                                                                                       user_name);
 }
 
 template <>
@@ -42,31 +42,28 @@ policy_check_status
 acl_policies::policies_check<policy_check_type::kDeny>(const access_type &ac_type,
                                                        const std::string &user_name) const
 {
-    return do_policies_check<policy_check_type::kDeny, policy_check_status::kDenied>(
-        ac_type, user_name, deny_policies, deny_policies_exclude);
+    return do_policies_check<policy_check_type::kDeny, policy_check_status::kDenied>(ac_type,
+                                                                                     user_name);
 }
 
 template <>
 policy_check_status
 acl_policies::do_policies_check<policy_check_type::kAllow, policy_check_status::kAllowed>(
-    const access_type &ac_type,
-    const std::string &user_name,
-    const std::vector<policy_item> &policies,
-    const std::vector<policy_item> &exclude_policies) const
+    const access_type &ac_type, const std::string &user_name) const
 {
-    for (const auto &policy : policies) {
-        // 1. Doesn't match an allow_policies or a deny_policies.
+    for (const auto &policy : allow_policies) {
+        // 1. Doesn't match an allow_policies.
         if (!policy.match(ac_type, user_name)) {
             continue;
         }
         // 2. Matches a policy.
-        for (const auto &exclude_policy : exclude_policies) {
+        for (const auto &exclude_policy : allow_policies_exclude) {
             if (exclude_policy.match(ac_type, user_name)) {
-                // 2.1. Matches an allow/deny_policies_exclude.
+                // 2.1. Matches an allow_policies_exclude.
                 return policy_check_status::kPending;
             }
         }
-        // 2.2. Doesn't match any allow/deny_exclude_policies.
+        // 2.2. Doesn't match any allow_exclude_policies.
         return policy_check_status::kAllowed;
     }
     // 3. Doesn't match any policy.
@@ -76,24 +73,21 @@ acl_policies::do_policies_check<policy_check_type::kAllow, policy_check_status::
 template <>
 policy_check_status
 acl_policies::do_policies_check<policy_check_type::kDeny, policy_check_status::kDenied>(
-    const access_type &ac_type,
-    const std::string &user_name,
-    const std::vector<policy_item> &policies,
-    const std::vector<policy_item> &exclude_policies) const
+    const access_type &ac_type, const std::string &user_name) const
 {
-    for (const auto &policy : policies) {
-        // 1. Doesn't match an allow_policies or a deny_policies.
+    for (const auto &policy : deny_policies) {
+        // 1. Doesn't match a deny_policies.
         if (!policy.match(ac_type, user_name)) {
             continue;
         }
         // 2. Matches a policy.
-        for (const auto &exclude_policy : exclude_policies) {
+        for (const auto &exclude_policy : deny_policies_exclude) {
             if (exclude_policy.match(ac_type, user_name)) {
-                // 2.1. Matches an allow/deny_policies_exclude.
+                // 2.1. Matches a deny_policies_exclude.
                 return policy_check_status::kPending;
             }
         }
-        // 2.2. Doesn't match any allow/deny_exclude_policies.
+        // 2.2. Doesn't match any deny_exclude_policies.
         return policy_check_status::kDenied;
     }
     // 3. Doesn't match any policy.
