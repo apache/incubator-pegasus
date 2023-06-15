@@ -54,7 +54,7 @@ DSN_TAG_VARIABLE(enable_latency_tracer_report, FT_MUTABLE);
 namespace {
 
 #define LATENCY_TRACER_METRIC_ENTITY_ID(description, starting_point, end_point)                    \
-    fmt::format("latency_tracer@{};{};{}", description, starting_point, end_point)
+    fmt::format("latency_tracer@{}|{}|{}", description, starting_point, end_point)
 
 metric_entity_ptr instantiate_latency_tracer_metric_entity(const std::string &description,
                                                            const std::string &starting_point,
