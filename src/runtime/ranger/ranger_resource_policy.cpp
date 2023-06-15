@@ -146,13 +146,11 @@ access_control_result do_check_ranger_resource_policy<policy_check_type::kAllow>
         }
         auto check_status =
             policy.policies.policies_check<policy_check_type::kAllow>(ac_type, user_name);
-        // When policy_check_type is 'kAllow' and in a 'allow_policies' and not in any
-        // 'allow_policies_exclude'.
         if (policy_check_status::kAllowed == check_status) {
             return access_control_result::kAllowed;
         }
 
-        // In a 'policies' and in a 'policies_exclude' or not match.
+        // In a 'allow_policies' and in a 'allow_policies_exclude' or not match.
         CHECK(policy_check_status::kPending == check_status ||
                   policy_check_status::kNotMatched == check_status,
               "the policy check status must be kPending or kNotMatched");
@@ -184,13 +182,11 @@ access_control_result do_check_ranger_resource_policy<policy_check_type::kDeny>(
         }
         auto check_status =
             policy.policies.policies_check<policy_check_type::kDeny>(ac_type, user_name);
-        // When policy_check_type is 'kDeny' and in a 'deny_policies' and not in any
-        // 'deny_policies_exclude'.
         if (policy_check_status::kDenied == check_status) {
             return access_control_result::kDenied;
         }
 
-        // In a 'policies' and in a 'policies_exclude' or not match.
+        // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
         CHECK(policy_check_status::kPending == check_status ||
                   policy_check_status::kNotMatched == check_status,
               "the policy check status must be kPending or kNotMatched");
