@@ -284,10 +284,10 @@ jobs:
         run: |
           # TODO(wangdan): clear unneeded files here temporarily. Clearing unneeded files should be
           # done in images of pegasus-build-env.
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          rm -rf /usr/share/dotnet
+          rm -rf /opt/ghc
+          rm -rf "/usr/local/share/boost"
+          rm -rf "$AGENT_TOOLSDIRECTORY"
       - name: Compilation
         run: |
           ccache -p
