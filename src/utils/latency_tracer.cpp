@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <cstdint>
 #include <iterator>
+#include <set>
 #include <utility>
 
 #include "runtime/api_layer1.h"
@@ -28,6 +29,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
+#include "utils/string_view.h"
 
 METRIC_DEFINE_entity(latency_tracer);
 
