@@ -110,9 +110,7 @@ struct acl_policies
 
     template <policy_check_type check_type, policy_check_status check_status>
     policy_check_status do_policies_check(const access_type &ac_type,
-                                          const std::string &user_name,
-                                          const std::vector<policy_item> &policies,
-                                          const std::vector<policy_item> &exclude_policies) const;
+                                          const std::string &user_name) const;
 };
 
 template <>
