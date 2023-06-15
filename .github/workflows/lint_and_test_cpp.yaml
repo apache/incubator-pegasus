@@ -146,7 +146,7 @@ jobs:
           ccache -z
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release
           ccache -s
-      - name: Clear Files
+      - name: Clear Build Files
         run: |
           find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - name: Pack Server
@@ -280,13 +280,21 @@ jobs:
           rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
           ../scripts/download_hadoop.sh hadoop-bin
           ../scripts/download_zk.sh zookeeper-bin
+      - name: Clear Unneeded Files
+        run: |
+          # TODO(wangdan): clear unneeded files here temporarily. Clearing unneeded files should be
+          # done in images of pegasus-build-env.
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       - name: Compilation
         run: |
           ccache -p
           ccache -z
           ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc)
           ccache -s
-      - name: Clear Files
+      - name: Clear Build Files
         run: |
           find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - name: Tar files
@@ -423,7 +431,7 @@ jobs:
 #          ccache -z
 #          ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc)
 #          ccache -s
-#      - name: Clear Files
+#      - name: Clear Build Files
 #        run: |
 #          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
 #      - name: Tar files
@@ -553,7 +561,7 @@ jobs:
           ccache -z
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc
           ccache -s
-      - name: Clear Files
+      - name: Clear Build Files
         run: |
           find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - name: Pack Server

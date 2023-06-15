@@ -123,6 +123,7 @@ class latency_tracer_metric_entities
 {
 public:
     using entity_map = std::unordered_map<std::string, std::unique_ptr<latency_tracer_metrics>>;
+
     latency_tracer_metric_entities() = default;
     ~latency_tracer_metric_entities() = default;
 
@@ -144,7 +145,7 @@ public:
                                                                                                    \
         dsn::utils::auto_write_lock l(_lock);                                                      \
         auto iter = _entities.find(entity_id);                                                     \
-        if (iter != _entities.end()) {                                                             \
+        if (dsn_unlikely(iter != _entities.end())) {                                               \
             METRIC_SET(*(iter->second), name, value);                                              \
             return;                                                                                \
         }                                                                                          \
