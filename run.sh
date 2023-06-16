@@ -310,6 +310,8 @@ function run_build()
     if [ ! -z "${IWYU}" ]; then
         make $MAKE_OPTIONS 2> iwyu.out
     else
+        make $MAKE_OPTIONS
+        find ${BUILD_LATEST_DIR}/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
         make install $MAKE_OPTIONS
     fi
     exit_if_fail $?
