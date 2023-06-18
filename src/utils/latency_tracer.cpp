@@ -127,6 +127,8 @@ public:
     latency_tracer_metric_entities() = default;
     ~latency_tracer_metric_entities() = default;
 
+// Acquire read lock firstly, since once the metric entity were created, there would be no need to
+// acquire write lock again.
 #define __METRIC_DEFINE_SET(name, value_type)                                                      \
     void METRIC_FUNC_NAME_SET(name)(const std::string &description,                                \
                                     const std::string &starting_point,                             \
