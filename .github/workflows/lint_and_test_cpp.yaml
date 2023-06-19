@@ -260,7 +260,8 @@ jobs:
           apt-get remove -y 'php.*'
           apt-get remove -y '^mongodb-.*'
           # apt-get remove -y '^mysql-.*'
-          apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
+          # apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
+          apt-get remove -y libgl1-mesa-dri
           apt-get autoremove -y
           apt-get clean
           rm -f /mnt/swapfile
