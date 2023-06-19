@@ -271,8 +271,8 @@ jobs:
           apt-get clean
           df -h
           echo "Removing large directories"
-          du -csh /mnt/swapfile
-          rm -f /mnt/swapfile
+          # du -csh /mnt/swapfile
+          # rm -f /mnt/swapfile
           du -csh /opt/ghc
           rm -rf /opt/ghc
           du -csh /usr/local/.ghcup
