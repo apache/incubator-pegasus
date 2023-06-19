@@ -246,7 +246,15 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
     steps:
-      - uses: jlumbroso/free-disk-space@main
+      - uses: actions/checkout@v3
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            /github/home/.ccache
+          key: asan_ccache
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
         with:
           # This might remove tools that are actually needed,
           # if set to "true" but frees about 6 GB
@@ -259,13 +267,6 @@ jobs:
           haskell: true
           large-packages: true
           swap-storage: true
-      - uses: actions/checkout@v3
-      - name: Setup cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            /github/home/.ccache
-          key: asan_ccache
       - uses: dorny/paths-filter@v2
         id: changes
         with:
