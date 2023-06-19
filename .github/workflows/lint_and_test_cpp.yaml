@@ -255,11 +255,11 @@ jobs:
           key: asan_ccache
       - name: Free Disk Space (Ubuntu)
         run: |
+          df -h
           du -csh /__w/*/*
           du -csh /__t/*/*
           echo "Listing 100 largest packages"
           dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
-          df -h
           echo "Removing large packages"
           # apt-get remove -y '^dotnet-.*'
           # apt-get remove -y '^llvm-.*'
@@ -270,9 +270,13 @@ jobs:
           # apt-get remove -y libgl1-mesa-dri
           # apt-get autoremove -y
           apt-get -s autoremove
+          apt-get remove -y openjdk-11-jre-headless
           # apt-get clean
           df -h
           echo "Removing large directories"
+          rm -rf /__t/CodeQL
+          rm -rf /__t/node
+          rm -rf /__t/PyPy
           # du -csh /mnt/swapfile
           # rm -f /mnt/swapfile
           # du -csh /opt/ghc
