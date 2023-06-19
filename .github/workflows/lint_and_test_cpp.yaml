@@ -626,7 +626,7 @@ jobs:
           ./run.sh pack_server -j
           rm -rf pegasus-server-*
       - name: Pack Tools
-        run:
+        run: |
           df -h
           ./run.sh pack_tools -j
           rm -rf pegasus-tools-*
