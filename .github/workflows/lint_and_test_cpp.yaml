@@ -246,7 +246,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
     steps:
-      - name: Free Disk Space (Ubuntu)
+      - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
         with:
           # This might remove tools that are actually needed,
