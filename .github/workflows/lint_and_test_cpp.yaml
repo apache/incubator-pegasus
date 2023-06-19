@@ -254,19 +254,26 @@ jobs:
             /github/home/.ccache
           key: asan_ccache
       - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # This might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-          # All of these default to true, but feel free to set to
-          # "false" if necessary for your workflow
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          swap-storage: true
+        run: |
+          apt-get remove -y '^dotnet-.*'
+          apt-get remove -y '^llvm-.*'
+          apt-get remove -y 'php.*'
+          apt-get remove -y '^mongodb-.*'
+          apt-get remove -y '^mysql-.*'
+          apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
+          apt-get autoremove -y
+          apt-get clean
+          rm -f /mnt/swapfile
+          rm -rf /opt/ghc
+          rm -rf /usr/local/.ghcup
+          rm -rf /usr/local/graalvm
+          rm -rf /usr/local/lib/android
+          rm -rf /usr/local/lib/node_modules
+          rm -rf /usr/local/share/boost
+          rm -rf /usr/local/share/chromium
+          rm -rf /usr/local/share/powershell
+          rm -rf /usr/share/dotnet
+          rm -rf "$AGENT_TOOLSDIRECTORY"
       - uses: dorny/paths-filter@v2
         id: changes
         with:
