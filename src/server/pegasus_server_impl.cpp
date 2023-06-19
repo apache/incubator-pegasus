@@ -2629,19 +2629,29 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
 void pegasus_server_impl::update_rocksdb_dynamic_options(
     const std::map<std::string, std::string> &envs)
 {
-    if (envs.size() == 0)
+    if (envs.size() == 0) {
         return;
+    }
+    auto extract_option = [](const std::string &option) -> std::string {
+        std::stringstream ss(option);
+        std::string prefix, rocksdb_opt;
+        std::getline(ss, prefix, '.');
+        std::getline(ss, rocksdb_opt);
+        LOG_INFO("Extract rocksdb dynamic opt ({}) from ({})", rocksdb_opt, option);
+        return rocksdb_opt;
+    };
 
     std::unordered_map<std::string, std::string> new_options;
     for (const auto &option : ROCKSDB_DYNAMIC_OPTIONS) {
         auto find = envs.find(option);
-        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0 && find != envs.end()) {
-            new_options["write_buffer_size"] = find->second;
+        if (find == envs.end()) {
+            continue;
         }
+        new_options[extract_option(option)] = find->second;
     }
 
     // doing set option
-    if (new_options.size() > 0 && set_options(new_options)) {
+    if (new_options.empty() && set_options(new_options)) {
         LOG_INFO("Set rocksdb dynamic options success");
     }
 }
@@ -2649,13 +2659,17 @@ void pegasus_server_impl::update_rocksdb_dynamic_options(
 void pegasus_server_impl::set_rocksdb_options_before_creating(
     const std::map<std::string, std::string> &envs)
 {
-    if (envs.size() == 0)
+    if (envs.size() == 0) {
         return;
+    }
 
     for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
         auto find = envs.find(option);
+        if (find == envs.end()) {
+            continue;
+        }
         bool is_set = false;
-        if (option.compare(ROCKSDB_NUM_LEVELS) == 0 && find != envs.end()) {
+        if (option.compare(ROCKSDB_NUM_LEVELS) == 0) {
             int32_t val = 0;
             if (!dsn::buf2int32(find->second, val))
                 continue;
@@ -2669,8 +2683,11 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
 
     for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
         auto find = envs.find(option);
+        if (find == envs.end()) {
+            continue;
+        }
         bool is_set = false;
-        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0 && find != envs.end()) {
+        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0) {
             uint64_t val = 0;
             if (!dsn::buf2uint64(find->second, val))
                 continue;

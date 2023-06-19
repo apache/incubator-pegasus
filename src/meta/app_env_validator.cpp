@@ -34,25 +34,23 @@ namespace dsn {
 namespace replication {
 bool validate_app_envs(const std::map<std::string, std::string> &envs)
 {
-    if (envs.size() == 0)
-        return true;
     // only check rocksdb app envs currently
-    std::string hint_message;
-    bool all_envs_vaild = true;
+
     for (const auto &it : envs) {
         if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(it.first) ==
                 replica_envs::ROCKSDB_STATIC_OPTIONS.end() &&
             replica_envs::ROCKSDB_DYNAMIC_OPTIONS.find(it.first) ==
-                replica_envs::ROCKSDB_DYNAMIC_OPTIONS.end())
+                replica_envs::ROCKSDB_DYNAMIC_OPTIONS.end()) {
             continue;
+        }
+        std::string hint_message;
         if (!validate_app_env(it.first, it.second, hint_message)) {
             LOG_WARNING(
                 "app env {}={} is invaild, hint_message:{}", it.first, it.second, hint_message);
-            all_envs_vaild = false;
-            break;
+            return false;
         }
     }
-    return all_envs_vaild;
+    return true;
 }
 
 bool validate_app_env(const std::string &env_name,

@@ -476,7 +476,7 @@ private:
     // Dynamically calculate the value of current data_cf option according to the conf module file
     // and usage scenario
     rocksdb::ColumnFamilyOptions _table_data_cf_opts;
-    rocksdb::BlockBasedTableOptions tbl_opts;
+    rocksdb::BlockBasedTableOptions _tbl_opts;
     rocksdb::ColumnFamilyOptions _meta_cf_opts;
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
