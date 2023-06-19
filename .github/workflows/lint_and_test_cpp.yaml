@@ -255,12 +255,12 @@ jobs:
           key: asan_ccache
       - name: Free Disk Space (Ubuntu)
         run: |
-          apt-get remove -m -y '^dotnet-.*'
-          apt-get remove -m -y '^llvm-.*'
-          apt-get remove -m -y 'php.*'
-          apt-get remove -m -y '^mongodb-.*'
-          apt-get remove -m -y '^mysql-.*'
-          apt-get remove -m -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
+          # apt-get remove -y '^dotnet-.*'
+          apt-get remove -y '^llvm-.*'
+          apt-get remove -y 'php.*'
+          apt-get remove -y '^mongodb-.*'
+          apt-get remove -y '^mysql-.*'
+          apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
           apt-get autoremove -y
           apt-get clean
           rm -f /mnt/swapfile
