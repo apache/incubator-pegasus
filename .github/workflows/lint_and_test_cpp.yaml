@@ -276,7 +276,6 @@ jobs:
           du -csh /__w/*/*
           du -csh /__t/*/*
           du -csh /opt/*
-          du -csh /mnt/*
           du -csh /usr/local/*
           du -csh /usr/local/lib/*
           du -csh /usr/local/share/*
@@ -286,7 +285,6 @@ jobs:
           rm -rf /__t/CodeQL
           rm -rf /__t/node
           rm -rf /__t/PyPy
-          rm -f /mnt/swapfile
           rm -rf /opt/ghc
           rm -rf /usr/local/.ghcup
           rm -rf /usr/local/graalvm
