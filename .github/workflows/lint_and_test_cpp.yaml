@@ -275,7 +275,7 @@ jobs:
           # rm -f /mnt/swapfile
           # du -csh /opt/ghc
           # rm -rf /opt/ghc
-          du -csh /usr/local/.ghcup
+          # du -csh /usr/local/.ghcup
           rm -rf /usr/local/.ghcup
           # du -csh /usr/local/graalvm
           # rm -rf /usr/local/graalvm
