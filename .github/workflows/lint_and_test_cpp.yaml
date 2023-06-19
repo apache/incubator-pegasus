@@ -292,8 +292,8 @@ jobs:
           #du -csh /usr/share/dotnet
           rm -rf /usr/share/dotnet
           echo "AGENT_TOOLSDIRECTORY is $AGENT_TOOLSDIRECTORY"
-          du -csh "$AGENT_TOOLSDIRECTORY"
-          rm -rf "$AGENT_TOOLSDIRECTORY"
+          # du -csh "$AGENT_TOOLSDIRECTORY"
+          # rm -rf "$AGENT_TOOLSDIRECTORY"
           df -h
       - uses: dorny/paths-filter@v2
         id: changes
