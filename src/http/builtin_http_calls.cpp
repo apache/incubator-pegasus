@@ -92,12 +92,6 @@ namespace dsn {
         })
         .with_help("Gets the server start time.");
 
-    register_http_call("perfCounter")
-        .with_callback([](const http_request &req, http_response &resp) {
-            get_perf_counter_handler(req, resp);
-        })
-        .with_help("Gets the value of a perf counter");
-
     register_http_call("config")
         .with_callback([](const http_request &req, http_response &resp) { get_config(req, resp); })
         .with_help("get the details of a specified config");
