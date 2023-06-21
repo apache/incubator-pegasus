@@ -132,6 +132,7 @@ jobs:
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
         run: |
+          df -h
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
       - name: Rebuild third-parties
@@ -139,6 +140,7 @@ jobs:
         working-directory: thirdparty
         # Build thirdparties and leave some necessary libraries and source
         run: |
+          df -h
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
@@ -147,25 +149,33 @@ jobs:
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
         run: |
+          df -h
           ccache -p
           ccache -z
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release
           ccache -s
+      - name: Clear Build Files
+        run: |
+          df -h
+          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - name: Pack Server
         run: |
+          df -h
           ./run.sh pack_server
           rm -rf pegasus-server-*
       - name: Pack Tools
         run: |
+          df -h
           ./run.sh pack_tools
           rm -rf pegasus-tools-*
       - name: Tar files
         run: |
+          df -h
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
           tar -zcvhf release__builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
+          df -h
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -258,6 +268,38 @@ jobs:
           path: |
             /github/home/.ccache
           key: asan_ccache
+      - name: Free Disk Space (Ubuntu)
+        run: |
+          df -h
+          echo "Listing 100 largest packages"
+          dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
+          echo "Removing large packages"
+          apt-get -s autoremove
+          apt-get remove -y openjdk-11-jre-headless
+          df -h
+          echo "Listing directories"
+          du -csh /__w/*/*
+          du -csh /__t/*/*
+          du -csh /opt/*
+          du -csh /usr/local/*
+          du -csh /usr/local/lib/*
+          du -csh /usr/local/share/*
+          du -csh /usr/share/*
+          echo "AGENT_TOOLSDIRECTORY is $AGENT_TOOLSDIRECTORY"
+          echo "Removing large directories"
+          rm -rf /__t/CodeQL
+          rm -rf /__t/node
+          rm -rf /__t/PyPy
+          rm -rf /opt/ghc
+          rm -rf /usr/local/.ghcup
+          rm -rf /usr/local/graalvm
+          rm -rf /usr/local/lib/android
+          rm -rf /usr/local/lib/node_modules
+          rm -rf /usr/local/share/boost
+          rm -rf /usr/local/share/chromium
+          rm -rf /usr/local/share/powershell
+          rm -rf /usr/share/dotnet
+          df -h
       - uses: dorny/paths-filter@v2
         id: changes
         with:
@@ -270,32 +312,53 @@ jobs:
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
         run: |
+          # TODO(wangdan): clear unneeded files here temporarily. Later, unneeded files could be cleared in images.
+          df -h
+          rm -f /root/thirdparties-src.zip
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
+          # TODO(wangdan): clear unneeded files here temporarily. Later, unneeded files could be cleared in images.
+          find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+          rm -rf ./thirdparty/hadoop-bin/share/doc
+          rm -rf ./thirdparty/zookeeper-bin/docs
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
         working-directory: thirdparty
         # Build thirdparties and leave some necessary libraries and source
         run: |
+          # TODO(wangdan): clear unneeded files here temporarily. Later, unneeded files could be cleared in images.
+          df -h
+          rm -f /root/thirdparties-src.zip
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
           rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
+          # TODO(wangdan): clear unneeded files here temporarily. Later, unneeded files could be cleared in images.
+          find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
           ../scripts/download_hadoop.sh hadoop-bin
           ../scripts/download_zk.sh zookeeper-bin
+          # TODO(wangdan): clear unneeded files here temporarily. Later, unneeded files could be cleared in images.
+          rm -rf hadoop-bin/share/doc
+          rm -rf zookeeper-bin/docs
       - name: Compilation
         run: |
+          df -h
           ccache -p
           ccache -z
           ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc)
           ccache -s
+      - name: Clear Build Files
+        run: |
+          df -h
+          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - name: Tar files
         run: |
+          df -h
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
           tar -zcvhf release_address_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
+          df -h
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -424,12 +487,15 @@ jobs:
 #          ccache -z
 #          ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc)
 #          ccache -s
+#      - name: Clear Build Files
+#        run: |
+#          df -h
+#          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
 #      - name: Tar files
 #        run: |
 #          mv thirdparty/hadoop-bin ./
 #          mv thirdparty/zookeeper-bin ./
 #          rm -rf thirdparty
-#          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
 #          tar -zcvhf release_undefined_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
 #      - name: Upload Artifact
 #        uses: actions/upload-artifact@v3
@@ -533,6 +599,7 @@ jobs:
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
         run: |
+          df -h
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
       - name: Rebuild third-parties
@@ -540,6 +607,7 @@ jobs:
         working-directory: thirdparty
         # Build thirdparties and leave some necessary libraries and source
         run: |
+          df -h
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -DUSE_JEMALLOC=ON -B build/
           cmake --build build/ -j $(nproc)
@@ -548,25 +616,33 @@ jobs:
           ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
         run: |
+          df -h
           ccache -p
           ccache -z
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc
           ccache -s
+      - name: Clear Build Files
+        run: |
+          df -h
+          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - name: Pack Server
         run: |
+          df -h
           ./run.sh pack_server -j
           rm -rf pegasus-server-*
       - name: Pack Tools
-        run:
+        run: |
+          df -h
           ./run.sh pack_tools -j
           rm -rf pegasus-tools-*
       - name: Tar files
         run: |
+          df -h
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
           tar -zcvhf release_jemalloc_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
+          df -h
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:

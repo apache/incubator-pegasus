@@ -193,6 +193,8 @@ class error_code;
 #define METRIC_VAR_INIT_backup_policy(name, ...) METRIC_VAR_INIT(name, backup_policy, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_queue(name, ...) METRIC_VAR_INIT(name, queue, ##__VA_ARGS__)
 #define METRIC_VAR_ASSIGN_profiler(name, ...) METRIC_VAR_ASSIGN(name, profiler, ##__VA_ARGS__)
+#define METRIC_VAR_INIT_latency_tracer(name, ...)                                                  \
+    METRIC_VAR_INIT(name, latency_tracer, ##__VA_ARGS__)
 
 // Perform increment_by() operations on gauges and counters.
 #define METRIC_VAR_INCREMENT_BY(name, x)                                                           \

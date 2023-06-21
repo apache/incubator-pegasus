@@ -361,7 +361,7 @@ namespace {
 
 metric_entity_ptr instantiate_profiler_metric_entity(const std::string &task_name)
 {
-    auto entity_id = fmt::format("task_{}", task_name);
+    auto entity_id = fmt::format("task@{}", task_name);
 
     return METRIC_ENTITY_profiler.instantiate(entity_id, {{"task_name", task_name}});
 }
