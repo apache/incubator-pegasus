@@ -29,6 +29,7 @@
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
 #include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"

@@ -19,7 +19,6 @@
 #include <fcntl.h>
 #include <algorithm>
 #include <fstream>
-#include <type_traits>
 #include <utility>
 
 #include "block_service/directio_writable_file.h"
