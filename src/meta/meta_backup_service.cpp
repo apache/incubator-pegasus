@@ -70,7 +70,7 @@ namespace {
 
 metric_entity_ptr instantiate_backup_policy_metric_entity(const std::string &policy_name)
 {
-    auto entity_id = fmt::format("backup_policy_{}", policy_name);
+    auto entity_id = fmt::format("backup_policy@{}", policy_name);
 
     return METRIC_ENTITY_backup_policy.instantiate(entity_id, {{"policy_name", policy_name}});
 }
