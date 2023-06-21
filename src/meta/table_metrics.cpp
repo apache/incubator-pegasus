@@ -112,7 +112,7 @@ namespace {
 
 metric_entity_ptr instantiate_partition_metric_entity(int32_t table_id, int32_t partition_id)
 {
-    auto entity_id = fmt::format("partition_{}", gpid(table_id, partition_id));
+    auto entity_id = fmt::format("partition@{}", gpid(table_id, partition_id));
 
     return METRIC_ENTITY_partition.instantiate(
         entity_id,
@@ -121,7 +121,7 @@ metric_entity_ptr instantiate_partition_metric_entity(int32_t table_id, int32_t 
 
 metric_entity_ptr instantiate_table_metric_entity(int32_t table_id)
 {
-    auto entity_id = fmt::format("table_{}", table_id);
+    auto entity_id = fmt::format("table@{}", table_id);
 
     return METRIC_ENTITY_table.instantiate(entity_id, {{"table_id", std::to_string(table_id)}});
 }

@@ -30,7 +30,7 @@ namespace {
 
 metric_entity_ptr instantiate_replica_metric_entity(const gpid &id)
 {
-    auto entity_id = fmt::format("replica_{}", id);
+    auto entity_id = fmt::format("replica@{}", id);
 
     // Do NOT add `replica_base._app_name` as the table name to the attributes of entity, since
     // it is read-only and will never be updated even if the table is renamed.

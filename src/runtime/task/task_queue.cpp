@@ -63,7 +63,7 @@ namespace {
 
 metric_entity_ptr instantiate_queue_metric_entity(const std::string &queue_name)
 {
-    auto entity_id = fmt::format("queue_{}", queue_name);
+    auto entity_id = fmt::format("queue@{}", queue_name);
 
     return METRIC_ENTITY_queue.instantiate(entity_id, {{"queue_name", queue_name}});
 }
