@@ -74,8 +74,6 @@ public:
     ///
     bool remove_counter(const std::string &full_name);
 
-    perf_counter_ptr get_counter(const std::string &full_name);
-
     struct counter_snapshot
     {
         double value{0.0};
