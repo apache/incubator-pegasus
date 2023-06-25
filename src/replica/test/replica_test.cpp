@@ -23,7 +23,6 @@
 #include <gtest/gtest.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <atomic>
 #include <iostream>
 #include <map>

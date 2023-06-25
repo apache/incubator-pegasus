@@ -369,8 +369,8 @@ void fs_manager::remove_replica(const gpid &pid)
 
 void fs_manager::update_disk_stat()
 {
-    _total_capacity_mb = 0;
-    _total_available_mb = 0;
+    int64_t total_capacity_mb = 0;
+    int64_t total_available_mb = 0;
     int total_available_ratio = 0;
     int min_available_ratio = 100;
     int max_available_ratio = 0;
@@ -386,23 +386,26 @@ void fs_manager::update_disk_stat()
             continue;
         }
         dn->update_disk_stat();
-        _total_capacity_mb += dn->disk_capacity_mb;
-        _total_available_mb += dn->disk_available_mb;
+        total_capacity_mb += dn->disk_capacity_mb;
+        total_available_mb += dn->disk_available_mb;
         min_available_ratio = std::min(dn->disk_available_ratio, min_available_ratio);
         max_available_ratio = std::max(dn->disk_available_ratio, max_available_ratio);
     }
     total_available_ratio = static_cast<int>(
-        _total_capacity_mb == 0 ? 0 : std::round(_total_available_mb * 100.0 / _total_capacity_mb));
+        total_capacity_mb == 0 ? 0 : std::round(total_available_mb * 100.0 / total_capacity_mb));
 
     LOG_INFO("update disk space succeed: disk_count = {}, total_capacity_mb = {}, "
              "total_available_mb = {}, total_available_ratio = {}%, min_available_ratio = {}%, "
              "max_available_ratio = {}%",
              _dir_nodes.size(),
-             _total_capacity_mb,
-             _total_available_mb,
+             total_capacity_mb,
+             total_available_mb,
              total_available_ratio,
              min_available_ratio,
              max_available_ratio);
+
+    _total_capacity_mb.store(total_capacity_mb, std::memory_order_relaxed);
+    _total_available_mb.store(total_available_mb, std::memory_order_relaxed);
 }
 
 void fs_manager::add_new_dir_node(const std::string &data_dir, const std::string &tag)

@@ -20,6 +20,7 @@
 #include <rocksdb/env.h>
 #include <algorithm>
 #include <type_traits>
+#include <fstream>
 #include <utility>
 
 #include "hdfs/hdfs.h"
