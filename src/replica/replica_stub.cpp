@@ -910,8 +910,8 @@ void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
 
     resp.disk_infos = _fs_manager.get_disk_infos(app_id);
     // Get the statistics from fs_manager's metrics, they are thread-safe.
-    resp.total_capacity_mb = _fs_manager._counter_total_capacity_mb->get_integer_value();
-    resp.total_available_mb = _fs_manager._counter_total_available_mb->get_integer_value();
+    resp.total_capacity_mb = _fs_manager._total_capacity_mb.load(std::memory_order_relaxed);
+    resp.total_available_mb = _fs_manager._total_available_mb.load(std::memory_order_relaxed);
     resp.err = ERR_OK;
 }
 
