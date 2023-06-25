@@ -29,6 +29,7 @@
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
 #include "utils/autoref_ptr.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
 #include "absl/strings/string_view.h"
 #include "utils/metrics.h"
@@ -171,8 +172,8 @@ private:
     // Especially when visiting the holding_replicas, you must take care.
     mutable zrwlock_nr _lock; // [ lock
 
-    int64_t _total_capacity_mb = 0;
-    int64_t _total_available_mb = 0;
+    std::atomic<int64_t> _total_capacity_mb{0};
+    std::atomic<int64_t> _total_available_mb{0};
 
     // Once dir_node has been added to '_dir_nodes', it will not be removed, it will be marked
     // as non-NORMAL status if it is not available.
