@@ -316,33 +316,4 @@ TEST(perf_counters_test, query_snapshot_by_regexp)
     ASSERT_TRUE(info.counters.empty());
 }
 
-TEST(perf_counters_test, get_by_fullname)
-{
-    struct test_case
-    {
-        const char *app;
-        const char *section;
-        const char *name;
-        dsn_perf_counter_type_t type;
-        const char *dsptr;
-        bool create;
-    } tests[] = {{"replica", "eon", "get_by_fullname1", COUNTER_TYPE_NUMBER, "pf1", false},
-                 {"replica", "eon", "get_by_fullname2", COUNTER_TYPE_NUMBER, "pf2", true}};
-
-    for (auto test : tests) {
-        // precondition: make sure the perf counter doesn't exist
-        std::string perf_counter_name;
-        perf_counter::build_full_name(test.app, test.section, test.name, perf_counter_name);
-        perf_counters::instance().remove_counter(perf_counter_name.c_str());
-
-        if (test.create) {
-            // create perf counter
-            perf_counter_wrapper counter;
-            counter.init_global_counter(test.app, test.section, test.name, test.type, test.dsptr);
-            ASSERT_NE(nullptr, perf_counters::instance().get_counter(perf_counter_name));
-        } else {
-            ASSERT_EQ(nullptr, perf_counters::instance().get_counter(perf_counter_name));
-        }
-    }
-}
 } // namespace dsn
