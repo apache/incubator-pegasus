@@ -44,6 +44,5 @@ private:
     info_collector _collector;
     available_detector _detector;
 };
-
 }
 } // namespace

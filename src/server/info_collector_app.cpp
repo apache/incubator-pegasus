@@ -32,8 +32,7 @@ class collector_http_service : public ::dsn::http_server_base
 {
 };
 
-info_collector_app::info_collector_app(const dsn::service_app_info *info)
-    : service_app(info)
+info_collector_app::info_collector_app(const dsn::service_app_info *info) : service_app(info)
 {
     register_http_service(new collector_http_service());
     dsn::start_http_server();
