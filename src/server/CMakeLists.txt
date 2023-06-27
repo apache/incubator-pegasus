@@ -38,7 +38,6 @@ set(MY_PROJ_LIBS
     dsn.replication.zookeeper_provider
     dsn_utils
     RocksDB::rocksdb
-    pegasus_reporter
     pegasus_base
     pegasus_client_static
     event
