@@ -23,7 +23,6 @@
 #include "replica/replication_service_app.h"
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
-#include "reporter/pegasus_counter_reporter.h"
 #include "utils/builtin_metrics.h"
 
 namespace pegasus {
@@ -49,9 +48,6 @@ public:
         // built-in metrics) are started.
         CHECK_EQ(::dsn::replication::replication_service_app::start(args_new), ::dsn::ERR_OK);
 
-        // TODO(wangdan): remove after all metrics have been migrated.
-        pegasus_counter_reporter::instance().start();
-
         _builtin_metrics.start();
         return ::dsn::ERR_OK;
     }
@@ -59,9 +55,6 @@ public:
     virtual ::dsn::error_code stop(bool cleanup = false) override
     {
         ::dsn::error_code ret = ::dsn::replication::replication_service_app::stop();
-
-        // TODO(wangdan): remove after all metrics have been migrated.
-        pegasus_counter_reporter::instance().stop();
 
         _builtin_metrics.stop();
         return ret;
@@ -91,9 +84,6 @@ public:
         // built-in metrics) are started.
         CHECK_EQ(::dsn::service::meta_service_app::start(args_new), ::dsn::ERR_OK);
 
-        // TODO(wangdan): remove after all metrics have been migrated.
-        pegasus_counter_reporter::instance().start();
-
         _builtin_metrics.start();
         return ::dsn::ERR_OK;
     }
@@ -101,9 +91,6 @@ public:
     virtual ::dsn::error_code stop(bool cleanup = false) override
     {
         ::dsn::error_code ret = ::dsn::service::meta_service_app::stop();
-
-        // TODO(wangdan): remove after all metrics have been migrated.
-        pegasus_counter_reporter::instance().stop();
 
         _builtin_metrics.stop();
         return ret;
