@@ -27,7 +27,6 @@
 
 #include "proxy_layer.h"
 #include "redis_parser.h"
-#include "reporter/pegasus_counter_reporter.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
 #include "utils/error_code.h"
@@ -56,8 +55,6 @@ public:
         };
         _proxy = std::make_unique<proxy_stub>(
             f, args[1].c_str(), args[2].c_str(), args.size() > 3 ? args[3].c_str() : "");
-
-        pegasus::server::pegasus_counter_reporter::instance().start();
 
         return ::dsn::ERR_OK;
     }

@@ -20,7 +20,6 @@
 #include "info_collector_app.h"
 
 #include "http/http_server.h"
-#include "reporter/pegasus_counter_reporter.h"
 #include "runtime/service_app.h"
 #include "server/available_detector.h"
 #include "server/info_collector.h"
@@ -33,8 +32,7 @@ class collector_http_service : public ::dsn::http_server_base
 {
 };
 
-info_collector_app::info_collector_app(const dsn::service_app_info *info)
-    : service_app(info), _updater_started(false)
+info_collector_app::info_collector_app(const dsn::service_app_info *info) : service_app(info)
 {
     register_http_service(new collector_http_service());
     dsn::start_http_server();
@@ -44,9 +42,6 @@ info_collector_app::~info_collector_app() {}
 
 ::dsn::error_code info_collector_app::start(const std::vector<std::string> &args)
 {
-    pegasus_counter_reporter::instance().start();
-    _updater_started = true;
-
     _collector.start();
     _detector.start();
     return ::dsn::ERR_OK;
@@ -54,10 +49,6 @@ info_collector_app::~info_collector_app() {}
 
 ::dsn::error_code info_collector_app::stop(bool cleanup)
 {
-    if (_updater_started) {
-        pegasus_counter_reporter::instance().stop();
-    }
-
     _collector.stop();
     _detector.stop();
     return ::dsn::ERR_OK;
