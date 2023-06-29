@@ -19,8 +19,14 @@
 
 #pragma once
 
+#include <functional>
 #include <set>
 #include <string>
+#include <unordered_map>
+
+namespace rocksdb {
+struct ColumnFamilyOptions;
+} // namespace rocksdb
 
 namespace pegasus {
 
@@ -81,4 +87,11 @@ extern const std::string ROCKSDB_NUM_LEVELS;
 extern const std::set<std::string> ROCKSDB_DYNAMIC_OPTIONS;
 
 extern const std::set<std::string> ROCKSDB_STATIC_OPTIONS;
+
+using cf_opts_setter = std::function<bool(const std::string &, rocksdb::ColumnFamilyOptions &)>;
+extern const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters;
+
+using cf_opts_getter =
+    std::function<void(/*out*/ std::string &, const rocksdb::ColumnFamilyOptions &)>;
+extern const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters;
 } // namespace pegasus

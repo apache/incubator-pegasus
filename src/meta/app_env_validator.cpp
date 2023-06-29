@@ -180,9 +180,9 @@ bool check_rocksdb_write_buffer_size(const std::string &env_value, std::string &
         hint_message = fmt::format("rocksdb.write_buffer_size cannot set this val: {}", env_value);
         return false;
     }
-    if (val < (32 << 20) || val > (512 << 20)) {
+    if (val < (16 << 20) || val > (512 << 20)) {
         hint_message =
-            fmt::format("rocksdb.write_buffer_size suggest set val in range [33554432, 536870912]");
+            fmt::format("rocksdb.write_buffer_size suggest set val in range [16777216, 536870912]");
         return false;
     }
     return true;

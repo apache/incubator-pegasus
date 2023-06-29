@@ -24,6 +24,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -68,7 +69,8 @@ public:
     error_code create_app_test(int32_t partition_count,
                                int32_t replica_count,
                                bool success_if_exist,
-                               const std::string &app_name)
+                               const std::string &app_name,
+                               const std::map<std::string, std::string> &envs = {})
     {
         configuration_create_app_request create_request;
         configuration_create_app_response create_response;
@@ -78,6 +80,7 @@ public:
         create_request.options.replica_count = replica_count;
         create_request.options.success_if_exist = success_if_exist;
         create_request.options.is_stateful = true;
+        create_request.options.envs = envs;
 
         auto result = fake_create_app(_ss.get(), create_request);
         fake_wait_rpc(result, create_response);
@@ -362,6 +365,12 @@ TEST_F(meta_app_operation_test, create_app)
     // - wrong app_status dropping
     // - create succeed with app_status dropped
     // - create succeed with success_if_exist=true
+    // - wrong rocksdb.num_levels (< 1)
+    // - wrong rocksdb.num_levels (> 10)
+    // - create app with rocksdb.num_levels (= 5) succeed
+    // - wrong rocksdb.write_buffer_size (< (16<<20))
+    // - wrong rocksdb.write_buffer_size (> (512<<20))
+    // - create app with rocksdb.write_buffer_size (= (32<<20)) succeed
     struct create_test
     {
         std::string app_name;
@@ -373,43 +382,106 @@ TEST_F(meta_app_operation_test, create_app)
         bool success_if_exist;
         app_status::type before_status;
         error_code expected_err;
-    } tests[] = {{APP_NAME, -1, 3, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 0, 3, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, -1, 1, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 0, 1, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 6, 2, 4, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 7, 2, 6, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 6, 2, 5, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 5, 2, 4, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 4, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 6, 2, 6, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 6, 2, 7, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME + "_1", 4, 5, 2, 5, 1, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME + "_2", 4, 5, 2, 6, 1, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME + "_3", 4, 4, 2, 4, 1, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME + "_4", 4, 4, 2, 6, 1, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME + "_5", 4, 3, 2, 4, 1, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME + "_6", 4, 4, 2, 5, 1, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME, 4, 3, 2, 5, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 3, 2, 4, 5, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 3, 2, 4, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 3, 2, 2, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 3, 2, 3, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 4, 4, 2, 3, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
-                 {APP_NAME + "_7", 4, 3, 2, 4, 3, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME, 4, 1, 1, 0, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
-                 {APP_NAME, 4, 2, 2, 1, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
-                 {APP_NAME, 4, 3, 3, 2, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
-                 {APP_NAME + "_8", 4, 3, 3, 3, 1, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME + "_9", 4, 1, 1, 1, 1, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME + "_10", 4, 2, 1, 2, 2, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_INVALID, ERR_OK},
-                 {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_INVALID, ERR_APP_EXIST},
-                 {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_CREATING, ERR_BUSY_CREATING},
-                 {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_RECALLING, ERR_BUSY_CREATING},
-                 {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_DROPPING, ERR_BUSY_DROPPING},
-                 {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_DROPPED, ERR_OK},
-                 {APP_NAME, 4, 3, 2, 3, 3, true, app_status::AS_INVALID, ERR_OK}};
+        std::map<std::string, std::string> envs = {};
+    } tests[] = {
+        {APP_NAME, -1, 3, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 0, 3, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, -1, 1, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 0, 1, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 6, 2, 4, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 7, 2, 6, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 6, 2, 5, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 5, 2, 4, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 4, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 6, 2, 6, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 6, 2, 7, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME + "_1", 4, 5, 2, 5, 1, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME + "_2", 4, 5, 2, 6, 1, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME + "_3", 4, 4, 2, 4, 1, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME + "_4", 4, 4, 2, 6, 1, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME + "_5", 4, 3, 2, 4, 1, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME + "_6", 4, 4, 2, 5, 1, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME, 4, 3, 2, 5, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 3, 2, 4, 5, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 3, 2, 4, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 3, 2, 2, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 3, 2, 3, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME, 4, 4, 2, 3, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        {APP_NAME + "_7", 4, 3, 2, 4, 3, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME, 4, 1, 1, 0, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
+        {APP_NAME, 4, 2, 2, 1, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
+        {APP_NAME, 4, 3, 3, 2, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
+        {APP_NAME + "_8", 4, 3, 3, 3, 1, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME + "_9", 4, 1, 1, 1, 1, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME + "_10", 4, 2, 1, 2, 2, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_INVALID, ERR_APP_EXIST},
+        {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_CREATING, ERR_BUSY_CREATING},
+        {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_RECALLING, ERR_BUSY_CREATING},
+        {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_DROPPING, ERR_BUSY_DROPPING},
+        {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_DROPPED, ERR_OK},
+        {APP_NAME, 4, 3, 2, 3, 3, true, app_status::AS_INVALID, ERR_OK},
+        {APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_INVALID_PARAMETERS,
+         {{"rocksdb.num_levels", "0"}}},
+        {APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_INVALID_PARAMETERS,
+         {{"rocksdb.num_levels", "11"}}},
+        {APP_NAME + "_11",
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_OK,
+         {{"rocksdb.num_levels", "5"}}},
+        {APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_INVALID_PARAMETERS,
+         {{"rocksdb.write_buffer_size", "1000"}}},
+        {APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_INVALID_PARAMETERS,
+         {{"rocksdb.write_buffer_size", "1073741824"}}},
+        {APP_NAME + "_12",
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_OK,
+         {{"rocksdb.write_buffer_size", "33554432"}}},
+    };
 
     clear_nodes();
 
@@ -453,13 +525,30 @@ TEST_F(meta_app_operation_test, create_app)
         } else if (test.before_status != app_status::AS_INVALID) {
             update_app_status(test.before_status);
         }
-        auto err = create_app_test(
-            test.partition_count, test.replica_count, test.success_if_exist, test.app_name);
+        auto err = create_app_test(test.partition_count,
+                                   test.replica_count,
+                                   test.success_if_exist,
+                                   test.app_name,
+                                   test.envs);
         ASSERT_EQ(err, test.expected_err);
 
         _ms->set_node_state(nodes, true);
     }
 
+    {
+        // Make sure all rocksdb options of ROCKSDB_DYNAMIC_OPTIONS and ROCKSDB_STATIC_OPTIONS are
+        // tested. Hint: Mainly verify the validate_app_envs function.
+        std::map<std::string, std::string> all_test_envs;
+        for (auto test : tests) {
+            all_test_envs.insert(test.envs.begin(), test.envs.end());
+        }
+        for (const auto &option : replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
+            ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
+        }
+        for (const auto &option : replica_envs::ROCKSDB_STATIC_OPTIONS) {
+            ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
+        }
+    }
     // set FLAGS_min_allowed_replica_count successfully
     res = update_flag("min_allowed_replica_count", "2");
     ASSERT_TRUE(res.is_ok());

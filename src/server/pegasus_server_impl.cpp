@@ -38,6 +38,7 @@
 #include <unistd.h> // IWYU pragma: keep
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <list>
 #include <mutex>
@@ -2629,17 +2630,9 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
 void pegasus_server_impl::update_rocksdb_dynamic_options(
     const std::map<std::string, std::string> &envs)
 {
-    if (envs.size() == 0) {
+    if (envs.empty()) {
         return;
     }
-    auto extract_option = [](const std::string &option) -> std::string {
-        std::stringstream ss(option);
-        std::string prefix, rocksdb_opt;
-        std::getline(ss, prefix, '.');
-        std::getline(ss, rocksdb_opt);
-        LOG_INFO("Extract rocksdb dynamic opt ({}) from ({})", rocksdb_opt, option);
-        return rocksdb_opt;
-    };
 
     std::unordered_map<std::string, std::string> new_options;
     for (const auto &option : ROCKSDB_DYNAMIC_OPTIONS) {
@@ -2647,11 +2640,15 @@ void pegasus_server_impl::update_rocksdb_dynamic_options(
         if (find == envs.end()) {
             continue;
         }
-        new_options[extract_option(option)] = find->second;
+
+        std::vector<std::string> args;
+        // split_args example: Parse "write_buffer_size" from "rocksdb.write_buffer_size"
+        dsn::utils::split_args(option.c_str(), args, '.');
+        new_options[args[1]] = find->second;
     }
 
     // doing set option
-    if (new_options.empty() && set_options(new_options)) {
+    if (!new_options.empty() && set_options(new_options)) {
         LOG_INFO("Set rocksdb dynamic options success");
     }
 }
@@ -2659,7 +2656,7 @@ void pegasus_server_impl::update_rocksdb_dynamic_options(
 void pegasus_server_impl::set_rocksdb_options_before_creating(
     const std::map<std::string, std::string> &envs)
 {
-    if (envs.size() == 0) {
+    if (envs.empty()) {
         return;
     }
 
@@ -2668,17 +2665,15 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
         if (find == envs.end()) {
             continue;
         }
-        bool is_set = false;
-        if (option.compare(ROCKSDB_NUM_LEVELS) == 0) {
-            int32_t val = 0;
-            if (!dsn::buf2int32(find->second, val))
-                continue;
-            is_set = true;
-            _data_cf_opts.num_levels = val;
-        }
 
-        if (is_set)
-            LOG_INFO("Set {} \"{}\" succeed", find->first, find->second);
+        auto setter = cf_opts_setters.find(option);
+        if (setter == cf_opts_setters.end()) {
+            LOG_WARNING("cannot find {} setter function, and set this option fail.", option);
+            continue;
+        }
+        if (setter->second(find->second, _data_cf_opts)) {
+            LOG_INFO_PREFIX("Set {} \"{}\" succeed", find->first, find->second);
+        }
     }
 
     for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
@@ -2686,16 +2681,15 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
         if (find == envs.end()) {
             continue;
         }
-        bool is_set = false;
-        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0) {
-            uint64_t val = 0;
-            if (!dsn::buf2uint64(find->second, val))
-                continue;
-            is_set = true;
-            _data_cf_opts.write_buffer_size = static_cast<size_t>(val);
+
+        auto setter = cf_opts_setters.find(option);
+        if (setter == cf_opts_setters.end()) {
+            LOG_WARNING("cannot find {} setter function, and set this option fail.", option);
+            continue;
         }
-        if (is_set)
-            LOG_INFO("Set {} \"{}\" succeed", find->first, find->second);
+        if (setter->second(find->second, _data_cf_opts)) {
+            LOG_INFO_PREFIX("Set {} \"{}\" succeed", find->first, find->second);
+        }
     }
 }
 
@@ -2731,6 +2725,14 @@ void pegasus_server_impl::update_app_envs_before_open_db(
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
 {
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
+    // write_buffer_size involves random values (refer to pegasus_server_impl::set_usage_scenario),
+    // so it can only be taken from _data_cf_opts
+    envs[ROCKSDB_WRITE_BUFFER_SIZE] = fmt::format("{}", _data_cf_opts.write_buffer_size);
+
+    // Get Data ColumnFamilyOptions directly from _data_cf
+    rocksdb::ColumnFamilyDescriptor desc;
+    rocksdb::Status s = _data_cf->GetDescriptor(&desc);
+    envs[ROCKSDB_NUM_LEVELS] = fmt::format("{}", desc.options.num_levels);
 }
 
 void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std::string> &envs)
@@ -3117,6 +3119,7 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
 void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_opts,
                                                 rocksdb::ColumnFamilyOptions *target_opts)
 {
+    LOG_INFO_PREFIX("Reset rocksdb envs options");
     // Reset rocksdb option includes two aspects:
     // 1. Set usage_scenario related rocksdb options
     // 2. Rocksdb option set in app envs, consists of ROCKSDB_DYNAMIC_OPTIONS and
