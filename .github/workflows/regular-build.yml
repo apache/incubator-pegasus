@@ -52,7 +52,6 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu1604
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
