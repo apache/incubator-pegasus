@@ -54,8 +54,7 @@ jobs:
     name: Check issue
     runs-on: ubuntu-latest
     steps:
-      - name: Pull Request Ticket Check Action
-        uses: neofinancial/ticket-check-action@v1.3.0
+        uses: neofinancial/ticket-check-action@v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           titleFormat: '%title%'
