@@ -39,7 +39,6 @@ jobs:
       fail-fast: false
       matrix:
         dockertag:
-          - ubuntu1604
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
