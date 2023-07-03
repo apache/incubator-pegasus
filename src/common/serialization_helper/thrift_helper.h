@@ -284,8 +284,8 @@ inline uint32_t rpc_address::write(apache::thrift::protocol::TProtocol *oprot) c
 inline uint32_t host_port::read(apache::thrift::protocol::TProtocol *iprot)
 {
     std::string host;
-    int16_t port;
-    int8_t type_enum_number;
+    int16_t port = 0;
+    int8_t type_enum_number = 0;
 
     uint32_t xfer = 0;
     auto binary_proto = dynamic_cast<apache::thrift::protocol::TBinaryProtocol *>(iprot);
