@@ -16,6 +16,7 @@
 // under the License.
 
 #include <boost/filesystem/path.hpp>
+#include <boost/system/error_code.hpp>
 #include <fcntl.h>
 #include <fmt/core.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
@@ -57,6 +58,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -319,15 +321,23 @@ TEST_F(load_from_private_log_test, handle_real_private_log)
     };
 
     for (auto tt : tests) {
-        boost::filesystem::path file(tt.fname);
-        boost::filesystem::copy_file(
-            file, _log_dir + "/log.1.0", boost::filesystem::copy_option::overwrite_if_exists);
-
         // reset replica to specified gpid
         duplicator.reset(nullptr);
-        _replica = create_mock_replica(
-            stub.get(), tt.id.get_app_id(), tt.id.get_partition_index(), _log_dir.c_str());
+        _replica = create_mock_replica(stub.get(), tt.id.get_app_id(), tt.id.get_partition_index());
 
+        // Update '_log_dir' to the corresponding replica created above.
+        _log_dir = _replica->dir();
+        ASSERT_TRUE(utils::filesystem::path_exists(_log_dir)) << _log_dir;
+
+        // Copy the log file to '_log_dir'
+        boost::filesystem::path file(tt.fname);
+        ASSERT_TRUE(dsn::utils::filesystem::file_exists(tt.fname)) << tt.fname;
+        boost::system::error_code ec;
+        boost::filesystem::copy_file(
+            file, _log_dir + "/log.1.0", boost::filesystem::copy_option::overwrite_if_exists, ec);
+        ASSERT_TRUE(!ec) << ec.value() << ", " << ec.category().name() << ", " << ec.message();
+
+        // Start to verify.
         load_and_wait_all_entries_loaded(tt.puts, tt.total, tt.id, 1, 0);
     }
 }

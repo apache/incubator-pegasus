@@ -100,7 +100,7 @@ const std::string replica::kAppInfo = ".app-info";
 replica::replica(replica_stub *stub,
                  gpid gpid,
                  const app_info &app,
-                 const char *dir,
+                 dir_node *dn,
                  bool need_restore,
                  bool is_duplication_follower)
     : serverlet<replica>("replica"),
@@ -124,7 +124,9 @@ replica::replica(replica_stub *stub,
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
     _stub = stub;
-    _dir = dir;
+    CHECK_NOTNULL(dn, "");
+    _dir_node = dn;
+    _dir = dn->replica_dir(_app_info.app_type, gpid);
     _options = &stub->options();
     init_state();
     _config.pid = gpid;
@@ -232,7 +234,6 @@ void replica::init_state()
     _last_config_change_time_ms = _create_time_ms;
     update_last_checkpoint_generate_time();
     _private_log = nullptr;
-    init_disk_tag();
     get_bool_envs(_app_info.envs, replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, _allow_ingest_behind);
 }
 
@@ -303,10 +304,13 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
     auto storage_error = _app->on_request(request);
     if (dsn_unlikely(storage_error != ERR_OK)) {
         switch (storage_error) {
-        // TODO(yingchun): Now only kCorruption is dealt, consider to deal with more storage
-        //  engine errors.
+        // TODO(yingchun): Now only kCorruption and kIOError are dealt, consider to deal with
+        //  more storage engine errors.
         case rocksdb::Status::kCorruption:
             handle_local_failure(ERR_RDB_CORRUPTION);
+            break;
+        case rocksdb::Status::kIOError:
+            handle_local_failure(ERR_DISK_IO_ERROR);
             break;
         default:
             LOG_ERROR_PREFIX("client read encountered an unhandled error: {}", storage_error);
@@ -588,14 +592,6 @@ uint32_t replica::query_data_version() const
 {
     CHECK_PREFIX(_app);
     return _app->query_data_version();
-}
-
-void replica::init_disk_tag()
-{
-    dsn::error_code err = _stub->_fs_manager.get_disk_tag(dir(), _disk_tag);
-    if (dsn::ERR_OK != err) {
-        LOG_ERROR_PREFIX("get disk tag of {} failed: {}, init it to empty ", dir(), err);
-    }
 }
 
 error_code replica::store_app_info(app_info &info, const std::string &path)

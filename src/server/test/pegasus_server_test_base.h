@@ -23,6 +23,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include "common/fs_manager.h"
 #include "replica/replica_stub.h"
 #include "utils/filesystem.h"
 
@@ -44,15 +45,22 @@ public:
     pegasus_server_test_base()
     {
         // Remove rdb to prevent rocksdb recovery from last test.
-        dsn::utils::filesystem::remove_path("./data/rdb");
+        dsn::utils::filesystem::remove_path("./test_dir");
         _replica_stub = new dsn::replication::replica_stub();
+        _replica_stub->get_fs_manager()->initialize({"test_dir"}, {"test_tag"});
 
         _gpid = dsn::gpid(100, 1);
         dsn::app_info app_info;
         app_info.app_type = "pegasus";
 
-        _replica =
-            new dsn::replication::replica(_replica_stub, _gpid, app_info, "./", false, false);
+        auto *dn = _replica_stub->get_fs_manager()->find_best_dir_for_new_replica(_gpid);
+        CHECK_NOTNULL(dn, "");
+        _replica = new dsn::replication::replica(_replica_stub, _gpid, app_info, dn, false, false);
+        const auto dir_data = dsn::utils::filesystem::path_combine(_replica->dir(), "data");
+        CHECK(dsn::utils::filesystem::create_directory(dir_data),
+              "create data dir {} failed",
+              dir_data);
+
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
     }
 

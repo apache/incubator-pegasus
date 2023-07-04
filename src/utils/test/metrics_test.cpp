@@ -3045,11 +3045,11 @@ TEST_P(MetricsRetirementTest, RetireOldMetrics)
 }
 
 const std::vector<surviving_metrics_case> metrics_retirement_tests = {
-    {"server_117", true, true, true, true},
-    {"server_118", true, true, true, false},
-    {"server_119", true, true, false, false},
-    {"server_120", true, false, false, false},
-    {"server_121", false, false, false, false},
+    {std::string("server_117"), true, true, true, true},
+    {std::string("server_118"), true, true, true, false},
+    {std::string("server_119"), true, true, false, false},
+    {std::string("server_120"), true, false, false, false},
+    {std::string("server_121"), false, false, false, false},
 };
 
 INSTANTIATE_TEST_CASE_P(MetricsTest,

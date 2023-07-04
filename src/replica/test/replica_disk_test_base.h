@@ -39,16 +39,23 @@ public:
     //  tag_5            100*5             50*5              50%
     //  total            2500              750               30%
     // replica info, for example:
-    //   dir_node             primary/secondary
-    //
-    //   tag_empty_1
-    //   tag_1                1.1 | 1.2,1.3
-    //                        2.1,2.2 | 2.3,2.4,2.5,2.6
-    //
-    //   tag_2                1.4 | 1.5,1.6
-    //                        2.7,2.8 | 2.9,2.10,2.11,2.12,2.13
-    //            ...
-    //            ...
+    //   dir_node             primary    | secondary
+    //   --------------------------------+---------------------------
+    //   tag_1                1.0        | 1.1 1.2
+    //                        2.0 2.1    | 2.2 2.3 2.4 2.5
+    //   --------------------------------+---------------------------
+    //   tag_2                1.3        | 1.4 1.5
+    //                        2.6 2.7    | 2.8 2.9 2.10 2.11
+    //   --------------------------------+---------------------------
+    //   tag_3                1.6        | 1.7 1.8
+    //                        2.12 2.13  | 2.14 2.15 2.16 2.17
+    //   --------------------------------+---------------------------
+    //   tag_4                           |
+    //   --------------------------------+---------------------------
+    //   tag_5                           |
+    //   --------------------------------+---------------------------
+    //   tag_empty_1                     |
+    //   --------------------------------+---------------------------
     replica_disk_test_base()
     {
         fail::setup();
@@ -56,6 +63,8 @@ public:
         fail::cfg("update_disk_stat", "return()");
         generate_mock_app_info();
 
+        stub->_fs_manager._dir_nodes.clear();
+        stub->_fs_manager.reset_disk_stat();
         generate_mock_dir_nodes(dir_nodes_count);
         generate_mock_empty_dir_node(empty_dir_nodes_count);
 
@@ -69,12 +78,6 @@ public:
 
     ~replica_disk_test_base() { fail::teardown(); }
 
-    void update_disk_replica() { stub->on_disk_stat(); }
-
-    void update_disks_status() { stub->update_disks_status(); }
-
-    std::vector<std::shared_ptr<dir_node>> get_dir_nodes() { return stub->_fs_manager._dir_nodes; }
-
     void generate_mock_dir_node(const app_info &app,
                                 const gpid pid,
                                 const std::string &tag,
@@ -83,7 +86,6 @@ public:
         dir_node *node_disk = new dir_node(tag, full_dir);
         node_disk->holding_replicas[app.app_id].emplace(pid);
         stub->_fs_manager._dir_nodes.emplace_back(node_disk);
-        stub->_fs_manager._available_data_dirs.emplace_back(full_dir);
     }
 
     void remove_mock_dir_node(const std::string &tag)
@@ -96,47 +98,6 @@ public:
                 break;
             }
         }
-    }
-
-    void
-    mock_node_status(int32_t node_index, disk_status::type old_status, disk_status::type new_status)
-    {
-        auto node = get_dir_nodes()[node_index];
-        for (const auto &kv : node->holding_replicas) {
-            for (const auto &pid : kv.second) {
-                update_replica_disk_status(pid, old_status);
-            }
-        }
-        stub->_fs_manager._status_updated_dir_nodes.clear();
-        if (old_status != new_status) {
-            node->status = new_status;
-            stub->_fs_manager._status_updated_dir_nodes.emplace_back(node);
-        }
-    }
-
-    error_code replica_disk_space_insufficient(const gpid &pid, bool &flag)
-    {
-        replica_ptr replica = stub->get_replica(pid);
-        if (replica == nullptr) {
-            return ERR_OBJECT_NOT_FOUND;
-        }
-        flag = replica->disk_space_insufficient();
-        return ERR_OK;
-    }
-
-    int32_t ignore_broken_disk_test(const std::string &mock_create_directory,
-                                    const std::string &mock_check_rw)
-    {
-        std::vector<std::string> data_dirs = {"disk1", "disk2", "disk3"};
-        std::vector<std::string> data_dir_tags = {"tag1", "tag2", "tag3"};
-        auto test_stub = std::make_unique<mock_replica_stub>();
-        fail::cfg("filesystem_create_directory", "return(" + mock_create_directory + ")");
-        fail::cfg("filesystem_check_dir_rw", "return(" + mock_check_rw + ")");
-        fail::cfg("update_disk_stat", "return()");
-        test_stub->initialize_fs_manager(data_dirs, data_dir_tags);
-        int32_t dir_size = test_stub->_fs_manager.get_available_data_dirs().size();
-        test_stub.reset();
-        return dir_size;
     }
 
     void prepare_before_add_new_disk_test(const std::string &create_dir,
@@ -153,7 +114,6 @@ public:
     void reset_after_add_new_disk_test()
     {
         stub->_fs_manager._dir_nodes.clear();
-        stub->_fs_manager._available_data_dirs.clear();
         dsn::utils::filesystem::remove_path("add_new_not_empty_disk");
     }
 
@@ -193,7 +153,6 @@ private:
             dir_node *node_disk =
                 new dir_node(fmt::format("tag_empty_{}", num), fmt::format("./tag_empty_{}", num));
             stub->_fs_manager._dir_nodes.emplace_back(node_disk);
-            stub->_fs_manager._available_data_dirs.emplace_back(node_disk->full_dir);
             utils::filesystem::create_directory(node_disk->full_dir);
             num--;
         }
@@ -201,14 +160,6 @@ private:
 
     void generate_mock_dir_nodes(int num)
     {
-        int app_id_1_disk_holding_replica_count =
-            app_id_1_primary_count_for_disk + app_id_1_secondary_count_for_disk;
-        int app_id_2_disk_holding_replica_count =
-            app_id_2_primary_count_for_disk + app_id_2_secondary_count_for_disk;
-
-        int app_id_1_partition_index = 1;
-        int app_id_2_partition_index = 1;
-
         int64_t disk_capacity_mb = num * 100;
         int count = 0;
         while (count++ < num) {
@@ -226,30 +177,8 @@ private:
                 node_disk->full_dir); // open replica need the options
             utils::filesystem::create_directory(node_disk->full_dir);
 
-            int app_1_replica_count_per_disk = app_id_1_disk_holding_replica_count;
-            while (app_1_replica_count_per_disk-- > 0) {
-                node_disk->holding_replicas[app_info_1.app_id].emplace(
-                    gpid(app_info_1.app_id, app_id_1_partition_index++));
-            }
-
-            int app_2_replica_count_per_disk = app_id_2_disk_holding_replica_count;
-            while (app_2_replica_count_per_disk-- > 0) {
-                node_disk->holding_replicas[app_info_2.app_id].emplace(
-                    gpid(app_info_2.app_id, app_id_2_partition_index++));
-            }
-
             stub->_fs_manager._dir_nodes.emplace_back(node_disk);
-            stub->_fs_manager._available_data_dirs.emplace_back(node_disk->full_dir);
         }
-    }
-
-    void update_replica_disk_status(const gpid &pid, const disk_status::type status)
-    {
-        replica_ptr replica = stub->get_replica(pid);
-        if (replica == nullptr) {
-            return;
-        }
-        replica->set_disk_status(status);
     }
 };
 

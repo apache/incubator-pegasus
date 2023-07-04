@@ -25,18 +25,21 @@
 #include <string>
 #include <utility>
 
+#include "common/fs_manager.h"
 #include "dsn.layer2_types.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
 #include "replica/replica.h"
+#include "replica/replica_stub.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service.h"
 #include "server/pegasus_write_service_impl.h"
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 #include "utils/string_view.h"
 
 namespace pegasus {
@@ -83,8 +86,9 @@ public:
         app_info.app_type = "pegasus";
         app_info.duplicating = true;
 
-        _replica =
-            new dsn::replication::replica(_replica_stub, _gpid, app_info, "./", false, false);
+        auto *dn = _replica_stub->get_fs_manager()->find_best_dir_for_new_replica(_gpid);
+        CHECK_NOTNULL(dn, "");
+        _replica = new dsn::replication::replica(_replica_stub, _gpid, app_info, dn, false, false);
         _server = std::make_unique<mock_pegasus_server_impl>(_replica);
 
         SetUp();

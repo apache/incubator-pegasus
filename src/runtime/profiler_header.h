@@ -50,29 +50,6 @@ enum perf_counter_ptr_type
     PERF_COUNTER_INVALID
 };
 
-class counter_info
-{
-public:
-    counter_info(const std::vector<std::string> &command_keys,
-                 perf_counter_ptr_type ptr_type,
-                 dsn_perf_counter_type_t counter_type,
-                 const std::string &title,
-                 const std::string &unit)
-        : keys(command_keys),
-          counter_ptr_type(ptr_type),
-          type(counter_type),
-          title(title),
-          unit_name(unit)
-    {
-    }
-
-    std::vector<std::string> keys;
-    perf_counter_ptr_type counter_ptr_type;
-    dsn_perf_counter_type_t type;
-    std::string title;
-    std::string unit_name;
-};
-
 struct task_spec_profiler
 {
     perf_counter_wrapper ptr[PERF_COUNTER_COUNT];

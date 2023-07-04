@@ -23,7 +23,10 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <algorithm>
+#include <atomic>
 
+#include "common/fs_manager.h"
+#include "metadata_types.h"
 #include "runtime/api_layer1.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
@@ -67,14 +70,19 @@ const std::string kFolderSuffixBak = ".bak";
 const std::string kFolderSuffixOri = ".ori";
 const std::string kFolderSuffixTmp = ".tmp";
 
-error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
+error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &dir_nodes,
                                  /*output*/ disk_cleaning_report &report)
 {
     std::vector<std::string> sub_list;
-    for (auto &dir : data_dirs) {
+    for (const auto &dn : dir_nodes) {
+        // It's allowed to clear up the directory when it's SPACE_INSUFFICIENT, but not allowed when
+        // it's IO_ERROR.
+        if (dn->status == disk_status::IO_ERROR) {
+            continue;
+        }
         std::vector<std::string> tmp_list;
-        if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
-            LOG_WARNING("gc_disk: failed to get subdirectories in {}", dir);
+        if (!dsn::utils::filesystem::get_subdirectories(dn->full_dir, tmp_list, false)) {
+            LOG_WARNING("gc_disk: failed to get subdirectories in {}", dn->full_dir);
             return error_s::make(ERR_OBJECT_NOT_FOUND, "failed to get subdirectories");
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
