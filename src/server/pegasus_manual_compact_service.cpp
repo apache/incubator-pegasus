@@ -301,6 +301,20 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
         LOG_INFO_PREFIX("ignored compact because exceed max_concurrent_running_count({})",
                         _max_concurrent_running_count.load());
         _manual_compact_enqueue_time_ms.store(0);
+
+        //bug fix : https://github.com/apache/incubator-pegasus/issues/1479
+        //now_timestamp return dsn_now_ms()
+        int loop_enqueue_time = now_timestamp() + 60 * 1000;
+        _manual_compact_enqueue_time_ms.store(loop_enqueue_time);
+        dsn::tasking::enqueue(LPC_MANUAL_COMPACT,
+                              &_app->_tracker,
+                              [this, options]() {
+            _pfc_manual_compact_enqueue_count->decrement();
+            manual_compact(options);},
+            0,
+            std::chrono::seconds(60));
+        LOG_INFO_PREFIX("ignored compact task re enqueue to wait for next execute,now task enqueue time({})ms",
+                        _manual_compact_enqueue_time_ms.load());
         return;
     }
 
