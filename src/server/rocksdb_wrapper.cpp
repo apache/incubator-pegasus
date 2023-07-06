@@ -47,6 +47,10 @@ DSN_DEFINE_int32(pegasus.server,
                  0,
                  "Which error code to inject in write path, 0 means no error. Only for test.");
 DSN_TAG_VARIABLE(inject_write_error_for_test, FT_MUTABLE);
+DSN_DEFINE_bool(pegasus.server,
+                 rocksdb_write_global_seqno,
+                 false,
+                 "If write_global_seqno is true, rocksdb will modify 'rocksdb.external_sst_file.global_seqno' of ssttable file during ingest process. If false, it will not be modified.");
 
 rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
     : replica_base(server),
@@ -212,6 +216,7 @@ int rocksdb_wrapper::ingest_files(int64_t decree,
     rocksdb::IngestExternalFileOptions ifo;
     ifo.move_files = true;
     ifo.ingest_behind = ingest_behind;
+    ifo.write_global_seqno = FLAGS_rocksdb_write_global_seqno;
     rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
     if (dsn_unlikely(!s.ok())) {
         LOG_ERROR_ROCKSDB("IngestExternalFile",
