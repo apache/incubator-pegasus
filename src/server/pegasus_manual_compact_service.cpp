@@ -21,6 +21,7 @@
 
 #include <limits.h>
 #include <rocksdb/options.h>
+#include <chrono>
 #include <list>
 #include <ostream>
 #include <set>
