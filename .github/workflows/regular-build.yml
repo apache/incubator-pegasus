@@ -55,7 +55,6 @@ jobs:
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          - centos6
           - centos7
         compiler:
           - "gcc,g++"
