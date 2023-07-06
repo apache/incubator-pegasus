@@ -55,6 +55,7 @@ pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_im
       _app(app),
       _disabled(false),
       _max_concurrent_running_count(INT_MAX),
+      _manual_compact_first_day_s(0),
       _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_running_time_ms(0),
       _manual_compact_last_finish_time_ms(0),
@@ -181,7 +182,14 @@ bool pegasus_manual_compact_service::check_periodic_compact(
 {
     auto find = envs.find(MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
     if (find == envs.end()) {
+        //if user remove MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for this app
+        _manual_compact_first_day_s.store(0);
         return false;
+    }
+    //first day means the date when user  firstly set MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for this app
+    if(0 == _manual_compact_first_day_s.load()){
+        int64_t first_day_midnight = dsn::utils::get_unix_sec_today_midnight();
+        _manual_compact_first_day_s.store(first_day_midnight);
     }
 
     std::list<std::string> trigger_time_strs;
@@ -204,8 +212,13 @@ bool pegasus_manual_compact_service::check_periodic_compact(
     }
 
     auto now = static_cast<int64_t>(now_timestamp());
+    int64_t cur_day_midnight = dsn::utils::get_unix_sec_today_midnight();
     for (auto t : trigger_time) {
         auto t_ms = t * 1000;
+        if(_manual_compact_first_day_s.load() ==  cur_day_midnight && t_ms < now){
+            return false;
+        }
+
         if (_manual_compact_last_finish_time_ms.load() < t_ms && t_ms < now) {
             return true;
         }

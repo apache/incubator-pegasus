@@ -92,6 +92,7 @@ private:
     // manual compact state
     std::atomic<bool> _disabled;
     std::atomic<int> _max_concurrent_running_count;
+    std::atomic<uint64_t> _manual_compact_first_day_s;
     std::atomic<uint64_t> _manual_compact_enqueue_time_ms;
     std::atomic<uint64_t> _manual_compact_start_running_time_ms;
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
