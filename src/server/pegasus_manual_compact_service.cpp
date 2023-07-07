@@ -314,7 +314,7 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
                               },
                               0,
                               std::chrono::seconds(60));
-        LOG_INFO_PREFIX("retry after 60 seconds,now task enqueue time({})ms",
+        LOG_INFO_PREFIX("retry 60 seconds later,now task enqueue time({})ms",
                         _manual_compact_enqueue_time_ms.load());
         return;
     }
