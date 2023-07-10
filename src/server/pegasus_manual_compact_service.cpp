@@ -202,6 +202,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
         _manual_compact_first_day_s.store(first_day_midnight);
     }
 
+
     std::set<int64_t> trigger_time;
     for (auto &tts : trigger_time_strs) {
         int64_t tt = dsn::utils::hh_mm_today_to_unix_sec(tts);
@@ -218,6 +219,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
     int64_t cur_day_midnight = dsn::utils::get_unix_sec_today_midnight();
     for (auto t : trigger_time) {
         auto t_ms = t * 1000;
+
         //_time_natural_increase means now time greater than t_ms by setting instead of natural increase of time
         if(_manual_compact_first_day_s.load() ==  cur_day_midnight && t_ms < now && !_time_natural_increase.load()){
             return false;
@@ -231,6 +233,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
 
     return false;
 }
+
 
 uint64_t pegasus_manual_compact_service::now_timestamp()
 {

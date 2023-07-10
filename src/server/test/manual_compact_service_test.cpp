@@ -62,13 +62,29 @@ public:
     void set_first_run_time(int64_t ts)
     {
         manual_compact_svc->_manual_compact_first_day_s.store(
-            static_cast<uint64_t>(ts * 1000));
+            static_cast<uint64_t>(ts));
+    }
+
+    uint64_t get_first_run_time()
+    {
+        return manual_compact_svc->_manual_compact_first_day_s.load();
     }
 
     void set_mock_now(uint64_t mock_now_sec)
     {
         manual_compact_svc->_mock_now_timestamp = mock_now_sec * 1000;
     }
+
+    uint64_t get_mock_now()
+    {
+        return  manual_compact_svc->_mock_now_timestamp;
+    }
+
+    void set_time_natural_increase(bool ok)
+    {
+        manual_compact_svc->_time_natural_increase.store(ok);
+    }
+
 
     void check_compact_disabled(const std::map<std::string, std::string> &envs, bool ok)
     {
@@ -332,46 +348,52 @@ TEST_F(manual_compact_service_test, check_manual_compact_state_1h_interval)
 
 TEST_F(manual_compact_service_test, check_periodic_compact_first_time)
 {
-    std::map<std::string, std::string> envs;
+   std::map<std::string, std::string> envs;
 
-    //user first set MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "02:00";
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
-    set_first_run_time((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
-    check_periodic_compact(envs, false);
+   //user first set MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY
+   envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "02:00";
+   set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("10:00"));
+   set_first_run_time(dsn::utils::get_unix_sec_today_midnight());
+   set_time_natural_increase(false);
+   check_periodic_compact(envs, false);
 
-    //now time to next day 00:00:01
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("23:59") + 61);
-    check_periodic_compact(envs, false);
+   //now time to next day 00:00:01
+   set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("23:59") + 61);
+   check_periodic_compact(envs, false);
 
-    //now time to next day 02:00:01
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("23:59") + 7201);
-    check_periodic_compact(envs, true);
+   //now time to next day 02:00:01
+   set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("23:59") + 7261);
+   set_time_natural_increase(true);
+   check_periodic_compact(envs, true);
 
-    // suppose compacted at today's 02:30
-    set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("02:30"));
+   // suppose compacted at today's 02:30
+   set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("02:30"));
 
-    //change value,but not first time set KEY
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
-    check_periodic_compact(envs, true);
+   //change value,but not first time set KEY
+   envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
+   set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
+   check_periodic_compact(envs, true);
 
-    //user remove MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for this app
-    envs.erase(MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
-    set_first_run_time(0);
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
-    check_periodic_compact(envs, false);
+   //user remove MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for this app
+   envs.erase(MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
+   set_first_run_time(0);
+   set_time_natural_increase(false);
+   set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
+   check_periodic_compact(envs, false);
 
 
-    //user first set MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "15:00";
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
-    set_first_run_time((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
-    check_periodic_compact(envs, false);
+   //user first set MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY
+   envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "15:00";
+   set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00"));
+   set_first_run_time(dsn::utils::get_unix_sec_today_midnight());
+   check_periodic_compact(envs, false);
 
-    //now time to 15:01
-    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("15:01"));
-    check_periodic_compact(envs, true);
+   //now time to 15:01(time natural increase)
+   set_first_run_time(true);
+   set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("15:01"));
+   check_periodic_compact(envs, true);
 }
+
+
 } // namespace server
 } // namespace pegasus
