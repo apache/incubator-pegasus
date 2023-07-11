@@ -183,7 +183,7 @@ bool pegasus_manual_compact_service::check_periodic_compact(
 {
     auto find = envs.find(MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
     if (find == envs.end()) {
-        //if user remove MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for this app
+        // if user remove MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for this app
         _manual_compact_first_day_s.store(0);
         _time_natural_increase.store(false);
         return false;
@@ -196,12 +196,12 @@ bool pegasus_manual_compact_service::check_periodic_compact(
         return false;
     }
 
-    //first day means the date when user  firstly set MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for this app
-    if(0 == _manual_compact_first_day_s.load()){
+    // first day means the date when user  firstly set MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for
+    // this app
+    if (0 == _manual_compact_first_day_s.load()) {
         int64_t first_day_midnight = dsn::utils::get_unix_sec_today_midnight();
         _manual_compact_first_day_s.store(first_day_midnight);
     }
-
 
     std::set<int64_t> trigger_time;
     for (auto &tts : trigger_time_strs) {
@@ -220,8 +220,10 @@ bool pegasus_manual_compact_service::check_periodic_compact(
     for (auto t : trigger_time) {
         auto t_ms = t * 1000;
 
-        //_time_natural_increase means now time greater than t_ms by setting instead of natural increase of time
-        if(_manual_compact_first_day_s.load() ==  cur_day_midnight && t_ms < now && !_time_natural_increase.load()){
+        //_time_natural_increase means now time greater than t_ms by setting instead of natural
+        //increase of time
+        if (_manual_compact_first_day_s.load() == cur_day_midnight && t_ms < now &&
+            !_time_natural_increase.load()) {
             return false;
         }
 
@@ -233,7 +235,6 @@ bool pegasus_manual_compact_service::check_periodic_compact(
 
     return false;
 }
-
 
 uint64_t pegasus_manual_compact_service::now_timestamp()
 {
