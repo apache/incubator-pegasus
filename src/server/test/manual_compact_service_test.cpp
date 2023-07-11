@@ -65,19 +65,9 @@ public:
             static_cast<uint64_t>(ts));
     }
 
-    uint64_t get_first_run_time()
-    {
-        return manual_compact_svc->_manual_compact_first_day_s.load();
-    }
-
     void set_mock_now(uint64_t mock_now_sec)
     {
         manual_compact_svc->_mock_now_timestamp = mock_now_sec * 1000;
-    }
-
-    uint64_t get_mock_now()
-    {
-        return  manual_compact_svc->_mock_now_timestamp;
     }
 
     void set_time_natural_increase(bool ok)
