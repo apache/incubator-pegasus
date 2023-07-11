@@ -92,6 +92,6 @@ using cf_opts_setter = std::function<bool(const std::string &, rocksdb::ColumnFa
 extern const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters;
 
 using cf_opts_getter =
-    std::function<void(/*out*/ std::string &, const rocksdb::ColumnFamilyOptions &)>;
+    std::function<void(const rocksdb::ColumnFamilyOptions &, /*out*/ std::string &)>;
 extern const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters;
 } // namespace pegasus

@@ -367,9 +367,11 @@ TEST_F(meta_app_operation_test, create_app)
     // - create succeed with success_if_exist=true
     // - wrong rocksdb.num_levels (< 1)
     // - wrong rocksdb.num_levels (> 10)
+    // - wrong rocksdb.num_levels (non-digital character)
     // - create app with rocksdb.num_levels (= 5) succeed
     // - wrong rocksdb.write_buffer_size (< (16<<20))
     // - wrong rocksdb.write_buffer_size (> (512<<20))
+    // - wrong rocksdb.write_buffer_size (non-digital character)
     // - create app with rocksdb.write_buffer_size (= (32<<20)) succeed
     struct create_test
     {
@@ -449,6 +451,16 @@ TEST_F(meta_app_operation_test, create_app)
          3,
          false,
          app_status::AS_INVALID,
+         ERR_INVALID_PARAMETERS,
+         {{"rocksdb.num_levels", "5i"}}},
+        {APP_NAME + "_11",
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
          ERR_OK,
          {{"rocksdb.num_levels", "5"}}},
         {APP_NAME,
@@ -471,6 +483,16 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_INVALID_PARAMETERS,
          {{"rocksdb.write_buffer_size", "1073741824"}}},
+        {APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_INVALID_PARAMETERS,
+         {{"rocksdb.write_buffer_size", "n33554432"}}},
         {APP_NAME + "_12",
          4,
          3,
@@ -539,7 +561,7 @@ TEST_F(meta_app_operation_test, create_app)
         // Make sure all rocksdb options of ROCKSDB_DYNAMIC_OPTIONS and ROCKSDB_STATIC_OPTIONS are
         // tested. Hint: Mainly verify the validate_app_envs function.
         std::map<std::string, std::string> all_test_envs;
-        for (auto test : tests) {
+        for (const auto &test : tests) {
             all_test_envs.insert(test.envs.begin(), test.envs.end());
         }
         for (const auto &option : replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {

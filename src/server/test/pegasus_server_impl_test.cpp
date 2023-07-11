@@ -113,7 +113,7 @@ public:
         {
             // Make sure all rocksdb options of ROCKSDB_DYNAMIC_OPTIONS and ROCKSDB_STATIC_OPTIONS
             // are tested.
-            for (auto test : tests) {
+            for (const auto &test : tests) {
                 all_test_envs[test.env_key] = test.env_value;
             }
             for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
@@ -132,13 +132,12 @@ public:
 
         std::map<std::string, std::string> query_envs;
         _server->query_app_envs(query_envs);
-        for (auto test : tests) {
-            auto iter = query_envs.find(test.env_key);
+        for (const auto &test : tests) {
+            const auto &iter = query_envs.find(test.env_key);
             if (iter != query_envs.end()) {
                 ASSERT_EQ(iter->second, test.expect_value);
             } else {
-                ASSERT_EQ(test.env_key,
-                          fmt::format("query_app_envs not supported {}", test.env_key));
+                ASSERT_TRUE(false) << fmt::format("query_app_envs not supported {}", test.env_key);
             }
         }
     }

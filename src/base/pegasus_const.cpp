@@ -124,16 +124,18 @@ const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters = {
     {ROCKSDB_WRITE_BUFFER_SIZE,
      [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
          uint64_t val = 0;
-         if (!dsn::buf2uint64(str, val))
+         if (!dsn::buf2uint64(str, val)) {
              return false;
+         }
          option.write_buffer_size = static_cast<size_t>(val);
          return true;
      }},
     {ROCKSDB_NUM_LEVELS,
      [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
          int32_t val = 0;
-         if (!dsn::buf2int32(str, val))
+         if (!dsn::buf2int32(str, val)) {
              return false;
+         }
          option.num_levels = val;
          return true;
      }},
@@ -141,11 +143,11 @@ const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters = {
 
 const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters = {
     {ROCKSDB_WRITE_BUFFER_SIZE,
-     [](/*out*/ std::string &str, const rocksdb::ColumnFamilyOptions &option) {
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
          str = fmt::format("{}", option.write_buffer_size);
      }},
     {ROCKSDB_NUM_LEVELS,
-     [](/*out*/ std::string &str, const rocksdb::ColumnFamilyOptions &option) {
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
          str = fmt::format("{}", option.num_levels);
      }},
 };

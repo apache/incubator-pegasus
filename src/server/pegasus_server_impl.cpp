@@ -2644,6 +2644,7 @@ void pegasus_server_impl::update_rocksdb_dynamic_options(
         std::vector<std::string> args;
         // split_args example: Parse "write_buffer_size" from "rocksdb.write_buffer_size"
         dsn::utils::split_args(option.c_str(), args, '.');
+        CHECK_EQ(args.size(), 2);
         new_options[args[1]] = find->second;
     }
 
@@ -2731,8 +2732,31 @@ void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::stri
 
     // Get Data ColumnFamilyOptions directly from _data_cf
     rocksdb::ColumnFamilyDescriptor desc;
-    rocksdb::Status s = _data_cf->GetDescriptor(&desc);
-    envs[ROCKSDB_NUM_LEVELS] = fmt::format("{}", desc.options.num_levels);
+    auto s = _data_cf->GetDescriptor(&desc);
+    CHECK_TRUE(s.ok());
+    for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
+        auto getter = cf_opts_getters.find(option);
+        if (getter == cf_opts_getters.end()) {
+            LOG_WARNING("cannot find {} getter function, and get this option fail.", option);
+            continue;
+        }
+        std::string option_val;
+        getter->second(desc.options, option_val);
+        envs[option] = option_val;
+    }
+    for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
+        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0) {
+            continue;
+        }
+        auto getter = cf_opts_getters.find(option);
+        if (getter == cf_opts_getters.end()) {
+            LOG_WARNING("cannot find {} getter function, and get this option fail.", option);
+            continue;
+        }
+        std::string option_val;
+        getter->second(desc.options, option_val);
+        envs[option] = option_val;
+    }
 }
 
 void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std::string> &envs)
