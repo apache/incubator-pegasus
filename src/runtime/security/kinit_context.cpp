@@ -71,14 +71,21 @@ error_s check_configuration()
           "There is no need to check configuration if FLAGS_enable_auth"
           " and FLAGS_enable_zookeeper_kerberos both are not true");
 
-    if (utils::is_empty(FLAGS_krb5_keytab) || !utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
-        return error_s::make(ERR_INVALID_PARAMETERS,
-                             fmt::format("invalid keytab file \"{}\"", FLAGS_krb5_keytab));
-    }
-
     if (utils::is_empty(FLAGS_krb5_config) || !utils::filesystem::file_exists(FLAGS_krb5_config)) {
         return error_s::make(ERR_INVALID_PARAMETERS,
                              fmt::format("invalid krb5 config file \"{}\"", FLAGS_krb5_config));
+    }
+
+    if (utils::is_empty(FLAGS_krb5_keytab) && utils::is_empty(FLAGS_krb5_principal)) {
+        return error_s::make(ERR_INCOMPLETE_PARAMETERS,
+                             fmt::format("invalid keytab file \"{}\" and principal \"{}\"",
+                                         FLAGS_krb5_keytab,
+                                         FLAGS_krb5_principal));
+    }
+
+    if (!utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
+        return error_s::make(ERR_INVALID_PARAMETERS,
+                             fmt::format("invalid keytab file \"{}\"", FLAGS_krb5_keytab));
     }
 
     if (utils::is_empty(FLAGS_krb5_principal)) {
@@ -93,6 +100,9 @@ class kinit_context : public utils::singleton<kinit_context>
 public:
     // implementation of 'kinit -k -t <keytab_file> <principal>'
     error_s kinit();
+    // If kinit has been executed outside the program, then directly obtain the principal
+    // information of the unix account for permission verification.
+    error_s get_principal_without_kinit();
     const std::string &username() const { return _user_name; }
 
 private:
@@ -137,6 +147,12 @@ kinit_context::~kinit_context() { krb5_get_init_creds_opt_free(_krb5_context, _o
 error_s kinit_context::kinit()
 {
     error_s err = check_configuration();
+    // When the return code is ERR_INCOMPLETE_PARAMETERS, it means that pegasus lacks the necessary
+    // parameters to execute kinit by itself, and will try to obtain the principal under the current
+    // unix account for identity authentication
+    if (err.code() == ERR_INCOMPLETE_PARAMETERS) {
+        return get_principal_without_kinit();
+    }
     if (!err.is_ok()) {
         return err;
     }
@@ -170,6 +186,26 @@ error_s kinit_context::kinit()
     // get and schedule to renew credentials from KDC and store it into _ccache
     RETURN_NOT_OK(get_credentials());
     schedule_renew_credentials();
+
+    return error_s::ok();
+}
+
+// obtain _principal info under the current unix account for permission verification.
+error_s kinit_context::get_principal_without_kinit()
+{
+    // get krb5_ctx
+    init_krb5_ctx();
+
+    // acquire credential cache handle
+    KRB5_RETURN_NOT_OK(krb5_cc_default(_krb5_context, &_ccache),
+                       "couldn't acquire credential cache handle");
+
+    // get '_principal' from '_ccache'
+    KRB5_RETURN_NOT_OK(krb5_cc_get_principal(_krb5_context, _ccache, &_principal),
+                       "get principal from cache failed");
+
+    // get '_user_name' from '_principal'
+    RETURN_NOT_OK(parse_username_from_principal());
 
     return error_s::ok();
 }
@@ -332,6 +368,11 @@ error_s kinit_context::wrap_krb5_err(krb5_error_code krb5_err, const std::string
 }
 
 error_s run_kinit() { return kinit_context::instance().kinit(); }
+
+error_s run_get_principal_without_kinit()
+{
+    return kinit_context::instance().get_principal_without_kinit();
+}
 
 const std::string &get_username() { return kinit_context::instance().username(); }
 } // namespace security
