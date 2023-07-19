@@ -26,8 +26,10 @@
 
 namespace dsn {
 namespace security {
+DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_string(krb5_config);
 DSN_DECLARE_string(krb5_keytab);
+DSN_DECLARE_string(krb5_principal);
 
 /***
  * set kerberos envs(for more details:
@@ -43,6 +45,12 @@ void set_krb5_env(bool is_server)
 
 error_s init_kerberos(bool is_server)
 {
+    // When pegasus enable auth and lacks the necessary parameters to execute kinit by itself, and
+    // will try to obtain the principal under the current unix account for identity authentication.
+    if (FLAGS_enable_auth && utils::is_empty(FLAGS_krb5_keytab) &&
+        utils::is_empty(FLAGS_krb5_principal)) {
+        return run_get_principal_without_kinit();
+    }
     // set kerberos env
     set_krb5_env(is_server);
 

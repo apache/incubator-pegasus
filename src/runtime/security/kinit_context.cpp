@@ -76,14 +76,7 @@ error_s check_configuration()
                              fmt::format("invalid krb5 config file \"{}\"", FLAGS_krb5_config));
     }
 
-    if (utils::is_empty(FLAGS_krb5_keytab) && utils::is_empty(FLAGS_krb5_principal)) {
-        return error_s::make(ERR_INCOMPLETE_PARAMETERS,
-                             fmt::format("invalid keytab file \"{}\" and principal \"{}\"",
-                                         FLAGS_krb5_keytab,
-                                         FLAGS_krb5_principal));
-    }
-
-    if (!utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
+    if (utils::is_empty(FLAGS_krb5_keytab) || !utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
         return error_s::make(ERR_INVALID_PARAMETERS,
                              fmt::format("invalid keytab file \"{}\"", FLAGS_krb5_keytab));
     }
@@ -147,12 +140,6 @@ kinit_context::~kinit_context() { krb5_get_init_creds_opt_free(_krb5_context, _o
 error_s kinit_context::kinit()
 {
     error_s err = check_configuration();
-    // When the return code is ERR_INCOMPLETE_PARAMETERS, it means that pegasus lacks the necessary
-    // parameters to execute kinit by itself, and will try to obtain the principal under the current
-    // unix account for identity authentication
-    if (err.code() == ERR_INCOMPLETE_PARAMETERS) {
-        return get_principal_without_kinit();
-    }
     if (!err.is_ok()) {
         return err;
     }
