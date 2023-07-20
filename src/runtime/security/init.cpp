@@ -23,6 +23,7 @@
 #include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace security {
