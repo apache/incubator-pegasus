@@ -71,14 +71,14 @@ error_s check_configuration()
           "There is no need to check configuration if FLAGS_enable_auth"
           " and FLAGS_enable_zookeeper_kerberos both are not true");
 
-    if (utils::is_empty(FLAGS_krb5_config) || !utils::filesystem::file_exists(FLAGS_krb5_config)) {
-        return error_s::make(ERR_INVALID_PARAMETERS,
-                             fmt::format("invalid krb5 config file \"{}\"", FLAGS_krb5_config));
-    }
-
     if (utils::is_empty(FLAGS_krb5_keytab) || !utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
         return error_s::make(ERR_INVALID_PARAMETERS,
                              fmt::format("invalid keytab file \"{}\"", FLAGS_krb5_keytab));
+    }
+
+    if (utils::is_empty(FLAGS_krb5_config) || !utils::filesystem::file_exists(FLAGS_krb5_config)) {
+        return error_s::make(ERR_INVALID_PARAMETERS,
+                             fmt::format("invalid krb5 config file \"{}\"", FLAGS_krb5_config));
     }
 
     if (utils::is_empty(FLAGS_krb5_principal)) {
