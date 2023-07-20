@@ -69,6 +69,8 @@ TEST(meta, apply_balancer) { g_app->apply_balancer_test(); }
 
 TEST(meta, cannot_run_balancer_test) { g_app->cannot_run_balancer_test(); }
 
+TEST(meta, app_blacklist_with_balancer_test) { g_app->app_blacklist_with_balancer_test(); }
+
 TEST(meta, construct_apps_test) { g_app->construct_apps_test(); }
 
 TEST(meta, balance_config_file) { g_app->balance_config_file(); }

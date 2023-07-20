@@ -35,8 +35,11 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <ostream>
+#include <set>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -537,6 +540,68 @@ void meta_service_test_app::cannot_run_balancer_test()
 
     // recover original FLAGS_min_live_node_count_for_unfreeze
     FLAGS_min_live_node_count_for_unfreeze = reserved_min_live_node_count_for_unfreeze;
+}
+
+void meta_service_test_app::app_blacklist_with_balancer_test()
+{
+    std::vector<dsn::rpc_address> node_list;
+    generate_node_list(node_list, 10, 20);
+    app_mapper apps;
+    node_mapper nodes;
+    nodes_fs_manager manager;
+    int disk_on_node = 9;
+    meta_service svc;
+    greedy_load_balancer glb(&svc);
+    generate_apps(apps, node_list, 5, disk_on_node, std::pair<uint32_t, uint32_t>(100, 200), true);
+    generate_node_mapper(nodes, apps, node_list);
+    generate_node_fs_manager(apps, nodes, manager, disk_on_node);
+    migration_list ml;
+
+    // set ignored apps
+    svc._state->_all_apps = apps;
+    const std::set<int32_t> ignored_apps_id = {1};
+    std::vector<std::string> args = {"set"};
+    for (const auto &ignored_app_id : ignored_apps_id) {
+        args.push_back(std::to_string(ignored_app_id));
+    }
+    svc._state->remote_command_balancer_ignored_app_ids(args);
+    app_mapper need_balance_apps;
+    migration_list temporary_list;
+    svc._state->get_need_balance_apps(need_balance_apps);
+
+    std::stringstream oss;
+    for (const auto &iter : need_balance_apps) {
+        oss << iter.first << " ";
+    }
+    LOG_INFO("need_balance_apps is {}", oss.str());
+    LOG_INFO("ignored app id: {}", svc._state->get_balancer_ignored_app_ids());
+
+    for (const auto &iter : nodes) {
+        LOG_INFO("node({}) have {} primaries, {} partitions",
+                 iter.first,
+                 iter.second.primary_count(),
+                 iter.second.partition_count());
+    }
+
+    // iterate 100 times balance
+    for (int i = 0; i < 100 && glb.balance({&need_balance_apps, &nodes}, ml); ++i) {
+        LOG_DEBUG("the {}th round of balancer", i);
+        migration_check_and_apply(need_balance_apps, nodes, ml, &manager);
+        for (const auto &ml_pair : ml) {
+            // If the migration_list does not contain the ignored app's gpid, it indicates that the
+            // app blacklist is effective.
+            CHECK_TRUE(ignored_apps_id.find(ml_pair.first.get_app_id()) == ignored_apps_id.end());
+        }
+        glb.check({&need_balance_apps, &nodes}, ml);
+        LOG_DEBUG("balance checker operation count = {}", ml.size());
+    }
+
+    for (const auto &iter : nodes) {
+        LOG_INFO("node({}) have {} primaries, {} partitions",
+                 iter.first,
+                 iter.second.primary_count(),
+                 iter.second.partition_count());
+    }
 }
 } // namespace replication
 } // namespace dsn

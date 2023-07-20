@@ -175,11 +175,9 @@ bool cluster_balance_policy::get_cluster_migration_info(
     app_mapper apps;
     for (const auto &kv : all_apps) {
         const std::shared_ptr<app_state> &app = kv.second;
-        auto ignored = is_ignored_app(app->app_id);
-        if (ignored || app->is_bulk_loading || app->splitting()) {
-            LOG_INFO("skip to balance app({}), ignored={}, bulk loading={}, splitting={}",
+        if (app->is_bulk_loading || app->splitting()) {
+            LOG_INFO("skip to balance app({}), bulk loading={}, splitting={}",
                      app->app_name,
-                     ignored,
                      app->is_bulk_loading,
                      app->splitting());
             continue;

@@ -44,6 +44,9 @@
 #include <utility>
 #include <vector>
 
+#include "common/replication_other_types.h"
+#include "meta/meta_service.h"
+#include "meta/server_state.h"
 #include "meta_data.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/extensible_object.h"
@@ -52,7 +55,6 @@ namespace dsn {
 namespace replication {
 class configuration_balancer_request;
 class configuration_balancer_response;
-class meta_service;
 
 /// server load balancer extensions for node_state
 /// record the newly assigned but not finished replicas for each node, to make the assigning
@@ -194,6 +196,11 @@ public:
                 return p1 < p2;
             return r1 < r2;
         };
+    }
+
+    bool is_ignored_app(const app_id &app_id)
+    {
+        return _svc->get_server_state()->is_ignored_app(app_id);
     }
 
 protected:

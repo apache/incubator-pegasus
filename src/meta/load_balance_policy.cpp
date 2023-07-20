@@ -22,20 +22,16 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
-#include <mutex>
 #include <ostream>
 
 #include "dsn.layer2_types.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
-#include "utils/command_manager.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/string_view.h"
-#include "utils/strings.h"
 
 namespace dsn {
 namespace replication {
@@ -176,20 +172,7 @@ generate_balancer_request(const app_mapper &apps,
     return std::make_shared<configuration_balancer_request>(std::move(result));
 }
 
-load_balance_policy::load_balance_policy(meta_service *svc)
-    : _svc(svc), _ctrl_balancer_ignored_apps(nullptr)
-{
-    static std::once_flag flag;
-    std::call_once(flag, [&]() {
-        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
-            {"meta.lb.ignored_app_list"},
-            "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
-            "get, set and clear balancer ignored_app_list",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_balancer_ignored_app_ids(args);
-            });
-    });
-}
+load_balance_policy::load_balance_policy(meta_service *svc) : _svc(svc) {}
 
 load_balance_policy::~load_balance_policy() {}
 
@@ -363,10 +346,6 @@ bool load_balance_policy::execute_balance(
 {
     for (const auto &kv : apps) {
         const std::shared_ptr<app_state> &app = kv.second;
-        if (is_ignored_app(kv.first)) {
-            LOG_INFO("skip to do balance for the ignored app[{}]", app->get_logname());
-            continue;
-        }
         if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading || app->splitting())
             continue;
 
@@ -388,81 +367,6 @@ bool load_balance_policy::execute_balance(
         }
     }
     return true;
-}
-
-std::string
-load_balance_policy::remote_command_balancer_ignored_app_ids(const std::vector<std::string> &args)
-{
-    static const std::string invalid_arguments("invalid arguments");
-    if (args.empty()) {
-        return invalid_arguments;
-    }
-    if (args[0] == "set") {
-        return set_balancer_ignored_app_ids(args);
-    }
-    if (args[0] == "get") {
-        return get_balancer_ignored_app_ids();
-    }
-    if (args[0] == "clear") {
-        return clear_balancer_ignored_app_ids();
-    }
-    return invalid_arguments;
-}
-
-std::string load_balance_policy::set_balancer_ignored_app_ids(const std::vector<std::string> &args)
-{
-    static const std::string invalid_arguments("invalid arguments");
-    if (args.size() != 2) {
-        return invalid_arguments;
-    }
-
-    std::vector<std::string> app_ids;
-    dsn::utils::split_args(args[1].c_str(), app_ids, ',');
-    if (app_ids.empty()) {
-        return invalid_arguments;
-    }
-
-    std::set<app_id> app_list;
-    for (const std::string &app_id_str : app_ids) {
-        app_id app;
-        if (!dsn::buf2int32(app_id_str, app)) {
-            return invalid_arguments;
-        }
-        app_list.insert(app);
-    }
-
-    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
-    _balancer_ignored_apps = std::move(app_list);
-    return "set ok";
-}
-
-std::string load_balance_policy::get_balancer_ignored_app_ids()
-{
-    std::stringstream oss;
-    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
-    if (_balancer_ignored_apps.empty()) {
-        return "no ignored apps";
-    }
-    oss << "ignored_app_id_list: ";
-    std::copy(_balancer_ignored_apps.begin(),
-              _balancer_ignored_apps.end(),
-              std::ostream_iterator<app_id>(oss, ","));
-    std::string app_ids = oss.str();
-    app_ids[app_ids.size() - 1] = '\0';
-    return app_ids;
-}
-
-std::string load_balance_policy::clear_balancer_ignored_app_ids()
-{
-    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
-    _balancer_ignored_apps.clear();
-    return "clear ok";
-}
-
-bool load_balance_policy::is_ignored_app(app_id app_id)
-{
-    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
-    return _balancer_ignored_apps.find(app_id) != _balancer_ignored_apps.end();
 }
 
 void load_balance_policy::number_nodes(const node_mapper &nodes)

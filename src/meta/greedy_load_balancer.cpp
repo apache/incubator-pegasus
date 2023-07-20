@@ -34,6 +34,7 @@
 
 #include "app_balance_policy.h"
 #include "cluster_balance_policy.h"
+#include "common/gpid.h"
 #include "greedy_load_balancer.h"
 #include "meta/load_balance_policy.h"
 #include "meta/server_load_balancer.h"
@@ -47,7 +48,6 @@
 #include "utils/math.h"
 
 namespace dsn {
-class gpid;
 
 namespace replication {
 class meta_service;
@@ -165,6 +165,10 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 {
     dsn::rpc_address n = ns.addr();
     return ns.for_each_partition([this, n](const dsn::gpid &pid) {
+        if (is_ignored_app(pid.get_app_id())) {
+            LOG_INFO("app {} is balance ignored app, gpid {} need ignored", pid.get_app_id(), pid);
+            return true;
+        }
         config_context &cc = *get_config_context(*(t_global_view->apps), pid);
         if (cc.find_from_serving(n) == cc.serving.end()) {
             LOG_INFO("meta server hasn't collected gpid({})'s info of {}", pid, n);
