@@ -33,8 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <atomic>
 #include <string>
 
+#include "common/fs_manager.h"
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
@@ -54,7 +56,9 @@ void replica::handle_local_failure(error_code error)
 {
     LOG_INFO_PREFIX("handle local failure error {}, status = {}", error, enum_to_string(status()));
 
-    if (error == ERR_RDB_CORRUPTION) {
+    if (error == ERR_DISK_IO_ERROR) {
+        _dir_node->status = disk_status::IO_ERROR;
+    } else if (error == ERR_RDB_CORRUPTION) {
         _data_corrupted = true;
     }
 

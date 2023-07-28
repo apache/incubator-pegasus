@@ -616,34 +616,41 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     // Start to load replicas in available data directories.
     LOG_INFO("start to load replicas");
-
-    std::vector<std::string> dir_list;
+    std::map<dir_node *, std::vector<std::string>> dirs_by_dn;
     for (const auto &dn : _fs_manager.get_dir_nodes()) {
-        std::vector<std::string> tmp_list;
-        CHECK(dsn::utils::filesystem::get_subdirectories(dn->full_dir, tmp_list, false),
-              "Fail to get subdirectories in {}.",
+        // Skip IO error dir_node.
+        if (dsn_unlikely(dn->status == disk_status::IO_ERROR)) {
+            continue;
+        }
+        std::vector<std::string> sub_directories;
+        CHECK(dsn::utils::filesystem::get_subdirectories(dn->full_dir, sub_directories, false),
+              "fail to get sub_directories in {}",
               dn->full_dir);
-        dir_list.insert(dir_list.end(), tmp_list.begin(), tmp_list.end());
+        dirs_by_dn.emplace(dn.get(), sub_directories);
     }
 
     replicas rps;
     utils::ex_lock rps_lock;
     std::deque<task_ptr> load_tasks;
     uint64_t start_time = dsn_now_ms();
-    for (auto &dir : dir_list) {
-        if (dsn::replication::is_data_dir_invalid(dir)) {
-            LOG_INFO("ignore dir {}", dir);
-            continue;
-        }
+    for (const auto &dn_dirs : dirs_by_dn) {
+        const auto dn = dn_dirs.first;
+        for (const auto &dir : dn_dirs.second) {
+            if (dsn::replication::is_data_dir_invalid(dir)) {
+                LOG_WARNING("ignore dir {}", dir);
+                continue;
+            }
 
-        load_tasks.push_back(
-            tasking::create_task(LPC_REPLICATION_INIT_LOAD,
-                                 &_tracker,
-                                 [this, dir, &rps, &rps_lock] {
-                                     LOG_INFO("process dir {}", dir);
+            load_tasks.push_back(
+                tasking::create_task(LPC_REPLICATION_INIT_LOAD,
+                                     &_tracker,
+                                     [this, dn, dir, &rps, &rps_lock] {
+                                         LOG_INFO("process dir {}", dir);
 
-                                     auto r = load_replica(dir.c_str());
-                                     if (r != nullptr) {
+                                         auto r = load_replica(dn, dir.c_str());
+                                         if (r == nullptr) {
+                                             return;
+                                         }
                                          LOG_INFO("{}@{}: load replica '{}' success, <durable, "
                                                   "commit> = <{}, {}>, last_prepared_decree = {}",
                                                   r->get_gpid(),
@@ -660,17 +667,17 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                                                rps[r->get_gpid()]->dir());
 
                                          rps[r->get_gpid()] = r;
-                                     }
-                                 },
-                                 load_tasks.size()));
-        load_tasks.back()->enqueue();
+                                     },
+                                     load_tasks.size()));
+            load_tasks.back()->enqueue();
+        }
     }
     for (auto &tsk : load_tasks) {
         tsk->wait();
     }
     uint64_t finish_time = dsn_now_ms();
 
-    dir_list.clear();
+    dirs_by_dn.clear();
     load_tasks.clear();
     LOG_INFO("load replicas succeed, replica_count = {}, time_used = {} ms",
              rps.size(),
@@ -1098,34 +1105,10 @@ void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
         }
     }
 
-    for (const auto &dir_node : _fs_manager._dir_nodes) {
-        disk_info info;
-        // app_name empty means query all app replica_count
-        if (req.app_name.empty()) {
-            info.holding_primary_replicas = dir_node->holding_primary_replicas;
-            info.holding_secondary_replicas = dir_node->holding_secondary_replicas;
-        } else {
-            const auto &primary_iter = dir_node->holding_primary_replicas.find(app_id);
-            if (primary_iter != dir_node->holding_primary_replicas.end()) {
-                info.holding_primary_replicas[app_id] = primary_iter->second;
-            }
-
-            const auto &secondary_iter = dir_node->holding_secondary_replicas.find(app_id);
-            if (secondary_iter != dir_node->holding_secondary_replicas.end()) {
-                info.holding_secondary_replicas[app_id] = secondary_iter->second;
-            }
-        }
-        info.tag = dir_node->tag;
-        info.full_dir = dir_node->full_dir;
-        info.disk_capacity_mb = dir_node->disk_capacity_mb;
-        info.disk_available_mb = dir_node->disk_available_mb;
-
-        resp.disk_infos.emplace_back(info);
-    }
-
-    resp.total_capacity_mb = _fs_manager._total_capacity_mb;
-    resp.total_available_mb = _fs_manager._total_available_mb;
-
+    resp.disk_infos = _fs_manager.get_disk_infos(app_id);
+    // Get the statistics from fs_manager's metrics, they are thread-safe.
+    resp.total_capacity_mb = _fs_manager._counter_total_capacity_mb->get_integer_value();
+    resp.total_available_mb = _fs_manager._counter_total_available_mb->get_integer_value();
     resp.err = ERR_OK;
 }
 
@@ -1196,11 +1179,12 @@ void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
     }
 
     for (auto i = 0; i < data_dir_tags.size(); ++i) {
+        // TODO(yingchun): move the following code to fs_manager.
         auto dir = data_dirs[i];
-        if (_fs_manager.is_dir_node_available(dir, data_dir_tags[i])) {
+        if (_fs_manager.is_dir_node_exist(dir, data_dir_tags[i])) {
             resp.err = ERR_NODE_ALREADY_EXIST;
             resp.__set_err_hint(
-                fmt::format("data_dir({}) tag({}) already available", dir, data_dir_tags[i]));
+                fmt::format("data_dir({}) tag({}) already exist", dir, data_dir_tags[i]));
             return;
         }
 
@@ -1375,12 +1359,7 @@ void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
     info.last_committed_decree = r->last_committed_decree();
     info.last_prepared_decree = r->last_prepared_decree();
     info.last_durable_decree = r->last_durable_decree();
-
-    dsn::error_code err = _fs_manager.get_disk_tag(r->dir(), info.disk_tag);
-    if (dsn::ERR_OK != err) {
-        LOG_WARNING("get disk tag of {} failed: {}", r->dir(), err);
-    }
-
+    info.disk_tag = r->get_dir_node()->tag;
     info.__set_manual_compact_status(r->get_manual_compact_status());
 }
 
@@ -2082,7 +2061,7 @@ void replica_stub::open_replica(
                  _primary_address_str,
                  group_check ? "with" : "without",
                  dir);
-        rep = load_replica(dir.c_str());
+        rep = load_replica(dn, dir.c_str());
 
         // if load data failed, re-open the `*.ori` folder which is the origin replica dir of disk
         // migration
@@ -2107,7 +2086,7 @@ void replica_stub::open_replica(
                 boost::replace_first(
                     origin_dir, replica_disk_migrator::kReplicaDirOriginSuffix, "");
                 dsn::utils::filesystem::rename_path(origin_tmp_dir, origin_dir);
-                rep = load_replica(origin_dir.c_str());
+                rep = load_replica(origin_dn, origin_dir.c_str());
 
                 FAIL_POINT_INJECT_F("mock_replica_load", [&](string_view) -> void {});
             }
@@ -2161,7 +2140,7 @@ void replica_stub::open_replica(
     }
 
     if (rep == nullptr) {
-        LOG_INFO(
+        LOG_WARNING(
             "{}@{}: open replica failed, erase from opening replicas", id, _primary_address_str);
         zauto_write_lock l(_replicas_lock);
         CHECK_GT_MSG(_opening_replicas.erase(id),
@@ -2220,12 +2199,11 @@ replica *replica_stub::new_replica(gpid gpid,
     }
     const auto &dir = dn->replica_dir(app.app_type, gpid);
     CHECK(dsn::utils::filesystem::directory_exists(dir), "dir({}) not exist", dir);
-    auto *rep =
-        new replica(this, gpid, app, dir.c_str(), restore_if_necessary, is_duplication_follower);
+    auto *rep = new replica(this, gpid, app, dn, restore_if_necessary, is_duplication_follower);
     error_code err;
     if (restore_if_necessary && (err = rep->restore_checkpoint()) != dsn::ERR_OK) {
         LOG_ERROR("{}: try to restore replica failed, error({})", rep->name(), err);
-        clear_on_failure(rep, dir, gpid);
+        clear_on_failure(rep);
         return nullptr;
     }
 
@@ -2235,14 +2213,14 @@ replica *replica_stub::new_replica(gpid gpid,
                   "previous detail error log",
                   rep->name(),
                   err);
-        clear_on_failure(rep, dir, gpid);
+        clear_on_failure(rep);
         return nullptr;
     }
 
     err = rep->initialize_on_new();
     if (err != ERR_OK) {
         LOG_ERROR("{}: new replica failed, err = {}", rep->name(), err);
-        clear_on_failure(rep, dir, gpid);
+        clear_on_failure(rep);
         return nullptr;
     }
 
@@ -2250,7 +2228,7 @@ replica *replica_stub::new_replica(gpid gpid,
     return rep;
 }
 
-replica *replica_stub::load_replica(const char *dir)
+replica *replica_stub::load_replica(dir_node *dn, const char *dir)
 {
     FAIL_POINT_INJECT_F("mock_replica_load", [&](string_view) -> replica * { return nullptr; });
 
@@ -2296,7 +2274,9 @@ replica *replica_stub::load_replica(const char *dir)
         return nullptr;
     }
 
-    auto *rep = new replica(this, pid, info, dir, false);
+    // The replica's directory must exists when creating a replica.
+    CHECK_EQ(dir, dn->replica_dir(app_type, pid));
+    auto *rep = new replica(this, pid, info, dn, false);
     err = rep->initialize_on_load();
     if (err != ERR_OK) {
         LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
@@ -2318,14 +2298,17 @@ replica *replica_stub::load_replica(const char *dir)
     return rep;
 }
 
-void replica_stub::clear_on_failure(replica *rep, const std::string &path, const gpid &pid)
+void replica_stub::clear_on_failure(replica *rep)
 {
+    const auto rep_dir = rep->dir();
+    const auto pid = rep->get_gpid();
+
     rep->close();
     delete rep;
     rep = nullptr;
 
     // clear work on failure
-    utils::filesystem::remove_path(path);
+    utils::filesystem::remove_path(rep_dir);
     _fs_manager.remove_replica(pid);
 }
 
@@ -2389,8 +2372,8 @@ void replica_stub::close_replica(replica_ptr r)
         _counter_replicas_closing_count->decrement();
     }
 
+    _fs_manager.remove_replica(id);
     if (r->is_data_corrupted()) {
-        _fs_manager.remove_replica(id);
         move_to_err_path(r->dir(), "trash replica");
         _counter_replicas_recent_replica_move_error_count->increment();
     }
@@ -2954,14 +2937,17 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
                                                             app_info *app,
                                                             const std::string &parent_dir)
 {
-    FAIL_POINT_INJECT_F("replica_stub_create_child_replica_if_not_found",
-                        [=](dsn::string_view) -> replica_ptr {
-                            replica *rep = new replica(this, child_pid, *app, "./", false);
-                            rep->_config.status = partition_status::PS_INACTIVE;
-                            _replicas.insert(replicas::value_type(child_pid, rep));
-                            LOG_INFO("mock create_child_replica_if_not_found succeed");
-                            return rep;
-                        });
+    FAIL_POINT_INJECT_F(
+        "replica_stub_create_child_replica_if_not_found", [=](dsn::string_view) -> replica_ptr {
+            const auto dn =
+                _fs_manager.create_child_replica_dir(app->app_type, child_pid, parent_dir);
+            CHECK_NOTNULL(dn, "");
+            auto *rep = new replica(this, child_pid, *app, dn, false);
+            rep->_config.status = partition_status::PS_INACTIVE;
+            _replicas.insert(replicas::value_type(child_pid, rep));
+            LOG_INFO("mock create_child_replica_if_not_found succeed");
+            return rep;
+        });
 
     zauto_write_lock l(_replicas_lock);
     auto it = _replicas.find(child_pid);

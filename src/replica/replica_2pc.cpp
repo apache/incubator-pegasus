@@ -27,6 +27,7 @@
 #include <fmt/core.h>
 #include <inttypes.h>
 #include <stddef.h>
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -37,6 +38,7 @@
 
 #include "bulk_load/replica_bulk_loader.h"
 #include "bulk_load_types.h"
+#include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
@@ -178,8 +180,8 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (FLAGS_reject_write_when_disk_insufficient &&
-        (disk_space_insufficient() || _primary_states.secondary_disk_space_insufficient())) {
-        response_client_write(request, ERR_DISK_INSUFFICIENT);
+        (_dir_node->status != disk_status::NORMAL || _primary_states.secondary_disk_abnormal())) {
+        response_client_write(request, disk_status_to_error_code(_dir_node->status));
         return;
     }
 

@@ -47,6 +47,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
+#include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
@@ -543,7 +544,7 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
                     err);
             } else {
                 response.base_local_dir = _app->data_dir();
-                response.__set_replica_disk_tag(get_replica_disk_tag());
+                response.__set_replica_disk_tag(_dir_node->tag);
                 LOG_INFO_PREFIX(
                     "on_learn[{:#018x}]: learner = {}, get app learn state succeed, "
                     "learned_meta_size = {}, learned_file_count = {}, learned_to_decree = {}",
@@ -910,7 +911,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             resp.replica_disk_tag,
             resp.base_local_dir,
             resp.state.files,
-            get_replica_disk_tag(),
+            _dir_node->tag,
             learn_dir,
             get_gpid(),
             true, // overwrite
@@ -1237,8 +1238,12 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
         err,
         is_local_error ? "local_error" : "remote error");
 
-    if (is_local_error && err == ERR_RDB_CORRUPTION) {
-        _data_corrupted = true;
+    if (is_local_error) {
+        if (err == ERR_DISK_IO_ERROR) {
+            _dir_node->status = disk_status::IO_ERROR;
+        } else if (err == ERR_RDB_CORRUPTION) {
+            _data_corrupted = true;
+        }
     }
 
     _stub->_counter_replicas_learning_recent_learn_fail_count->increment();

@@ -66,6 +66,8 @@ github:
     - padmejin
     - shalk
     - WHBANG
+    - ruojieranyishen
+    - ninsmiracle
 
 notifications:
   commits: commits@pegasus.apache.org

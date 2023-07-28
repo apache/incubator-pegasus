@@ -19,7 +19,7 @@
 
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
-#include <functional>
+#include <atomic>
 #include <map>
 #include <memory>
 #include <set>
@@ -38,8 +38,11 @@ namespace dsn {
 class gpid;
 
 namespace replication {
+class disk_info;
 
 DSN_DECLARE_int32(disk_min_available_space_ratio);
+
+error_code disk_status_to_error_code(disk_status::type ds);
 
 struct dir_node
 {
@@ -49,7 +52,7 @@ public:
     int64_t disk_capacity_mb;
     int64_t disk_available_mb;
     int disk_available_ratio;
-    disk_status::type status;
+    std::atomic<disk_status::type> status;
     std::map<app_id, std::set<gpid>> holding_replicas;
     std::map<app_id, std::set<gpid>> holding_primary_replicas;
     std::map<app_id, std::set<gpid>> holding_secondary_replicas;
@@ -96,7 +99,13 @@ public:
     // TODO(yingchun): consider the disk capacity and available space.
     // NOTE: the 'pid' must not exist in any dir_nodes.
     dir_node *find_best_dir_for_new_replica(const dsn::gpid &pid) const;
-    dsn::error_code get_disk_tag(const std::string &dir, /*out*/ std::string &tag);
+    // Similar to the above, but will specify the dir_node for the new replica.
+    // NOTE: the 'pid' must not exist in any dir_nodes and the 'specified_dn' must be in the
+    // dir_nodes.
+    // NOTE: only used in test.
+    void specify_dir_for_new_replica_for_test(dir_node *specified_dn,
+                                              dsn::string_view app_type,
+                                              const dsn::gpid &pid) const;
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
     // Find the replica instance directory.
     dir_node *find_replica_dir(dsn::string_view app_type, gpid pid);
@@ -110,16 +119,20 @@ public:
                                        gpid child_pid,
                                        const std::string &parent_dir);
     void remove_replica(const dsn::gpid &pid);
-    bool for_each_dir_node(const std::function<bool(const dir_node &)> &func) const;
     void update_disk_stat();
 
     void add_new_dir_node(const std::string &data_dir, const std::string &tag);
+    bool is_dir_node_exist(const std::string &data_dir, const std::string &tag) const;
     const std::vector<std::shared_ptr<dir_node>> &get_dir_nodes() const
     {
         zauto_read_lock l(_lock);
         return _dir_nodes;
     }
-    bool is_dir_node_available(const std::string &data_dir, const std::string &tag) const;
+    error_code validate_migrate_op(gpid pid,
+                                   const std::string &origin_disk,
+                                   const std::string &target_disk,
+                                   std::string &err_msg) const;
+    std::vector<disk_info> get_disk_infos(int app_id) const;
 
 private:
     void reset_disk_stat()
@@ -142,6 +155,8 @@ private:
     int _min_available_ratio = 100;
     int _max_available_ratio = 0;
 
+    // Once dir_node has been added to '_dir_nodes', it will not be removed, it will be marked
+    // as non-NORMAL status if it is not available.
     std::vector<std::shared_ptr<dir_node>> _dir_nodes;
     // ] end of lock
 
@@ -160,7 +175,7 @@ private:
     FRIEND_TEST(fs_manager, find_best_dir_for_new_replica);
     FRIEND_TEST(fs_manager, get_dir_node);
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
-    FRIEND_TEST(replica_test, test_auto_trash);
+    FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
 };
 } // replication
 } // dsn

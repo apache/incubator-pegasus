@@ -19,8 +19,10 @@
 
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 #include "access_controller.h"
+#include "common/json_helper.h"
 #include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
 #include "utils/synchronize.h"
@@ -29,6 +31,9 @@ namespace dsn {
 class message_ex;
 
 namespace security {
+
+using matched_database_table_policies = std::vector<ranger::matched_database_table_policy>;
+
 class replica_access_controller : public access_controller
 {
 public:
@@ -45,6 +50,8 @@ public:
     // Update '_ranger_policies' when the app_env(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES) of the
     // table changes
     void update_ranger_policies(const std::string &policies) override;
+
+    DEFINE_JSON_SERIALIZATION(_ranger_policies);
 
 private:
     // Security check to avoid allowed_users is not empty in special scenarios.
@@ -64,7 +71,7 @@ private:
     std::string _env_policies;
 
     // The Ranger policies for ACL.
-    ranger::acl_policies _ranger_policies;
+    matched_database_table_policies _ranger_policies;
 
     std::string _name;
 

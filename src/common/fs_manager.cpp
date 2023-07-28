@@ -36,6 +36,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <iosfwd>
 #include <utility>
 
@@ -44,8 +45,8 @@
 #include "fmt/core.h"
 #include "fmt/ostream.h"
 #include "perf_counter/perf_counter.h"
+#include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
@@ -68,6 +69,19 @@ DSN_DEFINE_bool(replication,
                 ignore_broken_disk,
                 true,
                 "true means ignore broken data disk when initialize");
+
+error_code disk_status_to_error_code(disk_status::type ds)
+{
+    switch (ds) {
+    case disk_status::SPACE_INSUFFICIENT:
+        return dsn::ERR_DISK_INSUFFICIENT;
+    case disk_status::IO_ERROR:
+        return dsn::ERR_DISK_IO_ERROR;
+    default:
+        CHECK_EQ(disk_status::NORMAL, ds);
+        return dsn::ERR_OK;
+    }
+}
 
 uint64_t dir_node::replicas_count() const
 {
@@ -127,7 +141,8 @@ void dir_node::update_disk_stat()
     disk_available_ratio = static_cast<int>(
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
 
-    auto old_status = status;
+    // It's able to change status from NORMAL to SPACE_INSUFFICIENT, and vice versa.
+    disk_status::type old_status = status;
     auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
                           ? disk_status::SPACE_INSUFFICIENT
                           : disk_status::NORMAL;
@@ -202,6 +217,7 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
         // Check the status of this directory.
         std::string cdir;
         std::string err_msg;
+        disk_status::type status = disk_status::NORMAL;
         if (dsn_unlikely(!utils::filesystem::create_directory(dir, cdir, err_msg) ||
                          !utils::filesystem::check_dir_rw(dir, err_msg))) {
             if (FLAGS_ignore_broken_disk) {
@@ -209,9 +225,7 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
             } else {
                 CHECK(false, err_msg);
             }
-            // TODO(yingchun): Remove the 'continue' and mark its io error status, regardless
-            //  the status of the disks, add all disks.
-            continue;
+            status = disk_status::IO_ERROR;
         }
 
         // Normalize the data directories.
@@ -219,9 +233,12 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
         utils::filesystem::get_normalized_path(cdir, norm_path);
 
         // Create and add this dir_node.
-        auto dn = std::make_shared<dir_node>(dir_tag, norm_path);
+        auto dn = std::make_shared<dir_node>(dir_tag, norm_path, 0, 0, 0, status);
         dir_nodes.emplace_back(dn);
-        LOG_INFO("mark data dir({}) as tag({})", norm_path, dir_tag);
+        LOG_INFO("mark data dir({}) as tag({}) with status({})",
+                 norm_path,
+                 dir_tag,
+                 enum_to_string(status));
     }
     CHECK_FALSE(dir_nodes.empty());
 
@@ -233,17 +250,6 @@ void fs_manager::initialize(const std::vector<std::string> &data_dirs,
 
     // Update the disk statistics.
     update_disk_stat();
-}
-
-dsn::error_code fs_manager::get_disk_tag(const std::string &dir, std::string &tag)
-{
-    dir_node *n = get_dir_node(dir);
-    if (nullptr == n) {
-        return dsn::ERR_OBJECT_NOT_FOUND;
-    } else {
-        tag = n->tag;
-        return dsn::ERR_OK;
-    }
 }
 
 void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
@@ -279,6 +285,10 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
         zauto_write_lock l(_lock);
         // Try to find the dir_node with the least replica count.
         for (const auto &dn : _dir_nodes) {
+            // Do not allocate new replica on dir_node which is not NORMAL.
+            if (dn->status != disk_status::NORMAL) {
+                continue;
+            }
             CHECK(!dn->has(pid), "gpid({}) already exists in dir_node({})", pid, dn->tag);
             uint64_t app_replicas_count = dn->replicas_count(pid.get_app_id());
             uint64_t total_replicas_count = dn->replicas_count();
@@ -306,6 +316,25 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
     return selected;
 }
 
+void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
+                                                      dsn::string_view app_type,
+                                                      const dsn::gpid &pid) const
+{
+    bool dn_found = false;
+    zauto_write_lock l(_lock);
+    for (const auto &dn : _dir_nodes) {
+        CHECK(!dn->has(pid), "gpid({}) already exists in dir_node({})", pid, dn->tag);
+        if (dn.get() == specified_dn) {
+            dn_found = true;
+        }
+    }
+    CHECK(dn_found, "dir_node({}) is not exist", specified_dn->tag);
+    CHECK_EQ(disk_status::NORMAL, specified_dn->status);
+    const auto dir = specified_dn->replica_dir(app_type, pid);
+    CHECK_TRUE(dsn::utils::filesystem::create_directory(dir));
+    specified_dn->holding_replicas[pid.get_app_id()].emplace(pid);
+}
+
 void fs_manager::remove_replica(const gpid &pid)
 {
     zauto_write_lock l(_lock);
@@ -324,21 +353,18 @@ void fs_manager::remove_replica(const gpid &pid)
     }
 }
 
-bool fs_manager::for_each_dir_node(const std::function<bool(const dir_node &)> &func) const
-{
-    zauto_read_lock l(_lock);
-    for (auto &n : _dir_nodes) {
-        if (!func(*n))
-            return false;
-    }
-    return true;
-}
-
 void fs_manager::update_disk_stat()
 {
     zauto_write_lock l(_lock);
     reset_disk_stat();
     for (auto &dn : _dir_nodes) {
+        // If the disk is already in IO_ERROR status, it will not change to other status, just skip
+        // it.
+        if (dn->status == disk_status::IO_ERROR) {
+            LOG_WARNING("skip to update disk stat for dir({}), because it is in IO_ERROR status",
+                        dn->tag);
+            continue;
+        }
         dn->update_disk_stat();
         _total_capacity_mb += dn->disk_capacity_mb;
         _total_available_mb += dn->disk_available_mb;
@@ -366,21 +392,25 @@ void fs_manager::update_disk_stat()
 
 void fs_manager::add_new_dir_node(const std::string &data_dir, const std::string &tag)
 {
-    zauto_write_lock l(_lock);
     std::string norm_path;
     utils::filesystem::get_normalized_path(data_dir, norm_path);
-    dir_node *n = new dir_node(tag, norm_path);
-    _dir_nodes.emplace_back(n);
-    LOG_INFO("{}: mark data dir({}) as tag({})", dsn_primary_address().to_string(), norm_path, tag);
+    auto dn = std::make_shared<dir_node>(tag, norm_path);
+
+    {
+        zauto_write_lock l(_lock);
+        _dir_nodes.emplace_back(dn);
+    }
+    LOG_INFO("add new data dir({}) and mark as tag({})", norm_path, tag);
 }
 
-bool fs_manager::is_dir_node_available(const std::string &data_dir, const std::string &tag) const
+bool fs_manager::is_dir_node_exist(const std::string &data_dir, const std::string &tag) const
 {
+    std::string norm_path;
+    utils::filesystem::get_normalized_path(data_dir, norm_path);
+
     zauto_read_lock l(_lock);
-    for (const auto &dir_node : _dir_nodes) {
-        std::string norm_path;
-        utils::filesystem::get_normalized_path(data_dir, norm_path);
-        if (dir_node->full_dir == norm_path || dir_node->tag == tag) {
+    for (const auto &dn : _dir_nodes) {
+        if (dn->full_dir == norm_path || dn->tag == tag) {
             return true;
         }
     }
@@ -394,6 +424,10 @@ dir_node *fs_manager::find_replica_dir(dsn::string_view app_type, gpid pid)
     {
         zauto_read_lock l(_lock);
         for (const auto &dn : _dir_nodes) {
+            // Skip IO error dir_node.
+            if (dn->status == disk_status::IO_ERROR) {
+                continue;
+            }
             const auto dir = dn->replica_dir(app_type, pid);
             if (utils::filesystem::directory_exists(dir)) {
                 // Check if there are duplicate replica instance directories.
@@ -412,9 +446,17 @@ dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type,
     // Try to find the replica directory.
     auto replica_dn = find_replica_dir(app_type, pid);
     if (replica_dn != nullptr) {
+        // TODO(yingchun): enable this check after unit tests are refactored and fixed.
+        // CHECK(replica_dn->has(pid),
+        //       "replica({})'s directory({}) exists but not in management",
+        //       pid,
+        //       replica_dn->tag);
         return replica_dn;
     }
 
+    // TODO(yingchun): enable this check after unit tests are refactored and fixed.
+    // CHECK(0 == replica_dn->holding_replicas.count(pid.get_app_id()) ||
+    //       0 == replica_dn->holding_replicas[pid.get_app_id()].count(pid), "");
     // Find a dir_node for the new replica.
     replica_dn = find_best_dir_for_new_replica(pid);
     if (replica_dn == nullptr) {
@@ -440,6 +482,10 @@ dir_node *fs_manager::create_child_replica_dir(dsn::string_view app_type,
     {
         zauto_read_lock l(_lock);
         for (const auto &dn : _dir_nodes) {
+            // Skip non-available dir_node.
+            if (dn->status != disk_status::NORMAL) {
+                continue;
+            }
             child_dir = dn->replica_dir(app_type, child_pid);
             // <parent_dir> = <prefix>/<gpid>.<app_type>
             // check if <parent_dir>'s <prefix> is equal to <data_dir>
@@ -457,6 +503,104 @@ dir_node *fs_manager::create_child_replica_dir(dsn::string_view app_type,
     }
     add_replica(child_pid, child_dir);
     return child_dn;
+}
+
+std::vector<disk_info> fs_manager::get_disk_infos(int app_id) const
+{
+    std::vector<disk_info> disk_infos;
+    zauto_read_lock l(_lock);
+    for (const auto &dn : _dir_nodes) {
+        disk_info di;
+        // Query all app info if 'app_id' is 0, which is not a valid app id.
+        if (app_id == 0) {
+            di.holding_primary_replicas = dn->holding_primary_replicas;
+            di.holding_secondary_replicas = dn->holding_secondary_replicas;
+        } else {
+            const auto &primary_replicas = dn->holding_primary_replicas.find(app_id);
+            if (primary_replicas != dn->holding_primary_replicas.end()) {
+                di.holding_primary_replicas[app_id] = primary_replicas->second;
+            }
+
+            const auto &secondary_replicas = dn->holding_secondary_replicas.find(app_id);
+            if (secondary_replicas != dn->holding_secondary_replicas.end()) {
+                di.holding_secondary_replicas[app_id] = secondary_replicas->second;
+            }
+        }
+        di.tag = dn->tag;
+        di.full_dir = dn->full_dir;
+        di.disk_capacity_mb = dn->disk_capacity_mb;
+        di.disk_available_mb = dn->disk_available_mb;
+
+        disk_infos.emplace_back(std::move(di));
+    }
+
+    return disk_infos;
+}
+
+error_code fs_manager::validate_migrate_op(gpid pid,
+                                           const std::string &origin_disk,
+                                           const std::string &target_disk,
+                                           std::string &err_msg) const
+{
+    bool origin_disk_exist = false;
+    bool target_disk_exist = false;
+    zauto_read_lock l(_lock);
+    for (const auto &dn : _dir_nodes) {
+        // Check if the origin directory is valid.
+        if (dn->tag == origin_disk) {
+            CHECK_FALSE(origin_disk_exist);
+            if (!dn->has(pid)) {
+                err_msg = fmt::format(
+                    "replica({}) doesn't exist on the origin disk({})", pid, origin_disk);
+                return ERR_OBJECT_NOT_FOUND;
+            }
+
+            // It's OK to migrate a replica from a dir_node which is NORMAL or even
+            // SPACE_INSUFFICIENT, but not allowed when it's IO_ERROR.
+            if (dn->status == disk_status::IO_ERROR) {
+                err_msg = fmt::format(
+                    "replica({}) exists on an IO-Error origin disk({})", pid, origin_disk);
+                return ERR_DISK_IO_ERROR;
+            }
+
+            origin_disk_exist = true;
+        }
+
+        // Check if the target directory is valid.
+        if (dn->tag == target_disk) {
+            CHECK_FALSE(target_disk_exist);
+            if (dn->has(pid)) {
+                err_msg =
+                    fmt::format("replica({}) already exists on target disk({})", pid, target_disk);
+                return ERR_PATH_ALREADY_EXIST;
+            }
+
+            // It's not allowed to migrate a replica to a dir_node which is either
+            // SPACE_INSUFFICIENT or IO_ERROR.
+            if (dn->status == disk_status::SPACE_INSUFFICIENT ||
+                dn->status == disk_status::IO_ERROR) {
+                err_msg = fmt::format("replica({}) target disk({}) is {}",
+                                      pid,
+                                      origin_disk,
+                                      enum_to_string(dn->status));
+                return disk_status_to_error_code(dn->status);
+            }
+
+            target_disk_exist = true;
+        }
+    }
+
+    if (!origin_disk_exist) {
+        err_msg = fmt::format("origin disk({}) doesn't exist", origin_disk);
+        return ERR_OBJECT_NOT_FOUND;
+    }
+
+    if (!target_disk_exist) {
+        err_msg = fmt::format("target disk({}) doesn't exist", target_disk);
+        return ERR_OBJECT_NOT_FOUND;
+    }
+
+    return ERR_OK;
 }
 
 } // namespace replication

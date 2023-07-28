@@ -25,7 +25,7 @@ export BUILD_ROOT_DIR=${ROOT}/build
 export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
-export LD_LIBRARY_PATH=${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 
 function usage()
 {
@@ -210,12 +210,19 @@ function run_build()
     CMAKE_OPTIONS="-DCMAKE_C_COMPILER=${C_COMPILER}
                    -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
                    -DUSE_JEMALLOC=${USE_JEMALLOC}
-                   -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
                    -DENABLE_GCOV=${ENABLE_GCOV}
                    -DENABLE_GPERF=${ENABLE_GPERF}
                    -DBoost_NO_BOOST_CMAKE=ON
                    -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
                    -DBoost_NO_SYSTEM_PATHS=ON"
+
+    echo "BUILD_TYPE=$BUILD_TYPE"
+    if [ "$BUILD_TYPE" == "debug" ]
+    then
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
+    else
+        CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Release"
+    fi
 
     if [ "$(uname)" == "Darwin" ]; then
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
@@ -256,6 +263,11 @@ function run_build()
     echo "INFO: start build Pegasus..."
     BUILD_DIR="${BUILD_ROOT_DIR}/${BUILD_TYPE}_${SANITIZER}"
     BUILD_DIR=${BUILD_DIR%_*}
+
+    if [ ! -z "${IWYU}" ]; then
+        BUILD_DIR="${BUILD_DIR}_iwyu"
+    fi
+
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
@@ -331,6 +343,8 @@ function usage_test()
     echo "                     e.g., \"pegasus_unit_test,dsn_runtime_tests,dsn_meta_state_tests\","
     echo "                     if not set, then run all tests"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
+    echo "   --onebox_opts     update configs for onebox, e.g. key1=value1,key2=value2"
+    echo "   --test_opts       update configs for tests, e.g. key1=value1,key2=value2"
 }
 function run_test()
 {
@@ -371,6 +385,8 @@ function run_test()
       restore_test
       throttle_test
     )
+    local onebox_opts=""
+    local test_opts=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -387,6 +403,14 @@ function run_test()
                 ;;
             --enable_gcov)
                 enable_gcov="yes"
+                ;;
+            --onebox_opts)
+                onebox_opts=$2
+                shift
+                ;;
+            --test_opts)
+                test_opts=$2
+                shift
                 ;;
             *)
                 echo "Error: unknown option \"$key\""
@@ -434,19 +458,20 @@ function run_test()
           restore_test
           throttle_test
         )
-        if [[ "${need_onebox_tests[@]}" =~ "${test_modules}" ]]; then
+        if [[ "${need_onebox_tests[@]}" =~ "${module}" ]]; then
             run_clear_onebox
             m_count=3
-            if [ "${test_modules}" == "recovery_test" ]; then
+            if [ "${module}" == "recovery_test" ]; then
                 m_count=1
                 opts="meta_state_service_type=meta_state_service_simple,distributed_lock_service_type=distributed_lock_service_simple"
             fi
-            if [ "${test_modules}" == "backup_restore_test" ]; then
+            if [ "${module}" == "backup_restore_test" ]; then
                 opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=onebox"
             fi
-            if [ "${test_modules}" == "restore_test" ]; then
+            if [ "${module}" == "restore_test" ]; then
                 opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=mycluster"
             fi
+            [ -z ${onebox_opts} ] || opts="${opts},${onebox_opts}"
             if ! run_start_onebox -m ${m_count} -w -c --opts ${opts}; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
                 exit 1
@@ -458,7 +483,7 @@ function run_test()
             run_start_zk
         fi
         pushd ${BUILD_LATEST_DIR}/bin/$module
-        REPORT_DIR=$REPORT_DIR TEST_BIN=$module ./run.sh
+        REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
             exit 1

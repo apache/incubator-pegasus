@@ -71,11 +71,9 @@ jobs:
       fail-fast: false
       matrix:
         osversion:
-          - ubuntu1604
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          - centos6
           - centos7
     steps:
       - uses: actions/checkout@v3
@@ -109,11 +107,9 @@ jobs:
       fail-fast: false
       matrix:
         osversion:
-          - ubuntu1604
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          - centos6
           - centos7
     steps:
       - uses: actions/checkout@v3

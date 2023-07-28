@@ -1,0 +1,11 @@
+{
+  "image": "apache/pegasus:build-env-ubuntu2004",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "eamodio.gitlens"
+      ]
+    }
+  }
+}

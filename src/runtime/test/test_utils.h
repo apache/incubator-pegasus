@@ -48,6 +48,7 @@
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_worker.h"
 #include <gtest/gtest.h>
@@ -69,6 +70,9 @@ DEFINE_TASK_CODE_RPC(RPC_TEST_HASH3, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERV
 DEFINE_TASK_CODE_RPC(RPC_TEST_HASH4, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
 DEFINE_TASK_CODE_RPC(RPC_TEST_STRING_COMMAND, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+DEFINE_TASK_CODE_RPC(RPC_TEST_THRIFT_HOST_PORT_PARSER,
+                     TASK_PRIORITY_COMMON,
+                     THREAD_POOL_TEST_SERVER)
 
 extern int g_test_count;
 extern int g_test_ret;
@@ -121,6 +125,13 @@ public:
         }
     }
 
+    void on_rpc_host_port_test(dsn::message_ex *message)
+    {
+        host_port hp;
+        ::dsn::unmarshall(message, hp);
+        reply(message, hp.to_string());
+    }
+
     ::dsn::error_code start(const std::vector<std::string> &args)
     {
         // server
@@ -135,6 +146,9 @@ public:
             register_rpc_handler(RPC_TEST_STRING_COMMAND,
                                  "rpc.test.string.command",
                                  &test_client::on_rpc_string_test);
+            register_rpc_handler(RPC_TEST_THRIFT_HOST_PORT_PARSER,
+                                 "rpc.test.host_port",
+                                 &test_client::on_rpc_host_port_test);
         }
 
         // client

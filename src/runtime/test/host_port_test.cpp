@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 #include <string.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "runtime/rpc/dns_resolver.h"
@@ -29,6 +30,14 @@
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/task/task_tracker.h"
+#include "test_utils.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 
@@ -200,6 +209,34 @@ TEST(host_port_test, dns_resolver)
         ASSERT_EQ(host_port(addr_grp.group_address()->leader()),
                   hp_grp.group_host_port()->leader());
     }
+}
+
+void send_and_check_host_port_by_serialize(const host_port &hp, dsn_msg_serialize_format t)
+{
+    auto hp_str = hp.to_string();
+    ::dsn::rpc_address server("localhost", 20101);
+
+    dsn::message_ptr msg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);
+    msg_ptr->header->context.u.serialize_format = t;
+
+    ::dsn::marshall(msg_ptr.get(), hp);
+
+    dsn::task_tracker tracker;
+    rpc::call(server, msg_ptr.get(), &tracker, [hp_str](error_code ec, std::string &&resp) {
+        ASSERT_EQ(ERR_OK, ec);
+        ASSERT_EQ(resp, hp_str);
+    })->wait();
+}
+
+TEST(host_port_test, thrift_parser)
+{
+    host_port hp1 = host_port("localhost", 8080);
+    send_and_check_host_port_by_serialize(hp1, DSF_THRIFT_BINARY);
+    send_and_check_host_port_by_serialize(hp1, DSF_THRIFT_JSON);
+
+    host_port hp2 = host_port("localhost", 1010);
+    send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_BINARY);
+    send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_JSON);
 }
 
 } // namespace dsn

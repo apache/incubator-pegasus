@@ -54,15 +54,16 @@ TEST(fs_manager, initialize)
     {
         std::string create_dir_ok;
         std::string check_dir_rw_ok;
-        int32_t data_dir_size;
-    } tests[]{{"true", "true", 3}, {"true", "false", 2}, {"false", "false", 2}};
+        // Regardless of the status of the disk, the number of dir_nodes should be 3.
+        int32_t dir_node_size;
+    } tests[]{{"true", "true", 3}, {"true", "false", 3}, {"false", "false", 3}};
     int i = 0;
     for (const auto &test : tests) {
         fail::cfg("filesystem_create_directory", "return(" + test.create_dir_ok + ")");
         fail::cfg("filesystem_check_dir_rw", "return(" + test.check_dir_rw_ok + ")");
         fs_manager fm;
         fm.initialize({"disk1", "disk2", "disk3"}, {"tag1", "tag2", "tag3"});
-        ASSERT_EQ(test.data_dir_size, fm.get_dir_nodes().size()) << i;
+        ASSERT_EQ(test.dir_node_size, fm.get_dir_nodes().size()) << i;
         i++;
     }
     fail::teardown();

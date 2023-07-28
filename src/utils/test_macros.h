@@ -33,3 +33,9 @@
             return;                                                                                \
         }                                                                                          \
     } while (0)
+
+// Substring matches.
+#define ASSERT_STR_CONTAINS(str, substr) ASSERT_THAT(str, testing::HasSubstr(substr))
+
+#define ASSERT_STR_NOT_CONTAINS(str, substr)                                                       \
+    ASSERT_THAT(str, testing::Not(testing::HasSubstr(substr)))

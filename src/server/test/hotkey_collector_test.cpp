@@ -37,6 +37,7 @@
 #include "server/test/message_utils.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
 namespace dsn {
@@ -221,7 +222,7 @@ TEST_F(fine_collector_test, fine_collector)
 class hotkey_collector_test : public pegasus_server_test_base
 {
 public:
-    hotkey_collector_test() { start(); }
+    hotkey_collector_test() { CHECK_EQ(::dsn::ERR_OK, start()); }
 
     std::shared_ptr<pegasus::server::hotkey_collector> get_read_collector()
     {

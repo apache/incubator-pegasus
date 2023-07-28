@@ -46,6 +46,11 @@ on:
   # for manually triggering workflow
   workflow_dispatch:
 
+env:
+  # Update the options to reduce the consumption of the disk space
+  ONEBOX_OPTS: disk_min_available_space_ratio=5
+  TEST_OPTS: throttle_test_medium_value_kb=10,throttle_test_large_value_kb=25
+                                                                                                                
 jobs:
   cpp_clang_format_linter:
     name: Lint
@@ -159,7 +164,8 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar --exclude='*CMakeFiles*' -zcvhf release__builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
+          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+          tar -zcvhf release__builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -230,7 +236,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
-          ./run.sh test -m ${{ matrix.test_module }}
+          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
   build_ASAN:
     name: Build ASAN
@@ -282,7 +288,8 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar --exclude='*CMakeFiles*' -zcvhf release_address_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
+          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+          tar -zcvhf release_address_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -355,7 +362,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
-          ./run.sh test -m ${{ matrix.test_module }}
+          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
 #                 when we are going to release a stable version. So we disable them in regular CI
@@ -410,7 +417,8 @@ jobs:
 #          mv thirdparty/hadoop-bin ./
 #          mv thirdparty/zookeeper-bin ./
 #          rm -rf thirdparty
-#          tar --exclude='*CMakeFiles*' -zcvhf release_undefined_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
+#          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+#          tar -zcvhf release_undefined_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
 #      - name: Upload Artifact
 #        uses: actions/upload-artifact@v3
 #        with:
@@ -479,7 +487,7 @@ jobs:
 #          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
 #          ulimit -s unlimited
 #          . ./scripts/config_hdfs.sh
-#          ./run.sh test -m ${{ matrix.test_module }}
+#          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
   build_with_jemalloc:
     name: Build with jemalloc
@@ -535,7 +543,8 @@ jobs:
           mv thirdparty/hadoop-bin ./
           mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar --exclude='*CMakeFiles*' -zcvhf release_jemalloc_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
+          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+          tar -zcvhf release_jemalloc_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -573,7 +582,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
-          ./run.sh test -m ${{ matrix.test_module }}
+          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
   build_pegasus_on_macos:
     name: macOS

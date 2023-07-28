@@ -180,13 +180,14 @@ void primary_context::cleanup_split_states()
     split_stopped_secondary.clear();
 }
 
-bool primary_context::secondary_disk_space_insufficient() const
+bool primary_context::secondary_disk_abnormal() const
 {
     for (const auto &kv : secondary_disk_status) {
-        if (kv.second == disk_status::SPACE_INSUFFICIENT) {
-            LOG_INFO("partition[{}] secondary[{}] disk space is insufficient",
+        if (kv.second != disk_status::NORMAL) {
+            LOG_INFO("partition[{}] secondary[{}] disk space is {}",
                      membership.pid,
-                     kv.first.to_string());
+                     kv.first.to_string(),
+                     enum_to_string(kv.second));
             return true;
         }
     }

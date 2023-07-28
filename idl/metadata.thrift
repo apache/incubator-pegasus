@@ -58,7 +58,12 @@ enum split_status
 enum disk_status
 {
     NORMAL = 0,
-    SPACE_INSUFFICIENT
+    // Indicate the disk is in space insufficiency. See config
+    // [replication].disk_min_available_space_ratio for more details.
+    SPACE_INSUFFICIENT,
+    // Indicate the disk is in IO error. The disk will be marked as IO_ERROR
+    // when it's read/write unavailable.
+    IO_ERROR
 }
 
 enum manual_compaction_status
