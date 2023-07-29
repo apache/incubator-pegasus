@@ -19,7 +19,6 @@
 
 #include "pegasus_const.h"
 
-#include <fmt/core.h>
 #include <rocksdb/options.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -144,11 +143,11 @@ const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters = {
 const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters = {
     {ROCKSDB_WRITE_BUFFER_SIZE,
      [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
-         str = fmt::format("{}", option.write_buffer_size);
+         str = std::to_string(option.write_buffer_size);
      }},
     {ROCKSDB_NUM_LEVELS,
      [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
-         str = fmt::format("{}", option.num_levels);
+         str = std::to_string(option.num_levels);
      }},
 };
 } // namespace pegasus

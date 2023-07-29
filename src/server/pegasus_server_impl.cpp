@@ -2636,7 +2636,7 @@ void pegasus_server_impl::update_rocksdb_dynamic_options(
 
     std::unordered_map<std::string, std::string> new_options;
     for (const auto &option : ROCKSDB_DYNAMIC_OPTIONS) {
-        auto find = envs.find(option);
+        const auto &find = envs.find(option);
         if (find == envs.end()) {
             continue;
         }
@@ -2662,12 +2662,12 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
     }
 
     for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
-        auto find = envs.find(option);
+        const auto &find = envs.find(option);
         if (find == envs.end()) {
             continue;
         }
 
-        auto setter = cf_opts_setters.find(option);
+        const auto &setter = cf_opts_setters.find(option);
         if (setter == cf_opts_setters.end()) {
             LOG_WARNING("cannot find {} setter function, and set this option fail.", option);
             continue;
@@ -2678,12 +2678,12 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
     }
 
     for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
-        auto find = envs.find(option);
+        const auto &find = envs.find(option);
         if (find == envs.end()) {
             continue;
         }
 
-        auto setter = cf_opts_setters.find(option);
+        const auto &setter = cf_opts_setters.find(option);
         if (setter == cf_opts_setters.end()) {
             LOG_WARNING("cannot find {} setter function, and set this option fail.", option);
             continue;
@@ -2728,18 +2728,14 @@ void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::stri
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
     // write_buffer_size involves random values (refer to pegasus_server_impl::set_usage_scenario),
     // so it can only be taken from _data_cf_opts
-    envs[ROCKSDB_WRITE_BUFFER_SIZE] = fmt::format("{}", _data_cf_opts.write_buffer_size);
+    envs[ROCKSDB_WRITE_BUFFER_SIZE] = std::to_string(_data_cf_opts.write_buffer_size);
 
     // Get Data ColumnFamilyOptions directly from _data_cf
     rocksdb::ColumnFamilyDescriptor desc;
-    auto s = _data_cf->GetDescriptor(&desc);
-    CHECK_TRUE(s.ok());
+    CHECK_TRUE(_data_cf->GetDescriptor(&desc).ok());
     for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
         auto getter = cf_opts_getters.find(option);
-        if (getter == cf_opts_getters.end()) {
-            LOG_WARNING("cannot find {} getter function, and get this option fail.", option);
-            continue;
-        }
+        CHECK_TRUE(getter != cf_opts_getters.end());
         std::string option_val;
         getter->second(desc.options, option_val);
         envs[option] = option_val;
@@ -2749,10 +2745,7 @@ void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::stri
             continue;
         }
         auto getter = cf_opts_getters.find(option);
-        if (getter == cf_opts_getters.end()) {
-            LOG_WARNING("cannot find {} getter function, and get this option fail.", option);
-            continue;
-        }
+        CHECK_TRUE(getter != cf_opts_getters.end());
         std::string option_val;
         getter->second(desc.options, option_val);
         envs[option] = option_val;
