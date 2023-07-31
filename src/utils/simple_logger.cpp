@@ -113,7 +113,7 @@ void screen_logger::dsn_logv(const char *file,
     vprintf(fmt, args);
     printf("\n");
 
-    if (log_level >= LOG_LEVEL_FATAL) {
+    if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
         dsn_coredump();
     }
 }
@@ -291,7 +291,7 @@ void simple_logger::dsn_log(const char *file,
         printf("%s\n", str);
     }
 
-    if (log_level >= LOG_LEVEL_FATAL) {
+    if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
         dsn_coredump();
     }
 
