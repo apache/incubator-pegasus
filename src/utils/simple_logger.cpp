@@ -112,6 +112,10 @@ void screen_logger::dsn_logv(const char *file,
     }
     vprintf(fmt, args);
     printf("\n");
+
+    if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
+        dsn_coredump();
+    }
 }
 
 void screen_logger::flush() { ::fflush(stdout); }
@@ -285,6 +289,10 @@ void simple_logger::dsn_log(const char *file,
             printf("%s:%d:%s(): ", file, line, function);
         }
         printf("%s\n", str);
+    }
+
+    if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
+        dsn_coredump();
     }
 
     if (++_lines >= 200000) {
