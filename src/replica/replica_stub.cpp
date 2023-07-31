@@ -132,6 +132,14 @@ DSN_DEFINE_bool(replication,
                 verbose_commit_log_on_start,
                 false,
                 "whether to print verbose log when commit mutation when starting the server");
+DSN_DEFINE_bool(
+    replication,
+    crash_on_slog_error,
+    false,
+    "whether to exit the process while fail to open slog. If true, the process will exit and leave "
+    "the corrupted slog and replicas to be handled by the administrator. If false, the process "
+    "will continue, and remove the slog and move all the replicas to corresponding error "
+    "directories");
 DSN_DEFINE_uint32(replication,
                   max_concurrent_manual_emergency_checkpointing_count,
                   10,
@@ -708,6 +716,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     if (err == ERR_OK) {
         LOG_INFO("replay shared log succeed, time_used = {} ms", finish_time - start_time);
     } else {
+        if (FLAGS_crash_on_slog_error) {
+            LOG_FATAL("replay shared log failed, err = {}, please check the error details", err);
+        }
         LOG_ERROR("replay shared log failed, err = {}, time_used = {} ms, clear all logs ...",
                   err,
                   finish_time - start_time);
