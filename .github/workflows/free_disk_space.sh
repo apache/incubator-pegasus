@@ -36,6 +36,7 @@ echo "After removing large packages, the space of each disk:"
 df -h
 
 echo "Listing directories ..."
+du -csh /*
 du -csh /__w/*/*
 du -csh /__t/*/*
 du -csh /opt/*
@@ -47,8 +48,11 @@ echo "AGENT_TOOLSDIRECTORY is $AGENT_TOOLSDIRECTORY"
 
 echo "Removing large directories ..."
 rm -rf /__t/CodeQL
-rm -rf /__t/node
 rm -rf /__t/PyPy
+rm -rf /__t/Python
+rm -rf /__t/Ruby
+rm -rf /__t/go
+rm -rf /__t/node
 rm -rf /opt/ghc
 rm -rf /usr/local/.ghcup
 rm -rf /usr/local/graalvm
