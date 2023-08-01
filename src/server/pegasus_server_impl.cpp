@@ -2668,10 +2668,7 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
         }
 
         const auto &setter = cf_opts_setters.find(option);
-        if (setter == cf_opts_setters.end()) {
-            LOG_WARNING("cannot find {} setter function, and set this option fail.", option);
-            continue;
-        }
+        CHECK_TRUE(setter != cf_opts_setters.end());
         if (setter->second(find->second, _data_cf_opts)) {
             LOG_INFO_PREFIX("Set {} \"{}\" succeed", find->first, find->second);
         }
@@ -2684,10 +2681,7 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
         }
 
         const auto &setter = cf_opts_setters.find(option);
-        if (setter == cf_opts_setters.end()) {
-            LOG_WARNING("cannot find {} setter function, and set this option fail.", option);
-            continue;
-        }
+        CHECK_TRUE(setter != cf_opts_setters.end());
         if (setter->second(find->second, _data_cf_opts)) {
             LOG_INFO_PREFIX("Set {} \"{}\" succeed", find->first, find->second);
         }
