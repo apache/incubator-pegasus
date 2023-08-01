@@ -16,8 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 echo "=============================================================================="
 echo "Freeing up disk space on Github workflows"
 echo "=============================================================================="
@@ -36,9 +34,11 @@ echo "After removing large packages, the space of each disk:"
 df -h
 
 echo "Listing directories ..."
+mount
 du -csh /*
-du -csh /__w/*/*
+du -csh /__e/*/*
 du -csh /__t/*/*
+du -csh /__w/*/*
 du -csh /opt/*
 du -csh /usr/local/*
 du -csh /usr/local/lib/*
