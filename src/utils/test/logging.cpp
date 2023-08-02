@@ -38,6 +38,7 @@
 #include <string>
 
 #include "utils/api_utilities.h"
+#include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 
 TEST(core, logging)
@@ -76,8 +77,8 @@ TEST(core, dlog_f)
                  {dsn_log_level_t::LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
                  {dsn_log_level_t::LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
 
-    fail::setup();
-    fail::cfg("coredump_for_fatal_log", "void(false)");
+    dsn::fail::setup();
+    dsn::fail::cfg("coredump_for_fatal_log", "void(false)");
 
     for (auto test : tests) {
         // Test logging_provider::dsn_log
@@ -87,5 +88,5 @@ TEST(core, dlog_f)
         dlog(test.level, "dlog: sortkey = %s", test.str.c_str());
     }
 
-    fail::teardown();
+    dsn::fail::teardown();
 }

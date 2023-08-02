@@ -300,11 +300,10 @@ void simple_logger::dsn_log(const char *file,
     if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
         bool coredump = true;
         FAIL_POINT_INJECT_NOT_RETURN_F(
-            "coredump_for_fatal_log",
-            [&coredump, this](dsn::string_view str) {
-            CHECK(buf2bool(str, coredump),
-                              "invalid coredump toggle for fatal log, should be true or false: {}",
-                              str);
+            "coredump_for_fatal_log", [&coredump, this](dsn::string_view str) {
+                CHECK(buf2bool(str, coredump),
+                      "invalid coredump toggle for fatal log, should be true or false: {}",
+                      str);
             });
 
         if (coredump) {

@@ -47,17 +47,19 @@ public:
     ~screen_logger() override;
 
     void dsn_logv(const char *file,
-                          const char *function,
-                          const int line,
-                          dsn_log_level_t log_level,
-                          const char *fmt,
-                          va_list args) override;
+                  const char *function,
+                  const int line,
+                  dsn_log_level_t log_level,
+                  const char *fmt,
+                  va_list args) override;
 
     void dsn_log(const char *file,
-                         const char *function,
-                         const int line,
-                         dsn_log_level_t log_level,
-                         const char *str) override {}
+                 const char *function,
+                 const int line,
+                 dsn_log_level_t log_level,
+                 const char *str) override
+    {
+    }
 
     virtual void flush();
 
