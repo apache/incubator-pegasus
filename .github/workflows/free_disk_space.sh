@@ -39,6 +39,10 @@ du -csh /*
 du -csh /__e/*/*
 du -csh /__t/*/*
 du -csh /__w/*/*
+du -csh /github/*
+du -csh /github/home/*
+du -csh /github/workflow/*
+du -csh /home/*
 du -csh /opt/*
 du -csh /usr/local/*
 du -csh /usr/local/lib/*
