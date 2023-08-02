@@ -57,9 +57,7 @@
 #define CHECK_EXPRESSION(expression, evaluation, ...)                                              \
     do {                                                                                           \
         if (dsn_unlikely(!(evaluation))) {                                                         \
-            dlog_f(LOG_LEVEL_FATAL, "assertion expression: " #expression);                         \
-            dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__);                                                  \
-            dsn_coredump();                                                                        \
+            LOG_FATAL("assertion expression: " #expression " !! " __VA_ARGS__);                    \
         }                                                                                          \
     } while (false)
 

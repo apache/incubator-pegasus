@@ -38,10 +38,12 @@
 #include "runtime/api_layer1.h"
 #include "runtime/task/task_spec.h"
 #include "utils/command_manager.h"
+#include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
@@ -261,6 +263,10 @@ void simple_logger::dsn_logv(const char *file,
         printf("\n");
     }
 
+    if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
+        dsn_coredump();
+    }
+
     if (++_lines >= 200000) {
         create_log_file();
     }
@@ -292,7 +298,18 @@ void simple_logger::dsn_log(const char *file,
     }
 
     if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
-        dsn_coredump();
+        bool coredump = true;
+        FAIL_POINT_INJECT_NOT_RETURN_F(
+            "coredump_for_fatal_log",
+            [&coredump, this](dsn::string_view str) {
+            CHECK(buf2bool(str, coredump),
+                              "invalid coredump toggle for fatal log, should be true or false: {}",
+                              str);
+            });
+
+        if (coredump) {
+            dsn_coredump();
+        }
     }
 
     if (++_lines >= 200000) {

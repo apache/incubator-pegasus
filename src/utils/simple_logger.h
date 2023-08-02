@@ -46,18 +46,18 @@ public:
     explicit screen_logger(bool short_header);
     ~screen_logger() override;
 
-    virtual void dsn_logv(const char *file,
+    void dsn_logv(const char *file,
                           const char *function,
                           const int line,
                           dsn_log_level_t log_level,
                           const char *fmt,
-                          va_list args);
+                          va_list args) override;
 
-    virtual void dsn_log(const char *file,
+    void dsn_log(const char *file,
                          const char *function,
                          const int line,
                          dsn_log_level_t log_level,
-                         const char *str){};
+                         const char *str) override {}
 
     virtual void flush();
 

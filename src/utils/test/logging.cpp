@@ -76,7 +76,16 @@ TEST(core, dlog_f)
                  {dsn_log_level_t::LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
                  {dsn_log_level_t::LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
 
+    fail::setup();
+    fail::cfg("coredump_for_fatal_log", "void(false)");
+
     for (auto test : tests) {
-        dlog_f(test.level, "sortkey = {}", test.str);
+        // Test logging_provider::dsn_log
+        dlog_f(test.level, "dlog_f: sortkey = {}", test.str);
+
+        // Test logging_provider::dsn_logv
+        dlog(test.level, "dlog: sortkey = %s", test.str.c_str());
     }
+
+    fail::teardown();
 }
