@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # The MIT License (MIT)
 #
 # Copyright (c) 2015 Microsoft Corporation
