@@ -29,8 +29,8 @@ if [ -z "${REPORT_DIR}" ]; then
 fi
 
 if [ -n ${TEST_OPTS} ]; then
-    if [ ! -f ./config-test.ini ]; then
-        echo "./config-test.ini does not exists !"
+    if [ ! -f "./config-test.ini" ]; then
+        echo "./config-test.ini does not exists"
         exit 1
     fi
 
