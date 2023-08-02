@@ -35,14 +35,16 @@ df -h
 
 echo "Listing directories ..."
 mount
+ls -lrt /
 du -csh /*
 du -csh /__e/*/*
 du -csh /__t/*/*
 du -csh /__w/*/*
+ls -lrt /github
 du -csh /github/*
-du -csh /github/home/*
+ls -lrt /github/home
 du -csh /github/workflow/*
-du -csh /home/*
+ls -lrt /home
 du -csh /opt/*
 du -csh /usr/local/*
 du -csh /usr/local/lib/*
