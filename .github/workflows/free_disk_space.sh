@@ -42,9 +42,6 @@ du -csh /__t/*/*
 du -csh /__w/*/*
 ls -lrt /github
 du -csh /github/*
-ls -lrt /github/home
-du -csh /github/workflow/*
-ls -lrt /home
 du -csh /opt/*
 du -csh /usr/local/*
 du -csh /usr/local/lib/*
