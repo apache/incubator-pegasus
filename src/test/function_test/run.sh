@@ -26,7 +26,7 @@ fi
 
 if [ -n ${TEST_OPTS} ]; then
     if [ ! -f ./config.ini ]; then
-        echo "./config.ini does not exists !"
+        echo "./config.ini does not exists"
         exit 1
     fi
 
