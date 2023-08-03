@@ -64,7 +64,7 @@ TEST(core, logging_big_log)
              big_str.c_str());
 }
 
-TEST(core, dlog_f)
+TEST(core, dlog)
 {
     struct test_case
     {
