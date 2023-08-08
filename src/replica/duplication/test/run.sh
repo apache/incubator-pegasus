@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # The MIT License (MIT)
 #
 # Copyright (c) 2015 Microsoft Corporation
@@ -23,6 +23,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+if [ -n ${TEST_OPTS} ]; then
+    if [ ! -f "./config-test.ini" ]; then
+        echo "./config-test.ini does not exists"
+        exit 1
+    fi
+
+    OPTS=`echo ${TEST_OPTS} | xargs`
+    config_kvs=(${OPTS//,/ })
+    for config_kv in ${config_kvs[@]}; do
+        config_kv=`echo $config_kv | xargs`
+        kv=(${config_kv//=/ })
+        if [ ! ${#kv[*]} -eq 2 ]; then
+            echo "Invalid config kv !"
+            exit 1
+        fi
+        sed -i '/^\s*'"${kv[0]}"'/c '"${kv[0]}"' = '"${kv[1]}" ./config-test.ini
+    done
+fi
 
 ./dsn_replica_dup_test
 

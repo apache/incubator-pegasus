@@ -29,6 +29,26 @@ bin=./dsn.rep_tests.simple_kv
 function run_single()
 {
     prefix=$1
+
+    if [ -n ${TEST_OPTS} ]; then
+        if [ ! -f "./${prefix}.ini" ]; then
+            echo "./${prefix}.ini does not exists"
+            exit 1
+        fi
+
+        OPTS=`echo ${TEST_OPTS} | xargs`
+        config_kvs=(${OPTS//,/ })
+        for config_kv in ${config_kvs[@]}; do
+            config_kv=`echo $config_kv | xargs`
+            kv=(${config_kv//=/ })
+            if [ ! ${#kv[*]} -eq 2 ]; then
+                echo "Invalid config kv !"
+                exit 1
+            fi
+            sed -i '/^\s*'"${kv[0]}"'/c '"${kv[0]}"' = '"${kv[1]}" ./${prefix}.ini
+        done
+    fi
+
     echo "${bin} ${prefix}.ini ${prefix}.act"
     ${bin} ${prefix}.ini ${prefix}.act
     ret=$?

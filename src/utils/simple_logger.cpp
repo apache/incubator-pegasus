@@ -41,6 +41,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
