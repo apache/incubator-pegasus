@@ -57,9 +57,9 @@
 #define CHECK_EXPRESSION(expression, evaluation, ...)                                              \
     do {                                                                                           \
         if (dsn_unlikely(!(evaluation))) {                                                         \
-            dlog_f(LOG_LEVEL_FATAL, "assertion expression: " #expression);                         \
-            dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__);                                                  \
-            dsn_coredump();                                                                        \
+            std::string assertion_info("assertion expression: [" #expression "] ");                \
+            assertion_info += fmt::format(__VA_ARGS__);                                            \
+            LOG_FATAL(assertion_info);                                                             \
         }                                                                                          \
     } while (false)
 

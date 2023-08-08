@@ -38,11 +38,14 @@
 #include "runtime/api_layer1.h"
 #include "runtime/task/task_spec.h"
 #include "utils/command_manager.h"
+#include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/process_utils.h"
+#include "utils/string_conv.h"
+#include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
@@ -94,6 +97,28 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
                log_prefixed_message_func().c_str());
 }
 
+namespace {
+
+inline void process_fatal_log(dsn_log_level_t log_level)
+{
+    if (dsn_likely(log_level < LOG_LEVEL_FATAL)) {
+        return;
+    }
+
+    bool coredump = true;
+    FAIL_POINT_INJECT_NOT_RETURN_F("coredump_for_fatal_log", [&coredump](dsn::string_view str) {
+        CHECK(buf2bool(str, coredump),
+              "invalid coredump toggle for fatal log, should be true or false: {}",
+              str);
+    });
+
+    if (dsn_likely(coredump)) {
+        dsn_coredump();
+    }
+}
+
+} // anonymous namespace
+
 screen_logger::screen_logger(bool short_header) { _short_header = short_header; }
 
 screen_logger::~screen_logger(void) {}
@@ -114,9 +139,7 @@ void screen_logger::dsn_logv(const char *file,
     vprintf(fmt, args);
     printf("\n");
 
-    if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
-        dsn_coredump();
-    }
+    process_fatal_log(log_level);
 }
 
 void screen_logger::flush() { ::fflush(stdout); }
@@ -262,6 +285,8 @@ void simple_logger::dsn_logv(const char *file,
         printf("\n");
     }
 
+    process_fatal_log(log_level);
+
     if (++_lines >= 200000) {
         create_log_file();
     }
@@ -292,9 +317,7 @@ void simple_logger::dsn_log(const char *file,
         printf("%s\n", str);
     }
 
-    if (dsn_unlikely(log_level >= LOG_LEVEL_FATAL)) {
-        dsn_coredump();
-    }
+    process_fatal_log(log_level);
 
     if (++_lines >= 200000) {
         create_log_file();
