@@ -410,6 +410,9 @@ jobs:
 #          path: |
 #            /github/home/.ccache
 #          key: ubsan_ccache
+#      - name: Free Disk Space (Ubuntu)
+#        run: |
+#          .github/workflows/free_disk_space.sh
 #      - uses: dorny/paths-filter@v2
 #        id: changes
 #        with:
