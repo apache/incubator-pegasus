@@ -410,6 +410,9 @@ jobs:
 #          path: |
 #            /github/home/.ccache
 #          key: ubsan_ccache
+#      - name: Free Disk Space (Ubuntu)
+#        run: |
+#          .github/workflows/free_disk_space.sh
 #      - uses: dorny/paths-filter@v2
 #        id: changes
 #        with:
@@ -591,9 +594,13 @@ jobs:
         run: |
           find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - name: Pack Server
-        run: ./run.sh pack_server -j
+        run: |
+          ./run.sh pack_server -j
+          rm -rf pegasus-server-*
       - name: Pack Tools
-        run: ./run.sh pack_tools -j
+        run: |
+          ./run.sh pack_tools -j
+          rm -rf pegasus-tools-*
       - name: Tar files
         run: |
           mv thirdparty/hadoop-bin ./
