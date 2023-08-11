@@ -295,7 +295,6 @@ ExternalProject_Add(curl
         --disable-smtp
         --disable-telnet
         --disable-tftp
-        --disable-shared
         --without-librtmp
         --without-zlib
         --without-libssh2
