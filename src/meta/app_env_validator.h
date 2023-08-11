@@ -25,6 +25,8 @@
 namespace dsn {
 namespace replication {
 
+bool validate_app_envs(const std::map<std::string, std::string> &envs);
+
 bool validate_app_env(const std::string &env_name,
                       const std::string &env_value,
                       std::string &hint_message);

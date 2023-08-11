@@ -137,7 +137,7 @@ DSN_DEFINE_bool(pegasus.server,
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_disable_table_block_cache,
                 false,
-                "rocksdb tbl_opts.no_block_cache");
+                "rocksdb _tbl_opts.no_block_cache");
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_enable_write_buffer_manager,
                 false,
@@ -466,12 +466,11 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     CHECK(parse_compression_types("none", _meta_cf_opts.compression_per_level),
           "parse rocksdb_compression_type failed.");
 
-    rocksdb::BlockBasedTableOptions tbl_opts;
-    tbl_opts.read_amp_bytes_per_bit = FLAGS_read_amp_bytes_per_bit;
+    _tbl_opts.read_amp_bytes_per_bit = FLAGS_read_amp_bytes_per_bit;
 
     if (FLAGS_rocksdb_disable_table_block_cache) {
-        tbl_opts.no_block_cache = true;
-        tbl_opts.block_restart_interval = 4;
+        _tbl_opts.no_block_cache = true;
+        _tbl_opts.block_restart_interval = 4;
     } else {
         // If block cache is enabled, all replicas on this server will share the same block cache
         // object. It's convenient to control the total memory used by this server, and the LRU
@@ -484,7 +483,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         });
 
         // every replica has the same block cache
-        tbl_opts.block_cache = _s_block_cache;
+        _tbl_opts.block_cache = _s_block_cache;
     }
 
     // FLAGS_rocksdb_limiter_max_write_megabytes_per_sec <= 0 means close the rate limit.
@@ -520,7 +519,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                             FLAGS_rocksdb_total_size_across_write_buffer);
             _s_write_buffer_manager = std::make_shared<rocksdb::WriteBufferManager>(
                 static_cast<size_t>(FLAGS_rocksdb_total_size_across_write_buffer),
-                tbl_opts.block_cache);
+                _tbl_opts.block_cache);
         });
         _db_opts.write_buffer_manager = _s_write_buffer_manager;
     }
@@ -541,33 +540,33 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     CHECK(index_type_item != INDEX_TYPE_STRING_MAP.end(),
           "[pegasus.server]rocksdb_index_type should be one among binary_search, "
           "hash_search, two_level_index_search or binary_search_with_first_key.");
-    tbl_opts.index_type = index_type_item->second;
+    _tbl_opts.index_type = index_type_item->second;
     LOG_INFO_PREFIX("rocksdb_index_type = {}", FLAGS_rocksdb_index_type);
 
-    tbl_opts.partition_filters = FLAGS_rocksdb_partition_filters;
+    _tbl_opts.partition_filters = FLAGS_rocksdb_partition_filters;
     // TODO(yingchun): clean up these useless log ?
-    LOG_INFO_PREFIX("rocksdb_partition_filters = {}", tbl_opts.partition_filters);
+    LOG_INFO_PREFIX("rocksdb_partition_filters = {}", _tbl_opts.partition_filters);
 
-    tbl_opts.metadata_block_size = FLAGS_rocksdb_metadata_block_size;
-    LOG_INFO_PREFIX("rocksdb_metadata_block_size = {}", tbl_opts.metadata_block_size);
+    _tbl_opts.metadata_block_size = FLAGS_rocksdb_metadata_block_size;
+    LOG_INFO_PREFIX("rocksdb_metadata_block_size = {}", _tbl_opts.metadata_block_size);
 
-    tbl_opts.cache_index_and_filter_blocks = FLAGS_rocksdb_cache_index_and_filter_blocks;
+    _tbl_opts.cache_index_and_filter_blocks = FLAGS_rocksdb_cache_index_and_filter_blocks;
     LOG_INFO_PREFIX("rocksdb_cache_index_and_filter_blocks = {}",
-                    tbl_opts.cache_index_and_filter_blocks);
+                    _tbl_opts.cache_index_and_filter_blocks);
 
-    tbl_opts.pin_top_level_index_and_filter = FLAGS_rocksdb_pin_top_level_index_and_filter;
+    _tbl_opts.pin_top_level_index_and_filter = FLAGS_rocksdb_pin_top_level_index_and_filter;
     LOG_INFO_PREFIX("rocksdb_pin_top_level_index_and_filter = {}",
-                    tbl_opts.pin_top_level_index_and_filter);
+                    _tbl_opts.pin_top_level_index_and_filter);
 
-    tbl_opts.cache_index_and_filter_blocks_with_high_priority =
+    _tbl_opts.cache_index_and_filter_blocks_with_high_priority =
         FLAGS_rocksdb_cache_index_and_filter_blocks_with_high_priority;
     LOG_INFO_PREFIX("rocksdb_cache_index_and_filter_blocks_with_high_priority = {}",
-                    tbl_opts.cache_index_and_filter_blocks_with_high_priority);
+                    _tbl_opts.cache_index_and_filter_blocks_with_high_priority);
 
-    tbl_opts.pin_l0_filter_and_index_blocks_in_cache =
+    _tbl_opts.pin_l0_filter_and_index_blocks_in_cache =
         FLAGS_rocksdb_pin_l0_filter_and_index_blocks_in_cache;
     LOG_INFO_PREFIX("rocksdb_pin_l0_filter_and_index_blocks_in_cache = {}",
-                    tbl_opts.pin_l0_filter_and_index_blocks_in_cache);
+                    _tbl_opts.pin_l0_filter_and_index_blocks_in_cache);
 
     // Bloom filter configurations.
     if (!FLAGS_rocksdb_disable_bloom_filter) {
@@ -584,8 +583,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         //                                 50         |      0.225453      |      ~0.00003
         // Recommend using no more than three decimal digits after the decimal point, as in 6.667.
         // More details: https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter
-        tbl_opts.format_version = FLAGS_rocksdb_format_version;
-        tbl_opts.filter_policy.reset(
+        _tbl_opts.format_version = FLAGS_rocksdb_format_version;
+        _tbl_opts.filter_policy.reset(
             rocksdb::NewBloomFilterPolicy(FLAGS_rocksdb_bloom_filter_bits_per_key, false));
 
         if (dsn::utils::equals(FLAGS_rocksdb_filter_type, "prefix")) {
@@ -596,8 +595,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         }
     }
 
-    _data_cf_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
-    _meta_cf_opts.table_factory.reset(NewBlockBasedTableFactory(tbl_opts));
+    _data_cf_opts.table_factory.reset(NewBlockBasedTableFactory(_tbl_opts));
+    _meta_cf_opts.table_factory.reset(NewBlockBasedTableFactory(_tbl_opts));
 
     _key_ttl_compaction_filter_factory = std::make_shared<KeyWithTTLCompactionFilterFactory>();
     _data_cf_opts.compaction_filter_factory = _key_ttl_compaction_filter_factory;

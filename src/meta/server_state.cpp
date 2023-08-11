@@ -1151,6 +1151,9 @@ void server_state::create_app(dsn::message_ex *msg)
                !validate_target_max_replica_count(request.options.replica_count)) {
         response.err = ERR_INVALID_PARAMETERS;
         will_create_app = false;
+    } else if (!validate_app_envs(request.options.envs)) {
+        response.err = ERR_INVALID_PARAMETERS;
+        will_create_app = false;
     } else {
         zauto_write_lock l(_lock);
         app = get_app(request.app_name);
