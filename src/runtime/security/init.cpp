@@ -46,8 +46,9 @@ void set_krb5_env(bool is_server)
 
 error_s init_kerberos(bool is_server)
 {
-    // When pegasus enable auth and lacks the necessary parameters to execute kinit by itself, and
-    // will try to obtain the principal under the current unix account for identity authentication.
+    // When FLAGS_enable_auth is set but lacks of necessary parameters to execute kinit by itself, then
+    // try to obtain the principal under the current Unix account for identity authentication
+    // automatically.
     if (FLAGS_enable_auth && utils::is_empty(FLAGS_krb5_keytab) &&
         utils::is_empty(FLAGS_krb5_principal)) {
         return run_get_principal_without_kinit();
