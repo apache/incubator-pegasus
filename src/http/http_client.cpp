@@ -15,24 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#pragma once
-
-#include <curl/curl.h>
-
-#include "http/http_method.h"
-
 namespace pegasus {
-
-class http_client
-{
-public:
-    http_client();
-    ~http_client();
-
-private:
-    CURL* _curl = nullptr;
-
-    DISALLOW_COPY_AND_ASSIGN(http_client);
-};
 
 } // namespace pegasus
