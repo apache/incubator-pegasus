@@ -30,7 +30,15 @@ public:
     ~http_client();
 
 private:
+    void clear_error_buffer();
+    bool is_error_buffer_empty();
+
+    // The size of a buffer that is used by libcurl to store human readable
+    // error messages on failures or problems.
+    static const constexpr size_t kErrorBufferBytes = CURL_ERROR_SIZE;
+
     CURL* _curl = nullptr;
+    char _error_buf[kErrorBufferBytes];
 
     DISALLOW_COPY_AND_ASSIGN(http_client);
 };
