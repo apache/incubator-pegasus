@@ -174,7 +174,7 @@ public:
             message_ptr msg = parser.get_message_on_receive(&reader, read_next);
             ASSERT_NE(msg, nullptr);
             ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
-            ASSERT_EQ(msg->header->hdr_type, http_method::GET);
+            ASSERT_EQ(msg->header->hdr_type, pegasus::http_method::GET);
             ASSERT_EQ(msg->header->context.u.is_request, 1);
             ASSERT_EQ(msg->buffers.size(), HTTP_MSG_BUFFERS_NUM);
             ASSERT_EQ(msg->buffers[2].size(), 1); // url
@@ -215,7 +215,7 @@ TEST_F(http_message_parser_test, parse_request)
     ASSERT_NE(msg, nullptr);
 
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
-    ASSERT_EQ(msg->header->hdr_type, http_method::POST);
+    ASSERT_EQ(msg->header->hdr_type, pegasus::http_method::POST);
     ASSERT_EQ(msg->header->context.u.is_request, 1);
     ASSERT_EQ(msg->buffers.size(), HTTP_MSG_BUFFERS_NUM);
     ASSERT_EQ(msg->buffers[1].to_string(), "Message Body sdfsdf"); // body
@@ -266,7 +266,7 @@ TEST_F(http_message_parser_test, eof)
     ASSERT_NE(msg, nullptr);
 
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
-    ASSERT_EQ(msg->header->hdr_type, http_method::GET);
+    ASSERT_EQ(msg->header->hdr_type, pegasus::http_method::GET);
     ASSERT_EQ(msg->header->context.u.is_request, 1);
     ASSERT_EQ(msg->buffers.size(), HTTP_MSG_BUFFERS_NUM);
     ASSERT_EQ(msg->buffers[1].to_string(), ""); // body
@@ -297,7 +297,7 @@ TEST_F(http_message_parser_test, parse_long_url)
     message_ptr msg = parser.get_message_on_receive(&reader, read_next);
     ASSERT_NE(msg, nullptr);
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
-    ASSERT_EQ(msg->header->hdr_type, http_method::GET);
+    ASSERT_EQ(msg->header->hdr_type, pegasus::http_method::GET);
     ASSERT_EQ(msg->header->context.u.is_request, 1);
     ASSERT_EQ(msg->buffers.size(), HTTP_MSG_BUFFERS_NUM);
     ASSERT_EQ(msg->buffers[2].size(), 4097); // url

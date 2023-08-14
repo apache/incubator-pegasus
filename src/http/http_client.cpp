@@ -18,7 +18,8 @@
 #include "http/http_client.h"
 
 #include <fmt/core.h>
-#include "utils/errors.h"
+#include <limits>
+#include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
 namespace pegasus {
@@ -45,19 +46,22 @@ http_client::~http_client()
     }
 }
 
+            // TODO: err
 #define RETURN_IF_CURL_NOT_OK(expr, err, ...) \
     do { \
     const auto code = (expr); \
     if (dsn_unlikely(code != CURLE_OK)) { \
         std::string msg(fmt::format("{}: {}", fmt::format(__VA_ARGS__), to_error_msg(code))); \
-            // TODO: err
         return dsn::error_s::make(err, msg); \
     } \
     } while (0)
 
-#define RETURN_IF_SETOPT_NOT_OK(opt, param, err) \
             // TODO: err
+#define RETURN_IF_SETOPT_NOT_OK(opt, param, err) \
     RETURN_IF_CURL_NOT_OK(curl_easy_setopt(_curl, opt, param), err, "failed to set " #opt " to " #param)
+
+#define RETURN_IF_DO_METHOD_NOT_OK(err) \
+    RETURN_IF_CURL_NOT_OK(curl_easy_perform(_curl), err, "failed to perform [method={}, url={}]", enum_to_string(_method), _url, action)
 
 dsn::error_s http_client::init()
 {
@@ -83,15 +87,17 @@ dsn::error_s http_client::init()
     // Before 8.3.0, it was unlimited.
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_MAXREDIRS, 20);
 
-    // A lambda can only be converted to a function pointer if it does not capture. See
+    // A lambda can only be converted to a function pointer if it does not capture:
     // https://stackoverflow.com/questions/28746744/passing-capturing-lambda-as-function-pointer
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3337.pdf
     curl_write_callback callback = [](char* buffer, size_t size, size_t nmemb, void* param) {
-        HttpClient* client = (HttpClient*)param;
+        http_client* client = reinterpret_cast<http_client*>(param);
         return client->on_response_data(buffer, size * nmemb);
     };
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEFUNCTION, callback);
 
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEDATA, static_cast<void*>(this));
+    // This http_client object itself is passed to the callback function.
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEDATA, reinterpret_cast<void*>(this));
 
     return error_s::ok();
 }
@@ -117,9 +123,62 @@ std::string http_client::to_error_msg(CURLcode code)
     return err_msg;
 }
 
+size_t http_client::on_response_data(const void* data, size_t length) {
+    if (_callback == nullptr) {
+        return length;
+    }
+
+    if (!(*_callback)) {
+        return length;
+    }
+
+    return (*_callback)(data, length) ? length : std::numeric_limits<size_t>::max();
+}
+
     // Error buffer should be cleared
     clear_error_buf();
 
+dsn::error_s http_client::set_method(http_method method) {
+    switch (method) {
+    case http_method::GET:
+        RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPGET, 1L);
+        break;
+    case http_method::POST:
+        RETURN_IF_SETOPT_NOT_OK(CURLOPT_POST, 1L);
+        break;
+    default:
+        LOG_FATAL("Unsupported http_method");
+    }
+
+    _method = method;
+    return dsn::error_s::ok();
+}
+
+dsn::error_s http_client::set_url(const std::string& url) {
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_URL, url.c_str());
+    _url = url;
+}
+
+dsn::error_s http_client::do_method(const http_client::http_callback& callback) {
+    _callback = &callback;
+    RETURN_IF_DO_METHOD_NOT_OK();
+    return dsn::error_s::ok();
+}
+
+dsn::error_s http_client::do_method(std::string* response) {
+    if (response == nullptr) {
+        return do_method();
+    }
+
+    auto callback = [response](const void* data, size_t length) {
+        response->append(reinterpret_cast<char*>data, length);
+        return true;
+    };
+
+    return do_method(callback);
+}
+
+#undef RETURN_IF_DO_METHOD_NOT_OK
 #undef RETURN_IF_SETOPT_NOT_OK
 
 } // namespace pegasus

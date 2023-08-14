@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "utils/enum_helper.h"
+
 namespace pegasus {
 
 enum class http_method
@@ -24,5 +26,10 @@ enum class http_method
     GET = 1,
     POST = 2,
 };
+
+ENUM_BEGIN(http_method)
+ENUM_REG2(http_method, GET)
+ENUM_REG2(http_method, POST)
+ENUM_END(http_method)
 
 } // namespace pegasus
