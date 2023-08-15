@@ -19,10 +19,10 @@
 
 #include <fmt/core.h>
 #include <limits>
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 
-namespace pegasus {
+namespace dsn {
 
 DSN_DEFINE_uint32(http,
                   curl_timeout_ms,
@@ -30,11 +30,17 @@ DSN_DEFINE_uint32(http,
                   "The maximum time in milliseconds that you allow the libcurl transfer operation "
                   "to complete");
 
-static_assert(http_client::kErrorBufferBytes >= CURL_ERROR_SIZE,
-              "The error buffer used by libcurl must be at least CURL_ERROR_SIZE bytes big");
-
-http_client::http_client() : _curl(nullptr), _method(http_method::GET), _callback(nullptr)
+http_client::http_client()
+    : _curl(nullptr),
+      _method(http_method::GET),
+      _callback(nullptr),
+      _header_changed(true),
+      _header_list(nullptr)
 {
+    // Since `kErrorBufferBytes` is private, `static_assert` have to be put in constructor.
+    static_assert(http_client::kErrorBufferBytes >= CURL_ERROR_SIZE,
+                  "The error buffer used by libcurl must be at least CURL_ERROR_SIZE bytes big");
+
     clear_error_buf();
 }
 
@@ -44,6 +50,8 @@ http_client::~http_client()
         curl_easy_cleanup(_curl);
         _curl = nullptr;
     }
+
+    free_header_list();
 }
 
 namespace {
@@ -72,8 +80,9 @@ inline dsn::error_code to_error_code(CURLcode code)
     } while (0)
 
 #define RETURN_IF_SETOPT_NOT_OK(opt, input)                                                        \
-    RETURN_IF_CURL_NOT_OK(curl_easy_setopt(_curl, opt, input), "failed to set " #opt " to"         \
-                                                                                     " " #input)
+    RETURN_IF_CURL_NOT_OK(curl_easy_setopt(_curl, opt, input),                                     \
+                          "failed to set " #opt " to"                                              \
+                          " " #input)
 
 #define RETURN_IF_GETINFO_NOT_OK(info, output)                                                     \
     RETURN_IF_CURL_NOT_OK(curl_easy_getinfo(_curl, info, output), "failed to get from " #info)
@@ -89,12 +98,14 @@ dsn::error_s http_client::init()
     if (_curl == nullptr) {
         _curl = curl_easy_init();
         if (_curl == nullptr) {
-            // TODO: err
-            return dsn::error_s::make(err, "fail to initialize curl");
+            return dsn::error_s::make(dsn::ERR_CURL_FAILED, "fail to initialize curl");
         }
     } else {
         curl_easy_reset(_curl);
     }
+
+    clear_header_fields();
+    free_header_list();
 
     // Additional messages for errors are needed.
     clear_error_buf();
@@ -187,11 +198,80 @@ dsn::error_s http_client::set_timeout(long timeout_ms)
     return dsn::error_s::ok();
 }
 
+void http_client::clear_header_fields()
+{
+    _header_fields.clear();
+
+    _header_changed = true;
+}
+
+void http_client::free_header_list()
+{
+    if (_header_list == nullptr) {
+        return;
+    }
+
+    curl_slist_free_all(_header_list);
+    _header_list = nullptr;
+}
+
+void http_client::set_header_field(const dsn::string_view &key, const dsn::string_view &val)
+{
+    _header_fields[key] = val;
+    _header_changed = true;
+}
+
+void http_client::set_accept(const dsn::string_view &val) { set_header_field("Accept", val); }
+
+void http_client::set_content_type(const dsn::string_view &val)
+{
+    set_header_field("Content-Type", val);
+}
+
+dsn::error_s http_client::process_header()
+{
+    if (!_header_changed) {
+        return dsn::error_s::ok();
+    }
+
+    free_header_list();
+
+    for (const auto &field : _header_fields) {
+        auto str = fmt::format("{}: {}", field.first, field.second);
+
+        // A null pointer is returned if anything went wrong, otherwise the new list pointer is
+        // returned. To avoid overwriting an existing non-empty list on failure, the new list
+        // should be returned to a temporary variable which can be tested for NULL before updating
+        // the original list pointer. (https://curl.se/libcurl/c/curl_slist_append.html)
+        struct curl_slist *temp = curl_slist_append(_header_list, str.c_str());
+        if (temp == nullptr) {
+            free_header_list();
+            return dsn::error_s::make(dsn::ERR_CURL_FAILED, "curl_slist_append failed");
+        }
+        _header_list = temp;
+    }
+
+    // This would work well even if `_header_list` is NULL pointer. Pass a NULL to this option
+    // to reset back to no custom headers. (https://curl.se/libcurl/c/CURLOPT_HTTPHEADER.html)
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPHEADER, _header_list);
+
+    // New header has been built successfully, thus mark it unchanged.
+    _header_changed = false;
+
+    return dsn::error_s::ok();
+}
+
 dsn::error_s http_client::do_method(const http_client::http_callback &callback)
 {
     // `curl_easy_perform` would run synchronously, thus it is safe to use the pointer to
     // `callback`.
     _callback = &callback;
+
+    const auto &err = process_header();
+    if (!err) {
+        return err;
+    }
+
     RETURN_IF_DO_METHOD_NOT_OK();
     return dsn::error_s::ok();
 }
@@ -203,7 +283,7 @@ dsn::error_s http_client::do_method(std::string *response)
     }
 
     auto callback = [response](const void *data, size_t length) {
-        response->append(reinterpret_cast<char *> data, length);
+        response->append(reinterpret_cast<char *>(data), length);
         return true;
     };
 
@@ -220,4 +300,4 @@ dsn::error_s http_client::get_http_status(long &http_status) const
 #undef RETURN_IF_SETOPT_NOT_OK
 #undef RETURN_IF_CURL_NOT_OK
 
-} // namespace pegasus
+} // namespace dsn

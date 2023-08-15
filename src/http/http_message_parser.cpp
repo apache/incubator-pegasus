@@ -132,10 +132,10 @@ http_message_parser::http_message_parser()
 
         message_header *header = msg->header;
         if (parser->type == HTTP_REQUEST && parser->method == HTTP_GET) {
-            header->hdr_type = pegasus::http_method::GET;
+            header->hdr_type = http_method::GET;
             header->context.u.is_request = 1;
         } else if (parser->type == HTTP_REQUEST && parser->method == HTTP_POST) {
-            header->hdr_type = pegasus::http_method::POST;
+            header->hdr_type = http_method::POST;
             header->context.u.is_request = 1;
         } else {
             // Bit fields don't work with "perfect" forwarding, see

@@ -20,11 +20,14 @@
 #include <curl/curl.h>
 #include <functional>
 #include <string>
+#include <unordered_map>
 
 #include "http/http_method.h"
 #include "utils/errors.h"
+#include "utils/ports.h"
+#include "utils/string_view.h"
 
-namespace pegasus {
+namespace dsn {
 
 // Not thread-safe.
 class http_client
@@ -41,16 +44,26 @@ public:
     dsn::error_s set_url(const std::string &url);
     dsn::error_s set_timeout(long timeout_ms);
 
-    dsn::error_s do_method(long &http_status, const http_callback &callback = {});
-    dsn::error_s do_method(long &http_status, std::string *response);
+    void clear_header_fields();
+    void set_accept(const dsn::string_view &val);
+    void set_content_type(const dsn::string_view &val);
+
+    dsn::error_s do_method(const http_callback &callback = {});
+    dsn::error_s do_method(std::string *response);
 
     dsn::error_s get_http_status(long &http_status) const;
 
 private:
-    void clear_error_buffer();
-    bool is_error_buffer_empty() const;
+    using header_field_map = std::unordered_map<std::string, std::string>;
+
+    void clear_error_buf();
+    bool is_error_buf_empty() const;
     std::string to_error_msg(CURLcode code) const;
     size_t on_response_data(const void *data, size_t length);
+
+    void free_header_list();
+    void set_header_field(const dsn::string_view &key, const dsn::string_view &val);
+    dsn::error_s process_header();
 
     // The size of a buffer that is used by libcurl to store human readable
     // error messages on failures or problems.
@@ -62,7 +75,11 @@ private:
     const http_callback *_callback;
     char _error_buf[kErrorBufferBytes];
 
+    bool _header_changed;
+    header_field_map _header_fields;
+    struct curl_slist *_header_list;
+
     DISALLOW_COPY_AND_ASSIGN(http_client);
 };
 
-} // namespace pegasus
+} // namespace dsn

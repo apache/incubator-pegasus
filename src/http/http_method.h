@@ -19,17 +19,18 @@
 
 #include "utils/enum_helper.h"
 
-namespace pegasus {
+namespace dsn {
 
 enum class http_method
 {
     GET = 1,
     POST = 2,
+    INVALID = 100,
 };
 
-ENUM_BEGIN(http_method)
+ENUM_BEGIN(http_method, http_method::INVALID)
 ENUM_REG2(http_method, GET)
 ENUM_REG2(http_method, POST)
 ENUM_END(http_method)
 
-} // namespace pegasus
+} // namespace dsn

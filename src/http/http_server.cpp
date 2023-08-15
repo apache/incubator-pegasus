@@ -168,7 +168,7 @@ void http_server::serve(message_ex *msg)
     http_request ret;
     ret.body = m->buffers[1];
     ret.full_url = m->buffers[2];
-    ret.method = static_cast<pegasus::http_method>(m->header->hdr_type);
+    ret.method = static_cast<http_method>(m->header->hdr_type);
 
     http_parser_url u{0};
     http_parser_parse_url(ret.full_url.data(), ret.full_url.length(), false, &u);

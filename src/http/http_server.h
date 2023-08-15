@@ -50,7 +50,7 @@ struct http_request
     std::unordered_map<std::string, std::string> query_args;
     blob body;
     blob full_url;
-    pegasus::http_method method;
+    http_method method;
 };
 
 enum class http_status_code
