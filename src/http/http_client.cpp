@@ -215,18 +215,15 @@ void http_client::free_header_list()
     _header_list = nullptr;
 }
 
-void http_client::set_header_field(const dsn::string_view &key, const dsn::string_view &val)
+void http_client::set_header_field(dsn::string_view key, dsn::string_view val)
 {
-    _header_fields[key] = val;
+    _header_fields[std::string(key)] = std::string(val);
     _header_changed = true;
 }
 
-void http_client::set_accept(const dsn::string_view &val) { set_header_field("Accept", val); }
+void http_client::set_accept(dsn::string_view val) { set_header_field("Accept", val); }
 
-void http_client::set_content_type(const dsn::string_view &val)
-{
-    set_header_field("Content-Type", val);
-}
+void http_client::set_content_type(dsn::string_view val) { set_header_field("Content-Type", val); }
 
 dsn::error_s http_client::process_header()
 {
@@ -283,7 +280,7 @@ dsn::error_s http_client::do_method(std::string *response)
     }
 
     auto callback = [response](const void *data, size_t length) {
-        response->append(reinterpret_cast<char *>(data), length);
+        response->append(reinterpret_cast<const char *>(data), length);
         return true;
     };
 

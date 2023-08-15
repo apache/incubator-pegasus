@@ -45,8 +45,8 @@ public:
     dsn::error_s set_timeout(long timeout_ms);
 
     void clear_header_fields();
-    void set_accept(const dsn::string_view &val);
-    void set_content_type(const dsn::string_view &val);
+    void set_accept(dsn::string_view val);
+    void set_content_type(dsn::string_view val);
 
     dsn::error_s do_method(const http_callback &callback = {});
     dsn::error_s do_method(std::string *response);
@@ -62,7 +62,7 @@ private:
     size_t on_response_data(const void *data, size_t length);
 
     void free_header_list();
-    void set_header_field(const dsn::string_view &key, const dsn::string_view &val);
+    void set_header_field(dsn::string_view key, dsn::string_view val);
     dsn::error_s process_header();
 
     // The size of a buffer that is used by libcurl to store human readable
