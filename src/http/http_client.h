@@ -30,27 +30,36 @@ namespace pegasus {
 class http_client
 {
 public:
-    using http_callback = std::function<bool(const void* data, size_t length)>;
+    using http_callback = std::function<bool(const void *data, size_t length)>;
 
     http_client();
     ~http_client();
 
-    dsn::error_s do_method(const http_callback& callback = {});
-    dsn::error_s do_method(std::string* response);
+    dsn::error_s init();
+
+    dsn::error_s set_method(http_method method);
+    dsn::error_s set_url(const std::string &url);
+    dsn::error_s set_timeout(long timeout_ms);
+
+    dsn::error_s do_method(long &http_status, const http_callback &callback = {});
+    dsn::error_s do_method(long &http_status, std::string *response);
+
+    dsn::error_s get_http_status(long &http_status) const;
 
 private:
     void clear_error_buffer();
-    bool is_error_buffer_empty();
-
+    bool is_error_buffer_empty() const;
+    std::string to_error_msg(CURLcode code) const;
+    size_t on_response_data(const void *data, size_t length);
 
     // The size of a buffer that is used by libcurl to store human readable
     // error messages on failures or problems.
     static const constexpr size_t kErrorBufferBytes = CURL_ERROR_SIZE;
 
-    CURL* _curl = nullptr;
+    CURL *_curl;
     http_method _method;
     std::string _url;
-    const http_callback* _callback = nullptr;
+    const http_callback *_callback;
     char _error_buf[kErrorBufferBytes];
 
     DISALLOW_COPY_AND_ASSIGN(http_client);

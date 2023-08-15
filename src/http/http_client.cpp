@@ -25,17 +25,17 @@
 namespace pegasus {
 
 DSN_DEFINE_uint32(http,
-                  libcurl_error_buffer_bytes,
-                  CURL_ERROR_SIZE,
-                  "The size of a buffer that is used by libcurl to store human readable "
-                  "error messages on failures or problems");
-DSN_DEFINE_validator(libcurl_error_buffer_bytes, [](uint32_t value) -> bool { return value >= CURL_ERROR_SIZE; });
+                  curl_timeout_ms,
+                  10000,
+                  "The maximum time in milliseconds that you allow the libcurl transfer operation "
+                  "to complete");
 
-static_assert(http_client::kErrorBufferBytes >= CURL_ERROR_SIZE, "The error buffer used by libcurl must be at least CURL_ERROR_SIZE bytes big");
+static_assert(http_client::kErrorBufferBytes >= CURL_ERROR_SIZE,
+              "The error buffer used by libcurl must be at least CURL_ERROR_SIZE bytes big");
 
-http_client::http_client()
+http_client::http_client() : _curl(nullptr), _method(http_method::GET), _callback(nullptr)
 {
-
+    clear_error_buf();
 }
 
 http_client::~http_client()
@@ -46,22 +46,43 @@ http_client::~http_client()
     }
 }
 
-            // TODO: err
-#define RETURN_IF_CURL_NOT_OK(expr, err, ...) \
-    do { \
-    const auto code = (expr); \
-    if (dsn_unlikely(code != CURLE_OK)) { \
-        std::string msg(fmt::format("{}: {}", fmt::format(__VA_ARGS__), to_error_msg(code))); \
-        return dsn::error_s::make(err, msg); \
-    } \
+namespace {
+
+inline dsn::error_code to_error_code(CURLcode code)
+{
+    if (code == CURLE_OK) {
+        return dsn::ERR_OK;
+    }
+
+    if (code == CURLE_OPERATION_TIMEDOUT) {
+        return dsn::ERR_TIMEOUT;
+    }
+    return dsn::ERR_CURL_FAILED;
+}
+
+} // anonymous namespace
+
+#define RETURN_IF_CURL_NOT_OK(expr, ...)                                                           \
+    do {                                                                                           \
+        const auto code = (expr);                                                                  \
+        if (dsn_unlikely(code != CURLE_OK)) {                                                      \
+            std::string msg(fmt::format("{}: {}", fmt::format(__VA_ARGS__), to_error_msg(code)));  \
+            return dsn::error_s::make(to_error_code(code), msg);                                   \
+        }                                                                                          \
     } while (0)
 
-            // TODO: err
-#define RETURN_IF_SETOPT_NOT_OK(opt, param, err) \
-    RETURN_IF_CURL_NOT_OK(curl_easy_setopt(_curl, opt, param), err, "failed to set " #opt " to " #param)
+#define RETURN_IF_SETOPT_NOT_OK(opt, input)                                                        \
+    RETURN_IF_CURL_NOT_OK(curl_easy_setopt(_curl, opt, input), "failed to set " #opt " to"         \
+                                                                                     " " #input)
 
-#define RETURN_IF_DO_METHOD_NOT_OK(err) \
-    RETURN_IF_CURL_NOT_OK(curl_easy_perform(_curl), err, "failed to perform [method={}, url={}]", enum_to_string(_method), _url, action)
+#define RETURN_IF_GETINFO_NOT_OK(info, output)                                                     \
+    RETURN_IF_CURL_NOT_OK(curl_easy_getinfo(_curl, info, output), "failed to get from " #info)
+
+#define RETURN_IF_DO_METHOD_NOT_OK()                                                               \
+    RETURN_IF_CURL_NOT_OK(curl_easy_perform(_curl),                                                \
+                          "failed to perform [method={}, url={}]",                                 \
+                          enum_to_string(_method),                                                 \
+                          _url)
 
 dsn::error_s http_client::init()
 {
@@ -76,6 +97,7 @@ dsn::error_s http_client::init()
     }
 
     // Additional messages for errors are needed.
+    clear_error_buf();
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_ERRORBUFFER, _error_buf);
 
     // Set with NOSIGNAL since we are multi-threaded.
@@ -84,46 +106,45 @@ dsn::error_s http_client::init()
     // Redirects are supported.
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_FOLLOWLOCATION, 1L);
 
-    // Before 8.3.0, it was unlimited.
+    // Before 8.3.0, CURLOPT_MAXREDIRS was unlimited.
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_MAXREDIRS, 20);
+
+    // Set common timeout for transfer operation. Users could also change it with their
+    // custom values by `set_timeout`.
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_TIMEOUT_MS, static_cast<long>(FLAGS_curl_timeout_ms));
 
     // A lambda can only be converted to a function pointer if it does not capture:
     // https://stackoverflow.com/questions/28746744/passing-capturing-lambda-as-function-pointer
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3337.pdf
-    curl_write_callback callback = [](char* buffer, size_t size, size_t nmemb, void* param) {
-        http_client* client = reinterpret_cast<http_client*>(param);
+    curl_write_callback callback = [](char *buffer, size_t size, size_t nmemb, void *param) {
+        http_client *client = reinterpret_cast<http_client *>(param);
         return client->on_response_data(buffer, size * nmemb);
     };
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEFUNCTION, callback);
 
     // This http_client object itself is passed to the callback function.
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEDATA, reinterpret_cast<void*>(this));
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEDATA, reinterpret_cast<void *>(this));
 
     return error_s::ok();
 }
 
-void http_client::clear_error_buf()
-{
-    _error_buf[0] = 0;
-}
+void http_client::clear_error_buf() { _error_buf[0] = 0; }
 
-bool http_client::is_error_buf_empty()
-{
-    return _error_buf[0] == 0;
-}
+bool http_client::is_error_buf_empty() const { return _error_buf[0] == 0; }
 
-std::string http_client::to_error_msg(CURLcode code)
+std::string http_client::to_error_msg(CURLcode code) const
 {
-        std::string err_msg = fmt::format("code={}", curl_easy_strerror(code)); 
-    if (is_error_buf_empty()) { 
+    std::string err_msg = fmt::format("code={}", curl_easy_strerror(code));
+    if (is_error_buf_empty()) {
         return err_msg;
-    } 
+    }
 
     err_msg += fmt::format(", msg={}", _error_buf);
     return err_msg;
 }
 
-size_t http_client::on_response_data(const void* data, size_t length) {
+size_t http_client::on_response_data(const void *data, size_t length)
+{
     if (_callback == nullptr) {
         return length;
     }
@@ -135,10 +156,8 @@ size_t http_client::on_response_data(const void* data, size_t length) {
     return (*_callback)(data, length) ? length : std::numeric_limits<size_t>::max();
 }
 
-    // Error buffer should be cleared
-    clear_error_buf();
-
-dsn::error_s http_client::set_method(http_method method) {
+dsn::error_s http_client::set_method(http_method method)
+{
     switch (method) {
     case http_method::GET:
         RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPGET, 1L);
@@ -154,31 +173,51 @@ dsn::error_s http_client::set_method(http_method method) {
     return dsn::error_s::ok();
 }
 
-dsn::error_s http_client::set_url(const std::string& url) {
+dsn::error_s http_client::set_url(const std::string &url)
+{
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_URL, url.c_str());
+
     _url = url;
+    return dsn::error_s::ok();
 }
 
-dsn::error_s http_client::do_method(const http_client::http_callback& callback) {
+dsn::error_s http_client::set_timeout(long timeout_ms)
+{
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_TIMEOUT_MS, timeout_ms);
+    return dsn::error_s::ok();
+}
+
+dsn::error_s http_client::do_method(const http_client::http_callback &callback)
+{
+    // `curl_easy_perform` would run synchronously, thus it is safe to use the pointer to
+    // `callback`.
     _callback = &callback;
     RETURN_IF_DO_METHOD_NOT_OK();
     return dsn::error_s::ok();
 }
 
-dsn::error_s http_client::do_method(std::string* response) {
+dsn::error_s http_client::do_method(std::string *response)
+{
     if (response == nullptr) {
         return do_method();
     }
 
-    auto callback = [response](const void* data, size_t length) {
-        response->append(reinterpret_cast<char*>data, length);
+    auto callback = [response](const void *data, size_t length) {
+        response->append(reinterpret_cast<char *> data, length);
         return true;
     };
 
     return do_method(callback);
 }
 
+dsn::error_s http_client::get_http_status(long &http_status) const
+{
+    RETURN_IF_GETINFO_NOT_OK(CURLINFO_RESPONSE_CODE, &http_status);
+    return dsn::error_s::ok();
+}
+
 #undef RETURN_IF_DO_METHOD_NOT_OK
 #undef RETURN_IF_SETOPT_NOT_OK
+#undef RETURN_IF_CURL_NOT_OK
 
 } // namespace pegasus

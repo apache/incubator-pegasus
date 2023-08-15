@@ -97,6 +97,8 @@ public:
         return true;
     }
 
+    explicit operator bool() const noexcept { return is_ok(); }
+
     std::string description() const
     {
         if (!_info) {
