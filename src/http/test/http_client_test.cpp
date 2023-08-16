@@ -22,6 +22,21 @@
 
 namespace dsn {
 
+TEST(http_client_test, connect)
+{
+    http_client client;
+    ASSERT_TRUE(client.init().is_ok());
+
+    // No one has listened on port 20000, thus this would lead to "Connection refused".
+    client.set_url("http://127.0.0.1:20000/test/get");
+
+    const auto &err = client.do_method();
+    ASSERT_EQ(dsn::ERR_CURL_FAILED, err.code());
+
+    // Would print something like "Failed to connect to 127.0.0.1 port 20000: Connection refused".
+    std::cout << "failed to connect: " << err.description() << std::endl;
+}
+
 void test_http_client(http_client &client,
                       const http_method method,
                       const long expected_http_status,
@@ -30,7 +45,7 @@ void test_http_client(http_client &client,
     client.set_method(method);
 
     std::string actual_response;
-    client.do_method(&actual_response);
+    ASSERT_TRUE(client.do_method(&actual_response));
 
     long actual_http_status;
     ASSERT_TRUE(client.get_http_status(actual_http_status).is_ok());

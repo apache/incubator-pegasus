@@ -145,12 +145,12 @@ bool http_client::is_error_buf_empty() const { return _error_buf[0] == 0; }
 
 std::string http_client::to_error_msg(CURLcode code) const
 {
-    std::string err_msg = fmt::format("code={}", curl_easy_strerror(code));
+    std::string err_msg = fmt::format("desc=\"{}\"", curl_easy_strerror(code));
     if (is_error_buf_empty()) {
         return err_msg;
     }
 
-    err_msg += fmt::format(", msg={}", _error_buf);
+    err_msg += fmt::format(", msg=\"{}\"", _error_buf);
     return err_msg;
 }
 
