@@ -160,6 +160,7 @@ size_t http_client::on_response_data(const void *data, size_t length)
         return length;
     }
 
+    // callback function is empty.
     if (!(*_callback)) {
         return length;
     }
