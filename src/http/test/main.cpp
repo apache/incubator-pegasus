@@ -74,7 +74,7 @@ public:
         dsn::start_http_server();
     }
 
-    dsn::error_code start(const std::vector<std::string> &args)
+    dsn::error_code start(const std::vector<std::string> &args) override
     {
         gtest_ret = RUN_ALL_TESTS();
         gtest_flags = 1;
@@ -86,7 +86,7 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    // register all possible services
+    // Register test service.
     dsn::service_app::register_factory<test_service_app>("test");
 
     dsn_run_config("config-test.ini", false);
