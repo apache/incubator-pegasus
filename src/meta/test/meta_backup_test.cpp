@@ -38,6 +38,7 @@
 #include "meta_test_base.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
@@ -108,7 +109,8 @@ public:
             cold_backup::get_app_metadata_file(backup_root, app->app_name, app_id, backup_id);
 
         int64_t metadata_file_size = 0;
-        if (!dsn::utils::filesystem::file_size(metadata_file, metadata_file_size)) {
+        if (!dsn::utils::filesystem::file_size(
+                metadata_file, dsn::utils::FileDataType::kSensitive, metadata_file_size)) {
             return false;
         }
         return metadata_file_size > 0;

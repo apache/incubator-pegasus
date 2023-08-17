@@ -25,7 +25,6 @@
 #include <rocksdb/advanced_cache.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/db.h>
-#include <rocksdb/env.h>
 #include <rocksdb/iterator.h>
 #include <rocksdb/rate_limiter.h>
 #include <rocksdb/statistics.h>
@@ -77,6 +76,7 @@
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/defer.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -1638,7 +1638,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         rocksdb::ConfigOptions config_options;
         // Set `ignore_unknown_options` true for forward compatibility.
         config_options.ignore_unknown_options = true;
-        config_options.env = rocksdb::Env::Default();
+        config_options.env = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive);
         auto status =
             rocksdb::LoadLatestOptions(config_options, rdb_path, &loaded_db_opt, &loaded_cf_descs);
         if (!status.ok()) {
@@ -1683,7 +1683,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     config_options.ignore_unsupported_options = true;
     config_options.sanity_level =
         rocksdb::ConfigOptions::SanityLevel::kSanityLevelLooselyCompatible;
-    config_options.env = rocksdb::Env::Default();
+    config_options.env = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive);
     auto s =
         rocksdb::CheckOptionsCompatibility(config_options, rdb_path, _db_opts, column_families);
     if (!s.ok() && !s.IsNotFound() && !has_incompatible_db_options) {

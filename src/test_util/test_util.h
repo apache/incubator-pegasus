@@ -22,12 +22,13 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <fmt/core.h>
 #include <functional>
 #include <gtest/gtest.h>
 #include <string>
 
-#include "fmt/core.h"
 #include "runtime/api_layer1.h"
+#include "utils/env.h"
 #include "utils/flags.h"
 #include "utils/test_macros.h"
 
@@ -45,7 +46,20 @@ namespace pegasus {
 class encrypt_data_test_base : public testing::TestWithParam<bool>
 {
 public:
-    encrypt_data_test_base() { FLAGS_encrypt_data_at_rest = GetParam(); }
+    encrypt_data_test_base()
+    {
+        FLAGS_encrypt_data_at_rest = GetParam();
+        // The size of an actual encrypted file should plus kEncryptionHeaderkSize bytes if consider
+        // it as kNonSensitive.
+        if (FLAGS_encrypt_data_at_rest) {
+            _extra_encrypted_file_size = dsn::utils::kEncryptionHeaderkSize;
+        }
+    }
+
+    uint64_t extra_encrypted_file_size() const { return _extra_encrypted_file_size; }
+
+private:
+    uint64_t _extra_encrypted_file_size = 0;
 };
 
 class stop_watch

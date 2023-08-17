@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -39,7 +40,9 @@ public:
     }
 };
 
-TEST_F(replica_backup_manager_test, clear_cold_backup)
+INSTANTIATE_TEST_CASE_P(, replica_backup_manager_test, ::testing::Values(false, true));
+
+TEST_P(replica_backup_manager_test, clear_cold_backup)
 {
     std::string policy_name = "test_policy";
 

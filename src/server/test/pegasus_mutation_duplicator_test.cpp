@@ -20,6 +20,7 @@
 #include "server/pegasus_mutation_duplicator.h"
 
 #include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -288,7 +289,9 @@ private:
     }
 };
 
-TEST_F(pegasus_mutation_duplicator_test, get_hash_from_request)
+INSTANTIATE_TEST_CASE_P(, pegasus_mutation_duplicator_test, ::testing::Values(false, true));
+
+TEST_P(pegasus_mutation_duplicator_test, get_hash_from_request)
 {
     std::string hash_key("hash");
     std::string sort_key("sort");
@@ -336,7 +339,7 @@ TEST_F(pegasus_mutation_duplicator_test, get_hash_from_request)
 // Verifies that calls on `get_hash_key_from_request` won't make
 // message unable to read. (if `get_hash_key_from_request` doesn't
 // copy the message internally, it will.)
-TEST_F(pegasus_mutation_duplicator_test, read_after_get_hash_key)
+TEST_P(pegasus_mutation_duplicator_test, read_after_get_hash_key)
 {
     std::string hash_key("hash");
     std::string sort_key("sort");
@@ -358,18 +361,18 @@ TEST_F(pegasus_mutation_duplicator_test, read_after_get_hash_key)
     ASSERT_EQ(rpc.request().key.to_string(), raw_key.to_string());
 }
 
-TEST_F(pegasus_mutation_duplicator_test, duplicate) { test_duplicate(); }
+TEST_P(pegasus_mutation_duplicator_test, duplicate) { test_duplicate(); }
 
-TEST_F(pegasus_mutation_duplicator_test, duplicate_failed) { test_duplicate_failed(); }
+TEST_P(pegasus_mutation_duplicator_test, duplicate_failed) { test_duplicate_failed(); }
 
-TEST_F(pegasus_mutation_duplicator_test, duplicate_isolated_hashkeys)
+TEST_P(pegasus_mutation_duplicator_test, duplicate_isolated_hashkeys)
 {
     test_duplicate_isolated_hashkeys();
 }
 
-TEST_F(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplicator(); }
+TEST_P(pegasus_mutation_duplicator_test, create_duplicator) { test_create_duplicator(); }
 
-TEST_F(pegasus_mutation_duplicator_test, duplicate_duplicate)
+TEST_P(pegasus_mutation_duplicator_test, duplicate_duplicate)
 {
     replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
     auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");

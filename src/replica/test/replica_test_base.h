@@ -26,20 +26,20 @@
 
 #pragma once
 
-#include "utils/smart_pointers.h"
-#include "replica/replication_app_base.h"
-#include "utils/filesystem.h"
-#include "utils/errors.h"
 #include <gtest/gtest.h>
 
-#include "replica/replica_stub.h"
-
 #include "mock_utils.h"
+#include "replica/replication_app_base.h"
+#include "replica/replica_stub.h"
+#include "test_util/test_util.h"
+#include "utils/errors.h"
+#include "utils/filesystem.h"
+#include "utils/smart_pointers.h"
 
 namespace dsn {
 namespace replication {
 
-class replica_stub_test_base : public ::testing::Test
+class replica_stub_test_base : public pegasus::encrypt_data_test_base
 {
 public:
     replica_stub_test_base() { stub = std::make_unique<mock_replica_stub>(); }

@@ -51,7 +51,7 @@ struct hash<flag_tag>
 // Example:
 //    DSN_DEFINE_string(core, filename, "my_file.txt", "The file to read");
 //    DSN_DEFINE_validator(filename, [](const char *fname){ return is_file(fname); });
-//    auto fptr = file::open(FLAGS_filename, O_RDONLY | O_BINARY, 0);
+//    auto fptr = file::open(FLAGS_filename, file::FileOpenType::kReadOnly);
 
 #define DSN_DECLARE_VARIABLE(type, name) extern type FLAGS_##name
 
