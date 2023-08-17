@@ -23,6 +23,7 @@
 #include <fmt/core.h>
 #include <new>
 
+#include "http/http_method.h"
 #include "runtime/api_layer1.h"
 #include "utils/flags.h"
 #include "utils/rand.h"

@@ -25,6 +25,7 @@
 
 #include "builtin_http_calls.h"
 #include "fmt/core.h"
+#include "http/http_method.h"
 #include "http_call_registry.h"
 #include "http_message_parser.h"
 #include "http_server_impl.h"

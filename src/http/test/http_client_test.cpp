@@ -15,10 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <iostream>
 #include <string>
 
 #include "http/http_client.h"
+#include "http/http_method.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 
 namespace dsn {
 

@@ -19,6 +19,10 @@
 
 #include <fmt/core.h>
 #include <limits>
+#include <utility>
+
+#include "curl/curl.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 

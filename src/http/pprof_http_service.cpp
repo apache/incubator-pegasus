@@ -38,6 +38,7 @@
 #include <utility>
 #include <vector>
 
+#include "http/http_method.h"
 #include "http/http_server.h"
 #include "runtime/api_layer1.h"
 #include "utils/blob.h"

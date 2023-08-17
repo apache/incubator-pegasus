@@ -18,6 +18,7 @@
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <stdint.h>
 #include <string.h>
 #include <algorithm>
 #include <memory>
@@ -29,6 +30,7 @@
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_message_parser.h"
+#include "http/http_method.h"
 #include "http/http_server.h"
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/rpc_message.h"

@@ -15,14 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <gtest/gtest.h>
 #include <chrono>
 #include <functional>
-#include <gtest/gtest.h>
+#include <string>
 #include <thread>
 #include <vector>
 
+#include "http/http_method.h"
 #include "http/http_server.h"
+#include "runtime/app_model.h"
 #include "runtime/service_app.h"
+#include "utils/error_code.h"
 #include "utils/ports.h"
 
 int gtest_flags = 0;

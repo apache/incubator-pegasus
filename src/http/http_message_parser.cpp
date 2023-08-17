@@ -26,12 +26,13 @@
 
 #include "http_message_parser.h"
 
+#include <stdint.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <string.h>
 #include <utility>
 #include <vector>
 
-#include "http_server.h"
+#include "http/http_method.h"
 #include "nodejs/http_parser.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/blob.h"

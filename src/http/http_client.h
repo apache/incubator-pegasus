@@ -18,6 +18,7 @@
 #pragma once
 
 #include <curl/curl.h>
+#include <stddef.h>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -29,7 +30,17 @@
 
 namespace dsn {
 
-// Not thread-safe.
+// A library for http client that provides convenient APIs to access http services, implemented
+// based on libcurl (https://curl.se/libcurl/c/).
+//
+// This class is not thread-safe. Thus maintain one instance for each thread.
+//
+// Example of submitting GET request to remote http service
+// --------------------------------------------------------
+// Create an instance of http_client:
+// http_client client;
+//
+// const auto &err = client.init();
 class http_client
 {
 public:
