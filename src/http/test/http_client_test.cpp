@@ -31,10 +31,10 @@ namespace dsn {
 TEST(http_client_test, connect)
 {
     http_client client;
-    ASSERT_TRUE(client.init().is_ok());
+    ASSERT_TRUE(client.init());
 
     // No one has listened on port 20000, thus this would lead to "Connection refused".
-    client.set_url("http://127.0.0.1:20000/test/get");
+    ASSERT_TRUE(client.set_url("http://127.0.0.1:20000/test/get"));
 
     const auto &err = client.do_method();
     ASSERT_EQ(dsn::ERR_CURL_FAILED, err.code());
@@ -48,13 +48,13 @@ void test_http_client(http_client &client,
                       const long expected_http_status,
                       const std::string &expected_response)
 {
-    client.set_method(method);
+    ASSERT_TRUE(client.set_method(method));
 
     std::string actual_response;
     ASSERT_TRUE(client.do_method(&actual_response));
 
     long actual_http_status;
-    ASSERT_TRUE(client.get_http_status(actual_http_status).is_ok());
+    ASSERT_TRUE(client.get_http_status(actual_http_status));
     EXPECT_EQ(expected_http_status, actual_http_status);
     EXPECT_EQ(expected_response, actual_response);
 }
@@ -62,7 +62,7 @@ void test_http_client(http_client &client,
 TEST(http_client_test, get)
 {
     http_client client;
-    ASSERT_TRUE(client.init().is_ok());
+    ASSERT_TRUE(client.init());
 
     client.set_url("http://127.0.0.1:20001/test/get");
 

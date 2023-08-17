@@ -40,7 +40,32 @@ namespace dsn {
 // Create an instance of http_client:
 // http_client client;
 //
-// const auto &err = client.init();
+// It's necessary to initialize the new instance before coming into use:
+// auto err = client.init();
+//
+// Specify which http method you would use, such as GET or POST:
+// err = client.set_method(method);
+//
+// Specify the target url that you would request for:
+// err = client.set_url(method);
+//
+// Submit the request to remote http service:
+// err = client.do_method();
+//
+// If response data should be processed, use callback function:
+// auto callback = [...](const void *data, size_t length) {
+//     ......
+//     return true;
+// };
+// err = client.do_method(callback);
+//
+// Or just provide a string pointer:
+// std::string response;
+// err = client.do_method(&response);
+//
+// Get the http status code after requesting:
+// long http_status;
+// err = client.get_http_status(http_status);
 class http_client
 {
 public:
@@ -49,19 +74,31 @@ public:
     http_client();
     ~http_client();
 
+    // Before coming into use, init() must be called to initialize http client. It could also be
+    // called to reset the http clients that have been initialized previously.
     dsn::error_s init();
 
+    // Specify which http method would be used, such as GET or POST:
     dsn::error_s set_method(http_method method);
+
+    // Specify the target url that the request would be sent for:
     dsn::error_s set_url(const std::string &url);
+
+    // Specify the maximum time in milliseconds that a request is allowed to complete.
     dsn::error_s set_timeout(long timeout_ms);
 
+    // Operations for the header fields.
     void clear_header_fields();
     void set_accept(dsn::string_view val);
     void set_content_type(dsn::string_view val);
 
+    // Submit request to remote http service, with response processed by callback function.
     dsn::error_s do_method(const http_callback &callback = {});
+
+    // Submit request to remote http service, with response data returned in a string.
     dsn::error_s do_method(std::string *response);
 
+    // Get the http status code after requesting.
     dsn::error_s get_http_status(long &http_status) const;
 
 private:
@@ -70,6 +107,7 @@ private:
     void clear_error_buf();
     bool is_error_buf_empty() const;
     std::string to_error_msg(CURLcode code) const;
+
     size_t on_response_data(const void *data, size_t length);
 
     void free_header_list();
