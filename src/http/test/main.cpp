@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <gtest/gtest.h>
 #include <chrono>
 #include <functional>
@@ -26,6 +27,7 @@
 #include "http/http_server.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
+#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/ports.h"
 

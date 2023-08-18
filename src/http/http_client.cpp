@@ -184,6 +184,7 @@ dsn::error_s http_client::with_post_method(const std::string &data)
 {
     // No need to enable CURLOPT_POST by `RETURN_IF_SETOPT_NOT_OK(CURLOPT_POST, 1L)`, since using
     // either of CURLOPT_POSTFIELDS or CURLOPT_COPYPOSTFIELDS implies setting CURLOPT_POST to 1.
+    // See https://curl.se/libcurl/c/CURLOPT_POSTFIELDS.html for details.
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_POSTFIELDSIZE, static_cast<long>(data.size()));
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_COPYPOSTFIELDS, data.data());
     _method = http_method::POST;

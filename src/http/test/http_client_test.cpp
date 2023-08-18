@@ -27,6 +27,7 @@
 #include "http/http_method.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 
