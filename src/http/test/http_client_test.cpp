@@ -28,7 +28,7 @@
 
 namespace dsn {
 
-TEST(http_client_test, connect)
+TEST(HttpClientTest, Connect)
 {
     http_client client;
     ASSERT_TRUE(client.init());
@@ -43,31 +43,55 @@ TEST(http_client_test, connect)
     std::cout << "failed to connect: " << err.description() << std::endl;
 }
 
-void test_http_client(http_client &client,
-                      const http_method method,
-                      const long expected_http_status,
-                      const std::string &expected_response)
+using http_client_method_case = std::tuple<http_method, long, const char *>;
+
+class HttpClientMethodTest : public testing::TestWithParam<http_client_method_case>
 {
-    ASSERT_TRUE(client.set_method(method));
+public:
+    void SetUp() override
+    {
+        ASSERT_TRUE(_client.init());
+        _client.set_url("http://127.0.0.1:20001/test/get");
+    }
 
-    std::string actual_response;
-    ASSERT_TRUE(client.do_method(&actual_response));
+    void test_mothod(const http_method method,
+                     const long expected_http_status,
+                     const std::string &expected_response)
+    {
+        ASSERT_TRUE(_client.set_method(method));
 
-    long actual_http_status;
-    ASSERT_TRUE(client.get_http_status(actual_http_status));
-    EXPECT_EQ(expected_http_status, actual_http_status);
-    EXPECT_EQ(expected_response, actual_response);
+        std::string actual_response;
+        ASSERT_TRUE(_client.do_method(&actual_response));
+
+        long actual_http_status;
+        ASSERT_TRUE(_client.get_http_status(actual_http_status));
+
+        EXPECT_EQ(expected_http_status, actual_http_status);
+        EXPECT_EQ(expected_response, actual_response);
+    }
+
+private:
+    http_client _client;
+};
+
+TEST_P(HttpClientMethodTest, Get)
+{
+    http_method method;
+    long expected_http_status;
+    const char *expected_response;
+    std::tie(method, expected_http_status, expected_response) = GetParam();
+
+    http_client _client;
+    test_mothod(method, expected_http_status, expected_response);
 }
 
-TEST(http_client_test, get)
-{
-    http_client client;
-    ASSERT_TRUE(client.init());
+const std::vector<http_client_method_case> http_client_method_tests = {
+    {http_method::POST, 400, "please use GET method"},
+    {http_method::GET, 200, "you are using GET method"},
+};
 
-    client.set_url("http://127.0.0.1:20001/test/get");
-
-    test_http_client(client, http_method::POST, 400, "please use GET method");
-    test_http_client(client, http_method::GET, 200, "you are using GET method");
-}
+INSTANTIATE_TEST_CASE_P(HttpClientTest,
+                        HttpClientMethodTest,
+                        testing::ValuesIn(http_client_method_tests));
 
 } // namespace dsn

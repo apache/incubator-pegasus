@@ -89,7 +89,12 @@ TEST(bultin_http_calls_test, meta_query)
 
 TEST(bultin_http_calls_test, get_help)
 {
+    // Used to save current http calls as backup.
+    std::vector<std::shared_ptr<http_call>> backup_calls;
+
+    // Remove all http calls.
     for (const auto &call : http_call_registry::instance().list_all_calls()) {
+        backup_calls.push_back(call);
         http_call_registry::instance().remove(call->path);
     }
 
@@ -113,8 +118,14 @@ TEST(bultin_http_calls_test, get_help)
     get_help_handler(req, resp);
     ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\",\"/recentStartTime\":\"ip:port/recentStartTime\"}\n");
 
+    // Remove all http calls, especially `recentStartTime`.
     for (const auto &call : http_call_registry::instance().list_all_calls()) {
         http_call_registry::instance().remove(call->path);
+    }
+
+    // Recover http calls from backup.
+    for (const auto &call : backup_calls) {
+        http_call_registry::instance().add(call);
     }
 }
 

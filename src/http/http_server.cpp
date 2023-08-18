@@ -147,8 +147,8 @@ void http_server::serve(message_ex *msg)
         resp.body = fmt::format("failed to parse request: {}", res.get_error());
     } else {
         const http_request &req = res.get_value();
-        std::shared_ptr<http_call> call = http_call_registry::instance().find(req.path);
-        if (call != nullptr) {
+        auto call = http_call_registry::instance().find(req.path);
+        if (call) {
             call->callback(req, resp);
         } else {
             resp.status_code = http_status_code::not_found;
