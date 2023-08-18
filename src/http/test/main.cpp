@@ -38,11 +38,19 @@ public:
     test_http_service()
     {
         register_handler("get",
-                         std::bind(&test_http_service::get_handler,
+                         std::bind(&test_http_service::method_handler,
                                    this,
+                                   dsn::http_method::GET,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
                          "ip:port/test/get");
+        register_handler("post",
+                         std::bind(&test_http_service::method_handler,
+                                   this,
+                                   dsn::http_method::POST,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2),
+                         "ip:port/test/post");
     }
 
     ~test_http_service() = default;
@@ -50,15 +58,24 @@ public:
     std::string path() const override { return "test"; }
 
 private:
-    void get_handler(const dsn::http_request &req, dsn::http_response &resp)
+    void method_handler(dsn::http_method target_method,
+                        const dsn::http_request &req,
+                        dsn::http_response &resp)
     {
-        if (req.method != dsn::http_method::GET) {
-            resp.body = "please use GET method";
+        if (req.method != target_method) {
+            resp.body = fmt::format("please use {} method", enum_to_string(target_method));
             resp.status_code = dsn::http_status_code::bad_request;
             return;
         }
 
-        resp.body = "you are using GET method";
+        std::string postfix;
+        if (target_method == dsn::http_method::POST) {
+            postfix = " ";
+            postfix += req.body.to_string();
+        }
+
+        resp.body =
+            fmt::format("you are using {} method{}", enum_to_string(target_method), postfix);
         resp.status_code = dsn::http_status_code::ok;
     }
 

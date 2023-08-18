@@ -140,7 +140,7 @@ dsn::error_s http_client::init()
     // This http_client object itself is passed to the callback function.
     RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEDATA, reinterpret_cast<void *>(this));
 
-    return error_s::ok();
+    return dsn::error_s::ok();
 }
 
 void http_client::clear_error_buf() { _error_buf[0] = 0; }
@@ -172,28 +172,39 @@ size_t http_client::on_response_data(const void *data, size_t length)
     return (*_callback)(data, length) ? length : std::numeric_limits<size_t>::max();
 }
 
+dsn::error_s http_client::set_url(const std::string &url)
+{
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_URL, url.c_str());
+
+    _url = url;
+    return dsn::error_s::ok();
+}
+
+dsn::error_s http_client::with_post_method(const std::string &data)
+{
+    // No need to enable CURLOPT_POST by `RETURN_IF_SETOPT_NOT_OK(CURLOPT_POST, 1L)`, since using
+    // either of CURLOPT_POSTFIELDS or CURLOPT_COPYPOSTFIELDS implies setting CURLOPT_POST to 1.
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_POSTFIELDSIZE, static_cast<long>(data.size()));
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_COPYPOSTFIELDS, data.data());
+    _method = http_method::POST;
+    return dsn::error_s::ok();
+}
+
+dsn::error_s http_client::with_get_method() { return set_method(http_method::GET); }
+
 dsn::error_s http_client::set_method(http_method method)
 {
+    // No need to process the case of http_method::POST, since it should be enabled by
+    // `with_post_method`.
     switch (method) {
     case http_method::GET:
         RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPGET, 1L);
-        break;
-    case http_method::POST:
-        RETURN_IF_SETOPT_NOT_OK(CURLOPT_POST, 1L);
         break;
     default:
         LOG_FATAL("Unsupported http_method");
     }
 
     _method = method;
-    return dsn::error_s::ok();
-}
-
-dsn::error_s http_client::set_url(const std::string &url)
-{
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_URL, url.c_str());
-
-    _url = url;
     return dsn::error_s::ok();
 }
 

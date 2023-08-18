@@ -43,11 +43,14 @@ namespace dsn {
 // It's necessary to initialize the new instance before coming into use:
 // auto err = client.init();
 //
-// Specify which http method you would use, such as GET or POST:
-// err = client.set_method(method);
-//
 // Specify the target url that you would request for:
 // err = client.set_url(method);
+//
+// If you would use GET method, call `with_get_method`:
+// err = client.with_get_method();
+//
+// If you would use POST method, call `with_post_method` with post data:
+// err = client.with_post_method(post_data);
 //
 // Submit the request to remote http service:
 // err = client.do_method();
@@ -78,11 +81,14 @@ public:
     // called to reset the http clients that have been initialized previously.
     dsn::error_s init();
 
-    // Specify which http method would be used, such as GET or POST:
-    dsn::error_s set_method(http_method method);
-
-    // Specify the target url that the request would be sent for:
+    // Specify the target url that the request would be sent for.
     dsn::error_s set_url(const std::string &url);
+
+    // Using post method, with `data` as the payload for post body.
+    dsn::error_s with_post_method(const std::string &data);
+
+    // Using get method.
+    dsn::error_s with_get_method();
 
     // Specify the maximum time in milliseconds that a request is allowed to complete.
     dsn::error_s set_timeout(long timeout_ms);
@@ -109,6 +115,10 @@ private:
     std::string to_error_msg(CURLcode code) const;
 
     size_t on_response_data(const void *data, size_t length);
+
+    // Specify which http method would be used, such as GET. Enabling POST should not use this
+    // function (use `with_post_method` instead).
+    dsn::error_s set_method(http_method method);
 
     void free_header_list();
     void set_header_field(dsn::string_view key, dsn::string_view val);

@@ -16,10 +16,12 @@
 // under the License.
 
 // IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "http/http_client.h"
 #include "http/http_method.h"
@@ -43,22 +45,32 @@ TEST(HttpClientTest, Connect)
     std::cout << "failed to connect: " << err.description() << std::endl;
 }
 
-using http_client_method_case = std::tuple<http_method, long, const char *>;
+using http_client_method_case =
+    std::tuple<const char *, http_method, const char *, long, const char *>;
 
 class HttpClientMethodTest : public testing::TestWithParam<http_client_method_case>
 {
 public:
-    void SetUp() override
-    {
-        ASSERT_TRUE(_client.init());
-        _client.set_url("http://127.0.0.1:20001/test/get");
-    }
+    void SetUp() override { ASSERT_TRUE(_client.init()); }
 
-    void test_mothod(const http_method method,
+    void test_mothod(const std::string &url,
+                     const http_method method,
+                     const std::string &post_data,
                      const long expected_http_status,
                      const std::string &expected_response)
     {
-        ASSERT_TRUE(_client.set_method(method));
+        _client.set_url(url);
+
+        switch (method) {
+        case http_method::GET:
+            ASSERT_TRUE(_client.with_get_method());
+            break;
+        case http_method::POST:
+            ASSERT_TRUE(_client.with_post_method(post_data));
+            break;
+        default:
+            LOG_FATAL("Unsupported http_method");
+        }
 
         std::string actual_response;
         ASSERT_TRUE(_client.do_method(&actual_response));
@@ -76,18 +88,30 @@ private:
 
 TEST_P(HttpClientMethodTest, Get)
 {
+    const char *url;
     http_method method;
+    const char *post_data;
     long expected_http_status;
     const char *expected_response;
-    std::tie(method, expected_http_status, expected_response) = GetParam();
+    std::tie(url, method, post_data, expected_http_status, expected_response) = GetParam();
 
     http_client _client;
-    test_mothod(method, expected_http_status, expected_response);
+    test_mothod(url, method, post_data, expected_http_status, expected_response);
 }
 
 const std::vector<http_client_method_case> http_client_method_tests = {
-    {http_method::POST, 400, "please use GET method"},
-    {http_method::GET, 200, "you are using GET method"},
+    {"http://127.0.0.1:20001/test/get",
+     http_method::POST,
+     "with POST DATA",
+     400,
+     "please use GET method"},
+    {"http://127.0.0.1:20001/test/get", http_method::GET, "", 200, "you are using GET method"},
+    {"http://127.0.0.1:20001/test/post",
+     http_method::POST,
+     "with POST DATA",
+     200,
+     "you are using POST method with POST DATA"},
+    {"http://127.0.0.1:20001/test/post", http_method::GET, "", 400, "please use POST method"},
 };
 
 INSTANTIATE_TEST_CASE_P(HttpClientTest,
