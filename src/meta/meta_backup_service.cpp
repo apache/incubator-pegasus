@@ -1036,10 +1036,7 @@ void policy_context::sync_remove_backup_info(const backup_info &info, dsn::task_
                 0,
                 _backup_service->backup_option().meta_retry_delay_ms);
         } else {
-            CHECK(false,
-                  "{}: we can't handle this right now, error({})",
-                  _policy.policy_name,
-                  err);
+            CHECK(false, "{}: we can't handle this right now, error({})", _policy.policy_name, err);
         }
     };
 
@@ -1373,9 +1370,7 @@ void backup_service::do_add_policy(dsn::message_ex *req,
                                  _opt.meta_retry_delay_ms);
                 return;
             } else {
-                CHECK(false,
-                      "we can't handle this when create backup policy, err({})",
-                      err);
+                CHECK(false, "we can't handle this when create backup policy, err({})", err);
             }
         },
         value);
@@ -1411,9 +1406,7 @@ void backup_service::do_update_policy_to_remote_storage(
                                  0,
                                  _opt.meta_retry_delay_ms);
             } else {
-                CHECK(false,
-                      "we can't handle this when create backup policy, err({})",
-                      err);
+                CHECK(false, "we can't handle this when create backup policy, err({})", err);
             }
         });
 }

@@ -159,9 +159,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     // we put max_replica_count-1 recent replicas to last_drops, in case of the DDD-state when the
     // only primary dead
     // when add node to pc.last_drops, we don't remove it from our cc.drop_list
-    CHECK(pc.last_drops.empty(),
-          "last_drops of partition({}) must be empty",
-          pid);
+    CHECK(pc.last_drops.empty(), "last_drops of partition({}) must be empty", pid);
     for (auto iter = drop_list.rbegin(); iter != drop_list.rend(); ++iter) {
         if (pc.last_drops.size() + 1 >= max_replica_count)
             break;

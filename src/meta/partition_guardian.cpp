@@ -102,7 +102,8 @@ void partition_guardian::reconfig(meta_view view, const configuration_update_req
     if (!cc->lb_actions.empty()) {
         const configuration_proposal_action *current = cc->lb_actions.front();
         CHECK(current != nullptr && current->type != config_type::CT_INVALID,
-              "invalid proposal for gpid({})", gpid);
+              "invalid proposal for gpid({})",
+              gpid);
         // if the valid proposal is from cure
         if (!cc->lb_actions.is_from_balancer()) {
             finish_cure_proposal(view, gpid, *current);
@@ -239,8 +240,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
 
         for (int i = 0; i < pc.secondaries.size(); ++i) {
             node_state *ns = get_node_state(*(view.nodes), pc.secondaries[i], false);
-            CHECK_NOTNULL(
-                ns, "invalid secondary address, address = {}", pc.secondaries[i]);
+            CHECK_NOTNULL(ns, "invalid secondary address, address = {}", pc.secondaries[i]);
             if (!ns->alive())
                 continue;
 
@@ -605,9 +605,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         // if not emergency, only try to recover last dropped server
         const dropped_replica &server = cc.dropped.back();
         if (is_node_alive(*view.nodes, server.node)) {
-            CHECK(!server.node.is_invalid(),
-                  "invalid server address, address = {}",
-                  server.node);
+            CHECK(!server.node.is_invalid(), "invalid server address, address = {}", server.node);
             action.node = server.node;
         }
 
