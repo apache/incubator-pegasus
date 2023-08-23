@@ -259,8 +259,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     }
 
     mu->_tracer->set_name(fmt::format("mutation[{}]", mu->name()));
-    dlog(level,
-         "%s: mutation %s init_prepare, mutation_tid=%" PRIu64,
+    dlog_f(level,
+         "{}: mutation {} init_prepare, mutation_tid={}",
          name(),
          mu->name(),
          mu->tid());

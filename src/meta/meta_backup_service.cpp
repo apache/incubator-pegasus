@@ -1039,7 +1039,7 @@ void policy_context::sync_remove_backup_info(const backup_info &info, dsn::task_
             CHECK(false,
                   "{}: we can't handle this right now, error({})",
                   _policy.policy_name,
-                  err.to_string());
+                  err);
         }
     };
 
@@ -1375,7 +1375,7 @@ void backup_service::do_add_policy(dsn::message_ex *req,
             } else {
                 CHECK(false,
                       "we can't handle this when create backup policy, err({})",
-                      err.to_string());
+                      err);
             }
         },
         value);
@@ -1413,7 +1413,7 @@ void backup_service::do_update_policy_to_remote_storage(
             } else {
                 CHECK(false,
                       "we can't handle this when create backup policy, err({})",
-                      err.to_string());
+                      err);
             }
         });
 }

@@ -120,8 +120,8 @@ task::task(dsn::task_code code, int hash, service_node *node)
     } else {
         auto p = get_current_node();
         CHECK_NOTNULL(p,
-                      "tasks without explicit service node "
-                      "can only be created inside threads which is attached to specific node");
+                      "tasks without explicit service node can only be created "
+                      "inside threads which is attached to specific node");
         _node = p;
     }
 

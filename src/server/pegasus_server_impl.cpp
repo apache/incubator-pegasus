@@ -2308,7 +2308,7 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
         }
     }
     default:
-        CHECK(false, "unsupported filter type: %d", filter_type);
+        CHECK(false, "unsupported filter type: {}", filter_type);
     }
     return false;
 }
