@@ -213,7 +213,7 @@ private:
     friend class mock_log_file;
 
     uint32_t _crc32;
-    int64_t _start_offset; // start offset in the global space
+    bool int64_t _start_offset; // start offset in the global space
     std::atomic<int64_t>
         _end_offset; // end offset in the global space: end_offset = start_offset + file_size
     class file_streamer;
@@ -221,8 +221,8 @@ private:
     std::unique_ptr<file_streamer> _stream;
     disk_file *_handle;        // file handle
     const bool _is_read;       // if opened for read or write
-    std::string _path;         // file path
-    int _index;                // file index
+    const std::string _path;   // file path
+    const int _index;          // file index
     log_file_header _header;   // file header
     uint64_t _last_write_time; // seconds from epoch time
 

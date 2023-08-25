@@ -166,15 +166,15 @@ log_file::~log_file() { close(); }
 
 log_file::log_file(
     const char *path, disk_file *handle, int index, int64_t start_offset, bool is_read)
-    : _is_read(is_read)
+    :  _crc32(0),
+    _start_offset(start_offset),
+    _end_offset(start_offset),
+    _handle(handle),
+        _is_read(is_read),
+    _path(path),
+    _index(index),
+    _last_write_time(0)
 {
-    _start_offset = start_offset;
-    _end_offset = start_offset;
-    _handle = handle;
-    _path = path;
-    _index = index;
-    _crc32 = 0;
-    _last_write_time = 0;
     memset(&_header, 0, sizeof(_header));
 
     if (is_read) {
