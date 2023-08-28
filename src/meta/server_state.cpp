@@ -4089,6 +4089,7 @@ bool server_state::is_ignored_app(const app_id app_id)
 
 void server_state::get_need_balance_apps(/*out */ app_mapper &need_balance_apps)
 {
+    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
     for (const auto &app_pair : _all_apps) {
         if (is_ignored_app(app_pair.second->app_id)) {
             continue;
