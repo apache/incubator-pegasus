@@ -28,11 +28,10 @@
 
 #include <fmt/core.h>
 #include <fmt/ostream.h>
-#include <inttypes.h>
+#include <rocksdb/status.h>
 #include <algorithm>
 #include <functional>
 #include <iosfwd>
-#include <rocksdb/status.h>
 #include <set>
 
 #include "backup/replica_backup_manager.h"
@@ -285,8 +284,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
 
         // a small window where the state is not the latest yet
         if (last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary) {
-            LOG_ERROR_PREFIX("last_committed_decree(%" PRId64
-                             ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
+            LOG_ERROR_PREFIX("last_committed_decree({}) < last_prepare_decree_on_new_primary({})",
                              last_committed_decree(),
                              _primary_states.last_prepare_decree_on_new_primary);
             response_client_read(request, ERR_INVALID_STATE);
