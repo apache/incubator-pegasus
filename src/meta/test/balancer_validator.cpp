@@ -233,7 +233,8 @@ void meta_service_test_app::balance_config_file()
     for (int i = 0; suits[i]; ++i) {
         load_apps_and_nodes(suits[i], apps, nodes);
 
-        greedy_load_balancer greedy_lb(nullptr);
+        meta_service svc;
+        greedy_load_balancer greedy_lb(&svc);
         server_load_balancer *lb = &greedy_lb;
         migration_list ml;
 
