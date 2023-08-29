@@ -2346,7 +2346,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
     gpid id = r->get_gpid();
 
     zauto_write_lock l(_replicas_lock);
-    if (_replicas.size(id) > 1) {
+    if (_replicas.size() > 1) {
         if (_closed_replicas.find(id) != _closed_replicas.end() ||
             _closing_replicas.find(id) != _closing_replicas.end()) {
             LOG_INFO("{} gpid {} has been closed or is closing,do not join task queue again",
@@ -2377,7 +2377,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
         _counter_replicas_closing_count->increment();
         return task;
     } else {
-        return nullptr
+        return nullptr;
     }
 }
 
