@@ -2371,6 +2371,20 @@ void replica_stub::close_replica(replica_ptr r)
     gpid id = r->get_gpid();
     std::string name = r->name();
 
+    // this replica still have some dup mission in loading stage,try it later
+    if (r->having_dup_loading()) {
+        LOG_INFO(
+            "{} gpid {} has conflict between duplication load stage with close replica", name, id);
+
+        task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA,
+            &_tracker,
+            [=]() { close_replica(r); },
+            0,
+            // todo: time may be configurable
+            std::chrono::milliseconds(60000)); // try 60s later
+        return;
+    }
+
     r->close();
 
     {

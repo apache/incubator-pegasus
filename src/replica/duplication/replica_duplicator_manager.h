@@ -91,6 +91,15 @@ public:
     };
     std::vector<dup_state> get_dup_states() const;
 
+    bool check_still_have_dup_pipeline_loading(){
+        for(auto &kv : _duplications){
+            if (kv.second->get_is_loading()){
+                return true;
+            }
+        }
+        return false;
+    }
+
 private:
     void sync_duplication(const duplication_entry &ent);
 

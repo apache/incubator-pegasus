@@ -254,6 +254,7 @@ public:
     replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
     bool is_duplication_master() const { return _is_duplication_master; }
     bool is_duplication_follower() const { return _is_duplication_follower; }
+    bool having_dup_loading();
 
     //
     // Backup
@@ -633,6 +634,7 @@ private:
     bool _is_manual_emergency_checkpointing{false};
     bool _is_duplication_master{false};
     bool _is_duplication_follower{false};
+    std::atomic<bool> _still_have_pipeline_loading{false};
 
     // backup
     std::unique_ptr<replica_backup_manager> _backup_mgr;
