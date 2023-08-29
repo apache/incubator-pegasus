@@ -167,7 +167,7 @@ DSN_DEFINE_int32(replication,
                  32,
                  "shared log maximum segment file size (MB)");
 
-DSN_DEFINE_int32(replication, log_shared_file_count_limit, 100, "shared log maximum file count");
+// DSN_DEFINE_int32(replication, log_shared_file_count_limit, 100, "shared log maximum file count");
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,

@@ -2040,7 +2040,7 @@ private:
     }
 
     int64_t checkpoint_decree = 0;
-    ::dsn::error_code err = copy_checkpoint_to_dir_unsafe(tmp_dir.c_str(), &checkpoint_decree);
+    ::dsn::error_code err = copy_checkpoint_to_dir_unsafe(tmp_dir.c_str(), &checkpoint_decree, flush_memtable);
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR_PREFIX("copy_checkpoint_to_dir_unsafe failed with err = {}", err.to_string());
         return ::dsn::ERR_LOCAL_APP_FAILURE;

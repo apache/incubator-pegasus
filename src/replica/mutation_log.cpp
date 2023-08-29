@@ -528,7 +528,7 @@ error_code mutation_log::open(replay_callback read_callback,
                               const std::map<gpid, decree> &replay_condition)
 {
     CHECK(!_is_opened, "cannot open a opened mutation_log");
-    CHECK(nullptr == _current_log_file, "");
+    CHECK_NULL(_current_log_file, "");
 
     // create dir if necessary
     if (!dsn::utils::filesystem::path_exists(_dir)) {
@@ -562,9 +562,8 @@ error_code mutation_log::open(replay_callback read_callback,
                 err == ERR_INVALID_PARAMETERS) {
                 LOG_WARNING("skip file {} during log init, err = {}", fpath, err);
                 continue;
-            } else {
-                return err;
             }
+            return err;
         }
 
         if (_is_private) {
@@ -1295,19 +1294,20 @@ int mutation_log::garbage_collection(gpid gpid,
         zauto_lock l(_lock);
         files = _log_files;
         max_decree = _private_log_info.max_decree;
-        if (_current_log_file != nullptr)
+        if (_current_log_file != nullptr) {
             current_file_index = _current_log_file->index();
+        }
     }
 
     if (files.size() <= 1) {
         // nothing to do
         return 0;
-    } else {
-        // the last one should be the current log file
-        CHECK(current_file_index == -1 || files.rbegin()->first == current_file_index,
-              "invalid current_file_index, index = {}",
-              current_file_index);
     }
+
+    // the last one should be the current log file
+    CHECK(current_file_index == -1 || files.rbegin()->first == current_file_index,
+          "invalid current_file_index, index = {}",
+          current_file_index);
 
     // find the largest file which can be deleted.
     // after iterate, the 'mark_it' will point to the largest file which can be deleted.
@@ -1403,41 +1403,104 @@ int mutation_log::garbage_collection(gpid gpid,
     return deleted;
 }
 
+bool can_slog_be_removed(const replica_log_info_map &max_decrees, const log_file_ptr &file, const gpid &pid, const replica_log_info &rep_info, std::set<gpid> &prevent_gc_replicas)
+{
+    const auto &garbage_max_decree = rep_info.max_decree;
+    const auto &valid_start_offset = rep_info.valid_start_offset;
+
+    const auto &iter = max_decrees.find(pid);
+    if (iter == max_decrees.end()) {
+        // log not found for this replica, ok to delete
+        // valid_start_offset may be reset to 0 if initialize_on_load() returns
+        // ERR_INCOMPLETE_DATA
+        CHECK(valid_start_offset == 0 || valid_start_offset >= log->end_offset(),
+              "valid start offset must be 0 or greater than the end of this log file");
+
+        LOG_DEBUG(
+            "gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
+            "safe to delete this and all older logs for this replica",
+            pid,
+            log->path(),
+            garbage_max_decree);
+        return true;
+    } else if (log->end_offset() <= valid_start_offset) {
+        // log is invalid for this replica, ok to delete
+        LOG_DEBUG(
+            "gc @ {}: log is invalid for {}, as valid start offset vs log end offset = "
+            "{} vs {}, it is therefore safe to delete this and all older logs for this "
+            "replica",
+            pid,
+            log->path(),
+            valid_start_offset,
+            log->end_offset());
+        return true;
+    } else if (iter->second.max_decree <= garbage_max_decree) {
+        // all decrees are no more than garbage max decree, ok to delete
+        LOG_DEBUG("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it is "
+                  "therefore safe to delete this and all older logs for this replica",
+                  pid,
+                  log->path(),
+                  iter->second.max_decree,
+                  garbage_max_decree);
+        return true;
+    }
+
+    // iter->second.max_decree > garbage_max_decree
+    // should not delete this file
+    LOG_DEBUG("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it "
+              "is therefore not allowed to delete this and all older logs",
+              pid,
+              log->path(),
+              iter->second.max_decree,
+              garbage_max_decree);
+    prevent_gc_replicas.insert(pid);
+    decree gap = iter->second.max_decree - garbage_max_decree;
+    if (log->index() < stop_gc_log_index || gap > stop_gc_decree_gap) {
+        // record the max gap replica for the smallest log
+        stop_gc_replica = pid;
+        stop_gc_log_index = log->index();
+        stop_gc_decree_gap = gap;
+        stop_gc_garbage_max_decree = garbage_max_decree;
+        stop_gc_log_max_decree = iter->second.max_decree;
+    }
+    return false;
+}
+
 int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                                      int file_count_limit,
-                                     std::set<gpid> &prevent_gc_replicas)
+                                     std::set<gpid> &all_prevent_gc_replicas)
 {
     CHECK(!_is_private, "this method is only valid for shared log");
 
     std::map<int, log_file_ptr> files;
     replica_log_info_map max_decrees;
-    int current_log_index = -1;
+    // int current_log_index = -1;
     int64_t total_log_size = 0;
 
     {
         zauto_lock l(_lock);
         files = _log_files;
         max_decrees = _shared_log_info_map;
-        if (_current_log_file != nullptr)
-            current_log_index = _current_log_file->index();
+        CHECK_NULL(_current_log_file, "shared logs have been deprecated, thus could not be created");
+        // if (_current_log_file != nullptr)
+        //     current_log_index = _current_log_file->index();
         total_log_size = total_size_no_lock();
     }
 
-    if (files.size() <= 1) {
-        // nothing to do
+    if (files.empty()) {
         LOG_INFO("gc_shared: too few files to delete, file_count_limit = {}, reserved_log_count "
                  "= {}, reserved_log_size = {}, current_log_index = {}",
                  file_count_limit,
                  files.size(),
                  total_log_size,
                  current_log_index);
-        return (int)files.size();
-    } else {
-        // the last one should be the current log file
-        CHECK(-1 == current_log_index || files.rbegin()->first == current_log_index,
-              "invalid current_log_index, index = {}",
-              current_log_index);
+        return 0;
     }
+
+    // the last one should be the current log file
+    // CHECK(-1 == current_log_index || files.rbegin()->first == current_log_index,
+    //       "invalid current_log_index, index = {}",
+    //      current_log_index);
 
     int reserved_log_count = files.size();
     int64_t reserved_log_size = total_log_size;
@@ -1462,109 +1525,35 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
         bool delete_ok = true;
 
         // skip current file
-        if (current_log_index == log->index()) {
-            delete_ok = false;
-        }
+        //if (current_log_index == log->index()) {
+        //    delete_ok = false;
+        //}
 
-        if (delete_ok) {
-            std::set<gpid> prevent_gc_replicas_for_this_log;
+        // if (delete_ok) {
+        std::set<gpid> prevent_gc_replicas;
 
-            for (auto &kv : gc_condition) {
-                if (kickout_replicas.find(kv.first) != kickout_replicas.end()) {
-                    // no need to consider this replica
-                    continue;
-                }
-
-                gpid gpid = kv.first;
-                decree garbage_max_decree = kv.second.max_decree;
-                int64_t valid_start_offset = kv.second.valid_start_offset;
-
-                bool delete_ok_for_this_replica = false;
-                bool kickout_this_replica = false;
-                auto it3 = max_decrees.find(gpid);
-
-                // log not found for this replica, ok to delete
-                if (it3 == max_decrees.end()) {
-                    // valid_start_offset may be reset to 0 if initialize_on_load() returns
-                    // ERR_INCOMPLETE_DATA
-                    CHECK(valid_start_offset == 0 || valid_start_offset >= log->end_offset(),
-                          "valid start offset must be 0 or greater than the end of this log file");
-
-                    LOG_DEBUG(
-                        "gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
-                        "safe to delete this and all older logs for this replica",
-                        gpid,
-                        log->path(),
-                        garbage_max_decree);
-                    delete_ok_for_this_replica = true;
-                    kickout_this_replica = true;
-                }
-
-                // log is invalid for this replica, ok to delete
-                else if (log->end_offset() <= valid_start_offset) {
-                    LOG_DEBUG(
-                        "gc @ {}: log is invalid for {}, as valid start offset vs log end offset = "
-                        "{} vs {}, it is therefore safe to delete this and all older logs for this "
-                        "replica",
-                        gpid,
-                        log->path(),
-                        valid_start_offset,
-                        log->end_offset());
-                    delete_ok_for_this_replica = true;
-                    kickout_this_replica = true;
-                }
-
-                // all decrees are no more than garbage max decree, ok to delete
-                else if (it3->second.max_decree <= garbage_max_decree) {
-                    LOG_DEBUG("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it is "
-                              "therefore safe to delete this and all older logs for this replica",
-                              gpid,
-                              log->path(),
-                              it3->second.max_decree,
-                              garbage_max_decree);
-                    delete_ok_for_this_replica = true;
-                    kickout_this_replica = true;
-                }
-
-                else // it3->second.max_decree > garbage_max_decree
-                {
-                    // should not delete this file
-                    LOG_DEBUG("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it "
-                              "is therefore not allowed to delete this and all older logs",
-                              gpid,
-                              log->path(),
-                              it3->second.max_decree,
-                              garbage_max_decree);
-                    prevent_gc_replicas_for_this_log.insert(gpid);
-                    decree gap = it3->second.max_decree - garbage_max_decree;
-                    if (log->index() < stop_gc_log_index || gap > stop_gc_decree_gap) {
-                        // record the max gap replica for the smallest log
-                        stop_gc_replica = gpid;
-                        stop_gc_log_index = log->index();
-                        stop_gc_decree_gap = gap;
-                        stop_gc_garbage_max_decree = garbage_max_decree;
-                        stop_gc_log_max_decree = it3->second.max_decree;
-                    }
-                }
-
-                if (kickout_this_replica) {
-                    // files before this file is useless for this replica,
-                    // so from now on, this replica will not be considered anymore
-                    kickout_replicas.insert(gpid);
-                }
-
-                if (!delete_ok_for_this_replica) {
-                    // can not delete this file, mark it, and continue to check other replicas
-                    delete_ok = false;
-                }
+        for (auto &kv : gc_condition) {
+            if (kickout_replicas.find(kv.first) != kickout_replicas.end()) {
+                // no need to consider this replica
+                continue;
             }
 
-            // update prevent_gc_replicas
-            if (file_count > file_count_limit && !prevent_gc_replicas_for_this_log.empty()) {
-                prevent_gc_replicas.insert(prevent_gc_replicas_for_this_log.begin(),
-                                           prevent_gc_replicas_for_this_log.end());
+            if (can_slog_be_removed(max_decrees, log, kv.first, kv.second, prevent_gc_replicas)) {
+                // files before this file is useless for this replica,
+                // so from now on, this replica will not be considered anymore
+                kickout_replicas.insert(kv.first);
+            } else {
+                // can not delete this file, mark it, and continue to check other replicas
+                delete_ok = false;
             }
         }
+
+        // update prevent_gc_replicas
+        if (file_count > file_count_limit && !prevent_gc_replicas.empty()) {
+            all_prevent_gc_replicas.insert(prevent_gc_replicas.begin(),
+                                       prevent_gc_replicas.end());
+        }
+        // }
 
         if (delete_ok) {
             // found the largest file which can be deleted
@@ -1590,7 +1579,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                      reserved_smallest_log,
                      reserved_largest_log,
                      stop_gc_log_index,
-                     prevent_gc_replicas.size(),
+                     all_prevent_gc_replicas.size(),
                      stop_gc_replica,
                      stop_gc_decree_gap,
                      stop_gc_garbage_max_decree,
@@ -1683,7 +1672,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                  deleted_smallest_log,
                  deleted_largest_log,
                  stop_gc_log_index,
-                 prevent_gc_replicas.size(),
+                 all_prevent_gc_replicas.size(),
                  stop_gc_replica,
                  stop_gc_decree_gap,
                  stop_gc_garbage_max_decree,
