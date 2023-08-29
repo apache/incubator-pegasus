@@ -1596,6 +1596,14 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
     replica_ptr replica = get_replica(id);
     if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY &&
         replica->status() != partition_status::PS_PARTITION_SPLIT) {
+
+        // deal with double close when duplication and balance function running at the same time
+        if (replica->status() == partition_status::PS_INACTIVE && replica->having_dup_loading()) {
+            LOG_INFO("{}: replica not exists on meta server,and still have dup on it. wait to close",
+                   replica->name());
+            return;
+        }
+
         if (replica->status() == partition_status::PS_INACTIVE &&
             dsn_now_ms() - replica->create_time_milliseconds() <
                 FLAGS_gc_memory_replica_interval_ms) {
@@ -2337,31 +2345,40 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
     gpid id = r->get_gpid();
 
     zauto_write_lock l(_replicas_lock);
-    if (_replicas.erase(id) == 0) {
-        return nullptr;
+    if (_replicas.size(id) > 1) {
+        if (_closed_replicas.find(id) != _closed_replicas.end() ||
+            _closing_replicas.find(id) != _closing_replicas.end()) {
+            LOG_INFO("{} gpid {} has been closed or is closing,do not join task queue again",
+                     r->name(),
+                     id);
+            return nullptr;
+        }
+
+        _counter_replicas_count->decrement();
+
+        int delay_ms = 0;
+        if (r->status() == partition_status::PS_INACTIVE) {
+            delay_ms = FLAGS_gc_memory_replica_interval_ms;
+            LOG_INFO("{}: delay {} milliseconds to close replica, status = PS_INACTIVE",
+                     r->name(),
+                     delay_ms);
+        }
+
+        app_info a_info = *(r->get_app_info());
+        replica_info r_info;
+        get_replica_info(r_info, r);
+        task_ptr task = tasking::enqueue(
+            LPC_CLOSE_REPLICA,
+            &_tracker,
+            [=]() { close_replica(r); },
+            0,
+            std::chrono::milliseconds(delay_ms));
+        _closing_replicas[id] = std::make_tuple(task, r, std::move(a_info), std::move(r_info));
+        _counter_replicas_closing_count->increment();
+        return task;
+    }else{
+        return nullptr
     }
-
-    _counter_replicas_count->decrement();
-
-    int delay_ms = 0;
-    if (r->status() == partition_status::PS_INACTIVE) {
-        delay_ms = FLAGS_gc_memory_replica_interval_ms;
-        LOG_INFO("{}: delay {} milliseconds to close replica, status = PS_INACTIVE",
-                 r->name(),
-                 delay_ms);
-    }
-
-    app_info a_info = *(r->get_app_info());
-    replica_info r_info;
-    get_replica_info(r_info, r);
-    task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA,
-                                     &_tracker,
-                                     [=]() { close_replica(r); },
-                                     0,
-                                     std::chrono::milliseconds(delay_ms));
-    _closing_replicas[id] = std::make_tuple(task, r, std::move(a_info), std::move(r_info));
-    _counter_replicas_closing_count->increment();
-    return task;
 }
 
 void replica_stub::close_replica(replica_ptr r)
@@ -2383,6 +2400,10 @@ void replica_stub::close_replica(replica_ptr r)
             // todo: time may be configurable
             std::chrono::milliseconds(60000)); // try 60s later
         return;
+    }
+
+    if (!_replicas.empty()) {
+        _replicas.erase(id);
     }
 
     r->close();
