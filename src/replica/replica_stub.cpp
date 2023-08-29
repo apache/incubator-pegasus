@@ -1599,8 +1599,9 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
 
         // deal with double close when duplication and balance function running at the same time
         if (replica->status() == partition_status::PS_INACTIVE && replica->having_dup_loading()) {
-            LOG_INFO("{}: replica not exists on meta server,and still have dup on it. wait to close",
-                   replica->name());
+            LOG_INFO(
+                "{}: replica not exists on meta server,and still have dup on it. wait to close",
+                replica->name());
             return;
         }
 
@@ -2367,16 +2368,15 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
         app_info a_info = *(r->get_app_info());
         replica_info r_info;
         get_replica_info(r_info, r);
-        task_ptr task = tasking::enqueue(
-            LPC_CLOSE_REPLICA,
-            &_tracker,
-            [=]() { close_replica(r); },
-            0,
-            std::chrono::milliseconds(delay_ms));
+        task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA,
+                                         &_tracker,
+                                         [=]() { close_replica(r); },
+                                         0,
+                                         std::chrono::milliseconds(delay_ms));
         _closing_replicas[id] = std::make_tuple(task, r, std::move(a_info), std::move(r_info));
         _counter_replicas_closing_count->increment();
         return task;
-    }else{
+    } else {
         return nullptr
     }
 }
@@ -2394,11 +2394,11 @@ void replica_stub::close_replica(replica_ptr r)
             "{} gpid {} has conflict between duplication load stage with close replica", name, id);
 
         task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA,
-            &_tracker,
-            [=]() { close_replica(r); },
-            0,
-            // todo: time may be configurable
-            std::chrono::milliseconds(60000)); // try 60s later
+                                         &_tracker,
+                                         [=]() { close_replica(r); },
+                                         0,
+                                         // todo: time may be configurable
+                                         std::chrono::milliseconds(60000)); // try 60s later
         return;
     }
 

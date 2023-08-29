@@ -140,13 +140,9 @@ public:
 
     duplication_status::type status() const { return _status; };
 
-    void set_is_loading(bool loading){
-        _is_loading.store(loading);
-    }
+    void set_is_loading(bool loading) { _is_loading.store(loading); }
 
-    bool get_is_loading(){
-        return _is_loading.load();
-    }
+    bool get_is_loading() { return _is_loading.load(); }
 
 private:
     friend class duplication_test_base;
@@ -173,7 +169,7 @@ private:
     mutable zrwlock_nr _lock;
     duplication_progress _progress;
 
-    //avoid load conflict with replica close
+    // avoid load conflict with replica close
     std::atomic<bool> _is_loading;
 
     /// === pipeline === ///

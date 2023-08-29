@@ -246,7 +246,7 @@ void load_from_private_log::replay_log_block()
     // mutations()
     step_down_next_stage(_mutation_batch.last_decree(), _mutation_batch.move_all_mutations());
 
-    //step to ship meaning load has been finished
+    // step to ship meaning load has been finished
     _duplicator->set_is_loading(false);
 }
 

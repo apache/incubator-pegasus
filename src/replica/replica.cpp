@@ -605,7 +605,7 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
 
 bool replica::having_dup_loading()
 {
-    if(_duplication_mgr == nullptr){
+    if (_duplication_mgr == nullptr) {
         return false;
     }
     return _duplication_mgr->check_still_have_dup_pipeline_loading();
