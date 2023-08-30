@@ -1410,13 +1410,15 @@ struct stop_gc_info
     dsn::replication::decree garbage_max_decree = 0;
     dsn::replication::decree log_max_decree = 0;
 
-    std::string to_string() const {
-        return fmt::format("stop_gc_replica = {}, stop_gc_log_index = {}, stop_gc_decree_gap = {}, stop_gc_garbage_max_decree = {}, stop_gc_log_max_decree = {}",
-                     replica,
-                     log_index,
-                     decree_gap,
-                     garbage_max_decree,
-                     log_max_decree)
+    std::string to_string() const
+    {
+        return fmt::format("stop_gc_replica = {}, stop_gc_log_index = {}, stop_gc_decree_gap = {}, "
+                           "stop_gc_garbage_max_decree = {}, stop_gc_log_max_decree = {}",
+                           replica,
+                           log_index,
+                           decree_gap,
+                           garbage_max_decree,
+                           log_max_decree)
     }
 
     friend std::ostream &operator<<(std::ostream &os, const stop_gc_info &stop_gc)
@@ -1425,7 +1427,11 @@ struct stop_gc_info
     }
 };
 
-bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decrees, const dsn::replication::log_file_ptr &log, const dsn::gpid &pid, const dsn::replication::replica_log_info &rep_info, stop_gc_info &stop_gc)
+bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decrees,
+                         const dsn::replication::log_file_ptr &log,
+                         const dsn::gpid &pid,
+                         const dsn::replication::replica_log_info &rep_info,
+                         stop_gc_info &stop_gc)
 {
     const auto &garbage_max_decree = rep_info.max_decree;
     const auto &valid_start_offset = rep_info.valid_start_offset;
@@ -1438,23 +1444,21 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decre
         CHECK(valid_start_offset == 0 || valid_start_offset >= log->end_offset(),
               "valid start offset must be 0 or greater than the end of this log file");
 
-        LOG_DEBUG(
-            "gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
-            "safe to delete this and all older logs for this replica",
-            pid,
-            log->path(),
-            garbage_max_decree);
+        LOG_DEBUG("gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
+                  "safe to delete this and all older logs for this replica",
+                  pid,
+                  log->path(),
+                  garbage_max_decree);
         return true;
     } else if (log->end_offset() <= valid_start_offset) {
         // log is invalid for this replica, ok to delete
-        LOG_DEBUG(
-            "gc @ {}: log is invalid for {}, as valid start offset vs log end offset = "
-            "{} vs {}, it is therefore safe to delete this and all older logs for this "
-            "replica",
-            pid,
-            log->path(),
-            valid_start_offset,
-            log->end_offset());
+        LOG_DEBUG("gc @ {}: log is invalid for {}, as valid start offset vs log end offset = "
+                  "{} vs {}, it is therefore safe to delete this and all older logs for this "
+                  "replica",
+                  pid,
+                  log->path(),
+                  valid_start_offset,
+                  log->end_offset());
         return true;
     } else if (it->second.max_decree <= garbage_max_decree) {
         // all decrees are no more than garbage max decree, ok to delete
@@ -1503,7 +1507,8 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
         zauto_lock l(_lock);
         files = _log_files;
         max_decrees = _shared_log_info_map;
-        CHECK_NULL(_current_log_file, "shared logs have been deprecated, thus could not be created");
+        CHECK_NULL(_current_log_file,
+                   "shared logs have been deprecated, thus could not be created");
         total_log_size = total_size_no_lock();
         CHECK_EQ(total_log_size, 0);
     }
@@ -1513,7 +1518,8 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
         return 0;
     }
 
-    reserved_log_info reserved_log = {files.size(),total_log_size,files.begin()->first,files.rbegin()->first};
+    reserved_log_info reserved_log = {
+        files.size(), total_log_size, files.begin()->first, files.rbegin()->first};
 
     // find the largest file which can be deleted.
     // after iterate, the 'mark_it' will point to the largest file which can be deleted.
@@ -1576,7 +1582,10 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
     return reserved_log.log_count;
 }
 
-void mutation_log::remove_obsolete_log_files(const int largest_log_to_delete, log_file_map &files, reserved_log_info &reserved_log, log_deletion_info &log_deletion)
+void mutation_log::remove_obsolete_log_files(const int largest_log_to_delete,
+                                             log_file_map &files,
+                                             reserved_log_info &reserved_log,
+                                             log_deletion_info &log_deletion)
 {
     for (auto it = files.begin(); it != files.end() && it->second->index() <= largest_log_to_delete;
          ++it) {
@@ -1621,7 +1630,6 @@ void mutation_log::remove_obsolete_log_files(const int largest_log_to_delete, lo
             }
         }
     }
-
 }
 
 std::map<int, log_file_ptr> mutation_log::get_log_file_map() const

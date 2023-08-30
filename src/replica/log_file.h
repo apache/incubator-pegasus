@@ -184,7 +184,10 @@ public:
     // file path
     const std::string &path() const { return _path; }
     // previous decrees
-    const replica_log_info_map &previous_log_max_decrees() const { return _previous_log_max_decrees; }
+    const replica_log_info_map &previous_log_max_decrees() const
+    {
+        return _previous_log_max_decrees;
+    }
     // previous decree for speicified gpid
     decree previous_log_max_decree(const gpid &pid) const;
     // file header
