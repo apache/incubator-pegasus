@@ -233,8 +233,8 @@ public:
     //      || file.end_offset[r] <= gc_condition[r].valid_start_offset
     //  - the current log file should not be removed
     // thread safe
-    int garbage_collection(const replica_log_info_map &gc_condition,
-                           std::set<gpid> &prevent_gc_replicas);
+    size_t garbage_collection(const replica_log_info_map &gc_condition,
+                              std::set<gpid> &prevent_gc_replicas);
 
     //
     // when this is a private log, log files are learned by remote replicas
@@ -348,7 +348,7 @@ private:
 
     struct reserved_log_info
     {
-        int log_count;
+        size_t log_count;
         int64_t log_size;
         int smallest_log;
         int largest_log;
@@ -397,6 +397,7 @@ private:
         }
     };
 
+    using log_file_map = std::map<int, log_file_ptr>;
     void remove_obsolete_log_files(const int largest_log_to_delete,
                                    log_file_map &files,
                                    reserved_log_info &reserved_log,
@@ -430,8 +431,7 @@ private:
     bool _switch_file_demand;
 
     // logs
-    int _last_file_index; // new log file index = _last_file_index + 1
-    using log_file_map = std::map<int, log_file_ptr>;
+    int _last_file_index;           // new log file index = _last_file_index + 1
     log_file_map _log_files;        // index -> log_file_ptr
     log_file_ptr _current_log_file; // current log file
     int64_t _global_start_offset;   // global start offset of all files.

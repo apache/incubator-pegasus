@@ -216,7 +216,7 @@ private:
     friend class mock_log_file;
 
     uint32_t _crc32;
-    bool int64_t _start_offset; // start offset in the global space
+    const int64_t _start_offset; // start offset in the global space
     std::atomic<int64_t>
         _end_offset; // end offset in the global space: end_offset = start_offset + file_size
     class file_streamer;

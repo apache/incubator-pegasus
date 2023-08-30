@@ -1418,7 +1418,7 @@ struct stop_gc_info
                            log_index,
                            decree_gap,
                            garbage_max_decree,
-                           log_max_decree)
+                           log_max_decree);
     }
 
     friend std::ostream &operator<<(std::ostream &os, const stop_gc_info &stop_gc)
@@ -1495,8 +1495,8 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decre
 
 } // anonymous namespace
 
-int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
-                                     std::set<gpid> &prevent_gc_replicas)
+size_t mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
+                                        std::set<gpid> &prevent_gc_replicas)
 {
     CHECK(!_is_private, "this method is only valid for shared log");
 
