@@ -121,7 +121,7 @@ TEST(replication, log_file)
             lf->write_file_header(temp_writer, mdecrees);
             writer->add(temp_writer.get_buffer());
             ASSERT_EQ(mdecrees, lf->previous_log_max_decrees());
-            log_file_header &h = lf->header();
+            const auto &h = lf->header();
             ASSERT_EQ(100, h.start_global_offset);
         }
 

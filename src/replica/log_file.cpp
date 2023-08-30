@@ -357,7 +357,7 @@ void log_file::reset_stream(size_t offset /*default = 0*/)
     }
 }
 
-decree log_file::previous_log_max_decree(const dsn::gpid &pid)
+decree log_file::previous_log_max_decree(const dsn::gpid &pid) const
 {
     auto it = _previous_log_max_decrees.find(pid);
     return it == _previous_log_max_decrees.end() ? 0 : it->second.max_decree;

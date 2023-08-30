@@ -65,9 +65,9 @@ struct log_file_header
 // a structure to record replica's log info
 struct replica_log_info
 {
-    int64_t max_decree;
+    decree max_decree;
     int64_t valid_start_offset; // valid start offset in global space
-    replica_log_info(int64_t d, int64_t o)
+    replica_log_info(decree d, int64_t o)
     {
         max_decree = d;
         valid_start_offset = o;
@@ -184,11 +184,11 @@ public:
     // file path
     const std::string &path() const { return _path; }
     // previous decrees
-    const replica_log_info_map &previous_log_max_decrees() { return _previous_log_max_decrees; }
+    const replica_log_info_map &previous_log_max_decrees() const { return _previous_log_max_decrees; }
     // previous decree for speicified gpid
-    decree previous_log_max_decree(const gpid &pid);
+    decree previous_log_max_decree(const gpid &pid) const;
     // file header
-    log_file_header &header() { return _header; }
+    const log_file_header &header() const { return _header; }
 
     // read file header from reader, return byte count consumed
     int read_file_header(binary_reader &reader);

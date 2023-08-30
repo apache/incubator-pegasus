@@ -221,6 +221,8 @@ public:
                            int64_t reserve_max_size,
                            int64_t reserve_max_time);
 
+    // TODO(wangdan): fix comments
+    //
     // garbage collection for shared log, returns reserved file count.
     // `prevent_gc_replicas' will store replicas which prevent log files out of `file_count_limit'
     // to be deleted.
@@ -232,7 +234,6 @@ public:
     //  - the current log file should not be removed
     // thread safe
     int garbage_collection(const replica_log_info_map &gc_condition,
-                           int file_count_limit,
                            std::set<gpid> &prevent_gc_replicas);
 
     //
@@ -345,6 +346,56 @@ private:
     // get total size ithout lock.
     int64_t total_size_no_lock() const;
 
+struct reserved_log_info
+{
+    int log_count;
+    int64_t log_size;
+    int smallest_log;
+    int largest_log;
+
+    std::string to_string() const {
+        return fmt::format("reserved_log_count = {}, reserved_log_size = {}, reserved_smallest_log = {}, reserved_largest_log = {}",
+                     log_count,
+                     log_size,
+                     smallest_log,
+                     largest_log
+        );
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, const reserved_log_info &reserved_log)
+    {
+        return os << reserved_log.to_string();
+    }
+};
+
+struct log_deletion_info
+{
+    int to_delete_log_count = 0;
+    int64_t to_delete_log_size = 0;
+    int deleted_log_count = 0;
+    int64_t deleted_log_size = 0;
+    int deleted_smallest_log = 0;
+    int deleted_largest_log = 0;
+
+    std::string to_string() const {
+        return fmt::format("to_delete_log_count = {}, to_delete_log_size = {}, deleted_log_count = {}, deleted_log_size = {}, deleted_smallest_log = {}, deleted_largest_log = {}", 
+                 to_delete_log_count,
+                 to_delete_log_size,
+                 deleted_log_count,
+                 deleted_log_size,
+                 deleted_smallest_log,
+                 deleted_largest_log
+                );
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, const log_deletion_info &log_deletion)
+    {
+        return os << log_deletion.to_string();
+    }
+};
+
+void remove_obsolete_log_files(const int largest_log_to_delete, log_file_map &files, reserved_log_info &reserved_log, log_deletion_info &log_deletion);
+
 protected:
     std::string _dir;
     bool _is_private;
@@ -374,7 +425,8 @@ private:
 
     // logs
     int _last_file_index;                   // new log file index = _last_file_index + 1
-    std::map<int, log_file_ptr> _log_files; // index -> log_file_ptr
+    using log_file_map = std::map<int, log_file_ptr>; 
+    log_file_map _log_files;                // index -> log_file_ptr
     log_file_ptr _current_log_file;         // current log file
     int64_t _global_start_offset;           // global start offset of all files.
                                             // invalid if _log_files.size() == 0.
