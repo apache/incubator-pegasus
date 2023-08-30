@@ -167,7 +167,9 @@ DSN_DEFINE_int32(replication,
                  32,
                  "shared log maximum segment file size (MB)");
 
-// DSN_DEFINE_int32(replication, log_shared_file_count_limit, 100, "shared log maximum file count");
+DSN_DEFINE_uint32(replication, log_shared_gc_flush_replicas_limit, 50, "shared log maximum file count");
+DSN_TAG_VARIABLE(log_shared_gc_flush_replicas_limit, FT_MUTABLE);
+
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,
@@ -192,6 +194,7 @@ bool replica_stub::s_not_exit_on_log_failure = false;
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
                            bool is_long_subscriber /* = true*/)
     : serverlet("replica_stub"),
+    _last_gc_slog_flushed_replicas(0),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -1797,6 +1800,8 @@ void replica_stub::on_gc()
 
     LOG_INFO("start to garbage collection, replica_count = {}", rs.size());
 
+    // TODO(wangdan): fix comments
+    //
     // gc shared prepare log
     //
     // Now that checkpoint is very important for gc, we must be able to trigger checkpoint when
@@ -1850,50 +1855,46 @@ void replica_stub::on_gc()
         }
 
         std::set<gpid> prevent_gc_replicas;
-        int reserved_log_count = _log->garbage_collection(
-            gc_condition, FLAGS_log_shared_file_count_limit, prevent_gc_replicas);
-        if (reserved_log_count > FLAGS_log_shared_file_count_limit * 2) {
-            LOG_INFO(
-                "gc_shared: trigger emergency checkpoint by FLAGS_log_shared_file_count_limit, "
-                "file_count_limit = {}, reserved_log_count = {}, trigger all replicas to do "
-                "checkpoint",
-                FLAGS_log_shared_file_count_limit,
-                reserved_log_count);
-            for (auto &kv : rs) {
-                tasking::enqueue(
-                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                    kv.second.rep->tracker(),
-                    std::bind(&replica_stub::trigger_checkpoint, this, kv.second.rep, true),
-                    kv.first.thread_hash(),
-                    std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
-            }
-        } else if (reserved_log_count > FLAGS_log_shared_file_count_limit) {
+        auto reserved_log_count = _log->garbage_collection(
+            gc_condition, prevent_gc_replicas);
+        if (reserved_log_count > 0) {
+            CHECK_GE(_last_prevent_gc_replica_count, prevent_gc_replicas.size());
+            // if (_last_gc_slog_flushed_replicas > _last_prevent_gc_replica_count - prevent_gc_replicas.size() )
             std::ostringstream oss;
-            int c = 0;
-            for (auto &i : prevent_gc_replicas) {
-                if (c != 0)
+            uint32_t i = 0;
+            for (auto &pid : prevent_gc_replicas) {
+                if (i != 0) {
                     oss << ", ";
-                oss << i.to_string();
-                c++;
+                }
+                oss << pid.to_string();
+                ++i;
             }
             LOG_INFO(
-                "gc_shared: trigger emergency checkpoint by FLAGS_log_shared_file_count_limit, "
-                "file_count_limit = {}, reserved_log_count = {}, prevent_gc_replica_count = "
-                "{}, trigger them to do checkpoint: {}",
-                FLAGS_log_shared_file_count_limit,
+                "gc_shared: trigger emergency checkpoints to flush replicas for gc shared logs: "
+                "log_shared_gc_flush_replicas_limit = {}, reserved_log_count = {}, "
+                "replicas({}) = {}",
+                FLAGS_log_shared_gc_flush_replicas_limit,
                 reserved_log_count,
                 prevent_gc_replicas.size(),
                 oss.str());
-            for (auto &id : prevent_gc_replicas) {
-                auto find = rs.find(id);
-                if (find != rs.end()) {
-                    tasking::enqueue(
-                        LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                        find->second.rep->tracker(),
-                        std::bind(&replica_stub::trigger_checkpoint, this, find->second.rep, true),
-                        id.thread_hash(),
-                        std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
+
+            i = 0;
+            for (const auto &pid : prevent_gc_replicas) {
+                auto r = rs.find(pid);
+                if (r == rs.end()) {
+                    continue;
                 }
+
+                if (FLAGS_log_shared_gc_flush_replicas_limit == 0 || ++i > FLAGS_log_shared_gc_flush_replicas_limit) {
+                    continue;
+                }
+
+                tasking::enqueue(
+                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                    r->second.rep->tracker(),
+                    std::bind(&replica_stub::trigger_checkpoint, this, r->second.rep, true),
+                    pid.thread_hash(),
+                    std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
             }
         }
 

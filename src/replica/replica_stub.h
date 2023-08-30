@@ -435,6 +435,8 @@ private:
     opening_replicas _opening_replicas;
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
+    std::atomic<size_t> _last_gc_slog_flushed_replicas;
+    std::atomic<size_t> _last_prevent_gc_replica_count;
 
     mutation_log_ptr _log;
     ::dsn::rpc_address _primary_address;
