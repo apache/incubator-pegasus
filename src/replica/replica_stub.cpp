@@ -167,7 +167,7 @@ DSN_DEFINE_int32(replication,
                  32,
                  "shared log maximum segment file size (MB)");
 
-DSN_DEFINE_uint32(replication, log_shared_gc_flush_replicas_limit, 50, "shared log maximum file count");
+DSN_DEFINE_uint64(replication, log_shared_gc_flush_replicas_limit, 50, "The number of submitted replicas that are flushed for gc shared logs; 0 means no limit");
 DSN_TAG_VARIABLE(log_shared_gc_flush_replicas_limit, FT_MUTABLE);
 
 DSN_DEFINE_int32(
@@ -194,7 +194,8 @@ bool replica_stub::s_not_exit_on_log_failure = false;
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
                            bool is_long_subscriber /* = true*/)
     : serverlet("replica_stub"),
-    _last_gc_slog_flushed_replicas(0),
+_last_prevent_gc_replica_count(0),
+    _real_log_shared_gc_flush_replicas_limit(0),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -1770,35 +1771,12 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
     }
 }
 
-void replica_stub::on_gc()
+void replica_stub::gc_slog(const replica_gc_map &rs)
 {
-    uint64_t start = dsn_now_ns();
-
-    struct gc_info
-    {
-        replica_ptr rep;
-        partition_status::type status;
-        mutation_log_ptr plog;
-        decree last_durable_decree;
-        int64_t init_offset_in_shared_log;
-    };
-
-    std::unordered_map<gpid, gc_info> rs;
-    {
-        zauto_read_lock l(_replicas_lock);
-        // collect info in lock to prevent the case that the replica is closed in replica::close()
-        for (auto &kv : _replicas) {
-            const replica_ptr &rep = kv.second;
-            gc_info &info = rs[kv.first];
-            info.rep = rep;
-            info.status = rep->status();
-            info.plog = rep->private_log();
-            info.last_durable_decree = rep->last_durable_decree();
-            info.init_offset_in_shared_log = rep->get_app()->init_info().init_offset_in_shared_log;
-        }
+    if (_log == nullptr) {
+        _counter_shared_log_size->set(0);
+        return;
     }
-
-    LOG_INFO("start to garbage collection, replica_count = {}", rs.size());
 
     // TODO(wangdan): fix comments
     //
@@ -1821,85 +1799,151 @@ void replica_stub::on_gc()
     //   of triggering all replicas to do checkpoint, we will only trigger a few of necessary
     //   replicas which block garbage collection of the oldest log file.
     //
-    if (_log != nullptr) {
-        replica_log_info_map gc_condition;
-        for (auto &kv : rs) {
-            replica_log_info ri;
-            replica_ptr &rep = kv.second.rep;
-            mutation_log_ptr &plog = kv.second.plog;
-            if (plog) {
-                // flush private log to update plog_max_commit_on_disk,
-                // and just flush once to avoid flushing infinitely
-                plog->flush_once();
+    
+    replica_log_info_map gc_condition;
+    for (auto &kv : rs) {
+        replica_log_info ri;
+        auto &rep = kv.second.rep;
+        auto &plog = kv.second.plog;
+        if (plog) {
+            // flush private log to update plog_max_commit_on_disk,
+            // and just flush once to avoid flushing infinitely
+            plog->flush_once();
 
-                decree plog_max_commit_on_disk = plog->max_commit_on_disk();
-                ri.max_decree = std::min(kv.second.last_durable_decree, plog_max_commit_on_disk);
-                LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
-                         "last_durable_decree= {}, plog_max_commit_on_disk = {}",
-                         rep->name(),
-                         enum_to_string(kv.second.status),
-                         ri.max_decree,
-                         kv.second.last_durable_decree,
-                         plog_max_commit_on_disk);
-            } else {
-                ri.max_decree = kv.second.last_durable_decree;
-                LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
-                         "last_durable_decree = {}",
-                         rep->name(),
-                         enum_to_string(kv.second.status),
-                         ri.max_decree,
-                         kv.second.last_durable_decree);
-            }
-            ri.valid_start_offset = kv.second.init_offset_in_shared_log;
-            gc_condition[kv.first] = ri;
+            auto plog_max_commit_on_disk = plog->max_commit_on_disk();
+            ri.max_decree = std::min(kv.second.last_durable_decree, plog_max_commit_on_disk);
+            LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
+                     "last_durable_decree= {}, plog_max_commit_on_disk = {}",
+                     rep->name(),
+                     enum_to_string(kv.second.status),
+                     ri.max_decree,
+                     kv.second.last_durable_decree,
+                     plog_max_commit_on_disk);
+        } else {
+            ri.max_decree = kv.second.last_durable_decree;
+            LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
+                     "last_durable_decree = {}",
+                     rep->name(),
+                     enum_to_string(kv.second.status),
+                     ri.max_decree,
+                     kv.second.last_durable_decree);
         }
-
-        std::set<gpid> prevent_gc_replicas;
-        auto reserved_log_count = _log->garbage_collection(
-            gc_condition, prevent_gc_replicas);
-        if (reserved_log_count > 0) {
-            CHECK_GE(_last_prevent_gc_replica_count, prevent_gc_replicas.size());
-            // if (_last_gc_slog_flushed_replicas > _last_prevent_gc_replica_count - prevent_gc_replicas.size() )
-            std::ostringstream oss;
-            uint32_t i = 0;
-            for (auto &pid : prevent_gc_replicas) {
-                if (i != 0) {
-                    oss << ", ";
-                }
-                oss << pid.to_string();
-                ++i;
-            }
-            LOG_INFO(
-                "gc_shared: trigger emergency checkpoints to flush replicas for gc shared logs: "
-                "log_shared_gc_flush_replicas_limit = {}, reserved_log_count = {}, "
-                "replicas({}) = {}",
-                FLAGS_log_shared_gc_flush_replicas_limit,
-                reserved_log_count,
-                prevent_gc_replicas.size(),
-                oss.str());
-
-            i = 0;
-            for (const auto &pid : prevent_gc_replicas) {
-                auto r = rs.find(pid);
-                if (r == rs.end()) {
-                    continue;
-                }
-
-                if (FLAGS_log_shared_gc_flush_replicas_limit == 0 || ++i > FLAGS_log_shared_gc_flush_replicas_limit) {
-                    continue;
-                }
-
-                tasking::enqueue(
-                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                    r->second.rep->tracker(),
-                    std::bind(&replica_stub::trigger_checkpoint, this, r->second.rep, true),
-                    pid.thread_hash(),
-                    std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
-            }
-        }
-
-        _counter_shared_log_size->set(_log->total_size() / (1024 * 1024));
+        ri.valid_start_offset = kv.second.init_offset_in_shared_log;
+        gc_condition[kv.first] = ri;
     }
+
+    std::set<gpid> prevent_gc_replicas;
+    _log->garbage_collection(
+        gc_condition, prevent_gc_replicas);
+    flush_replicas_for_gc_slog(rs, prevent_gc_replicas);
+
+    auto total_size = _log->total_size();
+    _counter_shared_log_size->set(total_size / (1024 * 1024));
+
+    // Close slog if all of its files have been removed.
+    if (total_size == 0) {
+        _log.reset();
+    }
+}
+
+void replica_stub::find_log_shared_gc_flush_replicas()
+{
+    const size_t log_shared_gc_flush_replicas_limit = FLAGS_log_shared_gc_flush_replicas_limit;
+    if (log_shared_gc_flush_replicas_limit == 0)  {
+        // 0 for log_shared_gc_flush_replicas_limit means no limit.
+        _real_log_shared_gc_flush_replicas_limit = std::numeric_limits<size_t>::max();
+        return;
+    }
+
+    if (_last_prevent_gc_replica_count == 0 || ) {
+        // Initialize it for the 1st time.
+        _real_log_shared_gc_flush_replicas_limit = log_shared_gc_flush_replicas_limit;
+        return;
+    }
+
+    CHECK_GE(_last_prevent_gc_replica_count, prevent_gc_replicas.size());
+    size_t flushed_replicas = _last_prevent_gc_replica_count - prevent_gc_replicas.size();
+    if (flushed_replicas == 0) {
+        // It's too busy to process more flush tasks.
+        _real_log_shared_gc_flush_replicas_limit = 2;
+        return;
+    }
+
+    CHECK_GT(_real_log_shared_gc_flush_replicas_limit, 0);
+    if (flushed_replicas < _real_log_shared_gc_flush_replicas_limit) {
+        // Keep it unchanged.
+        return;
+    }
+
+    _real_log_shared_gc_flush_replicas_limit = std::min(log_shared_gc_flush_replicas_limit,_real_log_shared_gc_flush_replicas_limit* 2);
+}
+
+void replica_stub::flush_replicas_for_gc_slog(const replica_gc_map &rs, const std::set<gpid> &prevent_gc_replicas)
+{
+    if (prevent_gc_replicas.empty()) {
+        return;
+    }
+
+    find_log_shared_gc_flush_replicas();
+    _last_prevent_gc_replica_count = prevent_gc_replicas.size();
+
+    std::ostringstream oss;
+    uint32_t i = 0;
+    for (const auto &pid : prevent_gc_replicas) {
+        if (i != 0) {
+            oss << ", ";
+        }
+        oss << pid.to_string();
+        ++i;
+    }
+    LOG_INFO(
+        "gc_shared: trigger emergency checkpoints to flush replicas for gc shared logs: "
+        "log_shared_gc_flush_replicas_limit = {}, replicas({}) = {}",
+        FLAGS_log_shared_gc_flush_replicas_limit,
+        prevent_gc_replicas.size(),
+        oss.str());
+
+    i = 0;
+    for (const auto &pid : prevent_gc_replicas) {
+        auto r = rs.find(pid);
+        if (r == rs.end()) {
+            continue;
+        }
+
+        if (FLAGS_log_shared_gc_flush_replicas_limit == 0 || ++i > FLAGS_log_shared_gc_flush_replicas_limit) {
+            continue;
+        }
+
+        tasking::enqueue(
+            LPC_PER_REPLICA_CHECKPOINT_TIMER,
+            r->second.rep->tracker(),
+            std::bind(&replica_stub::trigger_checkpoint, this, r->second.rep, true),
+            pid.thread_hash(),
+            std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
+    }
+}
+
+void replica_stub::on_gc()
+{
+    uint64_t start = dsn_now_ns();
+
+    replica_gc_map rs;
+    {
+        zauto_read_lock l(_replicas_lock);
+        // collect info in lock to prevent the case that the replica is closed in replica::close()
+        for (const auto &kv : _replicas) {
+            const replica_ptr &rep = kv.second;
+            auto &info = rs[kv.first];
+            info.rep = rep;
+            info.status = rep->status();
+            info.plog = rep->private_log();
+            info.last_durable_decree = rep->last_durable_decree();
+            info.init_offset_in_shared_log = rep->get_app()->init_info().init_offset_in_shared_log;
+        }
+    }
+
+    LOG_INFO("start to garbage collection, replica_count = {}", rs.size());
+    gc_slog(rs);
 
     // statistic learning info
     uint64_t learning_count = 0;

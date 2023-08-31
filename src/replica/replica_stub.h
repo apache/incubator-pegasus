@@ -361,6 +361,18 @@ private:
     replica_life_cycle get_replica_life_cycle(gpid id);
     void on_gc_replica(replica_stub_ptr this_, gpid id);
 
+    struct gc_info
+    {
+        replica_ptr rep;
+        partition_status::type status;
+        mutation_log_ptr plog;
+        decree last_durable_decree;
+        int64_t init_offset_in_shared_log;
+    };
+    using replica_gc_map = std::unordered_map<gpid, gc_info>;
+    void gc_slog(const replica_gc_map &rs);
+void flush_replicas_for_gc_slog(const replica_gc_map &rs, const std::set<gpid> &prevent_gc_replicas);
+
     void response_client(gpid id,
                          bool is_read,
                          dsn::message_ex *request,
@@ -435,8 +447,8 @@ private:
     opening_replicas _opening_replicas;
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
-    std::atomic<size_t> _last_gc_slog_flushed_replicas;
-    std::atomic<size_t> _last_prevent_gc_replica_count;
+    size_t _last_prevent_gc_replica_count;
+    size_t _log_shared_gc_flush_replicas;
 
     mutation_log_ptr _log;
     ::dsn::rpc_address _primary_address;

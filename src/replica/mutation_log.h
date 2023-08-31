@@ -233,7 +233,7 @@ public:
     //      || file.end_offset[r] <= gc_condition[r].valid_start_offset
     //  - the current log file should not be removed
     // thread safe
-    size_t garbage_collection(const replica_log_info_map &gc_condition,
+    void garbage_collection(const replica_log_info_map &gc_condition,
                               std::set<gpid> &prevent_gc_replicas);
 
     //

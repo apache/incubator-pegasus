@@ -919,7 +919,7 @@ int64_t mutation_log::total_size() const
 
 int64_t mutation_log::total_size_no_lock() const
 {
-    return _log_files.size() > 0 ? _global_end_offset - _global_start_offset : 0;
+    return _log_files.empty() ? 0 : _global_end_offset - _global_start_offset;
 }
 
 error_code mutation_log::reset_from(const std::string &dir,
@@ -1443,7 +1443,6 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decre
         // ERR_INCOMPLETE_DATA
         CHECK(valid_start_offset == 0 || valid_start_offset >= log->end_offset(),
               "valid start offset must be 0 or greater than the end of this log file");
-
         LOG_DEBUG("gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
                   "safe to delete this and all older logs for this replica",
                   pid,
@@ -1480,7 +1479,7 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decre
               it->second.max_decree,
               garbage_max_decree);
 
-    dsn::replication::decree gap = it->second.max_decree - garbage_max_decree;
+    auto gap = it->second.max_decree - garbage_max_decree;
     if (log->index() < stop_gc.log_index || gap > stop_gc.decree_gap) {
         // record the max gap replica for the smallest log
         stop_gc.replica = pid;
@@ -1495,7 +1494,7 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decre
 
 } // anonymous namespace
 
-size_t mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
+void mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                                         std::set<gpid> &prevent_gc_replicas)
 {
     CHECK(!_is_private, "this method is only valid for shared log");
@@ -1515,7 +1514,7 @@ size_t mutation_log::garbage_collection(const replica_log_info_map &gc_condition
 
     if (files.empty()) {
         LOG_INFO("gc_shared: slog file not found");
-        return 0;
+        return;
     }
 
     reserved_log_info reserved_log = {
@@ -1561,11 +1560,11 @@ size_t mutation_log::garbage_collection(const replica_log_info_map &gc_condition
 
     if (mark_it == files.rend()) {
         // no file to delete
-        LOG_INFO("gc_shared: no file can be deleted, {}, {}, prevent_gc_replicas = {}",
+        LOG_INFO("gc_shared: no file can be deleted: {}, {}, prevent_gc_replicas = {}",
                  reserved_log,
                  stop_gc,
                  prevent_gc_replicas.size());
-        return reserved_log.log_count;
+        return;
     }
 
     log_deletion_info log_deletion;
@@ -1573,13 +1572,11 @@ size_t mutation_log::garbage_collection(const replica_log_info_map &gc_condition
     // ok, let's delete files in increasing order of file index
     // to avoid making a hole in the file list
     remove_obsolete_log_files(mark_it->second->index(), files, reserved_log, log_deletion);
-    LOG_INFO("gc_shared: deleted some files, {}, {}, {}, prevent_gc_replicas = {}",
+    LOG_INFO("gc_shared: deleted some files: {}, {}, {}, prevent_gc_replicas = {}",
              reserved_log,
              log_deletion,
              stop_gc,
              prevent_gc_replicas.size());
-
-    return reserved_log.log_count;
 }
 
 void mutation_log::remove_obsolete_log_files(const int largest_log_to_delete,
