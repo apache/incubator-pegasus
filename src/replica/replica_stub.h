@@ -32,11 +32,14 @@
 //   replica_stub(singleton) --> replica --> replication_app_base
 //
 
+#include <gtest/gtest_prod.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>

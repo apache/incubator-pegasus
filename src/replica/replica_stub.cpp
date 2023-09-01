@@ -43,6 +43,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <limits>
 #include <mutex>
 #include <ostream>
 #include <set>
@@ -1778,7 +1779,6 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
 void replica_stub::gc_slog(const replica_gc_map &rs)
 {
     if (_log == nullptr) {
-        _counter_shared_log_size->set(0);
         return;
     }
 
@@ -1843,10 +1843,21 @@ void replica_stub::gc_slog(const replica_gc_map &rs)
     auto total_size = _log->total_size();
     _counter_shared_log_size->set(total_size / (1024 * 1024));
 
-    // Close slog if all of its files have been removed.
-    if (total_size == 0) {
-        _log.reset();
-    }
+    // TODO(wangdan): currently we could not yet call _log.reset() as below to close slog and
+    // reset it to nullptr even if it was found that slog had become empty (which means there
+    // had not been any file for slog).
+    // if (total_size == 0) {
+    //     _log.reset();
+    // }
+    //
+    // The reason for this point is that on_gc() is scheduled by timer to run asynchronously
+    // during the initialization of replica_stub. It might happen before slog.on_partition_reset()
+    // (building slog._shared_log_info_map), which means slog would be closed mistakenly before
+    // it was initialized completely.
+    //
+    // All of slog files would removed on v2.5; thus it is safe to remove all of slog code (which
+    // means even slog object would not be created) on the next version (namely 2.6), and this
+    // problem would also be resolved.
 }
 
 void replica_stub::limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_count)

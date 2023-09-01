@@ -27,6 +27,7 @@
 #include "mutation_log.h"
 
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <algorithm>
 #include <cstdint>
 #include <ctime>
@@ -1504,17 +1505,17 @@ void mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
     int64_t total_log_size = 0;
     {
         zauto_lock l(_lock);
-        files = _log_files;
-        max_decrees = _shared_log_info_map;
+        total_log_size = total_size_no_lock();
+        if (_log_files.empty()) {
+            CHECK_EQ(total_log_size, 0);
+            LOG_INFO("gc_shared: slog file not found");
+            return;
+        }
+
         CHECK_NULL(_current_log_file,
                    "shared logs have been deprecated, thus could not be created");
-        total_log_size = total_size_no_lock();
-        CHECK_EQ(total_log_size, 0);
-    }
-
-    if (files.empty()) {
-        LOG_INFO("gc_shared: slog file not found");
-        return;
+        files = _log_files;
+        max_decrees = _shared_log_info_map;
     }
 
     reserved_log_info reserved_log = {

@@ -26,11 +26,13 @@
 
 #pragma once
 
+#include <fmt/core.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <algorithm>
 #include <atomic>
 #include <functional>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <set>
