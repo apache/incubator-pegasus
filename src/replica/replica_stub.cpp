@@ -1835,7 +1835,7 @@ void replica_stub::gc_slog(const replica_gc_map &rs)
     std::set<gpid> prevent_gc_replicas;
     _log->garbage_collection(
         gc_condition, prevent_gc_replicas);
-    flush_replicas_for_gc_slog(rs, prevent_gc_replicas);
+    flush_replicas_for_slog_gc(rs, prevent_gc_replicas);
 
     auto total_size = _log->total_size();
     _counter_shared_log_size->set(total_size / (1024 * 1024));
@@ -1846,7 +1846,7 @@ void replica_stub::gc_slog(const replica_gc_map &rs)
     }
 }
 
-void replica_stub::find_log_shared_gc_flush_replicas()
+void replica_stub::limit_flush_replicas_for_slog_gc()
 {
     const size_t log_shared_gc_flush_replicas_limit = FLAGS_log_shared_gc_flush_replicas_limit;
     if (log_shared_gc_flush_replicas_limit == 0)  {
@@ -1855,7 +1855,7 @@ void replica_stub::find_log_shared_gc_flush_replicas()
         return;
     }
 
-    if (_last_prevent_gc_replica_count == 0 || ) {
+    if (_last_prevent_gc_replica_count == 0) {
         // Initialize it for the 1st time.
         _real_log_shared_gc_flush_replicas_limit = log_shared_gc_flush_replicas_limit;
         return;
@@ -1869,22 +1869,28 @@ void replica_stub::find_log_shared_gc_flush_replicas()
         return;
     }
 
-    CHECK_GT(_real_log_shared_gc_flush_replicas_limit, 0);
+    if (_real_log_shared_gc_flush_replicas_limit == 0 || _real_log_shared_gc_flush_replicas_limit == std::numeric_limits<size_t>::max()) {
+        // Once it was previously set with some special values, it should be reset.
+        _real_log_shared_gc_flush_replicas_limit = log_shared_gc_flush_replicas_limit;
+        return;
+    }
+
     if (flushed_replicas < _real_log_shared_gc_flush_replicas_limit) {
         // Keep it unchanged.
         return;
     }
 
-    _real_log_shared_gc_flush_replicas_limit = std::min(log_shared_gc_flush_replicas_limit,_real_log_shared_gc_flush_replicas_limit* 2);
+    // Increase it to process more flush tasks.
+    _real_log_shared_gc_flush_replicas_limit = std::min(log_shared_gc_flush_replicas_limit,_real_log_shared_gc_flush_replicas_limit << 1);
 }
 
-void replica_stub::flush_replicas_for_gc_slog(const replica_gc_map &rs, const std::set<gpid> &prevent_gc_replicas)
+void replica_stub::flush_replicas_for_slog_gc(const replica_gc_map &rs, const std::set<gpid> &prevent_gc_replicas)
 {
     if (prevent_gc_replicas.empty()) {
         return;
     }
 
-    find_log_shared_gc_flush_replicas();
+    limit_flush_replicas_for_slog_gc();
     _last_prevent_gc_replica_count = prevent_gc_replicas.size();
 
     std::ostringstream oss;
