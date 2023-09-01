@@ -371,7 +371,8 @@ private:
     };
     using replica_gc_map = std::unordered_map<gpid, gc_info>;
     void gc_slog(const replica_gc_map &rs);
-void flush_replicas_for_gc_slog(const replica_gc_map &rs, const std::set<gpid> &prevent_gc_replicas);
+void limit_flush_replicas_for_slog_gc();
+void flush_replicas_for_slog_gc(const replica_gc_map &rs, const std::set<gpid> &prevent_gc_replicas);
 
     void response_client(gpid id,
                          bool is_read,
@@ -448,7 +449,7 @@ private:
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
     size_t _last_prevent_gc_replica_count;
-    size_t _log_shared_gc_flush_replicas;
+    size_t _real_log_shared_gc_flush_replicas_limit;
 
     mutation_log_ptr _log;
     ::dsn::rpc_address _primary_address;
