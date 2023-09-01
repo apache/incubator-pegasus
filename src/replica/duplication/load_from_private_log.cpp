@@ -122,6 +122,8 @@ void load_from_private_log::run()
 
 void load_from_private_log::find_log_file_to_start()
 {
+    _duplicator->set_duplication_plog_checking(true);
+
     // `file_map` has already excluded the useless log files during replica init.
     auto file_map = _private_log->get_log_file_map();
 
@@ -166,6 +168,8 @@ void load_from_private_log::find_log_file_to_start(std::map<int, log_file_ptr> l
         }
     }
     start_from_log_file(_current);
+
+    _duplicator->set_duplication_plog_checking(false);
 }
 
 void load_from_private_log::replay_log_block()
