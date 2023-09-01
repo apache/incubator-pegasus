@@ -470,21 +470,21 @@ public:
     {
     }
 
-    virtual ~mutation_log_shared() override
+    ~mutation_log_shared() override
     {
         close();
         _tracker.cancel_outstanding_tasks();
     }
 
-    virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn::task_code callback_code,
-                                   dsn::task_tracker *tracker,
-                                   aio_handler &&callback,
-                                   int hash = 0,
-                                   int64_t *pending_size = nullptr) override;
+    ::dsn::task_ptr append(mutation_ptr &mu,
+                           dsn::task_code callback_code,
+                           dsn::task_tracker *tracker,
+                           aio_handler &&callback,
+                           int hash = 0,
+                           int64_t *pending_size = nullptr) override;
 
-    virtual void flush() override;
-    virtual void flush_once() override;
+    void flush() override;
+    void flush_once() override;
 
 private:
     // async write pending mutations into log file
@@ -527,24 +527,22 @@ public:
         _tracker.cancel_outstanding_tasks();
     }
 
-    virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn::task_code callback_code,
-                                   dsn::task_tracker *tracker,
-                                   aio_handler &&callback,
-                                   int hash = 0,
-                                   int64_t *pending_size = nullptr) override;
+    ::dsn::task_ptr append(mutation_ptr &mu,
+                           dsn::task_code callback_code,
+                           dsn::task_tracker *tracker,
+                           aio_handler &&callback,
+                           int hash = 0,
+                           int64_t *pending_size = nullptr) override;
 
-    virtual bool get_learn_state_in_memory(decree start_decree,
-                                           binary_writer &writer) const override;
+    bool get_learn_state_in_memory(decree start_decree, binary_writer &writer) const override;
 
     // get in-memory mutations, including pending and writing mutations
-    virtual void
-    get_in_memory_mutations(decree start_decree,
-                            ballot start_ballot,
-                            /*out*/ std::vector<mutation_ptr> &mutation_list) const override;
+    void get_in_memory_mutations(decree start_decree,
+                                 ballot start_ballot,
+                                 /*out*/ std::vector<mutation_ptr> &mutation_list) const override;
 
-    virtual void flush() override;
-    virtual void flush_once() override;
+    void flush() override;
+    void flush_once() override;
 
 private:
     // async write pending mutations into log file
@@ -559,7 +557,7 @@ private:
                                   std::shared_ptr<log_appender> &pending,
                                   decree max_commit);
 
-    virtual void init_states() override;
+    void init_states() override;
 
     // flush at most count times
     // if count <= 0, means flush until all data is on disk
