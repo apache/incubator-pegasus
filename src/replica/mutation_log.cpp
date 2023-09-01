@@ -1495,7 +1495,7 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decre
 } // anonymous namespace
 
 void mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
-                                        std::set<gpid> &prevent_gc_replicas)
+                                      std::set<gpid> &prevent_gc_replicas)
 {
     CHECK(!_is_private, "this method is only valid for shared log");
 

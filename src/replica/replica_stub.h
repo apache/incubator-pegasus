@@ -371,8 +371,9 @@ private:
     };
     using replica_gc_map = std::unordered_map<gpid, gc_info>;
     void gc_slog(const replica_gc_map &rs);
-void limit_flush_replicas_for_slog_gc();
-void flush_replicas_for_slog_gc(const replica_gc_map &rs, const std::set<gpid> &prevent_gc_replicas);
+    void limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_count);
+    void flush_replicas_for_slog_gc(const replica_gc_map &rs,
+                                    const std::set<gpid> &prevent_gc_replicas);
 
     void response_client(gpid id,
                          bool is_read,

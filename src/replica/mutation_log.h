@@ -234,7 +234,7 @@ public:
     //  - the current log file should not be removed
     // thread safe
     void garbage_collection(const replica_log_info_map &gc_condition,
-                              std::set<gpid> &prevent_gc_replicas);
+                            std::set<gpid> &prevent_gc_replicas);
 
     //
     // when this is a private log, log files are learned by remote replicas
