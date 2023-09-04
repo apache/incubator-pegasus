@@ -42,6 +42,7 @@
 #include "replica/mutation.h"
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
+#include "rrdb/rrdb.code.definition.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
@@ -450,6 +451,63 @@ public:
             ASSERT_GE(log_files.size(), 1);
         }
     }
+
+    mutation_ptr generate_slog_mutation(const gpid &pid, const decree d, const std::string &data)
+    {
+        mutation_ptr mu(new mutation());
+        mu->data.header.ballot = 1;
+        mu->data.header.decree = d;
+        mu->data.header.pid = pid;
+        mu->data.header.last_committed_decree = d - 1;
+        mu->data.header.log_offset = 0;
+        mu->data.header.timestamp = d;
+
+        mu->data.updates.push_back(mutation_update());
+        mu->data.updates.back().code = dsn::apps::RPC_RRDB_RRDB_PUT;
+        mu->data.updates.back().data = blob::create_from_bytes(std::string(data));
+
+        mu->client_requests.push_back(nullptr);
+
+        return mu;
+    }
+
+    void generate_slog_file(const std::vector<std::pair<gpid, size_t>> &replica_mutations,
+                            decree &d,
+                            replica_log_info_map &gc_condition)
+    {
+        mutation_log_ptr mlog = new mutation_log_shared("./slog", 1, false);
+        ASSERT_EQ(ERR_OK, mlog->open(nullptr, nullptr));
+
+        for (size_t i = 0; i < replica_mutations.size(); ++i) {
+            for (size_t j = 0; j < replica_mutations[i].second; ++j) {
+                const auto &gc = gc_condition.find(replica_mutations[i].first);
+                if (gc == gc_condition.end()) {
+                    gc_condition.emplace(replica_mutations[i].first,
+                                         replica_log_info(d, mlog->get_global_offset()));
+                } else {
+                    gc->second.max_decree = d;
+                }
+
+                auto mu = generate_slog_mutation(replica_mutations[i].first, d++, "test data");
+                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, mlog->tracker(), nullptr, 0);
+            }
+        }
+
+        mlog->tracker()->wait_outstanding_tasks();
+        mlog->close();
+    }
+
+    void generate_slog_files(const std::vector<std::vector<std::pair<gpid, size_t>>> &files,
+                             std::vector<replica_log_info_map> &gc_conditions)
+    {
+        gc_conditions.clear();
+        gc_conditions.resize(files.size());
+
+        decree d = 1;
+        for (size_t i = 0; i < files.size(); ++i) {
+            generate_slog_file(files[i], d, gc_conditions[i]);
+        }
+    }
 };
 
 TEST_F(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
@@ -606,5 +664,15 @@ TEST_F(mutation_log_test, reset_from_while_writing)
     mlog->flush();
     ASSERT_EQ(actual.size(), expected.size());
 }
+
+TEST_F(mutation_log_test, gc_slog)
+{
+    std::vector<replica_log_info_map> gc_conditions;
+    generate_slog_files({}, gc_conditions);
+    // mlog->garbage_collection(gpid, durable_decree, 0, 0, 0);
+    // mlog->flush();
+    // mlog->close();
+}
+
 } // namespace replication
 } // namespace dsn
