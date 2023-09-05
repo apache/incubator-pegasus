@@ -138,8 +138,8 @@ int geo_client::set(const std::string &hash_key,
     auto async_set_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
         if (ec_ != PERR_OK) {
             LOG_ERROR("set data failed. hash_key={}, sort_key={}, error={}",
-                      hash_key,
-                      sort_key,
+                      utils::redact_sensitive_string(hash_key),
+                      utils::redact_sensitive_string(sort_key),
                       get_error_string(ec_));
             ret = ec_;
         }
@@ -186,8 +186,8 @@ void geo_client::async_set(const std::string &hash_key,
                     if (ec_ != PERR_OK) {
                         LOG_ERROR("set {} data failed. hash_key={}, sort_key={}, error={}",
                                   data_type_ == DataType::common ? "common" : "geo",
-                                  hash_key,
-                                  sort_key,
+                                  utils::redact_sensitive_string(hash_key),
+                                  utils::redact_sensitive_string(sort_key),
                                   get_error_string(ec_));
                         *ret = ec_;
                     }
@@ -238,8 +238,8 @@ int geo_client::get(const std::string &hash_key,
             lng_degrees = lng_degrees_;
         } else {
             LOG_WARNING("get data failed. hash_key={}, sort_key={}, error={}",
-                        hash_key,
-                        sort_key,
+                        utils::redact_sensitive_string(hash_key),
+                        utils::redact_sensitive_string(sort_key),
                         get_error_string(ec_));
         }
         ret = ec_;
@@ -269,8 +269,8 @@ void geo_client::async_get(const std::string &hash_key,
             S2LatLng latlng;
             if (!_codec.decode_from_value(value_, latlng)) {
                 LOG_ERROR("decode_from_value failed. hash_key={}, sort_key={}, value={}",
-                          hash_key,
-                          sort_key,
+                          utils::redact_sensitive_string(hash_key),
+                          utils::redact_sensitive_string(sort_key),
                           value_);
                 cb(PERR_GEO_DECODE_VALUE_ERROR, id, 0, 0);
                 return;
@@ -290,8 +290,8 @@ int geo_client::del(const std::string &hash_key,
     auto async_del_callback = [&](int ec_, pegasus_client::internal_info &&info_) {
         if (ec_ != PERR_OK) {
             LOG_ERROR("del data failed. hash_key={}, sort_key={}, error={}",
-                      hash_key,
-                      sort_key,
+                      utils::redact_sensitive_string(hash_key),
+                      utils::redact_sensitive_string(sort_key),
                       get_error_string(ec_));
             ret = ec_;
         }
@@ -358,8 +358,8 @@ void geo_client::async_del(const std::string &hash_key,
                     if (ec__ != PERR_OK) {
                         LOG_ERROR("del {} data failed. hash_key={}, sort_key={}, error={}",
                                   data_type_ == DataType::common ? "common" : "geo",
-                                  hash_key,
-                                  sort_key,
+                                  utils::redact_sensitive_string(hash_key),
+                                  utils::redact_sensitive_string(sort_key),
                                   get_error_string(ec_));
                         *ret = ec__;
                     }
@@ -391,8 +391,8 @@ int geo_client::set_geo_data(const std::string &hash_key,
         if (ec_ != PERR_OK) {
             ret = ec_;
             LOG_ERROR("set geo data failed. hash_key={}, sort_key={}, error={}",
-                      hash_key,
-                      sort_key,
+                      utils::redact_sensitive_string(hash_key),
+                      utils::redact_sensitive_string(sort_key),
                       get_error_string(ec_));
         }
         set_completed.notify();
@@ -521,8 +521,8 @@ void geo_client::async_search_radial(const std::string &hash_key,
         ](int ec_, std::string &&value_, pegasus_client::internal_info &&) mutable {
             if (ec_ != PERR_OK) {
                 LOG_ERROR("get failed. hash_key={}, sort_key={}, error={}",
-                          hash_key,
-                          sort_key,
+                          utils::redact_sensitive_string(hash_key),
+                          utils::redact_sensitive_string(sort_key),
                           get_error_string(ec_));
                 cb(ec_, {});
                 return;
@@ -531,8 +531,8 @@ void geo_client::async_search_radial(const std::string &hash_key,
             S2LatLng latlng;
             if (!_codec.decode_from_value(value_, latlng)) {
                 LOG_ERROR("decode_from_value failed. hash_key={}, sort_key={}, value={}",
-                          hash_key,
-                          sort_key,
+                          utils::redact_sensitive_string(hash_key),
+                          utils::redact_sensitive_string(sort_key),
                           value_);
                 cb(ec_, {});
                 return;
@@ -726,8 +726,8 @@ bool geo_client::generate_geo_keys(const std::string &hash_key,
     S2LatLng latlng;
     if (!_codec.decode_from_value(value, latlng)) {
         LOG_ERROR("decode_from_value failed. hash_key={}, sort_key={}, value={}",
-                  hash_key,
-                  sort_key,
+                  utils::redact_sensitive_string(hash_key),
+                  utils::redact_sensitive_string(sort_key),
                   value);
         return false;
     }
@@ -919,7 +919,7 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
             if (distance <= S2Earth::ToMeters(cap_ptr->radius())) {
                 std::string origin_hash_key, origin_sort_key;
                 if (!restore_origin_keys(geo_sort_key, origin_hash_key, origin_sort_key)) {
-                    LOG_ERROR("restore_origin_keys failed. geo_sort_key={}", geo_sort_key);
+                    LOG_ERROR("restore_origin_keys failed. geo_sort_key={}", utils::redact_sensitive_string(geo_sort_key));
                     cb();
                     return;
                 }
@@ -955,10 +955,10 @@ int geo_client::distance(const std::string &hash_key1,
             LOG_ERROR(
                 "get distance failed. hash_key1={}, sort_key1={}, hash_key2={}, sort_key2={}, "
                 "error={}",
-                hash_key1,
-                sort_key1,
-                hash_key2,
-                sort_key2,
+                utils::redact_sensitive_string(hash_key1),
+                utils::redact_sensitive_string(sort_key1),
+                utils::redact_sensitive_string(hash_key2),
+                utils::redact_sensitive_string(sort_key2),
                 get_error_string(ec_));
             ret = ec_;
         }
@@ -988,10 +988,10 @@ void geo_client::async_distance(const std::string &hash_key1,
         if (ec_ != PERR_OK) {
             LOG_ERROR("get data failed. hash_key1={}, sort_key1={}, hash_key2={}, sort_key2={}, "
                       "error={}",
-                      hash_key1,
-                      sort_key1,
-                      hash_key2,
-                      sort_key2,
+                      utils::redact_sensitive_string(hash_key1),
+                      utils::redact_sensitive_string(sort_key1),
+                      utils::redact_sensitive_string(hash_key2),
+                      utils::redact_sensitive_string(sort_key2),
                       get_error_string(ec_));
             *ret = ec_;
         }

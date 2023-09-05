@@ -29,6 +29,9 @@
 #include <vector>
 
 #include "utils/string_view.h"
+#include "utils/flags.h"
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
 
 namespace dsn {
 class rpc_address;
@@ -105,6 +108,9 @@ std::string c_escape_string(const T &src, bool always_escape = false)
 //    or (-n) if unescape failed, where n is the failure position.
 // ----------------------------------------------------------------------
 int c_unescape_string(const std::string &src, std::string &dest);
+
+template <typename T>
+T redact_sensitive_string(const T &src);
 
 inline dsn::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
 

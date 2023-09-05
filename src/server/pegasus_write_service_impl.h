@@ -214,10 +214,11 @@ public:
                 int64_t old_value_int;
                 if (!dsn::buf2int64(old_value, old_value_int)) {
                     // invalid old value
-                    LOG_ERROR_PREFIX("incr failed: decree = {}, error = "
-                                     "old value \"{}\" is not an integer or out of range",
-                                     decree,
-                                     utils::c_escape_string(old_value));
+                    LOG_ERROR_PREFIX(
+                        "incr failed: decree = {}, error = "
+                        "old value \"{}\" is not an integer or out of range",
+                        decree,
+                        utils::c_escape_string(utils::redact_sensitive_string(old_value)));
                     resp.error = rocksdb::Status::kInvalidArgument;
                     // we should write empty record to update rocksdb's last flushed decree
                     return empty_put(decree);
@@ -287,11 +288,12 @@ public:
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != rocksdb::Status::kOk) {
             // read check value failed
-            LOG_ERROR_ROCKSDB("Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
-                              "check_sort_key: {}",
-                              decree,
-                              utils::c_escape_string(update.hash_key),
-                              utils::c_escape_string(update.check_sort_key));
+            LOG_ERROR_ROCKSDB(
+                "Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
+                "check_sort_key: {}",
+                decree,
+                utils::c_escape_string(utils::redact_sensitive_string(update.hash_key)),
+                utils::c_escape_string(utils::redact_sensitive_string(update.check_sort_key)));
             resp.error = err;
             return resp.error;
         }
@@ -407,11 +409,12 @@ public:
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != rocksdb::Status::kOk) {
             // read check value failed
-            LOG_ERROR_ROCKSDB("Error to GetCheckValue for CheckAndMutate decree: {}, hash_key: {}, "
-                              "check_sort_key: {}",
-                              decree,
-                              utils::c_escape_string(update.hash_key),
-                              utils::c_escape_string(update.check_sort_key));
+            LOG_ERROR_ROCKSDB(
+                "Error to GetCheckValue for CheckAndMutate decree: {}, hash_key: {}, "
+                "check_sort_key: {}",
+                decree,
+                utils::c_escape_string(utils::redact_sensitive_string(update.hash_key)),
+                utils::c_escape_string(utils::redact_sensitive_string(update.check_sort_key)));
             resp.error = err;
             return resp.error;
         }
@@ -650,17 +653,18 @@ private:
                 LOG_ERROR_PREFIX("check failed: decree = {}, error = "
                                  "check value \"{}\" is not an integer or out of range",
                                  decree,
-                                 utils::c_escape_string(value));
+                                 utils::c_escape_string(utils::redact_sensitive_string(value)));
                 invalid_argument = true;
                 return false;
             }
             int64_t check_operand_int;
             if (!dsn::buf2int64(check_operand, check_operand_int)) {
                 // invalid check operand
-                LOG_ERROR_PREFIX("check failed: decree = {}, error = "
-                                 "check operand \"{}\" is not an integer or out of range",
-                                 decree,
-                                 utils::c_escape_string(check_operand));
+                LOG_ERROR_PREFIX(
+                    "check failed: decree = {}, error = "
+                    "check operand \"{}\" is not an integer or out of range",
+                    decree,
+                    utils::c_escape_string(utils::redact_sensitive_string(check_operand)));
                 invalid_argument = true;
                 return false;
             }

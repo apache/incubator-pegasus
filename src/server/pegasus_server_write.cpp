@@ -172,8 +172,8 @@ void pegasus_server_write::request_key_check(int64_t decree,
                          "decree: {}, code: {}, hash_key: {}, sort_key: {}",
                          decree,
                          msg->local_rpc_code.to_string(),
-                         utils::c_escape_string(hash_key),
-                         utils::c_escape_string(sort_key));
+                         utils::c_escape_string(utils::redact_sensitive_string(hash_key)),
+                         utils::c_escape_string(utils::redact_sensitive_string(sort_key)));
     }
 }
 
