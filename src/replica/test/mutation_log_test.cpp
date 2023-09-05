@@ -46,6 +46,7 @@
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
+#include "utils/defer.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -506,15 +507,11 @@ public:
     }
 
     void generate_slog_files(const std::vector<std::vector<std::pair<gpid, size_t>>> &files,
+                             mutation_log_ptr &mlog,
                              std::vector<replica_log_info_map> &gc_conditions)
     {
-        ASSERT_TRUE(dsn::utils::filesystem::remove_path("./slog_test"));
-        ASSERT_TRUE(dsn::utils::filesystem::create_directory("./slog_test"));
         gc_conditions.clear();
         gc_conditions.resize(files.size());
-
-        mutation_log_ptr mlog = new mutation_log_shared("./slog_test", 1, false);
-        ASSERT_EQ(ERR_OK, mlog->open(nullptr, nullptr));
 
         replica_log_info_map global_gc_condition;
 
@@ -526,7 +523,9 @@ public:
                 mlog->flush();
             }
         }
-        mlog->close();
+
+        mlog->_current_log_file->close();
+        mlog->_current_log_file = nullptr;
     }
 };
 
@@ -687,11 +686,36 @@ TEST_F(mutation_log_test, reset_from_while_writing)
 
 TEST_F(mutation_log_test, gc_slog)
 {
+    const std::string slog_dir("./slog_test");
+    ASSERT_TRUE(dsn::utils::filesystem::remove_path(slog_dir));
+    ASSERT_TRUE(dsn::utils::filesystem::create_directory(slog_dir));
+
+    mutation_log_ptr mlog = new mutation_log_shared(slog_dir, 1, false);
+    auto cleanup = dsn::defer([mlog]() { mlog->close(); });
+    ASSERT_EQ(ERR_OK, mlog->open(nullptr, nullptr));
+
+    const std::vector<std::vector<std::pair<gpid, size_t>>> files = {
+        {{gpid(2, 5), 10}, {gpid(1, 2), 10}}, {{gpid(1, 2), 10}}};
     std::vector<replica_log_info_map> gc_conditions;
-    generate_slog_files({{{gpid(2, 5), 10}, {gpid(1, 2), 10}}, {{gpid(1, 2), 10}}}, gc_conditions);
-    // mlog->garbage_collection(gpid, durable_decree, 0, 0, 0);
-    // mlog->flush();
-    // mlog->close();
+    generate_slog_files(files, mlog, gc_conditions);
+
+    for (size_t i = 0; i < gc_conditions.size(); ++i) {
+        std::set<gpid> actual_prevent_gc_replicas;
+        mlog->garbage_collection(gc_conditions[i], actual_prevent_gc_replicas);
+
+        std::vector<std::string> file_list;
+        ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(slog_dir, file_list, false));
+        ASSERT_EQ(gc_conditions.size() - i - 1, file_list.size());
+
+        std::set<gpid> expected_prevent_gc_replicas;
+        for (size_t j = i + 1; j < files.size(); ++j) {
+            for (size_t k = 0; k < files[j].size(); ++k) {
+                expected_prevent_gc_replicas.insert(files[j][k].first);
+            }
+        }
+
+        ASSERT_EQ(expected_prevent_gc_replicas, actual_prevent_gc_replicas);
+    }
 }
 
 } // namespace replication
