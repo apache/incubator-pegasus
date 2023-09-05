@@ -528,7 +528,7 @@ error_code mutation_log::open(replay_callback read_callback,
                               io_failure_callback write_error_callback,
                               const std::map<gpid, decree> &replay_condition)
 {
-    CHECK(!_is_opened, "cannot open a opened mutation_log");
+    CHECK(!_is_opened, "cannot open an opened mutation_log");
     CHECK_NULL(_current_log_file, "");
 
     // create dir if necessary
