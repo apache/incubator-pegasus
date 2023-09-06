@@ -33,6 +33,7 @@
 #include <gtest/gtest.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <limits>
 #include <unordered_map>
 
 #include "aio/aio_task.h"
@@ -52,6 +53,7 @@
 #include "utils/defer.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
@@ -479,27 +481,15 @@ public:
     void generate_slog_file(const std::vector<std::pair<gpid, size_t>> &replica_mutations,
                             mutation_log_ptr &mlog,
                             decree &d,
-                            replica_log_info_map &global_gc_condition,
-                            replica_log_info_map &gc_condition)
+                            std::unordered_map<gpid, int64_t> &valid_start_offsets)
     {
         for (size_t i = 0; i < replica_mutations.size(); ++i) {
             for (size_t j = 0; j < replica_mutations[i].second; ++j) {
                 const auto &pid = replica_mutations[i].first;
-                const auto &gc = gc_condition.find(pid);
-                if (gc == gc_condition.end()) {
-                    gc_condition.emplace(pid, replica_log_info(d, mlog->get_global_offset()));
-
-                    const auto &global_gc = global_gc_condition.find(pid);
-                    if (global_gc == global_gc_condition.end()) {
-                        mlog->set_valid_start_offset_on_open(pid, mlog->get_global_offset());
-                        global_gc_condition.emplace(pid,
-                                                    replica_log_info(d, mlog->get_global_offset()));
-                    } else {
-                        mlog->set_valid_start_offset_on_open(pid,
-                                                             global_gc->second.valid_start_offset);
-                    }
-                } else {
-                    gc->second.max_decree = d;
+                const auto &it = valid_start_offsets.find(pid);
+                if (it == valid_start_offsets.end()) {
+                    valid_start_offsets.emplace(pid, mlog->get_global_offset());
+                    mlog->set_valid_start_offset_on_open(pid, mlog->get_global_offset());
                 }
 
                 auto mu = generate_slog_mutation(pid, d++, "test data");
@@ -512,16 +502,13 @@ public:
 
     void generate_slog_files(const std::vector<std::vector<std::pair<gpid, size_t>>> &files,
                              mutation_log_ptr &mlog,
-                             std::vector<replica_log_info_map> &gc_conditions)
+                             std::unordered_map<gpid, int64_t> &valid_start_offsets)
     {
-        gc_conditions.clear();
-        gc_conditions.resize(files.size());
-
-        replica_log_info_map global_gc_condition;
+        valid_start_offsets.clear();
 
         decree d = 1;
         for (size_t i = 0; i < files.size(); ++i) {
-            generate_slog_file(files[i], mlog, d, global_gc_condition, gc_conditions[i]);
+            generate_slog_file(files[i], mlog, d, valid_start_offsets);
             if (i + 1 < files.size()) {
                 mlog->create_new_log_file();
                 mlog->flush();
@@ -702,20 +689,53 @@ TEST_F(mutation_log_test, gc_slog)
         {{{2, 5}, 8}, {{1, 1}, 7}, {{1, 2}, 2}},
         {{{1, 2}, 5}},
         {{{2, 5}, 16}, {{2, 7}, 8}, {{5, 6}, 27}}};
+
+    // Decrees for each partition:
+    // {1, 1}: 9 ~ 15
+    // {1, 2}: 16 ~ 22
+    // {2, 5}: 1 ~ 8, 23 ~ 38
+    // {2, 7}: 39 ~ 46
+    // {5, 6}: 47 ~ 73
+    const std::vector<std::unordered_map<gpid, decree>> durable_decrees = {
+        {{{1, 1}, 10}, {{1, 2}, 17}, {{2, 5}, 6}, {{2, 7}, 39}, {{5, 6}, 47}},
+        {{{1, 1}, 15}, {{1, 2}, 18}, {{2, 5}, 7}, {{2, 7}, 40}, {{5, 6}, 57}},
+        {{{1, 1}, 15}, {{1, 2}, 20}, {{2, 5}, 8}, {{2, 7}, 42}, {{5, 6}, 61}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 23}, {{2, 7}, 44}, {{5, 6}, 65}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 27}, {{2, 7}, 46}, {{5, 6}, 66}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 32}, {{2, 7}, 46}, {{5, 6}, 67}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 38}, {{2, 7}, 46}, {{5, 6}, 72}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 38}, {{2, 7}, 46}, {{5, 6}, 73}},
+    };
+    const std::vector<size_t> remaining_slog_files = {3, 3, 2, 1, 1, 1, 1, 0};
     const std::vector<std::set<gpid>> expected_prevent_gc_replicas = {
-        {{1, 2}, {2, 5}}, {}, {},
+        {{1, 1}, {1, 2}, {2, 5}, {2, 7}, {5, 6}},
+        {{1, 2}, {2, 5}, {2, 7}, {5, 6}},
+        {{1, 2}, {2, 5}, {2, 7}, {5, 6}},
+        {{2, 5}, {2, 7}, {5, 6}},
+        {{2, 5}, {5, 6}},
+        {{2, 5}, {5, 6}},
+        {{5, 6}},
+        {},
     };
 
-    std::vector<replica_log_info_map> gc_conditions;
-    generate_slog_files(files, mlog, gc_conditions);
+    std::unordered_map<gpid, int64_t> valid_start_offsets;
+    generate_slog_files(files, mlog, valid_start_offsets);
 
-    for (size_t i = 0; i < gc_conditions.size(); ++i) {
+    for (size_t i = 0; i < durable_decrees.size(); ++i) {
+        std::cout << "Update No." << i << " group of durable decrees" << std::endl;
+
+        replica_log_info_map gc_condition;
+        for (const auto &d : durable_decrees[i]) {
+            gc_condition.emplace(d.first, replica_log_info(d.second, valid_start_offsets[d.first]));
+        }
+
         std::set<gpid> actual_prevent_gc_replicas;
-        mlog->garbage_collection(gc_conditions[i], actual_prevent_gc_replicas);
+        mlog->garbage_collection(gc_condition, actual_prevent_gc_replicas);
 
         std::vector<std::string> file_list;
         ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(slog_dir, file_list, false));
-        ASSERT_EQ(gc_conditions.size() - i - 1, file_list.size());
+        ASSERT_EQ(remaining_slog_files[i], file_list.size());
+
         ASSERT_EQ(expected_prevent_gc_replicas[i], actual_prevent_gc_replicas);
     }
 }
