@@ -1880,7 +1880,8 @@ void replica_stub::limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_co
     size_t flushed_replicas = _last_prevent_gc_replica_count - prevent_gc_replica_count;
     if (flushed_replicas == 0) {
         // It's too busy to process more flush tasks.
-        _real_log_shared_gc_flush_replicas_limit = 2;
+        _real_log_shared_gc_flush_replicas_limit =
+            std::min(2UL, log_shared_gc_flush_replicas_limit);
         return;
     }
 

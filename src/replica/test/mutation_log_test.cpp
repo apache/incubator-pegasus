@@ -28,6 +28,7 @@
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <stdio.h>
@@ -41,6 +42,7 @@
 #include "replica/log_block.h"
 #include "replica/log_file.h"
 #include "replica/mutation.h"
+#include "replica/replica_stub.h"
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
 #include "rrdb/rrdb.code.definition.h"
@@ -697,7 +699,13 @@ TEST_F(mutation_log_test, gc_slog)
     ASSERT_EQ(ERR_OK, mlog->open(nullptr, nullptr));
 
     const std::vector<std::vector<std::pair<gpid, size_t>>> files = {
-        {{gpid(2, 5), 10}, {gpid(1, 2), 10}}, {{gpid(1, 2), 10}}};
+        {{{2, 5}, 8}, {{1, 1}, 7}, {{1, 2}, 2}},
+        {{{1, 2}, 5}},
+        {{{2, 5}, 16}, {{2, 7}, 8}, {{5, 6}, 27}}};
+    const std::vector<std::set<gpid>> expected_prevent_gc_replicas = {
+        {{1, 2}, {2, 5}}, {}, {},
+    };
+
     std::vector<replica_log_info_map> gc_conditions;
     generate_slog_files(files, mlog, gc_conditions);
 
@@ -708,49 +716,86 @@ TEST_F(mutation_log_test, gc_slog)
         std::vector<std::string> file_list;
         ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(slog_dir, file_list, false));
         ASSERT_EQ(gc_conditions.size() - i - 1, file_list.size());
-
-        std::set<gpid> expected_prevent_gc_replicas;
-        for (size_t j = i + 1; j < files.size(); ++j) {
-            for (size_t k = 0; k < files[j].size(); ++k) {
-                expected_prevent_gc_replicas.insert(files[j][k].first);
-            }
-        }
-
-        ASSERT_EQ(expected_prevent_gc_replicas, actual_prevent_gc_replicas);
+        ASSERT_EQ(expected_prevent_gc_replicas[i], actual_prevent_gc_replicas);
     }
 }
 
-using gc_slog_flush_replicas_case = std::tuple<std::set<gpid>, uint64_t, size_t>;
+using gc_slog_flush_replicas_case = std::tuple<std::set<gpid>, uint64_t, size_t, size_t, size_t>;
 
 class GcSlogFlushFeplicasTest : public testing::TestWithParam<gc_slog_flush_replicas_case>
 {
 };
 
+DSN_DECLARE_uint64(log_shared_gc_flush_replicas_limit);
+
 TEST_P(GcSlogFlushFeplicasTest, FlushReplicas)
 {
     std::set<gpid> prevent_gc_replicas;
+    size_t last_prevent_gc_replica_count;
     uint64_t limit;
+    size_t last_limit;
     size_t expected_flush_replicas;
-    std::tie(prevent_gc_replicas, limit, expected_flush_replicas) = GetParam();
+    std::tie(prevent_gc_replicas,
+             last_prevent_gc_replica_count,
+             limit,
+             last_limit,
+             expected_flush_replicas) = GetParam();
 
     replica_stub::replica_gc_map rs;
     for (const auto &r : prevent_gc_replicas) {
         rs.emplace(r, replica_stub::gc_info());
     }
 
+    const auto reserved_log_shared_gc_flush_replicas_limit =
+        FLAGS_log_shared_gc_flush_replicas_limit;
+    FLAGS_log_shared_gc_flush_replicas_limit = limit;
+
     dsn::fail::setup();
     dsn::fail::cfg("mock_flush_replicas_for_slog_gc", "void(true)");
 
     replica_stub stub;
+    stub._last_prevent_gc_replica_count = last_prevent_gc_replica_count;
+    stub._real_log_shared_gc_flush_replicas_limit = last_limit;
+
     stub.flush_replicas_for_slog_gc(rs, prevent_gc_replicas);
     EXPECT_EQ(expected_flush_replicas, stub._mock_flush_replicas_for_test);
 
     dsn::fail::teardown();
+
+    FLAGS_log_shared_gc_flush_replicas_limit = reserved_log_shared_gc_flush_replicas_limit;
 }
 
 const std::vector<gc_slog_flush_replicas_case> gc_slog_flush_replicas_tests = {
-    {{{1, 1}, {1, 2}}, 0, 2},
-    // {{}, },
+    // Initially, there is no limit on flushed replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 0, 0, 6},
+    // Initially, there is no limit on flushed replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 1, 0, 5, 6},
+    // Initially, limit is less than the number of replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 1, 0, 1},
+    // Initially, limit is less than the number of replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 2, 0, 2},
+    // Initially, limit is just equal to the number of replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 6, 0, 6},
+    // Initially, limit is more than the number of replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 7, 0, 6},
+    // No replica has been flushed during previous round.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 6, 6, 6, 2},
+    // No replica has been flushed during previous round.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 6, 1, 2, 1},
+    // The previous limit is 0.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 7, 5, 0, 5},
+    // The previous limit is infinite.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 7, 5, std::numeric_limits<size_t>::max(), 5},
+    // The number of previously flushed replicas is less than the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 7, 5, 0, 5},
+    // The number of previously flushed replicas reaches the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 8, 6, 2, 4},
+    // The number of previously flushed replicas reaches the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 12, 6, 6, 6},
+    // The number of previously flushed replicas is more than the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 9, 3, 2, 3},
+    // The number of previously flushed replicas is more than the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 9, 5, 2, 4},
 };
 
 INSTANTIATE_TEST_CASE_P(MutationLogTest,
