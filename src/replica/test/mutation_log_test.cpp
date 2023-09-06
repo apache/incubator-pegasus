@@ -33,6 +33,8 @@
 #include <gtest/gtest.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <cstdint>
+#include <iostream>
 #include <limits>
 #include <unordered_map>
 
@@ -481,11 +483,18 @@ public:
     void generate_slog_file(const std::vector<std::pair<gpid, size_t>> &replica_mutations,
                             mutation_log_ptr &mlog,
                             decree &d,
-                            std::unordered_map<gpid, int64_t> &valid_start_offsets)
+                            std::unordered_map<gpid, int64_t> &valid_start_offsets,
+                            std::pair<gpid, int64_t> &slog_file_start_offset)
     {
         for (size_t i = 0; i < replica_mutations.size(); ++i) {
+            const auto &pid = replica_mutations[i].first;
+
             for (size_t j = 0; j < replica_mutations[i].second; ++j) {
-                const auto &pid = replica_mutations[i].first;
+                if (i == 0) {
+                    slog_file_start_offset.first = pid;
+                    slog_file_start_offset.second = mlog->get_global_offset();
+                }
+
                 const auto &it = valid_start_offsets.find(pid);
                 if (it == valid_start_offsets.end()) {
                     valid_start_offsets.emplace(pid, mlog->get_global_offset());
@@ -502,13 +511,15 @@ public:
 
     void generate_slog_files(const std::vector<std::vector<std::pair<gpid, size_t>>> &files,
                              mutation_log_ptr &mlog,
-                             std::unordered_map<gpid, int64_t> &valid_start_offsets)
+                             std::unordered_map<gpid, int64_t> &valid_start_offsets,
+                             std::vector<std::pair<gpid, int64_t>> &slog_file_start_offsets)
     {
         valid_start_offsets.clear();
+        slog_file_start_offsets.resize(files.size());
 
         decree d = 1;
         for (size_t i = 0; i < files.size(); ++i) {
-            generate_slog_file(files[i], mlog, d, valid_start_offsets);
+            generate_slog_file(files[i], mlog, d, valid_start_offsets, slog_file_start_offsets[i]);
             if (i + 1 < files.size()) {
                 mlog->create_new_log_file();
                 mlog->flush();
@@ -718,8 +729,13 @@ TEST_F(mutation_log_test, gc_slog)
         {},
     };
 
+    const std::unordered_map<size_t, size_t> set_to_slog_file_start_offsets = {
+        {2, 1},
+    };
+
     std::unordered_map<gpid, int64_t> valid_start_offsets;
-    generate_slog_files(files, mlog, valid_start_offsets);
+    std::vector<std::pair<gpid, int64_t>> slog_file_start_offsets;
+    generate_slog_files(files, mlog, valid_start_offsets, slog_file_start_offsets);
 
     for (size_t i = 0; i < durable_decrees.size(); ++i) {
         std::cout << "Update No." << i << " group of durable decrees" << std::endl;
@@ -727,6 +743,12 @@ TEST_F(mutation_log_test, gc_slog)
         replica_log_info_map gc_condition;
         for (const auto &d : durable_decrees[i]) {
             gc_condition.emplace(d.first, replica_log_info(d.second, valid_start_offsets[d.first]));
+        }
+
+        const auto &set_to_start = set_to_slog_file_start_offsets.find(i);
+        if (set_to_start != set_to_slog_file_start_offsets.end()) {
+            const auto &start_offset = slog_file_start_offsets[set_to_start->second];
+            gc_condition[start_offset.first].valid_start_offset = start_offset.second;
         }
 
         std::set<gpid> actual_prevent_gc_replicas;
