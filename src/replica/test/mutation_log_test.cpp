@@ -26,6 +26,7 @@
 
 #include "replica/mutation_log.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -47,6 +48,7 @@
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
+#include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -717,6 +719,43 @@ TEST_F(mutation_log_test, gc_slog)
         ASSERT_EQ(expected_prevent_gc_replicas, actual_prevent_gc_replicas);
     }
 }
+
+using gc_slog_flush_replicas_case = std::tuple<std::set<gpid>, uint64_t, size_t>;
+
+class GcSlogFlushFeplicasTest : public testing::TestWithParam<gc_slog_flush_replicas_case>
+{
+};
+
+TEST_P(GcSlogFlushFeplicasTest, FlushReplicas)
+{
+    std::set<gpid> prevent_gc_replicas;
+    uint64_t limit;
+    size_t expected_flush_replicas;
+    std::tie(prevent_gc_replicas, limit, expected_flush_replicas) = GetParam();
+
+    replica_stub::replica_gc_map rs;
+    for (const auto &r : prevent_gc_replicas) {
+        rs.emplace(r, replica_stub::gc_info());
+    }
+
+    dsn::fail::setup();
+    dsn::fail::cfg("mock_flush_replicas_for_slog_gc", "void(true)");
+
+    replica_stub stub;
+    stub.flush_replicas_for_slog_gc(rs, prevent_gc_replicas);
+    EXPECT_EQ(expected_flush_replicas, stub._mock_flush_replicas_for_test);
+
+    dsn::fail::teardown();
+}
+
+const std::vector<gc_slog_flush_replicas_case> gc_slog_flush_replicas_tests = {
+    {{{1, 1}, {1, 2}}, 0, 2},
+    // {{}, },
+};
+
+INSTANTIATE_TEST_CASE_P(MutationLogTest,
+                        GcSlogFlushFeplicasTest,
+                        testing::ValuesIn(gc_slog_flush_replicas_tests));
 
 } // namespace replication
 } // namespace dsn

@@ -201,6 +201,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     : serverlet("replica_stub"),
       _last_prevent_gc_replica_count(0),
       _real_log_shared_gc_flush_replicas_limit(0),
+      _mock_flush_replicas_for_test(0),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -1911,7 +1912,7 @@ void replica_stub::flush_replicas_for_slog_gc(const replica_gc_map &rs,
     _last_prevent_gc_replica_count = prevent_gc_replicas.size();
 
     std::ostringstream oss;
-    uint32_t i = 0;
+    size_t i = 0;
     for (const auto &pid : prevent_gc_replicas) {
         if (i != 0) {
             oss << ", ";
@@ -1920,20 +1921,32 @@ void replica_stub::flush_replicas_for_slog_gc(const replica_gc_map &rs,
         ++i;
     }
     LOG_INFO("gc_shared: trigger emergency checkpoints to flush replicas for gc shared logs: "
-             "log_shared_gc_flush_replicas_limit = {}, replicas({}) = {}",
+             "log_shared_gc_flush_replicas_limit = {}/{}, replicas({}) = {}",
+             _real_log_shared_gc_flush_replicas_limit,
              FLAGS_log_shared_gc_flush_replicas_limit,
              prevent_gc_replicas.size(),
              oss.str());
 
     i = 0;
     for (const auto &pid : prevent_gc_replicas) {
-        auto r = rs.find(pid);
+        const auto &r = rs.find(pid);
         if (r == rs.end()) {
             continue;
         }
 
-        if (FLAGS_log_shared_gc_flush_replicas_limit == 0 ||
-            ++i > FLAGS_log_shared_gc_flush_replicas_limit) {
+        if (++i > _real_log_shared_gc_flush_replicas_limit) {
+            break;
+        }
+
+        bool mock_flush = false;
+        FAIL_POINT_INJECT_NOT_RETURN_F(
+            "mock_flush_replicas_for_slog_gc", [&mock_flush, this, i](dsn::string_view str) {
+                CHECK(buf2bool(str, mock_flush),
+                      "invalid mock_flush_replicas_for_slog_gc toggle, should be true or false: {}",
+                      str);
+                _mock_flush_replicas_for_test = i;
+            });
+        if (dsn_unlikely(mock_flush)) {
             continue;
         }
 

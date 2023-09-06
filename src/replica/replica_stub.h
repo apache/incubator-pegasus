@@ -440,6 +440,7 @@ private:
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
+    FRIEND_TEST(GcSlogFlushFeplicasTest, FlushReplicas);
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
@@ -454,6 +455,7 @@ private:
     closed_replicas _closed_replicas;
     size_t _last_prevent_gc_replica_count;
     size_t _real_log_shared_gc_flush_replicas_limit;
+    size_t _mock_flush_replicas_for_test;
 
     mutation_log_ptr _log;
     ::dsn::rpc_address _primary_address;
