@@ -521,11 +521,15 @@ public:
         for (size_t i = 0; i < files.size(); ++i) {
             generate_slog_file(files[i], mlog, d, valid_start_offsets, slog_file_start_offsets[i]);
             if (i + 1 < files.size()) {
+                // Do not create a new slog file after the last file is generated.
                 mlog->create_new_log_file();
-                mlog->flush();
+                // Wait until file header is written.
+                mlog->tracker()->wait_outstanding_tasks();
             }
         }
 
+        // Close and reset `_current_log_file` since slog has been deprecated and would not be
+        // used again.
         mlog->_current_log_file->close();
         mlog->_current_log_file = nullptr;
     }
@@ -688,25 +692,32 @@ TEST_F(mutation_log_test, reset_from_while_writing)
 
 TEST_F(mutation_log_test, gc_slog)
 {
+    // Remove the slog dir and create a new one.
     const std::string slog_dir("./slog_test");
     ASSERT_TRUE(dsn::utils::filesystem::remove_path(slog_dir));
     ASSERT_TRUE(dsn::utils::filesystem::create_directory(slog_dir));
 
+    // Create and open slog object, which would be closed at the end of the scope.
     mutation_log_ptr mlog = new mutation_log_shared(slog_dir, 1, false);
     auto cleanup = dsn::defer([mlog]() { mlog->close(); });
     ASSERT_EQ(ERR_OK, mlog->open(nullptr, nullptr));
 
-    const std::vector<std::vector<std::pair<gpid, size_t>>> files = {
-        {{{2, 5}, 8}, {{1, 1}, 7}, {{1, 2}, 2}},
-        {{{1, 2}, 5}},
-        {{{2, 5}, 16}, {{2, 7}, 8}, {{5, 6}, 27}}};
-
-    // Decrees for each partition:
+    // Each line describes a sequence of mutations written to specified replicas by
+    // specified numbers.
+    //
+    // From these sequences the decrees for each partition could be concluded as below:
     // {1, 1}: 9 ~ 15
     // {1, 2}: 16 ~ 22
     // {2, 5}: 1 ~ 8, 23 ~ 38
     // {2, 7}: 39 ~ 46
     // {5, 6}: 47 ~ 73
+    const std::vector<std::vector<std::pair<gpid, size_t>>> files = {
+        {{{2, 5}, 8}, {{1, 1}, 7}, {{1, 2}, 2}},
+        {{{1, 2}, 5}},
+        {{{2, 5}, 16}, {{2, 7}, 8}, {{5, 6}, 27}}};
+
+    // Each line describes a progress of durable decrees for all of replicas: decrees are
+    // continuously being applied and becoming durable.
     const std::vector<std::unordered_map<gpid, decree>> durable_decrees = {
         {{{1, 1}, 10}, {{1, 2}, 17}, {{2, 5}, 6}, {{2, 7}, 39}, {{5, 6}, 47}},
         {{{1, 1}, 15}, {{1, 2}, 18}, {{2, 5}, 7}, {{2, 7}, 40}, {{5, 6}, 57}},
@@ -729,10 +740,14 @@ TEST_F(mutation_log_test, gc_slog)
         {},
     };
 
+    // Each line describes an action, that during a round (related to the index of
+    // `durable_decrees`), which replica should be reset to the start offset of an
+    // slog file (related to the index of `files` and `slog_file_start_offsets`).
     const std::unordered_map<size_t, size_t> set_to_slog_file_start_offsets = {
         {2, 1},
     };
 
+    // Create slog files and write some data into them according to test cases.
     std::unordered_map<gpid, int64_t> valid_start_offsets;
     std::vector<std::pair<gpid, int64_t>> slog_file_start_offsets;
     generate_slog_files(files, mlog, valid_start_offsets, slog_file_start_offsets);
@@ -740,24 +755,31 @@ TEST_F(mutation_log_test, gc_slog)
     for (size_t i = 0; i < durable_decrees.size(); ++i) {
         std::cout << "Update No." << i << " group of durable decrees" << std::endl;
 
-        replica_log_info_map gc_condition;
+        // Update the progress of durable_decrees for each partition.
+        replica_log_info_map replica_durable_decrees;
         for (const auto &d : durable_decrees[i]) {
-            gc_condition.emplace(d.first, replica_log_info(d.second, valid_start_offsets[d.first]));
+            replica_durable_decrees.emplace(
+                d.first, replica_log_info(d.second, valid_start_offsets[d.first]));
         }
 
+        // Test condition for `valid_start_offset`, see `can_gc_replica_slog`.
         const auto &set_to_start = set_to_slog_file_start_offsets.find(i);
         if (set_to_start != set_to_slog_file_start_offsets.end()) {
             const auto &start_offset = slog_file_start_offsets[set_to_start->second];
-            gc_condition[start_offset.first].valid_start_offset = start_offset.second;
+            replica_durable_decrees[start_offset.first].valid_start_offset = start_offset.second;
         }
 
+        // Run garbage collection for a round.
         std::set<gpid> actual_prevent_gc_replicas;
-        mlog->garbage_collection(gc_condition, actual_prevent_gc_replicas);
+        mlog->garbage_collection(replica_durable_decrees, actual_prevent_gc_replicas);
 
+        // Check if the number of remaining slog files after garbage collection is desired.
         std::vector<std::string> file_list;
         ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(slog_dir, file_list, false));
         ASSERT_EQ(remaining_slog_files[i], file_list.size());
 
+        // Check if the replicas that prevent garbage collection (i.e. cannot be removed by
+        // garbage collection) is expected.
         ASSERT_EQ(expected_prevent_gc_replicas[i], actual_prevent_gc_replicas);
     }
 }

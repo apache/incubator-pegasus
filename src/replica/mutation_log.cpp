@@ -1428,7 +1428,7 @@ struct stop_gc_info
     }
 };
 
-bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decrees,
+bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &slog_max_decrees,
                          const dsn::replication::log_file_ptr &log,
                          const dsn::gpid &pid,
                          const dsn::replication::replica_log_info &rep_info,
@@ -1437,8 +1437,8 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decre
     const auto &garbage_max_decree = rep_info.max_decree;
     const auto &valid_start_offset = rep_info.valid_start_offset;
 
-    const auto &it = max_decrees.find(pid);
-    if (it == max_decrees.end()) {
+    const auto &it = slog_max_decrees.find(pid);
+    if (it == slog_max_decrees.end()) {
         // log not found for this replica, ok to delete
         // valid_start_offset may be reset to 0 if initialize_on_load() returns
         // ERR_INCOMPLETE_DATA
@@ -1495,13 +1495,13 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &max_decre
 
 } // anonymous namespace
 
-void mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
+void mutation_log::garbage_collection(const replica_log_info_map &replica_durable_decrees,
                                       std::set<gpid> &prevent_gc_replicas)
 {
     CHECK(!_is_private, "this method is only valid for shared log");
 
     log_file_map files;
-    replica_log_info_map max_decrees;
+    replica_log_info_map slog_max_decrees;
     int64_t total_log_size = 0;
     {
         zauto_lock l(_lock);
@@ -1515,7 +1515,7 @@ void mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
         CHECK_NULL(_current_log_file,
                    "shared logs have been deprecated, thus could not be created");
         files = _log_files;
-        max_decrees = _shared_log_info_map;
+        slog_max_decrees = _shared_log_info_map;
     }
 
     reserved_log_info reserved_log = {
@@ -1532,13 +1532,13 @@ void mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
 
         bool can_gc_all_replicas_slog = true;
 
-        for (auto &kv : gc_condition) {
+        for (auto &kv : replica_durable_decrees) {
             if (kickout_replicas.find(kv.first) != kickout_replicas.end()) {
                 // no need to consider this replica
                 continue;
             }
 
-            if (can_gc_replica_slog(max_decrees, log, kv.first, kv.second, stop_gc)) {
+            if (can_gc_replica_slog(slog_max_decrees, log, kv.first, kv.second, stop_gc)) {
                 // files before this file is useless for this replica,
                 // so from now on, this replica will not be considered anymore
                 kickout_replicas.insert(kv.first);
@@ -1555,8 +1555,8 @@ void mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
             break;
         }
 
-        // update max_decrees for the next log file
-        max_decrees = log->previous_log_max_decrees();
+        // update slog_max_decrees for the next log file
+        slog_max_decrees = log->previous_log_max_decrees();
     }
 
     if (mark_it == files.rend()) {

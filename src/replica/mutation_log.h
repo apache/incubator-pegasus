@@ -231,11 +231,11 @@ public:
     // remove log files if satisfy:
     //  - for each replica "r":
     //         r is not in file.max_decree
-    //      || file.max_decree[r] <= gc_condition[r].max_decree
-    //      || file.end_offset[r] <= gc_condition[r].valid_start_offset
+    //      || file.max_decree[r] <= replica_durable_decrees[r].max_decree
+    //      || file.end_offset[r] <= replica_durable_decrees[r].valid_start_offset
     //  - the current log file should not be removed
     // thread safe
-    void garbage_collection(const replica_log_info_map &gc_condition,
+    void garbage_collection(const replica_log_info_map &replica_durable_decrees,
                             std::set<gpid> &prevent_gc_replicas);
 
     //

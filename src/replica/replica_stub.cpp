@@ -1805,7 +1805,7 @@ void replica_stub::gc_slog(const replica_gc_map &rs)
     //   replicas which block garbage collection of the oldest log file.
     //
 
-    replica_log_info_map gc_condition;
+    replica_log_info_map replica_durable_decrees;
     for (auto &kv : rs) {
         replica_log_info ri;
         auto &rep = kv.second.rep;
@@ -1834,11 +1834,11 @@ void replica_stub::gc_slog(const replica_gc_map &rs)
                      kv.second.last_durable_decree);
         }
         ri.valid_start_offset = kv.second.init_offset_in_shared_log;
-        gc_condition[kv.first] = ri;
+        replica_durable_decrees[kv.first] = ri;
     }
 
     std::set<gpid> prevent_gc_replicas;
-    _log->garbage_collection(gc_condition, prevent_gc_replicas);
+    _log->garbage_collection(replica_durable_decrees, prevent_gc_replicas);
     flush_replicas_for_slog_gc(rs, prevent_gc_replicas);
 
     auto total_size = _log->total_size();
