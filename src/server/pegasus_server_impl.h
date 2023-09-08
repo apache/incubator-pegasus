@@ -20,6 +20,7 @@
 #pragma once
 
 #include <gtest/gtest_prod.h>
+#include <rocksdb/compression_type.h>
 #include <rocksdb/options.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/table.h>
@@ -70,6 +71,7 @@ class WriteBufferManager;
 namespace dsn {
 class blob;
 class message_ex;
+
 namespace replication {
 class detect_hotkey_request;
 class detect_hotkey_response;

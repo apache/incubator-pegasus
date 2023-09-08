@@ -167,7 +167,7 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
-            ROCKSDB_PORTABLE=ON
+            ROCKSDB_PORTABLE=1
             HADOOP_BIN_PATH=hadoop-bin
             ZOOKEEPER_BIN_PATH=zookeeper-bin
       - name: Image digest
@@ -203,7 +203,7 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
-            ROCKSDB_PORTABLE=ON
+            ROCKSDB_PORTABLE=1
             USE_JEMALLOC=ON
             HADOOP_BIN_PATH=hadoop-bin
             ZOOKEEPER_BIN_PATH=zookeeper-bin
