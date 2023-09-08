@@ -348,62 +348,63 @@ private:
     // get total size ithout lock.
     int64_t total_size_no_lock() const;
 
-    struct reserved_log_info
+    struct reserved_slog_info
     {
-        size_t log_count;
+        size_t file_count;
         int64_t log_size;
-        int smallest_log;
-        int largest_log;
+        int smallest_file_index;
+        int largest_file_index;
 
         std::string to_string() const
         {
-            return fmt::format("reserved_log_count = {}, reserved_log_size = {}, "
-                               "reserved_smallest_log = {}, reserved_largest_log = {}",
-                               log_count,
+            return fmt::format("reserved_slog_info = [file_count = {}, log_size = {}, "
+                               "smallest_file_index = {}, largest_file_index = {}]",
+                               file_count,
                                log_size,
-                               smallest_log,
-                               largest_log);
+                               smallest_file_index,
+                               largest_file_index);
         }
 
-        friend std::ostream &operator<<(std::ostream &os, const reserved_log_info &reserved_log)
+        friend std::ostream &operator<<(std::ostream &os, const reserved_slog_info &reserved_log)
         {
             return os << reserved_log.to_string();
         }
     };
 
-    struct log_deletion_info
+    struct slog_deletion_info
     {
-        int to_delete_log_count = 0;
+        int to_delete_file_count = 0;
         int64_t to_delete_log_size = 0;
-        int deleted_log_count = 0;
+        int deleted_file_count = 0;
         int64_t deleted_log_size = 0;
-        int deleted_smallest_log = 0;
-        int deleted_largest_log = 0;
+        int deleted_smallest_file_index = 0;
+        int deleted_largest_file_index = 0;
 
         std::string to_string() const
         {
-            return fmt::format("to_delete_log_count = {}, to_delete_log_size = {}, "
-                               "deleted_log_count = {}, deleted_log_size = {}, "
-                               "deleted_smallest_log = {}, deleted_largest_log = {}",
-                               to_delete_log_count,
+            return fmt::format("slog_deletion_info = [to_delete_file_count = {}, "
+                               "to_delete_log_size = {}, deleted_file_count = {}, "
+                               "deleted_log_size = {}, deleted_smallest_file_index = {}, "
+                               "deleted_largest_file_index = {}]",
+                               to_delete_file_count,
                                to_delete_log_size,
-                               deleted_log_count,
+                               deleted_file_count,
                                deleted_log_size,
-                               deleted_smallest_log,
-                               deleted_largest_log);
+                               deleted_smallest_file_index,
+                               deleted_largest_file_index);
         }
 
-        friend std::ostream &operator<<(std::ostream &os, const log_deletion_info &log_deletion)
+        friend std::ostream &operator<<(std::ostream &os, const slog_deletion_info &log_deletion)
         {
             return os << log_deletion.to_string();
         }
     };
 
     using log_file_map = std::map<int, log_file_ptr>;
-    void remove_obsolete_log_files(const int largest_log_to_delete,
-                                   log_file_map &files,
-                                   reserved_log_info &reserved_log,
-                                   log_deletion_info &log_deletion);
+    void remove_obsolete_slog_files(const int largest_log_to_delete,
+                                    log_file_map &files,
+                                    reserved_slog_info &reserved_log,
+                                    slog_deletion_info &log_deletion);
 
 protected:
     std::string _dir;

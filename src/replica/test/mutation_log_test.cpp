@@ -491,21 +491,25 @@ public:
 
             for (size_t j = 0; j < replica_mutations[i].second; ++j) {
                 if (i == 0) {
+                    // Record the start offset of each slog file.
                     slog_file_start_offset.first = pid;
                     slog_file_start_offset.second = mlog->get_global_offset();
                 }
 
                 const auto &it = valid_start_offsets.find(pid);
                 if (it == valid_start_offsets.end()) {
+                    // Add new partition with its start offset in slog.
                     valid_start_offsets.emplace(pid, mlog->get_global_offset());
                     mlog->set_valid_start_offset_on_open(pid, mlog->get_global_offset());
                 }
 
+                // Append a mutation.
                 auto mu = generate_slog_mutation(pid, d++, "test data");
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, mlog->tracker(), nullptr, 0);
             }
         }
 
+        // Wait until all mutations are written into this file.
         mlog->tracker()->wait_outstanding_tasks();
     }
 
