@@ -90,7 +90,7 @@ protected:
         ASSERT_NO_FATAL_FAILURE(
             run_cmd_from_project_root("mkdir -p onebox/block_service/local_service"));
         ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root(
-            "cp -r src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files/" +
+            "cp -r src/test/function_test/bulk_load/pegasus-bulk-load-function-test-files/" +
             LOCAL_ROOT + " onebox/block_service/local_service"));
         string cmd = "echo '{\"app_id\":" + std::to_string(app_id_) +
                      ",\"app_name\":\"temp\",\"partition_count\":8}' > "
@@ -114,7 +114,7 @@ protected:
     void replace_bulk_load_info()
     {
         string cmd = "cp -R "
-                     "src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files/"
+                     "src/test/function_test/bulk_load/pegasus-bulk-load-function-test-files/"
                      "mock_bulk_load_info/. " +
                      bulk_load_local_root_ + "/" + CLUSTER + "/" + app_name_ + "/";
         ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root(cmd));

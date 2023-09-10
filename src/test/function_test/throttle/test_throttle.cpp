@@ -131,7 +131,7 @@ struct throttle_test_recorder
 
 // read/write throttle function test
 // the details of records are saved in
-// `./src/builder/test/function_test/throttle_test/throttle_test_result.txt`
+// `./src/builder/test/function_test/throttle/throttle_test_result.txt`
 class throttle_test : public test_util
 {
 public:
