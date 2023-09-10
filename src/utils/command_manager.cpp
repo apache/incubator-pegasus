@@ -27,7 +27,6 @@
 #include "utils/command_manager.h"
 
 #include <stdlib.h>
-#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <sstream> // IWYU pragma: keep

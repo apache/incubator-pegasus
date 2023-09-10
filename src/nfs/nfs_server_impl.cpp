@@ -32,6 +32,7 @@
 #include <chrono>
 #include <cstdint>
 #include <mutex>
+#include <type_traits>
 #include <vector>
 
 #include "nfs/nfs_code_definition.h"

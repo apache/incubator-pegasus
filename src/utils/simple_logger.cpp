@@ -29,7 +29,6 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <stdint.h>
-#include <algorithm>
 #include <functional>
 #include <memory>
 #include <sstream>

@@ -33,6 +33,7 @@
 #include <functional>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 #include "utils/fmt_utils.h"
 

@@ -22,6 +22,7 @@
 // IWYU pragma: no_include <experimental/string_view>
 #include <functional>
 #include <string>
+#include <string_view>
 
 #include "enum_helper.h"
 #include "errors.h"

@@ -27,7 +27,6 @@
 #include "service_engine.h"
 
 #include <stdlib.h>
-#include <algorithm>
 #include <functional>
 #include <list>
 #include <unordered_map>

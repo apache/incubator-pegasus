@@ -27,6 +27,7 @@
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <memory>
 #include <utility>
 
 #include "common/replication.codes.h"

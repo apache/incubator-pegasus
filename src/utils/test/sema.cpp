@@ -39,6 +39,7 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <chrono>
+#include <memory>
 #include <thread>
 
 TEST(core, Semaphore)

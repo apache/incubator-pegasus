@@ -26,7 +26,6 @@
 
 #include "disk_engine.h"
 
-#include <algorithm>
 #include <list>
 // IWYU pragma: no_include <string>
 #include <utility>

@@ -32,7 +32,6 @@
 #include <s2/s2region_coverer.h>
 #include <s2/util/units/length-units.h>
 #include <stddef.h>
-#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <limits>
