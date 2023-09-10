@@ -125,8 +125,6 @@ fi
 
 copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
 copy_file ./thirdparty/output/lib/libhdfs* ${pack}/bin
-copy_file ./thirdparty/output/lib/libsasl*.so.* ${pack}/bin
-copy_file ./thirdparty/output/lib/libcom_err*.so.* ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 copy_file ./src/server/config.min.ini ${pack}/bin

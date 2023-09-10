@@ -50,6 +50,8 @@ RUN yum -y install centos-release-scl \
                    lz4-devel \
                    bison \
                    flex \
+                   krb5-devel \
+                   cyrus-sasl-devel \
                    patch; \
                    yum clean all; \
                    rm -rf /var/cache/yum;

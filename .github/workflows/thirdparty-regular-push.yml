@@ -144,7 +144,7 @@ jobs:
       fail-fast: false
       matrix:
         osversion:
-          - ubuntu2204
+          - ubuntu1804
     steps:
       - uses: actions/checkout@v3
       - name: Set up QEMU
