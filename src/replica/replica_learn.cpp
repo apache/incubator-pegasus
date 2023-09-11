@@ -46,6 +46,8 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/std.h>
+
 #include "aio/aio_task.h"
 #include "common/fs_manager.h"
 #include "common/gpid.h"
@@ -226,7 +228,7 @@ void replica::init_learn(uint64_t signature)
             _potential_secondary_states.learning_version,
             _config.primary,
             _potential_secondary_states.duration_ms(),
-            _stub->_learn_app_concurrent_count.load(),
+            _stub->_learn_app_concurrent_count,
             FLAGS_learn_app_max_concurrent_count);
         return;
     }
@@ -727,7 +729,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                 "FLAGS_learn_app_max_concurrent_count({}), skip this round",
                 _potential_secondary_states.learning_version,
                 _config.primary,
-                _stub->_learn_app_concurrent_count.load(),
+                _stub->_learn_app_concurrent_count,
                 FLAGS_learn_app_max_concurrent_count);
             _potential_secondary_states.learning_round_is_running = false;
             return;
