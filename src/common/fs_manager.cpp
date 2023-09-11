@@ -39,6 +39,8 @@
 #include <cstdint>
 #include <utility>
 
+#include <fmt/std.h> // IWYU pragma: keep
+
 #include "common/gpid.h"
 #include "common/replication_enums.h"
 #include "fmt/core.h"
@@ -327,7 +329,7 @@ void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
         }
     }
     CHECK(dn_found, "dir_node({}) is not exist", specified_dn->tag);
-    CHECK_EQ(disk_status::NORMAL, specified_dn->status.load());
+    CHECK_EQ(disk_status::NORMAL, specified_dn->status);
     const auto dir = specified_dn->replica_dir(app_type, pid);
     CHECK_TRUE(dsn::utils::filesystem::create_directory(dir));
     specified_dn->holding_replicas[pid.get_app_id()].emplace(pid);
