@@ -28,6 +28,8 @@
 
 #include <ostream>
 
+#include <fmt/ostream.h>
+
 #include "ports.h"
 
 namespace dsn {
@@ -66,3 +68,8 @@ private:
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_INVALID)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
 }
+
+template <>
+struct fmt::formatter<::dsn::threadpool_code> : ostream_formatter
+{
+};

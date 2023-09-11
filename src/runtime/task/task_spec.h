@@ -40,6 +40,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "runtime/task/task_code.h"
 #include "utils/api_utilities.h"
 #include "utils/config_api.h"
@@ -328,3 +330,20 @@ CONFIG_FLD(bool,
 CONFIG_END
 
 } // end namespace
+
+template <>
+struct fmt::formatter<::dsn::grpc_mode_t> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::network_header_format> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::rpc_channel> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::throttling_mode_t> : ostream_formatter
+{
+};

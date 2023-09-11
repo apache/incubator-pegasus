@@ -89,3 +89,8 @@ private:
 
 } // namespace replication
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::replication::commit_type> : ostream_formatter
+{
+};

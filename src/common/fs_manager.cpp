@@ -329,7 +329,7 @@ void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
         }
     }
     CHECK(dn_found, "dir_node({}) is not exist", specified_dn->tag);
-    CHECK_EQ(disk_status::NORMAL, specified_dn->status);
+    CHECK_EQ(disk_status::NORMAL, specified_dn->status.load());
     const auto dir = specified_dn->replica_dir(app_type, pid);
     CHECK_TRUE(dsn::utils::filesystem::create_directory(dir));
     specified_dn->holding_replicas[pid.get_app_id()].emplace(pid);

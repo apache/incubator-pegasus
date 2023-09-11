@@ -23,6 +23,8 @@
 #include <stdint.h>
 #include <string>
 
+#include <fmt/ostream.h>
+
 #include "base/pegasus_value_schema.h"
 #include "common/json_helper.h"
 #include "utils/blob.h"
@@ -161,3 +163,8 @@ private:
 void register_compaction_filter_rules();
 } // namespace server
 } // namespace pegasus
+
+template <>
+struct fmt::formatter<::pegasus::server::string_match_type> : ostream_formatter
+{
+};

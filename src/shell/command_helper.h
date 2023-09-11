@@ -26,6 +26,7 @@
 #include <thread>
 
 #include <boost/algorithm/string.hpp>
+#include <fmt/ostream.h>
 #include <rocksdb/db.h>
 #include <rocksdb/env.h>
 #include <rocksdb/sst_dump_tool.h>
@@ -73,6 +74,11 @@ enum scan_data_operator
     SCAN_GEN_GEO,
     SCAN_AND_MULTI_SET
 };
+template <>
+struct fmt::formatter<scan_data_operator> : ostream_formatter
+{
+};
+
 class top_container
 {
 public:

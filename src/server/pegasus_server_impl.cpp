@@ -45,6 +45,7 @@
 #include <ostream>
 #include <set>
 
+#include "base/idl_utils.h"
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
@@ -3051,7 +3052,7 @@ std::string pegasus_server_impl::compression_type_to_str(rocksdb::CompressionTyp
     case rocksdb::kZSTD:
         return "zstd";
     default:
-        LOG_ERROR_PREFIX("Unsupported compression type: {}.", type);
+        LOG_ERROR_PREFIX("Unsupported compression type: {}.", static_cast<int>(type));
         return "<unsupported>";
     }
 }

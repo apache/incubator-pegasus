@@ -617,10 +617,9 @@ void metric_timer::on_timer(const boost::system::error_code &ec)
     } while (0)
 
     if (dsn_unlikely(!!ec)) {
-        CHECK_EQ_MSG(ec,
-                     boost::system::errc::operation_canceled,
-                     "failed to exec on_timer with an error that cannot be handled: {}",
-                     ec.message());
+        CHECK(ec.value() == boost::system::errc::operation_canceled,
+              "failed to exec on_timer with an error that cannot be handled: {}",
+              ec.message());
 
         // Cancel can only be launched by close().
         auto expected_state = state::kClosing;

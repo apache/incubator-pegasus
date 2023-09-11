@@ -44,6 +44,8 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "block_service/block_service_manager.h"
 #include "bulk_load_types.h"
 #include "common/bulk_load_common.h"
@@ -438,7 +440,7 @@ private:
 
     std::shared_ptr<dsn::dist::slave_failure_detector_with_multimaster> _failure_detector;
     mutable zlock _state_lock;
-    volatile replica_node_state _state;
+    replica_node_state _state;
 
     // constants
     replication_options _options;
@@ -586,3 +588,8 @@ private:
 };
 } // namespace replication
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::replication::replica_stub::replica_node_state> : ostream_formatter
+{
+};

@@ -27,6 +27,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
@@ -115,6 +117,11 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
 inline bool operator!=(const host_port &hp1, const host_port &hp2) { return !(hp1 == hp2); }
 
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::host_port> : ostream_formatter
+{
+};
 
 namespace std {
 template <>

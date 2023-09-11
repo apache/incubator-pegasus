@@ -301,12 +301,12 @@ void available_detector::on_detect(int32_t idx)
                  _app_id,
                  _partition_count,
                  _cluster_name,
-                 _recent_day_detect_times,
-                 _recent_day_fail_times,
-                 _recent_hour_detect_times,
-                 _recent_hour_fail_times,
-                 _recent_minute_detect_times,
-                 _recent_minute_fail_times);
+                 _recent_day_detect_times.load(),
+                 _recent_day_fail_times.load(),
+                 _recent_hour_detect_times.load(),
+                 _recent_hour_fail_times.load(),
+                 _recent_minute_detect_times.load(),
+                 _recent_minute_fail_times.load());
     }
     LOG_DEBUG("available_detector begin to detect partition[{}] of table[{}] with id[{}] on the "
               "cluster[{}]",

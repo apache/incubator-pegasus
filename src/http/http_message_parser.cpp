@@ -138,7 +138,9 @@ http_message_parser::http_message_parser()
             header->hdr_type = http_method::HTTP_METHOD_POST;
             header->context.u.is_request = 1;
         } else {
-            LOG_ERROR("invalid http type {} and method {}", parser->type, parser->method);
+            LOG_ERROR("invalid http type {} and method {}",
+                      static_cast<unsigned int>(parser->type),
+                      static_cast<unsigned int>(parser->method));
             return 1;
         }
         return 0;

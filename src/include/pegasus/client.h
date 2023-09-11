@@ -28,6 +28,8 @@
 #include <functional>
 #include <memory>
 
+#include <fmt/ostream.h>
+
 namespace pegasus {
 
 class rrdb_client;
@@ -1217,3 +1219,12 @@ public:
 };
 
 } // namespace pegasus
+
+template <>
+struct fmt::formatter<::pegasus::pegasus_client::cas_check_type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::pegasus::pegasus_client::filter_type> : ostream_formatter
+{
+};

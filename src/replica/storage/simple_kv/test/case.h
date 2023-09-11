@@ -42,6 +42,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "common.h"
 #include "meta_admin_types.h"
 #include "runtime/rpc/rpc_address.h"
@@ -505,3 +507,12 @@ private:
 }
 }
 }
+
+template <>
+struct fmt::formatter<::dsn::replication::test::client_case_line::client_type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::test::event> : ostream_formatter
+{
+};

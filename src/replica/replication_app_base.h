@@ -32,6 +32,8 @@
 #include <map>
 #include <string>
 
+#include <fmt/ostream.h>
+
 #include "bulk_load_types.h"
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
@@ -316,3 +318,9 @@ protected:
 
 } // namespace replication
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::replication::replication_app_base::chkpt_apply_mode>
+    : ostream_formatter
+{
+};

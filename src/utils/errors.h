@@ -28,6 +28,8 @@
 
 #include <sstream>
 
+#include <fmt/ostream.h>
+
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -218,6 +220,11 @@ private:
 };
 
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::error_s> : ostream_formatter
+{
+};
 
 #define FMT_ERR(ec, msg, args...) error_s::make(ec, fmt::format(msg, ##args))
 

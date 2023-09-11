@@ -43,6 +43,8 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
@@ -213,3 +215,16 @@ struct parti_config
 }
 }
 }
+
+template <>
+struct fmt::formatter<::dsn::replication::test::parti_config> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::test::replica_id> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::test::state_snapshot> : ostream_formatter
+{
+};

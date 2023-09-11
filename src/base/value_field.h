@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
+
 namespace pegasus {
 
 enum value_field_type
@@ -59,3 +61,8 @@ struct user_data_field : public value_field
     dsn::string_view user_data;
 };
 } // namespace pegasus
+
+template <>
+struct fmt::formatter<::pegasus::value_field_type> : ostream_formatter
+{
+};

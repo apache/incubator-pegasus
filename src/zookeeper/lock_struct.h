@@ -38,6 +38,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "lock_types.h"
 #include "runtime/task/future_types.h"
 #include "utils/autoref_ptr.h"
@@ -129,3 +131,8 @@ private:
 };
 }
 }
+
+template <>
+struct fmt::formatter<::dsn::dist::lock_state> : ostream_formatter
+{
+};

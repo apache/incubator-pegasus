@@ -33,6 +33,8 @@
 
 #include <stdarg.h>
 
+#include <fmt/ostream.h>
+
 #include "ports.h"
 
 /*!
@@ -56,6 +58,11 @@ typedef enum dsn_log_level_t {
     LOG_LEVEL_COUNT,
     LOG_LEVEL_INVALID
 } dsn_log_level_t;
+
+template <>
+struct fmt::formatter<dsn_log_level_t> : ostream_formatter
+{
+};
 
 // logs with level smaller than this start_level will not be logged
 extern dsn_log_level_t dsn_log_start_level;

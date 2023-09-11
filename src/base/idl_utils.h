@@ -40,3 +40,16 @@ inline bool cas_is_check_operand_needed(dsn::apps::cas_check_type::type type)
 }
 
 } // namespace pegasus
+
+template <>
+struct fmt::formatter<::dsn::apps::cas_check_type::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::apps::filter_type::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::apps::mutate_operation::type> : ostream_formatter
+{
+};

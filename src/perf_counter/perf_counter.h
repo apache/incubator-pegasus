@@ -32,6 +32,8 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "utils/autoref_ptr.h"
 
 typedef enum dsn_perf_counter_type_t {
@@ -42,6 +44,11 @@ typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_COUNT,
     COUNTER_TYPE_INVALID
 } dsn_perf_counter_type_t;
+
+template <>
+struct fmt::formatter<dsn_perf_counter_type_t> : ostream_formatter
+{
+};
 
 typedef enum dsn_perf_counter_percentile_type_t {
     COUNTER_PERCENTILE_50,

@@ -24,6 +24,8 @@
 #include <set>
 #include <string>
 
+#include <fmt/ostream.h>
+
 #include "duplication_types.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "utils/errors.h"
@@ -89,3 +91,12 @@ struct duplication_constants
 
 } // namespace replication
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::replication::duplication_fail_mode::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::duplication_status::type> : ostream_formatter
+{
+};

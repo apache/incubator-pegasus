@@ -28,6 +28,8 @@
 
 #include <arpa/inet.h> // IWYU pragma: keep
 
+#include <fmt/ostream.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -207,6 +209,15 @@ private:
 };
 
 } // namespace dsn
+
+template <>
+struct fmt::formatter<dsn_host_type_t> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::rpc_address> : ostream_formatter
+{
+};
 
 namespace std {
 

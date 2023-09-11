@@ -32,6 +32,8 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "boost/smart_ptr/shared_ptr.hpp"
 #include "common/gpid.h"
 #include "common/serialization_helper/thrift_helper.h"
@@ -428,3 +430,8 @@ thrift_message_parser::thrift_message_parser()
 thrift_message_parser::~thrift_message_parser() = default;
 
 } // namespace dsn
+
+template <>
+struct fmt::formatter<apache::thrift::protocol::TMessageType> : ostream_formatter
+{
+};

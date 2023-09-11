@@ -48,6 +48,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <fmt/ostream.h>
+
 #include "ports.h"
 
 namespace dsn {
@@ -428,3 +430,8 @@ inline bool operator!=(string_view x, string_view y) noexcept { return !(x == y)
 std::ostream &operator<<(std::ostream &o, string_view piece);
 
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::string_view> : ostream_formatter
+{
+};

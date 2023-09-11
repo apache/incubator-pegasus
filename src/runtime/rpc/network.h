@@ -32,6 +32,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "perf_counter/perf_counter_wrapper.h"
 #include "rpc_address.h"
 #include "runtime/rpc/message_parser.h"
@@ -272,7 +274,6 @@ public:
     void on_send_completed(uint64_t signature = 0);
     virtual void on_failure(bool is_write = false);
 
-protected:
     ///
     /// fields related to sending messages
     ///
@@ -282,8 +283,10 @@ protected:
         SS_CONNECTED,
         SS_DISCONNECTED
     };
+
+protected:
     mutable utils::ex_lock_nr _lock; // [
-    volatile session_state _connect_state;
+    session_state _connect_state;
 
     bool negotiation_succeed = false;
     // when the negotiation of a session isn't succeed,
@@ -353,3 +356,8 @@ inline bool rpc_session::delay_recv(int delay_ms)
 
 /*@}*/
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::rpc_session::session_state> : ostream_formatter
+{
+};

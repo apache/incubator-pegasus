@@ -30,6 +30,8 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
+
 #include "utils/fail_point.h"
 #include "utils/api_utilities.h"
 #include "utils/ports.h"
@@ -132,3 +134,8 @@ private:
 
 } // namespace fail
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::fail::fail_point::task_type> : ostream_formatter
+{
+};

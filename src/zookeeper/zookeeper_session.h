@@ -41,6 +41,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "runtime/service_app.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
@@ -205,3 +207,8 @@ private:
 };
 }
 }
+
+template <>
+struct fmt::formatter<::dsn::dist::zookeeper_session> : ostream_formatter
+{
+};

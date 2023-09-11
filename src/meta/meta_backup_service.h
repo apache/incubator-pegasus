@@ -31,6 +31,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/ostream.h>
+
 #include "backup_types.h"
 #include "common/gpid.h"
 #include "common/json_helper.h"
@@ -420,3 +422,5 @@ private:
 };
 } // namespace replication
 } // namespace dsn
+
+template <> struct fmt::formatter<::dsn::replication::backup_start_time> : ostream_formatter {};

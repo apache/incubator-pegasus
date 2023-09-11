@@ -17,9 +17,10 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
+
 #include "runtime/pipeline.h"
 #include "utils/fmt_logging.h"
-
 #include "meta_state_service_utils.h"
 #include "meta/meta_state_service.h"
 #include "common/replication.codes.h"
@@ -311,3 +312,8 @@ struct on_get_children : operation
 } // namespace mss
 } // namespace replication
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::replication::mss::op_type::type> : ostream_formatter
+{
+};

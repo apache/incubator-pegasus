@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
+
 #include "utils/enum_helper.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "metadata_types.h"
@@ -164,3 +166,48 @@ ENUM_REG(replication::manual_compaction_status::RUNNING)
 ENUM_REG(replication::manual_compaction_status::FINISHED)
 ENUM_END2(replication::manual_compaction_status::type, manual_compaction_status)
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::app_status::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::bulk_load_status::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::config_type::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::detect_action::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::disk_migration_status::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::disk_status::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::learner_status::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::learn_type::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::manual_compaction_status::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::meta_function_level::type> : ostream_formatter
+{
+};
+template <>
+struct fmt::formatter<::dsn::replication::partition_status::type> : ostream_formatter
+{
+};

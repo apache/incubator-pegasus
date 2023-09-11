@@ -30,6 +30,8 @@
 #include <ostream>
 #include <string>
 
+#include <fmt/ostream.h>
+
 #include "utils/ports.h"
 
 namespace apache {
@@ -177,3 +179,8 @@ DEFINE_ERR_CODE(ERR_RDB_CORRUPTION)
 
 DEFINE_ERR_CODE(ERR_DISK_IO_ERROR)
 } // namespace dsn
+
+template <>
+struct fmt::formatter<::dsn::error_code> : ostream_formatter
+{
+};
