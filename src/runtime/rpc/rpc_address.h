@@ -30,7 +30,7 @@
 #include <fmt/ostream.h>
 #include <cstddef>
 #include <cstdint>
-#include <experimental/string_view>
+// IWYU pragma: no_include <experimental/string_view>
 #include <functional>
 #include <sstream>
 #include <string>
