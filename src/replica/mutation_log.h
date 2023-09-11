@@ -223,18 +223,15 @@ public:
                            int64_t reserve_max_size,
                            int64_t reserve_max_time);
 
-    // TODO(wangdan): fix comments
+    // Garbage collection for shared log.
+    // `prevent_gc_replicas' will store replicas which prevent log files from being deleted
+    // for gc.
     //
-    // garbage collection for shared log, returns reserved file count.
-    // `prevent_gc_replicas' will store replicas which prevent log files out of `file_count_limit'
-    // to be deleted.
-    // remove log files if satisfy:
-    //  - for each replica "r":
-    //         r is not in file.max_decree
-    //      || file.max_decree[r] <= replica_durable_decrees[r].max_decree
-    //      || file.end_offset[r] <= replica_durable_decrees[r].valid_start_offset
-    //  - the current log file should not be removed
-    // thread safe
+    // Since slog had been deprecated, no new slog files would be created. Therefore, our
+    // target is to remove all of the existing slog files according to the progressive durable
+    // decree for each replica.
+    //
+    // Thread safe.
     void garbage_collection(const replica_log_info_map &replica_durable_decrees,
                             std::set<gpid> &prevent_gc_replicas);
 
@@ -401,7 +398,10 @@ private:
     };
 
     using log_file_map = std::map<int, log_file_ptr>;
-    void remove_obsolete_slog_files(const int largest_log_to_delete,
+
+    // Closing and remove all of slog files that are smaller (i.e. older) than the largest
+    // file index.
+    void remove_obsolete_slog_files(const int largest_file_index_to_delete,
                                     log_file_map &files,
                                     reserved_slog_info &reserved_log,
                                     slog_deletion_info &log_deletion);

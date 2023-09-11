@@ -809,9 +809,9 @@ TEST_P(GcSlogFlushFeplicasTest, FlushReplicas)
              last_limit,
              expected_flush_replicas) = GetParam();
 
-    replica_stub::replica_gc_map rs;
+    replica_stub::replica_gc_info_map replica_gc_map;
     for (const auto &r : prevent_gc_replicas) {
-        rs.emplace(r, replica_stub::gc_info());
+        replica_gc_map.emplace(r, replica_stub::replica_gc_info());
     }
 
     const auto reserved_log_shared_gc_flush_replicas_limit =
@@ -825,7 +825,7 @@ TEST_P(GcSlogFlushFeplicasTest, FlushReplicas)
     stub._last_prevent_gc_replica_count = last_prevent_gc_replica_count;
     stub._real_log_shared_gc_flush_replicas_limit = last_limit;
 
-    stub.flush_replicas_for_slog_gc(rs, prevent_gc_replicas);
+    stub.flush_replicas_for_slog_gc(replica_gc_map, prevent_gc_replicas);
     EXPECT_EQ(expected_flush_replicas, stub._mock_flush_replicas_for_test);
 
     dsn::fail::teardown();

@@ -364,7 +364,7 @@ private:
     replica_life_cycle get_replica_life_cycle(gpid id);
     void on_gc_replica(replica_stub_ptr this_, gpid id);
 
-    struct gc_info
+    struct replica_gc_info
     {
         replica_ptr rep;
         partition_status::type status;
@@ -372,10 +372,10 @@ private:
         decree last_durable_decree;
         int64_t init_offset_in_shared_log;
     };
-    using replica_gc_map = std::unordered_map<gpid, gc_info>;
-    void gc_slog(const replica_gc_map &rs);
+    using replica_gc_info_map = std::unordered_map<gpid, replica_gc_info>;
+    void gc_slog(const replica_gc_info_map &replica_gc_map);
     void limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_count);
-    void flush_replicas_for_slog_gc(const replica_gc_map &rs,
+    void flush_replicas_for_slog_gc(const replica_gc_info_map &replica_gc_map,
                                     const std::set<gpid> &prevent_gc_replicas);
 
     void response_client(gpid id,

@@ -1403,28 +1403,29 @@ int mutation_log::garbage_collection(gpid gpid,
 
 namespace {
 
-struct stop_replica_gc_info
+struct gc_summary_info
 {
     dsn::gpid pid;
-    int file_index = 0;
-    dsn::replication::decree decree_gap = 0;
+    int smallest_file_index = 0;
+    dsn::replication::decree max_decree_gap = 0;
     dsn::replication::decree garbage_max_decree = 0;
-    dsn::replication::decree log_max_decree = 0;
+    dsn::replication::decree slog_max_decree = 0;
 
     std::string to_string() const
     {
-        return fmt::format("stop_replica_gc_info = [pid = {}, file_index = {}, decree_gap = {}, "
-                           "garbage_max_decree = {}, log_max_decree = {}]",
-                           pid,
-                           file_index,
-                           decree_gap,
-                           garbage_max_decree,
-                           log_max_decree);
+        return fmt::format(
+            "gc_summary_info = [pid = {}, smallest_file_index = {}, max_decree_gap = {}, "
+            "garbage_max_decree = {}, slog_max_decree = {}]",
+            pid,
+            smallest_file_index,
+            max_decree_gap,
+            garbage_max_decree,
+            slog_max_decree);
     }
 
-    friend std::ostream &operator<<(std::ostream &os, const stop_replica_gc_info &stop_replica_gc)
+    friend std::ostream &operator<<(std::ostream &os, const gc_summary_info &gc_summary)
     {
-        return os << stop_replica_gc.to_string();
+        return os << gc_summary.to_string();
     }
 };
 
@@ -1432,7 +1433,7 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &slog_max_
                          const dsn::replication::log_file_ptr &file,
                          const dsn::gpid &pid,
                          const dsn::replication::replica_log_info &replica_durable_info,
-                         stop_replica_gc_info &stop_replica_gc)
+                         gc_summary_info &gc_summary)
 {
     const auto &garbage_max_decree = replica_durable_info.max_decree;
     const auto &valid_start_offset = replica_durable_info.valid_start_offset;
@@ -1489,13 +1490,14 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &slog_max_
               garbage_max_decree);
 
     auto gap = it->second.max_decree - garbage_max_decree;
-    if (file->index() < stop_replica_gc.file_index || gap > stop_replica_gc.decree_gap) {
-        // Record the max decree gap between the garbage max decree and the oldest log file.
-        stop_replica_gc.pid = pid;
-        stop_replica_gc.file_index = file->index();
-        stop_replica_gc.decree_gap = gap;
-        stop_replica_gc.garbage_max_decree = garbage_max_decree;
-        stop_replica_gc.log_max_decree = it->second.max_decree;
+    if (file->index() < gc_summary.smallest_file_index || gap > gc_summary.max_decree_gap) {
+        // Find the oldest file of this round of iteration for gc of slog files, with the
+        // max decree gap between the garbage max decree and the oldest slog file.
+        gc_summary.pid = pid;
+        gc_summary.smallest_file_index = file->index();
+        gc_summary.max_decree_gap = gap;
+        gc_summary.garbage_max_decree = garbage_max_decree;
+        gc_summary.slog_max_decree = it->second.max_decree;
     }
 
     return false;
@@ -1536,7 +1538,7 @@ void mutation_log::garbage_collection(const replica_log_info_map &replica_durabl
     // iterating, `mark_it` would point to the newest file that could be deleted).
     log_file_map::reverse_iterator mark_it;
     std::set<gpid> kickout_replicas;
-    stop_replica_gc_info stop_replica_gc;
+    gc_summary_info gc_summary;
     for (mark_it = files.rbegin(); mark_it != files.rend(); ++mark_it) {
         const auto &file = mark_it->second;
         CHECK_EQ(mark_it->first, file->index());
@@ -1553,7 +1555,7 @@ void mutation_log::garbage_collection(const replica_log_info_map &replica_durabl
                                     file,
                                     replica_durable_info.first,
                                     replica_durable_info.second,
-                                    stop_replica_gc)) {
+                                    gc_summary)) {
                 // Log files before this file is useless for this replica,
                 // so from now on, this replica would not be considered any more.
                 kickout_replicas.insert(replica_durable_info.first);
@@ -1578,7 +1580,7 @@ void mutation_log::garbage_collection(const replica_log_info_map &replica_durabl
         // There's no file that could be deleted.
         LOG_INFO("gc_shared: no file can be deleted: {}, {}, prevent_gc_replicas = {}",
                  reserved_slog,
-                 stop_replica_gc,
+                 gc_summary,
                  prevent_gc_replicas.size());
         return;
     }
@@ -1591,7 +1593,7 @@ void mutation_log::garbage_collection(const replica_log_info_map &replica_durabl
     LOG_INFO("gc_shared: deleted some files: {}, {}, {}, prevent_gc_replicas = {}",
              reserved_slog,
              slog_deletion,
-             stop_replica_gc,
+             gc_summary,
              prevent_gc_replicas.size());
 }
 
