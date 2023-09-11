@@ -1218,13 +1218,6 @@ public:
     static pegasus_client *get_client(const char *cluster_name, const char *app_name);
 };
 
+inline auto format_as(pegasus_client::filter_type e) -> int { return e; }
+inline auto format_as(pegasus_client::cas_check_type e) -> int { return e; }
 } // namespace pegasus
-
-template <>
-struct fmt::formatter<::pegasus::pegasus_client::cas_check_type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::pegasus::pegasus_client::filter_type> : ostream_formatter
-{
-};

@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
+#include <fmt/format.h>
 
 namespace pegasus {
 
@@ -30,6 +30,7 @@ enum value_field_type
     USER_DATA,
     FIELD_COUNT,
 };
+inline auto format_as(value_field_type e) -> int { return e; }
 
 struct value_field
 {
@@ -61,8 +62,3 @@ struct user_data_field : public value_field
     dsn::string_view user_data;
 };
 } // namespace pegasus
-
-template <>
-struct fmt::formatter<::pegasus::value_field_type> : ostream_formatter
-{
-};

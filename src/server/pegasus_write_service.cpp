@@ -18,10 +18,8 @@
  */
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <rocksdb/status.h>
 #include <algorithm>
-#include <iosfwd>
 #include <string>
 
 #include "base/pegasus_rpc_types.h"

@@ -32,6 +32,7 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
+#include <fmt/ostream.h>
 #include <stdint.h>
 #include <string.h>
 #include <zookeeper/zookeeper.h>
@@ -41,8 +42,7 @@
 #include <string>
 #include <vector>
 
-#include <fmt/ostream.h>
-
+#include "fmt/core.h"
 #include "runtime/service_app.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

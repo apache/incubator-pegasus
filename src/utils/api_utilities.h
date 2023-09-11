@@ -59,10 +59,7 @@ typedef enum dsn_log_level_t {
     LOG_LEVEL_INVALID
 } dsn_log_level_t;
 
-template <>
-struct fmt::formatter<dsn_log_level_t> : ostream_formatter
-{
-};
+inline auto format_as(dsn_log_level_t e) -> int { return e; }
 
 // logs with level smaller than this start_level will not be logged
 extern dsn_log_level_t dsn_log_start_level;

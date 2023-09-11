@@ -19,6 +19,7 @@
 
 #include "available_detector.h"
 
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <pegasus/error.h>
 #include <stdlib.h>
@@ -30,7 +31,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <fmt/std.h>
+#include <fmt/std.h> // IWYU pragma: keep
 
 #include "base/pegasus_key_schema.h"
 #include "client/replication_ddl_client.h"

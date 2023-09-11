@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <gtest/gtest_prod.h>
 #include <atomic>
 #include <chrono>
@@ -30,8 +32,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <fmt/ostream.h>
 
 #include "backup_types.h"
 #include "common/gpid.h"
@@ -48,6 +48,7 @@
 namespace dsn {
 class message_ex;
 class rpc_address;
+
 namespace dist {
 namespace block_service {
 class block_filesystem;

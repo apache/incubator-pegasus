@@ -19,11 +19,10 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <string>
-
-#include <fmt/ostream.h>
 
 #include "base/pegasus_value_schema.h"
 #include "common/json_helper.h"
@@ -88,6 +87,7 @@ enum string_match_type
     SMT_MATCH_POSTFIX,
     SMT_INVALID,
 };
+inline auto format_as(string_match_type e) -> int { return e; }
 ENUM_BEGIN(string_match_type, SMT_INVALID)
 ENUM_REG(SMT_MATCH_ANYWHERE)
 ENUM_REG(SMT_MATCH_PREFIX)
@@ -163,8 +163,3 @@ private:
 void register_compaction_filter_rules();
 } // namespace server
 } // namespace pegasus
-
-template <>
-struct fmt::formatter<::pegasus::server::string_match_type> : ostream_formatter
-{
-};

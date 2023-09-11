@@ -26,11 +26,11 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <stdint.h>
 #include <ostream>
 #include <string>
-
-#include <fmt/ostream.h>
 
 #include "utils/ports.h"
 

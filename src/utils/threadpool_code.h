@@ -26,10 +26,10 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
 #include <ostream>
 
-#include <fmt/ostream.h>
-
+#include "fmt/core.h"
 #include "ports.h"
 
 namespace dsn {

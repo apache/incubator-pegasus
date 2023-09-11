@@ -26,12 +26,12 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
 #include <stdint.h>
 #include <ostream>
 #include <string>
 
-#include <fmt/ostream.h>
-
+#include "fmt/core.h"
 #include "utils/enum_helper.h"
 #include "utils/ports.h"
 #include "utils/threadpool_code.h"
@@ -55,6 +55,7 @@ typedef enum dsn_task_type_t {
     TASK_TYPE_COUNT,
     TASK_TYPE_INVALID
 } dsn_task_type_t;
+inline auto format_as(dsn_task_type_t e) -> int { return e; }
 
 ENUM_BEGIN(dsn_task_type_t, TASK_TYPE_INVALID)
 ENUM_REG(TASK_TYPE_RPC_REQUEST)
@@ -63,11 +64,6 @@ ENUM_REG(TASK_TYPE_COMPUTE)
 ENUM_REG(TASK_TYPE_AIO)
 ENUM_REG(TASK_TYPE_CONTINUATION)
 ENUM_END(dsn_task_type_t)
-
-template <>
-struct fmt::formatter<dsn_task_type_t> : ostream_formatter
-{
-};
 
 typedef enum dsn_task_priority_t {
     TASK_PRIORITY_LOW,

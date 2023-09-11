@@ -45,7 +45,7 @@
 #include <ostream>
 #include <set>
 
-#include "base/idl_utils.h"
+#include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"

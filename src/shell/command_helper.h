@@ -74,10 +74,7 @@ enum scan_data_operator
     SCAN_GEN_GEO,
     SCAN_AND_MULTI_SET
 };
-template <>
-struct fmt::formatter<scan_data_operator> : ostream_formatter
-{
-};
+inline auto format_as(scan_data_operator e) -> int { return e; }
 
 class top_container
 {

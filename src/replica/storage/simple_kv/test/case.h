@@ -35,14 +35,14 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <fstream>
 #include <map>
 #include <string>
 #include <vector>
-
-#include <fmt/ostream.h>
 
 #include "common.h"
 #include "meta_admin_types.h"
@@ -443,6 +443,7 @@ private:
     dsn::replication::config_type::type _config_type;
     rpc_address _config_node;
 };
+inline auto format_as(client_case_line::client_type e) -> int { return e; }
 
 class test_case : public dsn::utils::singleton<test_case>
 {
@@ -508,10 +509,6 @@ private:
 }
 }
 
-template <>
-struct fmt::formatter<::dsn::replication::test::client_case_line::client_type> : ostream_formatter
-{
-};
 template <>
 struct fmt::formatter<::dsn::replication::test::event> : ostream_formatter
 {

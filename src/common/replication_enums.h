@@ -165,49 +165,18 @@ ENUM_REG(replication::manual_compaction_status::QUEUING)
 ENUM_REG(replication::manual_compaction_status::RUNNING)
 ENUM_REG(replication::manual_compaction_status::FINISHED)
 ENUM_END2(replication::manual_compaction_status::type, manual_compaction_status)
-} // namespace dsn
 
-template <>
-struct fmt::formatter<::dsn::app_status::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::bulk_load_status::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::config_type::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::detect_action::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::disk_migration_status::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::disk_status::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::learner_status::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::learn_type::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::manual_compaction_status::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::meta_function_level::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::partition_status::type> : ostream_formatter
-{
-};
+inline auto format_as(app_status::type e) -> int { return e; }
+namespace replication {
+inline auto format_as(bulk_load_status::type e) -> int { return e; }
+inline auto format_as(config_type::type e) -> int { return e; }
+inline auto format_as(detect_action::type e) -> int { return e; }
+inline auto format_as(disk_migration_status::type e) -> int { return e; }
+inline auto format_as(disk_status::type e) -> int { return e; }
+inline auto format_as(learner_status::type e) -> int { return e; }
+inline auto format_as(learn_type::type e) -> int { return e; }
+inline auto format_as(manual_compaction_status::type e) -> int { return e; }
+inline auto format_as(meta_function_level::type e) -> int { return e; }
+inline auto format_as(partition_status::type e) -> int { return e; }
+} // namespace replication
+} // namespace dsn

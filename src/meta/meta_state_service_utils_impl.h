@@ -62,6 +62,7 @@ struct op_type
         return op_type_to_string_map[v - 1];
     }
 };
+inline auto format_as(op_type::type e) -> int { return e; }
 
 /// Base class for all operations.
 struct operation : pipeline::environment
@@ -312,8 +313,3 @@ struct on_get_children : operation
 } // namespace mss
 } // namespace replication
 } // namespace dsn
-
-template <>
-struct fmt::formatter<::dsn::replication::mss::op_type::type> : ostream_formatter
-{
-};

@@ -32,6 +32,7 @@
 //   replica_stub(singleton) --> replica --> replication_app_base
 //
 
+#include <fmt/ostream.h>
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <atomic>
@@ -43,8 +44,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <fmt/ostream.h>
 
 #include "block_service/block_service_manager.h"
 #include "bulk_load_types.h"
@@ -79,6 +78,7 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+
 namespace service {
 class copy_request;
 class copy_response;
@@ -308,6 +308,7 @@ private:
         NS_Connecting,
         NS_Connected
     };
+    inline friend auto format_as(replica_stub::replica_node_state e) -> int { return e; }
 
     enum replica_life_cycle
     {
@@ -588,8 +589,3 @@ private:
 };
 } // namespace replication
 } // namespace dsn
-
-template <>
-struct fmt::formatter<::dsn::replication::replica_stub::replica_node_state> : ostream_formatter
-{
-};

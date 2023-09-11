@@ -40,6 +40,8 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -47,8 +49,6 @@
 #include <iterator>
 #include <stdexcept>
 #include <string>
-
-#include <fmt/ostream.h>
 
 #include "ports.h"
 

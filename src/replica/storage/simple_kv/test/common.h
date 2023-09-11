@@ -35,6 +35,8 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <stdint.h>
 #include <algorithm>
 #include <iosfwd>
@@ -42,8 +44,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <fmt/ostream.h>
 
 #include "common/gpid.h"
 #include "common/replication_other_types.h"

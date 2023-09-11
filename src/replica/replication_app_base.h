@@ -26,13 +26,12 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
 #include <stdint.h>
 #include <string.h>
 #include <atomic>
 #include <map>
 #include <string>
-
-#include <fmt/ostream.h>
 
 #include "bulk_load_types.h"
 #include "common/json_helper.h"
@@ -315,12 +314,6 @@ protected:
 
     explicit replication_app_base(replication::replica *replica);
 };
-
+inline auto format_as(replication_app_base::chkpt_apply_mode e) -> int { return e; }
 } // namespace replication
 } // namespace dsn
-
-template <>
-struct fmt::formatter<::dsn::replication::replication_app_base::chkpt_apply_mode>
-    : ostream_formatter
-{
-};

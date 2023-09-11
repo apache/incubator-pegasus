@@ -35,12 +35,11 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
 #include <stdint.h>
 #include <set>
 #include <string>
 #include <vector>
-
-#include <fmt/ostream.h>
 
 #include "runtime/task/task_code.h"
 #include "utils/api_utilities.h"
@@ -87,6 +86,7 @@ typedef enum grpc_mode_t {
     GRPC_COUNT,
     GRPC_INVALID
 } grpc_mode_t;
+inline auto format_as(grpc_mode_t e) -> int { return e; }
 
 ENUM_BEGIN(grpc_mode_t, GRPC_INVALID)
 ENUM_REG(GRPC_TO_LEADER)
@@ -101,6 +101,7 @@ typedef enum throttling_mode_t {
     TM_COUNT,
     TM_INVALID
 } throttling_mode_t;
+inline auto format_as(throttling_mode_t e) -> int { return e; }
 
 ENUM_BEGIN(throttling_mode_t, TM_INVALID)
 ENUM_REG(TM_NONE)
@@ -130,11 +131,13 @@ ENUM_END(dsn_msg_serialize_format)
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format)
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_INVALID)
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN)
+inline auto format_as(network_header_format e) -> int { return e; }
 
 // define network channel types for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_TCP)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
+inline auto format_as(rpc_channel e) -> int { return e; }
 
 class aio_task;
 class message_ex;
@@ -330,20 +333,3 @@ CONFIG_FLD(bool,
 CONFIG_END
 
 } // end namespace
-
-template <>
-struct fmt::formatter<::dsn::grpc_mode_t> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::network_header_format> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::rpc_channel> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::throttling_mode_t> : ostream_formatter
-{
-};

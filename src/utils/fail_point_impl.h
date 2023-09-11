@@ -99,6 +99,7 @@ private:
     int _freq{100};
     int _max_cnt{-1}; // TODO(wutao1): not thread-safe
 };
+inline auto format_as(fail_point::task_type e) -> int { return e; }
 
 struct fail_point_registry
 {
@@ -134,8 +135,3 @@ private:
 
 } // namespace fail
 } // namespace dsn
-
-template <>
-struct fmt::formatter<::dsn::fail::fail_point::task_type> : ostream_formatter
-{
-};

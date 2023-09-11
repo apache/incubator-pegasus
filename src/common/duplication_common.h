@@ -19,12 +19,11 @@
 
 #pragma once
 
+#include <fmt/format.h>
 #include <stdint.h>
 #include <map>
 #include <set>
 #include <string>
-
-#include <fmt/ostream.h>
 
 #include "duplication_types.h"
 #include "runtime/rpc/rpc_holder.h"
@@ -89,14 +88,7 @@ struct duplication_constants
     const static std::string kDuplicationEnvMasterMetasKey;
 };
 
+inline auto format_as(duplication_fail_mode::type e) -> int { return e; }
+inline auto format_as(duplication_status::type e) -> int { return e; }
 } // namespace replication
 } // namespace dsn
-
-template <>
-struct fmt::formatter<::dsn::replication::duplication_fail_mode::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::duplication_status::type> : ostream_formatter
-{
-};

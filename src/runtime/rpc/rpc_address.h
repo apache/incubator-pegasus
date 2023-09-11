@@ -27,14 +27,15 @@
 #pragma once
 
 #include <arpa/inet.h> // IWYU pragma: keep
-
 #include <fmt/ostream.h>
-
 #include <cstddef>
 #include <cstdint>
+#include <experimental/string_view>
 #include <functional>
 #include <sstream>
 #include <string>
+
+#include "fmt/core.h"
 
 namespace apache {
 namespace thrift {
@@ -49,6 +50,7 @@ typedef enum dsn_host_type_t {
     HOST_TYPE_IPV4 = 1,
     HOST_TYPE_GROUP = 2,
 } dsn_host_type_t;
+inline auto format_as(dsn_host_type_t e) -> int { return e; }
 
 namespace dsn {
 
@@ -210,10 +212,6 @@ private:
 
 } // namespace dsn
 
-template <>
-struct fmt::formatter<dsn_host_type_t> : ostream_formatter
-{
-};
 template <>
 struct fmt::formatter<::dsn::rpc_address> : ostream_formatter
 {

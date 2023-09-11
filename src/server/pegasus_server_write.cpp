@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <stdio.h>
 #include <thrift/transport/TTransportException.h>

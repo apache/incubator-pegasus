@@ -33,12 +33,11 @@
  */
 #pragma once
 
+#include <fmt/ostream.h>
 #include <stdint.h>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <fmt/ostream.h>
 
 #include "lock_types.h"
 #include "runtime/task/future_types.h"
@@ -59,6 +58,7 @@ enum lock_state
     unlocking,
     state_count
 };
+inline auto format_as(lock_state e) -> int { return e; }
 
 struct zoolock_pair
 {
@@ -131,8 +131,3 @@ private:
 };
 }
 }
-
-template <>
-struct fmt::formatter<::dsn::dist::lock_state> : ostream_formatter
-{
-};

@@ -45,6 +45,7 @@ enum commit_type
     COMMIT_ALL_READY       // commit (last_committed, ...<all is_commit_ready mutations> ...]
     // - only valid when partition_status::PS_SECONDARY or partition_status::PS_PRIMARY
 };
+inline auto format_as(commit_type e) -> int { return e; }
 
 // prepare_list origins from the concept of `prepared list` in PacificA.
 // It stores an continuous and ordered list of mutations.
@@ -89,8 +90,3 @@ private:
 
 } // namespace replication
 } // namespace dsn
-
-template <>
-struct fmt::formatter<::dsn::replication::commit_type> : ostream_formatter
-{
-};

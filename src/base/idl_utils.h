@@ -21,6 +21,8 @@
 
 #include <string>
 
+#include <fmt/format.h>
+
 #include "rrdb/rrdb_types.h"
 
 namespace pegasus {
@@ -41,15 +43,10 @@ inline bool cas_is_check_operand_needed(dsn::apps::cas_check_type::type type)
 
 } // namespace pegasus
 
-template <>
-struct fmt::formatter<::dsn::apps::cas_check_type::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::apps::filter_type::type> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::apps::mutate_operation::type> : ostream_formatter
-{
-};
+namespace dsn {
+namespace apps {
+inline auto format_as(cas_check_type::type e) -> int { return e; }
+inline auto format_as(filter_type::type e) -> int { return e; }
+inline auto format_as(mutate_operation::type e) -> int { return e; }
+} // namespace apps
+} // namespace dsn

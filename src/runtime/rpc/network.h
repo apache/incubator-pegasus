@@ -26,13 +26,12 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
 #include <atomic>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <fmt/ostream.h>
 
 #include "perf_counter/perf_counter_wrapper.h"
 #include "rpc_address.h"
@@ -341,6 +340,7 @@ private:
     // it represents the name of the corresponding client
     std::string _client_username;
 };
+inline auto format_as(rpc_session::session_state e) -> int { return e; }
 
 // --------- inline implementation --------------
 // return true if delay applied.
@@ -356,8 +356,3 @@ inline bool rpc_session::delay_recv(int delay_ms)
 
 /*@}*/
 } // namespace dsn
-
-template <>
-struct fmt::formatter<::dsn::rpc_session::session_state> : ostream_formatter
-{
-};

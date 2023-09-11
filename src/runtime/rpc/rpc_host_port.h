@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <fmt/ostream.h>
 #include <cstddef>
 #include <cstdint>
 // IWYU pragma: no_include <experimental/string_view>
@@ -27,8 +28,7 @@
 #include <string>
 #include <vector>
 
-#include <fmt/ostream.h>
-
+#include "fmt/core.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
