@@ -28,6 +28,7 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 namespace replication {
@@ -87,5 +88,7 @@ struct duplication_constants
     const static std::string kDuplicationEnvMasterMetasKey;
 };
 
+USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)
+USER_DEFINED_ENUM_FORMATTER(duplication_status::type)
 } // namespace replication
 } // namespace dsn

@@ -617,8 +617,8 @@ void metric_timer::on_timer(const boost::system::error_code &ec)
     } while (0)
 
     if (dsn_unlikely(!!ec)) {
-        CHECK_EQ_MSG(ec,
-                     boost::system::errc::operation_canceled,
+        CHECK_EQ_MSG(static_cast<int>(boost::system::errc::operation_canceled),
+                     ec.value(),
                      "failed to exec on_timer with an error that cannot be handled: {}",
                      ec.message());
 

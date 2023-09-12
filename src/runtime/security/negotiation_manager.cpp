@@ -21,7 +21,6 @@
 
 #include "client_negotiation.h"
 #include "failure_detector/fd.code.definition.h"
-#include "fmt/core.h"
 #include "http/http_server.h"
 #include "negotiation_utils.h"
 #include "runtime/rpc/network.h"

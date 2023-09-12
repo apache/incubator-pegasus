@@ -21,6 +21,7 @@
 
 #include <gtest/gtest_prod.h>
 
+#include "base/idl_utils.h"
 #include "base/pegasus_key_schema.h"
 #include "logging_utils.h"
 #include "meta_store.h"
@@ -270,8 +271,7 @@ public:
         if (!is_check_type_supported(update.check_type)) {
             LOG_ERROR_PREFIX("invalid argument for check_and_set: decree = {}, error = {}",
                              decree,
-                             "check type {} not supported",
-                             update.check_type);
+                             fmt::format("check type {} not supported", update.check_type));
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
@@ -391,8 +391,7 @@ public:
         if (!is_check_type_supported(update.check_type)) {
             LOG_ERROR_PREFIX("invalid argument for check_and_mutate: decree = {}, error = {}",
                              decree,
-                             "check type {} not supported",
-                             update.check_type);
+                             fmt::format("check type {} not supported", update.check_type));
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);

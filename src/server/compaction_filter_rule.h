@@ -19,15 +19,17 @@
 
 #pragma once
 
-#include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <string>
+
+#include <gtest/gtest_prod.h>
 
 #include "base/pegasus_value_schema.h"
 #include "common/json_helper.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"
 #include "utils/factory_store.h"
+#include "utils/fmt_utils.h"
 #include "utils/string_view.h"
 
 namespace pegasus {
@@ -86,6 +88,7 @@ enum string_match_type
     SMT_MATCH_POSTFIX,
     SMT_INVALID,
 };
+USER_DEFINED_ENUM_FORMATTER(string_match_type)
 ENUM_BEGIN(string_match_type, SMT_INVALID)
 ENUM_REG(SMT_MATCH_ANYWHERE)
 ENUM_REG(SMT_MATCH_PREFIX)

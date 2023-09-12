@@ -28,6 +28,8 @@
 #include <functional>
 #include <memory>
 
+#include "utils/fmt_utils.h"
+
 namespace pegasus {
 
 class rrdb_client;
@@ -1216,4 +1218,6 @@ public:
     static pegasus_client *get_client(const char *cluster_name, const char *app_name);
 };
 
+USER_DEFINED_ENUM_FORMATTER(pegasus_client::filter_type)
+USER_DEFINED_ENUM_FORMATTER(pegasus_client::cas_check_type)
 } // namespace pegasus

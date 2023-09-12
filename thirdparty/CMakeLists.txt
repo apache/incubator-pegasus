@@ -246,9 +246,8 @@ ExternalProject_Add(fds
 
 # fmtlib >=6.x requires c++14 support, do not update this library for now
 ExternalProject_Add(fmt
-        URL ${OSS_URL_PREFIX}/fmt-5.3.0.tar.gz
-        https://github.com/fmtlib/fmt/archive/refs/tags/5.3.0.tar.gz
-        URL_MD5 1015bf3ff2a140dfe03de50ee2469401
+        URL https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz
+        URL_MD5 0d41a16f1b3878d44e6fd7ff1f6cc45a
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_BUILD_TYPE=release
         -DFMT_TEST=false

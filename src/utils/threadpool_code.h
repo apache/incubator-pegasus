@@ -29,6 +29,7 @@
 #include <ostream>
 
 #include "ports.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 class threadpool_code
@@ -66,3 +67,5 @@ private:
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_INVALID)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
 }
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::threadpool_code);

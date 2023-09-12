@@ -38,6 +38,7 @@
 #include <map>
 #include <utility>
 
+#include "common/replication_enums.h" // IWYU pragma: keep
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
