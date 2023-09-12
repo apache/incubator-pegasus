@@ -30,7 +30,6 @@
 #include <ostream>
 #include <string>
 
-#include "fmt/core.h"
 #include "utils/enum_helper.h"
 #include "utils/fmt_utils.h"
 #include "utils/ports.h"

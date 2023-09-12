@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <fmt/core.h>
 #include <stdint.h>
 #include <ostream>
 #include <string>

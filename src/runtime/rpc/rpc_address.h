@@ -27,7 +27,6 @@
 #pragma once
 
 #include <arpa/inet.h> // IWYU pragma: keep
-#include <fmt/core.h>
 #include <cstddef>
 #include <cstdint>
 // IWYU pragma: no_include <experimental/string_view>

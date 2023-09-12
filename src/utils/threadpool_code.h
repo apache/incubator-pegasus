@@ -28,7 +28,6 @@
 
 #include <ostream>
 
-#include "fmt/core.h"
 #include "ports.h"
 #include "utils/fmt_utils.h"
 

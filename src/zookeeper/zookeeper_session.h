@@ -41,7 +41,6 @@
 #include <string>
 #include <vector>
 
-#include "fmt/core.h"
 #include "runtime/service_app.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

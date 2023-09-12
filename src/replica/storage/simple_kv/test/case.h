@@ -35,7 +35,6 @@
 
 #pragma once
 
-#include <fmt/core.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <fstream>

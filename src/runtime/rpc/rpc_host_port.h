@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 
-#include "fmt/core.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"

@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <fmt/core.h>
 #include <gtest/gtest_prod.h>
 #include <atomic>
 #include <chrono>
