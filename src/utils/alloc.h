@@ -24,7 +24,7 @@
 #ifdef CACHELINE_SIZE
 
 #include <stddef.h>
-#include <algorithm>
+#include <algorithm> // IWYU pragma: keep
 #include <functional>
 #include <memory>
 #include <new>
