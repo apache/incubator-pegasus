@@ -32,8 +32,6 @@
 #include <map>
 #include <string>
 
-#include <fmt/ostream.h> // IWYU pragma: keep
-
 #include "bulk_load_types.h"
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
@@ -41,6 +39,7 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
 
 namespace dsn {
@@ -315,6 +314,6 @@ protected:
 
     explicit replication_app_base(replication::replica *replica);
 };
-inline auto format_as(replication_app_base::chkpt_apply_mode e) -> int { return e; }
+USER_DEFINED_ENUM_FORMATTER(replication_app_base::chkpt_apply_mode)
 } // namespace replication
 } // namespace dsn

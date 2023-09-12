@@ -55,7 +55,7 @@ typedef enum dsn_task_type_t {
     TASK_TYPE_COUNT,
     TASK_TYPE_INVALID
 } dsn_task_type_t;
-inline auto format_as(dsn_task_type_t e) -> int { return e; }
+USER_DEFINED_ENUM_FORMATTER(dsn_task_type_t)
 
 ENUM_BEGIN(dsn_task_type_t, TASK_TYPE_INVALID)
 ENUM_REG(TASK_TYPE_RPC_REQUEST)

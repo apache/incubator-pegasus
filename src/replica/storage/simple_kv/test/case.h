@@ -443,7 +443,7 @@ private:
     dsn::replication::config_type::type _config_type;
     rpc_address _config_node;
 };
-inline auto format_as(client_case_line::client_type e) -> int { return e; }
+USER_DEFINED_ENUM_FORMATTER(client_case_line::client_type)
 
 class test_case : public dsn::utils::singleton<test_case>
 {

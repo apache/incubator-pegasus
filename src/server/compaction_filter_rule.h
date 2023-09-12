@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include <string>
 
-#include <fmt/ostream.h> // IWYU pragma: keep
 #include <gtest/gtest_prod.h>
 
 #include "base/pegasus_value_schema.h"
@@ -30,6 +29,7 @@
 #include "utils/blob.h"
 #include "utils/enum_helper.h"
 #include "utils/factory_store.h"
+#include "utils/fmt_utils.h"
 #include "utils/string_view.h"
 
 namespace pegasus {
@@ -88,7 +88,7 @@ enum string_match_type
     SMT_MATCH_POSTFIX,
     SMT_INVALID,
 };
-inline auto format_as(string_match_type e) -> int { return e; }
+USER_DEFINED_ENUM_FORMATTER(string_match_type)
 ENUM_BEGIN(string_match_type, SMT_INVALID)
 ENUM_REG(SMT_MATCH_ANYWHERE)
 ENUM_REG(SMT_MATCH_PREFIX)

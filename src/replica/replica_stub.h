@@ -43,7 +43,6 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/ostream.h> // IWYU pragma: keep
 #include <gtest/gtest_prod.h>
 
 #include "block_service/block_service_manager.h"
@@ -73,6 +72,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -309,7 +309,7 @@ private:
         NS_Connecting,
         NS_Connected
     };
-    inline friend auto format_as(replica_stub::replica_node_state e) -> int { return e; }
+    friend USER_DEFINED_ENUM_FORMATTER(replica_stub::replica_node_state);
 
     enum replica_life_cycle
     {

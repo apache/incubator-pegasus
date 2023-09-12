@@ -35,7 +35,6 @@
 #include "boost/smart_ptr/shared_ptr.hpp"
 #include "common/gpid.h"
 #include "common/serialization_helper/thrift_helper.h"
-#include "fmt/core.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "thrift/protocol/TBinaryProtocol.h"

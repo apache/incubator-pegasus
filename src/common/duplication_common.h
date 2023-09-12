@@ -24,12 +24,11 @@
 #include <set>
 #include <string>
 
-#include <fmt/format.h> // IWYU pragma: keep
-
 #include "duplication_types.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 namespace replication {
@@ -89,7 +88,7 @@ struct duplication_constants
     const static std::string kDuplicationEnvMasterMetasKey;
 };
 
-inline auto format_as(duplication_fail_mode::type e) -> int { return e; }
-inline auto format_as(duplication_status::type e) -> int { return e; }
+USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)
+USER_DEFINED_ENUM_FORMATTER(duplication_status::type)
 } // namespace replication
 } // namespace dsn

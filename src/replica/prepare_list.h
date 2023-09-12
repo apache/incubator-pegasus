@@ -34,6 +34,7 @@
 #include "replica/mutation.h"
 #include "replica/replica_base.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 namespace replication {
@@ -45,7 +46,7 @@ enum commit_type
     COMMIT_ALL_READY       // commit (last_committed, ...<all is_commit_ready mutations> ...]
     // - only valid when partition_status::PS_SECONDARY or partition_status::PS_PRIMARY
 };
-inline auto format_as(commit_type e) -> int { return e; }
+USER_DEFINED_ENUM_FORMATTER(commit_type)
 
 // prepare_list origins from the concept of `prepared list` in PacificA.
 // It stores an continuous and ordered list of mutations.

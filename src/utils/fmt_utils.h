@@ -24,3 +24,6 @@
     struct fmt::formatter<type> : ostream_formatter                                                \
     {                                                                                              \
     }
+
+#define USER_DEFINED_ENUM_FORMATTER(type)                                                          \
+    inline auto format_as(type e)->int { return e; }

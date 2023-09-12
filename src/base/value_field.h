@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <fmt/format.h>
+#include "utils/fmt_utils.h"
 
 namespace pegasus {
 
@@ -30,7 +30,7 @@ enum value_field_type
     USER_DATA,
     FIELD_COUNT,
 };
-inline auto format_as(value_field_type e) -> int { return e; }
+USER_DEFINED_ENUM_FORMATTER(value_field_type)
 
 struct value_field
 {

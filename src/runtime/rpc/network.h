@@ -32,8 +32,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fmt/ostream.h> // IWYU pragma: keep
-
 #include "perf_counter/perf_counter_wrapper.h"
 #include "rpc_address.h"
 #include "runtime/rpc/message_parser.h"
@@ -41,6 +39,7 @@
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/join_point.h"
 #include "utils/link.h"
 #include "utils/synchronize.h"
@@ -284,7 +283,7 @@ protected:
         SS_CONNECTED,
         SS_DISCONNECTED
     };
-    friend inline auto format_as(rpc_session::session_state e) -> int { return e; }
+    friend USER_DEFINED_ENUM_FORMATTER(rpc_session::session_state);
 
     mutable utils::ex_lock_nr _lock; // [
     volatile session_state _connect_state;

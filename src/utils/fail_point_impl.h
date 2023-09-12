@@ -30,14 +30,14 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
-
-#include "utils/fail_point.h"
-#include "utils/api_utilities.h"
-#include "utils/ports.h"
 #include <mutex>
 #include <unordered_map>
 #include <utility>
+
+#include "utils/api_utilities.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_utils.h"
+#include "utils/ports.h"
 
 namespace dsn {
 namespace fail {
@@ -99,7 +99,7 @@ private:
     int _freq{100};
     int _max_cnt{-1}; // TODO(wutao1): not thread-safe
 };
-inline auto format_as(fail_point::task_type e) -> int { return e; }
+USER_DEFINED_ENUM_FORMATTER(fail_point::task_type)
 
 struct fail_point_registry
 {
