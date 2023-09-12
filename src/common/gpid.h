@@ -29,7 +29,7 @@
 #include <ostream>
 #include <thrift/protocol/TProtocol.h>
 
-#include <fmt/ostream.h>
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 
@@ -93,10 +93,7 @@ private:
 
 } // namespace dsn
 
-template <>
-struct fmt::formatter<::dsn::gpid> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::gpid);
 
 namespace std {
 template <>

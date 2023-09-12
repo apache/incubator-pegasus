@@ -33,11 +33,12 @@
  */
 #pragma once
 
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <fmt/ostream.h> // IWYU pragma: keep
 
 #include "lock_types.h"
 #include "runtime/task/future_types.h"

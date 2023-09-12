@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
 #include <cstddef>
 #include <cstdint>
 // IWYU pragma: no_include <experimental/string_view>
@@ -32,6 +31,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+#include "utils/fmt_utils.h"
 
 namespace apache {
 namespace thrift {
@@ -118,10 +118,7 @@ inline bool operator!=(const host_port &hp1, const host_port &hp2) { return !(hp
 
 } // namespace dsn
 
-template <>
-struct fmt::formatter<::dsn::host_port> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::host_port);
 
 namespace std {
 template <>

@@ -26,11 +26,11 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
 #include <ostream>
 
 #include "fmt/core.h"
 #include "ports.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 class threadpool_code
@@ -69,7 +69,4 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_INVALID)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_DEFAULT)
 }
 
-template <>
-struct fmt::formatter<::dsn::threadpool_code> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::threadpool_code);

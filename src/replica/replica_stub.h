@@ -32,8 +32,6 @@
 //   replica_stub(singleton) --> replica --> replication_app_base
 //
 
-#include <fmt/ostream.h>
-#include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <atomic>
 #include <functional>
@@ -44,6 +42,9 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <fmt/ostream.h> // IWYU pragma: keep
+#include <gtest/gtest_prod.h>
 
 #include "block_service/block_service_manager.h"
 #include "bulk_load_types.h"
@@ -441,7 +442,7 @@ private:
 
     std::shared_ptr<dsn::dist::slave_failure_detector_with_multimaster> _failure_detector;
     mutable zlock _state_lock;
-    replica_node_state _state;
+    volatile replica_node_state _state;
 
     // constants
     replication_options _options;

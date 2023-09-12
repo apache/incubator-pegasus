@@ -26,12 +26,13 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
 #include <atomic>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include <fmt/ostream.h> // IWYU pragma: keep
 
 #include "perf_counter/perf_counter_wrapper.h"
 #include "rpc_address.h"
@@ -273,6 +274,7 @@ public:
     void on_send_completed(uint64_t signature = 0);
     virtual void on_failure(bool is_write = false);
 
+protected:
     ///
     /// fields related to sending messages
     ///
@@ -282,10 +284,10 @@ public:
         SS_CONNECTED,
         SS_DISCONNECTED
     };
+    friend inline auto format_as(rpc_session::session_state e) -> int { return e; }
 
-protected:
     mutable utils::ex_lock_nr _lock; // [
-    session_state _connect_state;
+    volatile session_state _connect_state;
 
     bool negotiation_succeed = false;
     // when the negotiation of a session isn't succeed,
@@ -340,7 +342,6 @@ private:
     // it represents the name of the corresponding client
     std::string _client_username;
 };
-inline auto format_as(rpc_session::session_state e) -> int { return e; }
 
 // --------- inline implementation --------------
 // return true if delay applied.

@@ -41,7 +41,6 @@
 #pragma once
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -51,6 +50,7 @@
 #include <string>
 
 #include "ports.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 
@@ -431,7 +431,4 @@ std::ostream &operator<<(std::ostream &o, string_view piece);
 
 } // namespace dsn
 
-template <>
-struct fmt::formatter<::dsn::string_view> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::string_view);

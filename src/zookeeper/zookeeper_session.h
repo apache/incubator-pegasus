@@ -32,7 +32,6 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <string.h>
 #include <zookeeper/zookeeper.h>
@@ -46,6 +45,7 @@
 #include "runtime/service_app.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/fmt_utils.h"
 #include "utils/synchronize.h"
 
 struct String_vector;
@@ -208,7 +208,4 @@ private:
 }
 }
 
-template <>
-struct fmt::formatter<::dsn::dist::zookeeper_session> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::dist::zookeeper_session);

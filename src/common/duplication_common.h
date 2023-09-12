@@ -19,11 +19,12 @@
 
 #pragma once
 
-#include <fmt/format.h>
 #include <stdint.h>
 #include <map>
 #include <set>
 #include <string>
+
+#include <fmt/format.h> // IWYU pragma: keep
 
 #include "duplication_types.h"
 #include "runtime/rpc/rpc_holder.h"

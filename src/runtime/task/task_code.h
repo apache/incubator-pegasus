@@ -26,13 +26,13 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <ostream>
 #include <string>
 
 #include "fmt/core.h"
 #include "utils/enum_helper.h"
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
 #include "utils/threadpool_code.h"
 
@@ -118,9 +118,12 @@ public:
 
     const char *to_string() const;
 
-    constexpr bool operator==(const task_code &r) { return _internal_code == r._internal_code; }
+    constexpr bool operator==(const task_code &r) const
+    {
+        return _internal_code == r._internal_code;
+    }
 
-    constexpr bool operator!=(const task_code &r) { return !(*this == r); }
+    constexpr bool operator!=(const task_code &r) const { return !(*this == r); }
 
     constexpr operator int() const { return _internal_code; }
 
@@ -206,7 +209,4 @@ DEFINE_TASK_CODE(TASK_CODE_EXEC_INLINED, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAU
 
 } // namespace dsn
 
-template <>
-struct fmt::formatter<::dsn::task_code> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::task_code);

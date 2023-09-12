@@ -35,11 +35,12 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <set>
 #include <string>
 #include <vector>
+
+#include <fmt/ostream.h> // IWYU pragma: keep
 
 #include "runtime/task/task_code.h"
 #include "utils/api_utilities.h"

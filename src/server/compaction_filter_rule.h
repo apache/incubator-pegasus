@@ -19,10 +19,11 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
-#include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <string>
+
+#include <fmt/ostream.h> // IWYU pragma: keep
+#include <gtest/gtest_prod.h>
 
 #include "base/pegasus_value_schema.h"
 #include "common/json_helper.h"

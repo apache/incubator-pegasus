@@ -27,7 +27,6 @@
 #pragma once
 
 #include <arpa/inet.h> // IWYU pragma: keep
-#include <fmt/ostream.h>
 #include <cstddef>
 #include <cstdint>
 // IWYU pragma: no_include <experimental/string_view>
@@ -35,7 +34,9 @@
 #include <sstream>
 #include <string>
 
-#include "fmt/core.h"
+#include <fmt/core.h>
+
+#include "utils/fmt_utils.h"
 
 namespace apache {
 namespace thrift {
@@ -212,10 +213,7 @@ private:
 
 } // namespace dsn
 
-template <>
-struct fmt::formatter<::dsn::rpc_address> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::rpc_address);
 
 namespace std {
 

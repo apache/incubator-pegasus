@@ -36,7 +36,6 @@
 #pragma once
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <fstream>
@@ -48,6 +47,7 @@
 #include "meta_admin_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
 
@@ -509,7 +509,4 @@ private:
 }
 }
 
-template <>
-struct fmt::formatter<::dsn::replication::test::event> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::event);

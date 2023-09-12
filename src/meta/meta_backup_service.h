@@ -18,7 +18,6 @@
 #pragma once
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <gtest/gtest_prod.h>
 #include <atomic>
 #include <chrono>
@@ -43,6 +42,7 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -424,4 +424,4 @@ private:
 } // namespace replication
 } // namespace dsn
 
-template <> struct fmt::formatter<::dsn::replication::backup_start_time> : ostream_formatter {};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::backup_start_time);

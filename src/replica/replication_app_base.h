@@ -26,12 +26,13 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <string.h>
 #include <atomic>
 #include <map>
 #include <string>
+
+#include <fmt/ostream.h> // IWYU pragma: keep
 
 #include "bulk_load_types.h"
 #include "common/json_helper.h"

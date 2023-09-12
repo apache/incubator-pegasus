@@ -36,7 +36,6 @@
 #pragma once
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <algorithm>
 #include <iosfwd>
@@ -49,6 +48,7 @@
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 class partition_configuration;
@@ -216,15 +216,6 @@ struct parti_config
 }
 }
 
-template <>
-struct fmt::formatter<::dsn::replication::test::parti_config> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::test::replica_id> : ostream_formatter
-{
-};
-template <>
-struct fmt::formatter<::dsn::replication::test::state_snapshot> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::parti_config);
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::replica_id);
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::state_snapshot);

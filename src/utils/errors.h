@@ -28,11 +28,10 @@
 
 #include <sstream>
 
-#include <fmt/ostream.h>
-
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
 #include "utils/smart_pointers.h"
 #include "utils/string_view.h"
@@ -221,10 +220,7 @@ private:
 
 } // namespace dsn
 
-template <>
-struct fmt::formatter<::dsn::error_s> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
 
 #define FMT_ERR(ec, msg, args...) error_s::make(ec, fmt::format(msg, ##args))
 

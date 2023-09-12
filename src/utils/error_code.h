@@ -27,11 +27,11 @@
 #pragma once
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <ostream>
 #include <string>
 
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
 
 namespace apache {
@@ -55,9 +55,12 @@ public:
 
     const char *to_string() const;
 
-    constexpr bool operator==(const error_code &r) { return _internal_code == r._internal_code; }
+    constexpr bool operator==(const error_code &r) const
+    {
+        return _internal_code == r._internal_code;
+    }
 
-    constexpr bool operator!=(const error_code &r) { return !(*this == r); }
+    constexpr bool operator!=(const error_code &r) const { return !(*this == r); }
 
     constexpr operator int() const { return _internal_code; }
 
@@ -180,7 +183,4 @@ DEFINE_ERR_CODE(ERR_RDB_CORRUPTION)
 DEFINE_ERR_CODE(ERR_DISK_IO_ERROR)
 } // namespace dsn
 
-template <>
-struct fmt::formatter<::dsn::error_code> : ostream_formatter
-{
-};
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_code);

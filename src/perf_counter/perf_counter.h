@@ -26,12 +26,13 @@
 
 #pragma once
 
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <fmt/ostream.h> // IWYU pragma: keep
 
 #include "utils/autoref_ptr.h"
 
