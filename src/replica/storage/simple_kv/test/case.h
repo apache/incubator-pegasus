@@ -46,6 +46,7 @@
 #include "meta_admin_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
 
@@ -441,6 +442,7 @@ private:
     dsn::replication::config_type::type _config_type;
     rpc_address _config_node;
 };
+USER_DEFINED_ENUM_FORMATTER(client_case_line::client_type)
 
 class test_case : public dsn::utils::singleton<test_case>
 {
@@ -505,3 +507,5 @@ private:
 }
 }
 }
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::event);

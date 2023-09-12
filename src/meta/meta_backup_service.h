@@ -41,11 +41,13 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 class message_ex;
 class rpc_address;
+
 namespace dist {
 namespace block_service {
 class block_filesystem;
@@ -420,3 +422,5 @@ private:
 };
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::backup_start_time);

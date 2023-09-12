@@ -32,7 +32,6 @@
 //   replica_stub(singleton) --> replica --> replication_app_base
 //
 
-#include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <atomic>
 #include <functional>
@@ -43,6 +42,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <gtest/gtest_prod.h>
 
 #include "block_service/block_service_manager.h"
 #include "bulk_load_types.h"
@@ -71,12 +72,14 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+
 namespace service {
 class copy_request;
 class copy_response;
@@ -306,6 +309,7 @@ private:
         NS_Connecting,
         NS_Connected
     };
+    friend USER_DEFINED_ENUM_FORMATTER(replica_stub::replica_node_state);
 
     enum replica_life_cycle
     {

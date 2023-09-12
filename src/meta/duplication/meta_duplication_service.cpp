@@ -16,10 +16,8 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <algorithm>
 #include <cstdint>
-#include <iosfwd>
 #include <queue>
 #include <type_traits>
 

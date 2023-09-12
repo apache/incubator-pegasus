@@ -388,11 +388,9 @@ function(dsn_common_setup)
 
   set(BUILD_SHARED_LIBS OFF)
 
-  include(CheckCXXCompilerFlag)
-  CHECK_CXX_COMPILER_FLAG("-std=c++1y" COMPILER_SUPPORTS_CXX1Y)
-  if(NOT ${COMPILER_SUPPORTS_CXX1Y})
-    message(FATAL_ERROR "You need a compiler with C++1y support.")
-  endif()
+  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 
   dsn_setup_system_libs()
   dsn_setup_compiler_flags()

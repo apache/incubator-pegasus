@@ -30,6 +30,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+#include "utils/fmt_utils.h"
 
 namespace apache {
 namespace thrift {
@@ -115,6 +116,8 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
 inline bool operator!=(const host_port &hp1, const host_port &hp2) { return !(hp1 == hp2); }
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::host_port);
 
 namespace std {
 template <>

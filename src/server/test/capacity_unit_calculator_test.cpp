@@ -17,13 +17,14 @@
  * under the License.
  */
 
-#include <algorithm>
+#include <fmt/core.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <memory>
 #include <rocksdb/status.h>
 #include <stdint.h>
+#include <algorithm>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
