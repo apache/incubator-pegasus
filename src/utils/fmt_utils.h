@@ -24,4 +24,3 @@
     struct fmt::formatter<type> : ostream_formatter                                                \
     {                                                                                              \
     }
-
