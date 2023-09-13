@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 #include "utils/ports.h"
 
 // The check for the definition of CACHELINE_SIZE has to be put after including "utils/ports.h",

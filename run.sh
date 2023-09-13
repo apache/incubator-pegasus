@@ -118,7 +118,7 @@ function run_build()
     ENABLE_GPERF=ON
     SKIP_THIRDPARTY=NO
     SANITIZER=""
-    ROCKSDB_PORTABLE=OFF
+    ROCKSDB_PORTABLE=0
     USE_JEMALLOC=OFF
     BUILD_TEST=OFF
     IWYU=""
@@ -177,7 +177,7 @@ function run_build()
                 SKIP_THIRDPARTY=YES
                 ;;
             --enable_rocksdb_portable)
-                ROCKSDB_PORTABLE=ON
+                ROCKSDB_PORTABLE=1
                 ;;
             --use_jemalloc)
                 ENABLE_GPERF=OFF

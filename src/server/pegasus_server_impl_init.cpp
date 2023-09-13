@@ -19,6 +19,7 @@
 
 #include <fmt/core.h>
 #include <rocksdb/cache.h>
+#include <rocksdb/env.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/options.h>
 #include <rocksdb/rate_limiter.h>
@@ -422,6 +423,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _rng_rd_opts.rocksdb_iteration_threshold_time_ms = FLAGS_rocksdb_iteration_threshold_time_ms;
 
     // init rocksdb::DBOptions
+    _db_opts.env = rocksdb::Env::Default();
     _db_opts.create_if_missing = true;
     // atomic flush data CF and meta CF, aim to keep consistency of 'last flushed decree' in meta CF
     // and data in data CF.
