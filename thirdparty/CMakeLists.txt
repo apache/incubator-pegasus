@@ -361,8 +361,8 @@ ExternalProject_Add(jemalloc
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 
 ExternalProject_Add(rocksdb
-        URL https://github.com/facebook/rocksdb/archive/refs/tags/v8.3.3.tar.gz
-        URL_MD5 2815555a2ee2d12a7081a91fb988bf24
+        URL https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
+        URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DFAIL_ON_WARNINGS=OFF
