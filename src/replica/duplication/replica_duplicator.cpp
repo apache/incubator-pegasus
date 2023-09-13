@@ -262,6 +262,5 @@ void replica_duplicator::set_duplication_plog_checking(bool checking)
     _replica->set_duplication_plog_checking(checking);
 }
 
-
 } // namespace replication
 } // namespace dsn

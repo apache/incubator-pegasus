@@ -260,7 +260,6 @@ public:
         _is_duplication_plog_checking.store(checking);
     }
 
-
     //
     // Backup
     //

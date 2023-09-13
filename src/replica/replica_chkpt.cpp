@@ -156,10 +156,9 @@ void replica::on_checkpoint_timer()
 
         if (is_duplication_plog_checking()) {
             LOG_DEBUG_PREFIX("gc_private {}: skip gc because duplication is checking plog files",
-                           enum_to_string(status()));
+                             enum_to_string(status()));
             return;
         }
-
 
         tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
                          &_tracker,
