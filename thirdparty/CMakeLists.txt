@@ -21,9 +21,9 @@ project(pegasus_thirdparties)
 cmake_minimum_required(VERSION 3.11.0)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    # require at least gcc 5.4.0
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.4.0)
-        message(FATAL_ERROR "GCC version must be at least 5.4.0!")
+    # require at least gcc 7.0.0
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0.0)
+        message(FATAL_ERROR "GCC version must be at least 7.0.0!")
     endif ()
 endif ()
 
@@ -244,7 +244,6 @@ ExternalProject_Add(fds
         BUILD_IN_SOURCE 1
         )
 
-# fmtlib >=6.x requires c++14 support, do not update this library for now
 ExternalProject_Add(fmt
         URL https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz
         URL_MD5 0d41a16f1b3878d44e6fd7ff1f6cc45a

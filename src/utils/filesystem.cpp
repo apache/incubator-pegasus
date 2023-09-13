@@ -33,8 +33,6 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-// IWYU pragma: no_include <bits/struct_stat.h>
-#include <sys/stat.h> // IWYU pragma: keep
 #include <boost/filesystem/operations.hpp>
 #include <boost/system/error_code.hpp>
 #include <errno.h>
@@ -46,8 +44,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+// IWYU pragma: no_include <bits/struct_stat.h>
+#include <sys/stat.h> // IWYU pragma: keep
 #include <unistd.h>
-#include <algorithm>
 #include <fstream>
 
 #include "utils/defer.h"

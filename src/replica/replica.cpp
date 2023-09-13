@@ -28,7 +28,6 @@
 
 #include <fmt/core.h>
 #include <rocksdb/status.h>
-#include <algorithm>
 #include <functional>
 #include <set>
 

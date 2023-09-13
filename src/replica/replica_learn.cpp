@@ -48,7 +48,6 @@
 
 #include <fmt/std.h> // IWYU pragma: keep
 
-#include "aio/aio_task.h"
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"

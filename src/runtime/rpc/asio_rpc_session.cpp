@@ -28,7 +28,6 @@
 
 #include <boost/asio.hpp> // IWYU pragma: keep
 // IWYU pragma: no_include <ext/alloc_traits.h>
-#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <new>

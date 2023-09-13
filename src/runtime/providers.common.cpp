@@ -33,7 +33,6 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <algorithm>
 #include <string>
 
 #include "runtime/env_provider.h"

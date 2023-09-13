@@ -17,7 +17,6 @@
 
 #include "cold_backup_context.h"
 
-#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <memory>

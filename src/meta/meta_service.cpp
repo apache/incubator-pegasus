@@ -25,8 +25,8 @@
  */
 
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <boost/lexical_cast.hpp>
-#include <ext/alloc_traits.h>
 #include <algorithm> // for std::remove_if
 #include <chrono>
 #include <functional>

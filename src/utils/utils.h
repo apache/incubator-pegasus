@@ -28,7 +28,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <algorithm>
+#include <algorithm> // IWYU pragma: keep
 #include <iterator>
 #include <map>
 #include <memory>

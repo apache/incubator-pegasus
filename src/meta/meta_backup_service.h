@@ -18,6 +18,7 @@
 #pragma once
 
 #include <gtest/gtest_prod.h>
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>

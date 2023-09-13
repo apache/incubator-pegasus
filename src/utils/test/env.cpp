@@ -38,6 +38,7 @@
 #include <gtest/gtest.h>
 #include <stdint.h>
 #include <limits>
+#include <memory>
 
 #include "utils/rand.h"
 
