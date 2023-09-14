@@ -174,6 +174,10 @@ class replica : public serverlet<replica>, public ref_counter, public replica_ba
 public:
     ~replica(void);
 
+    // store `info` into a file under `path` directory
+    // path = "" means using the default directory (`_dir`/.app_info)
+    error_code store_app_info(app_info &info, const std::string &path = "");
+
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
     void reset_prepare_list_after_replay();
@@ -520,9 +524,7 @@ private:
     // update envs to deny client request
     void update_deny_client(const std::map<std::string, std::string> &envs);
 
-    // store `info` into a file under `path` directory
-    // path = "" means using the default directory (`_dir`/.app_info)
-    error_code store_app_info(app_info &info, const std::string &path = "");
+
 
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_name(const std::string &app_name);

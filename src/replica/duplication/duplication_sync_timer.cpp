@@ -107,11 +107,23 @@ void duplication_sync_timer::update_duplication_map(
 {
     for (replica_ptr &r : get_all_replicas()) {
         auto it = dup_map.find(r->get_gpid().get_app_id());
+        app_info *info = const_cast<app_info *>(r->get_app_info());
+        gpid id = r->get_gpid();
+        bool doing_duplication;
+
         if (it == dup_map.end()) {
             // no duplication is assigned to this app
             r->get_duplication_manager()->update_duplication_map({});
+            doing_duplication = false;
         } else {
             r->get_duplication_manager()->update_duplication_map(it->second);
+            doing_duplication = true;
+        }
+
+        if (_stub->_closed_replicas.find(id) == _stub->_closed_replicas.end() &&
+            _stub->_closing_replicas.find(id) == _stub->_closing_replicas.end()) {
+            doing_duplication ? info->__set_duplicating(true) : info->__set_duplicating(false);
+            r->store_app_info(*info, "");
         }
     }
 }
