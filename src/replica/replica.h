@@ -524,8 +524,6 @@ private:
     // update envs to deny client request
     void update_deny_client(const std::map<std::string, std::string> &envs);
 
-
-
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_name(const std::string &app_name);
 
