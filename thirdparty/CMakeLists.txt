@@ -360,9 +360,13 @@ ExternalProject_Add(jemalloc
 
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 
+# This is the commit "Update the status badge to pegasus-kv/rocksdb's own (#18) " on
+# branch v8.5.3-pegasus-encrypt of https://github.com/pegasus-kv/rocksdb.git.
+# The v8.5.3-pegasus-encrypt branch is based on the v8.5.3 tag of facebook/rocksdb and add
+# the encryption feature.
 ExternalProject_Add(rocksdb
-        URL https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
-        URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
+        URL https://github.com/pegasus-kv/rocksdb/archive/090c3d9fd1b99c633abc5ab4de2f75d4c6b6528d.zip
+        URL_MD5 1e556d77ae853b22f62dd2e82e915937
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DFAIL_ON_WARNINGS=OFF
