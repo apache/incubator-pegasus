@@ -259,7 +259,7 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup cache
@@ -370,7 +370,7 @@ jobs:
     needs: build_ASAN
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v3
@@ -401,7 +401,7 @@ jobs:
 #    needs: cpp_clang_format_linter
 #    runs-on: ubuntu-latest
 #    container:
-#      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
+#      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #    steps:
 #      - uses: actions/checkout@v3
 #      - name: Setup cache
@@ -508,7 +508,7 @@ jobs:
 #    needs: build_UBSAN
 #    runs-on: ubuntu-latest
 #    container:
-#      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
+#      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #      options: --cap-add=SYS_PTRACE
 #    steps:
 #      - uses: actions/checkout@v3
