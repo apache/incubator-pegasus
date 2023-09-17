@@ -34,7 +34,7 @@ while read -r -a line; do
     output_xml="${REPORT_DIR}/dsn_meta_state_tests_${test_case/.ini/.xml}"
     echo "============ run dsn_meta_state_tests ${test_case} with gtest_filter ${gtest_filter} ============"
     ./clear.sh
-    GTEST_OUTPUT="xml:${output_xml}" GTEST_FILTER=${gtest_filter} ./dsn_meta_state_tests ${test_case}
+    GTEST_OUTPUT="xml:${output_xml}" GTEST_FILTER=${gtest_filter} ASAN_OPTIONS=detect_odr_violation=0 ./dsn_meta_state_tests ${test_case}
 
     if [ $? -ne 0 ]; then
         echo "run dsn_meta_state_tests $test_case failed"

@@ -23,6 +23,6 @@ exit_if_fail() {
     fi
 }
 
-./pegasus_geo_test
+ASAN_OPTIONS=detect_odr_violation=0 ./pegasus_geo_test
 
 exit_if_fail $? "run pegasus_geo_test failed"

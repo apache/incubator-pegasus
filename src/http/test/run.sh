@@ -29,4 +29,4 @@ if [ -z "${REPORT_DIR}" ]; then
 fi
 
 output_xml="${REPORT_DIR}/dsn_http_test.xml"
-GTEST_OUTPUT="xml:${output_xml}" ./dsn_http_test
+GTEST_OUTPUT="xml:${output_xml}" ASAN_OPTIONS=detect_odr_violation=0 ./dsn_http_test

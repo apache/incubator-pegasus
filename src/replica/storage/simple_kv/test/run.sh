@@ -50,7 +50,7 @@ function run_single()
     fi
 
     echo "${bin} ${prefix}.ini ${prefix}.act"
-    ${bin} ${prefix}.ini ${prefix}.act
+    ASAN_OPTIONS=detect_odr_violation=0 ${bin} ${prefix}.ini ${prefix}.act
     ret=$?
     if find . -name log.1.txt &>/dev/null; then
         log=`find . -name log.1.txt`

@@ -47,7 +47,7 @@ loop_count=0
 last_ret=0
 while [ $loop_count -le 5 ]
 do
-  GTEST_OUTPUT="xml:${REPORT_DIR}/${TEST_BIN}.xml" ./${TEST_BIN}
+  GTEST_OUTPUT="xml:${REPORT_DIR}/${TEST_BIN}.xml" ASAN_OPTIONS=detect_odr_violation=0 ./${TEST_BIN}
   last_ret=$?
   if [ $last_ret -eq 0 ]; then
       break

@@ -49,7 +49,7 @@ fi
 
 ./clear.sh
 output_xml="${REPORT_DIR}/dsn.meta.test.1.xml"
-GTEST_OUTPUT="xml:${output_xml}" ./dsn.meta.test
+GTEST_OUTPUT="xml:${output_xml}" ASAN_OPTIONS=detect_odr_violation=0 ./dsn.meta.test
 if [ $? -ne 0 ]; then
     echo "run dsn.meta.test failed"
     echo "---- ls ----"

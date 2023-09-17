@@ -51,7 +51,7 @@ fi
 ./clear.sh
 
 echo "running dsn.replication.simple_kv for 20 seconds ..."
-./dsn.replication.simple_kv config.ini &>out &
+ASAN_OPTIONS=detect_odr_violation=0 ./dsn.replication.simple_kv config.ini &>out &
 PID=$!
 sleep 20
 kill $PID

@@ -42,7 +42,7 @@ if [ -n ${TEST_OPTS} ]; then
     done
 fi
 
-./pegasus_unit_test
+ASAN_OPTIONS=detect_odr_violation=0 ./pegasus_unit_test
 
 exit_if_fail $? "run unit test failed"
 

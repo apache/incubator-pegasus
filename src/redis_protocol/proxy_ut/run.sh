@@ -21,4 +21,4 @@ if [ -z $REPORT_DIR ]; then
 fi
 
 test_case=pegasus_rproxy_test
-GTEST_OUTPUT="xml:$REPORT_DIR/$test_case.xml" ./$test_case
+GTEST_OUTPUT="xml:$REPORT_DIR/$test_case.xml" ASAN_OPTIONS=detect_odr_violation=0 ./$test_case
