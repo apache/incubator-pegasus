@@ -30,7 +30,7 @@ fi
 
 ./clear.sh
 output_xml="${REPORT_DIR}/dsn_utils_tests.xml"
-GTEST_OUTPUT="xml:${output_xml}" ASAN_OPTIONS=detect_odr_violation=0 ./dsn_utils_tests
+GTEST_OUTPUT="xml:${output_xml}" ./dsn_utils_tests
 
 if [ $? -ne 0 ]; then
     echo "run dsn_utils_tests failed"

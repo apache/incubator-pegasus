@@ -49,4 +49,4 @@ fi
 
 ./clear.sh
 output_xml="${REPORT_DIR}/dsn.replica.test.1.xml"
-GTEST_OUTPUT="xml:${output_xml}" ASAN_OPTIONS=detect_odr_violation=0 ./dsn.replica.test
+GTEST_OUTPUT="xml:${output_xml}" ./dsn.replica.test

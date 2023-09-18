@@ -26,6 +26,8 @@ export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
 export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
+# Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
+export ASAN_OPTIONS=detect_odr_violation=0
 
 function usage()
 {
@@ -868,7 +870,7 @@ function run_start_onebox()
             sleep 1
             sleeped=$((sleeped+1))
             echo "Sleeped for $sleeped seconds"
-            unhealthy_count=`echo "ls -d" | ASAN_OPTIONS=detect_odr_violation=0 ./run.sh shell | awk 'f{ if(NF<7){f=0} else if($3!=$4){print} } / fully_healthy /{print;f=1}' | wc -l`
+            unhealthy_count=`echo "ls -d" | ./run.sh shell | awk 'f{ if(NF<7){f=0} else if($3!=$4){print} } / fully_healthy /{print;f=1}' | wc -l`
             if [ $unhealthy_count -eq 1 ]; then
                 echo "Cluster becomes healthy."
                 break

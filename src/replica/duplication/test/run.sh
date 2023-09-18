@@ -42,7 +42,7 @@ if [ -n ${TEST_OPTS} ]; then
     done
 fi
 
-ASAN_OPTIONS=detect_odr_violation=0 ./dsn_replica_dup_test
+./dsn_replica_dup_test
 
 if [ $? -ne 0 ]; then
     tail -n 100 data/log/log.1.txt
