@@ -592,8 +592,8 @@ error_code mutation_log::open(replay_callback read_callback,
     file_list.clear();
 
     // filter useless log
-    std::map<int, log_file_ptr>::iterator replay_begin = _log_files.begin();
-    std::map<int, log_file_ptr>::iterator replay_end = _log_files.end();
+    log_file_map_by_index::iterator replay_begin = _log_files.begin();
+    log_file_map_by_index::iterator replay_end = _log_files.end();
     if (!replay_condition.empty()) {
         if (_is_private) {
             auto find = replay_condition.find(_private_gpid);
@@ -609,7 +609,7 @@ error_code mutation_log::open(replay_callback read_callback,
         } else {
             // find the largest file which can be ignored.
             // after iterate, the 'mark_it' will point to the largest file which can be ignored.
-            std::map<int, log_file_ptr>::reverse_iterator mark_it;
+            log_file_map_by_index::reverse_iterator mark_it;
             std::set<gpid> kickout_replicas;
             replica_log_info_map max_decrees; // max_decrees for log file at mark_it.
             for (mark_it = _log_files.rbegin(); mark_it != _log_files.rend(); ++mark_it) {
@@ -666,7 +666,7 @@ error_code mutation_log::open(replay_callback read_callback,
     }
 
     // replay with the found files
-    std::map<int, log_file_ptr> replay_logs(replay_begin, replay_end);
+    log_file_map_by_index replay_logs(replay_begin, replay_end);
     int64_t end_offset = 0;
     err = replay(
         replay_logs,
@@ -1092,7 +1092,7 @@ bool mutation_log::get_learn_state(gpid gpid, decree start, /*out*/ learn_state 
         state.meta = temp_writer.get_buffer();
     }
 
-    std::map<int, log_file_ptr> files;
+    log_file_map_by_index files;
     {
         zauto_lock l(_lock);
 
@@ -1199,13 +1199,13 @@ void mutation_log::get_parent_mutations_and_logs(gpid pid,
         // no memory data and no disk data
         return;
     }
-    std::map<int, log_file_ptr> file_map = get_log_file_map();
+    const auto &file_map = get_log_file_map();
 
     bool skip_next = false;
     std::list<std::string> learn_files;
     decree last_max_decree = 0;
     for (auto itr = file_map.rbegin(); itr != file_map.rend(); ++itr) {
-        log_file_ptr &log = itr->second;
+        const log_file_ptr &log = itr->second;
         if (log->end_offset() <= _private_log_info.valid_start_offset)
             break;
 
@@ -1284,7 +1284,7 @@ int mutation_log::garbage_collection(gpid gpid,
 {
     CHECK(_is_private, "this method is only valid for private log");
 
-    std::map<int, log_file_ptr> files;
+    log_file_map_by_index files;
     decree max_decree = invalid_decree;
     int current_file_index = -1;
 
@@ -1309,7 +1309,7 @@ int mutation_log::garbage_collection(gpid gpid,
 
     // find the largest file which can be deleted.
     // after iterate, the 'mark_it' will point to the largest file which can be deleted.
-    std::map<int, log_file_ptr>::reverse_iterator mark_it;
+    log_file_map_by_index::reverse_iterator mark_it;
     int64_t already_reserved_size = 0;
     for (mark_it = files.rbegin(); mark_it != files.rend(); ++mark_it) {
         log_file_ptr log = mark_it->second;
@@ -1401,26 +1401,23 @@ int mutation_log::garbage_collection(gpid gpid,
     return deleted;
 }
 
-namespace {
-
 struct gc_summary_info
 {
     dsn::gpid pid;
-    int smallest_file_index = 0;
+    int min_file_index = 0;
     dsn::replication::decree max_decree_gap = 0;
     dsn::replication::decree garbage_max_decree = 0;
     dsn::replication::decree slog_max_decree = 0;
 
     std::string to_string() const
     {
-        return fmt::format(
-            "gc_summary_info = [pid = {}, smallest_file_index = {}, max_decree_gap = {}, "
-            "garbage_max_decree = {}, slog_max_decree = {}]",
-            pid,
-            smallest_file_index,
-            max_decree_gap,
-            garbage_max_decree,
-            slog_max_decree);
+        return fmt::format("gc_summary_info = [pid = {}, min_file_index = {}, max_decree_gap = {}, "
+                           "garbage_max_decree = {}, slog_max_decree = {}]",
+                           pid,
+                           min_file_index,
+                           max_decree_gap,
+                           garbage_max_decree,
+                           slog_max_decree);
     }
 
     friend std::ostream &operator<<(std::ostream &os, const gc_summary_info &gc_summary)
@@ -1429,11 +1426,13 @@ struct gc_summary_info
     }
 };
 
+namespace {
+
 bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &slog_max_decrees,
                          const dsn::replication::log_file_ptr &file,
                          const dsn::gpid &pid,
                          const dsn::replication::replica_log_info &replica_durable_info,
-                         gc_summary_info &gc_summary)
+                         dsn::replication::gc_summary_info &gc_summary)
 {
     const auto &garbage_max_decree = replica_durable_info.max_decree;
     const auto &valid_start_offset = replica_durable_info.valid_start_offset;
@@ -1490,11 +1489,11 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &slog_max_
               garbage_max_decree);
 
     auto gap = it->second.max_decree - garbage_max_decree;
-    if (file->index() < gc_summary.smallest_file_index || gap > gc_summary.max_decree_gap) {
+    if (file->index() < gc_summary.min_file_index || gap > gc_summary.max_decree_gap) {
         // Find the oldest file of this round of iteration for gc of slog files, with the
         // max decree gap between the garbage max decree and the oldest slog file.
         gc_summary.pid = pid;
-        gc_summary.smallest_file_index = file->index();
+        gc_summary.min_file_index = file->index();
         gc_summary.max_decree_gap = gap;
         gc_summary.garbage_max_decree = garbage_max_decree;
         gc_summary.slog_max_decree = it->second.max_decree;
@@ -1512,7 +1511,7 @@ void mutation_log::garbage_collection(const replica_log_info_map &replica_durabl
 
     // Fetch the snapshot of the latest states of the slog, such as the max decree it maintains
     // for each partition.
-    log_file_map files;
+    log_file_map_by_index files;
     replica_log_info_map slog_max_decrees;
     int64_t total_log_size = 0;
     {
@@ -1536,7 +1535,7 @@ void mutation_log::garbage_collection(const replica_log_info_map &replica_durabl
     // Iterate over the slog files from the newest to the oldest in descending order(i.e.
     // file index in descending order), to find the newest file that could be deleted(after
     // iterating, `mark_it` would point to the newest file that could be deleted).
-    log_file_map::reverse_iterator mark_it;
+    log_file_map_by_index::reverse_iterator mark_it;
     std::set<gpid> kickout_replicas;
     gc_summary_info gc_summary;
     for (mark_it = files.rbegin(); mark_it != files.rend(); ++mark_it) {
@@ -1597,13 +1596,13 @@ void mutation_log::garbage_collection(const replica_log_info_map &replica_durabl
              prevent_gc_replicas.size());
 }
 
-void mutation_log::remove_obsolete_slog_files(const int largest_file_index_to_delete,
-                                              log_file_map &files,
+void mutation_log::remove_obsolete_slog_files(const int max_file_index_to_delete,
+                                              log_file_map_by_index &files,
                                               reserved_slog_info &reserved_slog,
                                               slog_deletion_info &slog_deletion)
 {
     for (auto it = files.begin();
-         it != files.end() && it->second->index() <= largest_file_index_to_delete;
+         it != files.end() && it->second->index() <= max_file_index_to_delete;
          ++it) {
         auto &file = it->second;
         CHECK_EQ(it->first, file->index());
@@ -1624,10 +1623,10 @@ void mutation_log::remove_obsolete_slog_files(const int largest_file_index_to_de
         LOG_INFO("gc_shared: log file {} is removed", fpath);
         slog_deletion.deleted_file_count++;
         slog_deletion.deleted_log_size += file->end_offset() - file->start_offset();
-        if (slog_deletion.deleted_smallest_file_index == 0) {
-            slog_deletion.deleted_smallest_file_index = file->index();
+        if (slog_deletion.deleted_min_file_index == 0) {
+            slog_deletion.deleted_min_file_index = file->index();
         }
-        slog_deletion.deleted_largest_file_index = file->index();
+        slog_deletion.deleted_max_file_index = file->index();
 
         // Remove the log file from _log_files.
         {
@@ -1638,17 +1637,17 @@ void mutation_log::remove_obsolete_slog_files(const int largest_file_index_to_de
             reserved_slog.file_count = _log_files.size();
             reserved_slog.log_size = total_size_no_lock();
             if (reserved_slog.file_count > 0) {
-                reserved_slog.smallest_file_index = _log_files.begin()->first;
-                reserved_slog.largest_file_index = _log_files.rbegin()->first;
+                reserved_slog.min_file_index = _log_files.begin()->first;
+                reserved_slog.max_file_index = _log_files.rbegin()->first;
             } else {
-                reserved_slog.smallest_file_index = -1;
-                reserved_slog.largest_file_index = -1;
+                reserved_slog.min_file_index = -1;
+                reserved_slog.max_file_index = -1;
             }
         }
     }
 }
 
-std::map<int, log_file_ptr> mutation_log::get_log_file_map() const
+mutation_log::log_file_map_by_index mutation_log::get_log_file_map() const
 {
     zauto_lock l(_lock);
     return _log_files;
@@ -1656,3 +1655,5 @@ std::map<int, log_file_ptr> mutation_log::get_log_file_map() const
 
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(dsn::replication::gc_summary_info);

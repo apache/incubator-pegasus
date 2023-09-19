@@ -373,8 +373,18 @@ private:
         int64_t init_offset_in_shared_log;
     };
     using replica_gc_info_map = std::unordered_map<gpid, replica_gc_info>;
+
+    // Try to remove obsolete files of shared log for garbage collection according to the provided
+    // states of all replicas. The purpose is to remove all of the files of shared log, since it
+    // has been deprecated, and would not be appended any more.
     void gc_slog(const replica_gc_info_map &replica_gc_map);
+
+    // The number of flushed replicas for the garbage collection of shared log at a time should be
+    // limited.
     void limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_count);
+
+    // Flush rocksdb data to sst files for replicas to facilitate garbage collection of more files
+    // of shared log.
     void flush_replicas_for_slog_gc(const replica_gc_info_map &replica_gc_map,
                                     const std::set<gpid> &prevent_gc_replicas);
 
@@ -453,8 +463,14 @@ private:
     opening_replicas _opening_replicas;
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
+
+    // The number of replicas that prevent slog files from being removed for gc at last round.
     size_t _last_prevent_gc_replica_count;
+
+    // The real limit of flushed replicas for the garbage collection of shared log.
     size_t _real_log_shared_gc_flush_replicas_limit;
+
+    // The number of flushed replicas, mocked only for test.
     size_t _mock_flush_replicas_for_test;
 
     mutation_log_ptr _log;

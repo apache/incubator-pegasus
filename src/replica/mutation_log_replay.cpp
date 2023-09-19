@@ -133,7 +133,7 @@ namespace replication {
                                            replay_callback callback,
                                            /*out*/ int64_t &end_offset)
 {
-    std::map<int, log_file_ptr> logs;
+    log_file_map_by_index logs;
     for (auto &fpath : log_files) {
         error_code err;
         log_file_ptr log = log_file::open_read(fpath.c_str(), err);
@@ -154,7 +154,7 @@ namespace replication {
     return replay(logs, callback, end_offset);
 }
 
-/*static*/ error_code mutation_log::replay(std::map<int, log_file_ptr> &logs,
+/*static*/ error_code mutation_log::replay(log_file_map_by_index &logs,
                                            replay_callback callback,
                                            /*out*/ int64_t &end_offset)
 {

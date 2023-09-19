@@ -285,8 +285,10 @@ public:
     decree max_gced_decree(gpid gpid) const;
     decree max_gced_decree_no_lock(gpid gpid) const;
 
+    using log_file_map_by_index = std::map<int, log_file_ptr>;
+
     // thread-safe
-    std::map<int, log_file_ptr> get_log_file_map() const;
+    log_file_map_by_index get_log_file_map() const;
 
     // check the consistence of valid_start_offset
     // thread safe
@@ -299,6 +301,58 @@ public:
     void demand_switch_file() { _switch_file_demand = true; }
 
     task_tracker *tracker() { return &_tracker; }
+
+    struct reserved_slog_info
+    {
+        size_t file_count = 0;
+        int64_t log_size = 0;
+        int min_file_index = 0;
+        int max_file_index = 0;
+
+        std::string to_string() const
+        {
+            return fmt::format("reserved_slog_info = [file_count = {}, log_size = {}, "
+                               "min_file_index = {}, max_file_index = {}]",
+                               file_count,
+                               log_size,
+                               min_file_index,
+                               max_file_index);
+        }
+
+        friend std::ostream &operator<<(std::ostream &os, const reserved_slog_info &reserved_log)
+        {
+            return os << reserved_log.to_string();
+        }
+    };
+
+    struct slog_deletion_info
+    {
+        int to_delete_file_count = 0;
+        int64_t to_delete_log_size = 0;
+        int deleted_file_count = 0;
+        int64_t deleted_log_size = 0;
+        int deleted_min_file_index = 0;
+        int deleted_max_file_index = 0;
+
+        std::string to_string() const
+        {
+            return fmt::format("slog_deletion_info = [to_delete_file_count = {}, "
+                               "to_delete_log_size = {}, deleted_file_count = {}, "
+                               "deleted_log_size = {}, deleted_min_file_index = {}, "
+                               "deleted_max_file_index = {}]",
+                               to_delete_file_count,
+                               to_delete_log_size,
+                               deleted_file_count,
+                               deleted_log_size,
+                               deleted_min_file_index,
+                               deleted_max_file_index);
+        }
+
+        friend std::ostream &operator<<(std::ostream &os, const slog_deletion_info &log_deletion)
+        {
+            return os << log_deletion.to_string();
+        }
+    };
 
 protected:
     // thread-safe
@@ -325,7 +379,7 @@ private:
                              replay_callback callback,
                              /*out*/ int64_t &end_offset);
 
-    static error_code replay(std::map<int, log_file_ptr> &log_files,
+    static error_code replay(log_file_map_by_index &log_files,
                              replay_callback callback,
                              /*out*/ int64_t &end_offset);
 
@@ -345,64 +399,10 @@ private:
     // get total size ithout lock.
     int64_t total_size_no_lock() const;
 
-    struct reserved_slog_info
-    {
-        size_t file_count;
-        int64_t log_size;
-        int smallest_file_index;
-        int largest_file_index;
-
-        std::string to_string() const
-        {
-            return fmt::format("reserved_slog_info = [file_count = {}, log_size = {}, "
-                               "smallest_file_index = {}, largest_file_index = {}]",
-                               file_count,
-                               log_size,
-                               smallest_file_index,
-                               largest_file_index);
-        }
-
-        friend std::ostream &operator<<(std::ostream &os, const reserved_slog_info &reserved_log)
-        {
-            return os << reserved_log.to_string();
-        }
-    };
-
-    struct slog_deletion_info
-    {
-        int to_delete_file_count = 0;
-        int64_t to_delete_log_size = 0;
-        int deleted_file_count = 0;
-        int64_t deleted_log_size = 0;
-        int deleted_smallest_file_index = 0;
-        int deleted_largest_file_index = 0;
-
-        std::string to_string() const
-        {
-            return fmt::format("slog_deletion_info = [to_delete_file_count = {}, "
-                               "to_delete_log_size = {}, deleted_file_count = {}, "
-                               "deleted_log_size = {}, deleted_smallest_file_index = {}, "
-                               "deleted_largest_file_index = {}]",
-                               to_delete_file_count,
-                               to_delete_log_size,
-                               deleted_file_count,
-                               deleted_log_size,
-                               deleted_smallest_file_index,
-                               deleted_largest_file_index);
-        }
-
-        friend std::ostream &operator<<(std::ostream &os, const slog_deletion_info &log_deletion)
-        {
-            return os << log_deletion.to_string();
-        }
-    };
-
-    using log_file_map = std::map<int, log_file_ptr>;
-
-    // Closing and remove all of slog files that are smaller (i.e. older) than the largest
-    // file index.
-    void remove_obsolete_slog_files(const int largest_file_index_to_delete,
-                                    log_file_map &files,
+    // Closing and remove all of slog files whose indexes are less than (i.e. older) or equal to
+    // `max_file_index_to_delete`.
+    void remove_obsolete_slog_files(const int max_file_index_to_delete,
+                                    log_file_map_by_index &files,
                                     reserved_slog_info &reserved_log,
                                     slog_deletion_info &log_deletion);
 
@@ -434,12 +434,12 @@ private:
     bool _switch_file_demand;
 
     // logs
-    int _last_file_index;           // new log file index = _last_file_index + 1
-    log_file_map _log_files;        // index -> log_file_ptr
-    log_file_ptr _current_log_file; // current log file
-    int64_t _global_start_offset;   // global start offset of all files.
-                                    // invalid if _log_files.size() == 0.
-    int64_t _global_end_offset;     // global end offset currently
+    int _last_file_index;             // new log file index = _last_file_index + 1
+    log_file_map_by_index _log_files; // index -> log_file_ptr
+    log_file_ptr _current_log_file;   // current log file
+    int64_t _global_start_offset;     // global start offset of all files.
+                                      // invalid if _log_files.size() == 0.
+    int64_t _global_end_offset;       // global end offset currently
 
     // replica log info
     // - log_info.max_decree: the max decree of mutations up to now
@@ -580,3 +580,6 @@ private:
 
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::mutation_log::reserved_slog_info);
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::mutation_log::slog_deletion_info);
