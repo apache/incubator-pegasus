@@ -27,7 +27,6 @@
 #include "mutation_log.h"
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <algorithm>
 #include <cstdint>
 #include <ctime>

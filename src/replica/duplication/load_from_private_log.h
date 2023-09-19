@@ -21,7 +21,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <chrono>
-#include <map>
 
 #include "common/replication_other_types.h"
 #include "mutation_batch.h"

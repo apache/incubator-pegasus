@@ -52,6 +52,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {

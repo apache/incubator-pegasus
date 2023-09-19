@@ -46,8 +46,6 @@
 #include <utility>
 #include <vector>
 
-#include <gtest/gtest_prod.h>
-
 #include "block_service/block_service_manager.h"
 #include "bulk_load_types.h"
 #include "common/bulk_load_common.h"
@@ -464,7 +462,7 @@ private:
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
 
-    // The number of replicas that prevent slog files from being removed for gc at last round.
+    // The number of replicas that prevent slog files from being removed for gc at the last round.
     size_t _last_prevent_gc_replica_count;
 
     // The real limit of flushed replicas for the garbage collection of shared log.

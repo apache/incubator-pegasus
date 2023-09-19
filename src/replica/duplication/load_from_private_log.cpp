@@ -16,6 +16,7 @@
 // under the License.
 
 #include <iterator>
+#include <map>
 #include <utility>
 
 #include "common/duplication_common.h"
