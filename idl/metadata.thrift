@@ -98,6 +98,7 @@ struct replica_configuration
     // 2. false - secondary copy mutation in this prepare message asynchronously
     // NOTICE: it should always be false when update_local_configuration
     7:optional bool       split_sync_to_child = false;
+    8:optional dsn.host_port     hp_primary;
 }
 
 struct replica_info
