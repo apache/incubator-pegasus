@@ -379,6 +379,7 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
         -DUSE_RTTI=ON
+        -DWITH_OPENSSL=ON  # enable encryption
         -DCMAKE_BUILD_TYPE=Release
         -DWITH_JEMALLOC=${USE_JEMALLOC}
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}
