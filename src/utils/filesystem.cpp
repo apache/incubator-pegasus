@@ -33,11 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/system/error_code.hpp>
 #include <errno.h>
 #include <fcntl.h>
-#include <fmt/core.h>
 #include <ftw.h>
 #include <limits.h>
 #include <openssl/md5.h>
@@ -45,11 +42,18 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 // IWYU pragma: no_include <bits/struct_stat.h>
-#include <sys/stat.h> // IWYU pragma: keep
 #include <unistd.h>
-#include <fstream>
+
+#include <istream>
+
+#include <boost/filesystem/operations.hpp>
+#include <boost/system/error_code.hpp>
+#include <fmt/core.h>
+#include <rocksdb/env.h>
+#include <rocksdb/status.h>
 
 #include "utils/defer.h"
+#include "utils/env.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
@@ -388,7 +392,7 @@ bool rename_path(const std::string &path1, const std::string &path2)
     return ret;
 }
 
-bool file_size(const std::string &path, int64_t &sz)
+bool deprecated_file_size(const std::string &path, int64_t &sz)
 {
     struct stat_ st;
     std::string npath;
@@ -414,6 +418,23 @@ bool file_size(const std::string &path, int64_t &sz)
 
     sz = st.st_size;
 
+    return true;
+}
+
+bool file_size(const std::string &path, int64_t &sz)
+{
+    return file_size(path, dsn::utils::FileDataType::kNonSensitive, sz);
+}
+
+bool file_size(const std::string &path, FileDataType type, int64_t &sz)
+{
+    uint64_t file_size = 0;
+    auto s = dsn::utils::PegasusEnv(type)->GetFileSize(path, &file_size);
+    if (!s.ok()) {
+        LOG_ERROR("GetFileSize failed, file '{}', err = {}", path, s.ToString());
+        return false;
+    }
+    sz = file_size;
     return true;
 }
 

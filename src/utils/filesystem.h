@@ -61,6 +61,8 @@
 
 namespace dsn {
 namespace utils {
+enum class FileDataType;
+
 namespace filesystem {
 
 int get_normalized_path(const std::string &path, std::string &npath);
@@ -96,7 +98,15 @@ bool remove_path(const std::string &path);
 // this will always remove target path if exist
 bool rename_path(const std::string &path1, const std::string &path2);
 
+// Get the file size. The encryption header is considered as part of the file if it is an encrypted
+// file.
+// TODO(yingchun): refactor to use uint64_t.
 bool file_size(const std::string &path, int64_t &sz);
+// The legacy file_size(), just for testing.
+bool deprecated_file_size(const std::string &path, int64_t &sz);
+// Get the file size. The encryption header is not considered as part of the file if it is an
+// encrypted file and 'type' is specified as FileDataType::kSensitive.
+bool file_size(const std::string &path, FileDataType type, int64_t &sz);
 
 bool create_directory(const std::string &path);
 

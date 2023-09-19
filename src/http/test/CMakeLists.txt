@@ -26,7 +26,7 @@ set(MY_PROJ_LIBS
     dsn_runtime
     gtest
     gtest_main
-    )
+    rocksdb)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
