@@ -365,8 +365,8 @@ option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = ba
 # The v8.5.3-pegasus-encrypt branch is based on the v8.5.3 tag of facebook/rocksdb and add
 # the encryption feature.
 ExternalProject_Add(rocksdb
-        URL https://github.com/pegasus-kv/rocksdb/archive/090c3d9fd1b99c633abc5ab4de2f75d4c6b6528d.zip
-        URL_MD5 1e556d77ae853b22f62dd2e82e915937
+        URL https://github.com/pegasus-kv/rocksdb/archive/e72106597e6b7924485cadc2433b66029f1aaf17.zip
+        URL_MD5 6f6daef703586ce788643bbb8a984fff
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DFAIL_ON_WARNINGS=OFF
