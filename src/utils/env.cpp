@@ -49,6 +49,12 @@ DSN_DEFINE_string(pegasus.server,
                   "The encryption method to use in the filesystem. Now "
                   "supports AES128CTR, AES192CTR, AES256CTR and SM4CTR.");
 
+DSN_DEFINE_bool(replication,
+                enable_direct_io,
+                false,
+                "Whether to enable direct I/O when download files");
+DSN_TAG_VARIABLE(enable_direct_io, FT_MUTABLE);
+
 namespace dsn {
 namespace utils {
 
@@ -89,6 +95,7 @@ rocksdb::Status do_copy_file(const std::string &src_fname,
                              uint64_t *total_size)
 {
     rocksdb::EnvOptions src_env_options;
+    src_env_options.use_direct_reads = FLAGS_enable_direct_io;
     std::unique_ptr<rocksdb::SequentialFile> src_file;
     auto s =
         dsn::utils::PegasusEnv(src_type)->NewSequentialFile(src_fname, &src_file, src_env_options);
@@ -105,6 +112,7 @@ rocksdb::Status do_copy_file(const std::string &src_fname,
     }
 
     rocksdb::EnvOptions dst_env_options;
+    dst_env_options.use_direct_writes = FLAGS_enable_direct_io;
     std::unique_ptr<rocksdb::WritableFile> dst_file;
     s = dsn::utils::PegasusEnv(dst_type)->NewWritableFile(dst_fname, &dst_file, dst_env_options);
     LOG_AND_RETURN_NOT_RDB_OK(WARNING, s, "failed to open file {} for writing", dst_fname);

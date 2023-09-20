@@ -75,7 +75,7 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
-    )
+    rocksdb)
 
 set(MY_BOOST_LIBS Boost::filesystem Boost::regex)
 
