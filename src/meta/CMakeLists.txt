@@ -54,7 +54,7 @@ set(MY_PROJ_LIBS
     crypto
     hashtable
     hdfs
-    )
+    rocksdb)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
