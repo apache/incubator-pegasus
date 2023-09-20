@@ -35,12 +35,10 @@
 #include "aio/disk_engine.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/async_calls.h"
-#include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
-#include "utils/string_view.h"
 
 namespace dsn {
 
@@ -98,13 +96,6 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
             LOG_ERROR("write failed with errno={}, return {}.", utils::safe_strerror(errno), resp);
             return resp;
         }
-
-        // mock the `ret` to reproduce the `write incomplete` case in the first write
-        FAIL_POINT_INJECT_NOT_RETURN_F("aio_pwrite_incomplete", [&](string_view s) -> void {
-            if (dsn_unlikely(buffer_offset == 0)) {
-                --ret;
-            }
-        });
 
         buffer_offset += ret;
         if (dsn_unlikely(buffer_offset != aio_ctx.buffer_size)) {
