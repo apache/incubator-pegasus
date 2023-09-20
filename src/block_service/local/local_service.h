@@ -18,8 +18,8 @@
 #pragma once
 
 #include <nlohmann/detail/macro_scope.hpp>
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>     // IWYU pragma: keep
+#include <nlohmann/json_fwd.hpp> // IWYU pragma: keep
 #include <stdint.h>
 #include <string>
 #include <vector>
