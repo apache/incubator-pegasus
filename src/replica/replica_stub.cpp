@@ -36,6 +36,7 @@
 #include <boost/algorithm/string/replace.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
