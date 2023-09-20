@@ -97,7 +97,7 @@ protected:
     // Generate the 'bulk_load_info' file according to 'bli' to path 'bulk_load_info_path'.
     void generate_bulk_load_info(const bulk_load_info &bli, const std::string &bulk_load_info_path)
     {
-        blob value = dsn::json::json_forwarder<bulk_load_info>::encode(bli);
+        auto value = dsn::json::json_forwarder<bulk_load_info>::encode(bli);
         auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
                                             rocksdb::Slice(value.data(), value.length()),
                                             bulk_load_info_path,
@@ -113,7 +113,7 @@ protected:
         ASSERT_TRUE(utils::filesystem::file_size(bulk_load_info_path, fm.size));
         ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(bulk_load_info_path, fm.md5));
         std::string value = nlohmann::json(fm).dump();
-        string bulk_load_info_meta_path =
+        auto bulk_load_info_meta_path =
             fmt::format("{}/{}/{}/.bulk_load_info.meta", kLocalBulkLoadRoot, kCluster, app_name_);
         auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
                                             rocksdb::Slice(value),
@@ -133,7 +133,7 @@ protected:
             fmt::format("cp -r {}/{} {}", kSourceFilesRoot, kBulkLoad, kLocalServiceRoot)));
 
         // Generate 'bulk_load_info'.
-        string bulk_load_info_path =
+        auto bulk_load_info_path =
             fmt::format("{}/{}/{}/bulk_load_info", kLocalBulkLoadRoot, kCluster, app_name_);
         NO_FATALS(generate_bulk_load_info(bulk_load_info(app_id_, app_name_, partition_count_),
                                           bulk_load_info_path));
@@ -167,9 +167,9 @@ protected:
     bulk_load_status::type wait_bulk_load_finish(int64_t remain_seconds)
     {
         int64_t sleep_time = 5;
-        error_code err = ERR_OK;
+        auto err = ERR_OK;
 
-        bulk_load_status::type last_status = bulk_load_status::BLS_INVALID;
+        auto last_status = bulk_load_status::BLS_INVALID;
         // when bulk load end, err will be ERR_INVALID_STATE
         while (remain_seconds > 0 && err == ERR_OK) {
             sleep_time = std::min(sleep_time, remain_seconds);
@@ -216,8 +216,8 @@ protected:
     void operate_data(operation op, const string &value, int count)
     {
         for (int i = 0; i < count; ++i) {
-            string hash_key = fmt::format("{}{}", kBulkLoadHashKeyPrefix2, i);
-            string sort_key = fmt::format("{}{}", kBulkLoadSortKeyPrefix2, i);
+            auto hash_key = fmt::format("{}{}", kBulkLoadHashKeyPrefix2, i);
+            auto sort_key = fmt::format("{}{}", kBulkLoadSortKeyPrefix2, i);
             switch (op) {
             case operation::GET: {
                 string actual_value;
@@ -309,7 +309,7 @@ TEST_F(bulk_load_test, inconsistent_bulk_load_info)
                               {app_id_, app_name_, partition_count_ * 2}};
     for (const auto &test : tests) {
         // Generate inconsistent 'bulk_load_info'.
-        string bulk_load_info_path =
+        auto bulk_load_info_path =
             fmt::format("{}/{}/{}/bulk_load_info", kLocalBulkLoadRoot, kCluster, app_name_);
         NO_FATALS(generate_bulk_load_info(test, bulk_load_info_path));
 
