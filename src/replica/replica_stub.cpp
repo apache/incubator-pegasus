@@ -588,13 +588,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     LOG_INFO("primary_address = {}", _primary_address_str);
 
     set_options(opts);
-    std::ostringstream oss;
-    for (int i = 0; i < _options.meta_servers.size(); ++i) {
-        if (i != 0)
-            oss << ",";
-        oss << _options.meta_servers[i].to_string();
-    }
-    LOG_INFO("meta_servers = {}", oss.str());
+    LOG_INFO("meta_servers = {}", fmt::join(_options.meta_servers, ", "));
 
     _deny_client = FLAGS_deny_client_on_start;
     _verbose_client_log = FLAGS_verbose_client_log_on_start;
@@ -1910,23 +1904,14 @@ void replica_stub::flush_replicas_for_slog_gc(const replica_gc_info_map &replica
     limit_flush_replicas_for_slog_gc(prevent_gc_replicas.size());
     _last_prevent_gc_replica_count = prevent_gc_replicas.size();
 
-    std::ostringstream oss;
-    size_t i = 0;
-    for (const auto &pid : prevent_gc_replicas) {
-        if (i != 0) {
-            oss << ", ";
-        }
-        oss << pid.to_string();
-        ++i;
-    }
     LOG_INFO("gc_shared: trigger emergency checkpoints to flush replicas for gc shared logs: "
-             "log_shared_gc_flush_replicas_limit = {}/{}, replicas({}) = {}",
+             "log_shared_gc_flush_replicas_limit = {}/{}, prevent_gc_replicas({}) = {}",
              _real_log_shared_gc_flush_replicas_limit,
              FLAGS_log_shared_gc_flush_replicas_limit,
              prevent_gc_replicas.size(),
-             oss.str());
+             fmt::join(prevent_gc_replicas, ", "));
 
-    i = 0;
+    size_t i = 0;
     for (const auto &pid : prevent_gc_replicas) {
         const auto &replica_gc = replica_gc_map.find(pid);
         if (replica_gc == replica_gc_map.end()) {
