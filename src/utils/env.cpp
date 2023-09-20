@@ -56,7 +56,7 @@ rocksdb::Env *NewEncryptedEnv()
 {
     // Create an encryption provider.
     std::shared_ptr<rocksdb::EncryptionProvider> provider;
-    std::string provider_id =
+    auto provider_id =
         fmt::format("AES:{},{}", FLAGS_server_key_for_testing, FLAGS_encryption_method);
     auto s = rocksdb::EncryptionProvider::CreateFromString(
         rocksdb::ConfigOptions(), provider_id, &provider);
@@ -96,12 +96,13 @@ rocksdb::Status do_copy_file(const std::string &src_fname,
 
     // Limit the size of the file to be copied.
     int64_t src_file_size;
-    CHECK(dsn::utils::filesystem::file_size(src_fname, src_type, src_file_size), "");
+    CHECK_TRUE(dsn::utils::filesystem::file_size(src_fname, src_type, src_file_size));
     if (remain_size == -1) {
         // Copy the whole file if 'remain_size' is -1.
         remain_size = src_file_size;
+    } else {
+        remain_size = std::min(remain_size, src_file_size);
     }
-    remain_size = std::min(remain_size, src_file_size);
 
     rocksdb::EnvOptions dst_env_options;
     std::unique_ptr<rocksdb::WritableFile> dst_file;
