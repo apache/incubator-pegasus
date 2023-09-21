@@ -39,7 +39,8 @@ set(MY_PROJ_LIBS dsn_replica_server
                  zookeeper
                  hashtable
                  gtest
-                 )
+                 dsn_utils
+                 rocksdb)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
