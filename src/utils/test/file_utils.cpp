@@ -33,6 +33,7 @@
 #include <string>
 #include <vector>
 
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 
@@ -683,12 +684,12 @@ static void file_utils_test_file_size()
     bool ret;
 
     path = "./file_utils_temp.txt";
-    ret = dsn::utils::filesystem::file_size(path, sz);
-    EXPECT_TRUE(ret);
-    EXPECT_TRUE(sz == 12);
+    ret = dsn::utils::filesystem::file_size(path, dsn::utils::FileDataType::kNonSensitive, sz);
+    ASSERT_TRUE(ret);
+    ASSERT_EQ(12, sz);
 
     path = "./file_utils_temp2.txt";
-    ret = dsn::utils::filesystem::file_size(path, sz);
+    ret = dsn::utils::filesystem::file_size(path, dsn::utils::FileDataType::kNonSensitive, sz);
     EXPECT_FALSE(ret);
 }
 

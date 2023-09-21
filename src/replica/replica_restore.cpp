@@ -49,6 +49,7 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
@@ -160,7 +161,8 @@ error_code replica::download_checkpoint(const configuration_restore_request &req
                 const std::string file_name =
                     utils::filesystem::path_combine(local_chkpt_dir, f_meta.name);
                 if (download_err == ERR_OK || download_err == ERR_PATH_ALREADY_EXIST) {
-                    if (!utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
+                    if (!utils::filesystem::verify_file(
+                            file_name, utils::FileDataType::kSensitive, f_meta.md5, f_meta.size)) {
                         download_err = ERR_CORRUPTION;
                     } else if (download_err == ERR_PATH_ALREADY_EXIST) {
                         download_err = ERR_OK;
