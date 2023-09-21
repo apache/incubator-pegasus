@@ -26,6 +26,7 @@
 #include <nlohmann/json_fwd.hpp>
 #include <fstream>
 #include <initializer_list>
+#include <stdexcept>
 #include <vector>
 
 #include "block_service/local/local_service.h"

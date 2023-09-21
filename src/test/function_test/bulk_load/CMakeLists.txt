@@ -37,7 +37,8 @@ set(MY_PROJ_LIBS
     gssapi_krb5
     krb5
     function_test_utils
-    )
+    rocksdb
+    test_utils)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 

@@ -16,17 +16,16 @@
 // under the License.
 
 #include <errno.h>
-#include <nlohmann/json.hpp>
 #include <algorithm>
-#include <fstream>
 #include <initializer_list>
+#include <istream>
 #include <memory>
 #include <set>
 #include <type_traits>
 #include <utility>
 
 #include "local_service.h"
-#include "nlohmann/detail/macro_scope.hpp"
+#include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
@@ -51,13 +50,6 @@ namespace dist {
 namespace block_service {
 
 DEFINE_TASK_CODE(LPC_LOCAL_SERVICE_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_BLOCK_SERVICE)
-
-struct file_metadata
-{
-    uint64_t size;
-    std::string md5;
-};
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(file_metadata, size, md5)
 
 bool file_metadata_from_json(std::ifstream &fin, file_metadata &fmeta) noexcept
 {

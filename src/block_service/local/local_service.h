@@ -17,6 +17,9 @@
 
 #pragma once
 
+#include <nlohmann/detail/macro_scope.hpp>
+#include <nlohmann/json.hpp>     // IWYU pragma: keep
+#include <nlohmann/json_fwd.hpp> // IWYU pragma: keep
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -31,6 +34,13 @@ class task_tracker;
 
 namespace dist {
 namespace block_service {
+
+struct file_metadata
+{
+    int64_t size = 0;
+    std::string md5;
+};
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(file_metadata, size, md5)
 
 class local_service : public block_filesystem
 {
