@@ -26,11 +26,32 @@
 #include "gtest/gtest-message.h"
 #include "gtest/gtest-test-part.h"
 #include "gtest/gtest.h"
+#include "metadata_types.h"
+#include "rocksdb/env.h"
+#include "rocksdb/slice.h"
+#include "rocksdb/status.h"
 #include "runtime/api_layer1.h"
 #include "utils/defer.h"
+#include "utils/env.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 
 namespace pegasus {
+
+void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm)
+{
+    ASSERT_NE(fm, nullptr);
+    auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
+                                        rocksdb::Slice("write some data."),
+                                        full_name,
+                                        /* should_sync */ true);
+    ASSERT_TRUE(s.ok()) << s.ToString();
+    fm->name = full_name;
+    ASSERT_EQ(dsn::ERR_OK, dsn::utils::filesystem::md5sum(full_name, fm->md5));
+    ASSERT_TRUE(dsn::utils::filesystem::file_size(
+        full_name, dsn::utils::FileDataType::kSensitive, fm->size));
+}
 
 void AssertEventually(const std::function<void(void)> &f, int timeout_sec, WaitBackoff backoff)
 {

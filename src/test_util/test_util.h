@@ -19,11 +19,20 @@
 
 #pragma once
 
+#include <gtest/gtest.h>
+#include <rocksdb/env.h>
 #include <functional>
+#include <string>
 
-#include "gtest/gtest.h"
+#include "metadata_types.h"
 #include "utils/flags.h"
 #include "utils/test_macros.h"
+
+namespace dsn {
+namespace replication {
+class file_meta;
+} // namespace replication
+} // namespace dsn
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
@@ -35,6 +44,8 @@ class encrypt_data_test_base : public testing::TestWithParam<bool>
 public:
     encrypt_data_test_base() { FLAGS_encrypt_data_at_rest = GetParam(); }
 };
+
+void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm);
 
 #define ASSERT_EVENTUALLY(expr)                                                                    \
     do {                                                                                           \

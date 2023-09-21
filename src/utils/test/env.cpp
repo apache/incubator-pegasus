@@ -47,11 +47,11 @@
 #include <string>
 
 #include "test_util/test_util.h"
-#include "utils/enum_helper.h"
 #include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/rand.h"
+#include "utils/utils.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 

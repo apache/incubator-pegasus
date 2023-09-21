@@ -27,7 +27,8 @@ set(MY_PROJ_LIBS dsn_meta_server
         dsn_runtime
         hashtable
         gtest
-)
+        rocksdb
+        test_utils)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
