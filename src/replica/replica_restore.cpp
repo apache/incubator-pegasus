@@ -17,6 +17,8 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
+#include <rocksdb/env.h>
+#include <rocksdb/status.h>
 #include <stdint.h>
 #include <atomic>
 #include <fstream>
@@ -52,7 +54,6 @@
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/utils.h"
 
 using namespace dsn::dist::block_service;
 
@@ -93,41 +94,25 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
     return true;
 }
 
-bool replica::read_cold_backup_metadata(const std::string &file,
+bool replica::read_cold_backup_metadata(const std::string &fname,
                                         cold_backup_metadata &backup_metadata)
 {
-    if (!::dsn::utils::filesystem::file_exists(file)) {
+    if (!::dsn::utils::filesystem::file_exists(fname)) {
         LOG_ERROR_PREFIX(
-            "checkpoint on remote storage media is damaged, coz file({}) doesn't exist", file);
+            "checkpoint on remote storage media is damaged, coz file({}) doesn't exist", fname);
         return false;
     }
-    int64_t file_sz = 0;
-    if (!::dsn::utils::filesystem::file_size(file, file_sz)) {
-        LOG_ERROR_PREFIX("get file({}) size failed", file);
-        return false;
-    }
-    std::shared_ptr<char> buf = utils::make_shared_array<char>(file_sz + 1);
 
-    std::ifstream fin(file, std::ifstream::in);
-    if (!fin.is_open()) {
-        LOG_ERROR_PREFIX("open file({}) failed", file);
+    std::string data;
+    auto s = rocksdb::ReadFileToString(rocksdb::Env::Default(), fname, &data);
+    if (!s.ok()) {
+        LOG_ERROR_PREFIX("read file '{}' failed, err = {}", fname, s.ToString());
         return false;
     }
-    fin.read(buf.get(), file_sz);
-    CHECK_EQ_MSG(file_sz,
-                 fin.gcount(),
-                 "{}: read file({}) failed, need {}, but read {}",
-                 name(),
-                 file,
-                 file_sz,
-                 fin.gcount());
-    fin.close();
 
-    buf.get()[fin.gcount()] = '\0';
-    blob bb;
-    bb.assign(std::move(buf), 0, file_sz);
-    if (!::dsn::json::json_forwarder<cold_backup_metadata>::decode(bb, backup_metadata)) {
-        LOG_ERROR_PREFIX("file({}) under checkpoint is damaged", file);
+    if (!::dsn::json::json_forwarder<cold_backup_metadata>::decode(
+            blob::create_from_bytes(std::move(data)), backup_metadata)) {
+        LOG_ERROR_PREFIX("file({}) under checkpoint is damaged", fname);
         return false;
     }
     return true;
