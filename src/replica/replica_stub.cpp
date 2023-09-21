@@ -36,6 +36,7 @@
 #include <boost/algorithm/string/replace.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,6 +44,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <limits>
 #include <mutex>
 #include <ostream>
 #include <set>
@@ -167,7 +169,13 @@ DSN_DEFINE_int32(replication,
                  32,
                  "shared log maximum segment file size (MB)");
 
-DSN_DEFINE_int32(replication, log_shared_file_count_limit, 100, "shared log maximum file count");
+DSN_DEFINE_uint64(
+    replication,
+    log_shared_gc_flush_replicas_limit,
+    64,
+    "The number of submitted replicas that are flushed for gc shared logs; 0 means no limit");
+DSN_TAG_VARIABLE(log_shared_gc_flush_replicas_limit, FT_MUTABLE);
+
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,
@@ -192,6 +200,9 @@ bool replica_stub::s_not_exit_on_log_failure = false;
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
                            bool is_long_subscriber /* = true*/)
     : serverlet("replica_stub"),
+      _last_prevent_gc_replica_count(0),
+      _real_log_shared_gc_flush_replicas_limit(0),
+      _mock_flush_replicas_for_test(0),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -578,13 +589,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     LOG_INFO("primary_address = {}", _primary_address_str);
 
     set_options(opts);
-    std::ostringstream oss;
-    for (int i = 0; i < _options.meta_servers.size(); ++i) {
-        if (i != 0)
-            oss << ",";
-        oss << _options.meta_servers[i].to_string();
-    }
-    LOG_INFO("meta_servers = {}", oss.str());
+    LOG_INFO("meta_servers = {}", fmt::join(_options.meta_servers, ", "));
 
     _deny_client = FLAGS_deny_client_on_start;
     _verbose_client_log = FLAGS_verbose_client_log_on_start;
@@ -1767,138 +1772,202 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
     }
 }
 
+void replica_stub::gc_slog(const replica_gc_info_map &replica_gc_map)
+{
+    if (_log == nullptr) {
+        return;
+    }
+
+    replica_log_info_map replica_durable_decrees;
+    for (auto &replica_gc : replica_gc_map) {
+        replica_log_info replica_log;
+        auto &rep = replica_gc.second.rep;
+        auto &plog = replica_gc.second.plog;
+        if (plog) {
+            // Flush private log to update `plog_max_commit_on_disk`, and just flush once
+            // to avoid flushing infinitely.
+            plog->flush_once();
+            auto plog_max_commit_on_disk = plog->max_commit_on_disk();
+
+            replica_log.max_decree =
+                std::min(replica_gc.second.last_durable_decree, plog_max_commit_on_disk);
+            LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
+                     "last_durable_decree= {}, plog_max_commit_on_disk = {}",
+                     rep->name(),
+                     enum_to_string(replica_gc.second.status),
+                     replica_log.max_decree,
+                     replica_gc.second.last_durable_decree,
+                     plog_max_commit_on_disk);
+        } else {
+            replica_log.max_decree = replica_gc.second.last_durable_decree;
+            LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
+                     "last_durable_decree = {}",
+                     rep->name(),
+                     enum_to_string(replica_gc.second.status),
+                     replica_log.max_decree,
+                     replica_gc.second.last_durable_decree);
+        }
+        replica_log.valid_start_offset = replica_gc.second.init_offset_in_shared_log;
+        replica_durable_decrees[replica_gc.first] = replica_log;
+    }
+
+    // Garbage collection for shared log files.
+    std::set<gpid> prevent_gc_replicas;
+    _log->garbage_collection(replica_durable_decrees, prevent_gc_replicas);
+
+    // Trigger checkpoint to flush memtables once some replicas were found that prevent
+    // slog files from being removed for gc.
+    flush_replicas_for_slog_gc(replica_gc_map, prevent_gc_replicas);
+
+    auto total_size = _log->total_size();
+    _counter_shared_log_size->set(total_size / (1024 * 1024));
+
+    // TODO(wangdan): currently we could not yet call _log.reset() as below to close slog and
+    // reset it to nullptr even if it was found that slog had become empty (which means there
+    // had not been any file for slog).
+    // if (total_size == 0) {
+    //     _log.reset();
+    // }
+    //
+    // The reason for this point is that on_gc() is scheduled by timer to run asynchronously
+    // during the initialization of replica_stub. It might happen before slog.on_partition_reset()
+    // (building slog._shared_log_info_map), which means slog would be closed mistakenly before
+    // it was initialized completely.
+    //
+    // All of slog files would removed on v2.5; thus it is safe to remove all of slog code (which
+    // means even slog object would not be created) on the next version (namely 2.6), and this
+    // problem would also be resolved.
+}
+
+void replica_stub::limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_count)
+{
+    const size_t log_shared_gc_flush_replicas_limit = FLAGS_log_shared_gc_flush_replicas_limit;
+    if (log_shared_gc_flush_replicas_limit == 0) {
+        // 0 for log_shared_gc_flush_replicas_limit means no limit.
+        _real_log_shared_gc_flush_replicas_limit = std::numeric_limits<size_t>::max();
+        return;
+    }
+
+    if (_last_prevent_gc_replica_count == 0) {
+        // Initialize it for the 1st time.
+        _real_log_shared_gc_flush_replicas_limit = log_shared_gc_flush_replicas_limit;
+        return;
+    }
+
+    CHECK_GE(_last_prevent_gc_replica_count, prevent_gc_replica_count);
+    size_t flushed_replicas = _last_prevent_gc_replica_count - prevent_gc_replica_count;
+    if (flushed_replicas == 0) {
+        // It's too busy to process more flush tasks.
+        _real_log_shared_gc_flush_replicas_limit =
+            std::min(2UL, log_shared_gc_flush_replicas_limit);
+        return;
+    }
+
+    if (_real_log_shared_gc_flush_replicas_limit == 0 ||
+        _real_log_shared_gc_flush_replicas_limit == std::numeric_limits<size_t>::max()) {
+        // Once it was previously set with some special values, it should be reset.
+        _real_log_shared_gc_flush_replicas_limit = log_shared_gc_flush_replicas_limit;
+        return;
+    }
+
+    if (flushed_replicas < _real_log_shared_gc_flush_replicas_limit) {
+        // Keep it unchanged.
+        return;
+    }
+
+    // Increase it to process more flush tasks.
+    _real_log_shared_gc_flush_replicas_limit =
+        std::min(log_shared_gc_flush_replicas_limit, _real_log_shared_gc_flush_replicas_limit << 1);
+}
+
+void replica_stub::flush_replicas_for_slog_gc(const replica_gc_info_map &replica_gc_map,
+                                              const std::set<gpid> &prevent_gc_replicas)
+{
+    // Trigger checkpoints to flush memtables once some replicas were found that prevent slog files
+    // from being removed for gc.
+    //
+    // How to trigger memtable flush ?
+    //   A parameter `is_emergency' was added for `replica::background_async_checkpoint()` function;
+    //   once it's set true, underlying storage engine would flush memtable as soon as possiable.
+    //
+    // When memtable flush is triggered ?
+    //   1. After a fixed interval (specified by `[replication].gc_interval_ms` option), try to find
+    //   if there are some replicas preventing slog files from being removed for gc; if any, all of
+    //   them would be deleted "gradually" ("gradually" means the number of the replicas whose
+    //   memtables are submitted to storage engine to be flushed would be limited).
+    //   2. `[replication].checkpoint_max_interval_hours' option specified the max interval between
+    //   the two adjacent checkpoints.
+
+    if (prevent_gc_replicas.empty()) {
+        return;
+    }
+
+    limit_flush_replicas_for_slog_gc(prevent_gc_replicas.size());
+    _last_prevent_gc_replica_count = prevent_gc_replicas.size();
+
+    LOG_INFO("gc_shared: trigger emergency checkpoints to flush replicas for gc shared logs: "
+             "log_shared_gc_flush_replicas_limit = {}/{}, prevent_gc_replicas({}) = {}",
+             _real_log_shared_gc_flush_replicas_limit,
+             FLAGS_log_shared_gc_flush_replicas_limit,
+             prevent_gc_replicas.size(),
+             fmt::join(prevent_gc_replicas, ", "));
+
+    size_t i = 0;
+    for (const auto &pid : prevent_gc_replicas) {
+        const auto &replica_gc = replica_gc_map.find(pid);
+        if (replica_gc == replica_gc_map.end()) {
+            continue;
+        }
+
+        if (++i > _real_log_shared_gc_flush_replicas_limit) {
+            break;
+        }
+
+        bool mock_flush = false;
+        FAIL_POINT_INJECT_NOT_RETURN_F(
+            "mock_flush_replicas_for_slog_gc", [&mock_flush, this, i](dsn::string_view str) {
+                CHECK(buf2bool(str, mock_flush),
+                      "invalid mock_flush_replicas_for_slog_gc toggle, should be true or false: {}",
+                      str);
+                _mock_flush_replicas_for_test = i;
+            });
+        if (dsn_unlikely(mock_flush)) {
+            continue;
+        }
+
+        tasking::enqueue(
+            LPC_PER_REPLICA_CHECKPOINT_TIMER,
+            replica_gc->second.rep->tracker(),
+            std::bind(&replica_stub::trigger_checkpoint, this, replica_gc->second.rep, true),
+            pid.thread_hash(),
+            std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
+    }
+}
+
 void replica_stub::on_gc()
 {
     uint64_t start = dsn_now_ns();
 
-    struct gc_info
-    {
-        replica_ptr rep;
-        partition_status::type status;
-        mutation_log_ptr plog;
-        decree last_durable_decree;
-        int64_t init_offset_in_shared_log;
-    };
-
-    std::unordered_map<gpid, gc_info> rs;
+    replica_gc_info_map replica_gc_map;
     {
         zauto_read_lock l(_replicas_lock);
-        // collect info in lock to prevent the case that the replica is closed in replica::close()
-        for (auto &kv : _replicas) {
-            const replica_ptr &rep = kv.second;
-            gc_info &info = rs[kv.first];
-            info.rep = rep;
-            info.status = rep->status();
-            info.plog = rep->private_log();
-            info.last_durable_decree = rep->last_durable_decree();
-            info.init_offset_in_shared_log = rep->get_app()->init_info().init_offset_in_shared_log;
+        // A replica was removed from _replicas before it would be closed by replica::close().
+        // Thus it's safe to use the replica after fetching its ref pointer from _replicas.
+        for (const auto &rep_pair : _replicas) {
+            const replica_ptr &rep = rep_pair.second;
+
+            auto &replica_gc = replica_gc_map[rep_pair.first];
+            replica_gc.rep = rep;
+            replica_gc.status = rep->status();
+            replica_gc.plog = rep->private_log();
+            replica_gc.last_durable_decree = rep->last_durable_decree();
+            replica_gc.init_offset_in_shared_log =
+                rep->get_app()->init_info().init_offset_in_shared_log;
         }
     }
 
-    LOG_INFO("start to garbage collection, replica_count = {}", rs.size());
-
-    // gc shared prepare log
-    //
-    // Now that checkpoint is very important for gc, we must be able to trigger checkpoint when
-    // necessary.
-    // that is, we should be able to trigger memtable flush when necessary.
-    //
-    // How to trigger memtable flush?
-    //   we add a parameter `is_emergency' in dsn_app_async_checkpoint() function, when set true,
-    //   the undering storage system should flush memtable as soon as possiable.
-    //
-    // When to trigger memtable flush?
-    //   1. Using `[replication].checkpoint_max_interval_hours' option, we can set max interval time
-    //   of two adjacent checkpoints; If the time interval is arrived, then emergency checkpoint
-    //   will be triggered.
-    //   2. Using `[replication].log_shared_file_count_limit' option, we can set max file count of
-    //   shared log; If the limit is exceeded, then emergency checkpoint will be triggered; Instead
-    //   of triggering all replicas to do checkpoint, we will only trigger a few of necessary
-    //   replicas which block garbage collection of the oldest log file.
-    //
-    if (_log != nullptr) {
-        replica_log_info_map gc_condition;
-        for (auto &kv : rs) {
-            replica_log_info ri;
-            replica_ptr &rep = kv.second.rep;
-            mutation_log_ptr &plog = kv.second.plog;
-            if (plog) {
-                // flush private log to update plog_max_commit_on_disk,
-                // and just flush once to avoid flushing infinitely
-                plog->flush_once();
-
-                decree plog_max_commit_on_disk = plog->max_commit_on_disk();
-                ri.max_decree = std::min(kv.second.last_durable_decree, plog_max_commit_on_disk);
-                LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
-                         "last_durable_decree= {}, plog_max_commit_on_disk = {}",
-                         rep->name(),
-                         enum_to_string(kv.second.status),
-                         ri.max_decree,
-                         kv.second.last_durable_decree,
-                         plog_max_commit_on_disk);
-            } else {
-                ri.max_decree = kv.second.last_durable_decree;
-                LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
-                         "last_durable_decree = {}",
-                         rep->name(),
-                         enum_to_string(kv.second.status),
-                         ri.max_decree,
-                         kv.second.last_durable_decree);
-            }
-            ri.valid_start_offset = kv.second.init_offset_in_shared_log;
-            gc_condition[kv.first] = ri;
-        }
-
-        std::set<gpid> prevent_gc_replicas;
-        int reserved_log_count = _log->garbage_collection(
-            gc_condition, FLAGS_log_shared_file_count_limit, prevent_gc_replicas);
-        if (reserved_log_count > FLAGS_log_shared_file_count_limit * 2) {
-            LOG_INFO(
-                "gc_shared: trigger emergency checkpoint by FLAGS_log_shared_file_count_limit, "
-                "file_count_limit = {}, reserved_log_count = {}, trigger all replicas to do "
-                "checkpoint",
-                FLAGS_log_shared_file_count_limit,
-                reserved_log_count);
-            for (auto &kv : rs) {
-                tasking::enqueue(
-                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                    kv.second.rep->tracker(),
-                    std::bind(&replica_stub::trigger_checkpoint, this, kv.second.rep, true),
-                    kv.first.thread_hash(),
-                    std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
-            }
-        } else if (reserved_log_count > FLAGS_log_shared_file_count_limit) {
-            std::ostringstream oss;
-            int c = 0;
-            for (auto &i : prevent_gc_replicas) {
-                if (c != 0)
-                    oss << ", ";
-                oss << i.to_string();
-                c++;
-            }
-            LOG_INFO(
-                "gc_shared: trigger emergency checkpoint by FLAGS_log_shared_file_count_limit, "
-                "file_count_limit = {}, reserved_log_count = {}, prevent_gc_replica_count = "
-                "{}, trigger them to do checkpoint: {}",
-                FLAGS_log_shared_file_count_limit,
-                reserved_log_count,
-                prevent_gc_replicas.size(),
-                oss.str());
-            for (auto &id : prevent_gc_replicas) {
-                auto find = rs.find(id);
-                if (find != rs.end()) {
-                    tasking::enqueue(
-                        LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                        find->second.rep->tracker(),
-                        std::bind(&replica_stub::trigger_checkpoint, this, find->second.rep, true),
-                        id.thread_hash(),
-                        std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
-                }
-            }
-        }
-
-        _counter_shared_log_size->set(_log->total_size() / (1024 * 1024));
-    }
+    LOG_INFO("start to garbage collection, replica_count = {}", replica_gc_map.size());
+    gc_slog(replica_gc_map);
 
     // statistic learning info
     uint64_t learning_count = 0;
@@ -1914,7 +1983,7 @@ void replica_stub::on_gc()
     uint64_t splitting_max_duration_time_ms = 0;
     uint64_t splitting_max_async_learn_time_ms = 0;
     uint64_t splitting_max_copy_file_size = 0;
-    for (auto &kv : rs) {
+    for (auto &kv : replica_gc_map) {
         replica_ptr &rep = kv.second.rep;
         if (rep->status() == partition_status::PS_POTENTIAL_SECONDARY) {
             learning_count++;

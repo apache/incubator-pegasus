@@ -64,7 +64,7 @@ namespace log_utils {
 }
 
 /*extern*/
-error_s check_log_files_continuity(const std::map<int, log_file_ptr> &logs)
+error_s check_log_files_continuity(const mutation_log::log_file_map_by_index &logs)
 {
     if (logs.empty()) {
         return error_s::ok();

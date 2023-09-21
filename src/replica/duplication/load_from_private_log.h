@@ -21,7 +21,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <chrono>
-#include <map>
 
 #include "common/replication_other_types.h"
 #include "mutation_batch.h"
@@ -61,7 +60,7 @@ public:
 
     /// Find the log file that contains `_start_decree`.
     void find_log_file_to_start();
-    void find_log_file_to_start(std::map<int, log_file_ptr> log_files);
+    void find_log_file_to_start(const mutation_log::log_file_map_by_index &log_files);
 
     void replay_log_block();
 
