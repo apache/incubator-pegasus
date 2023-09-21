@@ -64,7 +64,8 @@
     } while (false)
 
 #define CHECK(x, ...) CHECK_EXPRESSION(x, x, __VA_ARGS__)
-#define CHECK_NOTNULL(p, ...) CHECK(p != nullptr, __VA_ARGS__)
+#define CHECK_NOTNULL(p, ...) CHECK((p) != nullptr, __VA_ARGS__)
+#define CHECK_NULL(p, ...) CHECK((p) == nullptr, __VA_ARGS__)
 
 // Macros for writing log message prefixed by log_prefix().
 #define LOG_DEBUG_PREFIX(...) LOG_DEBUG("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))

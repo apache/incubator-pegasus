@@ -51,7 +51,6 @@
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
 #include "runtime/task/task_tracker.h"
-#include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
