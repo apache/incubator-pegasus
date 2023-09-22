@@ -22,13 +22,14 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <rocksdb/slice.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <cctype>
-#include <rocksdb/slice.h>
-#include "utils/blob.h"
 
 #include "runtime/rpc/rpc_address.h"
+#include "utils/blob.h"
+
 #include "utils/fmt_logging.h"
 
 namespace pegasus {
