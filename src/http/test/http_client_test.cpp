@@ -18,6 +18,7 @@
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
+#include <cstring>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <string>
@@ -40,14 +41,45 @@ TEST(HttpClientTest, Connect)
     ASSERT_TRUE(client.set_url("http://127.0.0.1:20000/test/get"));
 
     const auto &err = client.do_method();
-    ASSERT_EQ(dsn::ERR_CURL_FAILED, err.code());
+    ASSERT_EQ(dsn::ERR_CURL_CONNECT_FAILED, err.code());
 
-    std::cout << "failed to connect: " << err.description() << std::endl;
-    const std::string expected_description("ERR_CURL_FAILED: failed to perform http request("
-                                           "method=GET, url=http://127.0.0.1:20000/test/get): "
-                                           "desc=\"Couldn't connect to server\", msg=\"Failed to "
-                                           "connect to 127.0.0.1 port 20000: Connection refused\"");
-    EXPECT_EQ(expected_description, err.description());
+    const std::string actual_description(err.description());
+    std::cout << "failed to connect: " << actual_description << std::endl;
+
+    const std::string expected_description_prefix(
+        "ERR_CURL_CONNECT_FAILED: failed to perform http request("
+        "method=GET, url=http://127.0.0.1:20000/test/get): code=7");
+    ASSERT_LT(expected_description_prefix.size(), actual_description.size());
+    EXPECT_EQ(expected_description_prefix,
+              actual_description.substr(0, expected_description_prefix.size()));
+}
+
+TEST(HttpClientTest, Callback)
+{
+    http_client client;
+    ASSERT_TRUE(client.init());
+
+    ASSERT_TRUE(client.set_url("http://127.0.0.1:20001/test/get"));
+    ASSERT_TRUE(client.with_get_method());
+
+    auto callback = [](const void *, size_t) { return false; };
+
+    const auto &err = client.do_method(callback);
+    ASSERT_EQ(dsn::ERR_CURL_WRITE_ERROR, err.code());
+
+    long actual_http_status;
+    ASSERT_TRUE(client.get_http_status(actual_http_status));
+    EXPECT_EQ(200, actual_http_status);
+
+    const std::string actual_description(err.description());
+    std::cout << "failed for callback: " << actual_description << std::endl;
+    const auto expected_description =
+        fmt::format("ERR_CURL_WRITE_ERROR: failed to perform http request("
+                    "method=GET, url=http://127.0.0.1:20001/test/get): code=23, "
+                    "desc=\"Failed writing received data to disk/application\", "
+                    "msg=\"Failed writing body ({} != 24)\"",
+                    std::numeric_limits<size_t>::max());
+    EXPECT_EQ(expected_description, actual_description);
 }
 
 using http_client_method_case =
@@ -57,6 +89,42 @@ class HttpClientMethodTest : public testing::TestWithParam<http_client_method_ca
 {
 public:
     void SetUp() override { ASSERT_TRUE(_client.init()); }
+
+    void test_method_with_response_string(const long expected_http_status,
+                                          const std::string &expected_response)
+    {
+        std::string actual_response;
+        ASSERT_TRUE(_client.do_method(&actual_response));
+
+        long actual_http_status;
+        ASSERT_TRUE(_client.get_http_status(actual_http_status));
+
+        EXPECT_EQ(expected_http_status, actual_http_status);
+        EXPECT_EQ(expected_response, actual_response);
+    }
+
+    void test_method_with_response_callback(const long expected_http_status,
+                                            const std::string &expected_response)
+    {
+        auto callback = [&expected_response](const void *data, size_t length) {
+            auto compare = [](const char *expected_data,
+                              size_t expected_length,
+                              const void *actual_data,
+                              size_t actual_length) {
+                if (expected_length != actual_length) {
+                    return false;
+                }
+                return std::memcmp(expected_data, actual_data, actual_length) == 0;
+            };
+            EXPECT_PRED4(compare, expected_response.data(), expected_response.size(), data, length);
+            return true;
+        };
+        ASSERT_TRUE(_client.do_method(callback));
+
+        long actual_http_status;
+        ASSERT_TRUE(_client.get_http_status(actual_http_status));
+        EXPECT_EQ(expected_http_status, actual_http_status);
+    }
 
     void test_mothod(const std::string &url,
                      const http_method method,
@@ -77,21 +145,15 @@ public:
             LOG_FATAL("Unsupported http_method");
         }
 
-        std::string actual_response;
-        ASSERT_TRUE(_client.do_method(&actual_response));
-
-        long actual_http_status;
-        ASSERT_TRUE(_client.get_http_status(actual_http_status));
-
-        EXPECT_EQ(expected_http_status, actual_http_status);
-        EXPECT_EQ(expected_response, actual_response);
+        test_method_with_response_string(expected_http_status, expected_response);
+        test_method_with_response_callback(expected_http_status, expected_response);
     }
 
 private:
     http_client _client;
 };
 
-TEST_P(HttpClientMethodTest, Get)
+TEST_P(HttpClientMethodTest, DoMethod)
 {
     const char *url;
     http_method method;

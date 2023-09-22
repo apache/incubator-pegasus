@@ -37,7 +37,7 @@ DSN_DEFINE_uint32(http,
 http_client::http_client()
     : _curl(nullptr),
       _method(http_method::GET),
-      _callback(nullptr),
+      _recv_callback(nullptr),
       _header_changed(true),
       _header_list(nullptr)
 {
@@ -66,9 +66,18 @@ inline dsn::error_code to_error_code(CURLcode code)
         return dsn::ERR_OK;
     }
 
+    if (code == CURLE_COULDNT_CONNECT) {
+        return dsn::ERR_CURL_CONNECT_FAILED;
+    }
+
     if (code == CURLE_OPERATION_TIMEDOUT) {
         return dsn::ERR_TIMEOUT;
     }
+
+    if (code == CURLE_WRITE_ERROR) {
+        return dsn::ERR_CURL_WRITE_ERROR;
+    }
+
     return dsn::ERR_CURL_FAILED;
 }
 
@@ -149,7 +158,8 @@ bool http_client::is_error_buf_empty() const { return _error_buf[0] == 0; }
 
 std::string http_client::to_error_msg(CURLcode code) const
 {
-    std::string err_msg = fmt::format("desc=\"{}\"", curl_easy_strerror(code));
+    std::string err_msg =
+        fmt::format("code={}, desc=\"{}\"", static_cast<int>(code), curl_easy_strerror(code));
     if (is_error_buf_empty()) {
         return err_msg;
     }
@@ -158,18 +168,27 @@ std::string http_client::to_error_msg(CURLcode code) const
     return err_msg;
 }
 
+// `data` passed to this function is NOT null-terminated.
+// `length` might be zero.
 size_t http_client::on_response_data(const void *data, size_t length)
 {
-    if (_callback == nullptr) {
+    if (_recv_callback == nullptr) {
         return length;
     }
 
-    // callback function is empty.
-    if (!(*_callback)) {
+    if (!(*_recv_callback)) {
+        // callback function is empty.
         return length;
     }
 
-    return (*_callback)(data, length) ? length : std::numeric_limits<size_t>::max();
+    // According to libcurl, callback should return the number of bytes actually taken care of.
+    // If that amount differs from the amount passed to callback function, it would signals an
+    // error condition. This causes the transfer to get aborted and the libcurl function used
+    // returns CURLE_WRITE_ERROR. Therefore, here we just return the max limit of size_t for
+    // failure.
+    //
+    // See https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html for details.
+    return (*_recv_callback)(data, length) ? length : std::numeric_limits<size_t>::max();
 }
 
 dsn::error_s http_client::set_url(const std::string &url)
@@ -275,11 +294,11 @@ dsn::error_s http_client::process_header()
     return dsn::error_s::ok();
 }
 
-dsn::error_s http_client::do_method(const http_client::http_callback &callback)
+dsn::error_s http_client::do_method(const http_client::recv_callback &callback)
 {
     // `curl_easy_perform` would run synchronously, thus it is safe to use the pointer to
     // `callback`.
-    _callback = &callback;
+    _recv_callback = &callback;
 
     const auto &err = process_header();
     if (!err) {

@@ -72,7 +72,7 @@ namespace dsn {
 class http_client
 {
 public:
-    using http_callback = std::function<bool(const void *data, size_t length)>;
+    using recv_callback = std::function<bool(const void *data, size_t length)>;
 
     http_client();
     ~http_client();
@@ -100,9 +100,13 @@ public:
 
     // Submit request to remote http service, with response processed by callback function.
     //
+    // `callback` function gets called by libcurl as soon as there is data received that needs
+    // to be saved. For most transfers, this callback gets called many times and each invoke
+    // delivers another chunk of data.
+    //
     // This function would run synchronously, which means it would wait until the response was
     // returned and processed appropriately.
-    dsn::error_s do_method(const http_callback &callback = {});
+    dsn::error_s do_method(const recv_callback &callback = {});
 
     // Submit request to remote http service, with response data returned in a string.
     //
@@ -137,7 +141,7 @@ private:
     CURL *_curl;
     http_method _method;
     std::string _url;
-    const http_callback *_callback;
+    const recv_callback *_recv_callback;
     char _error_buf[kErrorBufferBytes];
 
     bool _header_changed;
