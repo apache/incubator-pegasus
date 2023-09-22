@@ -194,39 +194,38 @@ int c_unescape_string(const std::string &src, std::string &dest)
     return len;
 }
 
-template<>
+template <>
 std::string redact_sensitive_string(const std::string &src)
 {
-    if(FLAGS_encrypt_data_at_rest){
+    if (FLAGS_encrypt_data_at_rest) {
         return "<redacted>";
-    }
-    else{
+    } else {
         return src;
     }
 }
 
-template<>
+template <>
 dsn::blob redact_sensitive_string(const dsn::blob &src)
 {
-     static dsn::blob rbb = dsn::blob::create_from_bytes(std::move("<redacted>"));
-    if(FLAGS_encrypt_data_at_rest){
+    static dsn::blob rbb = dsn::blob::create_from_bytes(std::move("<redacted>"));
+    if (FLAGS_encrypt_data_at_rest) {
         return rbb;
     }
 
-    else{
+    else {
         return src;
     }
 }
 
-template<>
+template <>
 rocksdb::Slice redact_sensitive_string(const rocksdb::Slice &src)
 {
-     static rocksdb::Slice slice = rocksdb::Slice(std::move("<redacted>"));
-    if(FLAGS_encrypt_data_at_rest){
+    static rocksdb::Slice slice = rocksdb::Slice(std::move("<redacted>"));
+    if (FLAGS_encrypt_data_at_rest) {
         return slice;
     }
 
-    else{
+    else {
         return src;
     }
 }

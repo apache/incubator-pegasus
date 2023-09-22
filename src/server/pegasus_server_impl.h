@@ -240,7 +240,6 @@ public:
         return _ingestion_status;
     }
 
-
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;

@@ -919,7 +919,8 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
             if (distance <= S2Earth::ToMeters(cap_ptr->radius())) {
                 std::string origin_hash_key, origin_sort_key;
                 if (!restore_origin_keys(geo_sort_key, origin_hash_key, origin_sort_key)) {
-                    LOG_ERROR("restore_origin_keys failed. geo_sort_key={}", utils::redact_sensitive_string(geo_sort_key));
+                    LOG_ERROR("restore_origin_keys failed. geo_sort_key={}",
+                              utils::redact_sensitive_string(geo_sort_key));
                     cb();
                     return;
                 }
