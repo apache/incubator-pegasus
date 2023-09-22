@@ -93,7 +93,7 @@ inline dsn::error_code to_error_code(CURLcode code)
 
 #define RETURN_IF_DO_METHOD_NOT_OK()                                                               \
     RETURN_IF_CURL_NOT_OK(curl_easy_perform(_curl),                                                \
-                          "failed to perform [method={}, url={}]",                                 \
+                          "failed to perform http request(method={}, url={})",                     \
                           enum_to_string(_method),                                                 \
                           _url)
 

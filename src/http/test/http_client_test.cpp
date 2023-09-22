@@ -42,8 +42,12 @@ TEST(HttpClientTest, Connect)
     const auto &err = client.do_method();
     ASSERT_EQ(dsn::ERR_CURL_FAILED, err.code());
 
-    // Would print something like "Failed to connect to 127.0.0.1 port 20000: Connection refused".
     std::cout << "failed to connect: " << err.description() << std::endl;
+    const std::string expected_description("ERR_CURL_FAILED: failed to perform http request("
+                                           "method=GET, url=http://127.0.0.1:20000/test/get): "
+                                           "desc=\"Couldn't connect to server\", msg=\"Failed to "
+                                           "connect to 127.0.0.1 port 20000: Connection refused\"");
+    EXPECT_EQ(expected_description, err.description());
 }
 
 using http_client_method_case =

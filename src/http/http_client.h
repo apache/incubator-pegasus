@@ -99,12 +99,18 @@ public:
     void set_content_type(dsn::string_view val);
 
     // Submit request to remote http service, with response processed by callback function.
+    //
+    // This function would run synchronously, which means it would wait until the response was
+    // returned and processed appropriately.
     dsn::error_s do_method(const http_callback &callback = {});
 
     // Submit request to remote http service, with response data returned in a string.
+    //
+    // This function would run synchronously, which means it would wait until the response was
+    // returned and processed appropriately.
     dsn::error_s do_method(std::string *response);
 
-    // Get the http status code after requesting.
+    // Get the last http status code after requesting.
     dsn::error_s get_http_status(long &http_status) const;
 
 private:
