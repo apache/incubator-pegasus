@@ -48,7 +48,7 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/replica/maual_compaction?app_id=<app_id>");
+                         "ip:port/replica/manual_compaction?app_id=<app_id>");
     }
 
     ~replica_http_service()
