@@ -51,6 +51,13 @@ public:
                          "ip:port/replica/maual_compaction?app_id=<app_id>");
     }
 
+    ~replica_http_service()
+    {
+        deregister_http_call("replica/duplication");
+        deregister_http_call("replica/data_version");
+        deregister_http_call("replica/manual_compaction");
+    }
+
     std::string path() const override { return "replica"; }
 
     void query_duplication_handler(const http_request &req, http_response &resp);
