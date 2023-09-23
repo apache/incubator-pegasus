@@ -20,11 +20,9 @@
 #pragma once
 
 #include <gtest/gtest.h>
-#include <rocksdb/env.h>
 #include <functional>
 #include <string>
 
-#include "metadata_types.h"
 #include "utils/flags.h"
 #include "utils/test_macros.h"
 
