@@ -22,6 +22,6 @@ set(MY_PROJ_NAME test_utils)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS gtest)
+set(MY_PROJ_LIBS gtest rocksdb)
 
 dsn_add_static_library()
