@@ -15,12 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
+#include <gtest/gtest.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <cstring>
-#include <gtest/gtest.h>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -31,6 +33,17 @@
 #include "utils/fmt_logging.h"
 
 namespace dsn {
+
+void check_expected_description_prefix(const std::string &expected_description_prefix,
+                                       const dsn::error_s &err)
+{
+    const std::string actual_description(err.description());
+    std::cout << actual_description << std::endl;
+
+    ASSERT_LT(expected_description_prefix.size(), actual_description.size());
+    EXPECT_EQ(expected_description_prefix,
+              actual_description.substr(0, expected_description_prefix.size()));
+}
 
 TEST(HttpClientTest, Connect)
 {
@@ -43,15 +56,18 @@ TEST(HttpClientTest, Connect)
     const auto &err = client.do_method();
     ASSERT_EQ(dsn::ERR_CURL_CONNECT_FAILED, err.code());
 
-    const std::string actual_description(err.description());
-    std::cout << "failed to connect: " << actual_description << std::endl;
+    std::cout << "failed to connect: ";
 
+    // We just check the prefix of description, including `method`, `url`, `code` and `desc`.
+    // The `msg` differ in various systems, such as:
+    // * msg="Failed to connect to 127.0.0.1 port 20000: Connection refused"
+    // * msg="Failed to connect to 127.0.0.1 port 20000 after 0 ms: Connection refused"
+    // Thus we don't check if `msg` fields are consistent.
     const std::string expected_description_prefix(
         "ERR_CURL_CONNECT_FAILED: failed to perform http request("
-        "method=GET, url=http://127.0.0.1:20000/test/get): code=7");
-    ASSERT_LT(expected_description_prefix.size(), actual_description.size());
-    EXPECT_EQ(expected_description_prefix,
-              actual_description.substr(0, expected_description_prefix.size()));
+        "method=GET, url=http://127.0.0.1:20000/test/get): code=7, "
+        "desc=\"Couldn't connect to server\"");
+    check_expected_description_prefix(expected_description_prefix, err);
 }
 
 TEST(HttpClientTest, Callback)
@@ -71,15 +87,18 @@ TEST(HttpClientTest, Callback)
     ASSERT_TRUE(client.get_http_status(actual_http_status));
     EXPECT_EQ(200, actual_http_status);
 
-    const std::string actual_description(err.description());
-    std::cout << "failed for callback: " << actual_description << std::endl;
-    const auto expected_description =
+    std::cout << "failed for callback: ";
+
+    // We just check the prefix of description, including `method`, `url`, `code` and `desc`.
+    // The `msg` differ in various systems, such as:
+    // * msg="Failed writing body (18446744073709551615 != 24)"
+    // * msg="Failure writing output to destination"
+    // Thus we don't check if `msg` fields are consistent.
+    const auto expected_description_prefix =
         fmt::format("ERR_CURL_WRITE_ERROR: failed to perform http request("
                     "method=GET, url=http://127.0.0.1:20001/test/get): code=23, "
-                    "desc=\"Failed writing received data to disk/application\", "
-                    "msg=\"Failed writing body ({} != 24)\"",
-                    std::numeric_limits<size_t>::max());
-    EXPECT_EQ(expected_description, actual_description);
+                    "desc=\"Failed writing received data to disk/application\"");
+    check_expected_description_prefix(expected_description_prefix, err);
 }
 
 using http_client_method_case =
