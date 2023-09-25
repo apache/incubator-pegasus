@@ -294,7 +294,7 @@ dsn::error_s http_client::process_header()
     return dsn::error_s::ok();
 }
 
-dsn::error_s http_client::do_method(const http_client::recv_callback &callback)
+dsn::error_s http_client::exec_method(const http_client::recv_callback &callback)
 {
     // `curl_easy_perform` would run synchronously, thus it is safe to use the pointer to
     // `callback`.
@@ -309,10 +309,10 @@ dsn::error_s http_client::do_method(const http_client::recv_callback &callback)
     return dsn::error_s::ok();
 }
 
-dsn::error_s http_client::do_method(std::string *response)
+dsn::error_s http_client::exec_method(std::string *response)
 {
     if (response == nullptr) {
-        return do_method();
+        return exec_method();
     }
 
     auto callback = [response](const void *data, size_t length) {
@@ -320,7 +320,7 @@ dsn::error_s http_client::do_method(std::string *response)
         return true;
     };
 
-    return do_method(callback);
+    return exec_method(callback);
 }
 
 dsn::error_s http_client::get_http_status(long &http_status) const

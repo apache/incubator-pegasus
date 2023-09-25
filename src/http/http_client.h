@@ -53,18 +53,18 @@ namespace dsn {
 // err = client.with_post_method(post_data);
 //
 // Submit the request to remote http service:
-// err = client.do_method();
+// err = client.exec_method();
 //
 // If response data should be processed, use callback function:
 // auto callback = [...](const void *data, size_t length) {
 //     ......
 //     return true;
 // };
-// err = client.do_method(callback);
+// err = client.exec_method(callback);
 //
 // Or just provide a string pointer:
 // std::string response;
-// err = client.do_method(&response);
+// err = client.exec_method(&response);
 //
 // Get the http status code after requesting:
 // long http_status;
@@ -106,13 +106,13 @@ public:
     //
     // This function would run synchronously, which means it would wait until the response was
     // returned and processed appropriately.
-    dsn::error_s do_method(const recv_callback &callback = {});
+    dsn::error_s exec_method(const recv_callback &callback = {});
 
     // Submit request to remote http service, with response data returned in a string.
     //
     // This function would run synchronously, which means it would wait until the response was
     // returned and processed appropriately.
-    dsn::error_s do_method(std::string *response);
+    dsn::error_s exec_method(std::string *response);
 
     // Get the last http status code after requesting.
     dsn::error_s get_http_status(long &http_status) const;

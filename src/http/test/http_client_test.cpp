@@ -52,7 +52,7 @@ TEST(HttpClientTest, Connect)
     // No one has listened on port 20000, thus this would lead to "Connection refused".
     ASSERT_TRUE(client.set_url("http://127.0.0.1:20000/test/get"));
 
-    const auto &err = client.do_method();
+    const auto &err = client.exec_method();
     ASSERT_EQ(dsn::ERR_CURL_CONNECT_FAILED, err.code());
 
     std::cout << "failed to connect: ";
@@ -79,7 +79,7 @@ TEST(HttpClientTest, Callback)
 
     auto callback = [](const void *, size_t) { return false; };
 
-    const auto &err = client.do_method(callback);
+    const auto &err = client.exec_method(callback);
     ASSERT_EQ(dsn::ERR_CURL_WRITE_ERROR, err.code());
 
     long actual_http_status;
@@ -112,7 +112,7 @@ public:
                                           const std::string &expected_response)
     {
         std::string actual_response;
-        ASSERT_TRUE(_client.do_method(&actual_response));
+        ASSERT_TRUE(_client.exec_method(&actual_response));
 
         long actual_http_status;
         ASSERT_TRUE(_client.get_http_status(actual_http_status));
@@ -137,7 +137,7 @@ public:
             EXPECT_PRED4(compare, expected_response.data(), expected_response.size(), data, length);
             return true;
         };
-        ASSERT_TRUE(_client.do_method(callback));
+        ASSERT_TRUE(_client.exec_method(callback));
 
         long actual_http_status;
         ASSERT_TRUE(_client.get_http_status(actual_http_status));
