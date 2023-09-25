@@ -72,10 +72,10 @@ INSTANTIATE_TEST_CASE_P(, aio_test, ::testing::Values(false));
 TEST_P(aio_test, basic)
 {
     const char *kUnitBuffer = "hello, world";
-    size_t kUnitBufferLength = strlen(kUnitBuffer);
-    int kTotalBufferCount = 100;
-    int kBufferCountPerBatch = 10;
-    int64_t kFileSize = kUnitBufferLength * kTotalBufferCount;
+    const size_t kUnitBufferLength = strlen(kUnitBuffer);
+    const int kTotalBufferCount = 100;
+    const int kBufferCountPerBatch = 10;
+    const int64_t kFileSize = kUnitBufferLength * kTotalBufferCount;
     ASSERT_EQ(0, kTotalBufferCount % kBufferCountPerBatch);
 
     auto check_callback = [kUnitBufferLength](::dsn::error_code err, size_t n) {
@@ -424,7 +424,7 @@ TEST_P(aio_test, dsn_file)
         offset += rin.sz;
     }
 
-    ASSERT_EQ((uint64_t)src_file_size, offset);
+    ASSERT_EQ(static_cast<uint64_t>(src_file_size), offset);
     ASSERT_EQ(ERR_OK, file::close(fout));
     ASSERT_EQ(ERR_OK, file::close(fin));
 
