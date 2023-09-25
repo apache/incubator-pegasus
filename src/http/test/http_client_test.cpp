@@ -22,7 +22,6 @@
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <cstring>
 #include <iostream>
-#include <limits>
 #include <string>
 #include <vector>
 
