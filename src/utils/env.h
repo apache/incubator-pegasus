@@ -19,8 +19,8 @@
 
 #include <rocksdb/env.h>
 #include <rocksdb/status.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 namespace dsn {
