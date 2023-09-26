@@ -27,6 +27,7 @@
 #include "meta/meta_state_service.h"
 
 #include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
@@ -36,11 +37,17 @@
 
 #include "meta/meta_state_service_simple.h"
 #include "meta/meta_state_service_zookeeper.h"
+#include "runtime/service_app.h"
 #include "runtime/task/task_tracker.h"
+#include "test_util/test_util.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
 
 using namespace dsn;
 using namespace dsn::dist;
@@ -50,8 +57,8 @@ DEFINE_TASK_CODE(META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, TASK_PRIORITY_HIGH, TH
 typedef std::function<meta_state_service *()> service_creator_func;
 typedef std::function<void(meta_state_service *)> service_deleter_func;
 
-#define expect_ok [](error_code ec) { EXPECT_TRUE(ec == ERR_OK); }
-#define expect_err [](error_code ec) { EXPECT_FALSE(ec == ERR_OK); }
+#define expect_ok [](error_code ec) { CHECK_EQ(ERR_OK, ec); }
+#define expect_err [](error_code ec) { CHECK_NE(ERR_OK, ec); }
 
 void provider_basic_test(const service_creator_func &service_creator,
                          const service_deleter_func &service_deleter)
@@ -70,9 +77,9 @@ void provider_basic_test(const service_creator_func &service_creator,
         service->get_children("/1",
                               META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
                               [](error_code ec, const std::vector<std::string> &children) {
-                                  CHECK(ec == ERR_OK && children.size() == 1 &&
-                                            *children.begin() == "1",
-                                        "unexpected child");
+                                  CHECK_EQ(ERR_OK, ec);
+                                  CHECK_EQ(1, children.size());
+                                  CHECK_EQ("1", *children.begin());
                               });
         service->node_exist("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)
@@ -107,11 +114,11 @@ void provider_basic_test(const service_creator_func &service_creator,
             ->get_data("/1",
                        META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
                        [](error_code ec, const dsn::blob &value) {
-                           expect_ok(ec);
+                           CHECK_EQ(ERR_OK, ec);
                            dsn::binary_reader reader(value);
                            int read_value = 0;
                            reader.read(read_value);
-                           CHECK_EQ(read_value, 0xdeadbeef);
+                           CHECK_EQ(0xdeadbeef, read_value);
                        })
             ->wait();
         writer = dsn::binary_writer();
@@ -124,27 +131,26 @@ void provider_basic_test(const service_creator_func &service_creator,
             ->get_data("/1",
                        META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
                        [](error_code ec, const dsn::blob &value) {
-                           expect_ok(ec);
+                           CHECK_EQ(ERR_OK, ec);
                            dsn::binary_reader reader(value);
                            int read_value = 0;
                            reader.read(read_value);
-                           CHECK_EQ(read_value, 0xbeefdead);
+                           CHECK_EQ(0xbeefdead, read_value);
                        })
             ->wait();
     }
-    // clean the node created in previos code-block, to support test in next round
+    // clean the node created in previous code-block, to support test in next round
     {
         service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)
             ->wait();
     }
 
-    typedef dsn::dist::meta_state_service::transaction_entries TEntries;
     // transaction op
     {
         // basic
         dsn::binary_writer writer;
         writer.write(0xdeadbeef);
-        std::shared_ptr<TEntries> entries = service->new_transaction_entries(5);
+        auto entries = service->new_transaction_entries(5);
         entries->create_node("/2");
         entries->create_node("/2/2");
         entries->create_node("/2/3");
@@ -155,11 +161,11 @@ void provider_basic_test(const service_creator_func &service_creator,
             entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok);
         tsk->wait();
         for (unsigned int i = 0; i < 5; ++i) {
-            EXPECT_TRUE(entries->get_result(i) == ERR_OK);
+            ASSERT_EQ(ERR_OK, entries->get_result(i));
         }
 
         // an invalid operation will stop whole transaction
-        entries = service->new_transaction_entries(5);
+        entries = service->new_transaction_entries(4);
         entries->create_node("/3");
         entries->create_node("/4");
         entries->delete_node("/2"); // delete a non empty dir
@@ -168,11 +174,12 @@ void provider_basic_test(const service_creator_func &service_creator,
         service->submit_transaction(entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)
             ->wait();
         error_code err[4] = {ERR_OK, ERR_OK, ERR_INVALID_PARAMETERS, ERR_INCONSISTENT_STATE};
-        for (unsigned int i = 0; i < 4; ++i)
-            EXPECT_EQ(err[i], entries->get_result(i));
+        for (unsigned int i = 0; i < 4; ++i) {
+            ASSERT_EQ(err[i], entries->get_result(i));
+        }
 
         // another invalid transaction
-        entries = service->new_transaction_entries(5);
+        entries = service->new_transaction_entries(4);
         entries->create_node("/3");
         entries->create_node("/4");
         entries->delete_node("/5"); // delete a non exist dir
@@ -182,8 +189,9 @@ void provider_basic_test(const service_creator_func &service_creator,
         err[2] = ERR_OBJECT_NOT_FOUND;
         service->submit_transaction(entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)
             ->wait();
-        for (unsigned int i = 0; i < 4; ++i)
-            EXPECT_EQ(err[i], entries->get_result(i));
+        for (unsigned int i = 0; i < 4; ++i) {
+            ASSERT_EQ(err[i], entries->get_result(i));
+        }
     }
 
     // check replay with transaction
@@ -195,7 +203,9 @@ void provider_basic_test(const service_creator_func &service_creator,
             ->get_children("/2",
                            META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
                            [](error_code ec, const std::vector<std::string> &children) {
-                               ASSERT_TRUE(children.size() == 1 && children[0] == "2");
+                               CHECK_EQ(ERR_OK, ec);
+                               CHECK_EQ(1, children.size());
+                               CHECK_EQ("2", children[0]);
                            })
             ->wait();
 
@@ -203,27 +213,27 @@ void provider_basic_test(const service_creator_func &service_creator,
             ->get_data("/2",
                        META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
                        [](error_code ec, const blob &value) {
-                           ASSERT_TRUE(ec == ERR_OK);
+                           CHECK_EQ(ERR_OK, ec);
                            binary_reader reader(value);
                            int content_value;
                            reader.read(content_value);
-                           ASSERT_TRUE(content_value == 0xdeadbeef);
+                           CHECK_EQ(0xdeadbeef, content_value);
                        })
             ->wait();
     }
 
     // delete the nodes created just now, using transaction delete
     {
-        std::shared_ptr<TEntries> entries = service->new_transaction_entries(2);
+        auto entries = service->new_transaction_entries(2);
         entries->delete_node("/2/2");
         entries->delete_node("/2");
 
         service->submit_transaction(entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)
             ->wait();
-        error_code err[2] = {ERR_OK, ERR_OK};
 
-        for (unsigned int i = 0; i < 2; ++i)
-            EXPECT_EQ(err[i], entries->get_result(i));
+        for (unsigned int i = 0; i < 2; ++i) {
+            ASSERT_EQ(ERR_OK, entries->get_result(i));
+        }
     }
 
     service_deleter(service);
@@ -235,7 +245,7 @@ void recursively_create_node_callback(meta_state_service *service,
                                       int current_layer,
                                       error_code ec)
 {
-    ASSERT_TRUE(ec == ERR_OK);
+    ASSERT_EQ(ERR_OK, ec);
     if (current_layer <= 0)
         return;
 
@@ -279,31 +289,41 @@ void provider_recursively_create_delete_test(const service_creator_func &creator
     deleter(service);
 }
 
-#undef expect_ok
-#undef expect_err
+class meta_state_service_test : public pegasus::encrypt_data_test_base
+{
+};
 
-TEST(meta_state_service, simple)
+// TODO(yingchun): ENCRYPTION: add enable encryption test.
+INSTANTIATE_TEST_CASE_P(, meta_state_service_test, ::testing::Values(false));
+
+TEST_P(meta_state_service_test, simple)
 {
     auto simple_service_creator = [] {
         meta_state_service_simple *svc = new meta_state_service_simple();
-        svc->initialize({});
+        auto err = svc->initialize({});
+        CHECK_EQ(ERR_OK, err);
         return svc;
     };
     auto simple_service_deleter = [](meta_state_service *simple_svc) { delete simple_svc; };
 
     provider_basic_test(simple_service_creator, simple_service_deleter);
     provider_recursively_create_delete_test(simple_service_creator, simple_service_deleter);
+
+    std::string log_path = dsn::utils::filesystem::path_combine(
+        service_app::current_service_app_info().data_dir, "meta_state_service.log");
+    ASSERT_TRUE(dsn::utils::filesystem::remove_path(log_path));
 }
 
-TEST(meta_state_service, zookeeper)
+TEST_P(meta_state_service_test, zookeeper)
 {
     auto zookeeper_service_creator = [] {
         meta_state_service_zookeeper *svc = new meta_state_service_zookeeper();
-        svc->initialize({});
+        auto err = svc->initialize({});
+        CHECK_EQ(ERR_OK, err);
         return svc;
     };
     auto zookeeper_service_deleter = [](meta_state_service *zookeeper_svc) {
-        ASSERT_EQ(zookeeper_svc->finalize(), ERR_OK);
+        ASSERT_EQ(ERR_OK, zookeeper_svc->finalize());
     };
 
     provider_basic_test(zookeeper_service_creator, zookeeper_service_deleter);

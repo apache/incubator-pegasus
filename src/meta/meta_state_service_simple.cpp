@@ -27,7 +27,6 @@
 #include "meta_state_service_simple.h"
 
 #include <fcntl.h>
-#include <stdio.h>
 #include <string.h>
 #include <algorithm>
 #include <set>
@@ -35,6 +34,9 @@
 #include <utility>
 
 #include "aio/file_io.h"
+#include "rocksdb/env.h"
+#include "rocksdb/slice.h"
+#include "rocksdb/status.h"
 #include "runtime/service_app.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
@@ -228,7 +230,7 @@ error_code meta_state_service_simple::apply_transaction(
         default:
             CHECK(false, "unsupported operation");
         }
-        CHECK_EQ_MSG(ec, ERR_OK, "unexpected error when applying");
+        CHECK_EQ_MSG(ERR_OK, ec, "unexpected error when applying");
     }
 
     return ERR_OK;
@@ -242,53 +244,73 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
     _offset = 0;
     std::string log_path = dsn::utils::filesystem::path_combine(work_dir, "meta_state_service.log");
     if (utils::filesystem::file_exists(log_path)) {
-        if (FILE *fd = fopen(log_path.c_str(), "rb")) {
-            for (;;) {
-                log_header header;
-                if (fread(&header, sizeof(log_header), 1, fd) != 1) {
-                    break;
-                }
-                if (header.magic != log_header::default_magic) {
-                    break;
-                }
-                std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(header.size));
-                if (fread(buffer.get(), header.size, 1, fd) != 1) {
-                    break;
-                }
-                _offset += sizeof(header) + header.size;
-                binary_reader reader(blob(buffer, (int)header.size));
-                int op_type = 0;
-                reader.read(op_type);
+        std::unique_ptr<rocksdb::SequentialFile> log_file;
+        auto s =
+            rocksdb::Env::Default()->NewSequentialFile(log_path, &log_file, rocksdb::EnvOptions());
+        CHECK(s.ok(), "open log file '{}' failed, err = {}", log_path, s.ToString());
 
-                switch (static_cast<operation_type>(op_type)) {
-                case operation_type::create_node: {
-                    std::string node;
-                    blob data;
-                    create_node_log::parse(reader, node, data);
-                    create_node_internal(node, data);
-                    break;
-                }
-                case operation_type::delete_node: {
-                    std::string node;
-                    bool recursively_delete;
-                    delete_node_log::parse(reader, node, recursively_delete);
-                    delete_node_internal(node, recursively_delete);
-                    break;
-                }
-                case operation_type::set_data: {
-                    std::string node;
-                    blob data;
-                    set_data_log::parse(reader, node, data);
-                    set_data_internal(node, data);
-                    break;
-                }
-                default:
-                    // The log is complete but its content is modified by cosmic ray. This is
-                    // unacceptable
-                    CHECK(false, "meta state server log corrupted");
-                }
+        while (true) {
+            static const int kLogHeaderSize = sizeof(log_header);
+            static const int kDefaultMagic = 0xdeadbeef;
+            rocksdb::Slice result;
+
+            // Read header.
+            char scratch[kLogHeaderSize] = {0};
+            s = log_file->PositionedRead(_offset, kLogHeaderSize, &result, scratch);
+            CHECK(s.ok(), "read log file '{}' header failed, err = {}", log_path, s.ToString());
+            if (result.empty()) {
+                LOG_INFO("read EOF of log file '{}'", log_path);
+                break;
             }
-            fclose(fd);
+            log_header *header = reinterpret_cast<log_header *>(scratch);
+            if (header->magic != kDefaultMagic) {
+                LOG_WARNING("read log file '{}' header with bad magic {}, skip the left!",
+                            log_path,
+                            header->magic);
+                break;
+            }
+            _offset += kLogHeaderSize;
+
+            // Read body.
+            std::shared_ptr<char> buffer(dsn::utils::make_shared_array<char>(header->size));
+            s = log_file->PositionedRead(_offset, header->size, &result, buffer.get());
+            CHECK(s.ok(),
+                  "read log file '{}' header with bad body, err = {}",
+                  log_path,
+                  s.ToString());
+            _offset += header->size;
+
+            binary_reader reader(blob(buffer, header->size));
+            int op_type = 0;
+            CHECK_EQ(sizeof(op_type), reader.read(op_type));
+
+            switch (static_cast<operation_type>(op_type)) {
+            case operation_type::create_node: {
+                std::string node;
+                blob data;
+                create_node_log::parse(reader, node, data);
+                create_node_internal(node, data);
+                break;
+            }
+            case operation_type::delete_node: {
+                std::string node;
+                bool recursively_delete;
+                delete_node_log::parse(reader, node, recursively_delete);
+                delete_node_internal(node, recursively_delete);
+                break;
+            }
+            case operation_type::set_data: {
+                std::string node;
+                blob data;
+                set_data_log::parse(reader, node, data);
+                set_data_internal(node, data);
+                break;
+            }
+            default:
+                // The log is complete but its content is modified by cosmic ray. This is
+                // unacceptable
+                CHECK(false, "meta state server log corrupted");
+            }
         }
     }
 
@@ -507,8 +529,9 @@ task_ptr meta_state_service_simple::get_children(const std::string &node,
 
 meta_state_service_simple::~meta_state_service_simple()
 {
-    _tracker.cancel_outstanding_tasks();
-    file::close(_log);
+    _tracker.wait_outstanding_tasks();
+    CHECK_EQ(ERR_OK, file::flush(_log));
+    CHECK_EQ(ERR_OK, file::close(_log));
 
     for (const auto &kv : _quick_map) {
         if ("/" != kv.first) {

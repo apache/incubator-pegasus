@@ -53,6 +53,7 @@
 
 namespace dsn {
 namespace dist {
+// Only for test purpose.
 class distributed_lock_service_simple : public distributed_lock_service
 {
 public:
