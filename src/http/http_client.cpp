@@ -100,7 +100,7 @@ inline dsn::error_code to_error_code(CURLcode code)
 #define RETURN_IF_GETINFO_NOT_OK(info, output)                                                     \
     RETURN_IF_CURL_NOT_OK(curl_easy_getinfo(_curl, info, output), "failed to get from " #info)
 
-#define RETURN_IF_DO_METHOD_NOT_OK()                                                               \
+#define RETURN_IF_EXEC_METHOD_NOT_OK()                                                             \
     RETURN_IF_CURL_NOT_OK(curl_easy_perform(_curl),                                                \
                           "failed to perform http request(method={}, url={})",                     \
                           enum_to_string(_method),                                                 \
@@ -305,7 +305,7 @@ dsn::error_s http_client::exec_method(const http_client::recv_callback &callback
         return err;
     }
 
-    RETURN_IF_DO_METHOD_NOT_OK();
+    RETURN_IF_EXEC_METHOD_NOT_OK();
     return dsn::error_s::ok();
 }
 
@@ -329,7 +329,7 @@ dsn::error_s http_client::get_http_status(long &http_status) const
     return dsn::error_s::ok();
 }
 
-#undef RETURN_IF_DO_METHOD_NOT_OK
+#undef RETURN_IF_EXEC_METHOD_NOT_OK
 #undef RETURN_IF_SETOPT_NOT_OK
 #undef RETURN_IF_CURL_NOT_OK
 

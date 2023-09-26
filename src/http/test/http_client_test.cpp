@@ -171,7 +171,7 @@ private:
     http_client _client;
 };
 
-TEST_P(HttpClientMethodTest, DoMethod)
+TEST_P(HttpClientMethodTest, ExecMethod)
 {
     const char *url;
     http_method method;
