@@ -299,7 +299,11 @@ set(CURL_OPTIONS
         --without-libidn
         --without-zstd)
 if (APPLE)
-    set(CURL_OPTIONS ${CURL_OPTIONS} --without-nghttp2)
+    set(CURL_OPTIONS
+	    ${CURL_OPTIONS}
+	    --without-nghttp2
+	    --without-libidn2
+	    --without-brotli)
 endif ()
 ExternalProject_Add(curl
         URL ${OSS_URL_PREFIX}/curl-8.3.0.tar.gz
