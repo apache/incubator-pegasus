@@ -65,6 +65,8 @@ enum class FileDataType;
 
 namespace filesystem {
 
+// TODO(yingchun): Consider using rocksdb APIs to rewrite the following functions.
+
 int get_normalized_path(const std::string &path, std::string &npath);
 
 bool get_absolute_path(const std::string &path1, std::string &path2);
@@ -136,6 +138,7 @@ bool get_disk_space_info(const std::string &path, disk_space_info &info);
 bool link_file(const std::string &src, const std::string &target);
 
 error_code md5sum(const std::string &file_path, /*out*/ std::string &result);
+error_code deprecated_md5sum(const std::string &file_path, /*out*/ std::string &result);
 
 // return value:
 //  - <A, B>:
@@ -143,25 +146,23 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result);
 //          B is represent wheter the directory is empty, true means empty, otherwise false
 std::pair<error_code, bool> is_directory_empty(const std::string &dirname);
 
+// TODO(yingchun): remove it!
 error_code read_file(const std::string &fname, /*out*/ std::string &buf);
 
 // compare file metadata calculated by fname with expected md5 and file_size
 bool verify_file(const std::string &fname,
+                 FileDataType type,
                  const std::string &expected_md5,
                  const int64_t &expected_fsize);
 
-bool verify_file_size(const std::string &fname, const int64_t &expected_fsize);
-
-bool verify_data_md5(const std::string &fname,
-                     const char *data,
-                     const size_t data_size,
-                     const std::string &expected_md5);
+bool verify_file_size(const std::string &fname, FileDataType type, const int64_t &expected_fsize);
 
 // create driectory and get absolute path
 bool create_directory(const std::string &path,
                       /*out*/ std::string &absolute_path,
                       /*out*/ std::string &err_msg);
 
+// TODO(yingchun): remove it!
 bool write_file(const std::string &fname, std::string &buf);
 
 // check if directory is readable and writable

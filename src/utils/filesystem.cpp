@@ -33,24 +33,23 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/system/error_code.hpp>
 #include <errno.h>
-#include <fcntl.h>
+#include <fmt/core.h>
 #include <ftw.h>
 #include <limits.h>
 #include <openssl/md5.h>
+#include <rocksdb/env.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 // IWYU pragma: no_include <bits/struct_stat.h>
 #include <unistd.h>
-
 #include <istream>
-
-#include <boost/filesystem/operations.hpp>
-#include <boost/system/error_code.hpp>
-#include <fmt/core.h>
-#include <rocksdb/env.h>
-#include <rocksdb/status.h>
+#include <memory>
 
 #include "utils/defer.h"
 #include "utils/env.h"
@@ -60,7 +59,6 @@
 #include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_view.h"
-#include "utils/strings.h"
 
 #define getcwd_ getcwd
 #define rmdir_ rmdir
@@ -417,7 +415,6 @@ bool deprecated_file_size(const std::string &path, int64_t &sz)
     }
 
     sz = st.st_size;
-
     return true;
 }
 
@@ -517,51 +514,26 @@ out_error:
 
 bool create_file(const std::string &path)
 {
-    size_t pos;
     std::string npath;
-    int fd;
-    int mode;
-    int err;
-
-    if (path.empty()) {
-        return false;
-    }
-
-    if (_FS_ISSEP(path.back())) {
-        return false;
-    }
-
-    err = get_normalized_path(path, npath);
+    int err = get_normalized_path(path, npath);
     if (err != 0) {
         return false;
     }
 
-    if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
-        return true;
-    }
-
-    if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
-        return false;
-    }
-
-    pos = npath.find_last_of("\\/");
+    auto pos = npath.find_last_of("\\/");
     if ((pos != std::string::npos) && (pos > 0)) {
         auto ppath = npath.substr(0, pos);
         if (!dsn::utils::filesystem::create_directory(ppath)) {
+            LOG_WARNING("fail to create directory {}", ppath);
             return false;
         }
     }
 
-    mode = 0775;
-    fd = ::creat(npath.c_str(), mode);
-    if (fd == -1) {
-        err = errno;
-        LOG_WARNING("create_file {} failed, err = {}", path, safe_strerror(err));
+    std::unique_ptr<rocksdb::WritableFile> wfile;
+    auto s = rocksdb::Env::Default()->ReopenWritableFile(path, &wfile, rocksdb::EnvOptions());
+    if (dsn_unlikely(!s.ok())) {
+        LOG_WARNING("fail to create file {}, err={}", path, s.ToString());
         return false;
-    }
-
-    if (::close_(fd) != 0) {
-        LOG_WARNING("create_file {}, failed to close the file handle.", path);
     }
 
     return true;
@@ -747,6 +719,54 @@ bool link_file(const std::string &src, const std::string &target)
 error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
 {
     result.clear();
+    if (!::dsn::utils::filesystem::file_exists(file_path)) {
+        LOG_ERROR("md5sum error: file {} not exist", file_path);
+        return ERR_OBJECT_NOT_FOUND;
+    }
+
+    std::unique_ptr<rocksdb::SequentialFile> sfile;
+    auto s = rocksdb::Env::Default()->NewSequentialFile(file_path, &sfile, rocksdb::EnvOptions());
+    if (!sfile) {
+        LOG_ERROR("md5sum error: open file {} failed, err={}", file_path, s.ToString());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    const int64_t kBufferSize = 4096;
+    char buf[kBufferSize];
+    unsigned char out[MD5_DIGEST_LENGTH] = {0};
+    MD5_CTX c;
+    CHECK_EQ(1, MD5_Init(&c));
+    while (true) {
+        rocksdb::Slice res;
+        s = sfile->Read(kBufferSize, &res, buf);
+        if (!s.ok()) {
+            MD5_Final(out, &c);
+            LOG_ERROR("md5sum error: read file {} failed, err={}", file_path, s.ToString());
+            return ERR_FILE_OPERATION_FAILED;
+        }
+        if (res.empty()) {
+            break;
+        }
+        CHECK_EQ(1, MD5_Update(&c, buf, res.size()));
+        if (res.size() < kBufferSize) {
+            break;
+        }
+    }
+    CHECK_EQ(1, MD5_Final(out, &c));
+
+    char str[MD5_DIGEST_LENGTH * 2 + 1];
+    str[MD5_DIGEST_LENGTH * 2] = 0;
+    for (int n = 0; n < MD5_DIGEST_LENGTH; n++) {
+        sprintf(str + n + n, "%02x", out[n]);
+    }
+    result.assign(str);
+
+    return ERR_OK;
+}
+
+error_code deprecated_md5sum(const std::string &file_path, /*out*/ std::string &result)
+{
+    result.clear();
     // if file not exist, we return ERR_OBJECT_NOT_FOUND
     if (!::dsn::utils::filesystem::file_exists(file_path)) {
         LOG_ERROR("md5sum error: file {} not exist", file_path);
@@ -841,6 +861,7 @@ error_code read_file(const std::string &fname, std::string &buf)
 }
 
 bool verify_file(const std::string &fname,
+                 FileDataType type,
                  const std::string &expected_md5,
                  const int64_t &expected_fsize)
 {
@@ -849,7 +870,7 @@ bool verify_file(const std::string &fname,
         return false;
     }
     int64_t f_size = 0;
-    if (!file_size(fname, f_size)) {
+    if (!file_size(fname, type, f_size)) {
         LOG_ERROR("verify file({}) failed, becaused failed to get file size", fname);
         return false;
     }
@@ -870,14 +891,14 @@ bool verify_file(const std::string &fname,
     return true;
 }
 
-bool verify_file_size(const std::string &fname, const int64_t &expected_fsize)
+bool verify_file_size(const std::string &fname, FileDataType type, const int64_t &expected_fsize)
 {
     if (!file_exists(fname)) {
         LOG_ERROR("file({}) is not existed", fname);
         return false;
     }
     int64_t f_size = 0;
-    if (!file_size(fname, f_size)) {
+    if (!file_size(fname, type, f_size)) {
         LOG_ERROR("verify file({}) size failed, becaused failed to get file size", fname);
         return false;
     }
@@ -886,22 +907,6 @@ bool verify_file_size(const std::string &fname, const int64_t &expected_fsize)
                   fname,
                   f_size,
                   expected_fsize);
-        return false;
-    }
-    return true;
-}
-
-bool verify_data_md5(const std::string &fname,
-                     const char *data,
-                     const size_t data_size,
-                     const std::string &expected_md5)
-{
-    std::string md5 = string_md5(data, data_size);
-    if (md5 != expected_md5) {
-        LOG_ERROR("verify data({}) failed, because data damaged, size: md5: {} VS {}",
-                  fname,
-                  md5,
-                  expected_md5);
         return false;
     }
     return true;
@@ -952,23 +957,28 @@ bool check_dir_rw(const std::string &path, std::string &err_msg)
                path.find(broken_disk_dir) == std::string::npos;
     });
 
-    std::string fname = "read_write_test_file";
-    std::string fpath = path_combine(path, fname);
-    if (!create_file(fpath)) {
-        err_msg = fmt::format("Fail to create test file {}.", fpath);
-        return false;
-    }
-
+    static const std::string kTestValue = "test_value";
+    static const std::string kFname = "read_write_test_file";
+    std::string fpath = path_combine(path, kFname);
     auto cleanup = defer([&fpath]() { remove_path(fpath); });
-    std::string value = "test_value";
-    if (!write_file(fpath, value)) {
-        err_msg = fmt::format("Fail to write file {}.", fpath);
+    auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
+                                        rocksdb::Slice(kTestValue),
+                                        fpath,
+                                        /* should_sync */ true);
+    if (dsn_unlikely(!s.ok())) {
+        err_msg = fmt::format("fail to write file {}, err={}", fpath, s.ToString());
         return false;
     }
 
-    std::string buf;
-    if (read_file(fpath, buf) != ERR_OK || buf != value) {
-        err_msg = fmt::format("Fail to read file {} or get wrong value({}).", fpath, buf);
+    std::string read_data;
+    s = rocksdb::ReadFileToString(rocksdb::Env::Default(), fpath, &read_data);
+    if (dsn_unlikely(!s.ok())) {
+        err_msg = fmt::format("fail to read file {}, err={}", fpath, s.ToString());
+        return false;
+    }
+
+    if (dsn_unlikely(read_data != kTestValue)) {
+        err_msg = fmt::format("get wrong value '{}' from file {}", read_data, fpath);
         return false;
     }
 
