@@ -148,6 +148,8 @@ protected:
 // ```
 extern http_call &register_http_call(std::string full_path);
 
+extern void deregister_http_call(const std::string &full_path);
+
 // Starts serving HTTP requests.
 // The internal HTTP server will reuse the rDSN server port.
 extern void start_http_server();
