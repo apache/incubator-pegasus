@@ -66,7 +66,6 @@ public:
 
     void register_cli_commands();
 
-    // TODO(yingchun): seems nobody call it, can be removed?
     void close_service()
     {
         unregister_rpc_handler(RPC_NFS_COPY);
@@ -107,14 +106,9 @@ private:
 
     struct file_handle_info_on_server
     {
-        disk_file *file_handle;
-        int32_t file_access_count; // concurrent r/w count
-        uint64_t last_access_time; // last touch time
-
-        file_handle_info_on_server()
-            : file_handle(nullptr), file_access_count(0), last_access_time(0)
-        {
-        }
+        disk_file *file_handle = nullptr;
+        int32_t file_access_count = 0; // concurrent r/w count
+        uint64_t last_access_time = 0; // last touch time
 
         ~file_handle_info_on_server()
         {

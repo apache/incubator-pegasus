@@ -98,9 +98,9 @@ public:
         ASSERT_EQ(dsn::ERR_OK,
                   ddl_client_->create_app(
                       destination_app_name, "pegasus", default_partitions, 3, {}, false));
-        srouce_client_ =
+        source_client_ =
             pegasus_client_factory::get_client(cluster_name_.c_str(), source_app_name.c_str());
-        ASSERT_NE(nullptr, srouce_client_);
+        ASSERT_NE(nullptr, source_client_);
         destination_client_ =
             pegasus_client_factory::get_client(cluster_name_.c_str(), destination_app_name.c_str());
         ASSERT_NE(nullptr, destination_client_);
@@ -132,7 +132,7 @@ public:
         while (expect_data_[empty_hash_key].size() < 1000) {
             sort_key = random_string();
             value = random_string();
-            ASSERT_EQ(PERR_OK, srouce_client_->set(empty_hash_key, sort_key, value))
+            ASSERT_EQ(PERR_OK, source_client_->set(empty_hash_key, sort_key, value))
                 << "hash_key=" << hash_key << ", sort_key=" << sort_key;
             expect_data_[empty_hash_key][sort_key] = value;
         }
@@ -142,7 +142,7 @@ public:
             while (expect_data_[hash_key].size() < 10) {
                 sort_key = random_string();
                 value = random_string();
-                ASSERT_EQ(PERR_OK, srouce_client_->set(hash_key, sort_key, value))
+                ASSERT_EQ(PERR_OK, source_client_->set(hash_key, sort_key, value))
                     << "hash_key=" << hash_key << ", sort_key=" << sort_key;
                 expect_data_[hash_key][sort_key] = value;
             }
@@ -163,7 +163,7 @@ protected:
     char buffer_[256];
     map<string, map<string, string>> expect_data_;
 
-    pegasus_client *srouce_client_;
+    pegasus_client *source_client_;
     pegasus_client *destination_client_;
 };
 const char copy_data_test::CCH[] =
@@ -176,7 +176,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
     vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
-    ASSERT_EQ(PERR_OK, srouce_client_->get_unordered_scanners(INT_MAX, options, raw_scanners));
+    ASSERT_EQ(PERR_OK, source_client_->get_unordered_scanners(INT_MAX, options, raw_scanners));
 
     LOG_INFO("open source app scanner succeed, partition_count = {}", raw_scanners.size());
 

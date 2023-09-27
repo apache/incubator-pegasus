@@ -34,14 +34,24 @@
  */
 #pragma once
 
-#include "runtime/tool_api.h"
+#include <memory>
+
 #include "nfs/nfs_node.h"
+#include "utils/error_code.h"
 
 namespace dsn {
+class aio_task;
+template <typename TResponse>
+class rpc_replier;
+
 namespace service {
 
-class nfs_service_impl;
+class copy_request;
+class copy_response;
+class get_file_size_request;
+class get_file_size_response;
 class nfs_client_impl;
+class nfs_service_impl;
 
 class nfs_node_simple : public nfs_node
 {
