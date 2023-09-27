@@ -741,7 +741,7 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
         s = sfile->Read(kBufferSize, &res, buf);
         if (!s.ok()) {
             MD5_Final(out, &c);
-            LOG_ERROR("md5sum error: read file {} failed, err = ", file_path, s.ToString());
+            LOG_ERROR("md5sum error: read file {} failed, err={}", file_path, s.ToString());
             return ERR_FILE_OPERATION_FAILED;
         }
         if (res.empty()) {
@@ -978,7 +978,7 @@ bool check_dir_rw(const std::string &path, std::string &err_msg)
     }
 
     if (dsn_unlikely(read_data != kTestValue)) {
-        err_msg = fmt::format("get wrong value '{}' from file", read_data, fpath);
+        err_msg = fmt::format("get wrong value '{}' from file {}", read_data, fpath);
         return false;
     }
 
