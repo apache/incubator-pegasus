@@ -48,7 +48,6 @@
 #include <sys/stat.h>
 // IWYU pragma: no_include <bits/struct_stat.h>
 #include <unistd.h>
-#include <istream>
 #include <memory>
 
 #include "utils/defer.h"
@@ -830,36 +829,6 @@ std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
     return res;
 }
 
-error_code read_file(const std::string &fname, std::string &buf)
-{
-    if (!file_exists(fname)) {
-        LOG_ERROR("file({}) doesn't exist", fname);
-        return ERR_FILE_OPERATION_FAILED;
-    }
-
-    int64_t file_sz = 0;
-    if (!file_size(fname, file_sz)) {
-        LOG_ERROR("get file({}) size failed", fname);
-        return ERR_FILE_OPERATION_FAILED;
-    }
-
-    buf.resize(file_sz);
-    std::ifstream fin(fname, std::ifstream::in);
-    if (!fin.is_open()) {
-        LOG_ERROR("open file({}) failed", fname);
-        return ERR_FILE_OPERATION_FAILED;
-    }
-    fin.read(&buf[0], file_sz);
-    CHECK_EQ_MSG(file_sz,
-                 fin.gcount(),
-                 "read file({}) failed, file_size = {} but read size = {}",
-                 fname,
-                 file_sz,
-                 fin.gcount());
-    fin.close();
-    return ERR_OK;
-}
-
 bool verify_file(const std::string &fname,
                  FileDataType type,
                  const std::string &expected_md5,
@@ -930,20 +899,6 @@ bool create_directory(const std::string &path, std::string &absolute_path, std::
         err_msg = fmt::format("Fail to get absolute path from {}.", path);
         return false;
     }
-    return true;
-}
-
-bool write_file(const std::string &fname, std::string &buf)
-{
-    if (!file_exists(fname)) {
-        LOG_ERROR("file({}) doesn't exist", fname);
-        return false;
-    }
-
-    std::ofstream fstream;
-    fstream.open(fname.c_str());
-    fstream << buf;
-    fstream.close();
     return true;
 }
 
