@@ -62,23 +62,14 @@ namespace {
 
 inline dsn::error_code to_error_code(CURLcode code)
 {
-    if (code == CURLE_OK) {
+    switch (code) {
+    case CURLE_OK:
         return dsn::ERR_OK;
-    }
-
-    if (code == CURLE_COULDNT_CONNECT) {
-        return dsn::ERR_CURL_CONNECT_FAILED;
-    }
-
-    if (code == CURLE_OPERATION_TIMEDOUT) {
+    case CURLE_OPERATION_TIMEDOUT:
         return dsn::ERR_TIMEOUT;
+    default:
+        return dsn::ERR_CURL_FAILED;
     }
-
-    if (code == CURLE_WRITE_ERROR) {
-        return dsn::ERR_CURL_WRITE_ERROR;
-    }
-
-    return dsn::ERR_CURL_FAILED;
 }
 
 } // anonymous namespace
@@ -300,10 +291,7 @@ dsn::error_s http_client::exec_method(const http_client::recv_callback &callback
     // `callback`.
     _recv_callback = &callback;
 
-    const auto &err = process_header();
-    if (!err) {
-        return err;
-    }
+    RETURN_NOT_OK(process_header());
 
     RETURN_IF_EXEC_METHOD_NOT_OK();
     return dsn::error_s::ok();

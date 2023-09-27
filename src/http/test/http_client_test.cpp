@@ -30,6 +30,7 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+#include "utils/test_macros.h"
 
 namespace dsn {
 
@@ -53,20 +54,23 @@ TEST(HttpClientTest, Connect)
     ASSERT_TRUE(client.set_url("http://127.0.0.1:20000/test/get"));
 
     const auto &err = client.exec_method();
-    ASSERT_EQ(dsn::ERR_CURL_CONNECT_FAILED, err.code());
+    ASSERT_EQ(dsn::ERR_CURL_FAILED, err.code());
 
     std::cout << "failed to connect: ";
 
+    // "code=7" means CURLE_COULDNT_CONNECT, see https://curl.se/libcurl/c/libcurl-errors.html
+    // for details.
+    //
     // We just check the prefix of description, including `method`, `url`, `code` and `desc`.
     // The `msg` differ in various systems, such as:
     // * msg="Failed to connect to 127.0.0.1 port 20000: Connection refused"
     // * msg="Failed to connect to 127.0.0.1 port 20000 after 0 ms: Connection refused"
     // Thus we don't check if `msg` fields are consistent.
     const std::string expected_description_prefix(
-        "ERR_CURL_CONNECT_FAILED: failed to perform http request("
+        "ERR_CURL_FAILED: failed to perform http request("
         "method=GET, url=http://127.0.0.1:20000/test/get): code=7, "
         "desc=\"Couldn't connect to server\"");
-    check_expected_description_prefix(expected_description_prefix, err);
+    NO_FATALS(check_expected_description_prefix(expected_description_prefix, err));
 }
 
 TEST(HttpClientTest, Callback)
@@ -80,7 +84,7 @@ TEST(HttpClientTest, Callback)
     auto callback = [](const void *, size_t) { return false; };
 
     const auto &err = client.exec_method(callback);
-    ASSERT_EQ(dsn::ERR_CURL_WRITE_ERROR, err.code());
+    ASSERT_EQ(dsn::ERR_CURL_FAILED, err.code());
 
     long actual_http_status;
     ASSERT_TRUE(client.get_http_status(actual_http_status));
@@ -88,16 +92,19 @@ TEST(HttpClientTest, Callback)
 
     std::cout << "failed for callback: ";
 
+    // "code=23" means CURLE_WRITE_ERROR, see https://curl.se/libcurl/c/libcurl-errors.html
+    // for details.
+    //
     // We just check the prefix of description, including `method`, `url`, `code` and `desc`.
     // The `msg` differ in various systems, such as:
     // * msg="Failed writing body (18446744073709551615 != 24)"
     // * msg="Failure writing output to destination"
     // Thus we don't check if `msg` fields are consistent.
     const auto expected_description_prefix =
-        fmt::format("ERR_CURL_WRITE_ERROR: failed to perform http request("
+        fmt::format("ERR_CURL_FAILED: failed to perform http request("
                     "method=GET, url=http://127.0.0.1:20001/test/get): code=23, "
                     "desc=\"Failed writing received data to disk/application\"");
-    check_expected_description_prefix(expected_description_prefix, err);
+    NO_FATALS(check_expected_description_prefix(expected_description_prefix, err));
 }
 
 using http_client_method_case =
