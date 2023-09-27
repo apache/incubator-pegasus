@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
 #include <cstdint>
-#include <fstream>
 #include <map>
 #include <memory>
 #include <string>
@@ -29,14 +29,16 @@
 #include "block_service/local/local_service.h"
 #include "block_service_mock.h"
 #include "metadata_types.h"
+#include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/test_macros.h"
 
 namespace dsn {
 namespace dist {
 namespace block_service {
 
-class block_service_manager_test : public ::testing::Test
+class block_service_manager_test : public pegasus::encrypt_data_test_base
 {
 public:
     block_service_manager_test()
@@ -52,20 +54,6 @@ public:
     {
         return _block_service_manager.download_file(
             PROVIDER, LOCAL_DIR, FILE_NAME, _fs.get(), download_size);
-    }
-
-    void create_local_file(const std::string &file_name)
-    {
-        std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, file_name);
-        utils::filesystem::create_file(whole_name);
-        std::ofstream test_file;
-        test_file.open(whole_name);
-        test_file << "write some data.\n";
-        test_file.close();
-
-        _file_meta.name = whole_name;
-        utils::filesystem::md5sum(whole_name, _file_meta.md5);
-        utils::filesystem::file_size(whole_name, _file_meta.size);
     }
 
     void create_remote_file(const std::string &file_name, int64_t size, const std::string &md5)
@@ -84,8 +72,10 @@ public:
     std::string FILE_NAME = "test_file";
 };
 
-// download_file unit tests
-TEST_F(block_service_manager_test, do_download_remote_file_not_exist)
+// TODO(yingchun): ENCRYPTION: add enable encryption test.
+INSTANTIATE_TEST_CASE_P(, block_service_manager_test, ::testing::Values(false));
+
+TEST_P(block_service_manager_test, remote_file_not_exist)
 {
     utils::filesystem::remove_path(LOCAL_DIR);
     auto fs = std::make_unique<local_service>();
@@ -93,31 +83,35 @@ TEST_F(block_service_manager_test, do_download_remote_file_not_exist)
     uint64_t download_size = 0;
     error_code err = _block_service_manager.download_file(
         PROVIDER, LOCAL_DIR, FILE_NAME, fs.get(), download_size);
-    ASSERT_EQ(err, ERR_CORRUPTION); // file does not exist
+    ASSERT_EQ(ERR_CORRUPTION, err);
 }
 
-TEST_F(block_service_manager_test, do_download_same_name_file)
+TEST_P(block_service_manager_test, local_file_exist)
 {
-    // local file exists, but md5 not matched with remote file
-    create_local_file(FILE_NAME);
-    create_remote_file(FILE_NAME, 2333, "md5_not_match");
-    uint64_t download_size = 0;
-    ASSERT_EQ(test_download_file(download_size), ERR_PATH_ALREADY_EXIST);
-    ASSERT_EQ(download_size, 0);
+    NO_FATALS(pegasus::create_local_test_file(utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME),
+                                              &_file_meta));
+    struct remote_file_info
+    {
+        int64_t size;
+        std::string md5;
+    } tests[]{
+        {2333, "bad_md5"},           // wrong size and md5
+        {2333, _file_meta.md5},      // wrong size
+        {_file_meta.size, "bad_md5"} // wrong md5
+    };
+    for (const auto &test : tests) {
+        // The remote file will be overwritten when repeatedly created.
+        create_remote_file(FILE_NAME, test.size, test.md5);
+        uint64_t download_size = 0;
+        ASSERT_EQ(ERR_PATH_ALREADY_EXIST, test_download_file(download_size));
+        ASSERT_EQ(0, download_size);
+    }
 }
 
-TEST_F(block_service_manager_test, do_download_file_exist)
+TEST_P(block_service_manager_test, do_download_succeed)
 {
-    create_local_file(FILE_NAME);
-    create_remote_file(FILE_NAME, _file_meta.size, _file_meta.md5);
-    uint64_t download_size = 0;
-    ASSERT_EQ(test_download_file(download_size), ERR_PATH_ALREADY_EXIST);
-    ASSERT_EQ(download_size, 0);
-}
-
-TEST_F(block_service_manager_test, do_download_succeed)
-{
-    create_local_file(FILE_NAME);
+    NO_FATALS(pegasus::create_local_test_file(utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME),
+                                              &_file_meta));
     create_remote_file(FILE_NAME, _file_meta.size, _file_meta.md5);
     // remove local file to mock condition that file not existed
     std::string file_name = utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME);

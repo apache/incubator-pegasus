@@ -36,6 +36,7 @@ set(MY_PROJ_LIBS
     gtest
     gtest_main
     hdfs
+    test_utils
     rocksdb)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
