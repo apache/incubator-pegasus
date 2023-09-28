@@ -443,17 +443,21 @@ TEST_P(HDFSClientTest, test_rename_path_while_writing)
     std::string kLocalTestPath = "test_dir";
     const int kTotalFiles = 100;
 
-    task_tracker tracker;
-    int success_count = 0;
-    write_test_files_async(kLocalTestPath, kTotalFiles, &success_count, &tracker);
-    usleep(100);
+    // The test is flaky, retry if it failed in 300 seconds.
+    ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
+        [&] {
+            task_tracker tracker;
+            int success_count = 0;
+            write_test_files_async(kLocalTestPath, kTotalFiles, &success_count, &tracker);
+            usleep(100);
 
-    std::string kLocalRenamedTestPath = "rename_dir." + std::to_string(dsn_now_ms());
-    // Rename succeed but some files write failed.
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path(kLocalTestPath, kLocalRenamedTestPath));
-    tracker.cancel_outstanding_tasks();
-    // Generally, we can assume partial files are written failed.
-    // It maybe flaky, please retry if it failed.
-    ASSERT_GT(success_count, 0) << success_count;
-    ASSERT_LT(success_count, kTotalFiles) << success_count;
+            std::string kLocalRenamedTestPath = "rename_dir." + std::to_string(dsn_now_ms());
+            // Rename succeed but some files write failed.
+            ASSERT_TRUE(dsn::utils::filesystem::rename_path(kLocalTestPath, kLocalRenamedTestPath));
+            tracker.cancel_outstanding_tasks();
+            // Generally, we can assume partial files are written failed.
+            ASSERT_GT(success_count, 0) << success_count;
+            ASSERT_LT(success_count, kTotalFiles) << success_count;
+        },
+        300);
 }
