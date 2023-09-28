@@ -276,11 +276,7 @@ ExternalProject_Add(civetweb
 ExternalProject_Get_property(civetweb SOURCE_DIR)
 set(civetweb_SRC ${SOURCE_DIR})
 
-ExternalProject_Add(curl
-        URL ${OSS_URL_PREFIX}/curl-7.47.0.tar.gz
-        http://curl.haxx.se/download/curl-7.47.0.tar.gz
-        URL_MD5 5109d1232d208dfd712c0272b8360393
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+set(CURL_OPTIONS
         --disable-dict
         --disable-file
         --disable-ftp
@@ -301,6 +297,19 @@ ExternalProject_Add(curl
         --without-libssh2
         --without-ssl
         --without-libidn
+        )
+if (APPLE)
+    set(CURL_OPTIONS
+	    ${CURL_OPTIONS}
+	    --without-nghttp2
+	    )
+endif ()
+ExternalProject_Add(curl
+        URL ${OSS_URL_PREFIX}/curl-7.47.0.tar.gz
+        http://curl.haxx.se/download/curl-7.47.0.tar.gz
+        URL_MD5 5109d1232d208dfd712c0272b8360393
+        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+        ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
         )
 

@@ -2513,7 +2513,7 @@ void test_http_get_metrics(const std::string &request_string,
     ASSERT_TRUE(req_res.is_ok());
 
     const auto &req = req_res.get_value();
-    std::cout << "method: " << req.method << std::endl;
+    std::cout << "method: " << enum_to_string(req.method) << std::endl;
 
     http_response resp;
     test_get_metrics_handler(req, resp);

@@ -38,6 +38,7 @@
 #include <utility>
 #include <vector>
 
+#include "http/http_method.h"
 #include "http/http_server.h"
 #include "runtime/api_layer1.h"
 #include "utils/blob.h"
@@ -308,7 +309,7 @@ void pprof_http_service::symbol_handler(const http_request &req, http_response &
     // Load /proc/self/maps
     pthread_once(&s_load_symbolmap_once, load_symbols);
 
-    if (req.method != http_method::HTTP_METHOD_POST) {
+    if (req.method != http_method::POST) {
         char buf[64];
         snprintf(buf, sizeof(buf), "num_symbols: %lu\n", symbol_map.size());
         resp.body = buf;

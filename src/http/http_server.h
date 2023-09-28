@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "http_method.h"
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
 #include "utils/errors.h"
@@ -37,12 +38,6 @@ DSN_DECLARE_bool(enable_http_server);
 
 /// The rpc code for all the HTTP RPCs.
 DEFINE_TASK_CODE_RPC(RPC_HTTP_SERVICE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
-
-enum http_method
-{
-    HTTP_METHOD_GET = 1,
-    HTTP_METHOD_POST = 2,
-};
 
 class message_ex;
 
