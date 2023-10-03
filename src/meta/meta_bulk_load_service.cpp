@@ -47,6 +47,9 @@
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/fail_point.h"
+#include "common/common.h"
+
+#include "meta_bulk_load_service.h"
 #include "utils/fmt_logging.h"
 #include "utils/smart_pointers.h"
 #include "utils/string_conv.h"
@@ -89,6 +92,7 @@ void bulk_load_service::initialize_bulk_load_service()
         make_unique<mss::meta_storage>(_meta_svc->get_remote_storage(), &_sync_tracker);
     _ingestion_context = std::make_unique<ingestion_context>();
 
+    initialize_bulk_load_cu_writer();
     create_bulk_load_root_dir();
     _sync_tracker.wait_outstanding_tasks();
 
@@ -643,6 +647,8 @@ void bulk_load_service::handle_app_downloading(const bulk_load_response &respons
 
     // update download progress
     int32_t total_progress = response.total_download_progress;
+    int32_t partition_total_file_size = response.total_downloaded_file_size;
+
     LOG_INFO("receive bulk load response from node({}) app({}) partition({}), primary_status({}), "
              "total_download_progress = {}",
              primary_addr.to_string(),
@@ -654,6 +660,7 @@ void bulk_load_service::handle_app_downloading(const bulk_load_response &respons
         zauto_write_lock l(_lock);
         _partitions_total_download_progress[pid] = total_progress;
         _partitions_bulk_load_state[pid] = response.group_bulk_load_state;
+        _partitions_total_downloaded_file_size[pid] = partition_total_file_size;
     }
 
     // update partition status to `downloaded` if all replica downloaded
@@ -1076,6 +1083,37 @@ void bulk_load_service::update_partition_info_on_remote_storage_reply(
     }
 }
 
+inline uint_32 sum_map_number( std::unordered_map<gpid, uint_32> &mymap)
+{
+    uint_32 result = 0;
+    for (auto iter = mymap.begin(); iter != mymap.end();iter++) {
+        result += iter->seconed;
+    }
+    return result;
+}
+
+void bulk_load_cu_flush(int32_t app_id){
+
+    for(auto iter : _partitions_total_downloaded_file_size){
+        current_pid = iter->first;
+        //values like {"appId@partitionID:[bulkloadCU]"}
+        std::string bulk_load_cu_values = std::to_string(app_id)+"@"+current_pid+":["+std::to_string( iter->second) +"]";
+
+        std::stringstream out;
+        rapidjson::OStreamWrapper wrapper(out);
+        dsn::json::JsonWriter writer(wrapper);
+        dsn::json::json_encode(writer, bulk_load_cu_values);
+
+        int64_t timestamp = dsn_now_ms() / 1000;
+        std::stringstream ss;
+        char buf[20];
+        utils::time_ms_to_date_time(timestamp * 1000, buf, sizeof(buf));
+        std::string timestamp_str = buf;
+        _bulk_load_cu_writer->set_result(timestamp_str, "bulkload_cu@" + primary_addr.to_string(), out.str());
+    }
+
+}
+
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::update_app_status_on_remote_storage_unlocked(
     int32_t app_id, bulk_load_status::type new_status, error_code err, bool should_send_request)
@@ -1114,6 +1152,15 @@ void bulk_load_service::update_app_status_on_remote_storage_unlocked(
     }
 
     _apps_pending_sync_flag[app_id] = true;
+
+    //finish downloading just now
+    if (old_status != new_status && new_status == bulk_load_status::BLS_DOWNLOADED){
+        _app_total_download_file_size[app_id] = sum_map_number(_partitions_total_downloaded_file_size);
+    }
+    ddebug_f("app({}) downloaded size {}  during bulk_load",
+             ainfo.app_name,
+             dsn::enum_to_string(_app_total_download_file_size[app_id]);
+
 
     if (bulk_load_status::BLS_INGESTING == new_status) {
         ainfo.is_ever_ingesting = true;
@@ -1162,6 +1209,11 @@ void bulk_load_service::update_app_status_on_remote_storage_reply(const app_bulk
         for (auto i = 0; i < partition_count; ++i) {
             partition_ingestion(ainfo.app_name, gpid(app_id, i));
         }
+    }
+
+    //after all partition update to succeed,and remote status has been changed,flush bulk load cu to stat
+    if(new_status == bulk_load_status::BLS_SUCCEED){
+        bulk_load_cu_flush(app_id);
     }
 
     if (new_status == bulk_load_status::BLS_PAUSING ||
@@ -1437,6 +1489,8 @@ void bulk_load_service::reset_local_bulk_load_states_unlocked(int32_t app_id,
     _apps_pending_sync_flag.erase(app_id);
     erase_map_elem_by_id(app_id, _partitions_pending_sync_flag);
     erase_map_elem_by_id(app_id, _partitions_total_download_progress);
+    erase_map_elem_by_id(app_id, _partitions_total_downloaded_file_size);
+    erase_map_elem_by_id(app_id,_app_total_download_file_size);
     _apps_rolling_back.erase(app_id);
     _apps_rollback_count.erase(app_id);
     reset_app_ingestion(app_id);

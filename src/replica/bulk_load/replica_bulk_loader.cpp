@@ -888,12 +888,18 @@ void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_respo
         primary_state.__set_download_progress(_download_progress.load());
         primary_state.__set_download_status(_download_status.load());
     }
-    response.group_bulk_load_state[_replica->_primary_states.membership.primary] = primary_state;
-    LOG_INFO_PREFIX("primary = {}, download progress = {}%, status = {}",
-                    _replica->_primary_states.membership.primary.to_string(),
-                    primary_state.download_progress,
-                    primary_state.download_status);
 
+    primary_state.__set_downloaded_file_size(_cur_downloaded_size.load());
+
+
+    response.group_bulk_load_state[_replica->_primary_states.membership.primary] = primary_state;
+    LOG_INFO_PREFIX("primary = {}, download progress = {}%, status = {},replica download file size = {}",
+                   _replica->_primary_states.membership.primary.to_string(),
+                   primary_state.download_progress,
+                   primary_state.download_status,
+                   primary_state.downloaded_file_size);
+
+    int32_t total_download_file_size = primary_state.downloaded_file_size;
     int32_t total_progress = primary_state.download_progress;
     for (const auto &target_address : _replica->_primary_states.membership.secondaries) {
         const auto &secondary_state =
@@ -908,11 +914,18 @@ void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_respo
                         s_status);
         response.group_bulk_load_state[target_address] = secondary_state;
         total_progress += s_progress;
+
+        int32_t s_download_file_size=
+            secondary_state.__isset.downloaded_file_size ? secondary_state.downloaded_file_size : 0;
+        total_download_file_size += s_download_file_size;
     }
 
     total_progress /= _replica->_primary_states.membership.max_replica_count;
     LOG_INFO_PREFIX("total download progress = {}%", total_progress);
     response.__set_total_download_progress(total_progress);
+
+    response.__set_total_download_file_size(total_download_file_size);
+
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -1047,6 +1060,7 @@ void replica_bulk_loader::report_bulk_load_states_to_primary(
         zauto_read_lock l(_lock);
         bulk_load_state.__set_download_progress(_download_progress.load());
         bulk_load_state.__set_download_status(_download_status.load());
+        bulk_load_state.__set_downloaded_file_size(_cur_downloaded_size.load());
     } break;
     case bulk_load_status::BLS_INGESTING:
         bulk_load_state.__set_ingest_status(_replica->_app->get_ingestion_status());
