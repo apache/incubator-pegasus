@@ -23,7 +23,7 @@ set -e
 PID=$$
 
 if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_rate_megabytes_per_disk>(default 100)"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_rate_megabytes>(default 100)"
   echo
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3 100"
@@ -42,9 +42,9 @@ meta_list=$2
 replica_task_id_list=$3
 
 if [ -z $4 ]; then
-  nfs_rate_megabytes_per_disk=100
+  nfs_rate_megabytes=100
 else
-  nfs_rate_megabytes_per_disk=$4
+  nfs_rate_megabytes=$4
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -53,6 +53,9 @@ cd $shell_dir
 
 echo "Check the argument..."
 source ./scripts/pegasus_check_arguments.sh add_node_list $cluster $meta_list $replica_task_id_list
+
+echo "Check the cluster version..."
+source ./scripts/pegasus_command_version.sh $cluster $meta_list
 
 if [ $? -ne 0 ]; then
     echo "ERROR: the argument check failed"
@@ -78,7 +81,7 @@ do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
 
-./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list true $nfs_rate_megabytes_per_disk
+./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list true $nfs_rate_megabytes
 
 echo "Finish time: `date`"
 add_node_finish_time=$((`date +%s`))
