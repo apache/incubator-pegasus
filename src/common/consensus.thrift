@@ -143,6 +143,7 @@ struct learn_request
     // be duplicated (ie. max_gced_decree < confirmed_decree), if not,
     // learnee will copy the missing logs.
     7:optional i64        max_gced_decree;
+    8:optional dsn.host_port     hp_learner;
 }
 
 struct learn_response
@@ -156,6 +157,7 @@ struct learn_response
     7:dsn.rpc_address       address; // learnee's address
     8:string                base_local_dir; // base dir of files on learnee
     9:optional string replica_disk_tag; // the disk tag of learnee located
+    10:optional dsn.host_port       hp_address; // learnee's address
 }
 
 struct learn_notify_response
@@ -180,6 +182,7 @@ struct group_check_request
     // Used to deliver child gpid and meta_split_status during partition split
     6:optional dsn.gpid     child_gpid;
     7:optional metadata.split_status meta_split_status;
+    8:optional dsn.host_port       hp_node;
 }
 
 struct group_check_response
@@ -195,5 +198,6 @@ struct group_check_response
     // if secondary pause or cancel split succeed, is_split_stopped = true
     8:optional bool       is_split_stopped;
     9:optional metadata.disk_status disk_status = metadata.disk_status.NORMAL;
+    10:optional dsn.host_port       hp_node;
 }
 

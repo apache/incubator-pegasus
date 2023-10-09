@@ -31,6 +31,7 @@
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/string_conv.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -68,8 +69,35 @@ host_port::host_port(std::string host, uint16_t port)
     CHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
 }
 
+bool host_port::from_string(const std::string s)
+{
+    std::string ip_port = s;
+    auto pos = ip_port.find_last_of(':');
+    if (pos == std::string::npos) {
+        return false;
+    }
+    std::string host = ip_port.substr(0, pos);
+    std::string port = ip_port.substr(pos + 1);
+
+    // check port
+    unsigned int port_num;
+    if (!internal::buf2unsigned(port, port_num) || port_num > UINT16_MAX) {
+        return false;
+    }
+
+    if (rpc_address::ipv4_from_host(host.c_str()) == 0) {
+        return false;
+    }
+
+    _type = HOST_TYPE_IPV4;
+    _host = host;
+    _port = port_num;
+    return true;
+}
+
 host_port::host_port(rpc_address addr)
 {
+    reset();
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
         CHECK(utils::hostname_from_ip(htonl(addr.ip()), &_host),
@@ -79,6 +107,7 @@ host_port::host_port(rpc_address addr)
     } break;
     case HOST_TYPE_GROUP: {
         _group_host_port = new rpc_group_host_port(addr.group_address());
+        _group_host_port->add_ref();
     } break;
     default:
         break;
@@ -133,7 +162,7 @@ std::string host_port::to_string() const
     case HOST_TYPE_GROUP:
         return fmt::format("address group {}", group_host_port()->name());
     default:
-        return "invalid address";
+        return "invalid host_port";
     }
 }
 
@@ -196,6 +225,15 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
 
     addresses = std::move(result_addresses);
     return error_s::ok();
+}
+
+void host_port::fill_host_ports_from_addresses(const std::vector<rpc_address> &addr_v,
+                                               std::vector<host_port> &hp_v)
+{
+    CHECK(hp_v.empty(), "optional host_port should be empty!");
+    for (const auto &addr : addr_v) {
+        hp_v.emplace_back(host_port(addr));
+    }
 }
 
 } // namespace dsn

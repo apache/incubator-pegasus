@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "runtime/rpc/group_address.h"
-#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
@@ -131,7 +130,10 @@ inline rpc_group_host_port::rpc_group_host_port(const rpc_group_address *g_addr)
         CHECK_TRUE(add(host_port(addr)));
     }
     _update_leader_automatically = g_addr->is_update_leader_automatically();
-    set_leader(host_port(g_addr->leader()));
+    auto leader_addr = g_addr->leader();
+    if (rpc_address::s_invalid_address != leader_addr) {
+        set_leader(host_port(leader_addr));
+    }
 }
 
 inline rpc_group_host_port &rpc_group_host_port::operator=(const rpc_group_host_port &other)
