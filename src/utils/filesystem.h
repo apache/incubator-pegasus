@@ -146,9 +146,6 @@ error_code deprecated_md5sum(const std::string &file_path, /*out*/ std::string &
 //          B is represent wheter the directory is empty, true means empty, otherwise false
 std::pair<error_code, bool> is_directory_empty(const std::string &dirname);
 
-// TODO(yingchun): remove it!
-error_code read_file(const std::string &fname, /*out*/ std::string &buf);
-
 // compare file metadata calculated by fname with expected md5 and file_size
 bool verify_file(const std::string &fname,
                  FileDataType type,
@@ -161,9 +158,6 @@ bool verify_file_size(const std::string &fname, FileDataType type, const int64_t
 bool create_directory(const std::string &path,
                       /*out*/ std::string &absolute_path,
                       /*out*/ std::string &err_msg);
-
-// TODO(yingchun): remove it!
-bool write_file(const std::string &fname, std::string &buf);
 
 // check if directory is readable and writable
 // call `create_directory` before to make `path` exist

@@ -16,6 +16,8 @@
 // under the License.
 
 #include <fmt/core.h>
+#include <rocksdb/env.h>
+#include <rocksdb/status.h>
 #include <functional>
 #include <memory>
 #include <unordered_map>
@@ -48,6 +50,7 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/string_view.h"
 #include "utils/thread_access_checker.h"
 
@@ -562,10 +565,10 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
 error_code replica_bulk_loader::parse_bulk_load_metadata(const std::string &fname)
 {
     std::string buf;
-    error_code ec = utils::filesystem::read_file(fname, buf);
-    if (ec != ERR_OK) {
-        LOG_ERROR_PREFIX("read file {} failed, error = {}", fname, ec);
-        return ec;
+    auto s = rocksdb::ReadFileToString(rocksdb::Env::Default(), fname, &buf);
+    if (dsn_unlikely(!s.ok())) {
+        LOG_ERROR_PREFIX("read file {} failed, error = {}", fname, s.ToString());
+        return ERR_FILE_OPERATION_FAILED;
     }
 
     blob bb = blob::create_from_bytes(std::move(buf));
