@@ -21,6 +21,7 @@
 #include <fmt/core.h>
 #include <gmock/gmock-actions.h>
 #include <gmock/gmock-spec-builders.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -124,10 +125,10 @@ public:
             }
         }
 
-        start(all_test_envs);
+        ASSERT_EQ(dsn::ERR_OK, start(all_test_envs));
         if (is_restart) {
-            _server->stop(false);
-            start();
+            ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
+            ASSERT_EQ(dsn::ERR_OK, start());
         }
 
         std::map<std::string, std::string> query_envs;
@@ -145,20 +146,20 @@ public:
 
 TEST_F(pegasus_server_impl_test, test_table_level_slow_query)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     test_table_level_slow_query();
 }
 
 TEST_F(pegasus_server_impl_test, default_data_version)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(_server->_pegasus_data_version, 1);
 }
 
 TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
 {
     // open a new db with no app env.
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL, _server->_usage_scenario);
     // set bulk_load scenario for the db.
     ASSERT_TRUE(_server->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD));
@@ -167,8 +168,8 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
     ASSERT_EQ(1000000000, opts.level0_file_num_compaction_trigger);
     ASSERT_EQ(true, opts.disable_auto_compactions);
     // reopen the db.
-    _server->stop(false);
-    start();
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
     ASSERT_EQ(opts.level0_file_num_compaction_trigger,
               _server->_db->GetOptions().level0_file_num_compaction_trigger);
@@ -179,7 +180,7 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
 {
     std::map<std::string, std::string> envs;
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
-    start(envs);
+    ASSERT_EQ(dsn::ERR_OK, start(envs));
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
 }
 
@@ -197,16 +198,16 @@ TEST_F(pegasus_server_impl_test, test_restart_db_with_rocksdb_envs)
 
 TEST_F(pegasus_server_impl_test, test_stop_db_twice)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_TRUE(_server->_is_open);
     ASSERT_TRUE(_server->_db != nullptr);
 
-    _server->stop(false);
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
     ASSERT_FALSE(_server->_is_open);
     ASSERT_TRUE(_server->_db == nullptr);
 
     // stop again
-    _server->stop(false);
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
     ASSERT_FALSE(_server->_is_open);
     ASSERT_TRUE(_server->_db == nullptr);
 }
