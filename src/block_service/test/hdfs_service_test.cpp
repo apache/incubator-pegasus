@@ -69,11 +69,21 @@ DEFINE_TASK_CODE(LPC_TEST_HDFS, TASK_PRIORITY_HIGH, dsn::THREAD_POOL_DEFAULT)
 class HDFSClientTest : public pegasus::encrypt_data_test_base
 {
 protected:
+    HDFSClientTest() : pegasus::encrypt_data_test_base()
+    {
+        for (int i = 0; i < FLAGS_num_test_file_lines; ++i) {
+            _local_test_data += "test";
+        }
+    }
+
     void generate_test_file(const std::string &filename);
     void write_test_files_async(const std::string &local_test_path,
                                 int total_files,
                                 int *success_count,
                                 task_tracker *tracker);
+
+private:
+    std::string _local_test_data;
 };
 
 void HDFSClientTest::generate_test_file(const std::string &filename)
@@ -97,29 +107,24 @@ void HDFSClientTest::write_test_files_async(const std::string &local_test_path,
                                             task_tracker *tracker)
 {
     dsn::utils::filesystem::create_directory(local_test_path);
-    std::string local_test_data;
-    for (int i = 0; i < FLAGS_num_test_file_lines; ++i) {
-        local_test_data += "test";
-    }
     for (int i = 0; i < total_files; ++i) {
-        tasking::enqueue(
-            LPC_TEST_HDFS, tracker, [&local_test_path, &local_test_data, i, success_count]() {
-                // mock the writing process in hdfs_file_object::download().
-                std::string test_file_name = local_test_path + "/test_file_" + std::to_string(i);
-                auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
-                                                    rocksdb::Slice(local_test_data),
-                                                    test_file_name,
-                                                    /* should_sync */ true);
-                if (s.ok()) {
-                    ++(*success_count);
-                } else {
-                    CHECK(s.IsIOError(), "{}", s.ToString());
-                    auto pos1 = s.ToString().find(
-                        "IO error: No such file or directory: While open a file for appending: ");
-                    auto pos2 = s.ToString().find("IO error: While appending to file: ");
-                    CHECK(pos1 == 0 || pos2 == 0, "{}", s.ToString());
-                }
-            });
+        tasking::enqueue(LPC_TEST_HDFS, tracker, [this, &local_test_path, i, success_count]() {
+            // mock the writing process in hdfs_file_object::download().
+            std::string test_file_name = local_test_path + "/test_file_" + std::to_string(i);
+            auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
+                                                rocksdb::Slice(_local_test_data),
+                                                test_file_name,
+                                                /* should_sync */ true);
+            if (s.ok()) {
+                ++(*success_count);
+            } else {
+                CHECK(s.IsIOError(), "{}", s.ToString());
+                auto pos1 = s.ToString().find(
+                    "IO error: No such file or directory: While open a file for appending: ");
+                auto pos2 = s.ToString().find("IO error: While appending to file: ");
+                CHECK(pos1 == 0 || pos2 == 0, "{}", s.ToString());
+            }
+        });
     }
 }
 
