@@ -308,9 +308,9 @@ if (APPLE)
             )
 endif ()
 ExternalProject_Add(curl
-        URL ${OSS_URL_PREFIX}/curl-8.3.0.tar.gz
-        http://curl.haxx.se/download/curl-8.3.0.tar.gz
-        URL_MD5 7e614827c4165bf30f9770577259561e
+        URL ${OSS_URL_PREFIX}/curl-8.4.0.tar.gz
+        http://curl.haxx.se/download/curl-8.4.0.tar.gz
+        URL_MD5 533e8a3b1228d5945a6a512537bea4c7
         CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
         ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
