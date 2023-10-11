@@ -94,8 +94,7 @@ static inline int get_stat_internal(const std::string &npath, struct stat_ &st)
     return err;
 }
 
-// TODO(yingchun): remove the return value because it's always 0.
-int get_normalized_path(const std::string &path, std::string &npath)
+void get_normalized_path(const std::string &path, std::string &npath)
 {
     char sep;
     size_t i;
@@ -105,7 +104,7 @@ int get_normalized_path(const std::string &path, std::string &npath)
 
     if (path.empty()) {
         npath = "";
-        return 0;
+        return;
     }
 
     len = path.length();
@@ -131,8 +130,6 @@ int get_normalized_path(const std::string &path, std::string &npath)
 
     CHECK_NE_MSG(tls_path_buffer[0], _FS_NULL, "Normalized path cannot be empty!");
     npath = tls_path_buffer;
-
-    return 0;
 }
 
 static __thread struct
@@ -210,44 +207,31 @@ bool path_exists(const std::string &path)
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    get_normalized_path(path, npath);
 
     return dsn::utils::filesystem::path_exists_internal(npath, FTW_NS);
 }
 
 bool directory_exists(const std::string &path)
 {
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
     return dsn::utils::filesystem::path_exists_internal(npath, FTW_D);
 }
 
 bool file_exists(const std::string &path)
 {
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
     return dsn::utils::filesystem::path_exists_internal(npath, FTW_F);
 }
@@ -257,23 +241,18 @@ static bool get_subpaths(const std::string &path,
                          bool recursive,
                          int typeflags)
 {
-    std::string npath;
-    bool ret;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
     if (!dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
         return false;
     }
 
+    bool ret;
     switch (typeflags) {
     case FTW_F:
         ret = dsn::utils::filesystem::file_tree_walk(
@@ -351,17 +330,12 @@ static bool remove_directory(const std::string &npath)
 
 bool remove_path(const std::string &path)
 {
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
     if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
         bool ret = (::remove(npath.c_str()) == 0);
@@ -391,20 +365,15 @@ bool rename_path(const std::string &path1, const std::string &path2)
 
 bool deprecated_file_size(const std::string &path, int64_t &sz)
 {
-    struct stat_ st;
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
-    err = dsn::utils::filesystem::get_stat_internal(npath, st);
+    struct stat_ st;
+    int err = dsn::utils::filesystem::get_stat_internal(npath, st);
     if (err != 0) {
         return false;
     }
@@ -458,18 +427,14 @@ bool create_directory(const std::string &path)
     std::string npath;
     std::string cpath;
     size_t len;
-    int err;
 
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    get_normalized_path(path, npath);
 
-    err = dsn::utils::filesystem::create_directory_component(npath);
+    int err = dsn::utils::filesystem::create_directory_component(npath);
     if (err == 0) {
         return true;
     } else if (err != ENOENT) {
@@ -514,10 +479,7 @@ out_error:
 bool create_file(const std::string &path)
 {
     std::string npath;
-    int err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    get_normalized_path(path, npath);
 
     auto pos = npath.find_last_of("\\/");
     if ((pos != std::string::npos) && (pos > 0)) {
@@ -599,23 +561,20 @@ std::string get_file_name(const std::string &path)
 
 std::string path_combine(const std::string &path1, const std::string &path2)
 {
-    int err;
-    std::string path3;
     std::string npath;
-
     if (path1.empty()) {
-        err = dsn::utils::filesystem::get_normalized_path(path2, npath);
+        get_normalized_path(path2, npath);
     } else if (path2.empty()) {
-        err = dsn::utils::filesystem::get_normalized_path(path1, npath);
+        get_normalized_path(path1, npath);
     } else {
-        path3 = path1;
+        std::string path3 = path1;
         path3.append(1, _FS_SLASH);
         path3.append(path2);
 
-        err = dsn::utils::filesystem::get_normalized_path(path3, npath);
+        get_normalized_path(path3, npath);
     }
 
-    return ((err == 0) ? npath : "");
+    return npath;
 }
 
 bool get_current_directory(std::string &path)
@@ -632,20 +591,15 @@ bool get_current_directory(std::string &path)
 
 bool last_write_time(const std::string &path, time_t &tm)
 {
-    struct stat_ st;
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
-    err = dsn::utils::filesystem::get_stat_internal(npath, st);
+    struct stat_ st;
+    int err = dsn::utils::filesystem::get_stat_internal(npath, st);
     if (err != 0) {
         return false;
     }

@@ -67,7 +67,7 @@ namespace filesystem {
 
 // TODO(yingchun): Consider using rocksdb APIs to rewrite the following functions.
 
-int get_normalized_path(const std::string &path, std::string &npath);
+void get_normalized_path(const std::string &path, std::string &npath);
 
 bool get_absolute_path(const std::string &path1, std::string &path2);
 
