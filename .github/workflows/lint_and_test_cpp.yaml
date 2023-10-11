@@ -247,6 +247,7 @@ jobs:
       - name: Tar files
         run: |
           tar -zxvf release__builder.tar
+          rm -f release__builder.tar
       - name: Unit Testing
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
@@ -386,6 +387,7 @@ jobs:
       - name: Tar files
         run: |
           tar -zxvf release_address_builder.tar
+          rm -f release_address_builder.tar
       - name: Unit Testing
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
@@ -527,6 +529,7 @@ jobs:
 #      - name: Tar files
 #        run: |
 #          tar -zxvf release_undefined_builder.tar
+#          rm -f release_undefined_builder.tar
 #      - name: Unit Testing
 #        run: |
 #          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
@@ -639,6 +642,7 @@ jobs:
       - name: Tar files
         run: |
           tar -zxvf release_jemalloc_builder.tar
+          rm -f release_jemalloc_builder.tar
       - name: Unit Testing
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server

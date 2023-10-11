@@ -59,7 +59,7 @@ void create_local_test_file(const std::string &full_name, dsn::replication::file
 
 #define ASSERT_IN_TIME_WITH_FIXED_INTERVAL(expr, sec)                                              \
     do {                                                                                           \
-        AssertEventually(expr, sec, WaitBackoff::NONE);                                            \
+        AssertEventually(expr, sec, ::pegasus::WaitBackoff::NONE);                                 \
         NO_PENDING_FATALS();                                                                       \
     } while (0)
 
