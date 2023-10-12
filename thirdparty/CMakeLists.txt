@@ -297,17 +297,20 @@ set(CURL_OPTIONS
         --without-libssh2
         --without-ssl
         --without-libidn
+        --without-zstd
         )
 if (APPLE)
     set(CURL_OPTIONS
-	    ${CURL_OPTIONS}
-	    --without-nghttp2
-	    )
+            ${CURL_OPTIONS}
+            --without-nghttp2
+            --without-libidn2
+            --without-brotli
+            )
 endif ()
 ExternalProject_Add(curl
-        URL ${OSS_URL_PREFIX}/curl-7.47.0.tar.gz
-        http://curl.haxx.se/download/curl-7.47.0.tar.gz
-        URL_MD5 5109d1232d208dfd712c0272b8360393
+        URL ${OSS_URL_PREFIX}/curl-8.4.0.tar.gz
+        http://curl.haxx.se/download/curl-8.4.0.tar.gz
+        URL_MD5 533e8a3b1228d5945a6a512537bea4c7
         CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
         ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
