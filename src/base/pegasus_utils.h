@@ -103,7 +103,7 @@ std::string c_escape_string(const T &src, bool always_escape = false)
 template <class T>
 std::string c_escape_sensitive_string(const T &src, bool always_escape = false)
 {
-    if(FLAGS_encrypt_data_at_rest){
+    if (FLAGS_encrypt_data_at_rest) {
         return "<redacted>";
     }
     return c_escape_string(src, always_escape);
