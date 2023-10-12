@@ -18,7 +18,6 @@
 #include "test_util.h"
 
 #include <gtest/gtest-spi.h>
-#include <stdint.h>
 #include <chrono>
 #include <ostream>
 #include <thread>
