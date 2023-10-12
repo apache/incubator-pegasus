@@ -25,7 +25,6 @@
 */
 #include "simple_kv.server.impl.h"
 
-#include <fcntl.h>
 #include <fmt/core.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -49,7 +48,6 @@
 #include "utils/blob.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 #include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
@@ -254,7 +252,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     }
 
     std::string fname = fmt::format("{}/checkpoint.{}", data_dir(), last_commit);
-    auto wfile = file::open(fname.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+    auto wfile = file::open(fname, file::FileOpenType::kWriteOnly);
     CHECK_NOTNULL(wfile, "");
 
 #define WRITE_DATA_SIZE(data, size)                                                                \

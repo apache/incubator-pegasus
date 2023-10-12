@@ -26,7 +26,6 @@
 
 #include "log_file.h"
 
-#include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,7 +98,7 @@ log_file::~log_file() { close(); }
         return nullptr;
     }
 
-    disk_file *hfile = file::open(path, O_RDONLY | O_BINARY, 0);
+    disk_file *hfile = file::open(path, file::FileOpenType::kReadOnly);
     if (!hfile) {
         err = ERR_FILE_OPERATION_FAILED;
         LOG_WARNING("open log file {} failed", path);
@@ -155,7 +154,7 @@ log_file::~log_file() { close(); }
         return nullptr;
     }
 
-    disk_file *hfile = file::open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
+    disk_file *hfile = file::open(path, file::FileOpenType::kWriteOnly);
     if (!hfile) {
         LOG_WARNING("create log {} failed", path);
         return nullptr;
@@ -268,6 +267,7 @@ aio_task_ptr log_file::commit_log_block(log_block &block,
     log_appender pending(offset, block);
     return commit_log_blocks(pending, evt, tracker, std::move(callback), hash);
 }
+
 aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
                                          dsn::task_code evt,
                                          dsn::task_tracker *tracker,
@@ -333,7 +333,7 @@ aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
                                  hash);
     }
 
-    if (utils::FLAGS_enable_latency_tracer) {
+    if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
         tsk->_tracer->set_parent_point_name("commit_pending_mutations");
         tsk->_tracer->set_description("log");
         for (const auto &mutation : pending.mutations()) {

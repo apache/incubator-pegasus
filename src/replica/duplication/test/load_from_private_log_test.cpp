@@ -16,8 +16,8 @@
 // under the License.
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
-#include <fcntl.h>
 #include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
@@ -54,7 +54,6 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem/operations.hpp>
@@ -459,7 +458,7 @@ TEST_F(load_fail_mode_test, fail_skip_real_corrupted_file)
         int64_t file_size;
         ASSERT_TRUE(utils::filesystem::file_size(
             log_path, dsn::utils::FileDataType::kSensitive, file_size));
-        auto wfile = file::open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+        auto wfile = file::open(log_path, file::FileOpenType::kWriteOnly);
         ASSERT_NE(wfile, nullptr);
 
         const char buf[] = "xxxxxx";

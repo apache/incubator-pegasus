@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <fcntl.h>
+#include <fmt/core.h>
 // IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
@@ -48,10 +48,24 @@
 #include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 #include "utils/test_macros.h"
 #include "utils/threadpool_code.h"
+
+DSN_DEFINE_uint32(aio_test,
+                  op_buffer_size,
+                  12,
+                  "The buffer size of each aio read or write operation for the aio_test.basic");
+DSN_DEFINE_uint32(aio_test,
+                  total_op_count,
+                  100,
+                  "The total count of read or write operations for the aio_test.basic");
+DSN_DEFINE_uint32(
+    aio_test,
+    op_count_per_batch,
+    10,
+    "The operation count of per read or write batch operation for the aio_test.basic");
 
 using namespace ::dsn;
 
@@ -62,6 +76,7 @@ class aio_test : public pegasus::encrypt_data_test_base
 {
 public:
     void SetUp() override { utils::filesystem::remove_path(kTestFileName); }
+    void TearDown() override { utils::filesystem::remove_path(kTestFileName); }
 
     const std::string kTestFileName = "aio_test.txt";
 };
@@ -71,10 +86,10 @@ INSTANTIATE_TEST_CASE_P(, aio_test, ::testing::Values(false));
 
 TEST_P(aio_test, basic)
 {
-    const char *kUnitBuffer = "hello, world";
-    const size_t kUnitBufferLength = strlen(kUnitBuffer);
-    const int kTotalBufferCount = 100;
-    const int kBufferCountPerBatch = 10;
+    const size_t kUnitBufferLength = FLAGS_op_buffer_size;
+    const std::string kUnitBuffer(kUnitBufferLength, 'x');
+    const int kTotalBufferCount = FLAGS_total_op_count;
+    const int kBufferCountPerBatch = FLAGS_op_count_per_batch;
     const int64_t kFileSize = kUnitBufferLength * kTotalBufferCount;
     ASSERT_EQ(0, kTotalBufferCount % kBufferCountPerBatch);
 
@@ -86,15 +101,16 @@ TEST_P(aio_test, basic)
     auto verify_data = [=]() {
         int64_t file_size;
         ASSERT_TRUE(utils::filesystem::file_size(
-            kTestFileName.c_str(), dsn::utils::FileDataType::kSensitive, file_size));
+            kTestFileName, dsn::utils::FileDataType::kSensitive, file_size));
         ASSERT_EQ(kFileSize, file_size);
 
         // Create a read file handler.
-        auto rfile = file::open(kTestFileName.c_str(), O_RDONLY | O_BINARY, 0);
+        auto rfile = file::open(kTestFileName, file::FileOpenType::kReadOnly);
         ASSERT_NE(rfile, nullptr);
 
         // 1. Check sequential read.
         {
+            pegasus::stop_watch sw;
             uint64_t offset = 0;
             std::list<aio_task_ptr> tasks;
             for (int i = 0; i < kTotalBufferCount; i++) {
@@ -111,12 +127,14 @@ TEST_P(aio_test, basic)
 
                 t->wait();
                 ASSERT_EQ(kUnitBufferLength, t->get_transferred_size());
-                ASSERT_STREQ(kUnitBuffer, read_buffer);
+                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffer);
             }
+            sw.stop_and_output(fmt::format("sequential read"));
         }
 
         // 2. Check concurrent read.
         {
+            pegasus::stop_watch sw;
             uint64_t offset = 0;
             std::list<aio_task_ptr> tasks;
             char read_buffers[kTotalBufferCount][kUnitBufferLength + 1];
@@ -137,22 +155,24 @@ TEST_P(aio_test, basic)
                 ASSERT_EQ(kUnitBufferLength, t->get_transferred_size());
             }
             for (int i = 0; i < kTotalBufferCount; i++) {
-                ASSERT_STREQ(kUnitBuffer, read_buffers[i]);
+                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffers[i]);
             }
+            sw.stop_and_output(fmt::format("concurrent read"));
         }
         ASSERT_EQ(ERR_OK, file::close(rfile));
     };
 
     // 1. Sequential write.
     {
-        auto wfile = file::open(kTestFileName.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+        pegasus::stop_watch sw;
+        auto wfile = file::open(kTestFileName, file::FileOpenType::kWriteOnly);
         ASSERT_NE(wfile, nullptr);
 
         uint64_t offset = 0;
         std::list<aio_task_ptr> tasks;
         for (int i = 0; i < kTotalBufferCount; i++) {
             auto t = ::dsn::file::write(wfile,
-                                        kUnitBuffer,
+                                        kUnitBuffer.c_str(),
                                         kUnitBufferLength,
                                         offset,
                                         LPC_AIO_TEST,
@@ -167,12 +187,14 @@ TEST_P(aio_test, basic)
         }
         ASSERT_EQ(ERR_OK, file::flush(wfile));
         ASSERT_EQ(ERR_OK, file::close(wfile));
+        sw.stop_and_output(fmt::format("sequential write"));
     }
     NO_FATALS(verify_data());
 
     // 2. Un-sequential write.
     {
-        auto wfile = file::open(kTestFileName.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+        pegasus::stop_watch sw;
+        auto wfile = file::open(kTestFileName, file::FileOpenType::kWriteOnly);
         ASSERT_NE(wfile, nullptr);
 
         std::vector<uint64_t> offsets;
@@ -188,7 +210,7 @@ TEST_P(aio_test, basic)
         std::list<aio_task_ptr> tasks;
         for (const auto &offset : offsets) {
             auto t = ::dsn::file::write(wfile,
-                                        kUnitBuffer,
+                                        kUnitBuffer.c_str(),
                                         kUnitBufferLength,
                                         offset,
                                         LPC_AIO_TEST,
@@ -202,19 +224,21 @@ TEST_P(aio_test, basic)
         }
         ASSERT_EQ(ERR_OK, file::flush(wfile));
         ASSERT_EQ(ERR_OK, file::close(wfile));
+        sw.stop_and_output(fmt::format("un-sequential write"));
     }
     NO_FATALS(verify_data());
 
     // 3. Overwrite.
     {
-        auto wfile = file::open(kTestFileName.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+        pegasus::stop_watch sw;
+        auto wfile = file::open(kTestFileName, file::FileOpenType::kWriteOnly);
         ASSERT_NE(wfile, nullptr);
 
         uint64_t offset = 0;
         std::list<aio_task_ptr> tasks;
         for (int i = 0; i < kTotalBufferCount; i++) {
             auto t = ::dsn::file::write(wfile,
-                                        kUnitBuffer,
+                                        kUnitBuffer.c_str(),
                                         kUnitBufferLength,
                                         offset,
                                         LPC_AIO_TEST,
@@ -229,19 +253,21 @@ TEST_P(aio_test, basic)
         }
         ASSERT_EQ(ERR_OK, file::flush(wfile));
         ASSERT_EQ(ERR_OK, file::close(wfile));
+        sw.stop_and_output(fmt::format("overwrite"));
     }
     NO_FATALS(verify_data());
 
     // 4. Vector write.
     {
-        auto wfile = file::open(kTestFileName.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+        pegasus::stop_watch sw;
+        auto wfile = file::open(kTestFileName, file::FileOpenType::kWriteOnly);
         ASSERT_NE(wfile, nullptr);
 
         uint64_t offset = 0;
         std::list<aio_task_ptr> tasks;
         std::unique_ptr<dsn_file_buffer_t[]> buffers(new dsn_file_buffer_t[kBufferCountPerBatch]);
         for (int i = 0; i < kBufferCountPerBatch; i++) {
-            buffers[i].buffer = static_cast<void *>(const_cast<char *>(kUnitBuffer));
+            buffers[i].buffer = static_cast<void *>(const_cast<char *>(kUnitBuffer.c_str()));
             buffers[i].size = kUnitBufferLength;
         }
         for (int i = 0; i < kTotalBufferCount / kBufferCountPerBatch; i++) {
@@ -264,16 +290,17 @@ TEST_P(aio_test, basic)
         }
         ASSERT_EQ(ERR_OK, file::flush(wfile));
         ASSERT_EQ(ERR_OK, file::close(wfile));
+        sw.stop_and_output(fmt::format("vector write"));
     }
     NO_FATALS(verify_data());
 }
 
 TEST_P(aio_test, aio_share)
 {
-    auto wfile = file::open(kTestFileName.c_str(), O_WRONLY | O_CREAT | O_BINARY, 0666);
+    auto wfile = file::open(kTestFileName, file::FileOpenType::kWriteOnly);
     ASSERT_NE(wfile, nullptr);
 
-    auto rfile = file::open(kTestFileName.c_str(), O_RDONLY | O_BINARY, 0);
+    auto rfile = file::open(kTestFileName, file::FileOpenType::kReadOnly);
     ASSERT_NE(rfile, nullptr);
 
     ASSERT_EQ(ERR_OK, file::close(wfile));
@@ -289,7 +316,7 @@ TEST_P(aio_test, operation_failed)
         *count = n;
     };
 
-    auto wfile = file::open(kTestFileName.c_str(), O_WRONLY | O_CREAT | O_BINARY, 0666);
+    auto wfile = file::open(kTestFileName, file::FileOpenType::kWriteOnly);
     ASSERT_NE(wfile, nullptr);
 
     char buff[512] = {0};
@@ -305,7 +332,7 @@ TEST_P(aio_test, operation_failed)
     t->wait();
     ASSERT_EQ(ERR_FILE_OPERATION_FAILED, *err);
 
-    auto rfile = file::open(kTestFileName.c_str(), O_RDONLY | O_BINARY, 0);
+    auto rfile = file::open(kTestFileName, file::FileOpenType::kReadOnly);
     ASSERT_NE(nullptr, rfile);
 
     t = ::dsn::file::read(rfile, buff, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
@@ -357,9 +384,9 @@ TEST_P(aio_test, dsn_file)
     ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(src_file, src_file_md5));
     ASSERT_FALSE(src_file_md5.empty());
 
-    auto fin = file::open(src_file.c_str(), O_RDONLY | O_BINARY, 0);
+    auto fin = file::open(src_file, file::FileOpenType::kReadOnly);
     ASSERT_NE(nullptr, fin);
-    auto fout = file::open(dst_file.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666);
+    auto fout = file::open(dst_file, file::FileOpenType::kWriteOnly);
     ASSERT_NE(nullptr, fout);
     char kUnitBuffer[1024];
     uint64_t offset = 0;

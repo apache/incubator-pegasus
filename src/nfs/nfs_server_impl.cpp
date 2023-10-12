@@ -26,7 +26,6 @@
 
 #include "nfs/nfs_server_impl.h"
 
-#include <fcntl.h>
 #include <chrono>
 #include <cstdint>
 #include <mutex>
@@ -41,7 +40,6 @@
 #include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
-#include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/utils.h"
 
@@ -93,7 +91,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
         zauto_lock l(_handles_map_lock);
         auto it = _handles_map.find(file_path); // find file handle cache first
         if (it == _handles_map.end()) {
-            dfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
+            dfile = file::open(file_path, file::FileOpenType::kReadOnly);
             if (dfile == nullptr) {
                 LOG_ERROR("[nfs_service] open file {} failed", file_path);
                 ::dsn::service::copy_response resp;
