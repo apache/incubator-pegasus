@@ -100,6 +100,15 @@ std::string c_escape_string(const T &src, bool always_escape = false)
     return s;
 }
 
+template <class T>
+std::string c_escape_sensitive_string(const T &src, bool always_escape = false)
+{
+    if(FLAGS_encrypt_data_at_rest){
+        return "<redacted>";
+    }
+    return c_escape_string(src, always_escape);
+}
+
 // ----------------------------------------------------------------------
 // c_unescape_string()
 //    Copies 'src' to 'dest', unescaping '0xFF'-style escape sequences to
