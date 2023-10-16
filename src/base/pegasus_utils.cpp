@@ -195,41 +195,5 @@ int c_unescape_string(const std::string &src, std::string &dest)
     return len;
 }
 
-template <>
-std::string redact_sensitive_string(const std::string &src)
-{
-    if (FLAGS_encrypt_data_at_rest) {
-        return "<redacted>";
-    } else {
-        return src;
-    }
-}
-
-template <>
-dsn::blob redact_sensitive_string(const dsn::blob &src)
-{
-    static dsn::blob rbb = dsn::blob::create_from_bytes(std::move("<redacted>"));
-    if (FLAGS_encrypt_data_at_rest) {
-        return rbb;
-    }
-
-    else {
-        return src;
-    }
-}
-
-template <>
-rocksdb::Slice redact_sensitive_string(const rocksdb::Slice &src)
-{
-    static rocksdb::Slice slice = rocksdb::Slice(std::move("<redacted>"));
-    if (FLAGS_encrypt_data_at_rest) {
-        return slice;
-    }
-
-    else {
-        return src;
-    }
-}
-
 } // namespace utils
 } // namespace pegasus

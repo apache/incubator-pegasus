@@ -118,8 +118,15 @@ std::string c_escape_sensitive_string(const T &src, bool always_escape = false)
 // ----------------------------------------------------------------------
 int c_unescape_string(const std::string &src, std::string &dest);
 
-template <typename T>
-T redact_sensitive_string(const T &src);
+template <class T>
+std::string redact_sensitive_string(const T &src)
+{
+    if (FLAGS_encrypt_data_at_rest) {
+        return "<redacted>";
+    } else {
+        return src;
+    }
+}
 
 inline dsn::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
 
