@@ -26,7 +26,6 @@
 
 #include "replica/mutation_log.h"
 
-#include <fcntl.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-param-test.h>
@@ -70,7 +69,7 @@ using namespace ::dsn::replication;
 
 static void overwrite_file(const char *file, int offset, const void *buf, int size)
 {
-    auto wfile = file::open(file, O_RDWR | O_CREAT | O_BINARY, 0666);
+    auto wfile = file::open(file, file::FileOpenType::kWriteOnly);
     ASSERT_NE(wfile, nullptr);
     auto t = ::dsn::file::write(wfile,
                                 (const char *)buf,

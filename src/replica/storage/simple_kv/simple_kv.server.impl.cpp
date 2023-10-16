@@ -35,7 +35,6 @@
 
 #include "simple_kv.server.impl.h"
 
-#include <fcntl.h>
 #include <fmt/core.h>
 #include <inttypes.h>
 #include <rocksdb/slice.h>
@@ -61,7 +60,6 @@
 #include "utils/blob.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -249,7 +247,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         return ERR_OK;
     }
 
-    auto wfile = file::open(fname.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+    auto wfile = file::open(fname, file::FileOpenType::kWriteOnly);
     CHECK_NOTNULL(wfile, "");
 
 #define WRITE_DATA_SIZE(data, size)                                                                \

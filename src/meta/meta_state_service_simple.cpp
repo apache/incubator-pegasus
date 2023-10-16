@@ -26,7 +26,6 @@
 
 #include "meta_state_service_simple.h"
 
-#include <fcntl.h>
 #include <string.h>
 #include <algorithm>
 #include <set>
@@ -44,7 +43,6 @@
 #include "utils/binary_reader.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
@@ -314,7 +312,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
         }
     }
 
-    _log = file::open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
+    _log = file::open(log_path, file::FileOpenType::kWriteOnly);
     if (!_log) {
         LOG_ERROR("open file failed: {}", log_path);
         return ERR_FILE_OPERATION_FAILED;

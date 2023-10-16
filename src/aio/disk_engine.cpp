@@ -102,22 +102,26 @@ aio_task *disk_write_queue::unlink_next_workload(void *plength)
     return first;
 }
 
-disk_file::disk_file(linux_fd_t fd) : _fd(fd) {}
+disk_file::disk_file(std::unique_ptr<rocksdb::RandomAccessFile> rf) : _read_file(std::move(rf)) {}
+disk_file::disk_file(std::unique_ptr<rocksdb::RandomRWFile> wf) : _write_file(std::move(wf)) {}
 
 aio_task *disk_file::read(aio_task *tsk)
 {
+    CHECK(_read_file, "");
     tsk->add_ref(); // release on completion, see `on_read_completed`.
     return _read_queue.add_work(tsk, nullptr);
 }
 
 aio_task *disk_file::write(aio_task *tsk, void *ctx)
 {
+    CHECK(_write_file, "");
     tsk->add_ref(); // release on completion
     return _write_queue.add_work(tsk, ctx);
 }
 
 aio_task *disk_file::on_read_completed(aio_task *wk, error_code err, size_t size)
 {
+    CHECK(_read_file, "");
     CHECK(wk->next == nullptr, "");
     auto ret = _read_queue.on_work_completed(wk, nullptr);
     wk->enqueue(err, size);
@@ -128,6 +132,7 @@ aio_task *disk_file::on_read_completed(aio_task *wk, error_code err, size_t size
 
 aio_task *disk_file::on_write_completed(aio_task *wk, void *ctx, error_code err, size_t size)
 {
+    CHECK(_write_file, "");
     auto ret = _write_queue.on_work_completed(wk, ctx);
 
     while (wk) {

@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include <list>
+#include <string>
 #include <utility>
 
 #include "aio/aio_task.h"
@@ -47,6 +48,13 @@ class task_tracker;
 
 namespace file {
 
+enum class FileOpenType
+{
+    kReadOnly = 0,
+    kWriteOnly
+};
+
+// TODO(yingchun): consider to return a smart pointer
 /// open file
 ///
 /// \param file_name filename of the file.
@@ -55,7 +63,7 @@ namespace file {
 ///
 /// \return file handle
 ///
-extern disk_file *open(const char *file_name, int flag, int pmode);
+extern disk_file *open(const std::string &fname, FileOpenType type);
 
 /// close the file handle
 extern error_code close(disk_file *file);
