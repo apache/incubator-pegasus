@@ -43,7 +43,7 @@ namespace utils {
 // it's seconds since 2016.01.01-00:00:00 GMT
 const uint32_t epoch_begin = 1451606400;
 inline uint32_t epoch_now() { return time(nullptr) - epoch_begin; }
-const static std::string kRedactedString = "<redactde>";
+const static std::string kRedactedString = "<redacted>";
 
 // extract "host" from rpc_address
 void addr2host(const ::dsn::rpc_address &addr, char *str, int len);
