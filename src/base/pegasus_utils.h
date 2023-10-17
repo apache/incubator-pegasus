@@ -43,7 +43,7 @@ namespace utils {
 // it's seconds since 2016.01.01-00:00:00 GMT
 const uint32_t epoch_begin = 1451606400;
 inline uint32_t epoch_now() { return time(nullptr) - epoch_begin; }
-const static std::string sSensitiveString = "<redactde>";
+const static std::string kRedactedString = "<redactde>";
 
 // extract "host" from rpc_address
 void addr2host(const ::dsn::rpc_address &addr, char *str, int len);
@@ -105,7 +105,7 @@ template <class T>
 std::string c_escape_sensitive_string(const T &src, bool always_escape = false)
 {
     if (FLAGS_encrypt_data_at_rest) {
-        return sSensitiveString;
+        return kRedactedString;
     }
     return c_escape_string(src, always_escape);
 }
@@ -120,10 +120,10 @@ std::string c_escape_sensitive_string(const T &src, bool always_escape = false)
 int c_unescape_string(const std::string &src, std::string &dest);
 
 template <class T>
-std::string redact_sensitive_string(const T &src)
+const std::string &redact_sensitive_string(const T &src)
 {
     if (FLAGS_encrypt_data_at_rest) {
-        return sSensitiveString;
+        return kRedactedString;
     } else {
         return src;
     }
