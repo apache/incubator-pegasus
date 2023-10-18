@@ -28,8 +28,8 @@
 #include <string>
 #include <vector>
 
-#include "utils/string_view.h"
 #include "utils/flags.h"
+#include "utils/string_view.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
