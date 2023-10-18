@@ -39,6 +39,7 @@
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/join_point.h"
 #include "utils/link.h"
 #include "utils/synchronize.h"
@@ -282,6 +283,8 @@ protected:
         SS_CONNECTED,
         SS_DISCONNECTED
     };
+    friend USER_DEFINED_ENUM_FORMATTER(rpc_session::session_state);
+
     mutable utils::ex_lock_nr _lock; // [
     volatile session_state _connect_state;
 

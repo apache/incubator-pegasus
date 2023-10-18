@@ -16,9 +16,7 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <functional>
-#include <iosfwd>
 #include <string>
 #include <tuple>
 #include <utility>

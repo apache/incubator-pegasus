@@ -44,6 +44,7 @@
 #include "runtime/service_app.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/fmt_utils.h"
 #include "utils/synchronize.h"
 
 struct String_vector;
@@ -205,3 +206,5 @@ private:
 };
 }
 }
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::dist::zookeeper_session);

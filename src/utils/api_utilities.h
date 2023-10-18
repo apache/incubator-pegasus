@@ -34,6 +34,7 @@
 #include <stdarg.h>
 
 #include "ports.h"
+#include "utils/fmt_utils.h"
 
 /*!
 @defgroup logging Logging Service
@@ -56,6 +57,8 @@ typedef enum dsn_log_level_t {
     LOG_LEVEL_COUNT,
     LOG_LEVEL_INVALID
 } dsn_log_level_t;
+
+USER_DEFINED_ENUM_FORMATTER(dsn_log_level_t)
 
 // logs with level smaller than this start_level will not be logged
 extern dsn_log_level_t dsn_log_start_level;

@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "utils/autoref_ptr.h"
+#include "utils/fmt_utils.h"
 
 typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_NUMBER,
@@ -42,6 +43,7 @@ typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_COUNT,
     COUNTER_TYPE_INVALID
 } dsn_perf_counter_type_t;
+USER_DEFINED_ENUM_FORMATTER(dsn_perf_counter_type_t)
 
 typedef enum dsn_perf_counter_percentile_type_t {
     COUNTER_PERCENTILE_50,

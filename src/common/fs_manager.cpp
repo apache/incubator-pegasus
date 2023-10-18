@@ -37,13 +37,13 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <iosfwd>
 #include <utility>
+
+#include <fmt/std.h> // IWYU pragma: keep
 
 #include "common/gpid.h"
 #include "common/replication_enums.h"
 #include "fmt/core.h"
-#include "fmt/ostream.h"
 #include "perf_counter/perf_counter.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"

@@ -1029,7 +1029,7 @@ void cold_backup_context::on_upload_file_complete(const std::string &local_filen
     } else {
         CHECK_GT(total, 0.0);
         update_progress(static_cast<int>(complete_size / total * 1000));
-        LOG_INFO("{}: the progress of upload checkpoint is {}", name, _progress);
+        LOG_INFO("{}: the progress of upload checkpoint is {}", name, _progress.load());
     }
     if (is_ready_for_upload()) {
         std::vector<std::string> upload_files;

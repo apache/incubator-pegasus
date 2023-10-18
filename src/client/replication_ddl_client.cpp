@@ -45,7 +45,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
-#include "fmt/ostream.h"
+#include "fmt/core.h"
 #include "meta/meta_rpc_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/group_address.h"

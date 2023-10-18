@@ -17,6 +17,7 @@
 * under the License.
 */
 
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>

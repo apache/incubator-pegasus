@@ -42,7 +42,6 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
-#include <fmt/format.h>
 #include <fmt/printf.h>
 #include <inttypes.h>
 #include <algorithm>

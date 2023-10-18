@@ -26,6 +26,7 @@
 #include <thread>
 
 #include <boost/algorithm/string.hpp>
+#include <fmt/ostream.h>
 #include <rocksdb/db.h>
 #include <rocksdb/env.h>
 #include <rocksdb/sst_dump_tool.h>
@@ -48,6 +49,7 @@
 #include "perf_counter/perf_counter_utils.h"
 #include "remote_cmd/remote_command.h"
 #include "tools/mutation_log_tool.h"
+#include "utils/fmt_utils.h"
 #include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
@@ -73,6 +75,8 @@ enum scan_data_operator
     SCAN_GEN_GEO,
     SCAN_AND_MULTI_SET
 };
+USER_DEFINED_ENUM_FORMATTER(scan_data_operator)
+
 class top_container
 {
 public:

@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "utils/fmt_utils.h"
+
 namespace pegasus {
 
 enum value_field_type
@@ -28,6 +30,7 @@ enum value_field_type
     USER_DATA,
     FIELD_COUNT,
 };
+USER_DEFINED_ENUM_FORMATTER(value_field_type)
 
 struct value_field
 {

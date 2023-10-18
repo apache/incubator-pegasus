@@ -20,10 +20,8 @@
 #include "pegasus_event_listener.h"
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <rocksdb/compaction_job_stats.h>
 #include <rocksdb/table_properties.h>
-#include <iosfwd>
 #include <string>
 
 #include "common/gpid.h"
