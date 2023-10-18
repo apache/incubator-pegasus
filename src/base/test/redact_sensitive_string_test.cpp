@@ -28,7 +28,6 @@
 
 const std::string test_string = "pegasus";
 
-// FLAGS_encrypt_data_at_rest up
 TEST(pegasus_utils, redact_sensitive_string)
 {
     FLAGS_encrypt_data_at_rest = true;
@@ -36,7 +35,6 @@ TEST(pegasus_utils, redact_sensitive_string)
     ASSERT_EQ(pegasus::utils::kRedactedString, result_string);
 }
 
-// FLAGS_encrypt_data_at_rest down
 TEST(pegasus_utils, redact_sensitive_string_with_encrypt)
 {
     FLAGS_encrypt_data_at_rest = false;
