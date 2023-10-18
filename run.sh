@@ -26,6 +26,8 @@ export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
 export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
+# Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
+export ASAN_OPTIONS=detect_odr_violation=0
 
 function usage()
 {
