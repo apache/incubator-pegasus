@@ -369,8 +369,8 @@ void pegasus_server_impl::on_get(get_rpc rpc)
             LOG_ERROR_PREFIX("rocksdb get failed for get from {}: hash_key = \"{}\", sort_key = "
                              "\"{}\", error = {}",
                              rpc.remote_address(),
-                             ::pegasus::utils::c_escape_string(hash_key),
-                             ::pegasus::utils::c_escape_string(sort_key),
+                             ::pegasus::utils::c_escape_sensitive_string(hash_key),
+                             ::pegasus::utils::c_escape_sensitive_string(sort_key),
                              status.ToString());
         } else if (!status.IsNotFound()) {
             LOG_ERROR_PREFIX("rocksdb get failed for get from {}: error = {}",
@@ -393,8 +393,8 @@ void pegasus_server_impl::on_get(get_rpc rpc)
                            "hash_key = {}, sort_key = {}, return = {}, "
                            "value_size = {}, time_used = {} ns",
                            rpc.remote_address(),
-                           ::pegasus::utils::c_escape_string(hash_key),
-                           ::pegasus::utils::c_escape_string(sort_key),
+                           ::pegasus::utils::c_escape_sensitive_string(hash_key),
+                           ::pegasus::utils::c_escape_sensitive_string(sort_key),
                            status.ToString(),
                            value.size(),
                            time_used);
@@ -508,17 +508,17 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                     "sort_key_filter_pattern = \"{}\", final_start = \"{}\" ({}), final_stop = "
                     "\"{}\" ({})",
                     rpc.remote_address(),
-                    ::pegasus::utils::c_escape_string(request.hash_key),
-                    ::pegasus::utils::c_escape_string(request.start_sortkey),
+                    ::pegasus::utils::c_escape_sensitive_string(request.hash_key),
+                    ::pegasus::utils::c_escape_sensitive_string(request.start_sortkey),
                     request.start_inclusive ? "inclusive" : "exclusive",
-                    ::pegasus::utils::c_escape_string(request.stop_sortkey),
+                    ::pegasus::utils::c_escape_sensitive_string(request.stop_sortkey),
                     request.stop_inclusive ? "inclusive" : "exclusive",
                     ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
                         ->second,
-                    ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern),
-                    ::pegasus::utils::c_escape_string(start),
+                    ::pegasus::utils::c_escape_sensitive_string(request.sort_key_filter_pattern),
+                    ::pegasus::utils::c_escape_sensitive_string(start),
                     start_inclusive ? "inclusive" : "exclusive",
-                    ::pegasus::utils::c_escape_string(stop),
+                    ::pegasus::utils::c_escape_sensitive_string(stop),
                     stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
@@ -685,7 +685,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                 LOG_ERROR_PREFIX("rocksdb scan failed for multi_get from {}: hash_key = \"{}\", "
                                  "reverse = {}, error = {}",
                                  rpc.remote_address(),
-                                 ::pegasus::utils::c_escape_string(request.hash_key),
+                                 ::pegasus::utils::c_escape_sensitive_string(request.hash_key),
                                  request.reverse ? "true" : "false",
                                  it->status().ToString());
             } else {
@@ -730,12 +730,13 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             // print log
             if (!status.ok()) {
                 if (FLAGS_rocksdb_verbose_log) {
-                    LOG_ERROR_PREFIX("rocksdb get failed for multi_get from {}: hash_key = \"{}\", "
-                                     "sort_key = \"{}\", error = {}",
-                                     rpc.remote_address(),
-                                     ::pegasus::utils::c_escape_string(request.hash_key),
-                                     ::pegasus::utils::c_escape_string(request.sort_keys[i]),
-                                     status.ToString());
+                    LOG_ERROR_PREFIX(
+                        "rocksdb get failed for multi_get from {}: hash_key = \"{}\", "
+                        "sort_key = \"{}\", error = {}",
+                        rpc.remote_address(),
+                        ::pegasus::utils::c_escape_sensitive_string(request.hash_key),
+                        ::pegasus::utils::c_escape_sensitive_string(request.sort_keys[i]),
+                        status.ToString());
                 } else if (!status.IsNotFound()) {
                     LOG_ERROR_PREFIX("rocksdb get failed for multi_get from {}: error = {}",
                                      rpc.remote_address(),
@@ -803,13 +804,13 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             "result_count = {}, result_size = {}, iteration_count = {}, "
             "expire_count = {}, filter_count = {}, time_used = {} ns",
             rpc.remote_address(),
-            ::pegasus::utils::c_escape_string(request.hash_key),
-            ::pegasus::utils::c_escape_string(request.start_sortkey),
+            ::pegasus::utils::c_escape_sensitive_string(request.hash_key),
+            ::pegasus::utils::c_escape_sensitive_string(request.start_sortkey),
             request.start_inclusive ? "inclusive" : "exclusive",
-            ::pegasus::utils::c_escape_string(request.stop_sortkey),
+            ::pegasus::utils::c_escape_sensitive_string(request.stop_sortkey),
             request.stop_inclusive ? "inclusive" : "exclusive",
             ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)->second,
-            ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern),
+            ::pegasus::utils::c_escape_sensitive_string(request.sort_key_filter_pattern),
             request.max_kv_count,
             request.max_kv_size,
             request.reverse ? "true" : "false",
@@ -894,8 +895,8 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
                     LOG_ERROR_PREFIX(
                         "rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
                         rpc.remote_address().to_string(),
-                        pegasus::utils::c_escape_string(hash_key),
-                        pegasus::utils::c_escape_string(sort_key));
+                        pegasus::utils::c_escape_sensitive_string(hash_key),
+                        pegasus::utils::c_escape_sensitive_string(sort_key));
                 }
                 continue;
             }
@@ -1011,7 +1012,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
             LOG_ERROR_PREFIX(
                 "rocksdb scan failed for sortkey_count from {}: hash_key = \"{}\", error = {}",
                 rpc.remote_address(),
-                ::pegasus::utils::c_escape_string(hash_key),
+                ::pegasus::utils::c_escape_sensitive_string(hash_key),
                 it->status().ToString());
         } else {
             LOG_ERROR_PREFIX("rocksdb scan failed for sortkey_count from {}: error = {}",
@@ -1071,8 +1072,8 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
             LOG_ERROR_PREFIX("rocksdb get failed for ttl from {}: hash_key = \"{}\", sort_key = "
                              "\"{}\", error = {}",
                              rpc.remote_address(),
-                             ::pegasus::utils::c_escape_string(hash_key),
-                             ::pegasus::utils::c_escape_string(sort_key),
+                             ::pegasus::utils::c_escape_sensitive_string(hash_key),
+                             ::pegasus::utils::c_escape_sensitive_string(sort_key),
                              status.ToString());
         } else if (!status.IsNotFound()) {
             LOG_ERROR_PREFIX("rocksdb get failed for ttl from {}: error = {}",
@@ -1181,9 +1182,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             LOG_WARNING_PREFIX("empty key range for get_scanner from {}: start_key = \"{}\" ({}), "
                                "stop_key = \"{}\" ({})",
                                rpc.remote_address(),
-                               ::pegasus::utils::c_escape_string(request.start_key),
+                               ::pegasus::utils::c_escape_sensitive_string(request.start_key),
                                request.start_inclusive ? "inclusive" : "exclusive",
-                               ::pegasus::utils::c_escape_string(request.stop_key),
+                               ::pegasus::utils::c_escape_sensitive_string(request.stop_key),
                                request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
@@ -1288,9 +1289,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                              "({}), stop_key = \"{}\" ({}), batch_size = {}, read_count = {}, "
                              "error = {}",
                              rpc.remote_address(),
-                             ::pegasus::utils::c_escape_string(start),
+                             ::pegasus::utils::c_escape_sensitive_string(start),
                              request.start_inclusive ? "inclusive" : "exclusive",
-                             ::pegasus::utils::c_escape_string(stop),
+                             ::pegasus::utils::c_escape_sensitive_string(stop),
                              request.stop_inclusive ? "inclusive" : "exclusive",
                              batch_count,
                              count,
@@ -1459,7 +1460,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
                                  "\"{}\" ({}), batch_size = {}, read_count = {}, error = {}",
                                  rpc.remote_address(),
                                  request.context_id,
-                                 ::pegasus::utils::c_escape_string(stop),
+                                 ::pegasus::utils::c_escape_sensitive_string(stop),
                                  stop_inclusive ? "inclusive" : "exclusive",
                                  batch_count,
                                  count,
@@ -3449,31 +3450,32 @@ std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(put.key, hash_key, sort_key);
         return fmt::format("put: hash_key={}, sort_key={}",
-                           pegasus::utils::c_escape_string(hash_key),
-                           pegasus::utils::c_escape_string(sort_key));
+                           pegasus::utils::c_escape_sensitive_string(hash_key),
+                           pegasus::utils::c_escape_sensitive_string(sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         auto multi_put = multi_put_rpc(request).request();
         return fmt::format("multi_put: hash_key={}, multi_put_count={}",
-                           pegasus::utils::c_escape_string(multi_put.hash_key),
+                           pegasus::utils::c_escape_sensitive_string(multi_put.hash_key),
                            multi_put.kvs.size());
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
         auto check_and_set = check_and_set_rpc(request).request();
         return fmt::format("check_and_set: hash_key={}, check_sort_key={}, set_sort_key={}",
-                           pegasus::utils::c_escape_string(check_and_set.hash_key),
-                           pegasus::utils::c_escape_string(check_and_set.check_sort_key),
-                           pegasus::utils::c_escape_string(check_and_set.set_sort_key));
+                           pegasus::utils::c_escape_sensitive_string(check_and_set.hash_key),
+                           pegasus::utils::c_escape_sensitive_string(check_and_set.check_sort_key),
+                           pegasus::utils::c_escape_sensitive_string(check_and_set.set_sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
         auto check_and_mutate = check_and_mutate_rpc(request).request();
-        return fmt::format("check_and_mutate: hash_key={}, check_sort_key={}, set_value_count={}",
-                           pegasus::utils::c_escape_string(check_and_mutate.hash_key),
-                           pegasus::utils::c_escape_string(check_and_mutate.check_sort_key),
-                           check_and_mutate.mutate_list.size());
+        return fmt::format(
+            "check_and_mutate: hash_key={}, check_sort_key={}, set_value_count={}",
+            pegasus::utils::c_escape_sensitive_string(check_and_mutate.hash_key),
+            pegasus::utils::c_escape_sensitive_string(check_and_mutate.check_sort_key),
+            check_and_mutate.mutate_list.size());
     }
 
     return "default";
