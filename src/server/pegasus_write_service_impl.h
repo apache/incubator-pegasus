@@ -21,6 +21,7 @@
 
 #include <gtest/gtest_prod.h>
 
+#include "base/idl_utils.h"
 #include "base/pegasus_key_schema.h"
 #include "logging_utils.h"
 #include "meta_store.h"
@@ -28,6 +29,7 @@
 #include "pegasus_write_service.h"
 #include "rocksdb_wrapper.h"
 #include "utils/defer.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
@@ -75,7 +77,8 @@ inline dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
     for (const auto &f_meta : metadata.files) {
         const auto &file_name = dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
         if (verify_before_ingest &&
-            !dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
+            !dsn::utils::filesystem::verify_file(
+                file_name, dsn::utils::FileDataType::kSensitive, f_meta.md5, f_meta.size)) {
             break;
         }
         files_path.emplace_back(file_name);
@@ -270,8 +273,7 @@ public:
         if (!is_check_type_supported(update.check_type)) {
             LOG_ERROR_PREFIX("invalid argument for check_and_set: decree = {}, error = {}",
                              decree,
-                             "check type {} not supported",
-                             update.check_type);
+                             fmt::format("check type {} not supported", update.check_type));
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
@@ -391,8 +393,7 @@ public:
         if (!is_check_type_supported(update.check_type)) {
             LOG_ERROR_PREFIX("invalid argument for check_and_mutate: decree = {}, error = {}",
                              decree,
-                             "check type {} not supported",
-                             update.check_type);
+                             fmt::format("check type {} not supported", update.check_type));
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);

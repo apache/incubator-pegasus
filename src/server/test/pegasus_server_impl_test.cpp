@@ -21,6 +21,7 @@
 #include <fmt/core.h>
 #include <gmock/gmock-actions.h>
 #include <gmock/gmock-spec-builders.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -29,7 +30,9 @@
 #include <stdint.h>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
+#include <utility>
 
 #include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
@@ -95,24 +98,68 @@ public:
             ASSERT_EQ(before_count + test.expect_perf_counter_incr, after_count);
         }
     }
+
+    void test_open_db_with_rocksdb_envs(bool is_restart)
+    {
+        struct create_test
+        {
+            std::string env_key;
+            std::string env_value;
+            std::string expect_value;
+        } tests[] = {
+            {"rocksdb.num_levels", "5", "5"}, {"rocksdb.write_buffer_size", "33554432", "33554432"},
+        };
+
+        std::map<std::string, std::string> all_test_envs;
+        {
+            // Make sure all rocksdb options of ROCKSDB_DYNAMIC_OPTIONS and ROCKSDB_STATIC_OPTIONS
+            // are tested.
+            for (const auto &test : tests) {
+                all_test_envs[test.env_key] = test.env_value;
+            }
+            for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
+                ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
+            }
+            for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
+                ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
+            }
+        }
+
+        ASSERT_EQ(dsn::ERR_OK, start(all_test_envs));
+        if (is_restart) {
+            ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
+            ASSERT_EQ(dsn::ERR_OK, start());
+        }
+
+        std::map<std::string, std::string> query_envs;
+        _server->query_app_envs(query_envs);
+        for (const auto &test : tests) {
+            const auto &iter = query_envs.find(test.env_key);
+            if (iter != query_envs.end()) {
+                ASSERT_EQ(iter->second, test.expect_value);
+            } else {
+                ASSERT_TRUE(false) << fmt::format("query_app_envs not supported {}", test.env_key);
+            }
+        }
+    }
 };
 
 TEST_F(pegasus_server_impl_test, test_table_level_slow_query)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     test_table_level_slow_query();
 }
 
 TEST_F(pegasus_server_impl_test, default_data_version)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(_server->_pegasus_data_version, 1);
 }
 
 TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
 {
     // open a new db with no app env.
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL, _server->_usage_scenario);
     // set bulk_load scenario for the db.
     ASSERT_TRUE(_server->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD));
@@ -121,8 +168,8 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
     ASSERT_EQ(1000000000, opts.level0_file_num_compaction_trigger);
     ASSERT_EQ(true, opts.disable_auto_compactions);
     // reopen the db.
-    _server->stop(false);
-    start();
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
     ASSERT_EQ(opts.level0_file_num_compaction_trigger,
               _server->_db->GetOptions().level0_file_num_compaction_trigger);
@@ -133,22 +180,34 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
 {
     std::map<std::string, std::string> envs;
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
-    start(envs);
+    ASSERT_EQ(dsn::ERR_OK, start(envs));
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
+}
+
+TEST_F(pegasus_server_impl_test, test_open_db_with_rocksdb_envs)
+{
+    // Hint: Verify the set_rocksdb_options_before_creating function by boolean is_restart=false.
+    test_open_db_with_rocksdb_envs(false);
+}
+
+TEST_F(pegasus_server_impl_test, test_restart_db_with_rocksdb_envs)
+{
+    // Hint: Verify the reset_rocksdb_options function by boolean is_restart=true.
+    test_open_db_with_rocksdb_envs(true);
 }
 
 TEST_F(pegasus_server_impl_test, test_stop_db_twice)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_TRUE(_server->_is_open);
     ASSERT_TRUE(_server->_db != nullptr);
 
-    _server->stop(false);
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
     ASSERT_FALSE(_server->_is_open);
     ASSERT_TRUE(_server->_db == nullptr);
 
     // stop again
-    _server->stop(false);
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
     ASSERT_FALSE(_server->_is_open);
     ASSERT_TRUE(_server->_db == nullptr);
 }

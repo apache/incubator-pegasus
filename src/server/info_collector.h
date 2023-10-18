@@ -19,10 +19,11 @@
 
 #pragma once
 
-// IWYU pragma: no_include <bits/std_abs.h>
 #include <s2/third_party/absl/base/port.h>
 #include <stdint.h>
 #include <stdlib.h>
+// IWYU pragma: no_include <bits/std_abs.h>
+#include <cmath> // IWYU pragma: keep
 #include <map>
 #include <memory>
 #include <string>

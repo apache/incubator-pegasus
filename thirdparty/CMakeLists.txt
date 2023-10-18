@@ -21,9 +21,9 @@ project(pegasus_thirdparties)
 cmake_minimum_required(VERSION 3.11.0)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    # require at least gcc 5.4.0
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.4.0)
-        message(FATAL_ERROR "GCC version must be at least 5.4.0!")
+    # require at least gcc 7.0.0
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0.0)
+        message(FATAL_ERROR "GCC version must be at least 7.0.0!")
     endif ()
 endif ()
 
@@ -159,35 +159,6 @@ ExternalProject_Add(thrift
         DEPENDS boost
         )
 
-if (NOT APPLE)
-    # kerberos
-    ExternalProject_Add(krb5
-            URL ${OSS_URL_PREFIX}/krb5-1.16.1.tar.gz
-            http://web.mit.edu/kerberos/dist/krb5/1.16/krb5-1.16.1.tar.gz
-            URL_MD5 848e9b80d6aaaa798e3f3df24b83c407
-            CONFIGURE_COMMAND cd src && ./configure --prefix=${TP_OUTPUT}
-            BUILD_COMMAND cd src && make
-            INSTALL_COMMAND cd src && make install
-            BUILD_IN_SOURCE 1
-            )
-
-    # cyrus-sasl
-    ExternalProject_Add(cyrus-sasl
-            URL ${OSS_URL_PREFIX}/cyrus-sasl-2.1.27.tar.gz
-            http://www.cyrusimap.org/releases/cyrus-sasl-2.1.27.tar.gz
-            URL_MD5 a33820c66e0622222c5aefafa1581083
-            CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
-            --enable-gssapi=${TP_OUTPUT}
-            --enable-scram=no
-            --enable-digest=no
-            --enable-cram=no
-            --enable-otp=no
-            BUILD_COMMAND make
-            INSTALL_COMMAND make install
-            BUILD_IN_SOURCE 1
-            )
-endif()
-
 check_cxx_compiler_flag(-Wformat-overflow COMPILER_SUPPORTS_FORMAT_OVERFLOW)
 if (COMPILER_SUPPORTS_FORMAT_OVERFLOW)
     set(ZOOKEEPER_CFLAGS -Wno-error=format-overflow)
@@ -212,9 +183,6 @@ ExternalProject_Add(zookeeper
         INSTALL_COMMAND ""
         BUILD_IN_SOURCE 1
         )
-if (NOT APPLE)
-    add_dependencies(zookeeper cyrus-sasl krb5)
-endif ()
 
 ExternalProject_Add(libevent
         URL ${OSS_URL_PREFIX}/libevent-release-2.1.8-stable.tar.gz
@@ -276,11 +244,9 @@ ExternalProject_Add(fds
         BUILD_IN_SOURCE 1
         )
 
-# fmtlib >=6.x requires c++14 support, do not update this library for now
 ExternalProject_Add(fmt
-        URL ${OSS_URL_PREFIX}/fmt-5.3.0.tar.gz
-        https://github.com/fmtlib/fmt/archive/refs/tags/5.3.0.tar.gz
-        URL_MD5 1015bf3ff2a140dfe03de50ee2469401
+        URL https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz
+        URL_MD5 0d41a16f1b3878d44e6fd7ff1f6cc45a
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_BUILD_TYPE=release
         -DFMT_TEST=false
@@ -310,11 +276,7 @@ ExternalProject_Add(civetweb
 ExternalProject_Get_property(civetweb SOURCE_DIR)
 set(civetweb_SRC ${SOURCE_DIR})
 
-ExternalProject_Add(curl
-        URL ${OSS_URL_PREFIX}/curl-7.47.0.tar.gz
-        http://curl.haxx.se/download/curl-7.47.0.tar.gz
-        URL_MD5 5109d1232d208dfd712c0272b8360393
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+set(CURL_OPTIONS
         --disable-dict
         --disable-file
         --disable-ftp
@@ -335,6 +297,22 @@ ExternalProject_Add(curl
         --without-libssh2
         --without-ssl
         --without-libidn
+        --without-zstd
+        )
+if (APPLE)
+    set(CURL_OPTIONS
+            ${CURL_OPTIONS}
+            --without-nghttp2
+            --without-libidn2
+            --without-brotli
+            )
+endif ()
+ExternalProject_Add(curl
+        URL ${OSS_URL_PREFIX}/curl-8.4.0.tar.gz
+        http://curl.haxx.se/download/curl-8.4.0.tar.gz
+        URL_MD5 533e8a3b1228d5945a6a512537bea4c7
+        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+        ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
         )
 
@@ -392,15 +370,15 @@ ExternalProject_Add(jemalloc
         BUILD_IN_SOURCE 1
         )
 
-option(ROCKSDB_PORTABLE "build a portable binary" OFF)
+option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 
-# The patch name '0879c240' means the patch of rocksdb:
-# https://github.com/facebook/rocksdb/commit/0879c240404b00142ba4718f36cd3f2bd537192d
+# This is the commit "Update the status badge to pegasus-kv/rocksdb's own (#18) " on
+# branch v8.5.3-pegasus-encrypt of https://github.com/pegasus-kv/rocksdb.git.
+# The v8.5.3-pegasus-encrypt branch is based on the v8.5.3 tag of facebook/rocksdb and add
+# the encryption feature.
 ExternalProject_Add(rocksdb
-        URL ${OSS_URL_PREFIX}/rocksdb-6.6.4.tar.gz
-        https://github.com/facebook/rocksdb/archive/refs/tags/v6.6.4.tar.gz
-        URL_MD5 7f7fcca3e96b7d83ef332804c90070c8
-        PATCH_COMMAND patch -p1 < ${TP_DIR}/rocksdb_fix_atomic_flush_0879c240.patch
+        URL https://github.com/pegasus-kv/rocksdb/archive/e72106597e6b7924485cadc2433b66029f1aaf17.zip
+        URL_MD5 6f6daef703586ce788643bbb8a984fff
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DFAIL_ON_WARNINGS=OFF
@@ -413,6 +391,7 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
         -DUSE_RTTI=ON
+        -DWITH_OPENSSL=ON  # enable encryption
         -DCMAKE_BUILD_TYPE=Release
         -DWITH_JEMALLOC=${USE_JEMALLOC}
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}

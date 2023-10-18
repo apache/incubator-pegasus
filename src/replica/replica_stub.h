@@ -33,11 +33,13 @@
 //
 
 #include <gtest/gtest_prod.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -71,12 +73,14 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+
 namespace service {
 class copy_request;
 class copy_response;
@@ -306,6 +310,7 @@ private:
         NS_Connecting,
         NS_Connected
     };
+    friend USER_DEFINED_ENUM_FORMATTER(replica_stub::replica_node_state);
 
     enum replica_life_cycle
     {
@@ -356,6 +361,30 @@ private:
     void get_local_replicas(/*out*/ std::vector<replica_info> &replicas);
     replica_life_cycle get_replica_life_cycle(gpid id);
     void on_gc_replica(replica_stub_ptr this_, gpid id);
+
+    struct replica_gc_info
+    {
+        replica_ptr rep;
+        partition_status::type status;
+        mutation_log_ptr plog;
+        decree last_durable_decree;
+        int64_t init_offset_in_shared_log;
+    };
+    using replica_gc_info_map = std::unordered_map<gpid, replica_gc_info>;
+
+    // Try to remove obsolete files of shared log for garbage collection according to the provided
+    // states of all replicas. The purpose is to remove all of the files of shared log, since it
+    // has been deprecated, and would not be appended any more.
+    void gc_slog(const replica_gc_info_map &replica_gc_map);
+
+    // The number of flushed replicas for the garbage collection of shared log at a time should be
+    // limited.
+    void limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_count);
+
+    // Flush rocksdb data to sst files for replicas to facilitate garbage collection of more files
+    // of shared log.
+    void flush_replicas_for_slog_gc(const replica_gc_info_map &replica_gc_map,
+                                    const std::set<gpid> &prevent_gc_replicas);
 
     void response_client(gpid id,
                          bool is_read,
@@ -419,6 +448,7 @@ private:
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
+    FRIEND_TEST(GcSlogFlushFeplicasTest, FlushReplicas);
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
@@ -431,6 +461,15 @@ private:
     opening_replicas _opening_replicas;
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
+
+    // The number of replicas that prevent slog files from being removed for gc at the last round.
+    size_t _last_prevent_gc_replica_count;
+
+    // The real limit of flushed replicas for the garbage collection of shared log.
+    size_t _real_log_shared_gc_flush_replicas_limit;
+
+    // The number of flushed replicas, mocked only for test.
+    size_t _mock_flush_replicas_for_test;
 
     mutation_log_ptr _log;
     ::dsn::rpc_address _primary_address;

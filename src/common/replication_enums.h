@@ -32,6 +32,7 @@
 #include "consensus_types.h"
 #include "meta_admin_types.h"
 #include "replica_admin_types.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 ENUM_BEGIN2(app_status::type, app_status, app_status::AS_INVALID)
@@ -163,4 +164,18 @@ ENUM_REG(replication::manual_compaction_status::QUEUING)
 ENUM_REG(replication::manual_compaction_status::RUNNING)
 ENUM_REG(replication::manual_compaction_status::FINISHED)
 ENUM_END2(replication::manual_compaction_status::type, manual_compaction_status)
+
+USER_DEFINED_ENUM_FORMATTER(app_status::type)
+namespace replication {
+USER_DEFINED_ENUM_FORMATTER(bulk_load_status::type)
+USER_DEFINED_ENUM_FORMATTER(config_type::type)
+USER_DEFINED_ENUM_FORMATTER(detect_action::type)
+USER_DEFINED_ENUM_FORMATTER(disk_migration_status::type)
+USER_DEFINED_ENUM_FORMATTER(disk_status::type)
+USER_DEFINED_ENUM_FORMATTER(learner_status::type)
+USER_DEFINED_ENUM_FORMATTER(learn_type::type)
+USER_DEFINED_ENUM_FORMATTER(manual_compaction_status::type)
+USER_DEFINED_ENUM_FORMATTER(meta_function_level::type)
+USER_DEFINED_ENUM_FORMATTER(partition_status::type)
+} // namespace replication
 } // namespace dsn

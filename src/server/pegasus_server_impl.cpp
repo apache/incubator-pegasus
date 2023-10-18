@@ -22,7 +22,7 @@
 #include <fmt/core.h>
 #include <inttypes.h>
 #include <limits.h>
-#include <rocksdb/cache.h>
+#include <rocksdb/advanced_cache.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/db.h>
 #include <rocksdb/env.h>
@@ -38,11 +38,14 @@
 #include <unistd.h> // IWYU pragma: keep
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <list>
 #include <mutex>
 #include <ostream>
+#include <set>
 
+#include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
@@ -1632,12 +1635,12 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         rocksdb::DBOptions loaded_db_opt;
         std::vector<rocksdb::ColumnFamilyDescriptor> loaded_cf_descs;
         rocksdb::ColumnFamilyOptions loaded_data_cf_opts;
+        rocksdb::ConfigOptions config_options;
         // Set `ignore_unknown_options` true for forward compatibility.
-        auto status = rocksdb::LoadLatestOptions(rdb_path,
-                                                 rocksdb::Env::Default(),
-                                                 &loaded_db_opt,
-                                                 &loaded_cf_descs,
-                                                 /*ignore_unknown_options=*/true);
+        config_options.ignore_unknown_options = true;
+        config_options.env = rocksdb::Env::Default();
+        auto status =
+            rocksdb::LoadLatestOptions(config_options, rdb_path, &loaded_db_opt, &loaded_cf_descs);
         if (!status.ok()) {
             // Here we ignore an invalid argument error related to `pegasus_data_version` and
             // `pegasus_data` options, which were used in old version rocksdbs (before 2.1.0).
@@ -1663,7 +1666,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             // We don't use `loaded_data_cf_opts` directly because pointer-typed options will
             // only be initialized with default values when calling 'LoadLatestOptions', see
             // 'rocksdb/utilities/options_util.h'.
-            reset_usage_scenario_options(loaded_data_cf_opts, &_table_data_cf_opts);
+            reset_rocksdb_options(loaded_data_cf_opts, &_table_data_cf_opts);
             _db_opts.allow_ingest_behind = parse_allow_ingest_behind(envs);
         }
     } else {
@@ -1675,11 +1678,14 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
         {{DATA_COLUMN_FAMILY_NAME, _table_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
-    auto s = rocksdb::CheckOptionsCompatibility(rdb_path,
-                                                rocksdb::Env::Default(),
-                                                _db_opts,
-                                                column_families,
-                                                /*ignore_unknown_options=*/true);
+    rocksdb::ConfigOptions config_options;
+    config_options.ignore_unknown_options = true;
+    config_options.ignore_unsupported_options = true;
+    config_options.sanity_level =
+        rocksdb::ConfigOptions::SanityLevel::kSanityLevelLooselyCompatible;
+    config_options.env = rocksdb::Env::Default();
+    auto s =
+        rocksdb::CheckOptionsCompatibility(config_options, rdb_path, _db_opts, column_families);
     if (!s.ok() && !s.IsNotFound() && !has_incompatible_db_options) {
         LOG_ERROR_PREFIX("rocksdb::CheckOptionsCompatibility failed, error = {}", s.ToString());
         return dsn::ERR_LOCAL_APP_FAILURE;
@@ -2037,7 +2043,8 @@ private:
     }
 
     int64_t checkpoint_decree = 0;
-    ::dsn::error_code err = copy_checkpoint_to_dir_unsafe(tmp_dir.c_str(), &checkpoint_decree);
+    ::dsn::error_code err =
+        copy_checkpoint_to_dir_unsafe(tmp_dir.c_str(), &checkpoint_decree, flush_memtable);
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR_PREFIX("copy_checkpoint_to_dir_unsafe failed with err = {}", err.to_string());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
@@ -2156,7 +2163,7 @@ private:
             {{DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
              {META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
         status = rocksdb::DB::OpenForReadOnly(
-            rocksdb::DBOptions(), checkpoint_dir, column_families, &handles_opened, &snapshot_db);
+            _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
         if (!status.ok()) {
             LOG_ERROR_PREFIX(
                 "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
@@ -2306,7 +2313,7 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
         }
     }
     default:
-        CHECK(false, "unsupported filter type: %d", filter_type);
+        CHECK(false, "unsupported filter type: {}", filter_type);
     }
     return false;
 }
@@ -2625,6 +2632,67 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
     return res;
 }
 
+void pegasus_server_impl::update_rocksdb_dynamic_options(
+    const std::map<std::string, std::string> &envs)
+{
+    if (envs.empty()) {
+        return;
+    }
+
+    std::unordered_map<std::string, std::string> new_options;
+    for (const auto &option : ROCKSDB_DYNAMIC_OPTIONS) {
+        const auto &find = envs.find(option);
+        if (find == envs.end()) {
+            continue;
+        }
+
+        std::vector<std::string> args;
+        // split_args example: Parse "write_buffer_size" from "rocksdb.write_buffer_size"
+        dsn::utils::split_args(option.c_str(), args, '.');
+        CHECK_EQ(args.size(), 2);
+        new_options[args[1]] = find->second;
+    }
+
+    // doing set option
+    if (!new_options.empty() && set_options(new_options)) {
+        LOG_INFO("Set rocksdb dynamic options success");
+    }
+}
+
+void pegasus_server_impl::set_rocksdb_options_before_creating(
+    const std::map<std::string, std::string> &envs)
+{
+    if (envs.empty()) {
+        return;
+    }
+
+    for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
+        const auto &find = envs.find(option);
+        if (find == envs.end()) {
+            continue;
+        }
+
+        const auto &setter = cf_opts_setters.find(option);
+        CHECK_TRUE(setter != cf_opts_setters.end());
+        if (setter->second(find->second, _data_cf_opts)) {
+            LOG_INFO_PREFIX("Set {} \"{}\" succeed", find->first, find->second);
+        }
+    }
+
+    for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
+        const auto &find = envs.find(option);
+        if (find == envs.end()) {
+            continue;
+        }
+
+        const auto &setter = cf_opts_setters.find(option);
+        CHECK_TRUE(setter != cf_opts_setters.end());
+        if (setter->second(find->second, _data_cf_opts)) {
+            LOG_INFO_PREFIX("Set {} \"{}\" succeed", find->first, find->second);
+        }
+    }
+}
+
 void pegasus_server_impl::update_app_envs(const std::map<std::string, std::string> &envs)
 {
     update_usage_scenario(envs);
@@ -2637,6 +2705,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 
     update_throttling_controller(envs);
+    update_rocksdb_dynamic_options(envs);
 }
 
 void pegasus_server_impl::update_app_envs_before_open_db(
@@ -2650,11 +2719,36 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_validate_partition_hash(envs);
     update_user_specified_compaction(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
+    set_rocksdb_options_before_creating(envs);
 }
 
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
 {
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
+    // write_buffer_size involves random values (refer to pegasus_server_impl::set_usage_scenario),
+    // so it can only be taken from _data_cf_opts
+    envs[ROCKSDB_WRITE_BUFFER_SIZE] = std::to_string(_data_cf_opts.write_buffer_size);
+
+    // Get Data ColumnFamilyOptions directly from _data_cf
+    rocksdb::ColumnFamilyDescriptor desc;
+    CHECK_TRUE(_data_cf->GetDescriptor(&desc).ok());
+    for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
+        auto getter = cf_opts_getters.find(option);
+        CHECK_TRUE(getter != cf_opts_getters.end());
+        std::string option_val;
+        getter->second(desc.options, option_val);
+        envs[option] = option_val;
+    }
+    for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
+        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0) {
+            continue;
+        }
+        auto getter = cf_opts_getters.find(option);
+        CHECK_TRUE(getter != cf_opts_getters.end());
+        std::string option_val;
+        getter->second(desc.options, option_val);
+        envs[option] = option_val;
+    }
 }
 
 void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std::string> &envs)
@@ -2962,7 +3056,7 @@ std::string pegasus_server_impl::compression_type_to_str(rocksdb::CompressionTyp
     case rocksdb::kZSTD:
         return "zstd";
     default:
-        LOG_ERROR_PREFIX("Unsupported compression type: {}.", type);
+        LOG_ERROR_PREFIX("Unsupported compression type: {}.", static_cast<int>(type));
         return "<unsupported>";
     }
 }
@@ -3036,6 +3130,23 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
             "set usage scenario from \"{}\" to \"{}\" failed", old_usage_scenario, usage_scenario);
         return false;
     }
+}
+
+void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_opts,
+                                                rocksdb::ColumnFamilyOptions *target_opts)
+{
+    LOG_INFO_PREFIX("Reset rocksdb envs options");
+    // Reset rocksdb option includes two aspects:
+    // 1. Set usage_scenario related rocksdb options
+    // 2. Rocksdb option set in app envs, consists of ROCKSDB_DYNAMIC_OPTIONS and
+    // ROCKSDB_STATIC_OPTIONS
+
+    // aspect 1:
+    reset_usage_scenario_options(base_opts, target_opts);
+
+    // aspect 2:
+    target_opts->num_levels = base_opts.num_levels;
+    target_opts->write_buffer_size = base_opts.write_buffer_size;
 }
 
 void pegasus_server_impl::reset_usage_scenario_options(
@@ -3179,7 +3290,7 @@ bool pegasus_server_impl::set_options(
     *missing_meta_cf = true;
     *missing_data_cf = true;
     std::vector<std::string> column_families;
-    auto s = rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), path, &column_families);
+    auto s = rocksdb::DB::ListColumnFamilies(_db_opts, path, &column_families);
     if (!s.ok()) {
         LOG_ERROR_PREFIX("rocksdb::DB::ListColumnFamilies failed, error = {}", s.ToString());
         if (s.IsCorruption() &&

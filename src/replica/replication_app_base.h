@@ -39,6 +39,7 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
 
 namespace dsn {
@@ -75,8 +76,8 @@ public:
     std::string to_string();
 
 private:
-    error_code load_json(const std::string &file);
-    error_code store_json(const std::string &file);
+    error_code load_json(const std::string &fname);
+    error_code store_json(const std::string &fname);
 };
 
 class replica_app_info
@@ -86,8 +87,8 @@ private:
 
 public:
     replica_app_info(app_info *app) { _app = app; }
-    error_code load(const std::string &file);
-    error_code store(const std::string &file);
+    error_code load(const std::string &fname);
+    error_code store(const std::string &fname);
 };
 
 /// The store engine interface of Pegasus.
@@ -313,6 +314,6 @@ protected:
 
     explicit replication_app_base(replication::replica *replica);
 };
-
+USER_DEFINED_ENUM_FORMATTER(replication_app_base::chkpt_apply_mode)
 } // namespace replication
 } // namespace dsn

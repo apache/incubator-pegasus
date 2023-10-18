@@ -68,9 +68,9 @@ public:
         return duplicator;
     }
 
-    std::map<int, log_file_ptr> open_log_file_map(const std::string &log_dir)
+    mutation_log::log_file_map_by_index open_log_file_map(const std::string &log_dir)
     {
-        std::map<int, log_file_ptr> log_file_map;
+        mutation_log::log_file_map_by_index log_file_map;
         error_s err = log_utils::open_log_file_map(log_dir, log_file_map);
         EXPECT_EQ(err, error_s::ok());
         return log_file_map;

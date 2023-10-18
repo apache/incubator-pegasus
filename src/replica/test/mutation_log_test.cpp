@@ -26,26 +26,37 @@
 
 #include "replica/mutation_log.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <stdio.h>
 #include <sys/types.h>
+#include <cstdint>
+#include <iostream>
+#include <limits>
 #include <unordered_map>
 
 #include "aio/aio_task.h"
+#include "aio/file_io.h"
 #include "backup_types.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "replica/log_block.h"
 #include "replica/log_file.h"
 #include "replica/mutation.h"
+#include "replica/replica_stub.h"
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
+#include "rrdb/rrdb.code.definition.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
+#include "utils/defer.h"
+#include "utils/env.h"
+#include "utils/fail_point.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
@@ -56,43 +67,26 @@ class message_ex;
 using namespace ::dsn;
 using namespace ::dsn::replication;
 
-static void copy_file(const char *from_file, const char *to_file, int64_t to_size = -1)
-{
-    int64_t from_size;
-    ASSERT_TRUE(dsn::utils::filesystem::file_size(from_file, from_size));
-    ASSERT_LE(to_size, from_size);
-    FILE *from = fopen(from_file, "rb");
-    ASSERT_TRUE(from != nullptr);
-    FILE *to = fopen(to_file, "wb");
-    ASSERT_TRUE(to != nullptr);
-    if (to_size == -1)
-        to_size = from_size;
-    if (to_size > 0) {
-        std::unique_ptr<char[]> buf(new char[to_size]);
-        auto n = fread(buf.get(), 1, to_size, from);
-        ASSERT_EQ(to_size, n);
-        n = fwrite(buf.get(), 1, to_size, to);
-        ASSERT_EQ(to_size, n);
-    }
-    int r = fclose(from);
-    ASSERT_EQ(0, r);
-    r = fclose(to);
-    ASSERT_EQ(0, r);
-}
-
 static void overwrite_file(const char *file, int offset, const void *buf, int size)
 {
-    FILE *f = fopen(file, "r+b");
-    ASSERT_TRUE(f != nullptr);
-    int r = fseek(f, offset, SEEK_SET);
-    ASSERT_EQ(0, r);
-    size_t n = fwrite(buf, 1, size, f);
-    ASSERT_EQ(size, n);
-    r = fclose(f);
-    ASSERT_EQ(0, r);
+    auto wfile = file::open(file, file::FileOpenType::kWriteOnly);
+    ASSERT_NE(wfile, nullptr);
+    auto t = ::dsn::file::write(wfile,
+                                (const char *)buf,
+                                size,
+                                offset,
+                                LPC_AIO_IMMEDIATE_CALLBACK,
+                                nullptr,
+                                [=](::dsn::error_code err, size_t n) {
+                                    CHECK_EQ(ERR_OK, err);
+                                    CHECK_EQ(size, n);
+                                });
+    t->wait();
+    ASSERT_EQ(ERR_OK, file::flush(wfile));
+    ASSERT_EQ(ERR_OK, file::close(wfile));
 }
 
-TEST(replication, log_file)
+TEST(replication_test, log_file)
 {
     replica_log_info_map mdecrees;
     gpid gpid(1, 0);
@@ -121,7 +115,7 @@ TEST(replication, log_file)
             lf->write_file_header(temp_writer, mdecrees);
             writer->add(temp_writer.get_buffer());
             ASSERT_EQ(mdecrees, lf->previous_log_max_decrees());
-            log_file_header &h = lf->header();
+            const auto &h = lf->header();
             ASSERT_EQ(100, h.start_global_offset);
         }
 
@@ -188,7 +182,7 @@ TEST(replication, log_file)
 
     // bad file data: empty file
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.0"));
-    copy_file(fpath.c_str(), "log.1.0", 0);
+    dsn::utils::copy_file_by_size(fpath, "log.1.0", 0);
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.0"));
     lf = log_file::open_read("log.1.0", err);
     ASSERT_TRUE(lf == nullptr);
@@ -198,7 +192,7 @@ TEST(replication, log_file)
 
     // bad file data: incomplete log_block_header
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.1"));
-    copy_file(fpath.c_str(), "log.1.1", sizeof(log_block_header) - 1);
+    dsn::utils::copy_file_by_size(fpath, "log.1.1", sizeof(log_block_header) - 1);
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.1"));
     lf = log_file::open_read("log.1.1", err);
     ASSERT_TRUE(lf == nullptr);
@@ -208,7 +202,7 @@ TEST(replication, log_file)
 
     // bad file data: bad log_block_header (magic = 0xfeadbeef)
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.2"));
-    copy_file(fpath.c_str(), "log.1.2");
+    dsn::utils::copy_file_by_size(fpath, "log.1.2");
     int32_t bad_magic = 0xfeadbeef;
     overwrite_file("log.1.2", FIELD_OFFSET(log_block_header, magic), &bad_magic, sizeof(bad_magic));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.2"));
@@ -220,7 +214,7 @@ TEST(replication, log_file)
 
     // bad file data: bad log_block_header (crc check failed)
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.3"));
-    copy_file(fpath.c_str(), "log.1.3");
+    dsn::utils::copy_file_by_size(fpath, "log.1.3");
     int32_t bad_crc = 0;
     overwrite_file("log.1.3", FIELD_OFFSET(log_block_header, body_crc), &bad_crc, sizeof(bad_crc));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.3"));
@@ -232,14 +226,13 @@ TEST(replication, log_file)
 
     // bad file data: incomplete block body
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.4"));
-    copy_file(fpath.c_str(), "log.1.4", sizeof(log_block_header) + 1);
+    dsn::utils::copy_file_by_size(fpath, "log.1.4", sizeof(log_block_header) + 1);
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.4"));
     lf = log_file::open_read("log.1.4", err);
     ASSERT_TRUE(lf == nullptr);
     ASSERT_EQ(ERR_INCOMPLETE_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.4"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.4.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.4.removed", "log.1.4"));
 
     // read the file for test
     offset = 100;
@@ -249,7 +242,7 @@ TEST(replication, log_file)
     ASSERT_EQ(1, lf->index());
     ASSERT_EQ(100, lf->start_offset());
     int64_t sz;
-    ASSERT_TRUE(dsn::utils::filesystem::file_size(fpath, sz));
+    ASSERT_TRUE(dsn::utils::filesystem::file_size(fpath, dsn::utils::FileDataType::kSensitive, sz));
     ASSERT_EQ(lf->start_offset() + sz, lf->end_offset());
 
     // read data
@@ -450,6 +443,83 @@ public:
             ASSERT_GE(log_files.size(), 1);
         }
     }
+
+    mutation_ptr generate_slog_mutation(const gpid &pid, const decree d, const std::string &data)
+    {
+        mutation_ptr mu(new mutation());
+        mu->data.header.ballot = 1;
+        mu->data.header.decree = d;
+        mu->data.header.pid = pid;
+        mu->data.header.last_committed_decree = d - 1;
+        mu->data.header.log_offset = 0;
+        mu->data.header.timestamp = d;
+
+        mu->data.updates.push_back(mutation_update());
+        mu->data.updates.back().code = dsn::apps::RPC_RRDB_RRDB_PUT;
+        mu->data.updates.back().data = blob::create_from_bytes(std::string(data));
+
+        mu->client_requests.push_back(nullptr);
+
+        return mu;
+    }
+
+    void generate_slog_file(const std::vector<std::pair<gpid, size_t>> &replica_mutations,
+                            mutation_log_ptr &mlog,
+                            decree &d,
+                            std::unordered_map<gpid, int64_t> &valid_start_offsets,
+                            std::pair<gpid, int64_t> &slog_file_start_offset)
+    {
+        for (size_t i = 0; i < replica_mutations.size(); ++i) {
+            const auto &pid = replica_mutations[i].first;
+
+            for (size_t j = 0; j < replica_mutations[i].second; ++j) {
+                if (i == 0) {
+                    // Record the start offset of each slog file.
+                    slog_file_start_offset.first = pid;
+                    slog_file_start_offset.second = mlog->get_global_offset();
+                }
+
+                const auto &it = valid_start_offsets.find(pid);
+                if (it == valid_start_offsets.end()) {
+                    // Add new partition with its start offset in slog.
+                    valid_start_offsets.emplace(pid, mlog->get_global_offset());
+                    mlog->set_valid_start_offset_on_open(pid, mlog->get_global_offset());
+                }
+
+                // Append a mutation.
+                auto mu = generate_slog_mutation(pid, d++, "test data");
+                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, mlog->tracker(), nullptr, 0);
+            }
+        }
+
+        // Wait until all mutations are written into this file.
+        mlog->tracker()->wait_outstanding_tasks();
+    }
+
+    void generate_slog_files(const std::vector<std::vector<std::pair<gpid, size_t>>> &files,
+                             mutation_log_ptr &mlog,
+                             std::unordered_map<gpid, int64_t> &valid_start_offsets,
+                             std::vector<std::pair<gpid, int64_t>> &slog_file_start_offsets)
+    {
+        valid_start_offsets.clear();
+        slog_file_start_offsets.resize(files.size());
+
+        decree d = 1;
+        for (size_t i = 0; i < files.size(); ++i) {
+            generate_slog_file(files[i], mlog, d, valid_start_offsets, slog_file_start_offsets[i]);
+            if (i + 1 < files.size()) {
+                // Do not create a new slog file after the last file is generated.
+                mlog->create_new_log_file();
+                // Wait until file header is written.
+                mlog->tracker()->wait_outstanding_tasks();
+            }
+        }
+
+        // Close and reset `_current_log_file` since slog has been deprecated and would not be
+        // used again.
+        mlog->_current_log_file->close();
+        mlog->_current_log_file = nullptr;
+    }
 };
 
 TEST_F(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
@@ -606,5 +676,182 @@ TEST_F(mutation_log_test, reset_from_while_writing)
     mlog->flush();
     ASSERT_EQ(actual.size(), expected.size());
 }
+
+TEST_F(mutation_log_test, gc_slog)
+{
+    // Remove the slog dir and create a new one.
+    const std::string slog_dir("./slog_test");
+    ASSERT_TRUE(dsn::utils::filesystem::remove_path(slog_dir));
+    ASSERT_TRUE(dsn::utils::filesystem::create_directory(slog_dir));
+
+    // Create and open slog object, which would be closed at the end of the scope.
+    mutation_log_ptr mlog = new mutation_log_shared(slog_dir, 1, false);
+    auto cleanup = dsn::defer([mlog]() { mlog->close(); });
+    ASSERT_EQ(ERR_OK, mlog->open(nullptr, nullptr));
+
+    // Each line describes a sequence of mutations written to specified replicas by
+    // specified numbers.
+    //
+    // From these sequences the decrees for each partition could be concluded as below:
+    // {1, 1}: 9 ~ 15
+    // {1, 2}: 16 ~ 22
+    // {2, 5}: 1 ~ 8, 23 ~ 38
+    // {2, 7}: 39 ~ 46
+    // {5, 6}: 47 ~ 73
+    const std::vector<std::vector<std::pair<gpid, size_t>>> files = {
+        {{{2, 5}, 8}, {{1, 1}, 7}, {{1, 2}, 2}},
+        {{{1, 2}, 5}},
+        {{{2, 5}, 16}, {{2, 7}, 8}, {{5, 6}, 27}}};
+
+    // Each line describes a progress of durable decrees for all of replicas: decrees are
+    // continuously being applied and becoming durable.
+    const std::vector<std::unordered_map<gpid, decree>> durable_decrees = {
+        {{{1, 1}, 10}, {{1, 2}, 17}, {{2, 5}, 6}, {{2, 7}, 39}, {{5, 6}, 47}},
+        {{{1, 1}, 15}, {{1, 2}, 18}, {{2, 5}, 7}, {{2, 7}, 40}, {{5, 6}, 57}},
+        {{{1, 1}, 15}, {{1, 2}, 20}, {{2, 5}, 8}, {{2, 7}, 42}, {{5, 6}, 61}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 23}, {{2, 7}, 44}, {{5, 6}, 65}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 27}, {{2, 7}, 46}, {{5, 6}, 66}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 32}, {{2, 7}, 46}, {{5, 6}, 67}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 38}, {{2, 7}, 46}, {{5, 6}, 72}},
+        {{{1, 1}, 15}, {{1, 2}, 22}, {{2, 5}, 38}, {{2, 7}, 46}, {{5, 6}, 73}},
+    };
+    const std::vector<size_t> remaining_slog_files = {3, 3, 2, 1, 1, 1, 1, 0};
+    const std::vector<std::set<gpid>> expected_prevent_gc_replicas = {
+        {{1, 1}, {1, 2}, {2, 5}, {2, 7}, {5, 6}},
+        {{1, 2}, {2, 5}, {2, 7}, {5, 6}},
+        {{1, 2}, {2, 5}, {2, 7}, {5, 6}},
+        {{2, 5}, {2, 7}, {5, 6}},
+        {{2, 5}, {5, 6}},
+        {{2, 5}, {5, 6}},
+        {{5, 6}},
+        {},
+    };
+
+    // Each line describes an action, that during a round (related to the index of
+    // `durable_decrees`), which replica should be reset to the start offset of an
+    // slog file (related to the index of `files` and `slog_file_start_offsets`).
+    const std::unordered_map<size_t, size_t> set_to_slog_file_start_offsets = {
+        {2, 1},
+    };
+
+    // Create slog files and write some data into them according to test cases.
+    std::unordered_map<gpid, int64_t> valid_start_offsets;
+    std::vector<std::pair<gpid, int64_t>> slog_file_start_offsets;
+    generate_slog_files(files, mlog, valid_start_offsets, slog_file_start_offsets);
+
+    for (size_t i = 0; i < durable_decrees.size(); ++i) {
+        std::cout << "Update No." << i << " group of durable decrees" << std::endl;
+
+        // Update the progress of durable_decrees for each partition.
+        replica_log_info_map replica_durable_decrees;
+        for (const auto &d : durable_decrees[i]) {
+            replica_durable_decrees.emplace(
+                d.first, replica_log_info(d.second, valid_start_offsets[d.first]));
+        }
+
+        // Test condition for `valid_start_offset`, see `can_gc_replica_slog`.
+        const auto &set_to_start = set_to_slog_file_start_offsets.find(i);
+        if (set_to_start != set_to_slog_file_start_offsets.end()) {
+            const auto &start_offset = slog_file_start_offsets[set_to_start->second];
+            replica_durable_decrees[start_offset.first].valid_start_offset = start_offset.second;
+        }
+
+        // Run garbage collection for a round.
+        std::set<gpid> actual_prevent_gc_replicas;
+        mlog->garbage_collection(replica_durable_decrees, actual_prevent_gc_replicas);
+
+        // Check if the number of remaining slog files after garbage collection is desired.
+        std::vector<std::string> file_list;
+        ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(slog_dir, file_list, false));
+        ASSERT_EQ(remaining_slog_files[i], file_list.size());
+
+        // Check if the replicas that prevent garbage collection (i.e. cannot be removed by
+        // garbage collection) is expected.
+        ASSERT_EQ(expected_prevent_gc_replicas[i], actual_prevent_gc_replicas);
+    }
+}
+
+using gc_slog_flush_replicas_case = std::tuple<std::set<gpid>, uint64_t, size_t, size_t, size_t>;
+
+class GcSlogFlushFeplicasTest : public testing::TestWithParam<gc_slog_flush_replicas_case>
+{
+};
+
+DSN_DECLARE_uint64(log_shared_gc_flush_replicas_limit);
+
+TEST_P(GcSlogFlushFeplicasTest, FlushReplicas)
+{
+    std::set<gpid> prevent_gc_replicas;
+    size_t last_prevent_gc_replica_count;
+    uint64_t limit;
+    size_t last_limit;
+    size_t expected_flush_replicas;
+    std::tie(prevent_gc_replicas,
+             last_prevent_gc_replica_count,
+             limit,
+             last_limit,
+             expected_flush_replicas) = GetParam();
+
+    replica_stub::replica_gc_info_map replica_gc_map;
+    for (const auto &r : prevent_gc_replicas) {
+        replica_gc_map.emplace(r, replica_stub::replica_gc_info());
+    }
+
+    const auto reserved_log_shared_gc_flush_replicas_limit =
+        FLAGS_log_shared_gc_flush_replicas_limit;
+    FLAGS_log_shared_gc_flush_replicas_limit = limit;
+
+    dsn::fail::setup();
+    dsn::fail::cfg("mock_flush_replicas_for_slog_gc", "void(true)");
+
+    replica_stub stub;
+    stub._last_prevent_gc_replica_count = last_prevent_gc_replica_count;
+    stub._real_log_shared_gc_flush_replicas_limit = last_limit;
+
+    stub.flush_replicas_for_slog_gc(replica_gc_map, prevent_gc_replicas);
+    EXPECT_EQ(expected_flush_replicas, stub._mock_flush_replicas_for_test);
+
+    dsn::fail::teardown();
+
+    FLAGS_log_shared_gc_flush_replicas_limit = reserved_log_shared_gc_flush_replicas_limit;
+}
+
+const std::vector<gc_slog_flush_replicas_case> gc_slog_flush_replicas_tests = {
+    // Initially, there is no limit on flushed replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 0, 0, 6},
+    // Initially, there is no limit on flushed replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 1, 0, 5, 6},
+    // Initially, limit is less than the number of replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 1, 0, 1},
+    // Initially, limit is less than the number of replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 2, 0, 2},
+    // Initially, limit is just equal to the number of replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 6, 0, 6},
+    // Initially, limit is more than the number of replicas.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 0, 7, 0, 6},
+    // No replica has been flushed during previous round.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 6, 6, 6, 2},
+    // No replica has been flushed during previous round.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 6, 1, 2, 1},
+    // The previous limit is 0.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 7, 5, 0, 5},
+    // The previous limit is infinite.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 7, 5, std::numeric_limits<size_t>::max(), 5},
+    // The number of previously flushed replicas is less than the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 7, 5, 0, 5},
+    // The number of previously flushed replicas reaches the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 8, 6, 2, 4},
+    // The number of previously flushed replicas reaches the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 12, 6, 6, 6},
+    // The number of previously flushed replicas is more than the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 9, 3, 2, 3},
+    // The number of previously flushed replicas is more than the previous limit.
+    {{{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}}, 9, 5, 2, 4},
+};
+
+INSTANTIATE_TEST_CASE_P(MutationLogTest,
+                        GcSlogFlushFeplicasTest,
+                        testing::ValuesIn(gc_slog_flush_replicas_tests));
+
 } // namespace replication
 } // namespace dsn

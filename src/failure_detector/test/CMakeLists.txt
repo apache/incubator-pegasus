@@ -41,7 +41,7 @@ set(MY_PROJ_LIBS
     dsn.failure_detector
     gtest
     hashtable
-    )
+    rocksdb)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 

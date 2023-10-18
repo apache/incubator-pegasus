@@ -37,7 +37,6 @@
 #include <gtest/gtest_prod.h>
 #include <s2/third_party/absl/base/port.h>
 #include <string.h>
-#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <set>

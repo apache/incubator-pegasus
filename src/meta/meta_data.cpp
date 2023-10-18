@@ -159,10 +159,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     // we put max_replica_count-1 recent replicas to last_drops, in case of the DDD-state when the
     // only primary dead
     // when add node to pc.last_drops, we don't remove it from our cc.drop_list
-    CHECK(pc.last_drops.empty(),
-          "last_drops of partition({}.{}) must be empty",
-          pid.get_app_id(),
-          pid.get_partition_index());
+    CHECK(pc.last_drops.empty(), "last_drops of partition({}) must be empty", pid);
     for (auto iter = drop_list.rbegin(); iter != drop_list.rend(); ++iter) {
         if (pc.last_drops.size() + 1 >= max_replica_count)
             break;
@@ -402,10 +399,9 @@ int config_context::collect_drop_replica(const rpc_address &node, const replica_
     iter = find_from_dropped(node);
     if (iter == dropped.end()) {
         CHECK(!in_dropped,
-              "adjust position of existing node({}) failed, this is a bug, partition({}.{})",
-              node.to_string(),
-              config_owner->pid.get_app_id(),
-              config_owner->pid.get_partition_index());
+              "adjust position of existing node({}) failed, this is a bug, partition({})",
+              node,
+              config_owner->pid);
         return -1;
     }
     return in_dropped ? 1 : 0;

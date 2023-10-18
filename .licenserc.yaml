@@ -312,7 +312,7 @@ header:
     - 'src/nfs/nfs_client_impl.h'
     - 'src/nfs/nfs_code_definition.h'
     - 'src/nfs/nfs_node.cpp'
-    - 'src/nfs/nfs_node_impl.cpp'
+    - 'src/nfs/nfs_node_simple.cpp'
     - 'src/nfs/nfs_node_simple.h'
     - 'src/nfs/nfs_server_impl.cpp'
     - 'src/nfs/nfs_server_impl.h'

@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 
 #include "common/replica_envs.h"
@@ -142,6 +143,17 @@ TEST_F(meta_app_envs_test, update_app_envs_test)
         {replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL, "80", ERR_OK, "", "80"},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, "90", ERR_OK, "", "90"},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, "100", ERR_OK, "", "100"},
+        {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
+         "100",
+         ERR_INVALID_PARAMETERS,
+         "rocksdb.write_buffer_size suggest set val in range [16777216, 536870912]",
+         "67108864"},
+        {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
+         "636870912",
+         ERR_INVALID_PARAMETERS,
+         "rocksdb.write_buffer_size suggest set val in range [16777216, 536870912]",
+         "536870912"},
+        {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE, "67108864", ERR_OK, "", "67108864"},
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION,
          "200",
          ERR_OK,
@@ -190,6 +202,18 @@ TEST_F(meta_app_envs_test, update_app_envs_test)
         ASSERT_EQ(response.hint_message, test.hint);
         if (app->envs.find(test.env_key) != app->envs.end()) {
             ASSERT_EQ(app->envs.at(test.env_key), test.expect_value);
+        }
+    }
+
+    {
+        // Make sure all rocksdb options of ROCKSDB_DYNAMIC_OPTIONS are tested.
+        // Hint: Mainly verify the update_rocksdb_dynamic_options function.
+        std::map<std::string, std::string> all_test_envs;
+        for (const auto &test : tests) {
+            all_test_envs[test.env_key] = test.env_value;
+        }
+        for (const auto &option : replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
+            ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
         }
     }
 }

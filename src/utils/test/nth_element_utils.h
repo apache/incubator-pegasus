@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <random>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -93,7 +94,10 @@ public:
             auto delta = _rand(_range_size);
             value += delta;
         }
-        std::random_shuffle(array.begin(), array.end());
+
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(array.begin(), array.end(), g);
     }
 
 private:

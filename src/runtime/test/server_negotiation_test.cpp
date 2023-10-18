@@ -23,7 +23,6 @@
 #include <memory>
 #include <utility>
 
-#include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"

@@ -17,41 +17,13 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
-#include <string>
+#include <fmt/ostream.h>
 
-#include "utils/ports.h"
+#define USER_DEFINED_STRUCTURE_FORMATTER(type)                                                     \
+    template <>                                                                                    \
+    struct fmt::formatter<type> : ostream_formatter                                                \
+    {                                                                                              \
+    }
 
-namespace dsn {
-namespace dist {
-namespace block_service {
-
-class direct_io_writable_file
-{
-public:
-    explicit direct_io_writable_file(const std::string &file_path);
-    ~direct_io_writable_file();
-
-    bool initialize();
-    bool write(const char *s, size_t n);
-    bool finalize();
-
-private:
-    DISALLOW_COPY_AND_ASSIGN(direct_io_writable_file);
-
-    std::string _file_path;
-    int _fd;
-    uint32_t _file_size;
-
-    // page size aligned buffer
-    void *_buffer;
-    // buffer size
-    uint32_t _buffer_size;
-    // buffer offset
-    uint32_t _offset;
-};
-
-} // namespace block_service
-} // namespace dist
-} // namespace dsn
+#define USER_DEFINED_ENUM_FORMATTER(type)                                                          \
+    inline auto format_as(type e)->int { return e; }

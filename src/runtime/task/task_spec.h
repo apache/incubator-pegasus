@@ -48,6 +48,7 @@
 #include "utils/enum_helper.h"
 #include "utils/exp_delay.h"
 #include "utils/extensible_object.h"
+#include "utils/fmt_utils.h"
 #include "utils/join_point.h"
 #include "utils/threadpool_code.h"
 
@@ -85,6 +86,7 @@ typedef enum grpc_mode_t {
     GRPC_COUNT,
     GRPC_INVALID
 } grpc_mode_t;
+USER_DEFINED_ENUM_FORMATTER(grpc_mode_t)
 
 ENUM_BEGIN(grpc_mode_t, GRPC_INVALID)
 ENUM_REG(GRPC_TO_LEADER)
@@ -99,6 +101,7 @@ typedef enum throttling_mode_t {
     TM_COUNT,
     TM_INVALID
 } throttling_mode_t;
+USER_DEFINED_ENUM_FORMATTER(throttling_mode_t)
 
 ENUM_BEGIN(throttling_mode_t, TM_INVALID)
 ENUM_REG(TM_NONE)
@@ -128,11 +131,13 @@ ENUM_END(dsn_msg_serialize_format)
 DEFINE_CUSTOMIZED_ID_TYPE(network_header_format)
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_INVALID)
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_DSN)
+USER_DEFINED_ENUM_FORMATTER(network_header_format)
 
 // define network channel types for RPC
 DEFINE_CUSTOMIZED_ID_TYPE(rpc_channel)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_TCP)
 DEFINE_CUSTOMIZED_ID(rpc_channel, RPC_CHANNEL_UDP)
+USER_DEFINED_ENUM_FORMATTER(rpc_channel)
 
 class aio_task;
 class message_ex;

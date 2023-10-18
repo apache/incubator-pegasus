@@ -54,7 +54,6 @@
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"

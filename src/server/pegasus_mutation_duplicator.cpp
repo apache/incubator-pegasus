@@ -20,13 +20,11 @@
 #include "pegasus_mutation_duplicator.h"
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
 #include <chrono>
 #include <cstdint>
 #include <functional>
-#include <iosfwd>
 #include <memory>
 #include <tuple>
 #include <utility>

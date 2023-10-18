@@ -49,6 +49,7 @@
 #include <string>
 
 #include "ports.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 
@@ -428,3 +429,5 @@ inline bool operator!=(string_view x, string_view y) noexcept { return !(x == y)
 std::ostream &operator<<(std::ostream &o, string_view piece);
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::string_view);

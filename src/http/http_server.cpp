@@ -17,7 +17,6 @@
 
 #include "http_server.h"
 
-#include <fmt/ostream.h>
 #include <stdint.h>
 #include <string.h>
 #include <memory>
@@ -26,6 +25,7 @@
 
 #include "builtin_http_calls.h"
 #include "fmt/core.h"
+#include "http/http_method.h"
 #include "http_call_registry.h"
 #include "http_message_parser.h"
 #include "http_server_impl.h"
@@ -147,8 +147,8 @@ void http_server::serve(message_ex *msg)
         resp.body = fmt::format("failed to parse request: {}", res.get_error());
     } else {
         const http_request &req = res.get_value();
-        std::shared_ptr<http_call> call = http_call_registry::instance().find(req.path);
-        if (call != nullptr) {
+        auto call = http_call_registry::instance().find(req.path);
+        if (call) {
             call->callback(req, resp);
         } else {
             resp.status_code = http_status_code::not_found;

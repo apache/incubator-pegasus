@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <fmt/core.h>
 #include <pegasus/error.h>
 #include <algorithm>
 #include <chrono>

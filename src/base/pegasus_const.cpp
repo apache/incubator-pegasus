@@ -19,6 +19,12 @@
 
 #include "pegasus_const.h"
 
+#include <rocksdb/options.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "utils/string_conv.h"
+
 namespace pegasus {
 
 // should be same with items in dsn::backup_restore_constant
@@ -101,4 +107,47 @@ const std::string USER_SPECIFIED_COMPACTION("user_specified_compaction");
 const std::string READ_SIZE_THROTTLING("replica.read_throttling_by_size");
 
 const std::string ROCKSDB_ALLOW_INGEST_BEHIND("rocksdb.allow_ingest_behind");
+
+const std::string ROCKSDB_WRITE_BUFFER_SIZE("rocksdb.write_buffer_size");
+
+const std::string ROCKSDB_NUM_LEVELS("rocksdb.num_levels");
+
+const std::set<std::string> ROCKSDB_DYNAMIC_OPTIONS = {
+    ROCKSDB_WRITE_BUFFER_SIZE,
+};
+const std::set<std::string> ROCKSDB_STATIC_OPTIONS = {
+    ROCKSDB_NUM_LEVELS,
+};
+
+const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters = {
+    {ROCKSDB_WRITE_BUFFER_SIZE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.write_buffer_size = static_cast<size_t>(val);
+         return true;
+     }},
+    {ROCKSDB_NUM_LEVELS,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.num_levels = val;
+         return true;
+     }},
+};
+
+const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters = {
+    {ROCKSDB_WRITE_BUFFER_SIZE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.write_buffer_size);
+     }},
+    {ROCKSDB_NUM_LEVELS,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.num_levels);
+     }},
+};
 } // namespace pegasus

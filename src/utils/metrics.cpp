@@ -23,6 +23,7 @@
 #include <fmt/core.h>
 #include <new>
 
+#include "http/http_method.h"
 #include "runtime/api_layer1.h"
 #include "utils/flags.h"
 #include "utils/rand.h"
@@ -275,7 +276,7 @@ const dsn::metric_filters::metric_fields_type kBriefMetricFields = get_brief_met
 
 void metrics_http_service::get_metrics_handler(const http_request &req, http_response &resp)
 {
-    if (req.method != http_method::HTTP_METHOD_GET) {
+    if (req.method != http_method::GET) {
         resp.body = encode_error_as_json("please use 'GET' method while querying for metrics");
         resp.status_code = http_status_code::bad_request;
         return;
@@ -617,8 +618,8 @@ void metric_timer::on_timer(const boost::system::error_code &ec)
     } while (0)
 
     if (dsn_unlikely(!!ec)) {
-        CHECK_EQ_MSG(ec,
-                     boost::system::errc::operation_canceled,
+        CHECK_EQ_MSG(static_cast<int>(boost::system::errc::operation_canceled),
+                     ec.value(),
                      "failed to exec on_timer with an error that cannot be handled: {}",
                      ec.message());
 

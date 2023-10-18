@@ -15,16 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <boost/filesystem/path.hpp>
-#include <boost/system/error_code.hpp>
-#include <fcntl.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <rocksdb/status.h>
+#include <stdint.h>
 #include <sys/types.h>
-#include <unistd.h>
 
+#include "aio/aio_task.h"
+#include "aio/file_io.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
@@ -44,6 +47,7 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"
@@ -58,7 +62,6 @@
 #include <iterator>
 #include <map>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -303,42 +306,43 @@ TEST_F(load_from_private_log_test, start_duplication_100000_4MB)
 // Ensure replica_duplicator can correctly handle real-world log file
 TEST_F(load_from_private_log_test, handle_real_private_log)
 {
+    std::vector<std::string> log_files({"log.1.0.handle_real_private_log",
+                                        "log.1.0.handle_real_private_log2",
+                                        "log.1.0.all_loaded_are_write_empties"});
+
     struct test_data
     {
-        std::string fname;
         int puts;
         int total;
         gpid id;
     } tests[] = {
         // PUT, PUT, PUT, EMPTY, PUT, EMPTY, EMPTY
-        {"log.1.0.handle_real_private_log", 4, 6, gpid(1, 4)},
+        {4, 6, gpid(1, 4)},
 
         // EMPTY, PUT, EMPTY
-        {"log.1.0.handle_real_private_log2", 1, 2, gpid(1, 4)},
+        {1, 2, gpid(1, 4)},
 
         // EMPTY, EMPTY, EMPTY
-        {"log.1.0.all_loaded_are_write_empties", 0, 2, gpid(1, 5)},
+        {0, 2, gpid(1, 5)},
     };
 
-    for (auto tt : tests) {
+    ASSERT_EQ(log_files.size(), sizeof(tests) / sizeof(test_data));
+    for (int i = 0; i < log_files.size(); i++) {
         // reset replica to specified gpid
         duplicator.reset(nullptr);
-        _replica = create_mock_replica(stub.get(), tt.id.get_app_id(), tt.id.get_partition_index());
+        _replica = create_mock_replica(
+            stub.get(), tests[i].id.get_app_id(), tests[i].id.get_partition_index());
 
         // Update '_log_dir' to the corresponding replica created above.
         _log_dir = _replica->dir();
         ASSERT_TRUE(utils::filesystem::path_exists(_log_dir)) << _log_dir;
 
         // Copy the log file to '_log_dir'
-        boost::filesystem::path file(tt.fname);
-        ASSERT_TRUE(dsn::utils::filesystem::file_exists(tt.fname)) << tt.fname;
-        boost::system::error_code ec;
-        boost::filesystem::copy_file(
-            file, _log_dir + "/log.1.0", boost::filesystem::copy_option::overwrite_if_exists, ec);
-        ASSERT_TRUE(!ec) << ec.value() << ", " << ec.category().name() << ", " << ec.message();
+        auto s = dsn::utils::copy_file(log_files[i], _log_dir + "/log.1.0");
+        ASSERT_TRUE(s.ok()) << s.ToString();
 
         // Start to verify.
-        load_and_wait_all_entries_loaded(tt.puts, tt.total, tt.id, 1, 0);
+        load_and_wait_all_entries_loaded(tests[i].puts, tests[i].total, tests[i].id, 1, 0);
     }
 }
 
@@ -451,12 +455,27 @@ TEST_F(load_fail_mode_test, fail_skip_real_corrupted_file)
 {
     { // inject some bad data in the middle of the first file
         std::string log_path = _log_dir + "/log.1.0";
-        auto file_size = boost::filesystem::file_size(log_path);
-        int fd = open(log_path.c_str(), O_WRONLY);
+        int64_t file_size;
+        ASSERT_TRUE(utils::filesystem::file_size(
+            log_path, dsn::utils::FileDataType::kSensitive, file_size));
+        auto wfile = file::open(log_path, file::FileOpenType::kWriteOnly);
+        ASSERT_NE(wfile, nullptr);
+
         const char buf[] = "xxxxxx";
-        auto written_size = pwrite(fd, buf, sizeof(buf), file_size / 2);
-        ASSERT_EQ(written_size, sizeof(buf));
-        close(fd);
+        auto buff_len = sizeof(buf);
+        auto t = ::dsn::file::write(wfile,
+                                    buf,
+                                    buff_len,
+                                    file_size / 2,
+                                    LPC_AIO_IMMEDIATE_CALLBACK,
+                                    nullptr,
+                                    [=](::dsn::error_code err, size_t n) {
+                                        CHECK_EQ(ERR_OK, err);
+                                        CHECK_EQ(buff_len, n);
+                                    });
+        t->wait();
+        ASSERT_EQ(ERR_OK, ::dsn::file::flush(wfile));
+        ASSERT_EQ(ERR_OK, ::dsn::file::close(wfile));
     }
 
     duplicator->update_fail_mode(duplication_fail_mode::FAIL_SKIP);

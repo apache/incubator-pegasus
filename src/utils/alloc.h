@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 #include "utils/ports.h"
 
 // The check for the definition of CACHELINE_SIZE has to be put after including "utils/ports.h",
@@ -24,7 +26,7 @@
 #ifdef CACHELINE_SIZE
 
 #include <stddef.h>
-#include <algorithm>
+#include <algorithm> // IWYU pragma: keep
 #include <functional>
 #include <memory>
 #include <new>

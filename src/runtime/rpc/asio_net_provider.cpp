@@ -31,7 +31,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <algorithm>
 #include <cstddef>
 #include <limits>
 #include <memory>
@@ -242,7 +241,7 @@ void asio_udp_provider::send_message(message_ex *request)
         [=](const boost::system::error_code &error, std::size_t bytes_transferred) {
             if (error) {
                 LOG_WARNING("send udp packet to ep {}:{} failed, message = {}",
-                            ep.address(),
+                            ep.address().to_string(),
                             ep.port(),
                             error.message());
                 // we do not handle failure here, rpc matcher would handle timeouts

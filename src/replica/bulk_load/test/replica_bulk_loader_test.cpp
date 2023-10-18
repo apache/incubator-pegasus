@@ -17,10 +17,14 @@
 
 #include "replica/bulk_load/replica_bulk_loader.h"
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
-#include <algorithm>
+#include <rocksdb/env.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/status.h>
 #include <fstream> // IWYU pragma: keep
 #include <memory>
 #include <vector>
@@ -33,10 +37,11 @@
 #include "replica/test/replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task_tracker.h"
+#include "test_util/test_util.h"
 #include "utils/blob.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
+#include "utils/test_macros.h"
 
 namespace dsn {
 namespace replication {
@@ -248,44 +253,21 @@ public:
         _replica->set_primary_partition_configuration(config);
     }
 
-    void create_local_file(const std::string &file_name)
+    void create_local_metadata_file()
     {
-        std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, file_name);
-        utils::filesystem::create_file(whole_name);
-        std::ofstream test_file;
-        test_file.open(whole_name);
-        test_file << "write some data.\n";
-        test_file.close();
+        NO_FATALS(pegasus::create_local_test_file(
+            utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME), &_file_meta));
 
-        _file_meta.name = whole_name;
-        utils::filesystem::md5sum(whole_name, _file_meta.md5);
-        utils::filesystem::file_size(whole_name, _file_meta.size);
-    }
-
-    error_code create_local_metadata_file()
-    {
-        create_local_file(FILE_NAME);
         _metadata.files.emplace_back(_file_meta);
         _metadata.file_total_size = _file_meta.size;
-
         std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-        utils::filesystem::create_file(whole_name);
-        std::ofstream os(whole_name.c_str(),
-                         (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
-        if (!os.is_open()) {
-            LOG_ERROR("open file {} failed", whole_name);
-            return ERR_FILE_OPERATION_FAILED;
-        }
-
         blob bb = json::json_forwarder<bulk_load_metadata>::encode(_metadata);
-        os.write((const char *)bb.data(), (std::streamsize)bb.length());
-        if (os.bad()) {
-            LOG_ERROR("write file {} failed", whole_name);
-            return ERR_FILE_OPERATION_FAILED;
-        }
-        os.close();
-
-        return ERR_OK;
+        auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
+                                            rocksdb::Slice(bb.data(), bb.length()),
+                                            whole_name,
+                                            /* should_sync */ true);
+        ASSERT_TRUE(s.ok()) << fmt::format(
+            "write file {} failed, err = {}", whole_name, s.ToString());
     }
 
     bool validate_metadata()
@@ -550,21 +532,21 @@ TEST_F(replica_bulk_loader_test, bulk_load_metadata_corrupt)
 {
     // create file can not parse as bulk_load_metadata structure
     utils::filesystem::create_directory(LOCAL_DIR);
-    create_local_file(METADATA);
+    NO_FATALS(pegasus::create_local_test_file(utils::filesystem::path_combine(LOCAL_DIR, METADATA),
+                                              &_file_meta));
     std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
     error_code ec = test_parse_bulk_load_metadata(metadata_file_name);
-    ASSERT_EQ(ec, ERR_CORRUPTION);
+    ASSERT_EQ(ERR_CORRUPTION, ec);
     utils::filesystem::remove_path(LOCAL_DIR);
 }
 
 TEST_F(replica_bulk_loader_test, bulk_load_metadata_parse_succeed)
 {
     utils::filesystem::create_directory(LOCAL_DIR);
-    error_code ec = create_local_metadata_file();
-    ASSERT_EQ(ec, ERR_OK);
+    NO_FATALS(create_local_metadata_file());
 
     std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-    ec = test_parse_bulk_load_metadata(metadata_file_name);
+    auto ec = test_parse_bulk_load_metadata(metadata_file_name);
     ASSERT_EQ(ec, ERR_OK);
     ASSERT_TRUE(validate_metadata());
     utils::filesystem::remove_path(LOCAL_DIR);

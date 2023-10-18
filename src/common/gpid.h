@@ -29,6 +29,8 @@
 #include <ostream>
 #include <thrift/protocol/TProtocol.h>
 
+#include "utils/fmt_utils.h"
+
 namespace dsn {
 
 // Group-Partition-ID.
@@ -90,6 +92,8 @@ private:
 };
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::gpid);
 
 namespace std {
 template <>

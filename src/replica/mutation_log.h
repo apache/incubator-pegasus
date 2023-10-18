@@ -26,11 +26,13 @@
 
 #pragma once
 
+#include <fmt/core.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <algorithm>
 #include <atomic>
 #include <functional>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <set>
@@ -50,6 +52,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -221,19 +224,17 @@ public:
                            int64_t reserve_max_size,
                            int64_t reserve_max_time);
 
-    // garbage collection for shared log, returns reserved file count.
-    // `prevent_gc_replicas' will store replicas which prevent log files out of `file_count_limit'
-    // to be deleted.
-    // remove log files if satisfy:
-    //  - for each replica "r":
-    //         r is not in file.max_decree
-    //      || file.max_decree[r] <= gc_condition[r].max_decree
-    //      || file.end_offset[r] <= gc_condition[r].valid_start_offset
-    //  - the current log file should not be removed
-    // thread safe
-    int garbage_collection(const replica_log_info_map &gc_condition,
-                           int file_count_limit,
-                           std::set<gpid> &prevent_gc_replicas);
+    // Garbage collection for shared log.
+    // `prevent_gc_replicas' will store replicas which prevent log files from being deleted
+    // for gc.
+    //
+    // Since slog had been deprecated, no new slog files would be created. Therefore, our
+    // target is to remove all of the existing slog files according to the progressive durable
+    // decree for each replica.
+    //
+    // Thread safe.
+    void garbage_collection(const replica_log_info_map &replica_durable_decrees,
+                            std::set<gpid> &prevent_gc_replicas);
 
     //
     // when this is a private log, log files are learned by remote replicas
@@ -285,8 +286,10 @@ public:
     decree max_gced_decree(gpid gpid) const;
     decree max_gced_decree_no_lock(gpid gpid) const;
 
+    using log_file_map_by_index = std::map<int, log_file_ptr>;
+
     // thread-safe
-    std::map<int, log_file_ptr> get_log_file_map() const;
+    log_file_map_by_index get_log_file_map() const;
 
     // check the consistence of valid_start_offset
     // thread safe
@@ -299,6 +302,58 @@ public:
     void demand_switch_file() { _switch_file_demand = true; }
 
     task_tracker *tracker() { return &_tracker; }
+
+    struct reserved_slog_info
+    {
+        size_t file_count = 0;
+        int64_t log_size = 0;
+        int min_file_index = 0;
+        int max_file_index = 0;
+
+        std::string to_string() const
+        {
+            return fmt::format("reserved_slog_info = [file_count = {}, log_size = {}, "
+                               "min_file_index = {}, max_file_index = {}]",
+                               file_count,
+                               log_size,
+                               min_file_index,
+                               max_file_index);
+        }
+
+        friend std::ostream &operator<<(std::ostream &os, const reserved_slog_info &reserved_log)
+        {
+            return os << reserved_log.to_string();
+        }
+    };
+
+    struct slog_deletion_info
+    {
+        int to_delete_file_count = 0;
+        int64_t to_delete_log_size = 0;
+        int deleted_file_count = 0;
+        int64_t deleted_log_size = 0;
+        int deleted_min_file_index = 0;
+        int deleted_max_file_index = 0;
+
+        std::string to_string() const
+        {
+            return fmt::format("slog_deletion_info = [to_delete_file_count = {}, "
+                               "to_delete_log_size = {}, deleted_file_count = {}, "
+                               "deleted_log_size = {}, deleted_min_file_index = {}, "
+                               "deleted_max_file_index = {}]",
+                               to_delete_file_count,
+                               to_delete_log_size,
+                               deleted_file_count,
+                               deleted_log_size,
+                               deleted_min_file_index,
+                               deleted_max_file_index);
+        }
+
+        friend std::ostream &operator<<(std::ostream &os, const slog_deletion_info &log_deletion)
+        {
+            return os << log_deletion.to_string();
+        }
+    };
 
 protected:
     // thread-safe
@@ -325,7 +380,7 @@ private:
                              replay_callback callback,
                              /*out*/ int64_t &end_offset);
 
-    static error_code replay(std::map<int, log_file_ptr> &log_files,
+    static error_code replay(log_file_map_by_index &log_files,
                              replay_callback callback,
                              /*out*/ int64_t &end_offset);
 
@@ -344,6 +399,13 @@ private:
 
     // get total size ithout lock.
     int64_t total_size_no_lock() const;
+
+    // Closing and remove all of slog files whose indexes are less than (i.e. older) or equal to
+    // `max_file_index_to_delete`.
+    void remove_obsolete_slog_files(const int max_file_index_to_delete,
+                                    log_file_map_by_index &files,
+                                    reserved_slog_info &reserved_log,
+                                    slog_deletion_info &log_deletion);
 
 protected:
     std::string _dir;
@@ -373,12 +435,12 @@ private:
     bool _switch_file_demand;
 
     // logs
-    int _last_file_index;                   // new log file index = _last_file_index + 1
-    std::map<int, log_file_ptr> _log_files; // index -> log_file_ptr
-    log_file_ptr _current_log_file;         // current log file
-    int64_t _global_start_offset;           // global start offset of all files.
-                                            // invalid if _log_files.size() == 0.
-    int64_t _global_end_offset;             // global end offset currently
+    int _last_file_index;             // new log file index = _last_file_index + 1
+    log_file_map_by_index _log_files; // index -> log_file_ptr
+    log_file_ptr _current_log_file;   // current log file
+    int64_t _global_start_offset;     // global start offset of all files.
+                                      // invalid if _log_files.size() == 0.
+    int64_t _global_end_offset;       // global end offset currently
 
     // replica log info
     // - log_info.max_decree: the max decree of mutations up to now
@@ -410,21 +472,21 @@ public:
     {
     }
 
-    virtual ~mutation_log_shared() override
+    ~mutation_log_shared() override
     {
         close();
         _tracker.cancel_outstanding_tasks();
     }
 
-    virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn::task_code callback_code,
-                                   dsn::task_tracker *tracker,
-                                   aio_handler &&callback,
-                                   int hash = 0,
-                                   int64_t *pending_size = nullptr) override;
+    ::dsn::task_ptr append(mutation_ptr &mu,
+                           dsn::task_code callback_code,
+                           dsn::task_tracker *tracker,
+                           aio_handler &&callback,
+                           int hash = 0,
+                           int64_t *pending_size = nullptr) override;
 
-    virtual void flush() override;
-    virtual void flush_once() override;
+    void flush() override;
+    void flush_once() override;
 
 private:
     // async write pending mutations into log file
@@ -467,24 +529,22 @@ public:
         _tracker.cancel_outstanding_tasks();
     }
 
-    virtual ::dsn::task_ptr append(mutation_ptr &mu,
-                                   dsn::task_code callback_code,
-                                   dsn::task_tracker *tracker,
-                                   aio_handler &&callback,
-                                   int hash = 0,
-                                   int64_t *pending_size = nullptr) override;
+    ::dsn::task_ptr append(mutation_ptr &mu,
+                           dsn::task_code callback_code,
+                           dsn::task_tracker *tracker,
+                           aio_handler &&callback,
+                           int hash = 0,
+                           int64_t *pending_size = nullptr) override;
 
-    virtual bool get_learn_state_in_memory(decree start_decree,
-                                           binary_writer &writer) const override;
+    bool get_learn_state_in_memory(decree start_decree, binary_writer &writer) const override;
 
     // get in-memory mutations, including pending and writing mutations
-    virtual void
-    get_in_memory_mutations(decree start_decree,
-                            ballot start_ballot,
-                            /*out*/ std::vector<mutation_ptr> &mutation_list) const override;
+    void get_in_memory_mutations(decree start_decree,
+                                 ballot start_ballot,
+                                 /*out*/ std::vector<mutation_ptr> &mutation_list) const override;
 
-    virtual void flush() override;
-    virtual void flush_once() override;
+    void flush() override;
+    void flush_once() override;
 
 private:
     // async write pending mutations into log file
@@ -499,7 +559,7 @@ private:
                                   std::shared_ptr<log_appender> &pending,
                                   decree max_commit);
 
-    virtual void init_states() override;
+    void init_states() override;
 
     // flush at most count times
     // if count <= 0, means flush until all data is on disk
@@ -521,3 +581,6 @@ private:
 
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::mutation_log::reserved_slog_info);
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::mutation_log::slog_deletion_info);

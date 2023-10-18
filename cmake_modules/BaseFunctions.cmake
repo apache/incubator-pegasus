@@ -147,6 +147,7 @@ function(dsn_add_project)
   endif()
   ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_LIBS}" "${MY_BINPLACES}")
   define_file_basename_for_sources(${MY_PROJ_NAME})
+  target_compile_features(${MY_PROJ_NAME} PRIVATE cxx_std_17)
 endfunction(dsn_add_project)
 
 function(dsn_add_static_library)
@@ -204,7 +205,7 @@ function(dsn_setup_compiler_flags)
   # We want access to the PRI* print format macros.
   add_definitions(-D__STDC_FORMAT_MACROS)
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -gdwarf-4" CACHE STRING "" FORCE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -gdwarf-4" CACHE STRING "" FORCE)
 
   #  -Wall: Enable all warnings.
   add_compile_options(-Wall)
@@ -221,9 +222,6 @@ function(dsn_setup_compiler_flags)
   #   use frame pointers to allow simple stack frame walking for backtraces.
   #   This has a small perf hit but worth it for the ability to profile in production
   add_compile_options( -fno-omit-frame-pointer)
-  # -Wno-deprecated-register
-  #   kbr5.h uses the legacy 'register' keyword.
-  add_compile_options(-Wno-deprecated-register)
   # -Wno-implicit-float-conversion
   #   Poco/Dynamic/VarHolder.h uses 'unsigned long' to 'float' conversion
   add_compile_options(-Wno-implicit-float-conversion)
@@ -388,11 +386,9 @@ function(dsn_common_setup)
 
   set(BUILD_SHARED_LIBS OFF)
 
-  include(CheckCXXCompilerFlag)
-  CHECK_CXX_COMPILER_FLAG("-std=c++1y" COMPILER_SUPPORTS_CXX1Y)
-  if(NOT ${COMPILER_SUPPORTS_CXX1Y})
-    message(FATAL_ERROR "You need a compiler with C++1y support.")
-  endif()
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 
   dsn_setup_system_libs()
   dsn_setup_compiler_flags()

@@ -25,23 +25,35 @@
 */
 #include "simple_kv.server.impl.h"
 
+#include <fmt/core.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <algorithm>
-#include <fstream>
+#include <memory>
 #include <utility>
 #include <vector>
 
+#include "aio/aio_task.h"
+#include "aio/file_io.h"
 #include "consensus_types.h"
+#include "rocksdb/env.h"
+#include "rocksdb/slice.h"
+#include "rocksdb/status.h"
 #include "runtime/serverlet.h"
+#include "runtime/task/task_code.h"
 #include "simple_kv_types.h"
+#include "utils/autoref_ptr.h"
+#include "utils/binary_reader.h"
+#include "utils/blob.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/threadpool_code.h"
+#include "utils/utils.h"
 
+// TODO(yingchun): most of the code are the same as
+// src/replica/storage/simple_kv/simple_kv.server.impl.cpp, unify the code!
 namespace dsn {
-class blob;
 
 namespace replication {
 class replica;
@@ -53,6 +65,8 @@ class replica;
 namespace dsn {
 namespace replication {
 namespace test {
+
+DEFINE_TASK_CODE(LPC_AIO_IMMEDIATE_CALLBACK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
 
 bool simple_kv_service_impl::s_simple_kv_open_fail = false;
 bool simple_kv_service_impl::s_simple_kv_close_fail = false;
@@ -174,34 +188,53 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 {
     dsn::zauto_lock l(_lock);
 
-    std::ifstream is(name.c_str(), std::ios::binary);
-    if (!is.is_open())
-        return;
+    std::unique_ptr<rocksdb::SequentialFile> rfile;
+    auto s = rocksdb::Env::Default()->NewSequentialFile(name, &rfile, rocksdb::EnvOptions());
+    CHECK(s.ok(), "open log file '{}' failed, err = {}", name, s.ToString());
 
     _store.clear();
 
-    uint64_t count;
-    int magic;
+    // Read header.
+    uint64_t count = 0;
+    int magic = 0;
+    rocksdb::Slice result;
+    static const uint64_t kHeaderSize = sizeof(count) + sizeof(magic);
+    char buff[kHeaderSize] = {0};
+    s = rfile->Read(kHeaderSize, &result, buff);
+    CHECK(s.ok(), "read header failed, err = {}", s.ToString());
+    CHECK(!result.empty(), "read EOF of file '{}'", name);
 
-    is.read((char *)&count, sizeof(count));
-    is.read((char *)&magic, sizeof(magic));
+    binary_reader reader(blob(buff, 0, kHeaderSize));
+    CHECK_EQ(sizeof(count), reader.read(count));
+    CHECK_EQ(sizeof(magic), reader.read(magic));
     CHECK_EQ_MSG(magic, 0xdeadbeef, "invalid checkpoint");
 
+    // Read kv pairs.
     for (uint64_t i = 0; i < count; i++) {
-        std::string key;
-        std::string value;
+        // Read key.
+        uint32_t sz = 0;
+        s = rfile->Read(sizeof(sz), &result, (char *)&sz);
+        CHECK(s.ok(), "read key size failed, err = {}", s.ToString());
+        CHECK(!result.empty(), "read EOF of file '{}'", name);
 
-        uint32_t sz;
-        is.read((char *)&sz, (uint32_t)sizeof(sz));
-        key.resize(sz);
+        std::shared_ptr<char> key_buffer(dsn::utils::make_shared_array<char>(sz));
+        s = rfile->Read(sz, &result, key_buffer.get());
+        CHECK(s.ok(), "read key failed, err = {}", s.ToString());
+        CHECK(!result.empty(), "read EOF of file '{}'", name);
+        std::string key = result.ToString();
 
-        is.read((char *)&key[0], sz);
+        // Read value.
+        s = rfile->Read(sizeof(sz), &result, (char *)&sz);
+        CHECK(s.ok(), "read value size failed, err = {}", s.ToString());
+        CHECK(!result.empty(), "read EOF of file '{}'", name);
 
-        is.read((char *)&sz, (uint32_t)sizeof(sz));
-        value.resize(sz);
+        std::shared_ptr<char> value_buffer(dsn::utils::make_shared_array<char>(sz));
+        s = rfile->Read(sz, &result, value_buffer.get());
+        CHECK(s.ok(), "read value failed, err = {}", s.ToString());
+        CHECK(!result.empty(), "read EOF of file '{}'", name);
+        std::string value = result.ToString();
 
-        is.read((char *)&value[0], sz);
-
+        // Store the kv pair.
         _store[key] = value;
     }
 }
@@ -218,30 +251,43 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         return ERR_OK;
     }
 
-    // TODO: should use async write instead
-    char name[256];
-    sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(), last_commit);
-    std::ofstream os(name, std::ios::binary);
+    std::string fname = fmt::format("{}/checkpoint.{}", data_dir(), last_commit);
+    auto wfile = file::open(fname, file::FileOpenType::kWriteOnly);
+    CHECK_NOTNULL(wfile, "");
 
+#define WRITE_DATA_SIZE(data, size)                                                                \
+    do {                                                                                           \
+        auto tsk = ::dsn::file::write(                                                             \
+            wfile, (char *)&data, size, offset, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr);     \
+        tsk->wait();                                                                               \
+        offset += size;                                                                            \
+    } while (false)
+
+#define WRITE_DATA(data) WRITE_DATA_SIZE(data, sizeof(data))
+
+    uint64_t offset = 0;
     uint64_t count = (uint64_t)_store.size();
+    WRITE_DATA(count);
+
     int magic = 0xdeadbeef;
+    WRITE_DATA(magic);
 
-    os.write((const char *)&count, (uint32_t)sizeof(count));
-    os.write((const char *)&magic, (uint32_t)sizeof(magic));
-
-    for (auto it = _store.begin(); it != _store.end(); ++it) {
-        const std::string &k = it->first;
+    for (const auto &kv : _store) {
+        const std::string &k = kv.first;
         uint32_t sz = (uint32_t)k.length();
+        WRITE_DATA(sz);
+        WRITE_DATA_SIZE(k[0], sz);
 
-        os.write((const char *)&sz, (uint32_t)sizeof(sz));
-        os.write((const char *)&k[0], sz);
-
-        const std::string &v = it->second;
+        const std::string &v = kv.second;
         sz = (uint32_t)v.length();
-
-        os.write((const char *)&sz, (uint32_t)sizeof(sz));
-        os.write((const char *)&v[0], sz);
+        WRITE_DATA(sz);
+        WRITE_DATA_SIZE(v[0], sz);
     }
+#undef WRITE_DATA
+#undef WRITE_DATA_SIZE
+
+    CHECK_EQ(ERR_OK, file::flush(wfile));
+    CHECK_EQ(ERR_OK, file::close(wfile));
 
     set_last_durable_decree(last_commit);
     LOG_INFO("simple_kv_service_impl create checkpoint succeed, "

@@ -390,8 +390,9 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(ref_this,
 {
     zookeeper_session::zoo_opcontext *op =
         reinterpret_cast<zookeeper_session::zoo_opcontext *>(result);
-    LOG_DEBUG(
-        "visit zookeeper internal: ans({}), call type({})", zerror(op->_output.error), op->_optype);
+    LOG_DEBUG("visit zookeeper internal: ans({}), call type({})",
+              zerror(op->_output.error),
+              static_cast<int>(op->_optype));
 
     switch (op->_optype) {
     case zookeeper_session::ZOO_OPERATION::ZOO_CREATE:

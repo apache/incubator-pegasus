@@ -27,7 +27,6 @@
 #include "thrift_message_parser.h"
 
 #include <string.h>
-#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,6 +45,7 @@
 #include "utils/crc.h"
 #include "utils/endians.h"
 #include "utils/fmt_logging.h"
+#include "utils/fmt_utils.h"
 #include "utils/string_view.h"
 #include "utils/strings.h"
 
@@ -428,3 +428,5 @@ thrift_message_parser::thrift_message_parser()
 thrift_message_parser::~thrift_message_parser() = default;
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(apache::thrift::protocol::TMessageType);

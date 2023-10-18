@@ -33,31 +33,31 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-// IWYU pragma: no_include <bits/struct_stat.h>
-#include <sys/stat.h> // IWYU pragma: keep
 #include <boost/filesystem/operations.hpp>
 #include <boost/system/error_code.hpp>
 #include <errno.h>
-#include <fcntl.h>
 #include <fmt/core.h>
 #include <ftw.h>
 #include <limits.h>
 #include <openssl/md5.h>
+#include <rocksdb/env.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+// IWYU pragma: no_include <bits/struct_stat.h>
 #include <unistd.h>
-#include <algorithm>
-#include <fstream>
+#include <memory>
 
 #include "utils/defer.h"
+#include "utils/env.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_view.h"
-#include "utils/strings.h"
 
 #define getcwd_ getcwd
 #define rmdir_ rmdir
@@ -94,8 +94,7 @@ static inline int get_stat_internal(const std::string &npath, struct stat_ &st)
     return err;
 }
 
-// TODO(yingchun): remove the return value because it's always 0.
-int get_normalized_path(const std::string &path, std::string &npath)
+void get_normalized_path(const std::string &path, std::string &npath)
 {
     char sep;
     size_t i;
@@ -105,7 +104,7 @@ int get_normalized_path(const std::string &path, std::string &npath)
 
     if (path.empty()) {
         npath = "";
-        return 0;
+        return;
     }
 
     len = path.length();
@@ -131,8 +130,6 @@ int get_normalized_path(const std::string &path, std::string &npath)
 
     CHECK_NE_MSG(tls_path_buffer[0], _FS_NULL, "Normalized path cannot be empty!");
     npath = tls_path_buffer;
-
-    return 0;
 }
 
 static __thread struct
@@ -210,44 +207,31 @@ bool path_exists(const std::string &path)
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    get_normalized_path(path, npath);
 
     return dsn::utils::filesystem::path_exists_internal(npath, FTW_NS);
 }
 
 bool directory_exists(const std::string &path)
 {
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
     return dsn::utils::filesystem::path_exists_internal(npath, FTW_D);
 }
 
 bool file_exists(const std::string &path)
 {
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
     return dsn::utils::filesystem::path_exists_internal(npath, FTW_F);
 }
@@ -257,23 +241,18 @@ static bool get_subpaths(const std::string &path,
                          bool recursive,
                          int typeflags)
 {
-    std::string npath;
-    bool ret;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
     if (!dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
         return false;
     }
 
+    bool ret;
     switch (typeflags) {
     case FTW_F:
         ret = dsn::utils::filesystem::file_tree_walk(
@@ -351,17 +330,12 @@ static bool remove_directory(const std::string &npath)
 
 bool remove_path(const std::string &path)
 {
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
     if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
         bool ret = (::remove(npath.c_str()) == 0);
@@ -389,22 +363,17 @@ bool rename_path(const std::string &path1, const std::string &path2)
     return ret;
 }
 
-bool file_size(const std::string &path, int64_t &sz)
+bool deprecated_file_size(const std::string &path, int64_t &sz)
 {
-    struct stat_ st;
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
-    err = dsn::utils::filesystem::get_stat_internal(npath, st);
+    struct stat_ st;
+    int err = dsn::utils::filesystem::get_stat_internal(npath, st);
     if (err != 0) {
         return false;
     }
@@ -414,7 +383,23 @@ bool file_size(const std::string &path, int64_t &sz)
     }
 
     sz = st.st_size;
+    return true;
+}
 
+bool file_size(const std::string &path, int64_t &sz)
+{
+    return file_size(path, dsn::utils::FileDataType::kNonSensitive, sz);
+}
+
+bool file_size(const std::string &path, FileDataType type, int64_t &sz)
+{
+    uint64_t file_size = 0;
+    auto s = dsn::utils::PegasusEnv(type)->GetFileSize(path, &file_size);
+    if (!s.ok()) {
+        LOG_ERROR("GetFileSize failed, file '{}', err = {}", path, s.ToString());
+        return false;
+    }
+    sz = file_size;
     return true;
 }
 
@@ -442,18 +427,14 @@ bool create_directory(const std::string &path)
     std::string npath;
     std::string cpath;
     size_t len;
-    int err;
 
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    get_normalized_path(path, npath);
 
-    err = dsn::utils::filesystem::create_directory_component(npath);
+    int err = dsn::utils::filesystem::create_directory_component(npath);
     if (err == 0) {
         return true;
     } else if (err != ENOENT) {
@@ -497,51 +478,23 @@ out_error:
 
 bool create_file(const std::string &path)
 {
-    size_t pos;
     std::string npath;
-    int fd;
-    int mode;
-    int err;
+    get_normalized_path(path, npath);
 
-    if (path.empty()) {
-        return false;
-    }
-
-    if (_FS_ISSEP(path.back())) {
-        return false;
-    }
-
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
-
-    if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
-        return true;
-    }
-
-    if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
-        return false;
-    }
-
-    pos = npath.find_last_of("\\/");
+    auto pos = npath.find_last_of("\\/");
     if ((pos != std::string::npos) && (pos > 0)) {
         auto ppath = npath.substr(0, pos);
         if (!dsn::utils::filesystem::create_directory(ppath)) {
+            LOG_WARNING("fail to create directory {}", ppath);
             return false;
         }
     }
 
-    mode = 0775;
-    fd = ::creat(npath.c_str(), mode);
-    if (fd == -1) {
-        err = errno;
-        LOG_WARNING("create_file {} failed, err = {}", path, safe_strerror(err));
+    std::unique_ptr<rocksdb::WritableFile> wfile;
+    auto s = rocksdb::Env::Default()->ReopenWritableFile(path, &wfile, rocksdb::EnvOptions());
+    if (dsn_unlikely(!s.ok())) {
+        LOG_WARNING("fail to create file {}, err={}", path, s.ToString());
         return false;
-    }
-
-    if (::close_(fd) != 0) {
-        LOG_WARNING("create_file {}, failed to close the file handle.", path);
     }
 
     return true;
@@ -608,23 +561,20 @@ std::string get_file_name(const std::string &path)
 
 std::string path_combine(const std::string &path1, const std::string &path2)
 {
-    int err;
-    std::string path3;
     std::string npath;
-
     if (path1.empty()) {
-        err = dsn::utils::filesystem::get_normalized_path(path2, npath);
+        get_normalized_path(path2, npath);
     } else if (path2.empty()) {
-        err = dsn::utils::filesystem::get_normalized_path(path1, npath);
+        get_normalized_path(path1, npath);
     } else {
-        path3 = path1;
+        std::string path3 = path1;
         path3.append(1, _FS_SLASH);
         path3.append(path2);
 
-        err = dsn::utils::filesystem::get_normalized_path(path3, npath);
+        get_normalized_path(path3, npath);
     }
 
-    return ((err == 0) ? npath : "");
+    return npath;
 }
 
 bool get_current_directory(std::string &path)
@@ -641,20 +591,15 @@ bool get_current_directory(std::string &path)
 
 bool last_write_time(const std::string &path, time_t &tm)
 {
-    struct stat_ st;
-    std::string npath;
-    int err;
-
     if (path.empty()) {
         return false;
     }
 
-    err = get_normalized_path(path, npath);
-    if (err != 0) {
-        return false;
-    }
+    std::string npath;
+    get_normalized_path(path, npath);
 
-    err = dsn::utils::filesystem::get_stat_internal(npath, st);
+    struct stat_ st;
+    int err = dsn::utils::filesystem::get_stat_internal(npath, st);
     if (err != 0) {
         return false;
     }
@@ -694,7 +639,7 @@ bool get_disk_space_info(const std::string &path, disk_space_info &info)
     FAIL_POINT_INJECT_F("filesystem_get_disk_space_info", [&info](string_view str) {
         info.capacity = 100 * 1024 * 1024;
         if (str.find("insufficient") != string_view::npos) {
-            info.available = 5 * 1024 * 1024;
+            info.available = 512 * 1024;
         } else {
             info.available = 50 * 1024 * 1024;
         }
@@ -725,6 +670,54 @@ bool link_file(const std::string &src, const std::string &target)
 }
 
 error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
+{
+    result.clear();
+    if (!::dsn::utils::filesystem::file_exists(file_path)) {
+        LOG_ERROR("md5sum error: file {} not exist", file_path);
+        return ERR_OBJECT_NOT_FOUND;
+    }
+
+    std::unique_ptr<rocksdb::SequentialFile> sfile;
+    auto s = rocksdb::Env::Default()->NewSequentialFile(file_path, &sfile, rocksdb::EnvOptions());
+    if (!sfile) {
+        LOG_ERROR("md5sum error: open file {} failed, err={}", file_path, s.ToString());
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    const int64_t kBufferSize = 4096;
+    char buf[kBufferSize];
+    unsigned char out[MD5_DIGEST_LENGTH] = {0};
+    MD5_CTX c;
+    CHECK_EQ(1, MD5_Init(&c));
+    while (true) {
+        rocksdb::Slice res;
+        s = sfile->Read(kBufferSize, &res, buf);
+        if (!s.ok()) {
+            MD5_Final(out, &c);
+            LOG_ERROR("md5sum error: read file {} failed, err={}", file_path, s.ToString());
+            return ERR_FILE_OPERATION_FAILED;
+        }
+        if (res.empty()) {
+            break;
+        }
+        CHECK_EQ(1, MD5_Update(&c, buf, res.size()));
+        if (res.size() < kBufferSize) {
+            break;
+        }
+    }
+    CHECK_EQ(1, MD5_Final(out, &c));
+
+    char str[MD5_DIGEST_LENGTH * 2 + 1];
+    str[MD5_DIGEST_LENGTH * 2] = 0;
+    for (int n = 0; n < MD5_DIGEST_LENGTH; n++) {
+        sprintf(str + n + n, "%02x", out[n]);
+    }
+    result.assign(str);
+
+    return ERR_OK;
+}
+
+error_code deprecated_md5sum(const std::string &file_path, /*out*/ std::string &result)
 {
     result.clear();
     // if file not exist, we return ERR_OBJECT_NOT_FOUND
@@ -790,37 +783,8 @@ std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
     return res;
 }
 
-error_code read_file(const std::string &fname, std::string &buf)
-{
-    if (!file_exists(fname)) {
-        LOG_ERROR("file({}) doesn't exist", fname);
-        return ERR_FILE_OPERATION_FAILED;
-    }
-
-    int64_t file_sz = 0;
-    if (!file_size(fname, file_sz)) {
-        LOG_ERROR("get file({}) size failed", fname);
-        return ERR_FILE_OPERATION_FAILED;
-    }
-
-    buf.resize(file_sz);
-    std::ifstream fin(fname, std::ifstream::in);
-    if (!fin.is_open()) {
-        LOG_ERROR("open file({}) failed", fname);
-        return ERR_FILE_OPERATION_FAILED;
-    }
-    fin.read(&buf[0], file_sz);
-    CHECK_EQ_MSG(file_sz,
-                 fin.gcount(),
-                 "read file({}) failed, file_size = {} but read size = {}",
-                 fname,
-                 file_sz,
-                 fin.gcount());
-    fin.close();
-    return ERR_OK;
-}
-
 bool verify_file(const std::string &fname,
+                 FileDataType type,
                  const std::string &expected_md5,
                  const int64_t &expected_fsize)
 {
@@ -829,7 +793,7 @@ bool verify_file(const std::string &fname,
         return false;
     }
     int64_t f_size = 0;
-    if (!file_size(fname, f_size)) {
+    if (!file_size(fname, type, f_size)) {
         LOG_ERROR("verify file({}) failed, becaused failed to get file size", fname);
         return false;
     }
@@ -850,14 +814,14 @@ bool verify_file(const std::string &fname,
     return true;
 }
 
-bool verify_file_size(const std::string &fname, const int64_t &expected_fsize)
+bool verify_file_size(const std::string &fname, FileDataType type, const int64_t &expected_fsize)
 {
     if (!file_exists(fname)) {
         LOG_ERROR("file({}) is not existed", fname);
         return false;
     }
     int64_t f_size = 0;
-    if (!file_size(fname, f_size)) {
+    if (!file_size(fname, type, f_size)) {
         LOG_ERROR("verify file({}) size failed, becaused failed to get file size", fname);
         return false;
     }
@@ -866,22 +830,6 @@ bool verify_file_size(const std::string &fname, const int64_t &expected_fsize)
                   fname,
                   f_size,
                   expected_fsize);
-        return false;
-    }
-    return true;
-}
-
-bool verify_data_md5(const std::string &fname,
-                     const char *data,
-                     const size_t data_size,
-                     const std::string &expected_md5)
-{
-    std::string md5 = string_md5(data, data_size);
-    if (md5 != expected_md5) {
-        LOG_ERROR("verify data({}) failed, because data damaged, size: md5: {} VS {}",
-                  fname,
-                  md5,
-                  expected_md5);
         return false;
     }
     return true;
@@ -908,20 +856,6 @@ bool create_directory(const std::string &path, std::string &absolute_path, std::
     return true;
 }
 
-bool write_file(const std::string &fname, std::string &buf)
-{
-    if (!file_exists(fname)) {
-        LOG_ERROR("file({}) doesn't exist", fname);
-        return false;
-    }
-
-    std::ofstream fstream;
-    fstream.open(fname.c_str());
-    fstream << buf;
-    fstream.close();
-    return true;
-}
-
 bool check_dir_rw(const std::string &path, std::string &err_msg)
 {
     FAIL_POINT_INJECT_F("filesystem_check_dir_rw", [path](string_view str) {
@@ -932,23 +866,28 @@ bool check_dir_rw(const std::string &path, std::string &err_msg)
                path.find(broken_disk_dir) == std::string::npos;
     });
 
-    std::string fname = "read_write_test_file";
-    std::string fpath = path_combine(path, fname);
-    if (!create_file(fpath)) {
-        err_msg = fmt::format("Fail to create test file {}.", fpath);
-        return false;
-    }
-
+    static const std::string kTestValue = "test_value";
+    static const std::string kFname = "read_write_test_file";
+    std::string fpath = path_combine(path, kFname);
     auto cleanup = defer([&fpath]() { remove_path(fpath); });
-    std::string value = "test_value";
-    if (!write_file(fpath, value)) {
-        err_msg = fmt::format("Fail to write file {}.", fpath);
+    auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
+                                        rocksdb::Slice(kTestValue),
+                                        fpath,
+                                        /* should_sync */ true);
+    if (dsn_unlikely(!s.ok())) {
+        err_msg = fmt::format("fail to write file {}, err={}", fpath, s.ToString());
         return false;
     }
 
-    std::string buf;
-    if (read_file(fpath, buf) != ERR_OK || buf != value) {
-        err_msg = fmt::format("Fail to read file {} or get wrong value({}).", fpath, buf);
+    std::string read_data;
+    s = rocksdb::ReadFileToString(rocksdb::Env::Default(), fpath, &read_data);
+    if (dsn_unlikely(!s.ok())) {
+        err_msg = fmt::format("fail to read file {}, err={}", fpath, s.ToString());
+        return false;
+    }
+
+    if (dsn_unlikely(read_data != kTestValue)) {
+        err_msg = fmt::format("get wrong value '{}' from file {}", read_data, fpath);
         return false;
     }
 

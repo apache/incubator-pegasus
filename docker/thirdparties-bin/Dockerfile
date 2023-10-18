@@ -26,7 +26,7 @@ COPY --from=builder /root/thirdparties-src.zip /root/thirdparties-src.zip
 
 ARG GITHUB_BRANCH=master
 ARG GITHUB_REPOSITORY_URL=https://github.com/apache/incubator-pegasus.git
-ARG ROCKSDB_PORTABLE=OFF
+ARG ROCKSDB_PORTABLE=native
 ARG USE_JEMALLOC=OFF
 ARG HADOOP_BIN_PATH
 ARG ZOOKEEPER_BIN_PATH

@@ -20,8 +20,10 @@
 #pragma once
 
 #include <gtest/gtest_prod.h>
+#include <rocksdb/compression_type.h>
 #include <rocksdb/options.h>
 #include <rocksdb/slice.h>
+#include <rocksdb/table.h>
 #include <rrdb/rrdb_types.h>
 #include <stdint.h>
 #include <atomic>
@@ -69,6 +71,7 @@ class WriteBufferManager;
 namespace dsn {
 class blob;
 class message_ex;
+
 namespace replication {
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -328,6 +331,10 @@ private:
 
     void update_user_specified_compaction(const std::map<std::string, std::string> &envs);
 
+    void update_rocksdb_dynamic_options(const std::map<std::string, std::string> &envs);
+
+    void set_rocksdb_options_before_creating(const std::map<std::string, std::string> &envs);
+
     void update_throttling_controller(const std::map<std::string, std::string> &envs);
 
     bool parse_allow_ingest_behind(const std::map<std::string, std::string> &envs);
@@ -358,6 +365,9 @@ private:
 
     void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
                                       rocksdb::ColumnFamilyOptions *target_opts);
+
+    void reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_opts,
+                               rocksdb::ColumnFamilyOptions *target_opts);
 
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
@@ -468,6 +478,7 @@ private:
     // Dynamically calculate the value of current data_cf option according to the conf module file
     // and usage scenario
     rocksdb::ColumnFamilyOptions _table_data_cf_opts;
+    rocksdb::BlockBasedTableOptions _tbl_opts;
     rocksdb::ColumnFamilyOptions _meta_cf_opts;
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
