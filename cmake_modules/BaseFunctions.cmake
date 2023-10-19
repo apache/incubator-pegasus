@@ -147,6 +147,7 @@ function(dsn_add_project)
   endif()
   ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_LIBS}" "${MY_BINPLACES}")
   define_file_basename_for_sources(${MY_PROJ_NAME})
+  target_compile_features(${MY_PROJ_NAME} PRIVATE cxx_std_14)
 endfunction(dsn_add_project)
 
 function(dsn_add_static_library)
@@ -204,7 +205,7 @@ function(dsn_setup_compiler_flags)
   # We want access to the PRI* print format macros.
   add_definitions(-D__STDC_FORMAT_MACROS)
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -gdwarf-4" CACHE STRING "" FORCE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -gdwarf-4" CACHE STRING "" FORCE)
 
   #  -Wall: Enable all warnings.
   add_compile_options(-Wall)
