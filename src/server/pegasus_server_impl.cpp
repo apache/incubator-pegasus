@@ -1667,7 +1667,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             // only be initialized with default values when calling 'LoadLatestOptions', see
             // 'rocksdb/utilities/options_util.h'.
             reset_rocksdb_options(
-                loaded_data_cf_opts,loaded_db_opt,envs,&_table_data_cf_opts, &_db_opts);
+                loaded_data_cf_opts, loaded_db_opt, envs, &_table_data_cf_opts, &_db_opts);
         }
     } else {
         // When create new DB, we have to create a new column family to store meta data (meta column
@@ -3150,7 +3150,7 @@ void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptio
     target_opts->num_levels = base_opts.num_levels;
     target_opts->write_buffer_size = base_opts.write_buffer_size;
 
-    reset_allow_ingest_behind_option(base_db_opt, envs,target_db_opt);
+    reset_allow_ingest_behind_option(base_db_opt, envs, target_db_opt);
 }
 
 void pegasus_server_impl::reset_usage_scenario_options(
