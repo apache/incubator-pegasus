@@ -1667,7 +1667,16 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             // only be initialized with default values when calling 'LoadLatestOptions', see
             // 'rocksdb/utilities/options_util.h'.
             reset_rocksdb_options(loaded_data_cf_opts, &_table_data_cf_opts);
-            _db_opts.allow_ingest_behind = parse_allow_ingest_behind(envs);
+
+            //here loaded_db_opt should be read success
+            if(envs.size() == 0){
+                //for reopen db during load balance learning
+                _db_opts.allow_ingest_behind = loaded_db_opt.allow_ingest_behind;
+                LOG_INFO_PREFIX("reopen replica,last_allow_ingest_behind = {}", loaded_db_opt.allow_ingest_behind);
+            } else{
+                _db_opts.allow_ingest_behind = parse_allow_ingest_behind(envs);
+                LOG_INFO_PREFIX("normal open replica,new_allow_ingest_behind = {}", _db_opts.allow_ingest_behind);
+            }
         }
     } else {
         // When create new DB, we have to create a new column family to store meta data (meta column
