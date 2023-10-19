@@ -147,6 +147,7 @@ function(dsn_add_project)
   endif()
   ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_LIBS}" "${MY_BINPLACES}")
   define_file_basename_for_sources(${MY_PROJ_NAME})
+  target_compile_features(${MY_PROJ_NAME} PRIVATE cxx_std_14)
 endfunction(dsn_add_project)
 
 function(dsn_add_static_library)
