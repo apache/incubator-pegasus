@@ -1667,7 +1667,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             // only be initialized with default values when calling 'LoadLatestOptions', see
             // 'rocksdb/utilities/options_util.h'.
             reset_rocksdb_options(
-                loaded_data_cf_opts, &_table_data_cf_opts, loaded_db_opt, &_db_opts, envs);
+                loaded_data_cf_opts,loaded_db_opt,envs,&_table_data_cf_opts, &_db_opts);
         }
     } else {
         // When create new DB, we have to create a new column family to store meta data (meta column
@@ -3131,11 +3131,11 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
     }
 }
 
-void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_opts,
-                                                rocksdb::ColumnFamilyOptions *target_opts,
+void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_cf_opts,
                                                 const rocksdb::DBOptions &base_db_opt,
-                                                rocksdb::DBOptions *target_db_opt,
-                                                const std::map<std::string, std::string> &envs)
+                                                const std::map<std::string, std::string> &envs,
+                                                rocksdb::ColumnFamilyOptions *target_cf_opts,
+                                                rocksdb::DBOptions *target_db_opt)
 {
     LOG_INFO_PREFIX("Reset rocksdb envs options");
     // Reset rocksdb option includes two aspects:
@@ -3144,13 +3144,13 @@ void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptio
     // ROCKSDB_STATIC_OPTIONS
 
     // aspect 1:
-    reset_usage_scenario_options(base_opts, target_opts);
+    reset_usage_scenario_options(base_cf_opts, target_cf_opts);
 
     // aspect 2:
     target_opts->num_levels = base_opts.num_levels;
     target_opts->write_buffer_size = base_opts.write_buffer_size;
 
-    reset_allow_ingest_behind_option(base_db_opt, target_db_opt, envs);
+    reset_allow_ingest_behind_option(base_db_opt, envs,target_db_opt);
 }
 
 void pegasus_server_impl::reset_usage_scenario_options(
@@ -3173,8 +3173,8 @@ void pegasus_server_impl::reset_usage_scenario_options(
 
 void pegasus_server_impl::reset_allow_ingest_behind_option(
     const rocksdb::DBOptions &base_db_opt,
-    rocksdb::DBOptions *target_db_opt,
-    const std::map<std::string, std::string> &envs)
+    const std::map<std::string, std::string> &envs,
+    rocksdb::DBOptions *target_db_opt)
 {
     if (envs.empty()) {
         // for reopen db during load balance learning
