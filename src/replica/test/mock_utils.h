@@ -445,7 +445,7 @@ public:
                            dsn::task_tracker *tracker,
                            aio_handler &&callback,
                            int hash = 0,
-                           int64_t *pending_size = nullptr)
+                           int64_t *pending_size = nullptr) override
     {
         _mu_list.push_back(mu);
         return nullptr;
