@@ -17,7 +17,6 @@
 
 #include "runtime/task/task.h"
 
-#include <fcntl.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -66,7 +65,7 @@ public:
 
     static void test_signal_finished_task()
     {
-        disk_file *fp = file::open("config-test.ini", O_RDONLY | O_BINARY, 0);
+        disk_file *fp = file::open("config-test.ini", file::FileOpenType::kReadOnly);
 
         // this aio task is enqueued into read-queue of disk_engine
         char buffer[128];
@@ -80,6 +79,7 @@ public:
         // signal a finished task won't cause failure
         t->signal_waiters(); // signal_waiters may return false
         t->signal_waiters();
+        ASSERT_EQ(ERR_OK, file::close(fp));
     }
 };
 

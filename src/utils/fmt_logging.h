@@ -20,6 +20,7 @@
 #pragma once
 
 #include <fmt/ostream.h>
+#include <rocksdb/status.h>
 
 #include "utils/api_utilities.h"
 
@@ -64,7 +65,8 @@
     } while (false)
 
 #define CHECK(x, ...) CHECK_EXPRESSION(x, x, __VA_ARGS__)
-#define CHECK_NOTNULL(p, ...) CHECK(p != nullptr, __VA_ARGS__)
+#define CHECK_NOTNULL(p, ...) CHECK((p) != nullptr, __VA_ARGS__)
+#define CHECK_NULL(p, ...) CHECK((p) == nullptr, __VA_ARGS__)
 
 // Macros for writing log message prefixed by log_prefix().
 #define LOG_DEBUG_PREFIX(...) LOG_DEBUG("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
@@ -270,6 +272,16 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
     do {                                                                                           \
         ::dsn::error_code _err = (s);                                                              \
         LOG_AND_RETURN_NOT_TRUE(level, _err == ::dsn::ERR_OK, _err, __VA_ARGS__);                  \
+    } while (0)
+
+// Return the given rocksdb::Status 's' if it is not OK.
+#define LOG_AND_RETURN_NOT_RDB_OK(level, s, ...)                                                   \
+    do {                                                                                           \
+        const auto &_s = (s);                                                                      \
+        if (dsn_unlikely(!_s.ok())) {                                                              \
+            LOG_##level("{}: {}", _s.ToString(), fmt::format(__VA_ARGS__));                        \
+            return _s;                                                                             \
+        }                                                                                          \
     } while (0)
 
 #ifndef NDEBUG

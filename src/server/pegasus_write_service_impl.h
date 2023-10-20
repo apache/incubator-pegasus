@@ -29,6 +29,7 @@
 #include "pegasus_write_service.h"
 #include "rocksdb_wrapper.h"
 #include "utils/defer.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
@@ -76,7 +77,8 @@ inline dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
     for (const auto &f_meta : metadata.files) {
         const auto &file_name = dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
         if (verify_before_ingest &&
-            !dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
+            !dsn::utils::filesystem::verify_file(
+                file_name, dsn::utils::FileDataType::kSensitive, f_meta.md5, f_meta.size)) {
             break;
         }
         files_path.emplace_back(file_name);
@@ -215,7 +217,7 @@ public:
                     LOG_ERROR_PREFIX("incr failed: decree = {}, error = "
                                      "old value \"{}\" is not an integer or out of range",
                                      decree,
-                                     utils::c_escape_string(old_value));
+                                     utils::c_escape_sensitive_string(old_value));
                     resp.error = rocksdb::Status::kInvalidArgument;
                     // we should write empty record to update rocksdb's last flushed decree
                     return empty_put(decree);
@@ -288,8 +290,8 @@ public:
             LOG_ERROR_ROCKSDB("Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
                               "check_sort_key: {}",
                               decree,
-                              utils::c_escape_string(update.hash_key),
-                              utils::c_escape_string(update.check_sort_key));
+                              utils::c_escape_sensitive_string(update.hash_key),
+                              utils::c_escape_sensitive_string(update.check_sort_key));
             resp.error = err;
             return resp.error;
         }
@@ -408,8 +410,8 @@ public:
             LOG_ERROR_ROCKSDB("Error to GetCheckValue for CheckAndMutate decree: {}, hash_key: {}, "
                               "check_sort_key: {}",
                               decree,
-                              utils::c_escape_string(update.hash_key),
-                              utils::c_escape_string(update.check_sort_key));
+                              utils::c_escape_sensitive_string(update.hash_key),
+                              utils::c_escape_sensitive_string(update.check_sort_key));
             resp.error = err;
             return resp.error;
         }
@@ -648,7 +650,7 @@ private:
                 LOG_ERROR_PREFIX("check failed: decree = {}, error = "
                                  "check value \"{}\" is not an integer or out of range",
                                  decree,
-                                 utils::c_escape_string(value));
+                                 utils::c_escape_sensitive_string(value));
                 invalid_argument = true;
                 return false;
             }
@@ -658,7 +660,7 @@ private:
                 LOG_ERROR_PREFIX("check failed: decree = {}, error = "
                                  "check operand \"{}\" is not an integer or out of range",
                                  decree,
-                                 utils::c_escape_string(check_operand));
+                                 utils::c_escape_sensitive_string(check_operand));
                 invalid_argument = true;
                 return false;
             }

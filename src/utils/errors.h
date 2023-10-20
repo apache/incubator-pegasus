@@ -97,6 +97,8 @@ public:
         return true;
     }
 
+    explicit operator bool() const noexcept { return is_ok(); }
+
     std::string description() const
     {
         if (!_info) {
@@ -227,7 +229,7 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
 #define RETURN_NOT_OK(s)                                                                           \
     do {                                                                                           \
         const ::dsn::error_s &_s = (s);                                                            \
-        if (dsn_unlikely(!_s.is_ok())) {                                                           \
+        if (dsn_unlikely(!_s)) {                                                                   \
             return _s;                                                                             \
         }                                                                                          \
     } while (false);

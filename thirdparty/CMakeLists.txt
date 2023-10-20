@@ -276,11 +276,7 @@ ExternalProject_Add(civetweb
 ExternalProject_Get_property(civetweb SOURCE_DIR)
 set(civetweb_SRC ${SOURCE_DIR})
 
-ExternalProject_Add(curl
-        URL ${OSS_URL_PREFIX}/curl-7.47.0.tar.gz
-        http://curl.haxx.se/download/curl-7.47.0.tar.gz
-        URL_MD5 5109d1232d208dfd712c0272b8360393
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+set(CURL_OPTIONS
         --disable-dict
         --disable-file
         --disable-ftp
@@ -301,6 +297,22 @@ ExternalProject_Add(curl
         --without-libssh2
         --without-ssl
         --without-libidn
+        --without-zstd
+        )
+if (APPLE)
+    set(CURL_OPTIONS
+            ${CURL_OPTIONS}
+            --without-nghttp2
+            --without-libidn2
+            --without-brotli
+            )
+endif ()
+ExternalProject_Add(curl
+        URL ${OSS_URL_PREFIX}/curl-8.4.0.tar.gz
+        http://curl.haxx.se/download/curl-8.4.0.tar.gz
+        URL_MD5 533e8a3b1228d5945a6a512537bea4c7
+        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+        ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
         )
 
@@ -360,9 +372,13 @@ ExternalProject_Add(jemalloc
 
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 
+# This is the commit "Update the status badge to pegasus-kv/rocksdb's own (#18) " on
+# branch v8.5.3-pegasus-encrypt of https://github.com/pegasus-kv/rocksdb.git.
+# The v8.5.3-pegasus-encrypt branch is based on the v8.5.3 tag of facebook/rocksdb and add
+# the encryption feature.
 ExternalProject_Add(rocksdb
-        URL https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
-        URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
+        URL https://github.com/pegasus-kv/rocksdb/archive/e72106597e6b7924485cadc2433b66029f1aaf17.zip
+        URL_MD5 6f6daef703586ce788643bbb8a984fff
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DFAIL_ON_WARNINGS=OFF
@@ -375,6 +391,7 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
         -DUSE_RTTI=ON
+        -DWITH_OPENSSL=ON  # enable encryption
         -DCMAKE_BUILD_TYPE=Release
         -DWITH_JEMALLOC=${USE_JEMALLOC}
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}

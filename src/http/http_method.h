@@ -17,41 +17,20 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
-#include <string>
-
-#include "utils/ports.h"
+#include "utils/enum_helper.h"
 
 namespace dsn {
-namespace dist {
-namespace block_service {
 
-class direct_io_writable_file
+enum class http_method
 {
-public:
-    explicit direct_io_writable_file(const std::string &file_path);
-    ~direct_io_writable_file();
-
-    bool initialize();
-    bool write(const char *s, size_t n);
-    bool finalize();
-
-private:
-    DISALLOW_COPY_AND_ASSIGN(direct_io_writable_file);
-
-    std::string _file_path;
-    int _fd;
-    uint32_t _file_size;
-
-    // page size aligned buffer
-    void *_buffer;
-    // buffer size
-    uint32_t _buffer_size;
-    // buffer offset
-    uint32_t _offset;
+    GET = 1,
+    POST = 2,
+    INVALID = 100,
 };
 
-} // namespace block_service
-} // namespace dist
+ENUM_BEGIN(http_method, http_method::INVALID)
+ENUM_REG2(http_method, GET)
+ENUM_REG2(http_method, POST)
+ENUM_END(http_method)
+
 } // namespace dsn

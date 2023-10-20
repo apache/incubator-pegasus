@@ -19,11 +19,53 @@
 
 #pragma once
 
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <functional>
+#include <gtest/gtest.h>
+#include <string>
 
+#include "fmt/core.h"
+#include "runtime/api_layer1.h"
+#include "utils/flags.h"
 #include "utils/test_macros.h"
 
+namespace dsn {
+namespace replication {
+class file_meta;
+} // namespace replication
+} // namespace dsn
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
+
 namespace pegasus {
+
+// A base parameterized test class for testing enable/disable encryption at rest.
+class encrypt_data_test_base : public testing::TestWithParam<bool>
+{
+public:
+    encrypt_data_test_base() { FLAGS_encrypt_data_at_rest = GetParam(); }
+};
+
+class stop_watch
+{
+public:
+    stop_watch() { _start_ms = dsn_now_ms(); }
+    void stop_and_output(const std::string &msg)
+    {
+        auto duration_ms =
+            std::chrono::duration_cast<std::chrono::duration<double>>(
+                std::chrono::milliseconds(static_cast<int64_t>(dsn_now_ms() - _start_ms)))
+                .count();
+        fmt::print(stdout, "{}, cost {} ms\n", msg, duration_ms);
+    }
+
+private:
+    uint64_t _start_ms = 0;
+};
+
+void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm);
 
 #define ASSERT_EVENTUALLY(expr)                                                                    \
     do {                                                                                           \
@@ -39,7 +81,7 @@ namespace pegasus {
 
 #define ASSERT_IN_TIME_WITH_FIXED_INTERVAL(expr, sec)                                              \
     do {                                                                                           \
-        AssertEventually(expr, sec, WaitBackoff::NONE);                                            \
+        AssertEventually(expr, sec, ::pegasus::WaitBackoff::NONE);                                 \
         NO_PENDING_FATALS();                                                                       \
     } while (0)
 

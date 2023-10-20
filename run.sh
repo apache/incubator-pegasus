@@ -26,6 +26,8 @@ export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
 export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
+# Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
+export ASAN_OPTIONS=detect_odr_violation=0
 
 function usage()
 {
@@ -435,10 +437,10 @@ function run_test()
     echo "test_modules=$test_modules"
 
     # download bulk load test data
-    if [[ "$test_modules" =~ "bulk_load_test" && ! -d "$ROOT/src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files" ]]; then
+    if [[ "$test_modules" =~ "bulk_load_test" && ! -d "$ROOT/src/test/function_test/bulk_load/pegasus-bulk-load-function-test-files" ]]; then
         echo "Start to download files used for bulk load function test"
         wget "https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-bulk-load-function-test-files.zip"
-        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test/bulk_load_test"
+        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test/bulk_load"
         rm "pegasus-bulk-load-function-test-files.zip"
         echo "Prepare files used for bulk load function test succeed"
     fi
@@ -482,7 +484,7 @@ function run_test()
             run_stop_zk
             run_start_zk
         fi
-        pushd ${BUILD_LATEST_DIR}/bin/$module
+        pushd ${BUILD_LATEST_DIR}/bin/${module}
         REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"

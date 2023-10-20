@@ -80,12 +80,17 @@ void nfs_node_simple::register_async_rpc_handler_for_test()
 
 error_code nfs_node_simple::stop()
 {
-    delete _server;
-    _server = nullptr;
+    if (_server != nullptr) {
+        _server->close_service();
 
-    delete _client;
-    _client = nullptr;
+        delete _server;
+        _server = nullptr;
+    }
 
+    if (_client != nullptr) {
+        delete _client;
+        _client = nullptr;
+    }
     return ERR_OK;
 }
 

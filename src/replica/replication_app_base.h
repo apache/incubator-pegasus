@@ -76,8 +76,8 @@ public:
     std::string to_string();
 
 private:
-    error_code load_json(const std::string &file);
-    error_code store_json(const std::string &file);
+    error_code load_json(const std::string &fname);
+    error_code store_json(const std::string &fname);
 };
 
 class replica_app_info
@@ -87,8 +87,8 @@ private:
 
 public:
     replica_app_info(app_info *app) { _app = app; }
-    error_code load(const std::string &file);
-    error_code store(const std::string &file);
+    error_code load(const std::string &fname);
+    error_code store(const std::string &fname);
 };
 
 /// The store engine interface of Pegasus.

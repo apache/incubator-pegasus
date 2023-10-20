@@ -33,6 +33,7 @@ set(MY_PROJ_LIBS gtest
                  dsn_runtime
                  dsn_aio
                  dsn_meta_server
+                 rocksdb
                  )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
