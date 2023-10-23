@@ -41,10 +41,11 @@ namespace pegasus {
 void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm)
 {
     ASSERT_NE(fm, nullptr);
-    auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
-                                        rocksdb::Slice("write some data."),
-                                        full_name,
-                                        /* should_sync */ true);
+    auto s =
+        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                   rocksdb::Slice("write some data."),
+                                   full_name,
+                                   /* should_sync */ true);
     ASSERT_TRUE(s.ok()) << s.ToString();
     fm->name = full_name;
     ASSERT_EQ(dsn::ERR_OK, dsn::utils::filesystem::md5sum(full_name, fm->md5));

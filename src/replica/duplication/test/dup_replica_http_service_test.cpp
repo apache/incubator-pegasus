@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -39,7 +40,9 @@ class dup_replica_http_service_test : public duplication_test_base
 {
 };
 
-TEST_F(dup_replica_http_service_test, query_duplication_handler)
+INSTANTIATE_TEST_CASE_P(, dup_replica_http_service_test, ::testing::Values(false, true));
+
+TEST_P(dup_replica_http_service_test, query_duplication_handler)
 {
     auto pri = stub->add_primary_replica(1, 1);
 

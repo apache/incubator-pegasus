@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 #include <gtest/gtest.h>
 #include <chrono>
 #include <string>
@@ -24,27 +25,35 @@
 #include "replication_service_test_app.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
+#include "test_util/test_util.h"
 #include "utils/error_code.h"
 
 int gtest_flags = 0;
 int gtest_ret = 0;
 replication_service_test_app *app;
 
-TEST(cold_backup_context, check_backup_on_remote) { app->check_backup_on_remote_test(); }
+class cold_backup_context_test : public pegasus::encrypt_data_test_base
+{
+};
 
-TEST(cold_backup_context, read_current_chkpt_file) { app->read_current_chkpt_file_test(); }
+TEST_P(cold_backup_context_test, check_backup_on_remote) { app->check_backup_on_remote_test(); }
 
-TEST(cold_backup_context, remote_chkpt_dir_exist) { app->remote_chkpt_dir_exist_test(); }
+TEST_P(cold_backup_context_test, read_current_chkpt_file) { app->read_current_chkpt_file_test(); }
 
-TEST(cold_backup_context, upload_checkpoint_to_remote) { app->upload_checkpoint_to_remote_test(); }
+TEST_P(cold_backup_context_test, remote_chkpt_dir_exist) { app->remote_chkpt_dir_exist_test(); }
 
-TEST(cold_backup_context, read_backup_metadata) { app->read_backup_metadata_test(); }
+TEST_P(cold_backup_context_test, upload_checkpoint_to_remote)
+{
+    app->upload_checkpoint_to_remote_test();
+}
 
-TEST(cold_backup_context, on_upload_chkpt_dir) { app->on_upload_chkpt_dir_test(); }
+TEST_P(cold_backup_context_test, read_backup_metadata) { app->read_backup_metadata_test(); }
 
-TEST(cold_backup_context, write_metadata_file) { app->write_backup_metadata_test(); }
+TEST_P(cold_backup_context_test, on_upload_chkpt_dir) { app->on_upload_chkpt_dir_test(); }
 
-TEST(cold_backup_context, write_current_chkpt_file) { app->write_current_chkpt_file_test(); }
+TEST_P(cold_backup_context_test, write_metadata_file) { app->write_backup_metadata_test(); }
+
+TEST_P(cold_backup_context_test, write_current_chkpt_file) { app->write_current_chkpt_file_test(); }
 
 error_code replication_service_test_app::start(const std::vector<std::string> &args)
 {

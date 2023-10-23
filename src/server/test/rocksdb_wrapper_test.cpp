@@ -18,6 +18,7 @@
  */
 
 #include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -103,7 +104,9 @@ public:
     }
 };
 
-TEST_F(rocksdb_wrapper_test, get)
+INSTANTIATE_TEST_CASE_P(, rocksdb_wrapper_test, ::testing::Values(false, true));
+
+TEST_P(rocksdb_wrapper_test, get)
 {
     // not found
     db_get_context get_ctx1;
@@ -135,7 +138,7 @@ TEST_F(rocksdb_wrapper_test, get)
     ASSERT_EQ(user_value, value);
 }
 
-TEST_F(rocksdb_wrapper_test, put_verify_timetag)
+TEST_P(rocksdb_wrapper_test, put_verify_timetag)
 {
     set_app_duplicating();
 
@@ -212,7 +215,7 @@ TEST_F(rocksdb_wrapper_test, put_verify_timetag)
 }
 
 // verify timetag on data version v0
-TEST_F(rocksdb_wrapper_test, verify_timetag_compatible_with_version_0)
+TEST_P(rocksdb_wrapper_test, verify_timetag_compatible_with_version_0)
 {
     const_cast<uint32_t &>(_rocksdb_wrapper->_pegasus_data_version) = 0; // old version
 

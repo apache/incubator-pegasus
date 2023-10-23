@@ -147,6 +147,7 @@ void FDSClientTest::TearDown() {}
 
 DEFINE_TASK_CODE(lpc_btest, TASK_PRIORITY_HIGH, dsn::THREAD_POOL_DEFAULT)
 
+// TODO(yingchun): add encryption test when FDSClient supports encryption.
 TEST_F(FDSClientTest, test_basic_operation)
 {
     const char *files[] = {"/fdstest/fdstest1/test1/test1",

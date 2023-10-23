@@ -39,6 +39,7 @@
 #include "utils/TokenBucket.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
@@ -606,7 +607,8 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
         const std::string &local_file = req.input_local_name;
         // get file size
         int64_t file_sz = 0;
-        dsn::utils::filesystem::file_size(local_file, file_sz);
+        dsn::utils::filesystem::file_size(
+            local_file, dsn::utils::FileDataType::kSensitive, file_sz);
 
         upload_response resp;
         // TODO: we can cache the whole file in buffer, then upload the buffer rather than the
@@ -671,6 +673,7 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
     t->set_tracker(tracker);
     download_response resp;
 
+    // TODO(yingchun): use rocksdb API to implement this.
     std::shared_ptr<std::ofstream> handle(new std::ofstream(
         req.output_local_name, std::ios::binary | std::ios::out | std::ios::trunc));
     if (!handle->is_open()) {

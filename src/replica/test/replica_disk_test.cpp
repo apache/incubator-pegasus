@@ -17,6 +17,7 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -86,7 +87,9 @@ public:
     }
 };
 
-TEST_F(replica_disk_test, on_query_disk_info_all_app)
+INSTANTIATE_TEST_CASE_P(, replica_disk_test, ::testing::Values(false, true));
+
+TEST_P(replica_disk_test, on_query_disk_info_all_app)
 {
     generate_fake_rpc();
     stub->on_query_disk_info(fake_query_disk_rpc);
@@ -160,7 +163,7 @@ TEST_F(replica_disk_test, on_query_disk_info_all_app)
     }
 }
 
-TEST_F(replica_disk_test, on_query_disk_info_app_not_existed)
+TEST_P(replica_disk_test, on_query_disk_info_app_not_existed)
 {
     generate_fake_rpc();
     query_disk_info_request &request = *fake_query_disk_rpc.mutable_request();
@@ -169,7 +172,7 @@ TEST_F(replica_disk_test, on_query_disk_info_app_not_existed)
     ASSERT_EQ(fake_query_disk_rpc.response().err, ERR_OBJECT_NOT_FOUND);
 }
 
-TEST_F(replica_disk_test, on_query_disk_info_one_app)
+TEST_P(replica_disk_test, on_query_disk_info_one_app)
 {
     generate_fake_rpc();
     query_disk_info_request &request = *fake_query_disk_rpc.mutable_request();
@@ -195,7 +198,7 @@ TEST_F(replica_disk_test, on_query_disk_info_one_app)
     }
 }
 
-TEST_F(replica_disk_test, gc_disk_useless_dir)
+TEST_P(replica_disk_test, gc_disk_useless_dir)
 {
     FLAGS_gc_disk_error_replica_interval_seconds = 1;
     FLAGS_gc_disk_garbage_replica_interval_seconds = 1;
@@ -237,7 +240,7 @@ TEST_F(replica_disk_test, gc_disk_useless_dir)
     ASSERT_EQ(report.error_replica_count, 2);
 }
 
-TEST_F(replica_disk_test, disk_status_test)
+TEST_P(replica_disk_test, disk_status_test)
 {
     struct disk_status_test
     {
@@ -261,7 +264,7 @@ TEST_F(replica_disk_test, disk_status_test)
     dn->status = disk_status::NORMAL;
 }
 
-TEST_F(replica_disk_test, add_new_disk_test)
+TEST_P(replica_disk_test, add_new_disk_test)
 {
     // Test case:
     // - invalid params
@@ -291,7 +294,7 @@ TEST_F(replica_disk_test, add_new_disk_test)
     }
 }
 
-TEST_F(replica_disk_test, disk_io_error_test)
+TEST_P(replica_disk_test, disk_io_error_test)
 {
     // Disable failure detector to avoid connecting with meta server which is not started.
     FLAGS_fd_disabled = true;

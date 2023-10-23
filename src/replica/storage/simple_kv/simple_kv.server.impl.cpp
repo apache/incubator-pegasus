@@ -58,6 +58,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/blob.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
@@ -186,7 +187,8 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     zauto_lock l(_lock);
 
     std::unique_ptr<rocksdb::SequentialFile> rfile;
-    auto s = rocksdb::Env::Default()->NewSequentialFile(name, &rfile, rocksdb::EnvOptions());
+    auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                 ->NewSequentialFile(name, &rfile, rocksdb::EnvOptions());
     CHECK(s.ok(), "open log file '{}' failed, err = {}", name, s.ToString());
 
     _store.clear();

@@ -450,7 +450,7 @@ private:
 
     /////////////////////////////////////////////////////////////////
     // replica restore from backup
-    bool read_cold_backup_metadata(const std::string &file, cold_backup_metadata &backup_metadata);
+    bool read_cold_backup_metadata(const std::string &fname, cold_backup_metadata &backup_metadata);
     // checkpoint on cold backup media maybe contain useless file,
     // we should abandon these file base cold_backup_metadata
     bool remove_useless_file_under_chkpt(const std::string &chkpt_dir,
@@ -555,7 +555,7 @@ private:
     friend class ::pegasus::server::pegasus_server_test_base;
     friend class ::pegasus::server::rocksdb_wrapper_test;
     FRIEND_TEST(replica_disk_test, disk_io_error_test);
-    FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
+    FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;

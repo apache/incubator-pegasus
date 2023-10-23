@@ -565,7 +565,8 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
 error_code replica_bulk_loader::parse_bulk_load_metadata(const std::string &fname)
 {
     std::string buf;
-    auto s = rocksdb::ReadFileToString(rocksdb::Env::Default(), fname, &buf);
+    auto s = rocksdb::ReadFileToString(
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &buf);
     if (dsn_unlikely(!s.ok())) {
         LOG_ERROR_PREFIX("read file {} failed, error = {}", fname, s.ToString());
         return ERR_FILE_OPERATION_FAILED;

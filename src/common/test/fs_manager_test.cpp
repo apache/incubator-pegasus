@@ -17,6 +17,7 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
@@ -33,6 +34,7 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
+#include "test_util/test_util.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 
@@ -47,7 +49,13 @@ TEST(dir_node, replica_dir)
     ASSERT_EQ("path/1.0.test", dn.replica_dir("test", gpid(1, 0)));
 }
 
-TEST(fs_manager, initialize)
+class fs_manager_test : public pegasus::encrypt_data_test_base
+{
+};
+
+INSTANTIATE_TEST_CASE_P(, fs_manager_test, ::testing::Values(false, true));
+
+TEST_P(fs_manager_test, initialize)
 {
     fail::setup();
     struct broken_disk_test
@@ -69,7 +77,7 @@ TEST(fs_manager, initialize)
     fail::teardown();
 }
 
-TEST(fs_manager, dir_update_disk_status)
+TEST_P(fs_manager_test, dir_update_disk_status)
 {
     struct update_disk_status
     {
@@ -94,7 +102,7 @@ TEST(fs_manager, dir_update_disk_status)
     }
 }
 
-TEST(fs_manager, get_dir_node)
+TEST_P(fs_manager_test, get_dir_node)
 {
     fs_manager fm;
     fm.initialize({"./data1"}, {"data1"});
@@ -115,7 +123,7 @@ TEST(fs_manager, get_dir_node)
     ASSERT_EQ(nullptr, fm.get_dir_node(base_dir + "/data2/replica1"));
 }
 
-TEST(fs_manager, find_replica_dir)
+TEST_P(fs_manager_test, find_replica_dir)
 {
     fs_manager fm;
     fm.initialize({"./data1", "./data2", "./data3"}, {"data1", "data2", "data3"});
@@ -137,7 +145,7 @@ TEST(fs_manager, find_replica_dir)
     ASSERT_EQ(dn, dn1);
 }
 
-TEST(fs_manager, create_replica_dir_if_necessary)
+TEST_P(fs_manager_test, create_replica_dir_if_necessary)
 {
     fs_manager fm;
 
@@ -154,7 +162,7 @@ TEST(fs_manager, create_replica_dir_if_necessary)
     ASSERT_EQ("data1", dn->tag);
 }
 
-TEST(fs_manager, create_child_replica_dir)
+TEST_P(fs_manager_test, create_child_replica_dir)
 {
     fs_manager fm;
     fm.initialize({"./data1", "./data2", "./data3"}, {"data1", "data2", "data3"});
@@ -174,7 +182,7 @@ TEST(fs_manager, create_child_replica_dir)
     ASSERT_EQ(dir, child_dir);
 }
 
-TEST(fs_manager, find_best_dir_for_new_replica)
+TEST_P(fs_manager_test, find_best_dir_for_new_replica)
 {
     // dn1 | 1.0,  1.1 +1.6
     // dn2 | 1.2,  1.3 +1.7   2.0
