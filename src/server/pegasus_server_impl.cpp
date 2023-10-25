@@ -3149,8 +3149,8 @@ void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptio
     reset_usage_scenario_options(base_cf_opts, target_cf_opts);
 
     // aspect 2:
-    target_opts->num_levels = base_opts.num_levels;
-    target_opts->write_buffer_size = base_opts.write_buffer_size;
+    target_cf_opts->num_levels = base_cf_opts.num_levels;
+    target_cf_opts->write_buffer_size = base_cf_opts.write_buffer_size;
 
     reset_allow_ingest_behind_option(base_db_opt, envs, target_db_opt);
 }
