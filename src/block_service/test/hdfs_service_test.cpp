@@ -90,7 +90,8 @@ void HDFSClientTest::generate_test_file(const std::string &filename)
 {
     int lines = FLAGS_num_test_file_lines;
     std::unique_ptr<rocksdb::WritableFile> wfile;
-    auto s = rocksdb::Env::Default()->NewWritableFile(filename, &wfile, rocksdb::EnvOptions());
+    auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                 ->NewWritableFile(filename, &wfile, rocksdb::EnvOptions());
     ASSERT_TRUE(s.ok()) << s.ToString();
     for (int i = 0; i < lines; ++i) {
         rocksdb::Slice data(fmt::format("{:04}d_this_is_a_simple_test_file\n", i));
@@ -128,8 +129,7 @@ void HDFSClientTest::write_test_files_async(const std::string &local_test_path,
     }
 }
 
-// TODO(yingchun): ENCRYPTION: add enable encryption test.
-INSTANTIATE_TEST_CASE_P(, HDFSClientTest, ::testing::Values(false));
+INSTANTIATE_TEST_CASE_P(, HDFSClientTest, ::testing::Values(false, true));
 
 TEST_P(HDFSClientTest, test_hdfs_read_write)
 {

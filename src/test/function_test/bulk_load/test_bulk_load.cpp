@@ -32,6 +32,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "base/pegasus_const.h"
 #include "block_service/local/local_service.h"
@@ -46,10 +47,14 @@
 #include "test/function_test/utils/test_util.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/test_macros.h"
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -98,10 +103,11 @@ protected:
     void generate_bulk_load_info(const bulk_load_info &bli, const std::string &bulk_load_info_path)
     {
         auto value = dsn::json::json_forwarder<bulk_load_info>::encode(bli);
-        auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
-                                            rocksdb::Slice(value.data(), value.length()),
-                                            bulk_load_info_path,
-                                            /* should_sync */ true);
+        auto s =
+            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                       rocksdb::Slice(value.data(), value.length()),
+                                       bulk_load_info_path,
+                                       /* should_sync */ true);
         ASSERT_TRUE(s.ok()) << s.ToString();
     }
 
@@ -110,15 +116,17 @@ protected:
     void generate_bulk_load_info_meta(const std::string &bulk_load_info_path)
     {
         dist::block_service::file_metadata fm;
-        ASSERT_TRUE(utils::filesystem::file_size(bulk_load_info_path, fm.size));
+        ASSERT_TRUE(utils::filesystem::file_size(
+            bulk_load_info_path, dsn::utils::FileDataType::kSensitive, fm.size));
         ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(bulk_load_info_path, fm.md5));
         std::string value = nlohmann::json(fm).dump();
         auto bulk_load_info_meta_path =
             fmt::format("{}/{}/{}/.bulk_load_info.meta", kLocalBulkLoadRoot, kCluster, app_name_);
-        auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
-                                            rocksdb::Slice(value),
-                                            bulk_load_info_meta_path,
-                                            /* should_sync */ true);
+        auto s =
+            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                       rocksdb::Slice(value),
+                                       bulk_load_info_meta_path,
+                                       /* should_sync */ true);
         ASSERT_TRUE(s.ok()) << s.ToString();
     }
 
@@ -131,6 +139,15 @@ protected:
         NO_FATALS(run_cmd_from_project_root("mkdir -p " + kLocalBulkLoadRoot));
         NO_FATALS(run_cmd_from_project_root(
             fmt::format("cp -r {}/{} {}", kSourceFilesRoot, kBulkLoad, kLocalServiceRoot)));
+
+        if (FLAGS_encrypt_data_at_rest) {
+            std::vector<std::string> src_files;
+            ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(kLocalServiceRoot, src_files, true));
+            for (const auto &src_file : src_files) {
+                auto s = dsn::utils::encrypt_file(src_file);
+                ASSERT_TRUE(s.ok()) << s.ToString();
+            }
+        }
 
         // Generate 'bulk_load_info'.
         auto bulk_load_info_path =

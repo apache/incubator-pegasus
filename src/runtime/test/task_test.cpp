@@ -25,7 +25,10 @@
 #include "aio/file_io.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
+#include "utils/flags.h"
 #include "utils/threadpool_code.h"
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
 
 namespace dsn {
 class disk_file;
@@ -65,6 +68,9 @@ public:
 
     static void test_signal_finished_task()
     {
+        // config-test.ini is not encrypted, so set FLAGS_encrypt_data_at_rest = false on force.
+        FLAGS_encrypt_data_at_rest = false;
+
         disk_file *fp = file::open("config-test.ini", file::FileOpenType::kReadOnly);
 
         // this aio task is enqueued into read-queue of disk_engine

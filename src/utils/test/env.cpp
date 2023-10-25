@@ -41,8 +41,8 @@
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
-#include <stdint.h>
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <string>
 
@@ -87,16 +87,6 @@ TEST(env_test, get_env)
 
 class env_file_test : public pegasus::encrypt_data_test_base
 {
-public:
-    env_file_test() : pegasus::encrypt_data_test_base()
-    {
-        // The size of an actual encrypted file should plus kEncryptionHeaderkSize bytes if consider
-        // it as kNonSensitive.
-        if (FLAGS_encrypt_data_at_rest) {
-            _extra_size = dsn::utils::kEncryptionHeaderkSize;
-        }
-    }
-    uint64_t _extra_size = 0;
 };
 
 INSTANTIATE_TEST_CASE_P(, env_file_test, ::testing::Values(false, true));
@@ -134,7 +124,7 @@ TEST_P(env_file_test, encrypt_file_2_files)
         ASSERT_EQ(kFileContentSize, wfile_size);
         ASSERT_TRUE(dsn::utils::filesystem::file_size(
             kEncryptedFileName, dsn::utils::FileDataType::kNonSensitive, wfile_size));
-        ASSERT_EQ(kFileContentSize + _extra_size, wfile_size);
+        ASSERT_EQ(kFileContentSize + extra_encrypted_file_size(), wfile_size);
         // Check file content.
         std::string data;
         s = rocksdb::ReadFileToString(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
@@ -174,7 +164,7 @@ TEST_P(env_file_test, encrypt_file_1_file)
     ASSERT_EQ(kFileContentSize, wfile_size);
     ASSERT_TRUE(dsn::utils::filesystem::file_size(
         kFileName, dsn::utils::FileDataType::kNonSensitive, wfile_size));
-    ASSERT_EQ(kFileContentSize + _extra_size, wfile_size);
+    ASSERT_EQ(kFileContentSize + extra_encrypted_file_size(), wfile_size);
     // Check file content.
     std::string data;
     s = rocksdb::ReadFileToString(
@@ -204,7 +194,7 @@ TEST_P(env_file_test, copy_file)
     ASSERT_EQ(kFileContentSize, wfile_size);
     ASSERT_TRUE(dsn::utils::filesystem::file_size(
         kFileName, dsn::utils::FileDataType::kNonSensitive, wfile_size));
-    ASSERT_EQ(kFileContentSize + _extra_size, wfile_size);
+    ASSERT_EQ(kFileContentSize + extra_encrypted_file_size(), wfile_size);
 
     // Check copy_file(src_fname, dst_fname, total_size).
     // Loop twice to check overwrite.
@@ -218,7 +208,7 @@ TEST_P(env_file_test, copy_file)
         ASSERT_EQ(kFileContentSize, wfile_size);
         ASSERT_TRUE(dsn::utils::filesystem::file_size(
             kCopyFileName, dsn::utils::FileDataType::kNonSensitive, wfile_size));
-        ASSERT_EQ(kFileContentSize + _extra_size, wfile_size);
+        ASSERT_EQ(kFileContentSize + extra_encrypted_file_size(), wfile_size);
         // Check file content.
         std::string data;
         s = rocksdb::ReadFileToString(
@@ -249,7 +239,7 @@ TEST_P(env_file_test, copy_file_by_size)
     ASSERT_EQ(kFileContentSize, wfile_size);
     ASSERT_TRUE(dsn::utils::filesystem::file_size(
         kFileName, dsn::utils::FileDataType::kNonSensitive, wfile_size));
-    ASSERT_EQ(kFileContentSize + _extra_size, wfile_size);
+    ASSERT_EQ(kFileContentSize + extra_encrypted_file_size(), wfile_size);
 
     // Check copy_file_by_size(src_fname, dst_fname, limit_size).
     struct test_case
@@ -271,7 +261,7 @@ TEST_P(env_file_test, copy_file_by_size)
         ASSERT_EQ(test.expect_size, actual_size);
         ASSERT_TRUE(dsn::utils::filesystem::file_size(
             kCopyFileName, dsn::utils::FileDataType::kNonSensitive, wfile_size));
-        ASSERT_EQ(test.expect_size + _extra_size, wfile_size);
+        ASSERT_EQ(test.expect_size + extra_encrypted_file_size(), wfile_size);
         // Check file content.
         std::string data;
         s = rocksdb::ReadFileToString(

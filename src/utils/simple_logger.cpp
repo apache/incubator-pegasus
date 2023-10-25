@@ -182,6 +182,10 @@ simple_logger::simple_logger(const char *log_dir)
 
     create_log_file();
 
+    // TODO(yingchun): simple_logger is destroyed after command_manager, so will cause crash like
+    //  "assertion expression: [_handlers.empty()] All commands must be deregistered before
+    //  command_manager is destroyed, however 'flush-log' is still registered".
+    //  We need to fix it.
     _cmds.emplace_back(::dsn::command_manager::instance().register_command(
         {"flush-log"},
         "flush-log - flush log to stderr or log file",

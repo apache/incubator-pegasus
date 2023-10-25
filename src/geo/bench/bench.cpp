@@ -34,6 +34,7 @@
 
 #include "geo/lib/geo_client.h"
 #include "geo/lib/latlng_codec.h"
+#include "utils/env.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
@@ -110,7 +111,7 @@ int main(int argc, char **argv)
         RESULT_COUNT
     };
     auto statistics = rocksdb::CreateDBStatistics();
-    rocksdb::Env *env = rocksdb::Env::Default();
+    rocksdb::Env *env = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive);
     uint64_t start = env->NowNanos();
     std::atomic<uint64_t> count(test_count);
     dsn::utils::notify_event get_completed;

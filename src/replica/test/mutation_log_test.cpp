@@ -49,6 +49,7 @@
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
 #include "rrdb/rrdb.code.definition.h"
+#include "test_util/test_util.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
@@ -86,7 +87,13 @@ static void overwrite_file(const char *file, int offset, const void *buf, int si
     ASSERT_EQ(ERR_OK, file::close(wfile));
 }
 
-TEST(replication_test, log_file)
+class replication_test : public pegasus::encrypt_data_test_base
+{
+};
+
+INSTANTIATE_TEST_CASE_P(, replication_test, ::testing::Values(false, true));
+
+TEST_P(replication_test, log_file)
 {
     replica_log_info_map mdecrees;
     gpid gpid(1, 0);
@@ -522,20 +529,22 @@ public:
     }
 };
 
-TEST_F(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
+INSTANTIATE_TEST_CASE_P(, mutation_log_test, ::testing::Values(false, true));
 
-TEST_F(mutation_log_test, replay_single_file_2000) { test_replay_single_file(2000); }
+TEST_P(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
 
-TEST_F(mutation_log_test, replay_single_file_5000) { test_replay_single_file(5000); }
+TEST_P(mutation_log_test, replay_single_file_2000) { test_replay_single_file(2000); }
 
-TEST_F(mutation_log_test, replay_single_file_10000) { test_replay_single_file(10000); }
+TEST_P(mutation_log_test, replay_single_file_5000) { test_replay_single_file(5000); }
 
-TEST_F(mutation_log_test, replay_single_file_1) { test_replay_single_file(1); }
+TEST_P(mutation_log_test, replay_single_file_10000) { test_replay_single_file(10000); }
 
-TEST_F(mutation_log_test, replay_single_file_10) { test_replay_single_file(10); }
+TEST_P(mutation_log_test, replay_single_file_1) { test_replay_single_file(1); }
+
+TEST_P(mutation_log_test, replay_single_file_10) { test_replay_single_file(10); }
 
 // mutation_log::open
-TEST_F(mutation_log_test, open)
+TEST_P(mutation_log_test, open)
 {
     std::vector<mutation_ptr> mutations;
 
@@ -568,13 +577,13 @@ TEST_F(mutation_log_test, open)
     }
 }
 
-TEST_F(mutation_log_test, replay_multiple_files_10000_1mb) { test_replay_multiple_files(10000, 1); }
+TEST_P(mutation_log_test, replay_multiple_files_10000_1mb) { test_replay_multiple_files(10000, 1); }
 
-TEST_F(mutation_log_test, replay_multiple_files_20000_1mb) { test_replay_multiple_files(20000, 1); }
+TEST_P(mutation_log_test, replay_multiple_files_20000_1mb) { test_replay_multiple_files(20000, 1); }
 
-TEST_F(mutation_log_test, replay_multiple_files_50000_1mb) { test_replay_multiple_files(50000, 1); }
+TEST_P(mutation_log_test, replay_multiple_files_50000_1mb) { test_replay_multiple_files(50000, 1); }
 
-TEST_F(mutation_log_test, replay_start_decree)
+TEST_P(mutation_log_test, replay_start_decree)
 {
     // decree ranges from [1, 30)
     generate_multiple_log_files(3);
@@ -587,7 +596,7 @@ TEST_F(mutation_log_test, replay_start_decree)
     ASSERT_EQ(mlog->get_log_file_map().size(), 3);
 }
 
-TEST_F(mutation_log_test, reset_from)
+TEST_P(mutation_log_test, reset_from)
 {
     std::vector<mutation_ptr> expected;
     { // writing logs
@@ -635,7 +644,7 @@ TEST_F(mutation_log_test, reset_from)
 
 // multi-threaded testing. ensure reset_from will wait until
 // all previous writes complete.
-TEST_F(mutation_log_test, reset_from_while_writing)
+TEST_P(mutation_log_test, reset_from_while_writing)
 {
     std::vector<mutation_ptr> expected;
     { // writing logs
@@ -677,7 +686,7 @@ TEST_F(mutation_log_test, reset_from_while_writing)
     ASSERT_EQ(actual.size(), expected.size());
 }
 
-TEST_F(mutation_log_test, gc_slog)
+TEST_P(mutation_log_test, gc_slog)
 {
     // Remove the slog dir and create a new one.
     const std::string slog_dir("./slog_test");

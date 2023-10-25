@@ -28,6 +28,7 @@
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <rocksdb/status.h>
 #include <stddef.h>
 #include <algorithm>
 #include <cstdint>
@@ -48,7 +49,10 @@
 #include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/threadpool_code.h"
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
 
 using namespace dsn;
 
@@ -63,8 +67,7 @@ class nfs_test : public pegasus::encrypt_data_test_base
 {
 };
 
-// TODO(yingchun): ENCRYPTION: add enable encryption test.
-INSTANTIATE_TEST_CASE_P(, nfs_test, ::testing::Values(false));
+INSTANTIATE_TEST_CASE_P(, nfs_test, ::testing::Values(false, true));
 
 TEST_P(nfs_test, basic)
 {
@@ -82,6 +85,13 @@ TEST_P(nfs_test, basic)
 
     // Prepare the source files information.
     std::vector<std::string> kSrcFilenames({"nfs_test_file1", "nfs_test_file2"});
+    if (FLAGS_encrypt_data_at_rest) {
+        for (auto &src_filename : kSrcFilenames) {
+            auto s = dsn::utils::encrypt_file(src_filename, src_filename + ".encrypted");
+            ASSERT_TRUE(s.ok()) << s.ToString();
+            src_filename += ".encrypted";
+        }
+    }
     std::vector<int64_t> src_file_sizes;
     std::vector<std::string> src_file_md5s;
     for (const auto &src_filename : kSrcFilenames) {

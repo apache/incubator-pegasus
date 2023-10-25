@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -55,7 +56,9 @@ public:
     }
 };
 
-TEST_F(mutation_batch_test, add_mutation_if_valid)
+INSTANTIATE_TEST_CASE_P(, mutation_batch_test, ::testing::Values(false, true));
+
+TEST_P(mutation_batch_test, add_mutation_if_valid)
 {
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());
@@ -85,7 +88,7 @@ TEST_F(mutation_batch_test, add_mutation_if_valid)
     ASSERT_EQ(result.size(), 2);
 }
 
-TEST_F(mutation_batch_test, ignore_non_idempotent_write)
+TEST_P(mutation_batch_test, ignore_non_idempotent_write)
 {
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());
@@ -98,7 +101,7 @@ TEST_F(mutation_batch_test, ignore_non_idempotent_write)
     ASSERT_EQ(result.size(), 0);
 }
 
-TEST_F(mutation_batch_test, mutation_buffer_commit)
+TEST_P(mutation_batch_test, mutation_buffer_commit)
 {
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());

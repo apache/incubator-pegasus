@@ -18,6 +18,7 @@
  */
 
 #include <base/pegasus_key_schema.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -55,6 +56,10 @@ namespace geo {
 
 DSN_DECLARE_int32(min_level);
 
+// TODO(yingchun): it doesn't make sense to derive from pegasus::encrypt_data_test_base to test
+//  encryption or non-encryption senarios, because the Pegasus cluster has been started with a
+//  fixed value of FLAGS_encrypt_data_at_rest.
+//  We can test the senarios after clearing and restarting the cluster.
 class geo_client_test : public ::testing::Test
 {
 public:

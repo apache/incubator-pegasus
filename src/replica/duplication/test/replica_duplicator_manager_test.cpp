@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -184,24 +185,26 @@ public:
     }
 };
 
-TEST_F(replica_duplicator_manager_test, get_duplication_confirms)
+INSTANTIATE_TEST_CASE_P(, replica_duplicator_manager_test, ::testing::Values(false, true));
+
+TEST_P(replica_duplicator_manager_test, get_duplication_confirms)
 {
     test_get_duplication_confirms();
 }
 
-TEST_F(replica_duplicator_manager_test, set_confirmed_decree_non_primary)
+TEST_P(replica_duplicator_manager_test, set_confirmed_decree_non_primary)
 {
     test_set_confirmed_decree_non_primary();
 }
 
-TEST_F(replica_duplicator_manager_test, remove_non_existed_duplications)
+TEST_P(replica_duplicator_manager_test, remove_non_existed_duplications)
 {
     test_remove_non_existed_duplications();
 }
 
-TEST_F(replica_duplicator_manager_test, min_confirmed_decree) { test_min_confirmed_decree(); }
+TEST_P(replica_duplicator_manager_test, min_confirmed_decree) { test_min_confirmed_decree(); }
 
-TEST_F(replica_duplicator_manager_test, update_checkpoint_prepared)
+TEST_P(replica_duplicator_manager_test, update_checkpoint_prepared)
 {
     auto r = stub->add_primary_replica(2, 1);
     duplication_entry ent;

@@ -34,7 +34,6 @@
 namespace dsn {
 namespace replication {
 
-// log_file::file_streamer
 class log_file::file_streamer
 {
 public:

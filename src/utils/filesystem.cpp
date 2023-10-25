@@ -491,7 +491,8 @@ bool create_file(const std::string &path)
     }
 
     std::unique_ptr<rocksdb::WritableFile> wfile;
-    auto s = rocksdb::Env::Default()->ReopenWritableFile(path, &wfile, rocksdb::EnvOptions());
+    auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                 ->ReopenWritableFile(path, &wfile, rocksdb::EnvOptions());
     if (dsn_unlikely(!s.ok())) {
         LOG_WARNING("fail to create file {}, err={}", path, s.ToString());
         return false;
@@ -678,7 +679,8 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
     }
 
     std::unique_ptr<rocksdb::SequentialFile> sfile;
-    auto s = rocksdb::Env::Default()->NewSequentialFile(file_path, &sfile, rocksdb::EnvOptions());
+    auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                 ->NewSequentialFile(file_path, &sfile, rocksdb::EnvOptions());
     if (!sfile) {
         LOG_ERROR("md5sum error: open file {} failed, err={}", file_path, s.ToString());
         return ERR_FILE_OPERATION_FAILED;
@@ -870,17 +872,20 @@ bool check_dir_rw(const std::string &path, std::string &err_msg)
     static const std::string kFname = "read_write_test_file";
     std::string fpath = path_combine(path, kFname);
     auto cleanup = defer([&fpath]() { remove_path(fpath); });
-    auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
-                                        rocksdb::Slice(kTestValue),
-                                        fpath,
-                                        /* should_sync */ true);
+    // Use kSensitive to test encryption functionality as well.
+    auto s =
+        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                   rocksdb::Slice(kTestValue),
+                                   fpath,
+                                   /* should_sync */ true);
     if (dsn_unlikely(!s.ok())) {
         err_msg = fmt::format("fail to write file {}, err={}", fpath, s.ToString());
         return false;
     }
 
     std::string read_data;
-    s = rocksdb::ReadFileToString(rocksdb::Env::Default(), fpath, &read_data);
+    s = rocksdb::ReadFileToString(
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fpath, &read_data);
     if (dsn_unlikely(!s.ok())) {
         err_msg = fmt::format("fail to read file {}, err={}", fpath, s.ToString());
         return false;

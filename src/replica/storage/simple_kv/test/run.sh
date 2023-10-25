@@ -118,8 +118,7 @@ if [ ! -z "${cases}" ]; then
         run_case ${id}
         echo
     done
-    # TODO(yingchun): ENCRYPTION: add enable encryption test.
-    # TEST_OPTS=${OLD_TEST_OPTS},encrypt_data_at_rest=true
+    TEST_OPTS=${OLD_TEST_OPTS},encrypt_data_at_rest=true
     for id in ${cases}; do
         run_case ${id}
         echo

@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -116,7 +117,9 @@ public:
     mock_replica_ptr _mock_replica;
 };
 
-TEST_F(replica_follower_test, test_init_master_info)
+INSTANTIATE_TEST_CASE_P(, replica_follower_test, ::testing::Values(false, true));
+
+TEST_P(replica_follower_test, test_init_master_info)
 {
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
@@ -140,7 +143,7 @@ TEST_F(replica_follower_test, test_init_master_info)
     ASSERT_FALSE(_mock_replica->is_duplication_follower());
 }
 
-TEST_F(replica_follower_test, test_duplicate_checkpoint)
+TEST_P(replica_follower_test, test_duplicate_checkpoint)
 {
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
@@ -160,7 +163,7 @@ TEST_F(replica_follower_test, test_duplicate_checkpoint)
     ASSERT_EQ(follower->duplicate_checkpoint(), ERR_BUSY);
 }
 
-TEST_F(replica_follower_test, test_async_duplicate_checkpoint_from_master_replica)
+TEST_P(replica_follower_test, test_async_duplicate_checkpoint_from_master_replica)
 {
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
@@ -182,7 +185,7 @@ TEST_F(replica_follower_test, test_async_duplicate_checkpoint_from_master_replic
     fail::teardown();
 }
 
-TEST_F(replica_follower_test, test_update_master_replica_config)
+TEST_P(replica_follower_test, test_update_master_replica_config)
 {
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
@@ -229,7 +232,7 @@ TEST_F(replica_follower_test, test_update_master_replica_config)
     ASSERT_EQ(master_replica_config(follower).pid, p.pid);
 }
 
-TEST_F(replica_follower_test, test_nfs_copy_checkpoint)
+TEST_P(replica_follower_test, test_nfs_copy_checkpoint)
 {
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
