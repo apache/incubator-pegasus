@@ -19,11 +19,13 @@
 
 #include "disk_cleaner.h"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <fmt/core.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <algorithm>
 #include <atomic>
+#include <cstring>
 
 #include "common/fs_manager.h"
 #include "metadata_types.h"
@@ -70,6 +72,27 @@ const std::string kFolderSuffixBak = ".bak";
 const std::string kFolderSuffixOri = ".ori";
 const std::string kFolderSuffixTmp = ".tmp";
 
+namespace {
+
+bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &timestamp_us)
+{
+    CHECK_GE(name.size(), suffix_size);
+
+    if (suffix_size == name.size()) {
+        return false;
+    }
+
+    const size_t end_idx = name.size() - suffix_size;
+    auto begin_idx = name.find_last_of('.',  end_idx - 1);
+    if (begin_idx == std::string::npos || ++begin_idx >= end_idx) {
+        return false;
+    }
+
+    return dsn::buf2uint64(dsn::string_view(name.data() + begin_idx, end_idx - begin_idx), timestamp_us);
+}
+
+} // anonymous namespace
+
 error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &dir_nodes,
                                  /*output*/ disk_cleaning_report &report)
 {
@@ -87,12 +110,12 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
     }
-    for (auto &fpath : sub_list) {
+
+    for (const auto &fpath : sub_list) {
         auto name = dsn::utils::filesystem::get_file_name(fpath);
         if (!is_data_dir_removable(name)) {
             continue;
         }
-        std::string folder_suffix = name.substr(name.length() - 4);
 
         time_t mt;
         if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
@@ -105,16 +128,16 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
         uint64_t remove_interval_seconds = current_time_ms / 1000;
 
         // don't delete ".bak" directory because it is backed by administrator.
-        if (folder_suffix == kFolderSuffixErr) {
+        if (boost::algorithm::ends_with(name, kFolderSuffixErr)) {
             report.error_replica_count++;
             remove_interval_seconds = FLAGS_gc_disk_error_replica_interval_seconds;
-        } else if (folder_suffix == kFolderSuffixGar) {
+        } else if (boost::algorithm::ends_with(name, kFolderSuffixGar)) {
             report.garbage_replica_count++;
             remove_interval_seconds = FLAGS_gc_disk_garbage_replica_interval_seconds;
-        } else if (folder_suffix == kFolderSuffixTmp) {
+        } else if (boost::algorithm::ends_with(name, kFolderSuffixTmp)) {
             report.disk_migrate_tmp_count++;
             remove_interval_seconds = FLAGS_gc_disk_migration_tmp_replica_interval_seconds;
-        } else if (folder_suffix == kFolderSuffixOri) {
+        } else if (boost::algorithm::ends_with(name, kFolderSuffixOri)) {
             report.disk_migrate_origin_count++;
             remove_interval_seconds = FLAGS_gc_disk_migration_origin_replica_interval_seconds;
         }
@@ -140,6 +163,17 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
     return error_s::ok();
 }
 
+bool is_data_dir_removable(const std::string &dir)
+{
+    return (boost::algorithm::ends_with(dir, kFolderSuffixErr) || boost::algorithm::ends_with(dir, kFolderSuffixGar) ||
+            boost::algorithm::ends_with(dir, kFolderSuffixTmp) || boost::algorithm::ends_with(dir, kFolderSuffixOri);
+}
+
+bool is_data_dir_invalid(const std::string &dir)
+{
+    return is_data_dir_removable(dir) || boost::algorithm::ends_with(dir, kFolderSuffixBak);
+}
+
 void move_to_err_path(const std::string &path, const std::string &log_prefix)
 {
     const std::string new_path = fmt::format("{}.{}{}", path, dsn_now_us(), kFolderSuffixErr);
@@ -150,5 +184,6 @@ void move_to_err_path(const std::string &path, const std::string &log_prefix)
           new_path);
     LOG_WARNING("{}: succeed to move directory from '{}' to '{}'", log_prefix, path, new_path);
 }
+
 } // namespace replication
 } // namespace dsn
