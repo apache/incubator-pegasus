@@ -92,6 +92,29 @@ bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &t
     return dsn::buf2uint64(dsn::string_view(name.data() + begin_idx, end_idx - begin_idx), timestamp_us);
 }
 
+bool get_expiration_seconds_by_timestamp(const std::string &name, size_t suffix_size, uint64_t delay_seconds, uint64_t &expiration_seconds)
+{
+    uint64_t timestamp_us = 0;
+    if (!parse_timestamp_us(name, suffix_size, timestamp_us)) {
+        return false;
+    }
+
+    expiration_seconds = timestamp_us / 1000000 + delay_seconds;
+    return true;
+}
+
+bool get_expiration_seconds_by_last_write_time(const std::string &path, uint64_t delay_seconds, uint64_t &expiration_seconds)
+{
+    time_t last_write_seconds;
+    if (!dsn::utils::filesystem::last_write_time(path, last_write_seconds)) {
+        LOG_WARNING("gc_disk: failed to get last write time of {}", path);
+        return false;
+    }
+
+    expiration_second = static_cast<uint64_t>(last_write_seconds) + delay_seconds;
+    return true;
+}
+
 } // anonymous namespace
 
 error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &dir_nodes,
@@ -118,47 +141,50 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
             continue;
         }
 
-        time_t mt;
-        if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
-            LOG_WARNING("gc_disk: failed to get last write time of {}", fpath);
-            continue;
-        }
-
-        auto last_write_time = (uint64_t)mt;
-        uint64_t current_time_ms = dsn_now_ms();
-        uint64_t remove_interval_seconds = current_time_ms / 1000;
+        uint64_t expiration_seconds = 0;
 
         // don't delete ".bak" directory because it is backed by administrator.
         if (boost::algorithm::ends_with(name, kFolderSuffixErr)) {
             report.error_replica_count++;
-            remove_interval_seconds = FLAGS_gc_disk_error_replica_interval_seconds;
+            if (!get_expiration_seconds_by_timestamp(name, kFolderSuffixErr.size(),FLAGS_gc_disk_error_replica_interval_seconds, expiration_seconds)) {
+                continue;
+            }
         } else if (boost::algorithm::ends_with(name, kFolderSuffixGar)) {
             report.garbage_replica_count++;
-            remove_interval_seconds = FLAGS_gc_disk_garbage_replica_interval_seconds;
+            if (get_expiration_seconds_by_timestamp(name, kFolderSuffixGar.size(), FLAGS_gc_disk_garbage_replica_interval_seconds, expiration_seconds)) {
+                continue;
+            }
         } else if (boost::algorithm::ends_with(name, kFolderSuffixTmp)) {
             report.disk_migrate_tmp_count++;
-            remove_interval_seconds = FLAGS_gc_disk_migration_tmp_replica_interval_seconds;
+            if (!get_expiration_seconds_by_last_write_time(fpath, FLAGS_gc_disk_migration_tmp_replica_interval_seconds, expiration_seconds)) {
+                continue;
+            }
         } else if (boost::algorithm::ends_with(name, kFolderSuffixOri)) {
             report.disk_migrate_origin_count++;
-            remove_interval_seconds = FLAGS_gc_disk_migration_origin_replica_interval_seconds;
+            if (!get_expiration_seconds_by_last_write_time(fpath, FLAGS_gc_disk_migration_origin_replica_interval_seconds, expiration_seconds)) {
+                continue;
+            }
+        } else {
+            continue;
         }
 
-        if (last_write_time + remove_interval_seconds <= current_time_ms / 1000) {
-            if (!dsn::utils::filesystem::remove_path(fpath)) {
-                LOG_WARNING("gc_disk: failed to delete directory '{}', time_used_ms = {}",
-                            fpath,
-                            dsn_now_ms() - current_time_ms);
-            } else {
+        auto current_time_ms = dsn_now_ms();
+        if (expiration_seconds <= current_time_ms / 1000) {
+            if (dsn::utils::filesystem::remove_path(fpath)) {
                 LOG_WARNING("gc_disk: replica_dir_op succeed to delete directory '{}'"
                             ", time_used_ms = {}",
                             fpath,
                             dsn_now_ms() - current_time_ms);
                 report.remove_dir_count++;
+            } else {
+                LOG_WARNING("gc_disk: failed to delete directory '{}', time_used_ms = {}",
+                            fpath,
+                            dsn_now_ms() - current_time_ms);
             }
         } else {
             LOG_INFO("gc_disk: reserve directory '{}', wait_seconds = {}",
                      fpath,
-                     last_write_time + remove_interval_seconds - current_time_ms / 1000);
+                     expiration_seconds - current_time_ms / 1000);
         }
     }
     return error_s::ok();
