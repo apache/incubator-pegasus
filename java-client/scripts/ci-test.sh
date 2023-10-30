@@ -59,8 +59,8 @@ cd ../
 
 
 pushd scripts
-echo "bash recompile_thrift.sh"
-bash recompile_thrift.sh
+echo "run recompile_thrift.sh"
+./recompile_thrift.sh
 popd
 mvn spotless:apply
 
