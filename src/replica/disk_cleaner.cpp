@@ -84,15 +84,19 @@ bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &t
     }
 
     const size_t end_idx = name.size() - suffix_size;
-    auto begin_idx = name.find_last_of('.',  end_idx - 1);
+    auto begin_idx = name.find_last_of('.', end_idx - 1);
     if (begin_idx == std::string::npos || ++begin_idx >= end_idx) {
         return false;
     }
 
-    return dsn::buf2uint64(dsn::string_view(name.data() + begin_idx, end_idx - begin_idx), timestamp_us);
+    return dsn::buf2uint64(dsn::string_view(name.data() + begin_idx, end_idx - begin_idx),
+                           timestamp_us);
 }
 
-bool get_expiration_seconds_by_timestamp(const std::string &name, size_t suffix_size, uint64_t delay_seconds, uint64_t &expiration_seconds)
+bool get_expiration_seconds_by_timestamp(const std::string &name,
+                                         size_t suffix_size,
+                                         uint64_t delay_seconds,
+                                         uint64_t &expiration_seconds)
 {
     uint64_t timestamp_us = 0;
     if (!parse_timestamp_us(name, suffix_size, timestamp_us)) {
@@ -103,7 +107,9 @@ bool get_expiration_seconds_by_timestamp(const std::string &name, size_t suffix_
     return true;
 }
 
-bool get_expiration_seconds_by_last_write_time(const std::string &path, uint64_t delay_seconds, uint64_t &expiration_seconds)
+bool get_expiration_seconds_by_last_write_time(const std::string &path,
+                                               uint64_t delay_seconds,
+                                               uint64_t &expiration_seconds)
 {
     time_t last_write_seconds;
     if (!dsn::utils::filesystem::last_write_time(path, last_write_seconds)) {
@@ -146,22 +152,34 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
         // don't delete ".bak" directory because it is backed by administrator.
         if (boost::algorithm::ends_with(name, kFolderSuffixErr)) {
             report.error_replica_count++;
-            if (!get_expiration_seconds_by_timestamp(name, kFolderSuffixErr.size(),FLAGS_gc_disk_error_replica_interval_seconds, expiration_seconds)) {
+            if (!get_expiration_seconds_by_timestamp(name,
+                                                     kFolderSuffixErr.size(),
+                                                     FLAGS_gc_disk_error_replica_interval_seconds,
+                                                     expiration_seconds)) {
                 continue;
             }
         } else if (boost::algorithm::ends_with(name, kFolderSuffixGar)) {
             report.garbage_replica_count++;
-            if (get_expiration_seconds_by_timestamp(name, kFolderSuffixGar.size(), FLAGS_gc_disk_garbage_replica_interval_seconds, expiration_seconds)) {
+            if (get_expiration_seconds_by_timestamp(name,
+                                                    kFolderSuffixGar.size(),
+                                                    FLAGS_gc_disk_garbage_replica_interval_seconds,
+                                                    expiration_seconds)) {
                 continue;
             }
         } else if (boost::algorithm::ends_with(name, kFolderSuffixTmp)) {
             report.disk_migrate_tmp_count++;
-            if (!get_expiration_seconds_by_last_write_time(fpath, FLAGS_gc_disk_migration_tmp_replica_interval_seconds, expiration_seconds)) {
+            if (!get_expiration_seconds_by_last_write_time(
+                    fpath,
+                    FLAGS_gc_disk_migration_tmp_replica_interval_seconds,
+                    expiration_seconds)) {
                 continue;
             }
         } else if (boost::algorithm::ends_with(name, kFolderSuffixOri)) {
             report.disk_migrate_origin_count++;
-            if (!get_expiration_seconds_by_last_write_time(fpath, FLAGS_gc_disk_migration_origin_replica_interval_seconds, expiration_seconds)) {
+            if (!get_expiration_seconds_by_last_write_time(
+                    fpath,
+                    FLAGS_gc_disk_migration_origin_replica_interval_seconds,
+                    expiration_seconds)) {
                 continue;
             }
         } else {
