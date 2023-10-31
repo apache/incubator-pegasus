@@ -3328,7 +3328,8 @@ bool pegasus_server_impl::set_options(
     return ::dsn::ERR_OK;
 }
 
-uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options,uint64_t start)
+uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options,
+                                                uint64_t start)
 {
     // wait flush before compact to make all data compacted.
     uint64_t start_time = dsn_now_ms();
@@ -3352,7 +3353,7 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     uint64_t last_manual_compact_finish_time = 0;
     CHECK_OK_PREFIX(
         _meta_store->get_last_manual_compact_finish_time(&last_manual_compact_finish_time));
-    after_manual_compact(start_time,last_manual_compact_finish_time);
+    after_manual_compact(start_time, last_manual_compact_finish_time);
 
     // generate new checkpoint and remove old checkpoints, in order to release storage asap
     if (!release_storage_after_manual_compact()) {
@@ -3377,8 +3378,9 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     return last_manual_compact_finish_time;
 }
 
-void pegasus_server_impl::after_manual_compact(std::uint64_t starttime,uint64_t endtime){
-    //store last manual compact used time to meta store for learn situation
+void pegasus_server_impl::after_manual_compact(std::uint64_t starttime, uint64_t endtime)
+{
+    // store last manual compact used time to meta store for learn situation
     uint64_t used_time = endtime - starttime;
     _meta_store->set_last_manual_compact_used_time(used_time);
     flush_all_family_columns(true);

@@ -310,7 +310,7 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     }
 
     uint64_t start = begin_manual_compact();
-    uint64_t finish = _app->do_manual_compact(options,start);
+    uint64_t finish = _app->do_manual_compact(options, start);
     end_manual_compact(start, finish);
 
     _pfc_manual_compact_running_count->decrement();
