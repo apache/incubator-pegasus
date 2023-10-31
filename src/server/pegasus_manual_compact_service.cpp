@@ -76,6 +76,11 @@ void pegasus_manual_compact_service::init_last_finish_time_ms(uint64_t last_fini
     _manual_compact_last_finish_time_ms.store(last_finish_time_ms);
 }
 
+void pegasus_manual_compact_service::init_last_used_time_ms(uint64_t last_used_time_ms)
+{
+    _manual_compact_last_time_used_ms.store(last_used_time_ms);
+}
+
 void pegasus_manual_compact_service::start_manual_compact_if_needed(
     const std::map<std::string, std::string> &envs)
 {
@@ -305,7 +310,7 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     }
 
     uint64_t start = begin_manual_compact();
-    uint64_t finish = _app->do_manual_compact(options);
+    uint64_t finish = _app->do_manual_compact(options,start);
     end_manual_compact(start, finish);
 
     _pfc_manual_compact_running_count->decrement();

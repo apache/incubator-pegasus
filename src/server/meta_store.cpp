@@ -34,6 +34,9 @@ const std::string meta_store::DATA_VERSION = "pegasus_data_version";
 const std::string meta_store::LAST_FLUSHED_DECREE = "pegasus_last_flushed_decree";
 const std::string meta_store::LAST_MANUAL_COMPACT_FINISH_TIME =
     "pegasus_last_manual_compact_finish_time";
+const std::string meta_store::LAST_MANUAL_COMPACT_USED_TIME =
+    "pegasus_last_manual_compact_used_time";
+
 
 meta_store::meta_store(pegasus_server_impl *server,
                        rocksdb::DB *db,
@@ -42,6 +45,38 @@ meta_store::meta_store(pegasus_server_impl *server,
 {
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
+}
+
+dsn::error_code meta_store::get_last_manual_compact_used_time(uint64_t *ts) const
+{
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
+                          get_value_from_meta_cf(false, LAST_MANUAL_COMPACT_USED_TIME, ts),
+                          "get_value_from_meta_cf failed");
+    return dsn::ERR_OK;
+}
+
+bool meta_store::check_key_exist_in_meta_store(const std::string meta_cf_key) const
+{
+    uint64_t value = 0;
+    auto ec = get_value_from_meta_cf(
+        false, meta_cf_key, &value);
+
+    if(::dsn::ERR_OBJECT_NOT_FOUND == ec){
+        LOG_INFO_PREFIX("check {} exist in meta store NOT_FOUND",meta_cf_key);
+    }
+
+    if(::dsn::ERR_LOCAL_APP_FAILURE == ec){
+        LOG_INFO_PREFIX("check {} exist in meta store APP_FAILURE",meta_cf_key);
+    }
+
+    return ::dsn::ERR_OK == ec ;
+}
+
+void meta_store::set_last_manual_compact_used_time(uint64_t last_manual_compact_used_time) const
+{
+    CHECK_EQ_PREFIX(
+        ::dsn::ERR_OK,
+        set_value_to_meta_cf(LAST_MANUAL_COMPACT_USED_TIME, last_manual_compact_used_time));
 }
 
 dsn::error_code meta_store::get_last_flushed_decree(uint64_t *decree) const
