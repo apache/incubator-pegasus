@@ -59,11 +59,6 @@ public:
     void set_usage_scenario(const std::string &usage_scenario) const;
 
     void set_last_manual_compact_used_time(uint64_t last_manual_compact_used_time) const;
-    bool check_key_exist_in_meta_store(std::string meta_cf_key) const;
-    bool check_last_used_time_exist_in_meta_store() const
-    {
-        return check_key_exist_in_meta_store(LAST_MANUAL_COMPACT_USED_TIME);
-    };
 
 private:
     ::dsn::error_code

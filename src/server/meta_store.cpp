@@ -54,22 +54,6 @@ dsn::error_code meta_store::get_last_manual_compact_used_time(uint64_t *ts) cons
     return dsn::ERR_OK;
 }
 
-bool meta_store::check_key_exist_in_meta_store(const std::string meta_cf_key) const
-{
-    uint64_t value = 0;
-    auto ec = get_value_from_meta_cf(false, meta_cf_key, &value);
-
-    if (::dsn::ERR_OBJECT_NOT_FOUND == ec) {
-        LOG_INFO_PREFIX("check {} exist in meta store NOT_FOUND", meta_cf_key);
-    }
-
-    if (::dsn::ERR_LOCAL_APP_FAILURE == ec) {
-        LOG_INFO_PREFIX("check {} exist in meta store APP_FAILURE", meta_cf_key);
-    }
-
-    return ::dsn::ERR_OK == ec;
-}
-
 void meta_store::set_last_manual_compact_used_time(uint64_t last_manual_compact_used_time) const
 {
     CHECK_EQ_PREFIX(
