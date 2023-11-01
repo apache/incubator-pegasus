@@ -117,7 +117,7 @@ bool get_expiration_seconds_by_last_write_time(const std::string &path,
         return false;
     }
 
-    expiration_second = static_cast<uint64_t>(last_write_seconds) + delay_seconds;
+    expiration_seconds = static_cast<uint64_t>(last_write_seconds) + delay_seconds;
     return true;
 }
 
@@ -210,8 +210,10 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
 
 bool is_data_dir_removable(const std::string &dir)
 {
-    return (boost::algorithm::ends_with(dir, kFolderSuffixErr) || boost::algorithm::ends_with(dir, kFolderSuffixGar) ||
-            boost::algorithm::ends_with(dir, kFolderSuffixTmp) || boost::algorithm::ends_with(dir, kFolderSuffixOri);
+    return boost::algorithm::ends_with(dir, kFolderSuffixErr) ||
+           boost::algorithm::ends_with(dir, kFolderSuffixGar) ||
+           boost::algorithm::ends_with(dir, kFolderSuffixTmp) ||
+           boost::algorithm::ends_with(dir, kFolderSuffixOri);
 }
 
 bool is_data_dir_invalid(const std::string &dir)
