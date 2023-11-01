@@ -196,7 +196,7 @@ inline void hotkey_collector::change_state_by_result()
         if (!_result.hot_hash_key.empty()) {
             change_state_to_finished();
             LOG_ERROR_PREFIX("Find the hotkey: {}",
-                             pegasus::utils::c_escape_string(_result.hot_hash_key));
+                             pegasus::utils::c_escape_sensitive_string(_result.hot_hash_key));
         }
         break;
     default:
@@ -277,7 +277,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         hint = fmt::format("{} hotkey result has been found: {}, you can send a stop rpc to "
                            "restart hotkey detection",
                            dsn::enum_to_string(_hotkey_type),
-                           pegasus::utils::c_escape_string(_result.hot_hash_key));
+                           pegasus::utils::c_escape_sensitive_string(_result.hot_hash_key));
         break;
     case hotkey_collector_state::STOPPED:
         change_state_to_coarse_detecting();
