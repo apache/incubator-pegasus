@@ -314,6 +314,9 @@ void hotkey_collector::query_result(dsn::replication::detect_hotkey_response &re
         LOG_INFO_PREFIX(hint);
     } else {
         resp.err = dsn::ERR_OK;
+        // Hot key should not be encrypted, thus use `c_escape_string` instead of
+        // `c_escape_sensitive_string` (otherwise it would be overwritten with
+        // "<redacted>").
         resp.__set_hotkey_result(pegasus::utils::c_escape_string(_result.hot_hash_key));
     }
 }
