@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <fmt/core.h>
 // IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
@@ -42,6 +43,7 @@
 #include "replica/test/mock_utils.h"
 #include "replica_admin_types.h"
 #include "replica_disk_test_base.h"
+#include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
@@ -200,6 +202,11 @@ TEST_P(replica_disk_test, on_query_disk_info_one_app)
 
 TEST_P(replica_disk_test, gc_disk_useless_dir)
 {
+    PRESERVE_FLAG(gc_disk_error_replica_interval_seconds);
+    PRESERVE_FLAG(gc_disk_garbage_replica_interval_seconds);
+    PRESERVE_FLAG(gc_disk_migration_origin_replica_interval_seconds);
+    PRESERVE_FLAG(gc_disk_migration_tmp_replica_interval_seconds);
+
     FLAGS_gc_disk_error_replica_interval_seconds = 1;
     FLAGS_gc_disk_garbage_replica_interval_seconds = 1;
     FLAGS_gc_disk_migration_origin_replica_interval_seconds = 1;
@@ -222,7 +229,8 @@ TEST_P(replica_disk_test, gc_disk_useless_dir)
                  {fmt::format("./2.2.pegasus.{}.err", dsn_now_us() + 1000 * 1000 * 1000), true}};
 
     for (const auto &test : tests) {
-        utils::filesystem::create_directory(test.path);
+        // Ensure that every directory does not exist and should be created.
+        CHECK_TRUE(utils::filesystem::create_directory(test.path));
         ASSERT_TRUE(utils::filesystem::directory_exists(test.path));
     }
 
@@ -234,6 +242,11 @@ TEST_P(replica_disk_test, gc_disk_useless_dir)
 
     for (const auto &test : tests) {
         ASSERT_EQ(test.expected_exists, utils::filesystem::directory_exists(test.path));
+        if (test.expected_exists) {
+            // Delete existing directories, in case that they are mixed with later test cases
+            // to affect test results.
+            CHECK_TRUE(dsn::utils::filesystem::remove_path(test.path));
+        }
     }
 
     ASSERT_EQ(report.remove_dir_count, 7);

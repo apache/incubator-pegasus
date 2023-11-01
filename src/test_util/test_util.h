@@ -28,6 +28,7 @@
 #include <string>
 
 #include "runtime/api_layer1.h"
+#include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/flags.h"
 #include "utils/test_macros.h"
@@ -39,6 +40,12 @@ class file_meta;
 } // namespace dsn
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
+
+// Save the current value of a flag and restore it at the end of the function.
+#define PRESERVE_FLAG(name)                                                                        \
+    auto PRESERVED_FLAGS_##name = FLAGS_##name;                                                    \
+    auto PRESERVED_FLAGS_##name##_cleanup =                                                        \
+        dsn::defer([PRESERVED_FLAGS_##name]() { FLAGS_##name = PRESERVED_FLAGS_##name; })
 
 namespace pegasus {
 

@@ -26,7 +26,6 @@
 #include <algorithm>
 #include <atomic>
 #include <cctype>
-#include <cstring>
 
 #include "common/fs_manager.h"
 #include "metadata_types.h"
@@ -93,11 +92,17 @@ bool get_expiration_seconds_by_last_write_time(const std::string &path,
 }
 
 // Unix timestamp in microseconds for 2010-01-01 00:00:00.
+// This timestamp could be used as the minimum, since it's far earlier than the time when
+// Pegasus was born.
 #define MIN_TIMESTAMP_US 1262275200000000
 #define MIN_TIMESTAMP_US_LENGTH (sizeof(STRINGIFY(MIN_TIMESTAMP_US)) - 1)
 
 bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &timestamp_us)
 {
+    // Examples of the directory names of faulty or dropped replicas could be:
+    // 1.1.pegasus.1698843209235962.err
+    // 2.1.pegasus.1698843214240709.gar
+
     CHECK_GE(name.size(), suffix_size);
 
     if (suffix_size == name.size()) {
@@ -115,6 +120,10 @@ bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &t
         return false;
     }
 
+    // std::isdigit() is not an addressable standard library function, thus it can't be used
+    // directly as an algorithm predicate.
+    //
+    // See following docs for details.
     // https://stackoverflow.com/questions/75868796/differences-between-isdigit-and-stdisdigit
     // https://en.cppreference.com/w/cpp/string/byte/isdigit
     const auto begin_itr = name.cbegin() + begin_idx;
@@ -136,6 +145,8 @@ bool get_expiration_seconds_by_timestamp(const std::string &name,
 {
     uint64_t timestamp_us = 0;
     if (!parse_timestamp_us(name, suffix_size, timestamp_us)) {
+        // Once the timestamp could not be extracted from the directory name, the last write time
+        // would be used as the base time to compute the expiration time.
         LOG_WARNING("gc_disk: failed to parse timestamp from {}, turn to "
                     "the last write time for {}",
                     name,

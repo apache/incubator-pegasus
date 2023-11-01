@@ -17,5 +17,12 @@
 
 #pragma once
 
+// Suppose there is a macro defined as:
+// #define FOO 123
+//
+// Once we need the value represented by FOO to be a string, i.e. "123", just do:
+// STRINGIFY(FOO)
+//
+// See https://gcc.gnu.org/onlinedocs/gcc-4.8.5/cpp/Stringification.html for details.
 #define STRINGIFY_HELPER(x) #x
 #define STRINGIFY(x) STRINGIFY_HELPER(x)
