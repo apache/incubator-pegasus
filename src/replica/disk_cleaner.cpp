@@ -34,7 +34,9 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/macros.h"
 #include "utils/string_conv.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -75,6 +77,24 @@ const std::string kFolderSuffixTmp = ".tmp";
 
 namespace {
 
+bool get_expiration_seconds_by_last_write_time(const std::string &path,
+                                               uint64_t delay_seconds,
+                                               uint64_t &expiration_seconds)
+{
+    time_t last_write_seconds;
+    if (!dsn::utils::filesystem::last_write_time(path, last_write_seconds)) {
+        LOG_WARNING("gc_disk: failed to get last write time of {}", path);
+        return false;
+    }
+
+    expiration_seconds = static_cast<uint64_t>(last_write_seconds) + delay_seconds;
+    return true;
+}
+
+// Unix timestamp in microseconds for 2010-01-01 00:00:00.
+#define MIN_TIMESTAMP_US 1262275200000000
+#define MIN_TIMESTAMP_US_LENGTH (sizeof(STRINGIFY(MIN_TIMESTAMP_US)) - 1)
+
 bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &timestamp_us)
 {
     CHECK_GE(name.size(), suffix_size);
@@ -89,35 +109,37 @@ bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &t
         return false;
     }
 
-    return dsn::buf2uint64(dsn::string_view(name.data() + begin_idx, end_idx - begin_idx),
-                           timestamp_us);
+    const auto length = end_idx - begin_idx;
+    if (length < MIN_TIMESTAMP_US_LENGTH) {
+        return false;
+    }
+
+    const auto begin_itr = name.cbegin() + begin_idx;
+    if (!std::all_of(begin_itr, begin_itr + length, ::isdigit)) {
+        return false;
+    }
+
+    const auto ok =
+        dsn::buf2uint64(dsn::string_view(name.data() + begin_idx, length), timestamp_us);
+    return ok ? timestamp_us > MIN_TIMESTAMP_US : false;
 }
 
 bool get_expiration_seconds_by_timestamp(const std::string &name,
+                                         const std::string &path,
                                          size_t suffix_size,
                                          uint64_t delay_seconds,
                                          uint64_t &expiration_seconds)
 {
     uint64_t timestamp_us = 0;
     if (!parse_timestamp_us(name, suffix_size, timestamp_us)) {
-        return false;
+        LOG_WARNING("gc_disk: failed to parse timestamp from {}, turn to "
+                    "the last write time for {}",
+                    name,
+                    path);
+        return get_expiration_seconds_by_last_write_time(path, delay_seconds, expiration_seconds);
     }
 
     expiration_seconds = timestamp_us / 1000000 + delay_seconds;
-    return true;
-}
-
-bool get_expiration_seconds_by_last_write_time(const std::string &path,
-                                               uint64_t delay_seconds,
-                                               uint64_t &expiration_seconds)
-{
-    time_t last_write_seconds;
-    if (!dsn::utils::filesystem::last_write_time(path, last_write_seconds)) {
-        LOG_WARNING("gc_disk: failed to get last write time of {}", path);
-        return false;
-    }
-
-    expiration_seconds = static_cast<uint64_t>(last_write_seconds) + delay_seconds;
     return true;
 }
 
@@ -141,18 +163,15 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
     }
 
-    for (const auto &fpath : sub_list) {
-        auto name = dsn::utils::filesystem::get_file_name(fpath);
-        if (!is_data_dir_removable(name)) {
-            continue;
-        }
-
+    for (const auto &path : sub_list) {
         uint64_t expiration_seconds = 0;
 
-        // don't delete ".bak" directory because it is backed by administrator.
+        // Note: don't delete ".bak" directory since it could be did by administrator.
+        const auto name = dsn::utils::filesystem::get_file_name(path);
         if (boost::algorithm::ends_with(name, kFolderSuffixErr)) {
             report.error_replica_count++;
             if (!get_expiration_seconds_by_timestamp(name,
+                                                     path,
                                                      kFolderSuffixErr.size(),
                                                      FLAGS_gc_disk_error_replica_interval_seconds,
                                                      expiration_seconds)) {
@@ -160,16 +179,17 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
             }
         } else if (boost::algorithm::ends_with(name, kFolderSuffixGar)) {
             report.garbage_replica_count++;
-            if (get_expiration_seconds_by_timestamp(name,
-                                                    kFolderSuffixGar.size(),
-                                                    FLAGS_gc_disk_garbage_replica_interval_seconds,
-                                                    expiration_seconds)) {
+            if (!get_expiration_seconds_by_timestamp(name,
+                                                     path,
+                                                     kFolderSuffixGar.size(),
+                                                     FLAGS_gc_disk_garbage_replica_interval_seconds,
+                                                     expiration_seconds)) {
                 continue;
             }
         } else if (boost::algorithm::ends_with(name, kFolderSuffixTmp)) {
             report.disk_migrate_tmp_count++;
             if (!get_expiration_seconds_by_last_write_time(
-                    fpath,
+                    path,
                     FLAGS_gc_disk_migration_tmp_replica_interval_seconds,
                     expiration_seconds)) {
                 continue;
@@ -177,7 +197,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
         } else if (boost::algorithm::ends_with(name, kFolderSuffixOri)) {
             report.disk_migrate_origin_count++;
             if (!get_expiration_seconds_by_last_write_time(
-                    fpath,
+                    path,
                     FLAGS_gc_disk_migration_origin_replica_interval_seconds,
                     expiration_seconds)) {
                 continue;
@@ -186,22 +206,22 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
             continue;
         }
 
-        auto current_time_ms = dsn_now_ms();
+        const auto current_time_ms = dsn_now_ms();
         if (expiration_seconds <= current_time_ms / 1000) {
-            if (dsn::utils::filesystem::remove_path(fpath)) {
+            if (dsn::utils::filesystem::remove_path(path)) {
                 LOG_WARNING("gc_disk: replica_dir_op succeed to delete directory '{}'"
                             ", time_used_ms = {}",
-                            fpath,
+                            path,
                             dsn_now_ms() - current_time_ms);
                 report.remove_dir_count++;
             } else {
                 LOG_WARNING("gc_disk: failed to delete directory '{}', time_used_ms = {}",
-                            fpath,
+                            path,
                             dsn_now_ms() - current_time_ms);
             }
         } else {
             LOG_INFO("gc_disk: reserve directory '{}', wait_seconds = {}",
-                     fpath,
+                     path,
                      expiration_seconds - current_time_ms / 1000);
         }
     }
