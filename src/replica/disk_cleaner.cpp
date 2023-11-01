@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <cstring>
 
 #include "common/fs_manager.h"
@@ -114,8 +115,11 @@ bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &t
         return false;
     }
 
+    // https://stackoverflow.com/questions/75868796/differences-between-isdigit-and-stdisdigit
+    // https://en.cppreference.com/w/cpp/string/byte/isdigit
     const auto begin_itr = name.cbegin() + begin_idx;
-    if (!std::all_of(begin_itr, begin_itr + length, ::isdigit)) {
+    if (!std::all_of(
+            begin_itr, begin_itr + length, [](unsigned char c) { return std::isdigit(c); })) {
         return false;
     }
 

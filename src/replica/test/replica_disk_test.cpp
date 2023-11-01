@@ -205,39 +205,42 @@ TEST_P(replica_disk_test, gc_disk_useless_dir)
     FLAGS_gc_disk_migration_origin_replica_interval_seconds = 1;
     FLAGS_gc_disk_migration_tmp_replica_interval_seconds = 1;
 
-    std::vector<std::string> tests{
-        "./replica1.err",
-        "./replica2.err",
-        "./replica.gar",
-        "./replica.tmp",
-        "./replica.ori",
-        "./replica.bak",
-        "./replica.1.1",
-    };
+    struct test_case
+    {
+        std::string path;
+        bool expected_exists;
+    } tests[] = {{"./replica1.err", false},
+                 {"./replica2.err", false},
+                 {"./replica.gar", false},
+                 {"./replica.tmp", false},
+                 {"./replica.ori", false},
+                 {"./replica.bak", true},
+                 {"./replica.1.1", true},
+                 {fmt::format("./1.1.pegasus.{}.err", dsn_now_us()), false},
+                 {fmt::format("./2.1.pegasus.{}.gar", dsn_now_us()), false},
+                 {fmt::format("./1.2.pegasus.{}.gar", dsn_now_us() + 1000 * 1000 * 1000), true},
+                 {fmt::format("./2.2.pegasus.{}.err", dsn_now_us() + 1000 * 1000 * 1000), true}};
 
     for (const auto &test : tests) {
-        utils::filesystem::create_directory(test);
-        ASSERT_TRUE(utils::filesystem::directory_exists(test));
+        utils::filesystem::create_directory(test.path);
+        ASSERT_TRUE(utils::filesystem::directory_exists(test.path));
     }
 
     sleep(5);
 
     disk_cleaning_report report{};
-    dsn::replication::disk_remove_useless_dirs({std::make_shared<dir_node>("test", "./")}, report);
+    ASSERT_TRUE(dsn::replication::disk_remove_useless_dirs(
+        {std::make_shared<dir_node>("test", "./")}, report));
 
     for (const auto &test : tests) {
-        if (!dsn::replication::is_data_dir_removable(test)) {
-            ASSERT_TRUE(utils::filesystem::directory_exists(test));
-            continue;
-        }
-        ASSERT_FALSE(utils::filesystem::directory_exists(test));
+        ASSERT_EQ(test.expected_exists, utils::filesystem::directory_exists(test.path));
     }
 
-    ASSERT_EQ(report.remove_dir_count, 5);
+    ASSERT_EQ(report.remove_dir_count, 7);
     ASSERT_EQ(report.disk_migrate_origin_count, 1);
     ASSERT_EQ(report.disk_migrate_tmp_count, 1);
-    ASSERT_EQ(report.garbage_replica_count, 1);
-    ASSERT_EQ(report.error_replica_count, 2);
+    ASSERT_EQ(report.garbage_replica_count, 3);
+    ASSERT_EQ(report.error_replica_count, 4);
 }
 
 TEST_P(replica_disk_test, disk_status_test)
