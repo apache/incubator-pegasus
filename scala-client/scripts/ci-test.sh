@@ -43,6 +43,10 @@ sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
 git clone https://github.com/apache/incubator-pegasus.git
 cd incubator-pegasus/java-client
 git checkout master
+cd scripts
+echo "run recompile_thrift.sh"
+./recompile_thrift.sh
+cd ..
 mvn clean package -DskipTests -Dcheckstyle.skip=true
 mvn clean install -DskipTests -Dcheckstyle.skip=true
 cd ..
