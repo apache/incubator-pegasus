@@ -223,6 +223,10 @@ TEST_P(replica_disk_test, gc_disk_useless_dir)
                  {"./replica.ori", false},
                  {"./replica.bak", true},
                  {"./replica.1.1", true},
+                 {"./1.1.pegasus.1234567890.err", false},
+                 {"./1.2.pegasus.0123456789.gar", false},
+                 {"./2.1.pegasus.1234567890123456.err", false},
+                 {"./2.2.pegasus.1234567890abcdef.gar", false},
                  {fmt::format("./1.1.pegasus.{}.err", dsn_now_us()), false},
                  {fmt::format("./2.1.pegasus.{}.gar", dsn_now_us()), false},
                  {fmt::format("./1.2.pegasus.{}.gar", dsn_now_us() + 1000 * 1000 * 1000), true},
@@ -249,11 +253,11 @@ TEST_P(replica_disk_test, gc_disk_useless_dir)
         }
     }
 
-    ASSERT_EQ(report.remove_dir_count, 7);
+    ASSERT_EQ(report.remove_dir_count, 11);
     ASSERT_EQ(report.disk_migrate_origin_count, 1);
     ASSERT_EQ(report.disk_migrate_tmp_count, 1);
-    ASSERT_EQ(report.garbage_replica_count, 3);
-    ASSERT_EQ(report.error_replica_count, 4);
+    ASSERT_EQ(report.garbage_replica_count, 5);
+    ASSERT_EQ(report.error_replica_count, 6);
 }
 
 TEST_P(replica_disk_test, disk_status_test)

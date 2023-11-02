@@ -19,12 +19,12 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <gtest/gtest.h>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
-#include <fmt/core.h>
 #include <functional>
-#include <gtest/gtest.h>
 #include <string>
 
 #include "runtime/api_layer1.h"
