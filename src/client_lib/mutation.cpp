@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "../base/pegasus_utils.h"
-#include "utils/enum_helper.h"
+#include "utils/string_view.h"
 
 using namespace ::dsn;
 
