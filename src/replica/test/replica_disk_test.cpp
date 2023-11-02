@@ -47,6 +47,7 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
+#include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"

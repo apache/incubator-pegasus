@@ -28,7 +28,6 @@
 #include <string>
 
 #include "runtime/api_layer1.h"
-#include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/flags.h"
 #include "utils/test_macros.h"

@@ -30,6 +30,7 @@
 #include "rocksdb/slice.h"
 #include "rocksdb/status.h"
 #include "runtime/api_layer1.h"
+#include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
