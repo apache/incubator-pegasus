@@ -18,13 +18,11 @@
  */
 
 #include <pegasus/client.h>
-#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "../base/pegasus_utils.h"
-#include "utils/string_view.h"
 
 using namespace ::dsn;
 
