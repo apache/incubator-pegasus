@@ -29,6 +29,10 @@
 
 #include "runtime/api_layer1.h"
 #include "utils/env.h"
+// IWYU refused to include "utils/defer.h" everywhere, both in .h and .cpp files.
+// However, once "utils/defer.h" is not included, it is inevitable that compilation
+// will fail since dsn::defer is referenced. Thus force IWYU to keep it.
+#include "utils/defer.h" // IWYU pragma: keep
 #include "utils/flags.h"
 #include "utils/test_macros.h"
 
