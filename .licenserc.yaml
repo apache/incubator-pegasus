@@ -57,10 +57,12 @@ header:
     - 'src/utils/hpc_locks/readme.txt'
     - 'src/utils/hpc_locks/rwlock.h'
     - 'src/utils/hpc_locks/sema.h'
-    # Copyright (c) xxxx The Chromium Authors
+    # Copyright (c) 2011 The Chromium Authors
     - 'src/utils/safe_strerror_posix.h'
+    # Copyright (c) 2012 The Chromium Authors
     - 'src/runtime/build_config.h'
     - 'src/utils/test/autoref_ptr_test.cpp'
+    # Copyright (c) 2006-2009 The Chromium Authors
     - 'src/utils/safe_strerror_posix.cpp'
     # Copyright 2017 The Abseil Authors
     - 'src/utils/absl/base/internal/invoke.h'
