@@ -200,6 +200,28 @@ TEST_P(replica_disk_test, on_query_disk_info_one_app)
     }
 }
 
+TEST_P(replica_disk_test, check_data_dir_removable)
+{
+    struct test_case
+    {
+        std::string path;
+        bool expected_removable;
+        bool expected_invalid;
+    } tests[] = {{"./replica.0.err", true, true},
+                 {"./replica.1.gar", true, true},
+                 {"./replica.2.tmp", true, true},
+                 {"./replica.3.ori", true, true},
+                 {"./replica.4.bak", false, true},
+                 {"./replica.5.abcde", false, false},
+                 {"./replica.6.x", false, false},
+                 {"./replica.7.8", false, false}};
+
+    for (const auto &test : tests) {
+        EXPECT_EQ(test.expected_removable, is_data_dir_removable(test.path));
+        EXPECT_EQ(test.expected_invalid, is_data_dir_invalid(test.path));
+    }
+}
+
 TEST_P(replica_disk_test, gc_disk_useless_dir)
 {
     PRESERVE_FLAG(gc_disk_error_replica_interval_seconds);
