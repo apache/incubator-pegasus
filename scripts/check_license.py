@@ -22,8 +22,8 @@ PRJ_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 YML_PATH = os.path.join(PRJ_PATH, '.licenserc.yaml')
 
 IGNORED_STARTS_WITH = ['.git/', '.idea/', 'docs/resources/']
-IGNORED_ENDS_WITH = ['.swp']
-IGNORED_FILES = {'.licenserc.yaml', 'LICENSE', 'tags'}
+IGNORED_ENDS_WITH = ['.swp', '.npmigonre', 'go.sum', '.csv', '.json', '.pdf']
+IGNORED_NAMES = {'.licenserc.yaml', 'LICENSE', 'tags'}
 
 COPYRIGHT_MARKERS = [
     "Copyright (c) 2016, Adi Shavit",
@@ -65,31 +65,37 @@ def mark_file(path):
     return NO_COPYRIGHT_MARKER_KEY
 
 
+def is_path_ignored(path):
+    for header in IGNORED_STARTS_WITH:
+        if path.startswith(header):
+            return True
+
+    for trailer in IGNORED_ENDS_WITH:
+        if path.endswith(trailer):
+            return True
+
+    return False
+
+
+def is_name_ignored(name):
+    return name in IGNORED_NAMES
+
+
 def classify_files():
     marked_files = {}
 
     for abs_dir, sub_dirs, file_names in os.walk(PRJ_PATH):
         rel_dir = os.path.relpath(abs_dir, PRJ_PATH)
+        if rel_dir == '.':
+            rel_dir = ''
 
         for name in file_names:
-            if name in IGNORED_FILES:
+            if is_name_ignored(name):
                 continue
 
             rel_path = os.path.join(rel_dir, name)
 
-            ignored = False
-            for header in IGNORED_STARTS_WITH:
-                if rel_path.startswith(header):
-                    ignored = True
-                    break
-            if ignored:
-                continue
-
-            for trailer in IGNORED_ENDS_WITH:
-                if rel_path.endswith(trailer):
-                    ignored = True
-                    break
-            if ignored:
+            if is_path_ignored(rel_path):
                 continue
 
             path = os.path.join(abs_dir, name)
@@ -108,19 +114,16 @@ def parse_yml():
     marked_files = {}
 
     with open(YML_PATH) as f:
-        current_marker = None
+        current_marker = NO_COPYRIGHT_MARKER_KEY
         for line in f:
             for marker in COPYRIGHT_MARKERS:
                 if marker in line:
                     current_marker = marker
                     break
             else:
-                if not current_marker:
-                    continue
-
                 begin_idx = line.find("'")
                 if begin_idx < 0:
-                    current_marker = None
+                    current_marker = NO_COPYRIGHT_MARKER_KEY
                     continue
 
                 begin_idx += 1
@@ -129,6 +132,11 @@ def parse_yml():
                     raise ValueError("Invalid file path line in {yml_path}".format(yml_path=YML_PATH))
 
                 path = line[begin_idx:end_idx]
+                if is_name_ignored(os.path.basename(path)):
+                    continue
+                if is_path_ignored(path):
+                    continue
+
                 if current_marker not in marked_files:
                     marked_files[current_marker] = set()
                 marked_files[current_marker].add(path)

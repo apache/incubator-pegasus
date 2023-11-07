@@ -35,6 +35,8 @@ header:
     - '.github/pull_request_template.md'
     # Image files for docs.
     - 'docs/resources/*'
+    # File in pdf format.
+    - '**/*.pdf'
     # Special files for golang.
     - '**/go.sum'
     # TODO(wangdan): Generated files for go client, could generate dynamically?
@@ -45,11 +47,26 @@ header:
     - '**/.npmigonre'
     # Special files for python.
     - 'python-client/requirement.txt'
-    # Used for unit tests and could not be added with copyright info (otherwise would lead to error).
+    # Used for tests and could not be added with copyright info (otherwise would lead to error).
     - 'src/aio/test/copy_source.txt'
     - 'src/runtime/test/command.txt'
+    - 'src/failure_detector/test/gtest.filter'
+    - 'src/meta/test/meta_state/gtest.filter'
+    - 'src/meta/test/suite1'
+    - 'src/meta/test/suite2'
+    - 'src/nfs/test/nfs_test_file1'
+    - 'src/nfs/test/nfs_test_file2'
+    - 'src/runtime/test/gtest.filter'
     # Used for unit tests and should be empty, or ignore all comment lines (otherwise would lead to error).
     - 'src/utils/test/config-empty.ini'
+    # Used for patches for thirdparties.
+    - 'thirdparty/fix_fds_for_macos.patch'
+    - 'thirdparty/fix_jemalloc_for_m1_on_macos.patch'
+    - 'thirdparty/fix_libevent_for_macos.patch'
+    - 'thirdparty/fix_prometheus-cpp_limits.patch'
+    - 'thirdparty/fix_s2_for_aarch64.patch'
+    - 'thirdparty/fix_thrift_for_cpp11.patch'
+    - 'thirdparty/rocksdb_fix_atomic_flush_0879c240.patch'
     # TODO(yingchun): shell/* files are import from thirdparties, we can move them to thirdparty later.
     # Copyright (c) 2016, Adi Shavit
     - 'src/shell/argh.h'
@@ -96,21 +113,6 @@ header:
     - 'cmake_modules/FindDL.cmake'
     # Copyright (c) 2017 Guillaume Papin
     - 'scripts/run-clang-format.py'
-    # need manual fix
-    - 'src/failure_detector/test/gtest.filter'
-    - 'src/meta/test/meta_state/gtest.filter'
-    - 'src/meta/test/suite1'
-    - 'src/meta/test/suite2'
-    - 'src/nfs/test/nfs_test_file1'
-    - 'src/nfs/test/nfs_test_file2'
-    - 'src/runtime/test/gtest.filter'
-    - 'thirdparty/fix_fds_for_macos.patch'
-    - 'thirdparty/fix_jemalloc_for_m1_on_macos.patch'
-    - 'thirdparty/fix_libevent_for_macos.patch'
-    - 'thirdparty/fix_prometheus-cpp_limits.patch'
-    - 'thirdparty/fix_s2_for_aarch64.patch'
-    - 'thirdparty/fix_thrift_for_cpp11.patch'
-    - 'thirdparty/rocksdb_fix_atomic_flush_0879c240.patch'
     # The MIT License (MIT), Copyright (c) 2015 Microsoft Corporation
     - 'cmake_modules/BaseFunctions.cmake'
     - 'docs/rdsn-README.md'
