@@ -15,7 +15,16 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
+import json
 import os
+import pprint
+
+PRJ_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+YML_PATH = os.path.join(PRJ_PATH, '.licenserc.yaml')
+
+IGNORED_STARTS_WITH = ['.git/', '.idea/', 'docs/']
+IGNORED_ENDS_WITH = ['.swp']
+IGNORED_FILES = {'.licenserc.yaml', 'LICENSE'}
 
 COPYRIGHT_MARKERS = [
     "Copyright (c) Facebook, Inc",
@@ -28,25 +37,28 @@ COPYRIGHT_MARKERS = [
     "Copyright (c) 2017 Guillaume Papin",
     "Copyright (c) 2015 Microsoft Corporation",
 ]
+IGNORED_COPYRIGHT_MARKERS = ["http://www.apache.org/licenses/LICENSE-2.0"]
 
-NO_COPYRIGHT_MARKER = "NO_COPYRIGHT_MARKER"
-
-PRJ_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-YML_PATH = os.path.join(PRJ_PATH, '.licenserc.yaml')
+NO_COPYRIGHT_MARKER_KEY = "NO_COPYRIGHT_MARKER"
+IGNORED_COPYRIGHT_MARKER_KEY = "IGNORED_COPYRIGHT_MARKER"
 
 
 def mark_file(path):
     with open(path) as f:
-        # print(path)
         try:
             for line in f:
+                for marker in IGNORED_COPYRIGHT_MARKERS:
+                    if marker in line:
+                        return IGNORED_COPYRIGHT_MARKER_KEY
+
                 for marker in COPYRIGHT_MARKERS:
                     if marker in line:
                         return marker
-        except Exception:
+        except UnicodeDecodeError:
+            # Ignore UnicodeDecodeError, since some files might be binary.
             pass
 
-    return NO_COPYRIGHT_MARKER
+    return NO_COPYRIGHT_MARKER_KEY
 
 
 def classify_files():
@@ -54,13 +66,36 @@ def classify_files():
 
     for abs_dir, sub_dirs, file_names in os.walk(PRJ_PATH):
         rel_dir = os.path.relpath(abs_dir, PRJ_PATH)
+
         for name in file_names:
+            if name in IGNORED_FILES:
+                continue
+
+            rel_path = os.path.join(rel_dir, name)
+
+            ignored = False
+            for header in IGNORED_STARTS_WITH:
+                if rel_path.startswith(header):
+                    ignored = True
+                    break
+            if ignored:
+                continue
+
+            for trailer in IGNORED_ENDS_WITH:
+                if rel_path.endswith(trailer):
+                    ignored = True
+                    break
+            if ignored:
+                continue
+
             path = os.path.join(abs_dir, name)
             marker = mark_file(path)
+            if marker == IGNORED_COPYRIGHT_MARKER_KEY:
+                continue
+
             if marker not in marked_files:
                 marked_files[marker] = set()
-            marked_files[marker].add(os.path.join(rel_dir, name))
-            # print(rel_dir, sub_dirs, file_names)
+            marked_files[marker].add(rel_path)
 
     return marked_files
 
@@ -114,6 +149,7 @@ def check_diff():
             print(
                 "No diff found for marker '{yml_marker}' in {yml_path}".format(yml_marker=yml_marker,
                                                                                yml_path=YML_PATH))
+            del marked_files[yml_marker]
             continue
 
         print("Diff found for marker '{yml_marker}' in {yml_path}:".format(yml_marker=yml_marker, yml_path=YML_PATH))
@@ -127,9 +163,8 @@ def check_diff():
     if not marked_files:
         return
 
-    print("markers in some files of the project not found in {yml_path}: {marked_files}".format(
-        yml_path=YML_PATH,
-        marked_files=marked_files))
+    print("markers in some files of the project not found in {yml_path}:".format(yml_path=YML_PATH))
+    pprint.pprint(marked_files)
 
 
 def main():
