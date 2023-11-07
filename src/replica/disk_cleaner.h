@@ -55,26 +55,13 @@ struct disk_cleaning_report
 extern error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &dir_nodes,
                                         /*output*/ disk_cleaning_report &report);
 
-inline bool is_data_dir_removable(const std::string &dir)
-{
-    if (dir.length() < 4) {
-        return false;
-    }
-    const std::string folder_suffix = dir.substr(dir.length() - 4);
-    return (folder_suffix == kFolderSuffixErr || folder_suffix == kFolderSuffixGar ||
-            folder_suffix == kFolderSuffixTmp || folder_suffix == kFolderSuffixOri);
-}
+bool is_data_dir_removable(const std::string &dir);
 
-// Note: ".bak" is invalid but not allow delete, because it can be backed by administrator.
-inline bool is_data_dir_invalid(const std::string &dir)
-{
-    if (dir.length() < 4) {
-        return false;
-    }
-    const std::string folder_suffix = dir.substr(dir.length() - 4);
-    return is_data_dir_removable(dir) || folder_suffix == kFolderSuffixBak;
-}
+// Note: ".bak" is invalid but not allowed to be deleted, because it could be did by
+// administrator on purpose.
+bool is_data_dir_invalid(const std::string &dir);
 
 void move_to_err_path(const std::string &path, const std::string &log_prefix);
+
 } // namespace replication
 } // namespace dsn

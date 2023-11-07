@@ -46,6 +46,7 @@
 #include "utils/enum_helper.h"
 #include "utils/fmt_logging.h"
 #include "utils/long_adder.h"
+#include "utils/macros.h"
 #include "utils/nth_element.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
@@ -973,8 +974,6 @@ struct kth_percentile_property
     double decimal;
 };
 
-#define STRINGIFY_HELPER(x) #x
-#define STRINGIFY(x) STRINGIFY_HELPER(x)
 #define STRINGIFY_KTH_PERCENTILE_NAME(kth) STRINGIFY(KTH_PERCENTILE_NAME(kth))
 #define KTH_TO_DECIMAL(kth) 0.##kth
 #define KTH_PERCENTILE_PROPERTY_LIST(kth)                                                          \
