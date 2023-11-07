@@ -15,7 +15,6 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
-import json
 import os
 import pprint
 
@@ -24,9 +23,13 @@ YML_PATH = os.path.join(PRJ_PATH, '.licenserc.yaml')
 
 IGNORED_STARTS_WITH = ['.git/', '.idea/', 'docs/']
 IGNORED_ENDS_WITH = ['.swp']
-IGNORED_FILES = {'.licenserc.yaml', 'LICENSE'}
+IGNORED_FILES = {'.licenserc.yaml', 'LICENSE', 'tags'}
 
 COPYRIGHT_MARKERS = [
+    "Copyright (c) 2016, Adi Shavit",
+    "Copyright (c) 2010-2016, Salvatore Sanfilippo",
+    "Copyright (c) 2010-2014, Salvatore Sanfilippo",
+    "Copyright (c) 2006-2015, Salvatore Sanfilippo",
     "Copyright (c) Facebook, Inc",
     "https://github.com/preshing/cpp11-on-multicore/blob/master/LICENSE",
     "Copyright (c) 2011 The Chromium Authors",
