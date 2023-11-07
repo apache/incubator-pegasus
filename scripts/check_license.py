@@ -21,7 +21,7 @@ import pprint
 PRJ_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 YML_PATH = os.path.join(PRJ_PATH, '.licenserc.yaml')
 
-IGNORED_STARTS_WITH = ['.git/', '.idea/', 'docs/']
+IGNORED_STARTS_WITH = ['.git/', '.idea/', 'docs/resources/']
 IGNORED_ENDS_WITH = ['.swp']
 IGNORED_FILES = {'.licenserc.yaml', 'LICENSE', 'tags'}
 

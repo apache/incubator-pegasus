@@ -38,6 +38,11 @@ header:
     - 'go-client/idl/base/rocskdb_err_string.go'
     - 'go-client/idl/base/GoUnusedProtection__.go'
     - '**/.npmigonre'
+    # Image files for docs
+    - 'docs/resources/*'
+    # Used for unit tests and were not be added with copyright info.
+    - 'src/aio/test/copy_source.txt'
+    - 'src/runtime/test/command.txt'
     # TODO(yingchun): shell/* files are import from thirdparties, we can move them to thirdparty later.
     # Copyright (c) 2016, Adi Shavit
     - 'src/shell/argh.h'
@@ -223,7 +228,6 @@ header:
     - 'src/aio/test/aio.cpp'
     - 'src/aio/test/clear.sh'
     - 'src/aio/test/config.ini'
-    - 'src/aio/test/copy_source.txt'
     - 'src/aio/test/run.sh'
     - 'src/block_service/test/config-test.ini'
     - 'src/client/CMakeLists.txt'
@@ -570,7 +574,6 @@ header:
     - 'src/runtime/test/address_test.cpp'
     - 'src/runtime/test/async_call.cpp'
     - 'src/runtime/test/clear.sh'
-    - 'src/runtime/test/command.txt'
     - 'src/runtime/test/config-test-corrupt-message.ini'
     - 'src/runtime/test/config-test-sim.ini'
     - 'src/runtime/test/config-test.ini'
