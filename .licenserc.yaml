@@ -20,29 +20,36 @@ header:
     copyright-owner: Apache Software Foundation
 
   paths-ignore:
+    # Configuration files that could not be added with copyright info (otherwise would lead to error).
+    - '.rat-excludes'
+    - '**/*.csv'
+    - '**/*.json'
     # All the type of licenses of this project should be added to LICENSE.
+    - 'DISCLAIMER-WIP'
     - 'LICENSE'
     - 'NOTICE'
-    - '.github/pull_request_template.md'
+    # Template files of issues and pull requests for Github.
     - '.github/ISSUE_TEMPLATE/bug_report.md'
     - '.github/ISSUE_TEMPLATE/feature-request.md'
     - '.github/ISSUE_TEMPLATE/general_question.md'
-    - '.rat-excludes'
-    - 'DISCLAIMER-WIP'
-    - 'python-client/requirement.txt'
-    - '.devcontainer/devcontainer.json'
+    - '.github/pull_request_template.md'
+    # Image files for docs.
+    - 'docs/resources/*'
+    # Special files for golang.
     - '**/go.sum'
-    - '**/*.csv'
-    - '**/*.json'
+    # TODO(wangdan): Generated files for go client, could generate dynamically?
+    - 'go-client/idl/base/GoUnusedProtection__.go'
     - 'go-client/idl/base/dsn_err_string.go'
     - 'go-client/idl/base/rocskdb_err_string.go'
-    - 'go-client/idl/base/GoUnusedProtection__.go'
+    # Special files for nodejs.
     - '**/.npmigonre'
-    # Image files for docs
-    - 'docs/resources/*'
-    # Used for unit tests and were not be added with copyright info.
+    # Special files for python.
+    - 'python-client/requirement.txt'
+    # Used for unit tests and could not be added with copyright info (otherwise would lead to error).
     - 'src/aio/test/copy_source.txt'
     - 'src/runtime/test/command.txt'
+    # Used for unit tests and should be empty, or ignore all comment lines (otherwise would lead to error).
+    - 'src/utils/test/config-empty.ini'
     # TODO(yingchun): shell/* files are import from thirdparties, we can move them to thirdparty later.
     # Copyright (c) 2016, Adi Shavit
     - 'src/shell/argh.h'
@@ -104,8 +111,6 @@ header:
     - 'thirdparty/fix_s2_for_aarch64.patch'
     - 'thirdparty/fix_thrift_for_cpp11.patch'
     - 'thirdparty/rocksdb_fix_atomic_flush_0879c240.patch'
-    # should be empty, or ignore all comment lines
-    - 'src/utils/test/config-empty.ini'
     # The MIT License (MIT), Copyright (c) 2015 Microsoft Corporation
     - 'cmake_modules/BaseFunctions.cmake'
     - 'docs/rdsn-README.md'
