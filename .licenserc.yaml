@@ -53,9 +53,10 @@ header:
     - 'src/utils/TokenBucket.h'
     - 'src/utils/test/TokenBucketTest.cpp'
     - 'src/utils/test/TokenBucketTest.h'
+    # https://github.com/preshing/modern-cpp-threading/blob/master/LICENSE
+    - 'src/utils/hpc_locks/autoreseteventcondvar.h'
     # https://github.com/preshing/cpp11-on-multicore/blob/master/LICENSE
     - 'src/utils/hpc_locks/autoresetevent.h'
-    - 'src/utils/hpc_locks/autoreseteventcondvar.h'
     - 'src/utils/hpc_locks/benaphore.h'
     - 'src/utils/hpc_locks/bitfield.h'
     - 'src/utils/hpc_locks/readme.txt'
