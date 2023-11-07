@@ -31,6 +31,9 @@ COPYRIGHT_MARKERS = [
 
 NO_COPYRIGHT_MARKER = "NO_COPYRIGHT_MARKER"
 
+PRJ_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+YML_PATH = os.path.join(PRJ_PATH, '.licenserc.yaml')
+
 
 def mark_file(path):
     with open(path) as f:
@@ -49,22 +52,88 @@ def mark_file(path):
 def classify_files():
     marked_files = {}
 
-    prj_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    for abs_dir, sub_dirs, file_names in os.walk(prj_path):
-        rel_dir = os.path.relpath(abs_dir, prj_path)
+    for abs_dir, sub_dirs, file_names in os.walk(PRJ_PATH):
+        rel_dir = os.path.relpath(abs_dir, PRJ_PATH)
         for name in file_names:
             path = os.path.join(abs_dir, name)
             marker = mark_file(path)
-            files = marked_files.get(marker, set())
-            files.add(os.path.join(rel_dir, name))
-            marked_files[marker] = files
+            if marker not in marked_files:
+                marked_files[marker] = set()
+            marked_files[marker].add(os.path.join(rel_dir, name))
             # print(rel_dir, sub_dirs, file_names)
 
-    print(marked_files)
+    return marked_files
+
+
+def parse_yml():
+    marked_files = {}
+
+    with open(YML_PATH) as f:
+        current_marker = None
+        for line in f:
+            for marker in COPYRIGHT_MARKERS:
+                if marker in line:
+                    current_marker = marker
+                    break
+            else:
+                if not current_marker:
+                    continue
+
+                begin_idx = line.find("'")
+                if begin_idx < 0:
+                    current_marker = None
+                    continue
+
+                begin_idx += 1
+                end_idx = line.find("'", begin_idx)
+                if end_idx < 0:
+                    raise ValueError("Invalid file path line in {yml_path}".format(yml_path=YML_PATH))
+
+                path = line[begin_idx:end_idx]
+                if current_marker not in marked_files:
+                    marked_files[current_marker] = set()
+                marked_files[current_marker].add(path)
+
+    return marked_files
+
+
+def check_diff():
+    yml_marked_files = parse_yml()
+    marked_files = classify_files()
+    for yml_marker, yml_files in yml_marked_files.items():
+        if yml_marker not in marked_files:
+            print(
+                "marker {yml_marker} in {yml_path} not found in any file of the project".format(yml_marker=yml_marker,
+                                                                                                yml_path=YML_PATH))
+            continue
+
+        files = marked_files[yml_marker]
+        yml_plus = yml_files - files
+        yml_minus = files - yml_files
+        if not yml_plus and not yml_minus:
+            print(
+                "No diff found for marker '{yml_marker}' in {yml_path}".format(yml_marker=yml_marker,
+                                                                               yml_path=YML_PATH))
+            continue
+
+        print("Diff found for marker '{yml_marker}' in {yml_path}:".format(yml_marker=yml_marker, yml_path=YML_PATH))
+        if yml_plus:
+            print("{plus}: {yml_plus}".format(plus='+' * len(yml_plus), yml_marker=yml_marker, yml_plus=yml_plus))
+        if yml_minus:
+            print("{minus}: {yml_minus}".format(minus='-' * len(yml_minus), yml_minus=yml_minus))
+
+        del marked_files[yml_marker]
+
+    if not marked_files:
+        return
+
+    print("markers in some files of the project not found in {yml_path}: {marked_files}".format(
+        yml_path=YML_PATH,
+        marked_files=marked_files))
 
 
 def main():
-    classify_files()
+    check_diff()
 
 
 if __name__ == '__main__':
