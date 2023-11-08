@@ -15,9 +15,6 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
-# Used for check if .licenserc.yaml is consistent with real files.
-
-
 import os
 import pprint
 
@@ -148,6 +145,9 @@ def parse_yml():
 
 
 def check_diff():
+    """
+    Used to check if .licenserc.yaml is consistent with real files.
+    """
     yml_marked_files = parse_yml()
     marked_files = classify_files()
     for yml_marker, yml_files in yml_marked_files.items():

@@ -36,7 +36,7 @@ header:
     # Image files for docs.
     - '**/*.jpg'
     - '**/*.png'
-    # File in pdf format.
+    # Files in pdf format.
     - '**/*.pdf'
     # Special files for golang.
     - '**/go.sum'
@@ -106,13 +106,13 @@ header:
     # Copyright 2017 The Abseil Authors
     - 'src/utils/absl/base/internal/invoke.h'
     - 'src/utils/absl/utility/utility.h'
+    - 'src/utils/memutil.h'
     - 'src/utils/smart_pointers.h'
+    - 'src/utils/string_view.cpp'
     - 'src/utils/string_view.h'
     - 'src/utils/test/memutil_test.cpp'
-    - 'src/utils/test/string_view_test.cpp'
     - 'src/utils/test/smart_pointers_test.cpp'
-    - 'src/utils/memutil.h'
-    - 'src/utils/string_view.cpp'
+    - 'src/utils/test/string_view_test.cpp'
     # Copyright (c) 2010-2011, Rob Jansen
     - 'cmake_modules/FindRT.cmake'
     - 'cmake_modules/FindDL.cmake'
