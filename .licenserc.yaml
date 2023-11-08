@@ -34,7 +34,8 @@ header:
     - '.github/ISSUE_TEMPLATE/general_question.md'
     - '.github/pull_request_template.md'
     # Image files for docs.
-    - 'docs/resources/*'
+    - '**/*.jpg'
+    - '**/*.png'
     # File in pdf format.
     - '**/*.pdf'
     # Special files for golang.
@@ -47,7 +48,7 @@ header:
     - '**/.npmigonre'
     # Special files for python.
     - 'python-client/requirement.txt'
-    # Used for tests and could not be added with copyright info (otherwise would lead to error).
+    # Text files used for tests and could not be added with copyright info (otherwise would lead to error).
     - 'src/aio/test/copy_source.txt'
     - 'src/runtime/test/command.txt'
     - 'src/failure_detector/test/gtest.filter'
@@ -57,8 +58,12 @@ header:
     - 'src/nfs/test/nfs_test_file1'
     - 'src/nfs/test/nfs_test_file2'
     - 'src/runtime/test/gtest.filter'
-    # Used for unit tests and should be empty, or ignore all comment lines (otherwise would lead to error).
+    # Used for tests and should be empty, or ignore all comment lines (otherwise would lead to error).
     - 'src/utils/test/config-empty.ini'
+    # Binary files used for tests and could not be added with copyright info (otherwise would lead to error).
+    - 'src/replica/duplication/test/log.1.0.handle_real_private_log'
+    - 'src/replica/duplication/test/log.1.0.handle_real_private_log2'
+    - 'src/replica/duplication/test/log.1.0.all_loaded_are_write_empties'
     # Used for patches for thirdparties.
     - 'thirdparty/fix_fds_for_macos.patch'
     - 'thirdparty/fix_jemalloc_for_m1_on_macos.patch'

@@ -15,14 +15,17 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
+# Used for check if .licenserc.yaml is consistent with real files.
+
+
 import os
 import pprint
 
 PRJ_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 YML_PATH = os.path.join(PRJ_PATH, '.licenserc.yaml')
 
-IGNORED_STARTS_WITH = ['.git/', '.idea/', 'docs/resources/']
-IGNORED_ENDS_WITH = ['.swp', '.npmigonre', 'go.sum', '.csv', '.json', '.pdf']
+IGNORED_STARTS_WITH = ['.git/', '.idea/']
+IGNORED_ENDS_WITH = ['.swp', '.npmigonre', 'go.sum', '.csv', '.json', '.pdf', '.jpg', '.png']
 IGNORED_NAMES = {'.licenserc.yaml', 'LICENSE', 'tags'}
 
 COPYRIGHT_MARKERS = [
