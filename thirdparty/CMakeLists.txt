@@ -375,8 +375,10 @@ option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = ba
 ExternalProject_Add(rocksdb
         URL https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
         URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
-        CONFIGURE_COMMAND git clone git@github.com:pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
-        DEPENDS jemalloc
+        PATCH_COMMAND ""
+        COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
+        COMMAND git clone -b fix_build_gtest --depth=1 https://github.com/acelyc111/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
+        DEPENDS googletest jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DROCKSDB_PLUGINS=encfs
         -DFAIL_ON_WARNINGS=OFF
