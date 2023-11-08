@@ -62,6 +62,7 @@ def mark_file(path):
             # Ignore UnicodeDecodeError, since some files might be binary.
             pass
 
+    # No marker was found, thus marked with no copyright.
     return NO_COPYRIGHT_MARKER_KEY
 
 
@@ -82,24 +83,32 @@ def is_name_ignored(name):
 
 
 def classify_files():
+    """
+    Scan all the files of the project, mark the ones that have copyright info.
+    """
     marked_files = {}
 
     for abs_dir, sub_dirs, file_names in os.walk(PRJ_PATH):
         rel_dir = os.path.relpath(abs_dir, PRJ_PATH)
         if rel_dir == '.':
+            # Drop the possible prefixed './' for the relative paths.
             rel_dir = ''
 
         for name in file_names:
+            # Some kinds of files should be ignored.
             if is_name_ignored(name):
                 continue
 
             rel_path = os.path.join(rel_dir, name)
 
+            # Some kinds of dirs/files should be ignored.
             if is_path_ignored(rel_path):
                 continue
 
             path = os.path.join(abs_dir, name)
             marker = mark_file(path)
+
+            # Some kinds of copyright could be ignored, such as Apache LICENSE-2.0.
             if marker == IGNORED_COPYRIGHT_MARKER_KEY:
                 continue
 
@@ -111,18 +120,24 @@ def classify_files():
 
 
 def parse_yml():
+    """
+    Scan all the files in .licenserc.yaml, mark the ones that have copyright info.
+    """
     marked_files = {}
 
     with open(YML_PATH) as f:
+        # The files without copyright info are marked with the specific key.
         current_marker = NO_COPYRIGHT_MARKER_KEY
         for line in f:
             for marker in COPYRIGHT_MARKERS:
                 if marker in line:
+                    # Files in following lines would belong to this copyright.
                     current_marker = marker
                     break
             else:
                 begin_idx = line.find("'")
                 if begin_idx < 0:
+                    # There's no file in this line, thus copyright would be reset.
                     current_marker = NO_COPYRIGHT_MARKER_KEY
                     continue
 
@@ -132,6 +147,8 @@ def parse_yml():
                     raise ValueError("Invalid file path line in {yml_path}".format(yml_path=YML_PATH))
 
                 path = line[begin_idx:end_idx]
+
+                # Some kinds of dirs/files should be ignored.
                 if is_name_ignored(os.path.basename(path)):
                     continue
                 if is_path_ignored(path):
@@ -146,7 +163,7 @@ def parse_yml():
 
 def check_diff():
     """
-    Used to check if .licenserc.yaml is consistent with real files.
+    Check if .licenserc.yaml is consistent with all real files of the project.
     """
     yml_marked_files = parse_yml()
     marked_files = classify_files()
@@ -161,6 +178,7 @@ def check_diff():
         yml_plus = yml_files - files
         yml_minus = files - yml_files
         if not yml_plus and not yml_minus:
+            # .licenserc.yaml is consistent with the project.
             print(
                 "No diff found for marker '{yml_marker}' in {yml_path}".format(yml_marker=yml_marker,
                                                                                yml_path=YML_PATH))
@@ -169,8 +187,10 @@ def check_diff():
 
         print("Diff found for marker '{yml_marker}' in {yml_path}:".format(yml_marker=yml_marker, yml_path=YML_PATH))
         if yml_plus:
+            # Files in .licenserc.yaml, but not in the project.
             print("{plus}: {yml_plus}".format(plus='+' * len(yml_plus), yml_marker=yml_marker, yml_plus=yml_plus))
         if yml_minus:
+            # Files in the project, but not in .licenserc.yaml.
             print("{minus}: {yml_minus}".format(minus='-' * len(yml_minus), yml_minus=yml_minus))
 
         del marked_files[yml_marker]
