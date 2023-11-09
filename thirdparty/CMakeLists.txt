@@ -372,15 +372,7 @@ ExternalProject_Add(jemalloc
 
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 
-ExternalProject_Add(rocksdb
-        URL https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
-        URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
-        PATCH_COMMAND ""
-        COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
-        COMMAND git clone -b fix_build_gtest --depth=1 https://github.com/acelyc111/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
-        DEPENDS googletest jemalloc
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DROCKSDB_PLUGINS=encfs
+set(ROCKSDB_OPTIONS
         -DFAIL_ON_WARNINGS=OFF
         -DWITH_BENCHMARK_TOOLS=OFF
         -DWITH_TOOLS=OFF
@@ -396,8 +388,23 @@ ExternalProject_Add(rocksdb
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        -DPORTABLE=${ROCKSDB_PORTABLE}
-        )
+        -DPORTABLE=${ROCKSDB_PORTABLE})
+# Link error on MacOS, disable building encfs plugin.
+# See https://github.com/pegasus-kv/encfs/issues/4
+if (NOT APPLE)
+    set(ROCKSDB_OPTIONS
+            ${ROCKSDB_OPTIONS}
+            -DROCKSDB_PLUGINS=encfs)
+endif ()
+ExternalProject_Add(rocksdb
+        URL https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
+        URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
+        PATCH_COMMAND ""
+        COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
+        COMMAND git clone -b main --depth=1 https://github.com/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
+        DEPENDS googletest jemalloc
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        ${ROCKSDB_OPTIONS})
 
 ExternalProject_Add(http-parser
         URL ${OSS_URL_PREFIX}/http-parser-2.9.4.zip
