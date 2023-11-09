@@ -372,15 +372,7 @@ ExternalProject_Add(jemalloc
 
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 
-# This is the commit "Update the status badge to pegasus-kv/rocksdb's own (#18) " on
-# branch v8.5.3-pegasus-encrypt of https://github.com/pegasus-kv/rocksdb.git.
-# The v8.5.3-pegasus-encrypt branch is based on the v8.5.3 tag of facebook/rocksdb and add
-# the encryption feature.
-ExternalProject_Add(rocksdb
-        URL https://github.com/pegasus-kv/rocksdb/archive/e72106597e6b7924485cadc2433b66029f1aaf17.zip
-        URL_MD5 6f6daef703586ce788643bbb8a984fff
-        DEPENDS jemalloc
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+set(ROCKSDB_OPTIONS
         -DFAIL_ON_WARNINGS=OFF
         -DWITH_BENCHMARK_TOOLS=OFF
         -DWITH_TOOLS=OFF
@@ -391,14 +383,29 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
         -DUSE_RTTI=ON
-        -DWITH_OPENSSL=ON  # enable encryption
         -DCMAKE_BUILD_TYPE=Release
         -DWITH_JEMALLOC=${USE_JEMALLOC}
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        -DPORTABLE=${ROCKSDB_PORTABLE}
-        )
+        -DPORTABLE=${ROCKSDB_PORTABLE})
+# Link error on MacOS, disable building encfs plugin.
+# See https://github.com/pegasus-kv/encfs/issues/4
+if (NOT APPLE)
+    set(ROCKSDB_OPTIONS
+            ${ROCKSDB_OPTIONS}
+            -DROCKSDB_PLUGINS=encfs)
+endif ()
+ExternalProject_Add(rocksdb
+        URL ${OSS_URL_PREFIX}/rocksdb-v8.5.3.tar.gz
+        https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
+        URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
+        PATCH_COMMAND ""
+        COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
+        COMMAND git clone -b main --depth=1 https://github.com/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
+        DEPENDS googletest jemalloc
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        ${ROCKSDB_OPTIONS})
 
 ExternalProject_Add(http-parser
         URL ${OSS_URL_PREFIX}/http-parser-2.9.4.zip
