@@ -19,15 +19,20 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <gtest/gtest.h>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <functional>
-#include <gtest/gtest.h>
 #include <string>
 
-#include "fmt/core.h"
 #include "runtime/api_layer1.h"
+#include "utils/env.h"
+// IWYU refused to include "utils/defer.h" everywhere, both in .h and .cpp files.
+// However, once "utils/defer.h" is not included, it is inevitable that compilation
+// will fail since dsn::defer is referenced. Thus force IWYU to keep it.
+#include "utils/defer.h" // IWYU pragma: keep
 #include "utils/flags.h"
 #include "utils/test_macros.h"
 
@@ -39,13 +44,32 @@ class file_meta;
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
+// Save the current value of a flag and restore it at the end of the function.
+#define PRESERVE_FLAG(name)                                                                        \
+    auto PRESERVED_FLAGS_##name = FLAGS_##name;                                                    \
+    auto PRESERVED_FLAGS_##name##_cleanup =                                                        \
+        dsn::defer([PRESERVED_FLAGS_##name]() { FLAGS_##name = PRESERVED_FLAGS_##name; })
+
 namespace pegasus {
 
 // A base parameterized test class for testing enable/disable encryption at rest.
 class encrypt_data_test_base : public testing::TestWithParam<bool>
 {
 public:
-    encrypt_data_test_base() { FLAGS_encrypt_data_at_rest = GetParam(); }
+    encrypt_data_test_base()
+    {
+        FLAGS_encrypt_data_at_rest = GetParam();
+        // The size of an actual encrypted file should plus kEncryptionHeaderkSize bytes if consider
+        // it as kNonSensitive.
+        if (FLAGS_encrypt_data_at_rest) {
+            _extra_encrypted_file_size = dsn::utils::kEncryptionHeaderkSize;
+        }
+    }
+
+    uint64_t extra_encrypted_file_size() const { return _extra_encrypted_file_size; }
+
+private:
+    uint64_t _extra_encrypted_file_size = 0;
 };
 
 class stop_watch

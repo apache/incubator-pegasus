@@ -1754,7 +1754,7 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
     CHECK(
         dsn::utils::filesystem::directory_exists(replica_path), "dir({}) not exist", replica_path);
     LOG_INFO("start to move replica({}) as garbage, path: {}", id, replica_path);
-    const auto rename_path = fmt::format("{}.{}.gar", replica_path, dsn_now_us());
+    const auto rename_path = fmt::format("{}.{}{}", replica_path, dsn_now_us(), kFolderSuffixGar);
     if (!dsn::utils::filesystem::rename_path(replica_path, rename_path)) {
         LOG_WARNING("gc_replica: failed to move directory '{}' to '{}'", replica_path, rename_path);
 

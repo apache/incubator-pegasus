@@ -114,6 +114,7 @@ std::string get_last_component(const std::string &input, const char splitters[])
 
 char *trim_string(char *s);
 
+// TODO(yingchun): unify the following functions with the ones in utils::filesystem
 // calculate the md5 checksum of buffer
 std::string string_md5(const char *buffer, unsigned int length);
 

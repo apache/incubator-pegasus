@@ -72,8 +72,7 @@ public:
     std::string FILE_NAME = "test_file";
 };
 
-// TODO(yingchun): ENCRYPTION: add enable encryption test.
-INSTANTIATE_TEST_CASE_P(, block_service_manager_test, ::testing::Values(false));
+INSTANTIATE_TEST_CASE_P(, block_service_manager_test, ::testing::Values(false, true));
 
 TEST_P(block_service_manager_test, remote_file_not_exist)
 {

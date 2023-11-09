@@ -41,6 +41,7 @@
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 #include "utils/crc.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
@@ -178,7 +179,9 @@ log_file::log_file(
 
     if (is_read) {
         int64_t sz;
-        CHECK(dsn::utils::filesystem::file_size(_path, sz), "fail to get file size of {}.", _path);
+        CHECK(dsn::utils::filesystem::file_size(_path, dsn::utils::FileDataType::kSensitive, sz),
+              "fail to get file size of {}.",
+              _path);
         _end_offset += sz;
     }
 }

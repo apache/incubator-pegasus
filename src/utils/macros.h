@@ -17,29 +17,12 @@
 
 #pragma once
 
-#include "common/backup_common.h"
-
-namespace dsn {
-namespace replication {
-
-class backup_clear_request;
-class replica_stub;
-
-// A server distributes the cold-backup task to the targeted replica.
-class replica_backup_server
-{
-public:
-    explicit replica_backup_server(const replica_stub *rs);
-    ~replica_backup_server();
-
-private:
-    void on_cold_backup(backup_rpc rpc);
-
-    void on_clear_cold_backup(const backup_clear_request &request);
-
-private:
-    const replica_stub *_stub;
-};
-
-} // namespace replication
-} // namespace dsn
+// Suppose there is a macro defined as:
+// #define FOO 123
+//
+// Once we need the value represented by FOO to be a string, i.e. "123", just do:
+// STRINGIFY(FOO)
+//
+// See https://gcc.gnu.org/onlinedocs/gcc-4.8.5/cpp/Stringification.html for details.
+#define STRINGIFY_HELPER(x) #x
+#define STRINGIFY(x) STRINGIFY_HELPER(x)

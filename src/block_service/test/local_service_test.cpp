@@ -36,6 +36,7 @@
 
 #include "block_service/local/local_service.h"
 #include "test_util/test_util.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 
 namespace dsn {
@@ -47,8 +48,7 @@ class local_service_test : public pegasus::encrypt_data_test_base
 {
 };
 
-// TODO(yingchun): ENCRYPTION: add enable encryption test.
-INSTANTIATE_TEST_CASE_P(, local_service_test, ::testing::Values(false));
+INSTANTIATE_TEST_CASE_P(, local_service_test, ::testing::Values(false, true));
 
 TEST_P(local_service_test, store_metadata)
 {
@@ -60,7 +60,8 @@ TEST_P(local_service_test, store_metadata)
     ASSERT_TRUE(boost::filesystem::exists(meta_file_path));
 
     std::string data;
-    auto s = rocksdb::ReadFileToString(rocksdb::Env::Default(), meta_file_path, &data);
+    auto s = rocksdb::ReadFileToString(
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), meta_file_path, &data);
     ASSERT_TRUE(s.ok()) << s.ToString();
 
     nlohmann::json j = nlohmann::json::parse(data);
@@ -76,10 +77,11 @@ TEST_P(local_service_test, load_metadata)
     {
         nlohmann::json j({{"md5", "abcde"}, {"size", 5}});
         std::string data = j.dump();
-        auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
-                                            rocksdb::Slice(data),
-                                            meta_file_path,
-                                            /* should_sync */ true);
+        auto s =
+            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                       rocksdb::Slice(data),
+                                       meta_file_path,
+                                       /* should_sync */ true);
         ASSERT_TRUE(s.ok()) << s.ToString();
 
         ASSERT_EQ(ERR_OK, file.load_metadata());
@@ -88,10 +90,11 @@ TEST_P(local_service_test, load_metadata)
     }
 
     {
-        auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
-                                            rocksdb::Slice("invalid json string"),
-                                            meta_file_path,
-                                            /* should_sync */ true);
+        auto s =
+            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                       rocksdb::Slice("invalid json string"),
+                                       meta_file_path,
+                                       /* should_sync */ true);
         ASSERT_TRUE(s.ok()) << s.ToString();
 
         local_file_object file2("a.txt");
@@ -101,10 +104,11 @@ TEST_P(local_service_test, load_metadata)
     {
         nlohmann::json j({{"md5", "abcde"}, {"no such key", "illegal"}});
         std::string data = j.dump();
-        auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
-                                            rocksdb::Slice(data),
-                                            meta_file_path,
-                                            /* should_sync */ true);
+        auto s =
+            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                       rocksdb::Slice(data),
+                                       meta_file_path,
+                                       /* should_sync */ true);
         ASSERT_TRUE(s.ok()) << s.ToString();
 
         local_file_object file2("a.txt");

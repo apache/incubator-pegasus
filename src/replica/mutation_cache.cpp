@@ -26,9 +26,6 @@
 
 #include "mutation_cache.h"
 
-// HACK: iwyu suggests <ext/alloc_traits.h> each time vector[] is used.
-// https://github.com/include-what-you-use/include-what-you-use/issues/166
-// TODO(yingchun): remove this pragma by using mapping.imp
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include "consensus_types.h"
 #include "mutation.h"

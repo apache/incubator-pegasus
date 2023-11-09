@@ -140,7 +140,7 @@ namespace replication {
         if (log == nullptr) {
             if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA ||
                 err == ERR_INVALID_PARAMETERS) {
-                LOG_DEBUG("skip file {} during log replay", fpath);
+                LOG_INFO("skip file {} during log replay", fpath);
                 continue;
             } else {
                 return err;

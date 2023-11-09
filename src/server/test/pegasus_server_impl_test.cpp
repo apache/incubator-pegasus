@@ -144,19 +144,21 @@ public:
     }
 };
 
-TEST_F(pegasus_server_impl_test, test_table_level_slow_query)
+INSTANTIATE_TEST_CASE_P(, pegasus_server_impl_test, ::testing::Values(false, true));
+
+TEST_P(pegasus_server_impl_test, test_table_level_slow_query)
 {
     ASSERT_EQ(dsn::ERR_OK, start());
     test_table_level_slow_query();
 }
 
-TEST_F(pegasus_server_impl_test, default_data_version)
+TEST_P(pegasus_server_impl_test, default_data_version)
 {
     ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(_server->_pegasus_data_version, 1);
 }
 
-TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
+TEST_P(pegasus_server_impl_test, test_open_db_with_latest_options)
 {
     // open a new db with no app env.
     ASSERT_EQ(dsn::ERR_OK, start());
@@ -176,7 +178,7 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
     ASSERT_EQ(opts.disable_auto_compactions, _server->_db->GetOptions().disable_auto_compactions);
 }
 
-TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
+TEST_P(pegasus_server_impl_test, test_open_db_with_app_envs)
 {
     std::map<std::string, std::string> envs;
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
@@ -184,19 +186,19 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
 }
 
-TEST_F(pegasus_server_impl_test, test_open_db_with_rocksdb_envs)
+TEST_P(pegasus_server_impl_test, test_open_db_with_rocksdb_envs)
 {
     // Hint: Verify the set_rocksdb_options_before_creating function by boolean is_restart=false.
     test_open_db_with_rocksdb_envs(false);
 }
 
-TEST_F(pegasus_server_impl_test, test_restart_db_with_rocksdb_envs)
+TEST_P(pegasus_server_impl_test, test_restart_db_with_rocksdb_envs)
 {
     // Hint: Verify the reset_rocksdb_options function by boolean is_restart=true.
     test_open_db_with_rocksdb_envs(true);
 }
 
-TEST_F(pegasus_server_impl_test, test_stop_db_twice)
+TEST_P(pegasus_server_impl_test, test_stop_db_twice)
 {
     ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_TRUE(_server->_is_open);
@@ -212,7 +214,7 @@ TEST_F(pegasus_server_impl_test, test_stop_db_twice)
     ASSERT_TRUE(_server->_db == nullptr);
 }
 
-TEST_F(pegasus_server_impl_test, test_update_user_specified_compaction)
+TEST_P(pegasus_server_impl_test, test_update_user_specified_compaction)
 {
     _server->_user_specified_compaction = "";
     std::map<std::string, std::string> envs;
@@ -226,7 +228,7 @@ TEST_F(pegasus_server_impl_test, test_update_user_specified_compaction)
     ASSERT_EQ(user_specified_compaction, _server->_user_specified_compaction);
 }
 
-TEST_F(pegasus_server_impl_test, test_load_from_duplication_data)
+TEST_P(pegasus_server_impl_test, test_load_from_duplication_data)
 {
     auto origin_file = fmt::format("{}/{}", _server->duplication_dir(), "checkpoint");
     dsn::utils::filesystem::create_directory(_server->duplication_dir());

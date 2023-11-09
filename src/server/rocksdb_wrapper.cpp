@@ -96,8 +96,8 @@ int rocksdb_wrapper::get(dsn::string_view raw_key, /*out*/ db_get_context *ctx)
     LOG_ERROR_ROCKSDB("Get",
                       s.ToString(),
                       "hash_key: {}, sort_key: {}",
-                      utils::c_escape_string(hash_key),
-                      utils::c_escape_string(sort_key));
+                      utils::c_escape_sensitive_string(hash_key),
+                      utils::c_escape_sensitive_string(sort_key));
     return s.code();
 }
 
@@ -156,8 +156,8 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
                           s.ToString(),
                           "decree: {}, hash_key: {}, sort_key: {}, expire_ts: {}",
                           ctx.decree,
-                          utils::c_escape_string(hash_key),
-                          utils::c_escape_string(sort_key),
+                          utils::c_escape_sensitive_string(hash_key),
+                          utils::c_escape_sensitive_string(sort_key),
                           expire_sec);
     }
     return s.code();
@@ -203,8 +203,8 @@ int rocksdb_wrapper::write_batch_delete(int64_t decree, dsn::string_view raw_key
                           s.ToString(),
                           "decree: {}, hash_key: {}, sort_key: {}",
                           decree,
-                          utils::c_escape_string(hash_key),
-                          utils::c_escape_string(sort_key));
+                          utils::c_escape_sensitive_string(hash_key),
+                          utils::c_escape_sensitive_string(sort_key));
     }
     return s.code();
 }

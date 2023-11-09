@@ -51,6 +51,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
@@ -386,10 +387,12 @@ statistic_file_infos_under_dir(const std::string &dir,
     total_size = 0;
     file_infos.clear();
 
+    // TODO(yingchun): check if there are any files that are not sensitive (not encrypted).
     for (std::string &file : sub_files) {
         std::pair<std::string, int64_t> file_info;
 
-        if (!utils::filesystem::file_size(file, file_info.second)) {
+        if (!utils::filesystem::file_size(
+                file, dsn::utils::FileDataType::kSensitive, file_info.second)) {
             LOG_ERROR("get file size of {} failed", file);
             return false;
         }

@@ -385,8 +385,8 @@ dsn::task_ptr hdfs_file_object::upload(const upload_request &req,
             rocksdb::EnvOptions env_options;
             env_options.use_direct_reads = FLAGS_enable_direct_io;
             std::unique_ptr<rocksdb::SequentialFile> rfile;
-            auto s = rocksdb::Env::Default()->NewSequentialFile(
-                req.input_local_name, &rfile, env_options);
+            auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                         ->NewSequentialFile(req.input_local_name, &rfile, env_options);
             if (!s.ok()) {
                 LOG_ERROR(
                     "open local file '{}' failed, err = {}", req.input_local_name, s.ToString());
@@ -552,7 +552,8 @@ dsn::task_ptr hdfs_file_object::download(const download_request &req,
             rocksdb::EnvOptions env_options;
             env_options.use_direct_writes = FLAGS_enable_direct_io;
             std::unique_ptr<rocksdb::WritableFile> wfile;
-            auto s = rocksdb::Env::Default()->NewWritableFile(target_file, &wfile, env_options);
+            auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                         ->NewWritableFile(target_file, &wfile, env_options);
             if (!s.ok()) {
                 LOG_ERROR("create local file '{}' failed, err = {}", target_file, s.ToString());
                 break;

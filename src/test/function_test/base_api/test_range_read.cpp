@@ -109,7 +109,6 @@ public:
     std::map<std::string, std::string> expect_kvs_;
 };
 
-// TODO(yingchun): use TEST_P to refact
 TEST_F(range_read_test, multiget_test)
 {
     pegasus::pegasus_client::multi_get_options options;

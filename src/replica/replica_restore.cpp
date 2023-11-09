@@ -105,7 +105,8 @@ bool replica::read_cold_backup_metadata(const std::string &fname,
     }
 
     std::string data;
-    auto s = rocksdb::ReadFileToString(rocksdb::Env::Default(), fname, &data);
+    auto s = rocksdb::ReadFileToString(
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &data);
     if (!s.ok()) {
         LOG_ERROR_PREFIX("read file '{}' failed, err = {}", fname, s.ToString());
         return false;

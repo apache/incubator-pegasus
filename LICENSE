@@ -231,9 +231,42 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 
-src/shell/linenoise/* - BSD-2-Clause License
+src/shell/linenoise/linenoise.h - BSD-2-Clause License
+src/shell/linenoise/LICENSE
 
   Copyright (c) 2010-2014, Salvatore Sanfilippo <antirez at gmail dot com>
+  Copyright (c) 2010-2013, Pieter Noordhuis <pcnoordhuis at gmail dot com>
+
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+   *  Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+   *  Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+--------------------------------------------------------------------------------
+
+src/shell/linenoise/linenoise.c - BSD-2-Clause License
+
+  Copyright (c) 2010-2016, Salvatore Sanfilippo <antirez at gmail dot com>
   Copyright (c) 2010-2013, Pieter Noordhuis <pcnoordhuis at gmail dot com>
 
   All rights reserved.
@@ -327,12 +360,12 @@ src/shell/argh.h - BSD-3-Clause License
 
 --------------------------------------------------------------------------------
 
-src/utils/smart_pointers.h - Apache 2.0 License
-src/utils/string_view.h
-src/utils/absl/base/internal/invoke.h
+src/utils/absl/base/internal/invoke.h - Apache 2.0 License
 src/utils/absl/utility/utility.h
 src/utils/memutil.h
+src/utils/smart_pointers.h
 src/utils/string_view.cpp
+src/utils/string_view.h
 src/utils/test/memutil_test.cpp
 src/utils/test/smart_pointers_test.cpp
 src/utils/test/string_view_test.cpp
@@ -406,11 +439,12 @@ limitations under the License.
 --------------------------------------------------------------------------------
 
 src/utils/hpc_locks/autoreseteventcondvar.h - zlib License
-src/utils/hpc_locks/rwlock.h
 src/utils/hpc_locks/autoresetevent.h
-src/utils/hpc_locks/sema.h
-src/utils/hpc_locks/bitfield.h
 src/utils/hpc_locks/benaphore.h
+src/utils/hpc_locks/bitfield.h
+src/utils/hpc_locks/readme.txt
+src/utils/hpc_locks/rwlock.h
+src/utils/hpc_locks/sema.h
 
 Copyright (c) 2015 Jeff Preshing
 

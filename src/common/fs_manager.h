@@ -172,10 +172,10 @@ private:
     friend class replica_disk_migrator;
     friend class replica_disk_test_base;
     friend class open_replica_test;
-    FRIEND_TEST(fs_manager, find_best_dir_for_new_replica);
-    FRIEND_TEST(fs_manager, get_dir_node);
+    FRIEND_TEST(fs_manager_test, find_best_dir_for_new_replica);
+    FRIEND_TEST(fs_manager_test, get_dir_node);
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
-    FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
+    FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
 };
 } // replication
 } // dsn

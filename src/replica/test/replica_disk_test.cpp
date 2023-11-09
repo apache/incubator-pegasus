@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include <fmt/core.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -41,6 +43,7 @@
 #include "replica/test/mock_utils.h"
 #include "replica_admin_types.h"
 #include "replica_disk_test_base.h"
+#include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
@@ -86,7 +89,9 @@ public:
     }
 };
 
-TEST_F(replica_disk_test, on_query_disk_info_all_app)
+INSTANTIATE_TEST_CASE_P(, replica_disk_test, ::testing::Values(false, true));
+
+TEST_P(replica_disk_test, on_query_disk_info_all_app)
 {
     generate_fake_rpc();
     stub->on_query_disk_info(fake_query_disk_rpc);
@@ -160,7 +165,7 @@ TEST_F(replica_disk_test, on_query_disk_info_all_app)
     }
 }
 
-TEST_F(replica_disk_test, on_query_disk_info_app_not_existed)
+TEST_P(replica_disk_test, on_query_disk_info_app_not_existed)
 {
     generate_fake_rpc();
     query_disk_info_request &request = *fake_query_disk_rpc.mutable_request();
@@ -169,7 +174,7 @@ TEST_F(replica_disk_test, on_query_disk_info_app_not_existed)
     ASSERT_EQ(fake_query_disk_rpc.response().err, ERR_OBJECT_NOT_FOUND);
 }
 
-TEST_F(replica_disk_test, on_query_disk_info_one_app)
+TEST_P(replica_disk_test, on_query_disk_info_one_app)
 {
     generate_fake_rpc();
     query_disk_info_request &request = *fake_query_disk_rpc.mutable_request();
@@ -195,49 +200,89 @@ TEST_F(replica_disk_test, on_query_disk_info_one_app)
     }
 }
 
-TEST_F(replica_disk_test, gc_disk_useless_dir)
+TEST_P(replica_disk_test, check_data_dir_removable)
 {
+    struct test_case
+    {
+        std::string path;
+        bool expected_removable;
+        bool expected_invalid;
+    } tests[] = {{"./replica.0.err", true, true},
+                 {"./replica.1.gar", true, true},
+                 {"./replica.2.tmp", true, true},
+                 {"./replica.3.ori", true, true},
+                 {"./replica.4.bak", false, true},
+                 {"./replica.5.abcde", false, false},
+                 {"./replica.6.x", false, false},
+                 {"./replica.7.8", false, false}};
+
+    for (const auto &test : tests) {
+        EXPECT_EQ(test.expected_removable, is_data_dir_removable(test.path));
+        EXPECT_EQ(test.expected_invalid, is_data_dir_invalid(test.path));
+    }
+}
+
+TEST_P(replica_disk_test, gc_disk_useless_dir)
+{
+    PRESERVE_FLAG(gc_disk_error_replica_interval_seconds);
+    PRESERVE_FLAG(gc_disk_garbage_replica_interval_seconds);
+    PRESERVE_FLAG(gc_disk_migration_origin_replica_interval_seconds);
+    PRESERVE_FLAG(gc_disk_migration_tmp_replica_interval_seconds);
+
     FLAGS_gc_disk_error_replica_interval_seconds = 1;
     FLAGS_gc_disk_garbage_replica_interval_seconds = 1;
     FLAGS_gc_disk_migration_origin_replica_interval_seconds = 1;
     FLAGS_gc_disk_migration_tmp_replica_interval_seconds = 1;
 
-    std::vector<std::string> tests{
-        "./replica1.err",
-        "./replica2.err",
-        "./replica.gar",
-        "./replica.tmp",
-        "./replica.ori",
-        "./replica.bak",
-        "./replica.1.1",
-    };
+    struct test_case
+    {
+        std::string path;
+        bool expected_exists;
+    } tests[] = {{"./replica1.err", false},
+                 {"./replica2.err", false},
+                 {"./replica.gar", false},
+                 {"./replica.tmp", false},
+                 {"./replica.ori", false},
+                 {"./replica.bak", true},
+                 {"./replica.1.1", true},
+                 {"./1.1.pegasus.1234567890.err", false},
+                 {"./1.2.pegasus.0123456789.gar", false},
+                 {"./2.1.pegasus.1234567890123456.err", false},
+                 {"./2.2.pegasus.1234567890abcdef.gar", false},
+                 {fmt::format("./1.1.pegasus.{}.err", dsn_now_us()), false},
+                 {fmt::format("./2.1.pegasus.{}.gar", dsn_now_us()), false},
+                 {fmt::format("./1.2.pegasus.{}.gar", dsn_now_us() + 1000 * 1000 * 1000), true},
+                 {fmt::format("./2.2.pegasus.{}.err", dsn_now_us() + 1000 * 1000 * 1000), true}};
 
     for (const auto &test : tests) {
-        utils::filesystem::create_directory(test);
-        ASSERT_TRUE(utils::filesystem::directory_exists(test));
+        // Ensure that every directory does not exist and should be created.
+        CHECK_TRUE(utils::filesystem::create_directory(test.path));
+        ASSERT_TRUE(utils::filesystem::directory_exists(test.path));
     }
 
     sleep(5);
 
     disk_cleaning_report report{};
-    dsn::replication::disk_remove_useless_dirs({std::make_shared<dir_node>("test", "./")}, report);
+    ASSERT_TRUE(dsn::replication::disk_remove_useless_dirs(
+        {std::make_shared<dir_node>("test", "./")}, report));
 
     for (const auto &test : tests) {
-        if (!dsn::replication::is_data_dir_removable(test)) {
-            ASSERT_TRUE(utils::filesystem::directory_exists(test));
-            continue;
+        ASSERT_EQ(test.expected_exists, utils::filesystem::directory_exists(test.path));
+        if (test.expected_exists) {
+            // Delete existing directories, in case that they are mixed with later test cases
+            // to affect test results.
+            CHECK_TRUE(dsn::utils::filesystem::remove_path(test.path));
         }
-        ASSERT_FALSE(utils::filesystem::directory_exists(test));
     }
 
-    ASSERT_EQ(report.remove_dir_count, 5);
+    ASSERT_EQ(report.remove_dir_count, 11);
     ASSERT_EQ(report.disk_migrate_origin_count, 1);
     ASSERT_EQ(report.disk_migrate_tmp_count, 1);
-    ASSERT_EQ(report.garbage_replica_count, 1);
-    ASSERT_EQ(report.error_replica_count, 2);
+    ASSERT_EQ(report.garbage_replica_count, 5);
+    ASSERT_EQ(report.error_replica_count, 6);
 }
 
-TEST_F(replica_disk_test, disk_status_test)
+TEST_P(replica_disk_test, disk_status_test)
 {
     struct disk_status_test
     {
@@ -261,7 +306,7 @@ TEST_F(replica_disk_test, disk_status_test)
     dn->status = disk_status::NORMAL;
 }
 
-TEST_F(replica_disk_test, add_new_disk_test)
+TEST_P(replica_disk_test, add_new_disk_test)
 {
     // Test case:
     // - invalid params
@@ -291,7 +336,7 @@ TEST_F(replica_disk_test, add_new_disk_test)
     }
 }
 
-TEST_F(replica_disk_test, disk_io_error_test)
+TEST_P(replica_disk_test, disk_io_error_test)
 {
     // Disable failure detector to avoid connecting with meta server which is not started.
     FLAGS_fd_disabled = true;

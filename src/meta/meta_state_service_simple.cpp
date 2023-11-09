@@ -41,6 +41,7 @@
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
@@ -243,8 +244,8 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
     std::string log_path = dsn::utils::filesystem::path_combine(work_dir, "meta_state_service.log");
     if (utils::filesystem::file_exists(log_path)) {
         std::unique_ptr<rocksdb::SequentialFile> log_file;
-        auto s =
-            rocksdb::Env::Default()->NewSequentialFile(log_path, &log_file, rocksdb::EnvOptions());
+        auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                     ->NewSequentialFile(log_path, &log_file, rocksdb::EnvOptions());
         CHECK(s.ok(), "open log file '{}' failed, err = {}", log_path, s.ToString());
 
         while (true) {

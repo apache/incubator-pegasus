@@ -293,8 +293,7 @@ class meta_state_service_test : public pegasus::encrypt_data_test_base
 {
 };
 
-// TODO(yingchun): ENCRYPTION: add enable encryption test.
-INSTANTIATE_TEST_CASE_P(, meta_state_service_test, ::testing::Values(false));
+INSTANTIATE_TEST_CASE_P(, meta_state_service_test, ::testing::Values(false, true));
 
 TEST_P(meta_state_service_test, simple)
 {

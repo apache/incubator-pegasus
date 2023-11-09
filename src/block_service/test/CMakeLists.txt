@@ -28,6 +28,7 @@ set(MY_PROJ_LIBS
     dsn.block_service.fds
     dsn.block_service.hdfs
     dsn_runtime
+    dsn_utils
     galaxy-fds-sdk-cpp
     PocoNet
     PocoFoundation

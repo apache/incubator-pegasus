@@ -16,6 +16,7 @@
 // under the License.
 
 #include <gtest/gtest-death-test.h>
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -46,7 +47,9 @@ public:
     ~open_replica_test() { dsn::utils::filesystem::remove_path("./tmp_dir"); }
 };
 
-TEST_F(open_replica_test, open_replica_add_decree_and_ballot_check)
+INSTANTIATE_TEST_CASE_P(, open_replica_test, ::testing::Values(false, true));
+
+TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
 {
     app_info ai;
     ai.app_type = "replica";

@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
@@ -105,14 +106,16 @@ public:
     std::unique_ptr<replica_duplicator> duplicator;
 };
 
-TEST_F(ship_mutation_test, ship_mutation_tuple_set) { test_ship_mutation_tuple_set(); }
+INSTANTIATE_TEST_CASE_P(, ship_mutation_test, ::testing::Values(false, true));
+
+TEST_P(ship_mutation_test, ship_mutation_tuple_set) { test_ship_mutation_tuple_set(); }
 
 void retry(pipeline::base *base)
 {
     base->schedule([base]() { retry(base); }, 10_s);
 }
 
-TEST_F(ship_mutation_test, pause)
+TEST_P(ship_mutation_test, pause)
 {
     auto shipper = mock_ship_mutation();
 

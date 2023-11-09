@@ -81,8 +81,7 @@ public:
     const std::string kTestFileName = "aio_test.txt";
 };
 
-// TODO(yingchun): ENCRYPTION: add enable encryption test.
-INSTANTIATE_TEST_CASE_P(, aio_test, ::testing::Values(false));
+INSTANTIATE_TEST_CASE_P(, aio_test, ::testing::Values(false, true));
 
 TEST_P(aio_test, basic)
 {
