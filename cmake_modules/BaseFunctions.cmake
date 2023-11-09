@@ -351,6 +351,7 @@ function(dsn_setup_thirdparty_libs)
   find_package(OpenSSL REQUIRED)
   include_directories(${OPENSSL_INCLUDE_DIR})
   link_libraries(${OPENSSL_CRYPTO_LIBRARY})
+  link_libraries(${OPENSSL_SSL_LIBRARY})
 
   link_directories(${THIRDPARTY_INSTALL_DIR}/lib)
   if (NOT APPLE)

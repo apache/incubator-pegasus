@@ -58,7 +58,6 @@ set(MY_PROJ_LIBS
         PocoNetSSL
         PocoJSON
         gtest
-        ssl
         hdfs)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
