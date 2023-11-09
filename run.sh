@@ -226,10 +226,6 @@ function run_build()
         CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Release"
     fi
 
-    if [ "$(uname)" == "Darwin" ]; then
-        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
-    fi
-
     if [ ! -z "${SANITIZER}" ]; then
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSANITIZER=${SANITIZER}"
     fi

@@ -27,11 +27,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
-if (APPLE)
-    if ("${MACOS_OPENSSL_ROOT_DIR}" STREQUAL "")
-        message(FATAL_ERROR "OpenSSL root should be set for MacOS")
-    endif()
-endif()
+find_package(OpenSSL REQUIRED)
 
 include(ExternalProject)
 include(CheckCXXCompilerFlag)
@@ -204,7 +200,6 @@ ExternalProject_Add(poco
         https://github.com/pocoproject/poco/archive/refs/tags/poco-1.11.1-release.tar.gz
         URL_MD5 a96210b60a675c4a8183ad1f2099d549
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DOPENSSL_ROOT_DIR=${MACOS_OPENSSL_ROOT_DIR}
         -DENABLE_MONGODB=OFF
         -DENABLE_PDF=OFF
         -DENABLE_DATA=OFF
@@ -230,7 +225,7 @@ ExternalProject_Add(fds
         URL_MD5 f7e0f86534f7b15c2a9b349f5cb45503
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_fds_for_macos.patch
         CMAKE_ARGS -DPOCO_INCLUDE=${TP_OUTPUT}/include
-        -DMACOS_OPENSSL_INCLUDE_DIR=${MACOS_OPENSSL_ROOT_DIR}/include
+        -DMACOS_OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}
         -DPOCO_LIB=${TP_OUTPUT}/lib
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
