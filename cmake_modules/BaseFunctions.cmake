@@ -348,6 +348,9 @@ function(dsn_setup_thirdparty_libs)
   message (STATUS "JAVA_JVM_LIBRARY=${JAVA_JVM_LIBRARY}")
   link_libraries(${JAVA_JVM_LIBRARY})
 
+  find_package(OpenSSL REQUIRED)
+  include_directories(${OPENSSL_INCLUDE_DIR})
+
   link_directories(${THIRDPARTY_INSTALL_DIR}/lib)
   if (NOT APPLE)
     link_directories(${THIRDPARTY_INSTALL_DIR}/lib64)
