@@ -57,7 +57,6 @@ set(MY_PROJ_LIBS
         PocoFoundation
         PocoNetSSL
         PocoJSON
-        crypto
         gtest
         ssl
         hdfs)

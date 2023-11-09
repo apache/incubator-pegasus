@@ -31,7 +31,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
-set(MY_PROJ_LIBS dsn_http crypto rocksdb)
+set(MY_PROJ_LIBS dsn_http rocksdb)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")
