@@ -397,7 +397,8 @@ if (NOT APPLE)
             -DROCKSDB_PLUGINS=encfs)
 endif ()
 ExternalProject_Add(rocksdb
-        URL https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
+        URL ${OSS_URL_PREFIX}/rocksdb-v8.5.3.tar.gz
+        https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
         URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
         PATCH_COMMAND ""
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
