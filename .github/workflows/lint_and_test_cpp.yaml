@@ -654,8 +654,6 @@ jobs:
     name: macOS
     needs: cpp_clang_format_linter
     runs-on: macos-12
-    env:
-      OPENSSL_ROOT_DIR: /usr/local/opt/openssl
     steps:
       - name: Install Softwares
         run: |
@@ -680,7 +678,7 @@ jobs:
         run: |
           export JAVA_HOME="${JAVA_HOME_8_X64}"
           mkdir -p build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/ -DMACOS_OPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR} -DROCKSDB_PORTABLE=1
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/ -DROCKSDB_PORTABLE=1
           cmake --build build/ -j $(sysctl -n hw.physicalcpu)
       - name: Compilation
         run: |

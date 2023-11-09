@@ -39,8 +39,6 @@ set(MY_PROJ_LIBS
     zookeeper
     hashtable
     gtest
-    ssl
-    crypto
     rocksdb)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)

@@ -51,7 +51,6 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
-    crypto
     hashtable
     hdfs
     rocksdb)

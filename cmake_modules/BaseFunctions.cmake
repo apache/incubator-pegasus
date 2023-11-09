@@ -348,15 +348,14 @@ function(dsn_setup_thirdparty_libs)
   message (STATUS "JAVA_JVM_LIBRARY=${JAVA_JVM_LIBRARY}")
   link_libraries(${JAVA_JVM_LIBRARY})
 
+  find_package(OpenSSL REQUIRED)
+  include_directories(${OPENSSL_INCLUDE_DIR})
+  link_libraries(${OPENSSL_CRYPTO_LIBRARY})
+  link_libraries(${OPENSSL_SSL_LIBRARY})
+
   link_directories(${THIRDPARTY_INSTALL_DIR}/lib)
   if (NOT APPLE)
     link_directories(${THIRDPARTY_INSTALL_DIR}/lib64)
-  endif()
-
-  if (APPLE)
-    include_directories(SYSTEM ${MACOS_OPENSSL_ROOT_DIR}/include)
-    link_directories(${MACOS_OPENSSL_ROOT_DIR}/lib)
-    message (STATUS "MACOS_OPENSSL_ROOT_DIR: ${MACOS_OPENSSL_ROOT_DIR}")
   endif()
 endfunction(dsn_setup_thirdparty_libs)
 
