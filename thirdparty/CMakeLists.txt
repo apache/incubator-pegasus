@@ -411,7 +411,7 @@ ExternalProject_Add(http-parser
         )
 
 ExternalProject_Add(abseil
-        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip.zip
+        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
         https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
         URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
