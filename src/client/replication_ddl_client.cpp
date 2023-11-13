@@ -1138,34 +1138,13 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     }
 }
 
-// help functions
-
-// TODO (yingchun) use join
-template <typename T>
-// make sure T support cout << T;
-std::string print_set(const std::set<T> &set)
-{
-    std::stringstream ss;
-    ss << "{";
-    auto begin = set.begin();
-    auto end = set.end();
-    for (auto it = begin; it != end; it++) {
-        if (it != begin) {
-            ss << ", ";
-        }
-        ss << *it;
-    }
-    ss << "}";
-    return ss.str();
-}
-
 static void print_policy_entry(const policy_entry &entry)
 {
     dsn::utils::table_printer tp;
     tp.add_row_name_and_data("    name", entry.policy_name);
     tp.add_row_name_and_data("    backup_provider_type", entry.backup_provider_type);
     tp.add_row_name_and_data("    backup_interval", entry.backup_interval_seconds + "s");
-    tp.add_row_name_and_data("    app_ids", print_set(entry.app_ids));
+    tp.add_row_name_and_data("    app_ids", fmt::format("{{{}}}", fmt::join(entry.app_ids, ", ")));
     tp.add_row_name_and_data("    start_time", entry.start_time);
     tp.add_row_name_and_data("    status", entry.is_disable ? "disabled" : "enabled");
     tp.add_row_name_and_data("    backup_history_count", entry.backup_history_count_to_keep);
@@ -1188,7 +1167,7 @@ static void print_backup_entry(const backup_entry &bentry)
     tp.add_row_name_and_data("    id", bentry.backup_id);
     tp.add_row_name_and_data("    start_time", start_time);
     tp.add_row_name_and_data("    end_time", end_time);
-    tp.add_row_name_and_data("    app_ids", print_set(bentry.app_ids));
+    tp.add_row_name_and_data("    app_ids", fmt::format("{{{}}}", fmt::join(bentry.app_ids, ", ")));
     tp.output(std::cout);
 }
 
