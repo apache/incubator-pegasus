@@ -34,7 +34,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <set>
 
 #include "backup_types.h"
 #include "common//duplication_common.h"
@@ -46,6 +45,7 @@
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "fmt/core.h"
+#include "fmt/format.h"
 #include "meta/meta_rpc_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/group_address.h"
