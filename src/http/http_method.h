@@ -28,6 +28,13 @@ enum class http_method
     INVALID = 100,
 };
 
+enum class http_auth_type {
+  NONE,
+  BASIC,
+  DIGEST,
+  SPNEGO,
+};
+
 ENUM_BEGIN(http_method, http_method::INVALID)
 ENUM_REG2(http_method, GET)
 ENUM_REG2(http_method, POST)
