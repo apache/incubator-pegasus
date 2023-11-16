@@ -120,7 +120,7 @@ if [ "$use_jemalloc" == "on" ]; then
     copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/bin
     copy_file ./thirdparty/output/lib/libprofiler.so.0 ${pack}/bin
 else
-    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
+    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so ${pack}/bin
 fi
 
 copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin

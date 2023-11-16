@@ -97,9 +97,9 @@ ExternalProject_Get_property(googletest SOURCE_DIR)
 set(googletest_SRC ${SOURCE_DIR})
 
 ExternalProject_Add(gperftools
-        URL ${OSS_URL_PREFIX}/gperftools-2.7.tar.gz
-        https://github.com/gperftools/gperftools/releases/download/gperftools-2.7/gperftools-2.7.tar.gz
-        URL_MD5 c6a852a817e9160c79bdb2d3101b4601
+        URL ${OSS_URL_PREFIX}/gperftools-2.13.tar.gz
+        https://github.com/gperftools/gperftools/releases/download/gperftools-2.13/gperftools-2.13.tar.gz
+        URL_MD5 4e218a40a354748c50d054c285caaae8
         CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-static=no --enable-frame-pointers=yes
         BUILD_IN_SOURCE 1
         )
