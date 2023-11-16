@@ -221,21 +221,21 @@ dsn::error_s http_client::set_method(http_method method)
 
 dsn::error_s http_client::set_auth(http_auth_type authType)
 {
-    switch(authType){
+    switch (authType) {
     case http_auth_type::SPNEGO:
-      RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPAUTH, CURLAUTH_NEGOTIATE);
-      break;
+        RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPAUTH, CURLAUTH_NEGOTIATE);
+        break;
     case http_auth_type::DIGEST:
-      RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
-      break;
+        RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
+        break;
     case http_auth_type::BASIC:
-      RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-      break;
+        RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        break;
     case http_auth_type::NONE:
-      break;
+        break;
     default:
-      RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-      break;
+        RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+        break;
     }
 
     return dsn::error_s::ok();
