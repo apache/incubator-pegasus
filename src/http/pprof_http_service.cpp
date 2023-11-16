@@ -52,17 +52,19 @@
 
 namespace dsn {
 
-bool check_TCMALLOC_SAMPLE_PARAMETER() {
-    char* str = getenv("TCMALLOC_SAMPLE_PARAMETER");
+bool check_TCMALLOC_SAMPLE_PARAMETER()
+{
+    char *str = getenv("TCMALLOC_SAMPLE_PARAMETER");
     if (str == nullptr) {
         return false;
     }
-    char* endptr;
+    char *endptr;
     int val = strtol(str, &endptr, 10);
     return (*endptr == '\0' && val > 0);
 }
 
-bool has_TCMALLOC_SAMPLE_PARAMETER() {
+bool has_TCMALLOC_SAMPLE_PARAMETER()
+{
     static bool val = check_TCMALLOC_SAMPLE_PARAMETER();
     return val;
 }
@@ -367,14 +369,14 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
     bool use_heap_profile = false;
     const std::string kSecondParam = "seconds";
     uint32_t seconds = 0;
-    const auto& iter = req.query_args.find(kSecondParam);
+    const auto &iter = req.query_args.find(kSecondParam);
     if (iter != req.query_args.end() && buf2uint32(iter->second, seconds)) {
         // This is true between calls to HeapProfilerStart() and HeapProfilerStop(), and
         // also if the program has been run with HEAPPROFILER, or some other
         // way to turn on whole-program profiling.
         if (IsHeapProfilerRunning()) {
             LOG_WARNING("heap profiling is running, dump the full profile directly");
-            char* profile = GetHeapProfile();
+            char *profile = GetHeapProfile();
             resp.status_code = http_status_code::ok;
             resp.body = profile;
             free(profile);
@@ -393,13 +395,13 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
         resp.body = profile;
         free(profile);
     } else {
-        // The environment variable TCMALLOC_SAMPLE_PARAMETER should set to a positive value, such
-        // as 524288, before running.
         if (!has_TCMALLOC_SAMPLE_PARAMETER()) {
-            static const char *msg = "no TCMALLOC_SAMPLE_PARAMETER in env";
-            LOG_WARNING(msg);
+            static const std::string kNoEnvMsg = "The environment variable "
+                                                 "TCMALLOC_SAMPLE_PARAMETER should set to a "
+                                                 "positive value, such as 524288, before running.";
+            LOG_WARNING(kNoEnvMsg);
             resp.status_code = http_status_code::internal_server_error;
-            resp.body = msg;
+            resp.body = kNoEnvMsg;
             return;
         }
 
