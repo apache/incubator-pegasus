@@ -95,7 +95,7 @@ public:
 
     // Specify the http auth type which include NONE BASIC DIGEST SPNEGO
     dsn::error_s set_auth(http_auth_type authType);
-    
+
     // Operations for the header fields.
     void clear_header_fields();
     void set_accept(dsn::string_view val);
