@@ -100,9 +100,8 @@ ExternalProject_Add(gperftools
         URL ${OSS_URL_PREFIX}/gperftools-2.13.tar.gz
         https://github.com/gperftools/gperftools/releases/download/gperftools-2.13/gperftools-2.13.tar.gz
         URL_MD5 4e218a40a354748c50d054c285caaae8
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-static=no --enable-frame-pointers=yes
+        BUILD_IN_SOURCE 1
         )
 
 set(HDFS_CLIENT_DIR "hadoop-hdfs-project/hadoop-hdfs-native-client")
