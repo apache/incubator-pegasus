@@ -306,7 +306,37 @@ ExternalProject_Add(curl
         URL ${OSS_URL_PREFIX}/curl-8.4.0.tar.gz
         http://curl.haxx.se/download/curl-8.4.0.tar.gz
         URL_MD5 533e8a3b1228d5945a6a512537bea4c7
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+        CONFIGURE_COMMAND ./configure
+        --prefix=${TP_OUTPUT}
+        --disable-alt-svc
+        --disable-dict
+        --disable-doh
+        --disable-file
+        --disable-ftp
+        --disable-gopher
+        --disable-imap
+        --disable-ipv6
+        --disable-ldap
+        --disable-ldaps
+        --disable-libcurl-option
+        --disable-manual
+        --disable-mime
+        --disable-netrc
+        --disable-parsedate
+        --disable-pop3
+        --disable-progress-meter
+        --disable-rtsp
+        --disable-smb
+        --disable-smtp
+        --disable-telnet
+        --disable-tftp
+        --without-brotli
+        --without-libidn2
+        --without-libpsl
+        --without-librtmp
+        --without-libssh2
+        --without-nghttp2
+        --with-gssapi
         ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
         )
