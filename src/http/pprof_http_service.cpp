@@ -364,12 +364,11 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
     }
     auto cleanup = dsn::defer([this]() { _in_pprof_action.store(false); });
 
-    // If kSecondParam is specified with a valid value, we'll use heap profiling,
+    // If "seconds" parameter is specified with a valid value, use heap profiling,
     // otherwise, use heap sampling.
     bool use_heap_profile = false;
-    const std::string kSecondParam = "seconds";
     uint32_t seconds = 0;
-    const auto &iter = req.query_args.find(kSecondParam);
+    const auto &iter = req.query_args.find("seconds");
     if (iter != req.query_args.end() && buf2uint32(iter->second, seconds)) {
         // This is true between calls to HeapProfilerStart() and HeapProfilerStop(), and
         // also if the program has been run with HEAPPROFILER, or some other
