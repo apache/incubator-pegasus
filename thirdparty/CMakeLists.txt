@@ -113,7 +113,7 @@ set(googletest_SRC ${SOURCE_DIR})
 ExternalProject_Add(gperftools
         URL https://github.com/gperftools/gperftools/archive/36fa5ee9ef55103d9edc0a206270f487f2539465.zip
         URL_MD5 885d2fd18123a17d879d0365a32e4ac8
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-static=no --enable-frame-pointers=yes
+        CONFIGURE_COMMAND ./autogen.sh && ./configure --prefix=${TP_OUTPUT} --enable-static=no --enable-frame-pointers=yes
         BUILD_IN_SOURCE 1
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
