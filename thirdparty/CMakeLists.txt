@@ -418,7 +418,6 @@ ExternalProject_Add(abseil
         https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
         URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DABSL_FIND_GOOGLETEST=OFF
         -DCMAKE_CXX_STANDARD=14
         )
