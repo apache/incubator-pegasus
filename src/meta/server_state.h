@@ -43,12 +43,14 @@
 #include <map>
 #include <memory>
 #include <ostream>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "common/gpid.h"
 #include "common/manual_compact.h"
+#include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
@@ -213,6 +215,9 @@ public:
     bool check_all_partitions();
     void get_cluster_balance_score(double &primary_stddev /*out*/, double &total_stddev /*out*/);
     void clear_proposals();
+
+    bool is_ignored_app(const app_id app_id);
+    std::string remote_command_balancer_ignored_app_ids(const std::vector<std::string> &args);
 
     int count_staging_app();
     // for test
@@ -394,6 +399,11 @@ private:
         return true;
     }
 
+    std::string set_balancer_ignored_app_ids(const std::vector<std::string> &args);
+    std::string get_balancer_ignored_app_ids();
+    std::string clear_balancer_ignored_app_ids();
+    void get_need_balance_apps(/*out */ app_mapper &need_balance_apps);
+
 private:
     friend class bulk_load_service;
     friend class bulk_load_service_test;
@@ -428,6 +438,9 @@ private:
 
     // for load balancer
     migration_list _temporary_list;
+    // the app set which won't be re-balanced
+    dsn::zrwlock_nr _balancer_ignored_apps_lock;
+    std::set<app_id> _balancer_ignored_apps;
 
     // for test
     config_change_subscriber _config_change_subscriber;

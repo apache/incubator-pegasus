@@ -131,6 +131,7 @@ public:
     void apply_balancer_test();
     void cannot_run_balancer_test();
     void construct_apps_test();
+    void app_blacklist_with_balancer_test();
 
     void json_compacity();
 

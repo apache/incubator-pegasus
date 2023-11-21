@@ -43,6 +43,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <iterator>
 #include <set>
 #include <sstream> // IWYU pragma: keep
 #include <string>
@@ -206,6 +207,14 @@ void server_state::register_cli_commands()
             }
             return result;
         }));
+
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+        {"meta.lb.ignored_app_list"},
+        "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
+        "get, set and clear balancer ignored_app_list",
+        [this](const std::vector<std::string> &args) {
+            return remote_command_balancer_ignored_app_ids(args);
+        }));
 }
 
 void server_state::initialize(meta_service *meta_svc, const std::string &apps_root)
@@ -275,6 +284,9 @@ int server_state::count_staging_app()
 {
     int ans = 0;
     for (const auto &app_kv : _all_apps) {
+        if (is_ignored_app(app_kv.second->app_id)) {
+            continue;
+        }
         if (app_kv.second->status == app_status::AS_CREATING ||
             app_kv.second->status == app_status::AS_DROPPING ||
             app_kv.second->status == app_status::AS_RECALLING)
@@ -2474,6 +2486,7 @@ bool server_state::check_all_partitions()
 {
     int healthy_partitions = 0;
     int total_partitions = 0;
+    int ignore_app_unhealthy_partitions = 0;
     meta_function_level::type level = _meta_svc->get_function_level();
 
     zauto_write_lock l(_lock);
@@ -2525,6 +2538,9 @@ bool server_state::check_all_partitions()
                             send_proposal(action, pc, *app);
                             send_proposal_count++;
                         }
+                    }
+                    if (is_ignored_app(app->app_id)) {
+                        ++ignore_app_unhealthy_partitions;
                     }
                 } else {
                     healthy_partitions++;
@@ -2602,7 +2618,7 @@ bool server_state::check_all_partitions()
         return false;
     }
 
-    if (healthy_partitions != total_partitions) {
+    if (total_partitions - healthy_partitions != ignore_app_unhealthy_partitions) {
         LOG_INFO("don't do replica migration coz {}/{} partitions aren't healthy",
                  total_partitions - healthy_partitions,
                  total_partitions);
@@ -2614,19 +2630,23 @@ bool server_state::check_all_partitions()
         return false;
     }
 
+    app_mapper need_balance_apps;
+    get_need_balance_apps(need_balance_apps);
+    LOG_INFO(get_balancer_ignored_app_ids());
+
     if (level == meta_function_level::fl_steady) {
         LOG_INFO("check if any replica migration can be done when meta server is in level({})",
                  _meta_function_level_VALUES_TO_NAMES.find(level)->second);
-        _meta_svc->get_balancer()->check({&_all_apps, &_nodes}, _temporary_list);
+        _meta_svc->get_balancer()->check({&need_balance_apps, &_nodes}, _temporary_list);
         LOG_INFO("balance checker operation count = {}", _temporary_list.size());
         // update balance checker operation count
         _meta_svc->get_balancer()->report(_temporary_list, true);
         return false;
     }
 
-    if (_meta_svc->get_balancer()->balance({&_all_apps, &_nodes}, _temporary_list)) {
+    if (_meta_svc->get_balancer()->balance({&need_balance_apps, &_nodes}, _temporary_list)) {
         LOG_INFO("try to do replica migration");
-        _meta_svc->get_balancer()->apply_balancer({&_all_apps, &_nodes}, _temporary_list);
+        _meta_svc->get_balancer()->apply_balancer({&need_balance_apps, &_nodes}, _temporary_list);
         // update balancer action details
         _meta_svc->get_balancer()->report(_temporary_list, false);
         if (_replica_migration_subscriber)
@@ -3995,5 +4015,90 @@ void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app
         &tracker);
 }
 
+std::string
+server_state::remote_command_balancer_ignored_app_ids(const std::vector<std::string> &args)
+{
+    static const std::string invalid_arguments("invalid arguments");
+    if (args.empty()) {
+        return invalid_arguments;
+    }
+    if (args[0] == "set") {
+        return set_balancer_ignored_app_ids(args);
+    }
+    if (args[0] == "get") {
+        return get_balancer_ignored_app_ids();
+    }
+    if (args[0] == "clear") {
+        return clear_balancer_ignored_app_ids();
+    }
+    return invalid_arguments;
+}
+
+std::string server_state::set_balancer_ignored_app_ids(const std::vector<std::string> &args)
+{
+    static const std::string invalid_arguments("invalid arguments");
+    if (args.size() != 2) {
+        return invalid_arguments;
+    }
+
+    std::vector<std::string> app_ids;
+    dsn::utils::split_args(args[1].c_str(), app_ids, ',');
+    if (app_ids.empty()) {
+        return invalid_arguments;
+    }
+
+    std::set<app_id> app_list;
+    for (const std::string &app_id_str : app_ids) {
+        app_id app;
+        if (!dsn::buf2int32(app_id_str, app)) {
+            return invalid_arguments;
+        }
+        app_list.insert(app);
+    }
+
+    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
+    _balancer_ignored_apps = std::move(app_list);
+    return "set ok";
+}
+
+std::string server_state::get_balancer_ignored_app_ids()
+{
+    std::stringstream oss;
+    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
+    if (_balancer_ignored_apps.empty()) {
+        return "no ignored apps";
+    }
+    oss << "ignored_app_id_list: ";
+    std::copy(_balancer_ignored_apps.begin(),
+              _balancer_ignored_apps.end(),
+              std::ostream_iterator<app_id>(oss, ","));
+    std::string app_ids = oss.str();
+    app_ids[app_ids.size() - 1] = '\0';
+    return app_ids;
+}
+
+std::string server_state::clear_balancer_ignored_app_ids()
+{
+    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
+    _balancer_ignored_apps.clear();
+    return "clear ok";
+}
+
+bool server_state::is_ignored_app(const app_id app_id)
+{
+    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
+    return _balancer_ignored_apps.find(app_id) != _balancer_ignored_apps.end();
+}
+
+void server_state::get_need_balance_apps(/*out */ app_mapper &need_balance_apps)
+{
+    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
+    for (const auto &app_pair : _all_apps) {
+        if (is_ignored_app(app_pair.second->app_id)) {
+            continue;
+        }
+        need_balance_apps.emplace(app_pair);
+    }
+}
 } // namespace replication
 } // namespace dsn

@@ -37,7 +37,6 @@
 
 namespace dsn {
 namespace replication {
-class meta_service;
 
 newly_partitions::newly_partitions() : newly_partitions(nullptr) {}
 

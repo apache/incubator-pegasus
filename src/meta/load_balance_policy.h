@@ -35,10 +35,8 @@
 #include "meta_data.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/enum_helper.h"
-#include "utils/zlocks.h"
 
 namespace dsn {
-class command_deregister;
 class partition_configuration;
 
 namespace replication {
@@ -87,7 +85,6 @@ public:
 
 protected:
     void init(const meta_view *global_view, migration_list *list);
-    bool is_ignored_app(app_id app_id);
 
     bool execute_balance(
         const app_mapper &apps,
@@ -108,12 +105,6 @@ protected:
     std::unordered_map<dsn::rpc_address, int> address_id;
     std::vector<dsn::rpc_address> address_vec;
 
-    // the app set which won't be re-balanced
-    dsn::zrwlock_nr _balancer_ignored_apps_lock; // {
-    std::set<app_id> _balancer_ignored_apps;
-    // }
-    std::unique_ptr<command_deregister> _ctrl_balancer_ignored_apps;
-
 private:
     void start_moving_primary(const std::shared_ptr<app_state> &app,
                               const rpc_address &from,
@@ -130,11 +121,6 @@ private:
                             rpc_address from,
                             rpc_address to);
     void number_nodes(const node_mapper &nodes);
-
-    std::string remote_command_balancer_ignored_app_ids(const std::vector<std::string> &args);
-    std::string set_balancer_ignored_app_ids(const std::vector<std::string> &args);
-    std::string get_balancer_ignored_app_ids();
-    std::string clear_balancer_ignored_app_ids();
 
     FRIEND_TEST(cluster_balance_policy, calc_potential_moving);
 };
