@@ -19,11 +19,11 @@
 
 #pragma once
 
+#include <absl/utility/utility.h>
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "runtime/task/async_calls.h"
 #include "utils/chrono_literals.h"
-#include "utils/absl/utility/utility.h"
 
 namespace dsn {
 namespace pipeline {

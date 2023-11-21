@@ -82,7 +82,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 #include "utils/token_bucket_throttling_controller.h"
@@ -2303,7 +2303,8 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
         if (value.length() < filter_pattern.length())
             return false;
         if (filter_type == ::dsn::apps::filter_type::FT_MATCH_ANYWHERE) {
-            return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
+            return value.to_string_view().find(filter_pattern.to_string_view()) !=
+                   absl::string_view::npos;
         } else if (filter_type == ::dsn::apps::filter_type::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());

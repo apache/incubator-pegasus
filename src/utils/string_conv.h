@@ -27,14 +27,14 @@
 #include <string>
 #include <type_traits>
 
-#include "string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 
 namespace internal {
 
 template <typename T>
-bool buf2signed(string_view buf, T &result)
+bool buf2signed(absl::string_view buf, T &result)
 {
     static_assert(std::is_signed<T>::value, "buf2signed works only with signed integer");
 
@@ -65,7 +65,7 @@ bool buf2signed(string_view buf, T &result)
 }
 
 template <typename T>
-bool buf2unsigned(string_view buf, T &result)
+bool buf2unsigned(absl::string_view buf, T &result)
 {
     static_assert(std::is_unsigned<T>::value, "buf2unsigned works only with unsigned integer");
 
@@ -104,27 +104,27 @@ bool buf2unsigned(string_view buf, T &result)
 
 /// buf2*: `result` will keep unmodified if false is returned.
 
-inline bool buf2int32(string_view buf, int32_t &result)
+inline bool buf2int32(absl::string_view buf, int32_t &result)
 {
     return internal::buf2signed(buf, result);
 }
 
-inline bool buf2int64(string_view buf, int64_t &result)
+inline bool buf2int64(absl::string_view buf, int64_t &result)
 {
     return internal::buf2signed(buf, result);
 }
 
-inline bool buf2uint32(string_view buf, uint32_t &result)
+inline bool buf2uint32(absl::string_view buf, uint32_t &result)
 {
     return internal::buf2unsigned(buf, result);
 }
 
-inline bool buf2uint64(string_view buf, uint64_t &result)
+inline bool buf2uint64(absl::string_view buf, uint64_t &result)
 {
     return internal::buf2unsigned(buf, result);
 }
 
-inline bool buf2bool(string_view buf, bool &result, bool ignore_case = true)
+inline bool buf2bool(absl::string_view buf, bool &result, bool ignore_case = true)
 {
     std::string data(buf.data(), buf.length());
     if (ignore_case) {
@@ -141,7 +141,7 @@ inline bool buf2bool(string_view buf, bool &result, bool ignore_case = true)
     return false;
 }
 
-inline bool buf2double(string_view buf, double &result)
+inline bool buf2double(absl::string_view buf, double &result)
 {
     if (buf.empty()) {
         return false;

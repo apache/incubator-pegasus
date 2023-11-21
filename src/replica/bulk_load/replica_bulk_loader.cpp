@@ -51,7 +51,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/thread_access_checker.h"
 
 namespace dsn {
@@ -442,7 +442,7 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
                                          const std::string &remote_dir,
                                          const std::string &local_dir)
 {
-    FAIL_POINT_INJECT_F("replica_bulk_loader_download_files", [](string_view) {});
+    FAIL_POINT_INJECT_F("replica_bulk_loader_download_files", [](absl::string_view) {});
 
     LOG_INFO_PREFIX("start to download files");
     dist::block_service::block_filesystem *fs =

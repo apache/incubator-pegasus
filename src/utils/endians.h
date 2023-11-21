@@ -23,7 +23,7 @@
 #include "api_utilities.h"
 #include "fmt_logging.h"
 #include "ports.h"
-#include "string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 
@@ -108,7 +108,7 @@ private:
 class data_input
 {
 public:
-    explicit data_input(string_view s) : _p(s.data()), _size(s.size()) {}
+    explicit data_input(absl::string_view s) : _p(s.data()), _size(s.size()) {}
 
     uint8_t read_u8() { return read_unsigned<uint8_t>(); }
 
@@ -118,7 +118,7 @@ public:
 
     uint64_t read_u64() { return read_unsigned<uint64_t>(); }
 
-    string_view read_str() { return {_p, _size}; }
+    absl::string_view read_str() { return {_p, _size}; }
 
     void skip(size_t sz)
     {

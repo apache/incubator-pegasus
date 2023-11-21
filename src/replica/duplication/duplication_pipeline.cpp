@@ -17,8 +17,10 @@
 
 #include "duplication_pipeline.h"
 
+#include <absl/strings/string_view.h>
 #include <stddef.h>
 #include <functional>
+#include <string>
 #include <utility>
 
 #include "dsn.layer2_types.h"
@@ -33,7 +35,6 @@
 #include "utils/fmt_logging.h"
 
 namespace dsn {
-class string_view;
 
 namespace replication {
 
@@ -42,7 +43,7 @@ namespace replication {
 //                     //
 
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
-    replica_base *, string_view /*remote cluster*/, string_view /*app*/)>
+    replica_base *, absl::string_view /*remote cluster*/, absl::string_view /*app*/)>
     mutation_duplicator::creator;
 
 //               //

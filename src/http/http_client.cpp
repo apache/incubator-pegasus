@@ -264,15 +264,15 @@ void http_client::free_header_list()
     _header_list = nullptr;
 }
 
-void http_client::set_header_field(dsn::string_view key, dsn::string_view val)
+void http_client::set_header_field(absl::string_view key, absl::string_view val)
 {
     _header_fields[std::string(key)] = std::string(val);
     _header_changed = true;
 }
 
-void http_client::set_accept(dsn::string_view val) { set_header_field("Accept", val); }
+void http_client::set_accept(absl::string_view val) { set_header_field("Accept", val); }
 
-void http_client::set_content_type(dsn::string_view val) { set_header_field("Content-Type", val); }
+void http_client::set_content_type(absl::string_view val) { set_header_field("Content-Type", val); }
 
 dsn::error_s http_client::process_header()
 {

@@ -26,6 +26,7 @@
 
 #include "nfs/nfs_server_impl.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <chrono>
 #include <cstdint>
 #include <mutex>

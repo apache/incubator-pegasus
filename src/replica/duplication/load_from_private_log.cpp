@@ -17,8 +17,10 @@
 
 #include <iterator>
 #include <map>
+#include <string>
 #include <utility>
 
+#include "absl/strings/string_view.h"
 #include "common/duplication_common.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"
@@ -34,7 +36,6 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -96,13 +97,15 @@ void load_from_private_log::run()
                 _duplicator->progress().confirmed_decree);
             repeat(1_s);
 
-            FAIL_POINT_INJECT_NOT_RETURN_F("duplication_sync_complete", [&](string_view s) -> void {
-                if (_duplicator->progress().confirmed_decree == invalid_decree) {
-                    // set_confirmed_decree(9), the value must be equal (decree_start of
-                    // `test_start_duplication` in `load_from_private_log_test.cpp`) -1
-                    _duplicator->update_progress(_duplicator->progress().set_confirmed_decree(9));
-                }
-            });
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "duplication_sync_complete", [&](absl::string_view s) -> void {
+                    if (_duplicator->progress().confirmed_decree == invalid_decree) {
+                        // set_confirmed_decree(9), the value must be equal (decree_start of
+                        // `test_start_duplication` in `load_from_private_log_test.cpp`) -1
+                        _duplicator->update_progress(
+                            _duplicator->progress().set_confirmed_decree(9));
+                    }
+                });
             return;
         } else {
             _mutation_batch.reset_mutation_buffer(_duplicator->progress().confirmed_decree);

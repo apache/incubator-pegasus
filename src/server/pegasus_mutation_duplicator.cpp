@@ -19,6 +19,7 @@
 
 #include "pegasus_mutation_duplicator.h"
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
@@ -55,10 +56,11 @@ struct replica_base;
 
 /// static definition of mutation_duplicator::creator.
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
-    replica_base *, string_view, string_view)>
-    mutation_duplicator::creator = [](replica_base *r, string_view remote, string_view app) {
-        return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
-    };
+    replica_base *, absl::string_view, absl::string_view)>
+    mutation_duplicator::creator =
+        [](replica_base *r, absl::string_view remote, absl::string_view app) {
+            return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
+        };
 
 } // namespace replication
 } // namespace dsn
@@ -95,8 +97,8 @@ using namespace dsn::literals::chrono_literals;
 }
 
 pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::replica_base *r,
-                                                         dsn::string_view remote_cluster,
-                                                         dsn::string_view app)
+                                                         absl::string_view remote_cluster,
+                                                         absl::string_view app)
     : mutation_duplicator(r), _remote_cluster(remote_cluster)
 {
     // initialize pegasus-client when this class is first time used.

@@ -36,7 +36,7 @@
 
 #include "gtest/gtest.h"
 #include "utils/configuration.h"
-#include "utils/string_view.h"
+#include "utils/string_conv.h"
 
 using namespace ::dsn;
 

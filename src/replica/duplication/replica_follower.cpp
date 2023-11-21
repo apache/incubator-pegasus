@@ -40,7 +40,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -119,12 +119,13 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, get_gpid().thread_hash());
     dsn::marshall(msg, meta_config_request);
     rpc::call(meta_servers, msg, &_tracker, [&](error_code err, query_cfg_response &&resp) mutable {
-        FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](string_view s) -> void {
+        FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](absl::string_view s) -> void {
             _tracker.set_tasks_success();
             return;
         });
 
-        FAIL_POINT_INJECT_F("duplicate_checkpoint_failed", [&](string_view s) -> void { return; });
+        FAIL_POINT_INJECT_F("duplicate_checkpoint_failed",
+                            [&](absl::string_view s) -> void { return; });
         if (update_master_replica_config(err, std::move(resp)) == ERR_OK) {
             copy_master_replica_checkpoint();
         }
@@ -247,7 +248,7 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
         &_tracker,
         [&, remote_dir](error_code err, size_t size) mutable {
             FAIL_POINT_INJECT_NOT_RETURN_F("nfs_copy_ok",
-                                           [&](string_view s) -> void { err = ERR_OK; });
+                                           [&](absl::string_view s) -> void { err = ERR_OK; });
 
             if (dsn_unlikely(err != ERR_OK)) {
                 LOG_ERROR_PREFIX("nfs copy master[{}] checkpoint failed: checkpoint = {}, err = {}",

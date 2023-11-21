@@ -18,7 +18,6 @@
  */
 
 #include "shell/commands.h"
-#include "utils/smart_pointers.h"
 
 class command_output
 {

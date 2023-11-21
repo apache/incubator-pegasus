@@ -35,8 +35,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/smart_pointers.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -149,8 +148,8 @@ mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r)
     // This helps for debugging.
     replica_base base(
         r->get_gpid(), std::string("mutation_batch@") + r->replica_name(), r->app_name());
-    _mutation_buffer =
-        make_unique<mutation_buffer>(&base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
+    _mutation_buffer = std::make_unique<mutation_buffer>(
+        &base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
             // committer
             add_mutation_if_valid(mu, _start_decree);
         });

@@ -48,9 +48,8 @@
 #include "utils/chrono_literals.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
-#include "utils/smart_pointers.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -86,7 +85,7 @@ bulk_load_service::bulk_load_service(meta_service *meta_svc, const std::string &
 void bulk_load_service::initialize_bulk_load_service()
 {
     _sync_bulk_load_storage =
-        make_unique<mss::meta_storage>(_meta_svc->get_remote_storage(), &_sync_tracker);
+        std::make_unique<mss::meta_storage>(_meta_svc->get_remote_storage(), &_sync_tracker);
     _ingestion_context = std::make_unique<ingestion_context>();
 
     create_bulk_load_root_dir();
@@ -99,7 +98,7 @@ void bulk_load_service::initialize_bulk_load_service()
 void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
 {
     FAIL_POINT_INJECT_F("meta_on_start_bulk_load",
-                        [=](dsn::string_view) { rpc.response().err = ERR_OK; });
+                        [=](absl::string_view) { rpc.response().err = ERR_OK; });
 
     const auto &request = rpc.request();
     auto &response = rpc.response();
@@ -168,7 +167,7 @@ bulk_load_service::check_bulk_load_request_params(const start_bulk_load_request 
                                                   std::string &hint_msg)
 {
     FAIL_POINT_INJECT_F("meta_check_bulk_load_request_params",
-                        [](dsn::string_view) -> error_code { return ERR_OK; });
+                        [](absl::string_view) -> error_code { return ERR_OK; });
 
     if (!validate_ingest_behind(envs, request.ingest_behind)) {
         hint_msg = fmt::format("inconsistent ingestion behind option");
@@ -409,7 +408,7 @@ bool bulk_load_service::check_partition_status(
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::partition_bulk_load(const std::string &app_name, const gpid &pid)
 {
-    FAIL_POINT_INJECT_F("meta_bulk_load_partition_bulk_load", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("meta_bulk_load_partition_bulk_load", [](absl::string_view) {});
 
     partition_configuration pconfig;
     if (!check_partition_status(app_name,
@@ -571,7 +570,7 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::try_resend_bulk_load_request(const std::string &app_name, const gpid &pid)
 {
-    FAIL_POINT_INJECT_F("meta_bulk_load_resend_request", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("meta_bulk_load_resend_request", [](absl::string_view) {});
     zauto_read_lock l(_lock);
     if (is_app_bulk_loading_unlocked(pid.get_app_id())) {
         tasking::enqueue(LPC_META_STATE_NORMAL,
@@ -1081,7 +1080,7 @@ void bulk_load_service::update_app_status_on_remote_storage_unlocked(
     int32_t app_id, bulk_load_status::type new_status, error_code err, bool should_send_request)
 {
     FAIL_POINT_INJECT_F("meta_update_app_status_on_remote_storage_unlocked",
-                        [](dsn::string_view) {});
+                        [](absl::string_view) {});
 
     app_bulk_load_info ainfo = _app_bulk_load_info[app_id];
     auto old_status = ainfo.status;
@@ -1213,7 +1212,7 @@ bool bulk_load_service::check_ever_ingestion_succeed(const partition_configurati
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::partition_ingestion(const std::string &app_name, const gpid &pid)
 {
-    FAIL_POINT_INJECT_F("meta_bulk_load_partition_ingestion", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("meta_bulk_load_partition_ingestion", [](absl::string_view) {});
 
     auto app_status = get_app_bulk_load_status(pid.get_app_id());
     if (app_status != bulk_load_status::BLS_INGESTING) {
@@ -1645,7 +1644,7 @@ void bulk_load_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
 void bulk_load_service::do_clear_app_bulk_load_result(int32_t app_id, clear_bulk_load_rpc rpc)
 {
     FAIL_POINT_INJECT_F("meta_do_clear_app_bulk_load_result",
-                        [rpc](dsn::string_view) { rpc.response().err = ERR_OK; });
+                        [rpc](absl::string_view) { rpc.response().err = ERR_OK; });
     std::string bulk_load_path = get_app_bulk_load_path(app_id);
     _meta_svc->get_meta_storage()->delete_node_recursively(
         std::move(bulk_load_path), [this, app_id, bulk_load_path, rpc]() {
@@ -1739,7 +1738,7 @@ void bulk_load_service::do_sync_partition(const gpid &pid, std::string &partitio
 // ThreadPool: THREAD_POOL_META_SERVER
 void bulk_load_service::try_to_continue_bulk_load()
 {
-    FAIL_POINT_INJECT_F("meta_try_to_continue_bulk_load", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("meta_try_to_continue_bulk_load", [](absl::string_view) {});
     zauto_read_lock l(_lock);
     for (const auto app_id : _bulk_load_app_id) {
         app_bulk_load_info ainfo = _app_bulk_load_info[app_id];

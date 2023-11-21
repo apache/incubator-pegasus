@@ -17,6 +17,7 @@
 
 #include "utils/metrics.h"
 
+#include <absl/strings/string_view.h>
 #include <boost/asio/basic_deadline_timer.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <boost/system/error_code.hpp>

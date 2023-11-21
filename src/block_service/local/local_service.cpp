@@ -36,7 +36,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 
 DSN_DECLARE_bool(enable_direct_io);
@@ -318,7 +318,7 @@ dsn::task_ptr local_file_object::write(const write_request &req,
     write_future_ptr tsk(new write_future(code, cb, 0));
     tsk->set_tracker(tracker);
 
-    FAIL_POINT_INJECT_F("mock_local_service_write_failed", [=](dsn::string_view) {
+    FAIL_POINT_INJECT_F("mock_local_service_write_failed", [=](absl::string_view) {
         auto write_failed = [=]() {
             write_response resp;
             resp.err = ERR_FS_INTERNAL;

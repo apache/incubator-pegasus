@@ -54,7 +54,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
-#include "utils/smart_pointers.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -581,7 +580,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
         }
         std::string table_name = get_table_name_from_app_name(app.app_name);
 
-        auto req = dsn::make_unique<dsn::replication::configuration_update_app_env_request>();
+        auto req = std::make_unique<dsn::replication::configuration_update_app_env_request>();
         req->__set_app_name(app.app_name);
         req->__set_keys(
             {dsn::replication::replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES});

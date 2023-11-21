@@ -38,7 +38,7 @@
 #include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -77,7 +77,7 @@ namespace replication {
                                               size_t start_offset,
                                               int64_t &end_offset)
 {
-    FAIL_POINT_INJECT_F("mutation_log_replay_block", [](string_view) -> error_s {
+    FAIL_POINT_INJECT_F("mutation_log_replay_block", [](absl::string_view) -> error_s {
         return error_s::make(ERR_INCOMPLETE_DATA, "mutation_log_replay_block");
     });
 
