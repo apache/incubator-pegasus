@@ -27,11 +27,8 @@
 #include "meta/duplication/duplication_info.h"
 
 #include <boost/algorithm/string/replace.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <ostream>
 
+#include "gtest/gtest.h"
 #include "runtime/app_model.h"
 
 namespace dsn {

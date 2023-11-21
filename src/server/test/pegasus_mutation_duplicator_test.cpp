@@ -20,13 +20,10 @@
 #include "server/pegasus_mutation_duplicator.h"
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
 #include <memory>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -36,6 +33,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "duplication_internal_types.h"
+#include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "replica/replica_base.h"

@@ -16,16 +16,13 @@
 // under the License.
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
+#include "gtest/gtest.h"
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_server.h"

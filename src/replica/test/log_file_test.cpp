@@ -15,10 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stddef.h>
 #include <memory>
 #include <string>
@@ -26,6 +22,7 @@
 
 #include "aio/aio_task.h"
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "replica/log_block.h"
 #include "replica/log_file.h"
 #include "replica_test_base.h"

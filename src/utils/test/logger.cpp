@@ -25,19 +25,16 @@
  */
 
 #include <errno.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <algorithm>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"

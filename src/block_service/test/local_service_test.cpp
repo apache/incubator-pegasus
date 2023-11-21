@@ -18,10 +18,6 @@
  */
 
 #include <boost/filesystem/operations.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <nlohmann/detail/json_ref.hpp>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
@@ -35,6 +31,7 @@
 #include <vector>
 
 #include "block_service/local/local_service.h"
+#include "gtest/gtest.h"
 #include "test_util/test_util.h"
 #include "utils/env.h"
 #include "utils/error_code.h"

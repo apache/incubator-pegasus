@@ -18,10 +18,6 @@
  */
 
 #include <base/pegasus_key_schema.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <math.h>
 #include <pegasus/error.h>
 #include <s2/s1angle.h>
@@ -43,6 +39,7 @@
 #include "client/replication_ddl_client.h"
 #include "common/replication_other_types.h"
 #include "geo/lib/geo_client.h"
+#include "gtest/gtest.h"
 #include "pegasus/client.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/blob.h"

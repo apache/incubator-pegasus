@@ -17,15 +17,13 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <s2/s1angle.h>
 #include <s2/s2latlng.h>
 #include <s2/third_party/absl/base/port.h>
 #include <string>
 
 #include "geo/lib/latlng_codec.h"
+#include "gtest/gtest.h"
 #include "utils/errors.h"
 
 namespace pegasus {

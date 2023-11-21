@@ -26,9 +26,6 @@
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <unistd.h>
 #include <algorithm>
 #include <cstdint>
@@ -48,6 +45,7 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "duplication_types.h"
+#include "gtest/gtest.h"
 #include "http/http_server.h"
 #include "meta/duplication/duplication_info.h"
 #include "meta/duplication/meta_duplication_service.h"

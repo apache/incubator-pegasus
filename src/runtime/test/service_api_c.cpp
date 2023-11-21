@@ -33,9 +33,6 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <chrono>
 #include <map>
@@ -43,6 +40,7 @@
 #include <thread>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "runtime/api_layer1.h"
 #include "runtime/global_config.h"
 #include "runtime/service_app.h"

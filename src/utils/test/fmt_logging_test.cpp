@@ -25,13 +25,11 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <memory>
 
 #include "common/gpid.h"
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "runtime/task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"

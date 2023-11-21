@@ -17,15 +17,11 @@
 * under the License.
 */
 
+#include <ext/alloc_traits.h>
 #include <fmt/core.h>
-// IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/status.h>
 #include <rrdb/rrdb_types.h>
 #include <stdint.h>
-#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -35,6 +31,7 @@
 #include "base/pegasus_const.h"
 #include "base/pegasus_key_schema.h"
 #include "client/partition_resolver.h"
+#include "gtest/gtest.h"
 #include "include/rrdb/rrdb.client.h"
 #include "test/function_test/utils/test_util.h"
 #include "utils/blob.h"

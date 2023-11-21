@@ -17,12 +17,10 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string>
 
 #include "base/pegasus_utils.h"
+#include "gtest/gtest.h"
 
 const std::string test_string = "pegasus";
 

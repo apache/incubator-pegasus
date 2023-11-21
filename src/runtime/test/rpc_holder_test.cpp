@@ -27,13 +27,11 @@
 #include "runtime/rpc/rpc_holder.h"
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string>
 
 #include "common/gpid.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/threadpool_code.h"

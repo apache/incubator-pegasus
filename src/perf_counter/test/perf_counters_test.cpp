@@ -35,13 +35,11 @@
 
 #include "perf_counter/perf_counters.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdio.h>
 #include <map>
 
 #include "common/json_helper.h"
+#include "gtest/gtest.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_utils.h"
 #include "perf_counter/perf_counter_wrapper.h"

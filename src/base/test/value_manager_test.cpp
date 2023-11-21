@@ -17,13 +17,11 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <string>
 
 #include "base/value_schema_manager.h"
+#include "gtest/gtest.h"
 #include "pegasus_value_schema.h"
 #include "utils/string_view.h"
 #include "value_field.h"

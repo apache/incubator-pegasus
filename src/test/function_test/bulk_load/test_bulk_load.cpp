@@ -16,9 +16,6 @@
 // under the License.
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <rocksdb/env.h>
@@ -40,6 +37,7 @@
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/json_helper.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "include/pegasus/error.h"
 #include "meta/meta_bulk_load_service.h"

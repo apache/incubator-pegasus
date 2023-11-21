@@ -26,15 +26,12 @@
 
 #include "replica/mutation_log.h"
 
-// IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <ext/alloc_traits.h>
 #include <sys/types.h>
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <tuple>
 #include <unordered_map>
 
 #include "aio/aio_task.h"
@@ -42,6 +39,7 @@
 #include "backup_types.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
+#include "gtest/gtest.h"
 #include "replica/log_block.h"
 #include "replica/log_file.h"
 #include "replica/mutation.h"

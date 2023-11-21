@@ -33,9 +33,6 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <string.h>
 #include <memory>
@@ -44,6 +41,7 @@
 
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "runtime/message_utils.cpp"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_address.h"

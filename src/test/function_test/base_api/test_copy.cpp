@@ -17,24 +17,20 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <limits.h>
 #include <s2/third_party/absl/base/port.h>
 #include <string.h>
 #include <time.h>
-#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "runtime/task/async_calls.h"

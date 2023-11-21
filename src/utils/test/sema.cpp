@@ -35,12 +35,11 @@
 
 #include "utils/hpc_locks/sema.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <chrono>
-#include <memory>
+#include <string>
 #include <thread>
+
+#include "gtest/gtest.h"
 
 TEST(core, Semaphore)
 {

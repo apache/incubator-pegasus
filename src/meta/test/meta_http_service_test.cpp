@@ -15,10 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -32,6 +28,7 @@
 #include "bulk_load_types.h"
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
+#include "gtest/gtest.h"
 #include "http/http_server.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_bulk_load_service.h"

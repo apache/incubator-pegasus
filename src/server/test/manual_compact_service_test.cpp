@@ -17,10 +17,6 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/options.h>
 #include <stdint.h>
 #include <atomic>
@@ -28,6 +24,7 @@
 #include <memory>
 #include <string>
 
+#include "gtest/gtest.h"
 #include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
 #include "runtime/api_layer1.h"

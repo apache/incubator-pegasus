@@ -17,19 +17,15 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/compression_type.h>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <map>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
 
 namespace pegasus {

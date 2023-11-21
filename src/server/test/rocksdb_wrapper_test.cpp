@@ -18,10 +18,6 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <memory>
 #include <string>
@@ -29,6 +25,7 @@
 
 #include "common/fs_manager.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "pegasus_utils.h"

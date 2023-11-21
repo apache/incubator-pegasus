@@ -27,14 +27,10 @@
 #include "meta/meta_state_service.h"
 
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <chrono>
 #include <thread>
 
+#include "gtest/gtest.h"
 #include "meta/meta_state_service_simple.h"
 #include "meta/meta_state_service_zookeeper.h"
 #include "runtime/service_app.h"

@@ -15,18 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
+#include <ext/alloc_traits.h>
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"

@@ -24,12 +24,10 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <memory>
+#include <string>
 #include <thread>
 
+#include "gtest/gtest.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/lockp.std.h"
 

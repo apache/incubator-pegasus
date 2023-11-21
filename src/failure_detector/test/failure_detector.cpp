@@ -24,10 +24,7 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <ext/alloc_traits.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
@@ -39,12 +36,14 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "failure_detector/failure_detector.h"
 #include "failure_detector/failure_detector_multimaster.h"
 #include "fd_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_options.h"
 #include "meta/meta_server_failure_detector.h"
 #include "replica/replica_stub.h"

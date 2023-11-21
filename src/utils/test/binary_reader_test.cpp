@@ -17,10 +17,7 @@
 
 #include "utils/binary_reader.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-
+#include "gtest/gtest.h"
 #include "utils/defer.h"
 
 namespace dsn {

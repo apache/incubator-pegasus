@@ -18,10 +18,6 @@
 #include "replica/bulk_load/replica_bulk_loader.h"
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
@@ -33,6 +29,7 @@
 #include "common/gpid.h"
 #include "common/json_helper.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"

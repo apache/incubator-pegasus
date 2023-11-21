@@ -21,7 +21,6 @@
 
 #include <nlohmann/json.hpp>
 #include <unistd.h>
-#include <algorithm>
 #include <fstream>
 #include <initializer_list>
 #include <utility>
@@ -31,8 +30,6 @@
 #include "client/replication_ddl_client.h"
 #include "common/replication_other_types.h"
 #include "fmt/core.h"
-#include "gtest/gtest-message.h"
-#include "gtest/gtest-test-part.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "nlohmann/detail/iterators/iter_impl.hpp"
