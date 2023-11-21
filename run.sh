@@ -211,12 +211,7 @@ function run_build()
 
     CMAKE_OPTIONS="-DCMAKE_C_COMPILER=${C_COMPILER}
                    -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
-                   -DUSE_JEMALLOC=${USE_JEMALLOC}
-                   -DENABLE_GCOV=${ENABLE_GCOV}
-                   -DENABLE_GPERF=${ENABLE_GPERF}
-                   -DBoost_NO_BOOST_CMAKE=ON
-                   -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
-                   -DBoost_NO_SYSTEM_PATHS=ON"
+                   -DUSE_JEMALLOC=${USE_JEMALLOC}"
 
     echo "BUILD_TYPE=$BUILD_TYPE"
     if [ "$BUILD_TYPE" == "debug" ]
@@ -257,6 +252,13 @@ function run_build()
         popd
         cd ..
     fi
+
+    CMAKE_OPTIONS="${CMAKE_OPTIONS}
+                   -DENABLE_GCOV=${ENABLE_GCOV}
+                   -DENABLE_GPERF=${ENABLE_GPERF}
+                   -DBoost_NO_BOOST_CMAKE=ON
+                   -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
+                   -DBoost_NO_SYSTEM_PATHS=ON"
 
     echo "INFO: start build Pegasus..."
     BUILD_DIR="${BUILD_ROOT_DIR}/${BUILD_TYPE}_${SANITIZER}"

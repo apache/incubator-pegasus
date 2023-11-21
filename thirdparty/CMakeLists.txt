@@ -17,8 +17,8 @@
 # under the License.
 ##############################################################################
 
-project(pegasus_thirdparties)
 cmake_minimum_required(VERSION 3.11.0)
+project(pegasus_thirdparties)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # require at least gcc 7.0.0
@@ -44,6 +44,12 @@ set(TP_OUTPUT ${PROJECT_SOURCE_DIR}/output)
 # LOG_DIR      = <STAMP_DIR>
 set_property(DIRECTORY PROPERTY EP_BASE ${TP_DIR}/build)
 
+include(ProcessorCount)
+ProcessorCount(PARALLEL)
+if(PARALLEL EQUAL 0)
+    set(PARALLEL 1)
+endif()
+
 set(OSS_URL_PREFIX "http://pegasus-thirdparty-package.oss-cn-beijing.aliyuncs.com")
 
 message(STATUS "Setting up third-parties...")
@@ -59,7 +65,9 @@ ExternalProject_Add(boost
         BUILD_COMMAND ./b2 toolset=gcc cxxflags=-fPIC cxxstd=11 install
         INSTALL_COMMAND cp -R include/boost ${TP_OUTPUT}/include && cp -R lib ${TP_OUTPUT}/
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 # header-only
 file(MAKE_DIRECTORY ${TP_OUTPUT}/include/concurrentqueue)
@@ -71,7 +79,9 @@ ExternalProject_Add(concurrentqueue
         BUILD_COMMAND ""
         INSTALL_COMMAND cp -R blockingconcurrentqueue.h concurrentqueue.h lightweightsemaphore.h internal/ ${TP_OUTPUT}/include/concurrentqueue
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 # header-only
 file(MAKE_DIRECTORY ${TP_OUTPUT}/include/readerwriterqueue)
@@ -83,7 +93,9 @@ ExternalProject_Add(readerwriterqueue
         BUILD_COMMAND ""
         INSTALL_COMMAND cp -R atomicops.h readerwriterqueue.h ${TP_OUTPUT}/include/readerwriterqueue
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(googletest
         URL ${OSS_URL_PREFIX}/googletest-release-1.8.0.tar.gz
@@ -92,7 +104,9 @@ ExternalProject_Add(googletest
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 ExternalProject_Get_property(googletest SOURCE_DIR)
 set(googletest_SRC ${SOURCE_DIR})
 
@@ -102,7 +116,9 @@ ExternalProject_Add(gperftools
         URL_MD5 4e218a40a354748c50d054c285caaae8
         CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-static=no --enable-frame-pointers=yes
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 set(HDFS_CLIENT_DIR "hadoop-hdfs-project/hadoop-hdfs-native-client")
 ExternalProject_Add(hadoop
@@ -115,7 +131,9 @@ ExternalProject_Add(hadoop
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 # header-only
 ExternalProject_Add(rapidjson
@@ -126,7 +144,9 @@ ExternalProject_Add(rapidjson
         BUILD_COMMAND ""
         INSTALL_COMMAND cp -R include/rapidjson ${TP_OUTPUT}/include
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(thrift
         URL ${OSS_URL_PREFIX}/thrift-0.9.3.tar.gz
@@ -153,7 +173,9 @@ ExternalProject_Add(thrift
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         DEPENDS boost
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 check_cxx_compiler_flag(-Wformat-overflow COMPILER_SUPPORTS_FORMAT_OVERFLOW)
 if (COMPILER_SUPPORTS_FORMAT_OVERFLOW)
@@ -172,13 +194,15 @@ ExternalProject_Add(zookeeper
         URL_MD5 44c2a33e01931aed94ef7f3d39d0963e
         PATCH_COMMAND ""
         COMMAND cd zookeeper-jute && mvn compile && cd ../zookeeper-client/zookeeper-client-c && cmake -DCMAKE_BUILD_TYPE=release -DWANT_CPPUNIT=OFF -DWITH_OPENSSL=OFF -DWITH_CYRUS_SASL=${ZOOKEEPER_WITH_CYRUS_SASL} -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        COMMAND cd zookeeper-client/zookeeper-client-c && make
+        COMMAND cd zookeeper-client/zookeeper-client-c && make -j${PARALLEL}
         COMMAND cp -R zookeeper-client/zookeeper-client-c/include/. ${TP_OUTPUT}/include/zookeeper && cp zookeeper-client/zookeeper-client-c/generated/zookeeper.jute.h ${TP_OUTPUT}/include/zookeeper && cp zookeeper-client/zookeeper-client-c/libzookeeper.a ${TP_OUTPUT}/lib && cp zookeeper-client/zookeeper-client-c/libhashtable.a ${TP_OUTPUT}/lib
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(libevent
         URL ${OSS_URL_PREFIX}/libevent-release-2.1.8-stable.tar.gz
@@ -192,8 +216,9 @@ ExternalProject_Add(libevent
         -DEVENT__DISABLE_SAMPLES=On
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(poco
         URL ${OSS_URL_PREFIX}/poco-1.11.1-release.tar.gz
@@ -217,7 +242,9 @@ ExternalProject_Add(poco
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         DEPENDS boost
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(fds
         URL ${OSS_URL_PREFIX}/fds-1.0.0.tar.gz
@@ -237,7 +264,9 @@ ExternalProject_Add(fds
         UPDATE_COMMAND "" # do not update
         DEPENDS googletest poco boost
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(fmt
         URL https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz
@@ -248,16 +277,9 @@ ExternalProject_Add(fmt
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        )
-
-ExternalProject_Add(gflags
-        URL ${OSS_URL_PREFIX}/gflags-2.2.1.zip
-        https://github.com/gflags/gflags/archive/v2.2.1.zip
-        URL_MD5 2d988ef0b50939fb50ada965dafce96b
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 # civetweb is one of the dependencies of promemetheus-cpp, do not build & install
 ExternalProject_Add(civetweb
@@ -267,7 +289,9 @@ ExternalProject_Add(civetweb
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 ExternalProject_Get_property(civetweb SOURCE_DIR)
 set(civetweb_SRC ${SOURCE_DIR})
 
@@ -310,7 +334,9 @@ ExternalProject_Add(curl
         CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
         ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(prometheus-cpp
         URL ${OSS_URL_PREFIX}/prometheus-cpp-0.7.0.tar.gz
@@ -323,7 +349,9 @@ ExternalProject_Add(prometheus-cpp
         -DENABLE_TESTING=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 # header-only
 ExternalProject_Add(nlohmann_json
@@ -334,7 +362,9 @@ ExternalProject_Add(nlohmann_json
         BUILD_COMMAND ""
         INSTALL_COMMAND cp -R include/nlohmann ${TP_OUTPUT}/include
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(s2geometry
         URL ${OSS_URL_PREFIX}/s2geometry-e8d16637a467d9f096a92a6d81a50a9b747ca828.zip
@@ -350,7 +380,9 @@ ExternalProject_Add(s2geometry
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         DEPENDS googletest
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 option(USE_JEMALLOC "use jemalloc" OFF)
 message(STATUS "USE_JEMALLOC = ${USE_JEMALLOC}")
@@ -361,13 +393,14 @@ ExternalProject_Add(jemalloc
         URL_MD5 3d41fbf006e6ebffd489bdb304d009ae
         PATCH_COMMAND patch -p0 < ${TP_DIR}/fix_jemalloc_for_m1_on_macos.patch
         CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-cxx --enable-stats --enable-prof
-        BUILD_COMMAND make
+        BUILD_COMMAND make -j${PARALLEL}
         INSTALL_COMMAND make install
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
-
 set(ROCKSDB_OPTIONS
         -DFAIL_ON_WARNINGS=OFF
         -DWITH_BENCHMARK_TOOLS=OFF
@@ -396,12 +429,15 @@ ExternalProject_Add(rocksdb
         URL ${OSS_URL_PREFIX}/rocksdb-v8.5.3.tar.gz
         https://github.com/facebook/rocksdb/archive/refs/tags/v8.5.3.tar.gz
         URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
-        PATCH_COMMAND ""
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_rocksdb-cmake-PORTABLE-option.patch
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
         COMMAND git clone -b main --depth=1 https://github.com/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
         DEPENDS googletest jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        ${ROCKSDB_OPTIONS})
+        ${ROCKSDB_OPTIONS}
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(http-parser
         URL ${OSS_URL_PREFIX}/http-parser-2.9.4.zip
@@ -411,7 +447,9 @@ ExternalProject_Add(http-parser
         BUILD_COMMAND ""
         INSTALL_COMMAND cp -R http_parser.h ${TP_OUTPUT}/include/nodejs/http_parser.h
         BUILD_IN_SOURCE 1
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
 ExternalProject_Add(abseil
         URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
@@ -420,4 +458,6 @@ ExternalProject_Add(abseil
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DABSL_FIND_GOOGLETEST=OFF
         -DCMAKE_CXX_STANDARD=14
-        )
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)

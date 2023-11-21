@@ -1,0 +1,75 @@
+From 67233eaf66ee067867265bff87e9d89fb7c46086 Mon Sep 17 00:00:00 2001
+From: Kefu Chai <tchaikov@gmail.com>
+Date: Mon, 18 Sep 2023 12:11:15 -0700
+Subject: [PATCH] cmake: check PORTABLE for well-known boolean representations
+ (#11724)
+
+Summary:
+before 459969e9, we were using CMake `option()` to represent `PORTABLE`. so the CMake boolean representations like ON, OFF, 0 and 1 are supported. this is also the downstream package maintainers were using before v8.3.2.
+
+in 459969e9, this option is expanded to specify the argument of `-march` passed to compiler in order to be more flexible and hence allows user to specify CPU type directly. but in the typical use cases, user would just want to use "ON" for the best performance on the building host, and "OFF" for a portable build when it comes to a distro package maintainer.
+
+so, in this change, let's check for the boolean representations supported by CMake.
+
+Fixes https://github.com/facebook/rocksdb/issues/11558
+Signed-off-by: Kefu Chai <tchaikov@gmail.com>
+
+Pull Request resolved: https://github.com/facebook/rocksdb/pull/11724
+
+Reviewed By: anand1976
+
+Differential Revision: D48827447
+
+Pulled By: ajkr
+
+fbshipit-source-id: b2fef7076b2e90ad13a1fbec80e197841fa06d38
+---
+ CMakeLists.txt | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4e30f6631..98cbf33ea 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -254,7 +254,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "loongarch64")
+ endif(CMAKE_SYSTEM_PROCESSOR MATCHES "loongarch64")
+ 
+ set(PORTABLE 0 CACHE STRING "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU")
+-if(PORTABLE STREQUAL 1)
++if(PORTABLE MATCHES "1|ON|YES|TRUE|Y")
+   # Usually nothing to do; compiler default is typically the most general
+   if(NOT MSVC)
+     if(CMAKE_SYSTEM_PROCESSOR MATCHES "^s390x")
+@@ -264,14 +264,7 @@ if(PORTABLE STREQUAL 1)
+       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=loongarch64")
+     endif()
+   endif()
+-elseif(PORTABLE MATCHES [^0]+)
+-  # Name of a CPU arch spec or feature set to require
+-  if(MSVC)
+-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:${PORTABLE}")
+-  else()
+-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=${PORTABLE}")
+-  endif()
+-else()
++elseif(PORTABLE MATCHES "0|OFF|NO|FALSE|N")
+   if(MSVC)
+     # NOTE: No auto-detection of current CPU, but instead assume some useful
+     # level of optimization is supported
+@@ -285,6 +278,13 @@ else()
+       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+     endif()
+   endif()
++else()
++  # Name of a CPU arch spec or feature set to require
++  if(MSVC)
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:${PORTABLE}")
++  else()
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=${PORTABLE}")
++  endif()
+ endif()
+ 
+ include(CheckCXXSourceCompiles)
+-- 
+2.42.1
+
