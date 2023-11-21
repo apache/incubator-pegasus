@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <s2/third_party/absl/base/port.h>
 #include <stdint.h>
 #include <stdlib.h>
 // IWYU pragma: no_include <bits/std_abs.h>
@@ -233,7 +232,7 @@ private:
     ::dsn::task_ptr _storage_size_stat_timer_task;
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
-    std::map<std::string, string> _capacity_unit_update_info;
+    std::map<std::string, std::string> _capacity_unit_update_info;
     // _hotspot_calculator_store is to save hotspot_partition_calculator for each table, a
     // hotspot_partition_calculator saves historical hotspot data and alert perf_counters of
     // corresponding table

@@ -19,7 +19,6 @@
 
 #include <s2/s1angle.h>
 #include <s2/s2latlng.h>
-#include <s2/third_party/absl/base/port.h>
 #include <string>
 
 #include "geo/lib/latlng_codec.h"

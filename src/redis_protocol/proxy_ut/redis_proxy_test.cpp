@@ -32,7 +32,6 @@
 // IWYU pragma: no_include <boost/asio/socket_base.hpp>
 #include <boost/system/error_code.hpp>
 #include <gtest/gtest_prod.h>
-#include <s2/third_party/absl/base/port.h>
 #include <string.h>
 #include <chrono>
 #include <memory>

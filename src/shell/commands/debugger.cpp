@@ -35,7 +35,6 @@
 #include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/ldb_cmd.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <ctime>

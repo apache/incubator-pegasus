@@ -27,6 +27,8 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS pegasus.rproxylib
+                 absl::flat_hash_set
+                 absl::strings
                  pegasus_geo_lib
                  pegasus_reporter
                  event

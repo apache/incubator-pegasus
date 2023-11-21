@@ -84,7 +84,7 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
 {
     for (int data_type = 0; data_type <= 1; data_type++) {
         for (int i = 0; i < partition_count; i++) {
-            string partition_desc =
+            std::string partition_desc =
                 _app_name + '.' +
                 (data_type == partition_qps_type::WRITE_HOTSPOT_DATA ? "write." : "read.") +
                 std::to_string(i);
@@ -95,7 +95,7 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
                 "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
         }
 
-        string total_desc =
+        std::string total_desc =
             _app_name + '.' +
             (data_type == partition_qps_type::WRITE_HOTSPOT_DATA ? "write.total" : "read.total");
         std::string counter_name = fmt::format("app.stat.hotspots.{}", total_desc);

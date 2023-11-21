@@ -31,6 +31,8 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_PROJ_LIBS pegasus.rproxylib
                 pegasus_base
+                absl::flat_hash_set
+                absl::strings
                 pegasus_geo_lib
                 s2
                 pegasus_client_static

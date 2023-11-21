@@ -353,6 +353,9 @@ function(dsn_setup_thirdparty_libs)
   link_libraries(${OPENSSL_CRYPTO_LIBRARY})
   link_libraries(${OPENSSL_SSL_LIBRARY})
 
+  # abseil
+  find_package(absl REQUIRED)
+
   link_directories(${THIRDPARTY_INSTALL_DIR}/lib)
   if (NOT APPLE)
     link_directories(${THIRDPARTY_INSTALL_DIR}/lib64)

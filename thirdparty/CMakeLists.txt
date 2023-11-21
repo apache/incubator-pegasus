@@ -366,22 +366,29 @@ ExternalProject_Add(nlohmann_json
         DOWNLOAD_NO_PROGRESS true
 )
 
-ExternalProject_Add(s2geometry
-        URL ${OSS_URL_PREFIX}/s2geometry-e8d16637a467d9f096a92a6d81a50a9b747ca828.zip
-        https://github.com/neverchanje/s2geometry/archive/e8d16637a467d9f096a92a6d81a50a9b747ca828.zip
-        URL_MD5 75cc44c9c31382083d8a2d0e42590788
-        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_s2_build_with_cxx17.patch
+ExternalProject_Add(abseil
+        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
+        https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
+        URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DGOOGLETEST_VERSION=1.14.0
-        -DGTEST_ROOT=${googletest_SRC}/googletest
-        -DBUILD_SHARED_LIBS=OFF
-        -DBUILD_PYTHON=OFF
-        -DBUILD_TESTING=OFF
-        -DBUILD_EXAMPLES=OFF
-        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DABSL_FIND_GOOGLETEST=OFF
         -DCMAKE_CXX_STANDARD=17
-        DEPENDS googletest
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
+ExternalProject_Add(s2geometry
+        URL ${OSS_URL_PREFIX}/s2geometry-0.10.0.tar.gz
+        https://github.com/google/s2geometry/archive/refs/tags/v0.10.0.tar.gz
+        URL_MD5 c68f3c5d326dde9255681b9201393a9f
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_s2_build_with_absl_and_gtest.patch
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DBUILD_SHARED_LIBS=OFF
+        -DGTEST_ROOT=${googletest_SRC}/googletest
+        -DWITH_PYTHON=OFF
+        -DBUILD_EXAMPLES=OFF
+        DEPENDS googletest abseil
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
 )
@@ -453,13 +460,3 @@ ExternalProject_Add(http-parser
         DOWNLOAD_NO_PROGRESS true
 )
 
-ExternalProject_Add(abseil
-        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
-        https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
-        URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DABSL_FIND_GOOGLETEST=OFF
-        -DCMAKE_CXX_STANDARD=14
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        DOWNLOAD_NO_PROGRESS true
-)
