@@ -283,16 +283,17 @@ set(CURL_OPTIONS
         --disable-manual
         --disable-pop3
         --disable-rtsp
+        --disable-shared
         --disable-smtp
         --disable-telnet
         --disable-tftp
-        --disable-shared
+        --without-libidn
         --without-librtmp
-        --without-zlib
         --without-libssh2
         --without-ssl
-        --without-libidn
+        --without-zlib
         --without-zstd
+        --with-gssapi
         )
 if (APPLE)
     set(CURL_OPTIONS
