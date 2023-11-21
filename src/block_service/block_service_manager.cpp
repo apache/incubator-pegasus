@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "block_service/block_service.h"
-#include "block_service/fds/fds_service.h"
 #include "block_service/hdfs/hdfs_service.h"
 #include "block_service/local/local_service.h"
 #include "runtime/task/task_code.h"
@@ -39,10 +38,6 @@ namespace block_service {
 
 block_service_registry::block_service_registry()
 {
-    CHECK(utils::factory_store<block_filesystem>::register_factory(
-              "fds_service", block_filesystem::create<fds_service>, PROVIDER_TYPE_MAIN),
-          "register fds_service failed");
-
     CHECK(utils::factory_store<block_filesystem>::register_factory(
               "hdfs_service", block_filesystem::create<hdfs_service>, PROVIDER_TYPE_MAIN),
           "register hdfs_service failed");

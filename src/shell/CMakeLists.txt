@@ -36,19 +36,10 @@ set(MY_PROJ_LIBS
     dsn_client
     dsn_utils
     dsn.block_service.local
-    dsn.block_service.fds
     dsn.block_service.hdfs
     dsn.block_service
     dsn.failure_detector
     pegasus_client_static
-    galaxy-fds-sdk-cpp
-    PocoNet
-    PocoFoundation
-    PocoNetSSL
-    PocoJSON
-    PocoCrypto
-    PocoUtil
-    PocoXML
     pegasus_geo_lib
     RocksDB::rocksdb
     absl::flat_hash_set

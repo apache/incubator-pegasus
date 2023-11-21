@@ -123,7 +123,6 @@ cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_pressureclient ${pack}/bin/
 
 mkdir -p ${pack}/lib
 copy_file ${BUILD_LATEST_DIR}/output/lib/*.so* ${pack}/lib/
-copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/lib/
 
 if [ "$use_jemalloc" == "on" ]; then
     copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/lib/

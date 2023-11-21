@@ -32,7 +32,6 @@ set(MY_PROJ_LIBS
     dsn_replication_common
     dsn_client
     dsn.block_service.local
-    dsn.block_service.fds
     dsn.block_service
     dsn.failure_detector
     dsn.replication.zookeeper_provider
@@ -42,14 +41,6 @@ set(MY_PROJ_LIBS
     pegasus_base
     pegasus_client_static
     event
-    galaxy-fds-sdk-cpp
-    PocoNet
-    PocoFoundation
-    PocoNetSSL
-    PocoJSON
-    PocoCrypto
-    PocoUtil
-    PocoXML
     hashtable
     )
 

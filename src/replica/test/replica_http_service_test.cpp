@@ -112,7 +112,7 @@ TEST_P(replica_http_service_test, update_config_handler)
 
     // Update config failed and value not changed.
     NO_FATALS(test_update_config(
-        {{"config_sync_interval_ms", "10"}, {"fds_write_limit_rate", "50"}},
+        {{"config_sync_interval_ms", "10"}, {"hdfs_write_limit_rate_mb_per_sec", "50"}},
         R"({"update_status":"ERR_INVALID_PARAMETERS: there should be exactly one config to be updated once"})"
         "\n"));
     NO_FATALS(test_check_config("config_sync_interval_ms", "30000"));
