@@ -18,7 +18,7 @@
  */
 
 #include <boost/lexical_cast.hpp>
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <chrono>
 #include <iostream>
 #include <memory>

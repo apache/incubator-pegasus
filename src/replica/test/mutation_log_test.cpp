@@ -26,7 +26,7 @@
 
 #include "replica/mutation_log.h"
 
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <sys/types.h>
 #include <cstdint>
 #include <iostream>

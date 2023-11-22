@@ -26,7 +26,7 @@
 
 #include "utils/output_utils.h"
 
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <string>
 #include <vector>
 

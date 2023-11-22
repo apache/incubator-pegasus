@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdlib.h>
 #include <chrono>
 #include <functional>

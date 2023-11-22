@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>

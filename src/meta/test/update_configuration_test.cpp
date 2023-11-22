@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>

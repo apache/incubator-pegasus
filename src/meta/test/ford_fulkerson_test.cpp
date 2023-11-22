@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdint.h>
 #include <memory>
 #include <unordered_map>

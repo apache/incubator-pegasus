@@ -17,7 +17,7 @@
 * under the License.
 */
 
-#include <ext/alloc_traits.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <rrdb/rrdb_types.h>
