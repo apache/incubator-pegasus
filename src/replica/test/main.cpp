@@ -35,6 +35,8 @@ class cold_backup_context_test : public pegasus::encrypt_data_test_base
 {
 };
 
+INSTANTIATE_TEST_CASE_P(, cold_backup_context_test, ::testing::Values(false, true));
+
 TEST_P(cold_backup_context_test, check_backup_on_remote) { app->check_backup_on_remote_test(); }
 
 TEST_P(cold_backup_context_test, read_current_chkpt_file) { app->read_current_chkpt_file_test(); }
