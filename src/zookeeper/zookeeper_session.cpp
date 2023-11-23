@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a C++ wrapper of zookeeper c async api, implementation
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
-
 #include <stdlib.h>
 #include <zookeeper/zookeeper.h>
 #include <algorithm>

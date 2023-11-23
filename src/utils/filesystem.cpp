@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     File system utility functions.
- *
- * Revision history:
- *     2015-08-24, HX Lin(linmajia@live.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <boost/filesystem/operations.hpp>
 #include <boost/system/error_code.hpp>
 #include <errno.h>

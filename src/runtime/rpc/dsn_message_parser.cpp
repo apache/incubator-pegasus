@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     Jun. 2016, Zuoyan Qin, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "dsn_message_parser.h"
 
 #include <stddef.h>

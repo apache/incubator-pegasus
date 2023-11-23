@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for sim lock.
- *
- * Revision history:
- *     Nov., 2015, @xiaotz (Xiaotong Zhang), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <functional>
 #include <string>
 

@@ -48,7 +48,7 @@ namespace pegasus {
 namespace server {
 
 // Falcon field description:
-//   http://git.n.xiaomi.com/falcon/doc/wikis/instance_monitor
+//   https://book.open-falcon.org/zh/philosophy/data-model.html
 struct falcon_metric
 {
     std::string endpoint;    // metric host

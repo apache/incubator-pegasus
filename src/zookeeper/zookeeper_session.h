@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a C++ wrapper of zookeeper c async api, header
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
-
 #include <stdint.h>
 #include <string.h>
 #include <zookeeper/zookeeper.h>
@@ -52,6 +44,7 @@ struct String_vector;
 namespace dsn {
 namespace dist {
 
+// A C++ wrapper of zookeeper c async APIs.
 class zookeeper_session
 {
 public:

@@ -24,19 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     single and double linked list
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <cassert>
 
+// single linked list.
 //
 // assuming public T::T* next; exists and inited to nullptr in T::T(...)
 //
@@ -116,6 +108,7 @@ public:
     T *_last;
 };
 
+// double linked list.
 class dlink
 {
 public:

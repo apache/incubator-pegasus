@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     delay for admission control
- *
- * Revision history:
- *     Nov., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "utils/singleton.h"
@@ -44,6 +35,7 @@ namespace dsn {
 const double s_default_delay_points[DELAY_COUNT] = {1.0, 1.2, 1.4, 1.6, 1.8, 2.0};
 const int s_default_delay[DELAY_COUNT] = {0, 0, 1, 2, 5, 10}; // millieseconds
 
+// Delay for admission control.
 class exp_delay
 {
 public:

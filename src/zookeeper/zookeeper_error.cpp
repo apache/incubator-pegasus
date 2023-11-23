@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     transform zookeeper error code to dsn error code, implementation
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
-
 #include <zookeeper/zookeeper.h>
 
 #include "utils/error_code.h"

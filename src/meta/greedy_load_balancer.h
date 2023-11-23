@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     A greedy load balancer based on Dijkstra & Ford-Fulkerson
- *
- * Revision history:
- *     2016-02-03, Weijie Sun, first version
- */
-
 #pragma once
 
 #include <memory>
@@ -51,6 +43,7 @@ namespace replication {
 class load_balance_policy;
 class meta_service;
 
+// A greedy load balancer based on Dijkstra & Ford-Fulkerson.
 class greedy_load_balancer : public server_load_balancer
 {
 public:

@@ -24,21 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
-* Description:
-*     interface of the reliable distributed lock service
-*
-* Revision history:
-*     2015-10-28, Weijie Sun, first version
-*     2015-11-5, @imzhenyu (Zhenyu Guo), remove create and destroy API as they are
-*                unnecessary, adjust the interface, so that
-*                (1) return task_ptr for callers to cancel or wait;
-*                (2) add factory for provider registration;
-*                (3) add cb_code parameter, then users can specify where the callback
-*                    should be executed
-*     xxxx-xx-xx, author, fix bug about xxx
-*/
-
 #pragma once
 
 #include "runtime/api_task.h"
@@ -68,6 +53,7 @@ typedef std::function<void(error_code ec, const std::string &owner_id, uint64_t 
 typedef future_task<error_code, std::string, uint64_t> lock_future;
 typedef dsn::ref_ptr<lock_future> lock_future_ptr;
 
+// The interface of the reliable distributed lock service.
 class distributed_lock_service
 {
 public:

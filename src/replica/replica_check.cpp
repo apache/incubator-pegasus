@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replica membership state periodical checking
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -72,6 +63,9 @@
 
 namespace dsn {
 namespace replication {
+
+// The replica membership state periodical checking part of replica.
+
 DSN_DEFINE_bool(replication, group_check_disabled, false, "whether group check is disabled");
 DSN_DEFINE_int32(replication,
                  group_check_interval_ms,
