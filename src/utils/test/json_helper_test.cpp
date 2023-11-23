@@ -24,11 +24,7 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string.h>
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <map>
@@ -39,6 +35,7 @@
 #include <vector>
 
 #include "common/json_helper.h"
+#include "gtest/gtest.h"
 #include "utils/blob.h"
 
 namespace dsn {

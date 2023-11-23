@@ -35,11 +35,9 @@
 
 #include "runtime/task/task_engine.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdio.h>
 
+#include "gtest/gtest.h"
 #include "runtime/global_config.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"

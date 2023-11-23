@@ -15,14 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <memory>
 #include <string>
 #include <unordered_set>
 
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"

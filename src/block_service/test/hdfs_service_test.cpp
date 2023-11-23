@@ -16,25 +16,20 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <algorithm>
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "block_service/block_service.h"
 #include "block_service/hdfs/hdfs_service.h"
+#include "gtest/gtest.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
@@ -134,10 +129,7 @@ INSTANTIATE_TEST_CASE_P(, HDFSClientTest, ::testing::Values(false, true));
 TEST_P(HDFSClientTest, test_hdfs_read_write)
 {
     if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
-        // TODO(yingchun): use GTEST_SKIP after upgrading gtest.
-        std::cout << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test."
-                  << std::endl;
-        return;
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
     }
 
     auto s = std::make_shared<hdfs_service>();
@@ -211,10 +203,7 @@ TEST_P(HDFSClientTest, test_hdfs_read_write)
 TEST_P(HDFSClientTest, test_upload_and_download)
 {
     if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
-        // TODO(yingchun): use GTEST_SKIP after upgrading gtest.
-        std::cout << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test."
-                  << std::endl;
-        return;
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
     }
 
     auto s = std::make_shared<hdfs_service>();
@@ -314,10 +303,7 @@ TEST_P(HDFSClientTest, test_upload_and_download)
 TEST_P(HDFSClientTest, test_concurrent_upload_download)
 {
     if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
-        // TODO(yingchun): use GTEST_SKIP after upgrading gtest.
-        std::cout << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test."
-                  << std::endl;
-        return;
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
     }
 
     auto s = std::make_shared<hdfs_service>();

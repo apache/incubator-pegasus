@@ -25,9 +25,6 @@
  */
 
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <cstdint>
 #include <fstream> // IWYU pragma: keep
@@ -41,6 +38,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "meta/meta_state_service.h"

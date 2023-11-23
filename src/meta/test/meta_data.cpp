@@ -24,10 +24,6 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -35,6 +31,7 @@
 #include "client/partition_resolver.h"
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "metadata_types.h"
 #include "misc/misc.h"

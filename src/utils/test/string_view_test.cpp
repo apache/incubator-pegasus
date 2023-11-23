@@ -14,12 +14,11 @@
 
 #include "utils/string_view.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <iomanip>
 #include <ostream>
 #include <type_traits>
+
+#include "gtest/gtest.h"
 
 namespace {
 

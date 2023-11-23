@@ -16,9 +16,6 @@
 // under the License.
 
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string.h>
 #include <algorithm>
 #include <atomic>
@@ -41,6 +38,7 @@
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_options.h"

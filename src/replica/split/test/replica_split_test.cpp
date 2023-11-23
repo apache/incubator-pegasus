@@ -15,12 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
-#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <string>
@@ -34,6 +29,7 @@
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
 #include "replica/mutation.h"

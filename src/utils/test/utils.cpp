@@ -33,20 +33,18 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stddef.h>
 #include <list>
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"

@@ -19,9 +19,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -32,6 +29,7 @@
 #include <memory>
 
 #include "block_service/block_service.h"
+#include "gtest/gtest.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"

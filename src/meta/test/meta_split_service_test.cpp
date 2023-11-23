@@ -26,9 +26,6 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string.h>
 #include <algorithm>
 #include <atomic>
@@ -48,6 +45,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_server_failure_detector.h"

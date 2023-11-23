@@ -15,10 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+// IWYU pragma: no_include <algorithm>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -28,6 +25,7 @@
 #include "block_service/block_service_manager.h"
 #include "block_service/local/local_service.h"
 #include "block_service_mock.h"
+#include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "test_util/test_util.h"
 #include "utils/error_code.h"

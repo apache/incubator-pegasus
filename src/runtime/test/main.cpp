@@ -37,7 +37,7 @@
 #include <iostream>
 #include <thread>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
 #include "test_utils.h"

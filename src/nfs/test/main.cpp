@@ -24,10 +24,6 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/status.h>
 #include <stddef.h>
 #include <algorithm>
@@ -39,6 +35,7 @@
 
 #include "aio/aio_task.h"
 #include "common/gpid.h"
+#include "gtest/gtest.h"
 #include "nfs/nfs_node.h"
 #include "runtime/app_model.h"
 #include "runtime/rpc/rpc_address.h"

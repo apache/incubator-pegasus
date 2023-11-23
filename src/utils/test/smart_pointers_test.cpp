@@ -14,14 +14,12 @@
 
 #include "utils/smart_pointers.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "gtest/gtest.h"
 
 using namespace dsn;
 

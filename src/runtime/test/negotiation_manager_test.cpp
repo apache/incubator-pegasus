@@ -17,11 +17,8 @@
 
 #include "runtime/security/negotiation_manager.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-
 #include "failure_detector/fd.code.definition.h"
+#include "gtest/gtest.h"
 #include "http/http_server.h"
 #include "nfs/nfs_code_definition.h"
 #include "runtime/rpc/network.h"

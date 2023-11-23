@@ -15,11 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <gtest/gtest-death-test.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <memory>
 #include <string>
@@ -28,6 +23,7 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
 #include "mock_utils.h"

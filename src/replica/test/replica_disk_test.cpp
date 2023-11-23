@@ -18,10 +18,6 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <unistd.h>
 #include <atomic>
 #include <cstdint>
@@ -36,6 +32,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "replica/disk_cleaner.h"
 #include "replica/replica.h"

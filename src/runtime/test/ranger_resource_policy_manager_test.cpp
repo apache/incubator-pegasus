@@ -16,9 +16,6 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <gtest/gtest-message.h>
-#include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rapidjson/document.h>
 #include <algorithm>
 #include <map>
@@ -29,6 +26,7 @@
 #include <vector>
 
 #include "common/json_helper.h"
+#include "gtest/gtest.h"
 #include "runtime/ranger/access_type.h"
 #include "runtime/ranger/ranger_resource_policy.h"
 #include "runtime/ranger/ranger_resource_policy_manager.h"

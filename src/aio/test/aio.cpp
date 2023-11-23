@@ -25,10 +25,6 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/status.h>
 #include <string.h>
 #include <algorithm>
@@ -41,6 +37,7 @@
 
 #include "aio/aio_task.h"
 #include "aio/file_io.h"
+#include "gtest/gtest.h"
 #include "runtime/task/task_code.h"
 #include "runtime/tool_api.h"
 #include "test_util/test_util.h"

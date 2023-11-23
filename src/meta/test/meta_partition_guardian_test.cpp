@@ -24,9 +24,6 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -45,6 +42,7 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "dummy_balancer.h"
+#include "gtest/gtest.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta/meta_options.h"

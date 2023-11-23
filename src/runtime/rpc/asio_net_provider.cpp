@@ -27,6 +27,24 @@
 #include "asio_net_provider.h"
 
 #include <boost/asio.hpp> // IWYU pragma: keep
+#include <boost/asio/basic_datagram_socket.hpp>
+#include <boost/asio/basic_socket_acceptor.hpp>
+#include <boost/asio/basic_stream_socket.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/detail/impl/reactive_socket_service_base.ipp>
+#include <boost/asio/detail/impl/service_registry.hpp>
+#include <boost/asio/impl/io_context.hpp>
+#include <boost/asio/impl/io_context.ipp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/ip/address.hpp>
+#include <boost/asio/ip/address_v4.hpp>
+#include <boost/asio/ip/basic_endpoint.hpp>
+#include <boost/asio/ip/impl/address.ipp>
+#include <boost/asio/ip/impl/address_v4.ipp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ip/udp.hpp>
+#include <boost/asio/socket_base.hpp>
 #include <boost/system/error_code.hpp>
 #include <stdint.h>
 #include <stdio.h>

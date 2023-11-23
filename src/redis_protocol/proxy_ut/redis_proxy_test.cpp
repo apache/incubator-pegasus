@@ -31,9 +31,6 @@
 // IWYU pragma: no_include <boost/asio/ip/tcp.hpp>
 // IWYU pragma: no_include <boost/asio/socket_base.hpp>
 #include <boost/system/error_code.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <gtest/gtest_prod.h>
 #include <s2/third_party/absl/base/port.h>
 #include <string.h>
@@ -46,6 +43,7 @@
 #include <vector>
 
 #include "geo/lib/geo_client.h"
+#include "gtest/gtest.h"
 #include "proxy_layer.h"
 #include "redis_parser.h"
 #include "runtime/app_model.h"

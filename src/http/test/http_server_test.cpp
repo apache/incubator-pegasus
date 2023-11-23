@@ -15,18 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <string.h>
-#include <algorithm>
 #include <memory>
 #include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_message_parser.h"

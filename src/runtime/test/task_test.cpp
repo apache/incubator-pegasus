@@ -17,12 +17,11 @@
 
 #include "runtime/task/task.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <string>
 
 #include "aio/aio_task.h"
 #include "aio/file_io.h"
+#include "gtest/gtest.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
 #include "utils/flags.h"

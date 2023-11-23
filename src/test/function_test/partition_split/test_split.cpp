@@ -15,9 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <chrono>
@@ -32,6 +29,7 @@
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"

@@ -26,9 +26,6 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <algorithm>
@@ -37,6 +34,7 @@
 #include <string>
 #include <utility>
 
+#include "gtest/gtest.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"

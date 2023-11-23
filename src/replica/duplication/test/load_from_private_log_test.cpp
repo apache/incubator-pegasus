@@ -17,11 +17,6 @@
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/status.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -33,6 +28,7 @@
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "duplication_types.h"
+#include "gtest/gtest.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"

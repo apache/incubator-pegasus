@@ -18,12 +18,10 @@
  */
 
 #include <fmt/core.h>
-#include <gtest/gtest-message.h>
-#include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <iostream>
 #include <string>
 
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"

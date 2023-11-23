@@ -34,10 +34,6 @@
  */
 
 #include <fmt/format.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -47,6 +43,7 @@
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "runtime/api_task.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"

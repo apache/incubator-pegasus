@@ -19,12 +19,6 @@
 
 #include <base/pegasus_key_schema.h>
 #include <fmt/core.h>
-#include <gmock/gmock-actions.h>
-#include <gmock/gmock-spec-builders.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <stdint.h>
@@ -34,6 +28,8 @@
 #include <string>
 #include <utility>
 
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
 #include "perf_counter/perf_counter.h"

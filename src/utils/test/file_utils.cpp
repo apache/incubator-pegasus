@@ -24,19 +24,15 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
 #include <stdint.h>
 #include <time.h>
-#include <fstream>
 #include <string>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "test_util/test_util.h"
 #include "utils/env.h"
 #include "utils/error_code.h"

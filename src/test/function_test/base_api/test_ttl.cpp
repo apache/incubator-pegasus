@@ -17,9 +17,6 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <time.h>
 #include <chrono>
@@ -30,6 +27,7 @@
 
 #include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "meta_admin_types.h"
 #include "pegasus/error.h"

@@ -19,9 +19,6 @@
 
 #include <boost/lexical_cast.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -31,6 +28,7 @@
 
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"

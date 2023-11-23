@@ -19,9 +19,6 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <unistd.h>
 #include <algorithm>
 #include <chrono>
@@ -38,6 +35,7 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "runtime/api_layer1.h"

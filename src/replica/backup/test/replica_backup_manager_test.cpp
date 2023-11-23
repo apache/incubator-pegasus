@@ -15,13 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <memory>
 #include <string>
 
+#include "gtest/gtest.h"
 #include "replica/backup/replica_backup_manager.h"
 #include "replica/replication_app_base.h"
 #include "replica/test/mock_utils.h"

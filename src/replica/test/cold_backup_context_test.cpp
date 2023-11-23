@@ -15,10 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <iostream>
@@ -36,6 +32,7 @@
 #include "common/backup_common.h"
 #include "common/gpid.h"
 #include "common/json_helper.h"
+#include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica.h"

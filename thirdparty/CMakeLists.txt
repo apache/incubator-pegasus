@@ -98,9 +98,9 @@ ExternalProject_Add(readerwriterqueue
 )
 
 ExternalProject_Add(googletest
-        URL ${OSS_URL_PREFIX}/googletest-release-1.8.0.tar.gz
-        https://codeload.github.com/google/googletest/tar.gz/release-1.8.0
-        URL_MD5 16877098823401d1bf2ed7891d7dce36
+        URL ${OSS_URL_PREFIX}/googletest-1.14.0.tar.gz
+        https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
+        URL_MD5 c8340a482851ef6a3fe618a082304cfc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -370,8 +370,9 @@ ExternalProject_Add(s2geometry
         URL ${OSS_URL_PREFIX}/s2geometry-e8d16637a467d9f096a92a6d81a50a9b747ca828.zip
         https://github.com/neverchanje/s2geometry/archive/e8d16637a467d9f096a92a6d81a50a9b747ca828.zip
         URL_MD5 75cc44c9c31382083d8a2d0e42590788
-        PATCH_COMMAND patch -p0 < ${TP_DIR}/fix_s2_for_aarch64.patch
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_s2_build_with_cxx17.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DGOOGLETEST_VERSION=1.14.0
         -DGTEST_ROOT=${googletest_SRC}/googletest
         -DBUILD_SHARED_LIBS=OFF
         -DBUILD_PYTHON=OFF
@@ -379,6 +380,7 @@ ExternalProject_Add(s2geometry
         -DBUILD_EXAMPLES=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_CXX_STANDARD=17
         DEPENDS googletest
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true

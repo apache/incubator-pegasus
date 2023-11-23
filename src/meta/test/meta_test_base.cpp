@@ -17,18 +17,15 @@
 
 #include "meta_test_base.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <map>
-#include <ostream>
 #include <thread>
 #include <unordered_map>
 #include <utility>
 
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_options.h"

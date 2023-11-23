@@ -17,10 +17,9 @@
 
 #include "utils/token_bucket_throttling_controller.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <unistd.h>
+
+#include "gtest/gtest.h"
 
 namespace dsn {
 namespace utils {

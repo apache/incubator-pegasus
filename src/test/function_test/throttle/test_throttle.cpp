@@ -18,12 +18,8 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <algorithm>
 #include <atomic>
 #include <iostream>
 #include <map>
@@ -35,6 +31,7 @@
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "runtime/api_layer1.h"
