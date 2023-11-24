@@ -27,7 +27,6 @@
 #include <s2/s2earth.h>
 #include <s2/s2latlng.h>
 #include <s2/s2testing.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdint.h>
 #include <list>
 #include <memory>

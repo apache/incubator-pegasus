@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include <s2/third_party/absl/base/port.h>
 #include <stdio.h>
 #include <string>
 

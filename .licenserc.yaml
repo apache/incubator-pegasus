@@ -70,7 +70,7 @@ header:
     - 'thirdparty/fix_libevent_for_macos.patch'
     - 'thirdparty/fix_prometheus-cpp_limits.patch'
     - 'thirdparty/fix_rocksdb-cmake-PORTABLE-option.patch'
-    - 'thirdparty/fix_s2_build_with_cxx17.patch'
+    - 'thirdparty/fix_s2_build_with_absl_and_gtest.patch'
     - 'thirdparty/fix_thrift_for_cpp11.patch'
     # TODO(yingchun): shell/* files are import from thirdparties, we can move them to thirdparty later.
     # Copyright (c) 2016, Adi Shavit

@@ -18,7 +18,6 @@
  */
 
 #include <limits.h>
-#include <s2/third_party/absl/base/port.h>
 #include <string.h>
 #include <time.h>
 #include <atomic>

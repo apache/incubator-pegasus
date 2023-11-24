@@ -51,6 +51,8 @@ set(MY_PROJ_LIBS
     PocoXML
     pegasus_geo_lib
     RocksDB::rocksdb
+    absl::flat_hash_set
+    absl::strings
     s2
     hdfs
     )

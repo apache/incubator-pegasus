@@ -24,7 +24,6 @@
 #include <s2/s2latlng.h>
 #include <s2/s2latlng_rect.h>
 #include <s2/s2testing.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdint.h>
 #include <atomic>
 #include <iostream>
