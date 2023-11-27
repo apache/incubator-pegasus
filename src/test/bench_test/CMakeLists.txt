@@ -36,7 +36,7 @@ set(MY_PROJ_LIBS
         krb5
         )
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES "config.ini")
 

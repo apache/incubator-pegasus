@@ -35,7 +35,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS gtest dsn_runtime rocksdb)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 # Extra files that will be installed
 set(MY_BINPLACES

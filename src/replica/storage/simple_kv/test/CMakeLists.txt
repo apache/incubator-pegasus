@@ -42,7 +42,7 @@ set(MY_PROJ_LIBS dsn_replica_server
                  dsn_utils
                  rocksdb)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 # Extra files that will be installed
 FILE(GLOB CASE_FILES "case-*")

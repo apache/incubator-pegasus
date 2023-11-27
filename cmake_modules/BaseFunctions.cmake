@@ -319,7 +319,7 @@ function(dsn_setup_thirdparty_libs)
 
   set(CMAKE_PREFIX_PATH ${THIRDPARTY_INSTALL_DIR};${CMAKE_PREFIX_PATH})
   message(STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
-  find_package(Boost COMPONENTS system filesystem regex REQUIRED)
+  find_package(Boost COMPONENTS system filesystem REQUIRED)
   include_directories(${Boost_INCLUDE_DIRS})
 
   find_library(THRIFT_LIB NAMES libthrift.a PATHS ${THIRDPARTY_INSTALL_DIR}/lib NO_DEFAULT_PATH)
