@@ -30,17 +30,15 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <algorithm>
-#include <iterator>
 #include <regex>
 #include <string>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "fail_point_impl.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
-#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace fail {
