@@ -30,7 +30,7 @@
 #include "base/value_schema_manager.h"
 #include "gtest/gtest.h"
 #include "utils/blob.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "value_field.h"
 
 using namespace pegasus;
@@ -52,7 +52,7 @@ uint64_t extract_time_tag(value_schema *schema, const std::string &raw_value)
 std::string generate_value(value_schema *schema,
                            uint32_t expire_ts,
                            uint64_t time_tag,
-                           dsn::string_view user_data)
+                           absl::string_view user_data)
 {
     std::string write_buf;
     std::vector<rocksdb::Slice> write_slices;

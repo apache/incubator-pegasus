@@ -17,6 +17,7 @@
 
 #include "hotkey_collector.h"
 
+#include <absl/strings/string_view.h>
 #include <boost/container_hash/extensions.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
@@ -128,7 +129,7 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 
 // TODO: (Tangyanzhao) replace it to xxhash
 
-/*extern*/ int get_bucket_id(dsn::string_view data, int bucket_num)
+/*extern*/ int get_bucket_id(absl::string_view data, int bucket_num)
 {
     return static_cast<int>(boost::hash_range(data.begin(), data.end()) % bucket_num);
 }
@@ -344,7 +345,7 @@ hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base,
 
 void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
 {
-    _hash_buckets[get_bucket_id(hash_key, _hash_bucket_num)].fetch_add(weight);
+    _hash_buckets[get_bucket_id(hash_key.to_string_view(), _hash_bucket_num)].fetch_add(weight);
 }
 
 void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
@@ -386,7 +387,7 @@ void hotkey_fine_data_collector::change_target_bucket(int target_bucket_index)
 
 void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
 {
-    if (get_bucket_id(hash_key, _hash_bucket_num) != _target_bucket_index.load()) {
+    if (get_bucket_id(hash_key.to_string_view(), _hash_bucket_num) != _target_bucket_index.load()) {
         return;
     }
     // abandon the key if enqueue failed (possibly because not enough room to enqueue)
@@ -397,7 +398,7 @@ struct blob_hash
 {
     std::size_t operator()(const dsn::blob &str) const
     {
-        dsn::string_view cp(str);
+        absl::string_view cp = str.to_string_view();
         return boost::hash_range(cp.begin(), cp.end());
     }
 };
@@ -406,7 +407,7 @@ struct blob_equal
 {
     std::size_t operator()(const dsn::blob &lhs, const dsn::blob &rhs) const
     {
-        return dsn::string_view(lhs) == dsn::string_view(rhs);
+        return lhs.to_string_view() == rhs.to_string_view();
     }
 };
 
@@ -428,13 +429,13 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     // the weight of all the collected hash keys
     std::vector<uint64_t> weights;
     weights.reserve(hash_keys_weight.size());
-    dsn::string_view weight_max_key; // the hashkey with the max weight
-    uint64_t weight_max = 0;         // the max weight by far
+    absl::string_view weight_max_key; // the hashkey with the max weight
+    uint64_t weight_max = 0;          // the max weight by far
     for (const auto &iter : hash_keys_weight) {
         weights.push_back(iter.second);
         if (iter.second > weight_max) {
             weight_max = iter.second;
-            weight_max_key = iter.first;
+            weight_max_key = iter.first.to_string_view();
         }
     }
 

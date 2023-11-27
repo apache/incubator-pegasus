@@ -26,6 +26,7 @@
 
 #include "common/replication_common.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
 #include <fstream>
 #include <memory>

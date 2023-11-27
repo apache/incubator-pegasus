@@ -58,7 +58,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 
@@ -345,7 +345,8 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
 
 error_code replication_app_base::apply_mutation(const mutation *mu)
 {
-    FAIL_POINT_INJECT_F("replication_app_base_apply_mutation", [](string_view) { return ERR_OK; });
+    FAIL_POINT_INJECT_F("replication_app_base_apply_mutation",
+                        [](absl::string_view) { return ERR_OK; });
 
     CHECK_EQ_PREFIX(mu->data.header.decree, last_committed_decree() + 1);
     CHECK_EQ_PREFIX(mu->data.updates.size(), mu->client_requests.size());

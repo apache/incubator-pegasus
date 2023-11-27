@@ -29,6 +29,7 @@
 #include <memory>
 #include <cstring>
 
+#include "absl/strings/string_view.h"
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TProtocol.h>
 
@@ -57,7 +58,7 @@ public:
     {
     }
 
-    /// NOTE: Use dsn::string_view whenever possible.
+    /// NOTE: Use absl::string_view whenever possible.
     /// blob is designed for shared buffer, never use it as constant view.
     /// Maybe we could deprecate this function in the future.
     blob(const char *buffer, int offset, unsigned int length)
@@ -98,7 +99,7 @@ public:
         _length = length;
     }
 
-    /// Deprecated. Use dsn::string_view whenever possible.
+    /// Deprecated. Use absl::string_view whenever possible.
     void assign(const char *buffer, int offset, unsigned int length)
     {
         _holder = nullptr;
@@ -156,6 +157,8 @@ public:
             return {};
         return std::string(_data, _length);
     }
+
+    absl::string_view to_string_view() const { return absl::string_view(_data, _length); }
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;

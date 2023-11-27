@@ -27,7 +27,7 @@
 #pragma once
 
 #include "common/gpid.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -35,7 +35,7 @@ namespace replication {
 /// Base class for types that are one-instance-per-replica.
 struct replica_base
 {
-    replica_base(gpid id, string_view name, string_view app_name)
+    replica_base(gpid id, absl::string_view name, absl::string_view app_name)
         : _gpid(id), _name(name), _app_name(app_name)
     {
     }

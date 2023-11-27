@@ -79,7 +79,7 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 
@@ -663,7 +663,7 @@ bool replica::is_same_ballot_status_change_allowed(partition_status::type olds,
 bool replica::update_local_configuration(const replica_configuration &config,
                                          bool same_ballot /* = false*/)
 {
-    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](dsn::string_view) -> bool {
+    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](absl::string_view) -> bool {
         auto old_status = status();
         _config = config;
         LOG_INFO_PREFIX(

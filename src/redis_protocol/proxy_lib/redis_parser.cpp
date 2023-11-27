@@ -45,7 +45,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
@@ -206,7 +206,7 @@ void redis_parser::eat_all(char *dest, size_t length)
 bool redis_parser::end_array_size()
 {
     int32_t count = 0;
-    if (dsn_unlikely(!dsn::buf2int32(dsn::string_view(_current_size), count))) {
+    if (dsn_unlikely(!dsn::buf2int32(absl::string_view(_current_size), count))) {
         LOG_ERROR(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
         return false;
@@ -244,8 +244,7 @@ void redis_parser::append_current_bulk_string()
 bool redis_parser::end_bulk_string_size()
 {
     int32_t length = 0;
-    if (dsn_unlikely(!dsn::buf2int32(
-            dsn::string_view(_current_size.c_str(), _current_size.length()), length))) {
+    if (dsn_unlikely(!dsn::buf2int32(absl::string_view(_current_size), length))) {
         LOG_ERROR(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
         return false;
@@ -545,9 +544,8 @@ void redis_parser::setex(message_entry &entry)
         simple_error_reply(entry, "wrong number of arguments for 'setex' command");
     } else {
         LOG_DEBUG_PREFIX("send SETEX command seqid({})", entry.sequence_id);
-        ::dsn::blob &ttl_blob = redis_req.sub_requests[2].data;
         int ttl_seconds;
-        if (!dsn::buf2int32(ttl_blob, ttl_seconds)) {
+        if (!dsn::buf2int32(redis_req.sub_requests[2].data.to_string_view(), ttl_seconds)) {
             simple_error_reply(entry, "value is not an integer or out of range");
             return;
         }
@@ -935,7 +933,7 @@ void redis_parser::counter_internal(message_entry &entry)
             simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
-        if (!dsn::buf2int64(entry.request.sub_requests[2].data, increment)) {
+        if (!dsn::buf2int64(entry.request.sub_requests[2].data.to_string_view(), increment)) {
             LOG_WARNING("{}: command {} seqid({}) with invalid 'increment': {}",
                         _remote_address,
                         command,
@@ -1177,12 +1175,12 @@ void redis_parser::geo_add(message_entry &entry)
     };
 
     for (int i = 0; i < member_count; ++i) {
-        dsn::string_view lng_degree_str(redis_request.sub_requests[2 + i * 3].data);
-        dsn::string_view lat_degree_str(redis_request.sub_requests[2 + i * 3 + 1].data);
         double lng_degree;
         double lat_degree;
-        if (dsn::buf2double(lng_degree_str, lng_degree) &&
-            dsn::buf2double(lat_degree_str, lat_degree)) {
+        if (dsn::buf2double(redis_request.sub_requests[2 + i * 3].data.to_string_view(),
+                            lng_degree) &&
+            dsn::buf2double(redis_request.sub_requests[2 + i * 3 + 1].data.to_string_view(),
+                            lat_degree)) {
             const std::string &hashkey = redis_request.sub_requests[2 + i * 3 + 2].data.to_string();
             _geo_client->async_set(hashkey, "", lat_degree, lng_degree, set_latlng_callback, 2000);
         } else if (set_count->fetch_sub(1) == 1) {

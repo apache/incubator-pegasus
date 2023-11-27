@@ -23,7 +23,7 @@
 #include "sasl_server_wrapper.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace security {
@@ -44,7 +44,7 @@ sasl_wrapper::~sasl_wrapper()
 
 error_s sasl_wrapper::retrieve_username(std::string &output)
 {
-    FAIL_POINT_INJECT_F("sasl_wrapper_retrieve_username", [](dsn::string_view str) {
+    FAIL_POINT_INJECT_F("sasl_wrapper_retrieve_username", [](absl::string_view str) {
         error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
         return error_s::make(err);
     });

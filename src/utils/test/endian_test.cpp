@@ -21,7 +21,6 @@
 
 #include "gtest/gtest.h"
 #include "utils/endians.h"
-#include "utils/string_view.h"
 
 using namespace dsn;
 

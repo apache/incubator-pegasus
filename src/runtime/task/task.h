@@ -27,6 +27,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <absl/utility/utility.h>
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -41,7 +42,6 @@
 #include "runtime/task/task_code.h"
 #include "task_spec.h"
 #include "task_tracker.h"
-#include "utils/absl/utility/utility.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/extensible_object.h"

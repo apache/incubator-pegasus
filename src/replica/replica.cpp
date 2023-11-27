@@ -61,7 +61,6 @@
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 #include "utils/rand.h"
-#include "utils/string_view.h"
 
 namespace dsn {
 namespace replication {

@@ -50,7 +50,7 @@
 #include "utils/nth_element.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/synchronize.h"
 
 namespace boost {
@@ -576,22 +576,22 @@ class metric_prototype
 public:
     struct ctor_args
     {
-        const string_view entity_type;
+        const absl::string_view entity_type;
         const metric_type type;
-        const string_view name;
+        const absl::string_view name;
         const metric_unit unit;
-        const string_view desc;
+        const absl::string_view desc;
     };
 
-    string_view entity_type() const { return _args.entity_type; }
+    absl::string_view entity_type() const { return _args.entity_type; }
 
     metric_type type() const { return _args.type; }
 
-    string_view name() const { return _args.name; }
+    absl::string_view name() const { return _args.name; }
 
     metric_unit unit() const { return _args.unit; }
 
-    string_view description() const { return _args.desc; }
+    absl::string_view description() const { return _args.desc; }
 
 protected:
     explicit metric_prototype(const ctor_args &args);

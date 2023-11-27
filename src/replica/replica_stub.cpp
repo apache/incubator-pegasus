@@ -86,7 +86,7 @@
 #include "utils/process_utils.h"
 #include "utils/rand.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #ifdef DSN_ENABLE_GPERF
@@ -1925,7 +1925,7 @@ void replica_stub::flush_replicas_for_slog_gc(const replica_gc_info_map &replica
 
         bool mock_flush = false;
         FAIL_POINT_INJECT_NOT_RETURN_F(
-            "mock_flush_replicas_for_slog_gc", [&mock_flush, this, i](dsn::string_view str) {
+            "mock_flush_replicas_for_slog_gc", [&mock_flush, this, i](absl::string_view str) {
                 CHECK(buf2bool(str, mock_flush),
                       "invalid mock_flush_replicas_for_slog_gc toggle, should be true or false: {}",
                       str);
@@ -2167,7 +2167,7 @@ void replica_stub::open_replica(
                 dsn::utils::filesystem::rename_path(origin_tmp_dir, origin_dir);
                 rep = load_replica(origin_dn, origin_dir.c_str());
 
-                FAIL_POINT_INJECT_F("mock_replica_load", [&](string_view) -> void {});
+                FAIL_POINT_INJECT_F("mock_replica_load", [&](absl::string_view) -> void {});
             }
         }
     }
@@ -2309,7 +2309,8 @@ replica *replica_stub::new_replica(gpid gpid,
 
 replica *replica_stub::load_replica(dir_node *dn, const char *dir)
 {
-    FAIL_POINT_INJECT_F("mock_replica_load", [&](string_view) -> replica * { return nullptr; });
+    FAIL_POINT_INJECT_F("mock_replica_load",
+                        [&](absl::string_view) -> replica * { return nullptr; });
 
     char splitters[] = {'\\', '/', 0};
     std::string name = utils::get_last_component(std::string(dir), splitters);
@@ -3017,7 +3018,7 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
                                                             const std::string &parent_dir)
 {
     FAIL_POINT_INJECT_F(
-        "replica_stub_create_child_replica_if_not_found", [=](dsn::string_view) -> replica_ptr {
+        "replica_stub_create_child_replica_if_not_found", [=](absl::string_view) -> replica_ptr {
             const auto dn =
                 _fs_manager.create_child_replica_dir(app->app_type, child_pid, parent_dir);
             CHECK_NOTNULL(dn, "");
@@ -3062,7 +3063,8 @@ void replica_stub::split_replica_error_handler(gpid pid, local_execution handler
 dsn::error_code
 replica_stub::split_replica_exec(dsn::task_code code, gpid pid, local_execution handler)
 {
-    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec", [](dsn::string_view) { return ERR_OK; });
+    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec",
+                        [](absl::string_view) { return ERR_OK; });
     replica_ptr replica = pid.get_app_id() == 0 ? nullptr : get_replica(pid);
     if (replica && handler) {
         tasking::enqueue(code,

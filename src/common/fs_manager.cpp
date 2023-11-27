@@ -51,7 +51,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -101,7 +101,7 @@ uint64_t dir_node::replicas_count(app_id id) const
     return iter->second.size();
 }
 
-std::string dir_node::replica_dir(dsn::string_view app_type, const dsn::gpid &pid) const
+std::string dir_node::replica_dir(absl::string_view app_type, const dsn::gpid &pid) const
 {
     return utils::filesystem::path_combine(full_dir, fmt::format("{}.{}", pid, app_type));
 }
@@ -126,7 +126,7 @@ uint64_t dir_node::remove(const gpid &pid)
 
 void dir_node::update_disk_stat()
 {
-    FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) { return; });
+    FAIL_POINT_INJECT_F("update_disk_stat", [](absl::string_view) { return; });
 
     dsn::utils::filesystem::disk_space_info dsi;
     if (!dsn::utils::filesystem::get_disk_space_info(full_dir, dsi)) {
@@ -317,7 +317,7 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
 }
 
 void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
-                                                      dsn::string_view app_type,
+                                                      absl::string_view app_type,
                                                       const dsn::gpid &pid) const
 {
     bool dn_found = false;
@@ -417,7 +417,7 @@ bool fs_manager::is_dir_node_exist(const std::string &data_dir, const std::strin
     return false;
 }
 
-dir_node *fs_manager::find_replica_dir(dsn::string_view app_type, gpid pid)
+dir_node *fs_manager::find_replica_dir(absl::string_view app_type, gpid pid)
 {
     std::string replica_dir;
     dir_node *replica_dn = nullptr;
@@ -441,7 +441,7 @@ dir_node *fs_manager::find_replica_dir(dsn::string_view app_type, gpid pid)
     return replica_dn;
 }
 
-dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type, gpid pid)
+dir_node *fs_manager::create_replica_dir_if_necessary(absl::string_view app_type, gpid pid)
 {
     // Try to find the replica directory.
     auto replica_dn = find_replica_dir(app_type, pid);
@@ -473,7 +473,7 @@ dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type,
     return replica_dn;
 }
 
-dir_node *fs_manager::create_child_replica_dir(dsn::string_view app_type,
+dir_node *fs_manager::create_child_replica_dir(absl::string_view app_type,
                                                gpid child_pid,
                                                const std::string &parent_dir)
 {

@@ -33,7 +33,7 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 struct row_data;
 
@@ -212,7 +212,7 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
     const dsn::replication::hotkey_type::type hotkey_type,
     const dsn::replication::detect_action::type action)
 {
-    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](absl::string_view) {});
 
     int app_id = -1;
     int partition_count = -1;
