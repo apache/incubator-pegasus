@@ -39,7 +39,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS dsn_replica_server dsn_meta_server dsn_client dsn_runtime hashtable rocksdb)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(INI_FILES "")
 file(GLOB

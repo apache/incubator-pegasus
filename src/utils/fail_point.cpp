@@ -28,27 +28,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// IWYU pragma: no_include <boost/regex/v4/basic_regex.hpp>
-// IWYU pragma: no_include <boost/regex/v4/match_flags.hpp>
-// IWYU pragma: no_include <boost/regex/v4/match_results.hpp>
-// IWYU pragma: no_include <boost/regex/v4/perl_matcher_common.hpp>
-// IWYU pragma: no_include <boost/regex/v4/perl_matcher_non_recursive.hpp>
-#include <boost/regex/v4/regex.hpp>
-// IWYU pragma: no_include <boost/regex/v4/regex_fwd.hpp>
-// IWYU pragma: no_include <boost/regex/v4/regex_match.hpp>
-// IWYU pragma: no_include <boost/regex/v4/sub_match.hpp>
 #include <stdint.h>
 #include <stdio.h>
-#include <algorithm>
-#include <iterator>
+#include <regex>
 #include <string>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "fail_point_impl.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
-#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace fail {
@@ -115,13 +105,13 @@ bool fail_point::parse_from_string(absl::string_view action)
     _max_cnt = -1;
     _freq = 100;
 
-    boost::regex regex(R"((\d+\%)?(\d+\*)?(\w+)(\((.*)\))?)");
-    boost::smatch match;
+    std::regex regex(R"((\d+\%)?(\d+\*)?(\w+)(\((.*)\))?)");
+    std::smatch match;
 
     std::string tmp(action.data(), action.length());
-    if (boost::regex_match(tmp, match, regex)) {
+    if (std::regex_match(tmp, match, regex)) {
         if (match.size() == 6) {
-            boost::ssub_match sub_match = match[1];
+            std::ssub_match sub_match = match[1];
             if (!sub_match.str().empty()) {
                 sscanf(sub_match.str().data(), "%d%%", &_freq);
             }

@@ -77,7 +77,7 @@ set(MY_PROJ_LIBS
     PocoJSON
     rocksdb)
 
-set(MY_BOOST_LIBS Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::filesystem)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")

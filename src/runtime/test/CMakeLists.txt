@@ -36,7 +36,7 @@ set(MY_PROJ_LIBS gtest
                  rocksdb
                  )
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 # Extra files that will be installed
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-test-corrupt-message.ini"

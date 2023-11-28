@@ -29,7 +29,7 @@ set(MY_PROJ_NAME dsn_utils)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_PROJ_LIBS dsn_http rocksdb)
 

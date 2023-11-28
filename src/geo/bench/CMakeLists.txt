@@ -38,7 +38,7 @@ set(MY_PROJ_LIBS
         dsn_utils
         )
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES "config.ini")
 

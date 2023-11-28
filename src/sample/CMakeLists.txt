@@ -23,11 +23,7 @@ set(MY_PROJ_LIBS
     pegasus_client_static
     )
 
-set(MY_BOOST_LIBS
-    Boost::filesystem
-    Boost::system
-    Boost::regex
-    )
+set(MY_BOOST_LIBS Boost::filesystem Boost::system)
 
 set(MY_BINPLACES config.ini run.sh)
 

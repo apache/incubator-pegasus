@@ -50,7 +50,7 @@ set(MY_PROJ_LIBS dsn_meta_server
                  test_utils
                  rocksdb)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 #Extra files that will be installed
 set(MY_BINPLACES clear.sh run.sh config-test.ini)

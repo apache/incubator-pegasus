@@ -60,7 +60,7 @@ set(MY_PROJ_LIBS
         gtest
         hdfs)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 # Extra files that will be installed
 set(MY_BINPLACES clear.sh run.sh config-test.ini suite1 suite2)
