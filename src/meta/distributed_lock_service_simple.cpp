@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a simple version of distributed lock service for development
- *
- * Revision history:
- *     2015-11-04, @imzhenyu (Zhenyu.Guo@microsoft.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <chrono>
 
 #include "common/replication.codes.h"

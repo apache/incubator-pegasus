@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     checkpoint the replicated app
- *
- * Revision history:
- *     Nov., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <fmt/core.h>
 #include <stdint.h>
 #include <atomic>
@@ -74,6 +65,8 @@
 
 namespace dsn {
 namespace replication {
+
+// The checkpoint of the replicated app part of replica.
 
 DSN_DEFINE_int32(replication,
                  checkpoint_max_interval_hours,

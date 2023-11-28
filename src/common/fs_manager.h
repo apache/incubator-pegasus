@@ -84,6 +84,7 @@ public:
     void update_disk_stat();
 };
 
+// Track the data directories and replicas.
 class fs_manager
 {
 public:

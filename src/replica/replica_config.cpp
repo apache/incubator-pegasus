@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replica configuration management
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/format.h>
@@ -85,6 +76,8 @@
 
 namespace dsn {
 namespace replication {
+
+// The configuration management part of replica.
 
 bool get_bool_envs(const std::map<std::string, std::string> &envs,
                    const std::string &name,

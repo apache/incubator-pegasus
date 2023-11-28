@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the meta server's server_state, definition file
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
- */
-
 #pragma once
 
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>

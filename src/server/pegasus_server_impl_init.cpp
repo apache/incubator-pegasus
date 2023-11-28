@@ -202,7 +202,7 @@ DSN_DEFINE_bool(pegasus.server,
 // treated as 4, a value of 19 will be treated as 16.
 //
 // Default: 0 (disabled)
-// see https://github.com/XiaoMi/pegasus-rocksdb/blob/v6.6.4-compatible/include/rocksdb/table.h#L247
+// see https://github.com/facebook/rocksdb/blob/v6.6.4/include/rocksdb/table.h#L247
 DSN_DEFINE_int32(pegasus.server,
                  read_amp_bytes_per_bit,
                  0,

@@ -26,14 +26,6 @@
 
 #include <ctype.h>
 #include <chrono>
-/*
- * Description:
- *     distributed lock service implemented with zookeeper, the implementation
- *     of lock_structure
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
 #include <functional>
 #include <memory>
 #include <string>

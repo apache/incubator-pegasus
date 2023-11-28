@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     fs_manager's implement: used to track the disk position for all the allocated replicas
- *
- * Revision history:
- *     2017-08-08: sunweijie@xiaomi.com, first draft
- */
-
 #include "fs_manager.h"
 
 #include <algorithm>

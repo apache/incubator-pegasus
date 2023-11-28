@@ -133,7 +133,7 @@ public:
     ~pegasus_write_service();
 
     // Write empty record.
-    // See this document (https://github.com/XiaoMi/pegasus/wiki/last_flushed_decree)
+    // See this document (https://pegasus.apache.org/zh/2018/03/07/last_flushed_decree.html)
     // to know why we must have empty write.
     int empty_put(int64_t decree);
 

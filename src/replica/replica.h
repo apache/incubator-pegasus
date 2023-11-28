@@ -24,23 +24,7 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replica interface, the base object which rdsn replicates
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
-
-//
-// a replica is a replication partition of a serivce,
-// which handles all replication related issues
-// and on_request the app messages to replication_app_base
-// which is binded to this replication partition
-//
 
 #include <gtest/gtest_prod.h>
 #include <stddef.h>
@@ -169,6 +153,11 @@ struct deny_client
     }
 };
 
+// The replica interface, the base object which rdsn replicates.
+//
+// A replica is a replication partition of a serivce, which handles all replication related
+// issues and on_request the app messages to replication_app_base which is binded to this
+// replication partition.
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:

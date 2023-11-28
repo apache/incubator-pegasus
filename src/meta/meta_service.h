@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     meta server service for EON (rDSN layer 2)
- *
- * Revision history:
- *     2015-03-09, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <fmt/core.h>
@@ -132,6 +123,7 @@ enum class meta_leader_state : int
     kNotLeaderAndCannotForwardRpc, // meta isn't leader, and rpc-msg can't forward to others
 };
 
+// Meta server service for EON (rDSN layer 2).
 class meta_service : public serverlet<meta_service>
 {
 public:

@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     failure handling in replica
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <atomic>
 #include <string>
 
@@ -51,6 +42,8 @@
 
 namespace dsn {
 namespace replication {
+
+// The failure handling part of replica.
 
 void replica::handle_local_failure(error_code error)
 {

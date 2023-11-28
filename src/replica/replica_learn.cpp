@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replication learning process
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <algorithm>
@@ -85,6 +76,8 @@
 
 namespace dsn {
 namespace replication {
+
+// The replication learning process part of replica.
 
 DSN_DEFINE_int32(replication,
                  learn_app_max_concurrent_count,

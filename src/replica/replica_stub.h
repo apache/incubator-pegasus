@@ -26,12 +26,6 @@
 
 #pragma once
 
-//
-// the replica_stub is the *singleton* entry to
-// access all replica managed in the same process
-//   replica_stub(singleton) --> replica --> replication_app_base
-//
-
 #include <gtest/gtest_prod.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -129,6 +123,8 @@ typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 class duplication_sync_timer;
 class replica_backup_server;
 
+// The replica_stub is the *singleton* entry to access all replica managed in the same process
+//   replica_stub(singleton) --> replica --> replication_app_base
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
