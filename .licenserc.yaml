@@ -28,6 +28,8 @@ header:
     - 'DISCLAIMER-WIP'
     - 'LICENSE'
     - 'NOTICE'
+    # Change log.
+    - 'HISTORY.md'
     # Template files of issues and pull requests for Github.
     - '.github/ISSUE_TEMPLATE/bug_report.md'
     - '.github/ISSUE_TEMPLATE/feature-request.md'
