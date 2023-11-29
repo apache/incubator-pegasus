@@ -361,6 +361,34 @@ ExternalProject_Add(jemalloc
         DOWNLOAD_NO_PROGRESS true
 )
 
+set(SNAPPY_OPTIONS
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DBUILD_SHARED_LIBS=OFF
+        -DSNAPPY_BUILD_TESTS=OFF
+        -DSNAPPY_BUILD_BENCHMARKS=OFF
+        -DSNAPPY_FUZZING_BUILD=OFF
+        -DSNAPPY_INSTALL=ON)
+execute_process(COMMAND arch OUTPUT_VARIABLE ARCH_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "ARCH_NAME = ${ARCH_NAME}")
+if (ARCH_NAME EQUAL "x86_64")
+    set(SNAPPY_OPTIONS
+            ${SNAPPY_OPTIONS}
+            -DSNAPPY_REQUIRE_AVX=ON
+            -DSNAPPY_REQUIRE_AVX2=ON)
+endif ()
+ExternalProject_Add(snappy
+        URL ${OSS_URL_PREFIX}/snappy-1.1.10.tar.gz
+        https://github.com/google/snappy/archive/refs/tags/1.1.10.tar.gz
+        URL_MD5 70153395ebe6d72febe2cf2e40026a44
+        PATCH_COMMAND ""
+        CMAKE_ARGS ${SNAPPY_OPTIONS}
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 set(ROCKSDB_OPTIONS
         -DFAIL_ON_WARNINGS=OFF
@@ -373,6 +401,8 @@ set(ROCKSDB_OPTIONS
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
         -DUSE_RTTI=ON
+        -DROCKSDB_BUILD_SHARED=OFF
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_BUILD_TYPE=Release
         -DWITH_JEMALLOC=${USE_JEMALLOC}
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}

@@ -34,20 +34,23 @@ set(DUPLICATION_SRC
 set(MY_PROJ_SRC "${DUPLICATION_SRC}")
 
 set(MY_PROJ_LIBS
-    dsn_replication_common
-    dsn.block_service
-    dsn.block_service.local
-    dsn.block_service.hdfs
-    dsn.failure_detector
-    dsn.replication.zookeeper_provider
-    dsn_dist_cmd
-    dsn_http
-    dsn_runtime
-    dsn_aio
-    zookeeper
-    hashtable
-    hdfs
-    rocksdb)
+        dsn_replication_common
+        dsn.block_service
+        dsn.block_service.local
+        dsn.block_service.hdfs
+        dsn.failure_detector
+        dsn.replication.zookeeper_provider
+        dsn_dist_cmd
+        dsn_http
+        dsn_runtime
+        dsn_aio
+        zookeeper
+        hashtable
+        hdfs
+        lz4
+        zstd
+        rocksdb
+        snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

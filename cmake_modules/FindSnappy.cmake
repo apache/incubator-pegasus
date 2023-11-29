@@ -15,24 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME dsn.block_service.local)
+# - Find SNAPPY (snappy.h, libsnappy.a, libsnappy.so, and libsnappy.so.1)
+# This module defines
+#  SNAPPY_INCLUDE_DIR, directory containing headers
+#  SNAPPY_SHARED_LIB, path to snappy's shared library
+#  SNAPPY_STATIC_LIB, path to snappy's static library
+#  SNAPPY_FOUND, whether snappy has been found
 
-#Source files under CURRENT project directory will be automatically included.
-#You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+find_path(SNAPPY_INCLUDE_DIR snappy.h
+  # make sure we don't accidentally pick up a different version
+  NO_CMAKE_SYSTEM_PATH
+  NO_SYSTEM_ENVIRONMENT_PATH)
+find_library(SNAPPY_STATIC_LIB libsnappy.a
+  NO_CMAKE_SYSTEM_PATH
+  NO_SYSTEM_ENVIRONMENT_PATH)
 
-#Search mode for source files under CURRENT project directory ?
-#"GLOB_RECURSE" for recursive search
-#"GLOB" for non - recursive search
-set(MY_SRC_SEARCH_MODE "GLOB")
-
-set(MY_PROJ_LIBS
-        lz4
-        zstd
-        rocksdb
-        snappy)
-
-#Extra files that will be installed
-set(MY_BINPLACES "")
-
-dsn_add_static_library()
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(Snappy REQUIRED_VARS
+  SNAPPY_STATIC_LIB SNAPPY_INCLUDE_DIR)
