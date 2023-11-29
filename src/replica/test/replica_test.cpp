@@ -239,7 +239,7 @@ public:
         std::cout << "the path of .app-info file is " << path << std::endl;
 
         // load new max_replica_count from file
-        auto err = replica_info.load(path);
+        auto err = replica_info.load(path, dsn::utils::FileDataType::kSensitive);
         ASSERT_EQ(ERR_OK, err);
         ASSERT_EQ(info, _mock_replica->_app_info);
         std::cout << "the loaded new app_info is " << info << std::endl;
@@ -249,7 +249,7 @@ public:
         _app_info.max_replica_count = reserved_max_replica_count;
 
         // load original max_replica_count from file
-        err = replica_info.load(path);
+        err = replica_info.load(path, dsn::utils::FileDataType::kSensitive);
         ASSERT_EQ(err, ERR_OK);
         ASSERT_EQ(info, _mock_replica->_app_info);
         std::cout << "the loaded original app_info is " << info << std::endl;

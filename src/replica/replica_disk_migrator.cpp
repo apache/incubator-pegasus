@@ -251,7 +251,7 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
         return false;
     });
     replica_init_info init_info = _replica->get_app()->init_info();
-    const auto &store_init_info_err = init_info.store(_target_replica_dir);
+    const auto &store_init_info_err = init_info.store(_target_replica_dir, dsn::utils::FileDataType::kSensitive);
     if (store_init_info_err != ERR_OK) {
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app init info failed({})",
                          req.origin_disk,

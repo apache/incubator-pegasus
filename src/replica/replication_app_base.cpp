@@ -67,13 +67,13 @@ namespace replication {
 const std::string replica_init_info::kInitInfo = ".init-info";
 
 namespace {
-error_code write_blob_to_file(const std::string &fname, const blob &data)
+error_code write_blob_to_file(const std::string &fname, const blob &data, const dsn::utils::FileDataType fileDataType)
 {
     // TODO(yingchun): consider not encrypt the meta files.
     std::string tmp_fname = fname + ".tmp";
     auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
     auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(fileDataType),
                                    rocksdb::Slice(data.data(), data.length()),
                                    tmp_fname,
                                    /* should_sync */ true);
@@ -89,7 +89,7 @@ error_code write_blob_to_file(const std::string &fname, const blob &data)
 }
 } // namespace
 
-error_code replica_init_info::load(const std::string &dir)
+error_code replica_init_info::load(const std::string &dir, const dsn::utils::FileDataType fileDataType)
 {
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
     LOG_AND_RETURN_NOT_TRUE(ERROR,
@@ -98,17 +98,17 @@ error_code replica_init_info::load(const std::string &dir)
                             "file({}) not exist",
                             info_path);
     LOG_AND_RETURN_NOT_OK(
-        ERROR, load_json(info_path), "load replica_init_info from {} failed", info_path);
+        ERROR, load_json(info_path, fileDataType), "load replica_init_info from {} failed", info_path);
     LOG_INFO("load replica_init_info from {} succeed: {}", info_path, to_string());
     return ERR_OK;
 }
 
-error_code replica_init_info::store(const std::string &dir)
+error_code replica_init_info::store(const std::string &dir, const dsn::utils::FileDataType fileDataType)
 {
     uint64_t start = dsn_now_ns();
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
     LOG_AND_RETURN_NOT_OK(ERROR,
-                          store_json(info_path),
+                          store_json(info_path, fileDataType),
                           "store replica_init_info to {} failed, time_used_ns = {}",
                           info_path,
                           dsn_now_ns() - start);
@@ -119,11 +119,11 @@ error_code replica_init_info::store(const std::string &dir)
     return ERR_OK;
 }
 
-error_code replica_init_info::load_json(const std::string &fname)
+error_code replica_init_info::load_json(const std::string &fname, const dsn::utils::FileDataType fileDataType)
 {
     std::string data;
     auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &data);
+        dsn::utils::PegasusEnv(fileDataType), fname, &data);
     LOG_AND_RETURN_NOT_TRUE(ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "read file {} failed", fname);
     LOG_AND_RETURN_NOT_TRUE(ERROR,
                             json::json_forwarder<replica_init_info>::decode(
@@ -134,9 +134,9 @@ error_code replica_init_info::load_json(const std::string &fname)
     return ERR_OK;
 }
 
-error_code replica_init_info::store_json(const std::string &fname)
+error_code replica_init_info::store_json(const std::string &fname, const dsn::utils::FileDataType fileDataType)
 {
-    return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this));
+    return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this), fileDataType);
 }
 
 std::string replica_init_info::to_string()
@@ -149,11 +149,11 @@ std::string replica_init_info::to_string()
     return oss.str();
 }
 
-error_code replica_app_info::load(const std::string &fname)
+error_code replica_app_info::load(const std::string &fname, const dsn::utils::FileDataType fileDataType)
 {
     std::string data;
     auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &data);
+        dsn::utils::PegasusEnv(fileDataType), fname, &data);
     LOG_AND_RETURN_NOT_TRUE(ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "read file {} failed", fname);
     binary_reader reader(blob::create_from_bytes(std::move(data)));
     int magic = 0;
@@ -164,7 +164,7 @@ error_code replica_app_info::load(const std::string &fname)
     return ERR_OK;
 }
 
-error_code replica_app_info::store(const std::string &fname)
+error_code replica_app_info::store(const std::string &fname, const dsn::utils::FileDataType fileDataType)
 {
     binary_writer writer;
     int magic = 0xdeadbeef;
@@ -184,7 +184,7 @@ error_code replica_app_info::store(const std::string &fname)
         marshall(writer, tmp, DSF_THRIFT_JSON);
     }
 
-    return write_blob_to_file(fname, writer.get_buffer());
+    return write_blob_to_file(fname, writer.get_buffer(), fileDataType);
 }
 
 /*static*/
