@@ -12,6 +12,7 @@
 * Add `rename_app` RPC interface for meta service and `rename` command for Pegasus shell, allowing to rename a table. [#1272](https://github.com/apache/incubator-pegasus/pull/1272)
 * Add a configuration `[network] enable_udp` to control if UDP service is started. The service would not be started when set to false. [#1132](https://github.com/apache/incubator-pegasus/pull/1132)
 * Add support to dump the statistical information while using `jemalloc`. [#1133](https://github.com/apache/incubator-pegasus/pull/1133)
+* Support `success_if_exist` option for the interface of creating table to pegasus shell, java and go clients. [#1148](https://github.com/apache/incubator-pegasus/pull/1148)
 * Add support to list tables for java client. [#1471](https://github.com/apache/incubator-pegasus/pull/1471) 
 * Add a new option `[replication] crash_on_slog_error` to make it possible to exit the replica server if the shared log failed to be replayed, instead of trashing all the replicas on the server. [#1574](https://github.com/apache/incubator-pegasus/pull/1574)
 * Support to flush and remove all shared log files for garbage collection, since there is at least 1 shared log file which is never removed, though long before that the private logs were written as WAL instead of shared logs. [#1594](https://github.com/apache/incubator-pegasus/pull/1594)
