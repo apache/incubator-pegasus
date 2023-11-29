@@ -366,8 +366,15 @@ private:
     void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
                                       rocksdb::ColumnFamilyOptions *target_opts);
 
-    void reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_opts,
-                               rocksdb::ColumnFamilyOptions *target_opts);
+    void reset_allow_ingest_behind_option(const rocksdb::DBOptions &base_db_opt,
+                                          const std::map<std::string, std::string> &envs,
+                                          rocksdb::DBOptions *target_db_opt);
+
+    void reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_cf_opts,
+                               const rocksdb::DBOptions &base_db_opt,
+                               const std::map<std::string, std::string> &envs,
+                               rocksdb::ColumnFamilyOptions *target_cf_opts,
+                               rocksdb::DBOptions *target_db_opt);
 
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
