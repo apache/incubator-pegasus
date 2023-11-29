@@ -222,9 +222,6 @@ function(dsn_setup_compiler_flags)
   #   use frame pointers to allow simple stack frame walking for backtraces.
   #   This has a small perf hit but worth it for the ability to profile in production
   add_compile_options( -fno-omit-frame-pointer)
-  # -Wno-implicit-float-conversion
-  #   Poco/Dynamic/VarHolder.h uses 'unsigned long' to 'float' conversion
-  add_compile_options(-Wno-implicit-float-conversion)
 
   find_program(CCACHE_FOUND ccache)
   if(CCACHE_FOUND)

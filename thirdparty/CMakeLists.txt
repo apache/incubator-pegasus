@@ -220,54 +220,6 @@ ExternalProject_Add(libevent
         DOWNLOAD_NO_PROGRESS true
 )
 
-ExternalProject_Add(poco
-        URL ${OSS_URL_PREFIX}/poco-1.11.1-release.tar.gz
-        https://github.com/pocoproject/poco/archive/refs/tags/poco-1.11.1-release.tar.gz
-        URL_MD5 a96210b60a675c4a8183ad1f2099d549
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DENABLE_MONGODB=OFF
-        -DENABLE_PDF=OFF
-        -DENABLE_DATA=OFF
-        -DENABLE_DATA_SQLITE=OFF
-        -DENABLE_DATA_MYSQL=OFF
-        -DENABLE_DATA_ODBC=OFF
-        -DENABLE_SEVENZIP=OFF
-        -DENABLE_ZIP=OFF
-        -DENABLE_APACHECONNECTOR=OFF
-        -DENABLE_CPPPARSER=OFF
-        -DENABLE_POCODOC=OFF
-        -DENABLE_PAGECOMPILER=OFF
-        -DENABLE_PAGECOMPILER_FILE2PAGE=OFF
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        DEPENDS boost
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        DOWNLOAD_NO_PROGRESS true
-)
-
-ExternalProject_Add(fds
-        URL ${OSS_URL_PREFIX}/fds-1.0.0.tar.gz
-        https://github.com/XiaoMi/galaxy-fds-sdk-cpp/archive/refs/tags/v1.0.0.tar.gz
-        URL_MD5 f7e0f86534f7b15c2a9b349f5cb45503
-        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_fds_for_macos.patch
-        CMAKE_ARGS -DPOCO_INCLUDE=${TP_OUTPUT}/include
-        -DMACOS_OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}
-        -DPOCO_LIB=${TP_OUTPUT}/lib
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        INSTALL_COMMAND cp libgalaxy-fds-sdk-cpp.a ${TP_OUTPUT}/lib
-        COMMAND rm -rf ${TP_OUTPUT}/include/fds
-        COMMAND cp -r include fds-include
-        COMMAND mv fds-include ${TP_OUTPUT}/include/fds # install fds headers into a stand-alone directory
-        UPDATE_COMMAND "" # do not update
-        DEPENDS googletest poco boost
-        BUILD_IN_SOURCE 1
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        DOWNLOAD_NO_PROGRESS true
-)
-
 ExternalProject_Add(fmt
         URL https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz
         URL_MD5 0d41a16f1b3878d44e6fd7ff1f6cc45a

@@ -37,7 +37,6 @@ set(MY_PROJ_LIBS
     dsn_replication_common
     dsn.block_service
     dsn.block_service.local
-    dsn.block_service.fds
     dsn.block_service.hdfs
     dsn.failure_detector
     dsn.replication.zookeeper_provider
@@ -46,11 +45,6 @@ set(MY_PROJ_LIBS
     dsn_runtime
     dsn_aio
     zookeeper
-    galaxy-fds-sdk-cpp
-    PocoNet
-    PocoFoundation
-    PocoNetSSL
-    PocoJSON
     hashtable
     hdfs
     rocksdb)

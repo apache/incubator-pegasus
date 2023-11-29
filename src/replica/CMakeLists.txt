@@ -62,7 +62,6 @@ set(MY_PROJ_LIBS
     dsn.failure_detector
     dsn.block_service
     dsn.block_service.local
-    dsn.block_service.fds
     dsn.block_service.hdfs
     dsn_nfs
     dsn_dist_cmd
@@ -70,11 +69,6 @@ set(MY_PROJ_LIBS
     dsn_runtime
     dsn_aio
     dsn_meta_server
-    galaxy-fds-sdk-cpp
-    PocoNet
-    PocoFoundation
-    PocoNetSSL
-    PocoJSON
     rocksdb)
 
 set(MY_BOOST_LIBS Boost::filesystem)

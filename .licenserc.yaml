@@ -65,7 +65,6 @@ header:
     - 'src/replica/duplication/test/log.1.0.handle_real_private_log2'
     - 'src/replica/duplication/test/log.1.0.all_loaded_are_write_empties'
     # Used for patches for thirdparties.
-    - 'thirdparty/fix_fds_for_macos.patch'
     - 'thirdparty/fix_jemalloc_for_m1_on_macos.patch'
     - 'thirdparty/fix_libevent_for_macos.patch'
     - 'thirdparty/fix_prometheus-cpp_limits.patch'

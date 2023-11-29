@@ -114,7 +114,6 @@ copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server ${pack}/b
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_meta_server.so ${pack}/bin
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_utils.so ${pack}/bin
-copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/bin
 
 if [ "$use_jemalloc" == "on" ]; then
     copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/bin

@@ -25,15 +25,9 @@ set(MY_PROJ_LIBS
     dsn_replication_common
     dsn.block_service
     dsn.block_service.local
-    dsn.block_service.fds
     dsn.block_service.hdfs
     dsn_runtime
     dsn_utils
-    galaxy-fds-sdk-cpp
-    PocoNet
-    PocoFoundation
-    PocoNetSSL
-    PocoJSON
     gtest
     gtest_main
     hdfs
