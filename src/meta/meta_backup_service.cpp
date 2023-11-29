@@ -48,6 +48,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
+#include "utils/defer.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/time_utils.h"
@@ -1245,6 +1246,11 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
 {
     configuration_add_backup_policy_request request;
     configuration_add_backup_policy_response response;
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_message.empty()) {
+            LOG_WARNING(response.hint_message);
+        }
+    });
 
     dsn::message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
     ::dsn::unmarshall(msg, request);
@@ -1421,6 +1427,11 @@ void backup_service::query_backup_policy(query_backup_policy_rpc rpc)
 {
     const configuration_query_backup_policy_request &request = rpc.request();
     configuration_query_backup_policy_response &response = rpc.response();
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_msg.empty()) {
+            LOG_WARNING(response.hint_msg);
+        }
+    });
 
     response.err = ERR_OK;
 
@@ -1491,6 +1502,12 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
     const configuration_modify_backup_policy_request &request = rpc.request();
     configuration_modify_backup_policy_response &response = rpc.response();
     response.err = ERR_OK;
+
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_message.empty()) {
+            LOG_WARNING(response.hint_message);
+        }
+    });
 
     std::shared_ptr<policy_context> context_ptr;
     {
@@ -1647,6 +1664,11 @@ void backup_service::start_backup_app(start_backup_app_rpc rpc)
 {
     const start_backup_app_request &request = rpc.request();
     start_backup_app_response &response = rpc.response();
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_message.empty()) {
+            LOG_WARNING(response.hint_message);
+        }
+    });
 
     int32_t app_id = request.app_id;
     std::shared_ptr<backup_engine> engine = std::make_shared<backup_engine>(this);
@@ -1712,6 +1734,11 @@ void backup_service::query_backup_status(query_backup_status_rpc rpc)
 {
     const query_backup_status_request &request = rpc.request();
     query_backup_status_response &response = rpc.response();
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_message.empty()) {
+            LOG_WARNING(response.hint_message);
+        }
+    });
 
     int32_t app_id = request.app_id;
     {
