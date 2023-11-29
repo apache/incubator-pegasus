@@ -422,7 +422,7 @@ func (m *rpcBasedMeta) Propose(gpid *base.Gpid, action admin.ConfigType, target 
 func (m *rpcBasedMeta) StartBackupApp(tableID int, providerType string, backupPath string) (*admin.StartBackupAppResponse, error) {
 	req := &admin.StartBackupAppRequest{
 		BackupProviderType: providerType,
-		AppID:              int32(tableID)
+		AppID:              int32(tableID),
 	}
 	if backupPath != "" {
 		req.BackupPath = &backupPath
