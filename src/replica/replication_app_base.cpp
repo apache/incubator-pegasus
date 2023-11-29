@@ -66,7 +66,7 @@ namespace replication {
 const std::string replica_init_info::kInitInfo = ".init-info";
 
 namespace {
-error_code write_blob_to_file(const std::string &fname, const blob &data, const utils::FileDataType &fileDataType)
+error_code write_blob_to_file(const std::string &fname, const blob &data, const dsn::utils::FileDataType &fileDataType)
 {
     // TODO(yingchun): consider not encrypt the meta files.
     std::string tmp_fname = fname + ".tmp";
@@ -88,7 +88,7 @@ error_code write_blob_to_file(const std::string &fname, const blob &data, const 
 }
 } // namespace
 
-error_code replica_init_info::load(const std::string &dir, const utils::FileDataType &fileDataType)
+error_code replica_init_info::load(const std::string &dir, const dsn::utils::FileDataType &fileDataType)
 {
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
     LOG_AND_RETURN_NOT_TRUE(ERROR,
@@ -102,7 +102,7 @@ error_code replica_init_info::load(const std::string &dir, const utils::FileData
     return ERR_OK;
 }
 
-error_code replica_init_info::store(const std::string &dir, const utils::FileDataType &fileDataType)
+error_code replica_init_info::store(const std::string &dir, const dsn::utils::FileDataType &fileDataType)
 {
     uint64_t start = dsn_now_ns();
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
@@ -118,7 +118,7 @@ error_code replica_init_info::store(const std::string &dir, const utils::FileDat
     return ERR_OK;
 }
 
-error_code replica_init_info::load_json(const std::string &fname, const utils::FileDataType &fileDataType)
+error_code replica_init_info::load_json(const std::string &fname, const dsn::utils::FileDataType &fileDataType)
 {
     std::string data;
     auto s = rocksdb::ReadFileToString(
@@ -133,7 +133,7 @@ error_code replica_init_info::load_json(const std::string &fname, const utils::F
     return ERR_OK;
 }
 
-error_code replica_init_info::store_json(const std::string &fname, const utils::FileDataType &fileDataType)
+error_code replica_init_info::store_json(const std::string &fname, const dsn::utils::FileDataType &fileDataType)
 {
     return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this), fileDataType);
 }
@@ -148,7 +148,7 @@ std::string replica_init_info::to_string()
     return oss.str();
 }
 
-error_code replica_app_info::load(const std::string &fname, const utils::FileDataType &fileDataType)
+error_code replica_app_info::load(const std::string &fname, const dsn::utils::FileDataType &fileDataType)
 {
     std::string data;
     auto s = rocksdb::ReadFileToString(
@@ -163,7 +163,7 @@ error_code replica_app_info::load(const std::string &fname, const utils::FileDat
     return ERR_OK;
 }
 
-error_code replica_app_info::store(const std::string &fname, const utils::FileDataType &fileDataType)
+error_code replica_app_info::store(const std::string &fname, const dsn::utils::FileDataType &fileDataType)
 {
     binary_writer writer;
     int magic = 0xdeadbeef;
