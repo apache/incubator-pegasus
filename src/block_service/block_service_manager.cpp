@@ -24,6 +24,7 @@
 #include "block_service/block_service.h"
 #include "block_service/hdfs/hdfs_service.h"
 #include "block_service/local/local_service.h"
+#include "fmt/core.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/config_api.h"
