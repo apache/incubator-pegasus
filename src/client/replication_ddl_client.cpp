@@ -1048,6 +1048,7 @@ dsn::error_code replication_ddl_client::add_backup_policy(const std::string &pol
     ::dsn::unmarshall(resp_task->get_response(), resp);
 
     if (resp.err != ERR_OK) {
+        std::cout << "add backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
         std::cout << "add backup policy succeed, policy_name = " << policy_name << std::endl;
@@ -1095,6 +1096,7 @@ dsn::error_code replication_ddl_client::disable_backup_policy(const std::string 
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "disable backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
         std::cout << "disable policy result: " << resp.err.to_string() << std::endl;
@@ -1123,6 +1125,7 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "enable backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else if (resp.err == ERR_BUSY) {
         std::cout << "policy is under backup, please try disable later" << std::endl;
@@ -1274,6 +1277,7 @@ replication_ddl_client::update_backup_policy(const std::string &policy_name,
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "modify backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
         std::cout << "Modify policy result: " << resp.err.to_string() << std::endl;
@@ -1350,6 +1354,8 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
     } else if (response.err == ERR_APP_DROPPED) {
         std::cout << "restore failed, because some partition's data is damaged on cold backup media"
                   << std::endl;
+    } else {
+        return response.err;
     }
     return ERR_OK;
 }
