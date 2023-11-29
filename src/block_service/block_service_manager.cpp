@@ -94,7 +94,7 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
         LOG_INFO("create block filesystem ok for {}", provider_desc);
         _fs_map.emplace(provider, std::unique_ptr<block_filesystem>(fs));
     } else {
-        LOG_ERROR("create block filesystem failed for {}, error = {}", provider_desc);
+        LOG_ERROR("create block filesystem failed for {}, error = {}", provider_desc, err);
         delete fs;
         fs = nullptr;
     }
