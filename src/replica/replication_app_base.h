@@ -38,6 +38,7 @@
 #include "metadata_types.h"
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/fmt_utils.h"
 #include "utils/ports.h"
@@ -71,13 +72,13 @@ public:
 
 public:
     replica_init_info() { memset((void *)this, 0, sizeof(*this)); }
-    error_code load(const std::string &dir, const dsn::utils::FileDataType fileDataType) WARN_UNUSED_RESULT;
-    error_code store(const std::string &dir, const dsn::utils::FileDataType fileDataType);
+    error_code load(const std::string &dir, const utils::FileDataType &fileDataType) WARN_UNUSED_RESULT;
+    error_code store(const std::string &dir, const utils::FileDataType &fileDataType);
     std::string to_string();
 
 private:
-    error_code load_json(const std::string &fname, const dsn::utils::FileDataType fileDataType);
-    error_code store_json(const std::string &fname, const dsn::utils::FileDataType fileDataType);
+    error_code load_json(const std::string &fname, const utils::FileDataType &fileDataType);
+    error_code store_json(const std::string &fname, const utils::FileDataType &fileDataType);
 };
 
 class replica_app_info
@@ -87,8 +88,8 @@ private:
 
 public:
     replica_app_info(app_info *app) { _app = app; }
-    error_code load(const std::string &fname, const dsn::utils::FileDataType fileDataType);
-    error_code store(const std::string &fname, const dsn::utils::FileDataType fileDataType);
+    error_code load(const std::string &fname, const utils::FileDataType &fileDataType);
+    error_code store(const std::string &fname, const utils::FileDataType &fileDataType);
 };
 
 /// The store engine interface of Pegasus.

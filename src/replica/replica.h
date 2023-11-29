@@ -54,6 +54,7 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/thread_access_checker.h"

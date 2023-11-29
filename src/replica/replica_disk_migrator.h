@@ -25,6 +25,7 @@
 #include "replica/replica_stub.h"
 #include "replica_admin_types.h"
 #include "runtime/task/task.h"
+#include "utils/env.h"
 
 namespace dsn {
 namespace replication {

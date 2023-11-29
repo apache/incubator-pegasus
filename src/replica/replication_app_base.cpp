@@ -52,7 +52,6 @@
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
-#include "utils/env.h"
 #include "utils/factory_store.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
@@ -67,7 +66,7 @@ namespace replication {
 const std::string replica_init_info::kInitInfo = ".init-info";
 
 namespace {
-error_code write_blob_to_file(const std::string &fname, const blob &data, const dsn::utils::FileDataType fileDataType)
+error_code write_blob_to_file(const std::string &fname, const blob &data, const utils::FileDataType &fileDataType)
 {
     // TODO(yingchun): consider not encrypt the meta files.
     std::string tmp_fname = fname + ".tmp";
@@ -89,7 +88,7 @@ error_code write_blob_to_file(const std::string &fname, const blob &data, const 
 }
 } // namespace
 
-error_code replica_init_info::load(const std::string &dir, const dsn::utils::FileDataType fileDataType)
+error_code replica_init_info::load(const std::string &dir, const utils::FileDataType &fileDataType)
 {
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
     LOG_AND_RETURN_NOT_TRUE(ERROR,
@@ -103,7 +102,7 @@ error_code replica_init_info::load(const std::string &dir, const dsn::utils::Fil
     return ERR_OK;
 }
 
-error_code replica_init_info::store(const std::string &dir, const dsn::utils::FileDataType fileDataType)
+error_code replica_init_info::store(const std::string &dir, const utils::FileDataType &fileDataType)
 {
     uint64_t start = dsn_now_ns();
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
@@ -119,7 +118,7 @@ error_code replica_init_info::store(const std::string &dir, const dsn::utils::Fi
     return ERR_OK;
 }
 
-error_code replica_init_info::load_json(const std::string &fname, const dsn::utils::FileDataType fileDataType)
+error_code replica_init_info::load_json(const std::string &fname, const utils::FileDataType &fileDataType)
 {
     std::string data;
     auto s = rocksdb::ReadFileToString(
@@ -134,7 +133,7 @@ error_code replica_init_info::load_json(const std::string &fname, const dsn::uti
     return ERR_OK;
 }
 
-error_code replica_init_info::store_json(const std::string &fname, const dsn::utils::FileDataType fileDataType)
+error_code replica_init_info::store_json(const std::string &fname, const utils::FileDataType &fileDataType)
 {
     return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this), fileDataType);
 }
@@ -149,7 +148,7 @@ std::string replica_init_info::to_string()
     return oss.str();
 }
 
-error_code replica_app_info::load(const std::string &fname, const dsn::utils::FileDataType fileDataType)
+error_code replica_app_info::load(const std::string &fname, const utils::FileDataType &fileDataType)
 {
     std::string data;
     auto s = rocksdb::ReadFileToString(
@@ -164,7 +163,7 @@ error_code replica_app_info::load(const std::string &fname, const dsn::utils::Fi
     return ERR_OK;
 }
 
-error_code replica_app_info::store(const std::string &fname, const dsn::utils::FileDataType fileDataType)
+error_code replica_app_info::store(const std::string &fname, const utils::FileDataType &fileDataType)
 {
     binary_writer writer;
     int magic = 0xdeadbeef;
@@ -242,7 +241,7 @@ error_code replication_app_base::open_internal(replica *r)
 
     _last_committed_decree = last_durable_decree();
 
-    auto err = _info.load(r->dir());
+    auto err = _info.load(r->dir(), dsn::utils::FileDataType::kSensitive);
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, err, "load replica_init_info failed");
 
     LOG_AND_RETURN_NOT_TRUE(ERROR_PREFIX,
@@ -459,7 +458,7 @@ error_code replication_app_base::update_init_info(replica *r,
     _info.init_offset_in_shared_log = shared_log_offset;
     _info.init_offset_in_private_log = private_log_offset;
 
-    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, _info.store(r->dir()), "store replica_init_info failed");
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, _info.store(r->dir(), dsn::utils::FileDataType::kSensitive), "store replica_init_info failed");
 
     return ERR_OK;
 }

@@ -592,7 +592,7 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
 {
     replica_app_info new_info((app_info *)&info);
     const auto &info_path = path.empty() ? utils::filesystem::path_combine(_dir, kAppInfo) : path;
-    auto err = new_info.store(info_path);
+    auto err = new_info.store(info_path, utils::FileDataType::kSensitive);
     if (dsn_unlikely(err != ERR_OK)) {
         LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);
     }
