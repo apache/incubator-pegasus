@@ -691,7 +691,7 @@ function usage_start_onebox()
     echo "   --use_product_config"
     echo "                     use the product config template"
     echo "   --hdfs_service_args"
-    echo "                     set the 'args' value of section '[block_service.hdfs_service]', it's a space separated HDFS namenode host:port and path string, for example: '127.0.0.1:8020 /pegasus'. Default is ''"
+    echo "                     set the 'args' value of section '[block_service.hdfs_service]', it's a space separated HDFS namenode host:port and path string, for example: '127.0.0.1:8020 /pegasus'. Default is empty"
     echo "   --opts"
     echo "                     update configs before start onebox, the configs are in the form of 'key1=value1,key2=value2'"
 }
