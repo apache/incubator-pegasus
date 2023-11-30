@@ -41,9 +41,8 @@ public:
                                       const std::string &key_version,
                                       std::string *decrypted_key);
 
-    dsn::error_s GenerateEncryptionKey(std::string *encryption_key,
-                                       std::string *iv,
-                                       std::string *key_version);
+    dsn::error_s
+    GenerateEncryptionKey(std::string *encryption_key, std::string *iv, std::string *key_version);
 
 private:
     dsn::error_s GenerateEncryptionKeyFromKMS(const std::string &key_name,
