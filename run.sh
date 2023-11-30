@@ -690,6 +690,8 @@ function usage_start_onebox()
     echo "                                                                  ./src/server/config.ini in production env"
     echo "   --use_product_config"
     echo "                     use the product config template"
+    echo "   --hdfs_service_args"
+    echo "                     set the 'args' value of section '[block_service.hdfs_service]', it's a space separated HDFS namenode host:port and path string, for example: '127.0.0.1:8020 /pegasus'. Default is empty"
     echo "   --opts"
     echo "                     update configs before start onebox, the configs are in the form of 'key1=value1,key2=value2'"
 }
@@ -705,6 +707,7 @@ function run_start_onebox()
     SERVER_PATH=${BUILD_LATEST_DIR}/output/bin/pegasus_server
     CONFIG_FILE=""
     USE_PRODUCT_CONFIG=false
+    HDFS_SERVICE_ARGS=""
     OPTS=""
 
     while [[ $# > 0 ]]; do
@@ -747,6 +750,11 @@ function run_start_onebox()
             --use_product_config)
                 USE_PRODUCT_CONFIG=true
                 ;;
+            --hdfs_service_args)
+                HDFS_SERVICE_ARGS="$2 $3"
+                shift
+                shift
+                ;;
             --opts)
                 OPTS="$2"
                 shift
@@ -776,6 +784,7 @@ function run_start_onebox()
         exit 1
     fi
 
+    echo "HDFS_SERVICE_ARGS $HDFS_SERVICE_ARGS"
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
@@ -789,6 +798,7 @@ function run_start_onebox()
         sed -i 's/%{slog.dir}//g' ${ROOT}/config-server.ini
         sed -i 's/%{data.dirs}//g' ${ROOT}/config-server.ini
         sed -i 's@%{home.dir}@'"$HOME"'@g' ${ROOT}/config-server.ini
+        sed -i 's@%{hdfs_service_args}@'"${HDFS_SERVICE_ARGS}"'@g' ${ROOT}/config-server.ini
         for i in $(seq ${META_COUNT})
         do
             meta_port=$((34600+i))
