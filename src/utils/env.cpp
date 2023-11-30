@@ -49,6 +49,11 @@ DSN_DEFINE_string(pegasus.server,
                   "The encryption method to use in the filesystem. Now "
                   "supports AES128CTR, AES192CTR, AES256CTR and SM4CTR.");
 
+DSN_DEFINE_string(pegasus.server,
+                  server_key,
+                  "0123456789ABCDEF0123456789ABCDEF",
+                  "The encrypted server key to use in the filesystem.");
+
 DSN_DEFINE_bool(replication,
                 enable_direct_io,
                 false,
@@ -62,9 +67,8 @@ rocksdb::Env *NewEncryptedEnv()
 {
     // Create an encryption provider.
     std::shared_ptr<rocksdb::EncryptionProvider> provider;
-    auto provider_id = fmt::format("id=AES;hex_instance_key={};method={}",
-                                   FLAGS_server_key_for_testing,
-                                   FLAGS_encryption_method);
+    auto provider_id = fmt::format(
+        "id=AES;hex_instance_key={};method={}", FLAGS_server_key, FLAGS_encryption_method);
     auto s = rocksdb::EncryptionProvider::CreateFromString(
         rocksdb::ConfigOptions(), provider_id, &provider);
     CHECK(s.ok(), "Failed to create encryption provider: {}", s.ToString());

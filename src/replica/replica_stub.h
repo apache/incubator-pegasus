@@ -64,6 +64,7 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
+#include "replica/pegasus_kms_key_provider.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
@@ -489,6 +490,7 @@ private:
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
     std::unique_ptr<replica_backup_server> _backup_server;
+    std::unique_ptr<dsn::security::KeyProvider> key_provider;
 
     // command_handlers
     std::vector<std::unique_ptr<command_deregister>> _cmds;

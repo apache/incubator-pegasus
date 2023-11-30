@@ -32,7 +32,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_INC_PATH "")
 
-set(MY_PROJ_LIBS "")
+set(MY_PROJ_LIBS absl::strings dsn_http curl gssapi_krb5)
 
 set(MY_PROJ_LIB_PATH "")
 

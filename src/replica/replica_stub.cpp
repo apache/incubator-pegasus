@@ -41,6 +41,7 @@
 #include <set>
 #include <vector>
 
+#include "absl/strings/str_cat.h"
 #include "backup/replica_backup_server.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
@@ -62,15 +63,16 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
-#include "replica_stub.h"
 #include "runtime/api_layer1.h"
 #include "runtime/ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/security/access_controller.h"
 #include "runtime/task/async_calls.h"
+#include "replica/pegasus_kms_key_provider.h"
 #include "split/replica_split_manager.h"
 #include "utils/command_manager.h"
+#include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -89,6 +91,8 @@
 #include "remote_cmd/remote_command.h"
 #include "utils/fail_point.h"
 
+DSN_DECLARE_bool(encrypt_data_at_rest);
+DSN_DECLARE_string(server_key);
 namespace dsn {
 namespace replication {
 DSN_DEFINE_bool(replication,
@@ -178,6 +182,14 @@ DSN_DEFINE_int32(
     10,
     "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
     "memory, replica server will release the exceeding memory back to operating system");
+DSN_DEFINE_string(pegasus.server,
+                  encryption_cluster_key_name,
+                  "pegasus",
+                  "The cluster name of encrypted server which use to get server key from kms.");
+DSN_DEFINE_string(pegasus.server,
+                  hadoop_kms_url,
+                  "",
+                  "Where the server encrypted key of file system can get from.");
 
 DSN_DECLARE_bool(duplication_enabled);
 DSN_DECLARE_int32(fd_beacon_interval_seconds);
@@ -215,6 +227,11 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     _log = nullptr;
     _primary_address_str[0] = '\0';
     install_perf_counters();
+    if (FLAGS_encrypt_data_at_rest) {
+        // TODO: check enable_acl whether be true
+        key_provider.reset(new dsn::security::PegasusKMSKeyProvider(
+            FLAGS_hadoop_kms_url, FLAGS_encryption_cluster_key_name));
+    }
 }
 
 replica_stub::~replica_stub(void) { close(); }
@@ -573,6 +590,35 @@ void replica_stub::initialize(bool clear /* = false*/)
     _access_controller = std::make_unique<dsn::security::access_controller>();
 }
 
+dsn::error_s store_kms_key(std::string data_dir,
+                           std::string encryption_key,
+                           std::string iv,
+                           std::string key_version)
+{
+    replica_kms_info kms_info(encryption_key, iv, key_version);
+    auto err = kms_info.store(data_dir);
+    if (dsn::ERR_OK == err) {
+        return dsn::error_s::ok();
+    } else {
+        return dsn::error_s::make(err, "Can't open replica_encrypted_key file to write");
+    }
+}
+
+void get_kms_key(std::string data_dir,
+                 std::string *encryption_key,
+                 std::string *iv,
+                 std::string *key_version)
+{
+    replica_kms_info kms_info;
+    auto err = kms_info.load(data_dir);
+    *encryption_key = kms_info.encryption_key;
+    *iv = kms_info.iv;
+    *key_version = kms_info.key_version;
+    if (dsn::ERR_OK != err) {
+        CHECK(err, "Can't open replica_encrypted_key file to read");
+    }
+}
+
 void replica_stub::initialize(const replication_options &opts, bool clear /* = false*/)
 {
     _primary_address = dsn_primary_address();
@@ -600,8 +646,30 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
     }
 
+    std::string encryption_key;
+    std::string iv;
+    std::string key_version;
+    std::string server_key;
+    // get and store eek from kms
+    if (key_provider) {
+        get_kms_key(_options.data_dirs[0], &encryption_key, &iv, &key_version);
+        if (encryption_key.empty()) {
+            CHECK(key_provider, "invalid kms url ({})", FLAGS_hadoop_kms_url);
+            CHECK(key_provider->GenerateEncryptionKey(&encryption_key, &iv, &key_version),
+                  "get encryption key failed");
+        }
+        CHECK(key_provider->DecryptEncryptionKey(encryption_key, iv, key_version, &server_key),
+              "get decryption key failed");
+        FLAGS_server_key = server_key.c_str();
+    }
+
     // Initialize the file system manager.
     _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags);
+
+    if (key_provider) {
+        CHECK(store_kms_key(_options.data_dirs[0], encryption_key, iv, key_version),
+              "Cant store kms key");
+    }
 
     // TODO(yingchun): remove the slog related code.
     // Create slog directory if it does not exist.

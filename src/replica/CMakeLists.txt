@@ -58,6 +58,7 @@ set(MY_PROJ_SRC
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS 
+    absl::strings
     dsn_replication_common
     dsn.failure_detector
     dsn.block_service
@@ -66,9 +67,11 @@ set(MY_PROJ_LIBS
     dsn_nfs
     dsn_dist_cmd
     dsn_http
+    curl
     dsn_runtime
     dsn_aio
     dsn_meta_server
+    dsn.security
     rocksdb)
 
 set(MY_BOOST_LIBS Boost::filesystem)

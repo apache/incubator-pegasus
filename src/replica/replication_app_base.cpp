@@ -65,6 +65,7 @@ namespace dsn {
 namespace replication {
 
 const std::string replica_init_info::kInitInfo = ".init-info";
+const std::string replica_kms_info::kFileName = "/replica_encrypted_key";
 
 namespace {
 error_code write_blob_to_file(const std::string &fname, const blob &data)
@@ -147,6 +148,70 @@ std::string replica_init_info::to_string()
         << ", init_offset_in_shared_log = " << init_offset_in_shared_log
         << ", init_offset_in_private_log = " << init_offset_in_private_log;
     return oss.str();
+}
+
+error_code replica_kms_info::load(const std::string &dir)
+{
+    std::string info_path = utils::filesystem::path_combine(dir, kFileName);
+    LOG_AND_RETURN_NOT_TRUE(ERROR,
+                            utils::filesystem::path_exists(info_path),
+                            ERR_PATH_NOT_FOUND,
+                            "file({}) not exist",
+                            info_path);
+    LOG_AND_RETURN_NOT_OK(
+        ERROR, load_json(info_path), "load replica_kms_info from {} failed", info_path);
+    LOG_INFO("load replica_kms_info from {} ", info_path);
+    return ERR_OK;
+}
+
+error_code replica_kms_info::store(const std::string &dir)
+{
+    uint64_t start = dsn_now_ns();
+    std::string info_path = utils::filesystem::path_combine(dir, kFileName);
+    LOG_AND_RETURN_NOT_OK(ERROR,
+                          store_json(info_path),
+                          "store replica_kms_info to {} failed, time_used_ns = {}",
+                          info_path,
+                          dsn_now_ns() - start);
+    LOG_INFO(
+        "store replica_kms_info to {} succeed, time_used_ns = {}", info_path, dsn_now_ns() - start);
+    return ERR_OK;
+}
+
+error_code replica_kms_info::load_json(const std::string &fname)
+{
+    std::string data;
+    auto s = rocksdb::ReadFileToString(
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kNonSensitive), fname, &data);
+    LOG_AND_RETURN_NOT_TRUE(ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "read file {} failed", fname);
+    LOG_AND_RETURN_NOT_TRUE(ERROR,
+                            json::json_forwarder<replica_kms_info>::decode(
+                                blob::create_from_bytes(std::move(data)), *this),
+                            ERR_FILE_OPERATION_FAILED,
+                            "decode json from file {} failed",
+                            fname);
+    return ERR_OK;
+}
+
+error_code replica_kms_info::store_json(const std::string &fname)
+{
+    const blob &data = json::json_forwarder<replica_kms_info>::encode(*this);
+    std::string tmp_fname = fname + ".tmp";
+    auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
+    auto s =
+        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kNonSensitive),
+                                   rocksdb::Slice(data.data(), data.length()),
+                                   tmp_fname,
+                                   /* should_sync */ true);
+    LOG_AND_RETURN_NOT_TRUE(
+        ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_fname);
+    LOG_AND_RETURN_NOT_TRUE(ERROR,
+                            utils::filesystem::rename_path(tmp_fname, fname),
+                            ERR_FILE_OPERATION_FAILED,
+                            "move file from {} to {} failed",
+                            tmp_fname,
+                            fname);
+    return ERR_OK;
 }
 
 error_code replica_app_info::load(const std::string &fname)

@@ -80,6 +80,30 @@ private:
     error_code store_json(const std::string &fname);
 };
 
+class replica_kms_info
+{
+public:
+    std::string encryption_key;
+    std::string iv;
+    std::string key_version;
+    DEFINE_JSON_SERIALIZATION(encryption_key, iv, key_version)
+    static const std::string kFileName;
+
+public:
+    replica_kms_info(const std::string &e_key = "",
+                     const std::string &i = "",
+                     const std::string &k_version = "")
+        : encryption_key(e_key), iv(i), key_version(k_version)
+    {
+    }
+    error_code load(const std::string &dir) WARN_UNUSED_RESULT;
+    error_code store(const std::string &dir);
+
+private:
+    error_code load_json(const std::string &fname);
+    error_code store_json(const std::string &fname);
+};
+
 class replica_app_info
 {
 private:
