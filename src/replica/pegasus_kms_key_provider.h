@@ -20,8 +20,8 @@
 #include <string>
 #include <utility>
 
-#include "runtime/security/kms_client.h"
 #include "replica/key_provider.h"
+#include "runtime/security/kms_client.h"
 #include "utils/errors.h"
 
 namespace dsn {
