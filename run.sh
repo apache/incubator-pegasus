@@ -33,7 +33,8 @@ if [ "$arch_output"x == "x86_64"x ]; then
 elif [ "$arch_output"x == "aarch64"x ]; then
     ARCH_TYPE="aarch64"
 else
-    echo "WARNING: unsupported CPU architecture '$arch_output', use 'x86_64' as default"
+    ARCH_TYPE="amd64"
+    echo "WARNING: unrecognized CPU architecture '$arch_output', use 'x86_64' as default"
 fi
 export LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/${ARCH_TYPE}:${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 # Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
@@ -2092,6 +2093,8 @@ case $cmd in
         ;;
     pack_server)
         shift
+        # source the config_hdfs.sh to get the HADOOP_HOME.
+        source "${ROOT}"/scripts/config_hdfs.sh
         PEGASUS_ROOT=$ROOT ./scripts/pack_server.sh $*
         ;;
     pack_client)

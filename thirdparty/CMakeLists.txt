@@ -120,14 +120,23 @@ ExternalProject_Add(gperftools
         DOWNLOAD_NO_PROGRESS true
 )
 
-set(HDFS_CLIENT_DIR "hadoop-hdfs-project/hadoop-hdfs-native-client")
+execute_process(COMMAND arch OUTPUT_VARIABLE ARCH_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(HADOOP_VERSION "hadoop-3.3.6")
+if (ARCH_NAME STREQUAL "aarch64")
+    set(HADOOP_PACKAGE_NAME ${HADOOP_VERSION}-${ARCH_NAME})
+    set(HADOOP_MD5 "369f899194a920e0d1c3c3bc1718b3b5")
+else ()
+    # Consider as x86_64 architecture as default
+    set(HADOOP_PACKAGE_NAME ${HADOOP_VERSION})
+    set(HADOOP_MD5 "1cbe1214299cd3bd282d33d3934b5cbd")
+endif ()
+set(HADOOP_URL_PREFIX "https://archive.apache.org/dist/hadoop/common/${HADOOP_VERSION}")
+
 ExternalProject_Add(hadoop
-        URL ${OSS_URL_PREFIX}/hadoop-release-2.8.4.tar.gz
-        https://github.com/apache/hadoop/archive/refs/tags/rel/release-2.8.4.tar.gz
-        URL_MD5 a1be737d4bff14923689619ab6545a96
+        URL ${HADOOP_URL_PREFIX}/${HADOOP_PACKAGE_NAME}.tar.gz
+        URL_MD5 ${HADOOP_MD5}
         PATCH_COMMAND ""
-        COMMAND cd ${HDFS_CLIENT_DIR} && mvn package -Pdist,native -DskipTests -Dmaven.javadoc.skip=true -Dtar
-        COMMAND cd ${HDFS_CLIENT_DIR} && cp -R target/hadoop-hdfs-native-client-2.8.4/include/. ${TP_OUTPUT}/include/hdfs && cp -R target/hadoop-hdfs-native-client-2.8.4/lib/native/. ${TP_OUTPUT}/lib
+        COMMAND mkdir -p ${TP_OUTPUT}/include/hdfs/ && cp include/hdfs.h ${TP_OUTPUT}/include/hdfs/ && cp lib/native/libhdfs.a lib/native/libhdfs.so ${TP_OUTPUT}/lib/ && cd ${TP_OUTPUT}/lib/ && ln -sf libhdfs.so libhdfs.so.0.0.0
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
@@ -356,9 +365,7 @@ set(SNAPPY_OPTIONS
         -DSNAPPY_BUILD_BENCHMARKS=OFF
         -DSNAPPY_FUZZING_BUILD=OFF
         -DSNAPPY_INSTALL=ON)
-execute_process(COMMAND arch OUTPUT_VARIABLE ARCH_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
-message(STATUS "ARCH_NAME = ${ARCH_NAME}")
-if (ARCH_NAME EQUAL "x86_64")
+if (ARCH_NAME STREQUAL "x86_64")
     set(SNAPPY_OPTIONS
             ${SNAPPY_OPTIONS}
             -DSNAPPY_REQUIRE_AVX=ON
