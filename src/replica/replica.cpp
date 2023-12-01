@@ -56,6 +56,7 @@
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
 #include "split/replica_split_manager.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"

@@ -20,6 +20,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <fmt/core.h>
 
+#include "absl/strings/string_view.h"
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
@@ -30,11 +31,11 @@
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
 #include "runtime/task/async_calls.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
 #include "utils/thread_access_checker.h"
 
 namespace dsn {
