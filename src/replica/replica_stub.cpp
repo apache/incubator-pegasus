@@ -41,7 +41,7 @@
 #include <set>
 #include <vector>
 
-#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "backup/replica_backup_server.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
@@ -58,7 +58,9 @@
 #include "perf_counter/perf_counter.h"
 #include "replica.h"
 #include "replica/duplication/replica_follower.h"
+#include "replica/key_provider.h"
 #include "replica/log_file.h"
+#include "replica/pegasus_kms_key_provider.h"
 #include "replica/replica_context.h"
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
@@ -69,7 +71,6 @@
 #include "runtime/rpc/serialization.h"
 #include "runtime/security/access_controller.h"
 #include "runtime/task/async_calls.h"
-#include "replica/pegasus_kms_key_provider.h"
 #include "split/replica_split_manager.h"
 #include "utils/command_manager.h"
 #include "utils/errors.h"
@@ -79,7 +80,6 @@
 #include "utils/process_utils.h"
 #include "utils/rand.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #ifdef DSN_ENABLE_GPERF
@@ -651,10 +651,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     std::string key_version;
     std::string server_key;
     // get and store eek from kms
-    if (key_provider) {
+    if (key_provider && !utils::is_empty(FLAGS_hadoop_kms_url)) {
         get_kms_key(_options.data_dirs[0], &encryption_key, &iv, &key_version);
         if (encryption_key.empty()) {
-            CHECK(key_provider, "invalid kms url ({})", FLAGS_hadoop_kms_url);
             CHECK(key_provider->GenerateEncryptionKey(&encryption_key, &iv, &key_version),
                   "get encryption key failed");
         }
@@ -666,7 +665,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     // Initialize the file system manager.
     _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags);
 
-    if (key_provider) {
+    if (key_provider && !utils::is_empty(FLAGS_hadoop_kms_url)) {
         CHECK(store_kms_key(_options.data_dirs[0], encryption_key, iv, key_version),
               "Cant store kms key");
     }

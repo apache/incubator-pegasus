@@ -15,6 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <algorithm>
+#include <initializer_list>
+#include <map>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -23,7 +27,10 @@
 #include "http/http_client.h"
 #include "http/http_method.h"
 #include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 #include "runtime/security/kms_client.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace security {

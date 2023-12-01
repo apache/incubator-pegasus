@@ -64,7 +64,6 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
-#include "replica/pegasus_kms_key_provider.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
@@ -75,6 +74,10 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+
+namespace security {
+class KeyProvider;
+}  // namespace security
 
 namespace service {
 class copy_request;

@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "absl/strings/str_split.h"
-#include "http/http_client.h"
 #include "utils/errors.h"
 
 namespace dsn {
