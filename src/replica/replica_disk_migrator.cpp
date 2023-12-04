@@ -31,7 +31,6 @@
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
 #include "runtime/task/async_calls.h"
-#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
@@ -252,7 +251,7 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
         return false;
     });
     replica_init_info init_info = _replica->get_app()->init_info();
-    const auto &store_init_info_err = init_info.store(_target_replica_dir, dsn::utils::FileDataType::kSensitive);
+    const auto &store_init_info_err = init_info.store(_target_replica_dir);
     if (store_init_info_err != ERR_OK) {
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app init info failed({})",
                          req.origin_disk,

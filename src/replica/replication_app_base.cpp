@@ -65,30 +65,7 @@ namespace replication {
 
 const std::string replica_init_info::kInitInfo = ".init-info";
 
-namespace {
-error_code write_blob_to_file(const std::string &fname, const blob &data, const dsn::utils::FileDataType &fileDataType)
-{
-    // TODO(yingchun): consider not encrypt the meta files.
-    std::string tmp_fname = fname + ".tmp";
-    auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(fileDataType),
-                                   rocksdb::Slice(data.data(), data.length()),
-                                   tmp_fname,
-                                   /* should_sync */ true);
-    LOG_AND_RETURN_NOT_TRUE(
-        ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_fname);
-    LOG_AND_RETURN_NOT_TRUE(ERROR,
-                            utils::filesystem::rename_path(tmp_fname, fname),
-                            ERR_FILE_OPERATION_FAILED,
-                            "move file from {} to {} failed",
-                            tmp_fname,
-                            fname);
-    return ERR_OK;
-}
-} // namespace
-
-error_code replica_init_info::load(const std::string &dir, const dsn::utils::FileDataType &fileDataType)
+error_code replica_init_info::load(const std::string &dir)
 {
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
     LOG_AND_RETURN_NOT_TRUE(ERROR,
@@ -97,17 +74,17 @@ error_code replica_init_info::load(const std::string &dir, const dsn::utils::Fil
                             "file({}) not exist",
                             info_path);
     LOG_AND_RETURN_NOT_OK(
-        ERROR, load_json(info_path, fileDataType), "load replica_init_info from {} failed", info_path);
+        ERROR, load_json(info_path), "load replica_init_info from {} failed", info_path);
     LOG_INFO("load replica_init_info from {} succeed: {}", info_path, to_string());
     return ERR_OK;
 }
 
-error_code replica_init_info::store(const std::string &dir, const dsn::utils::FileDataType &fileDataType)
+error_code replica_init_info::store(const std::string &dir)
 {
     uint64_t start = dsn_now_ns();
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
     LOG_AND_RETURN_NOT_OK(ERROR,
-                          store_json(info_path, fileDataType),
+                          store_json(info_path),
                           "store replica_init_info to {} failed, time_used_ns = {}",
                           info_path,
                           dsn_now_ns() - start);
@@ -118,11 +95,11 @@ error_code replica_init_info::store(const std::string &dir, const dsn::utils::Fi
     return ERR_OK;
 }
 
-error_code replica_init_info::load_json(const std::string &fname, const dsn::utils::FileDataType &fileDataType)
+error_code replica_init_info::load_json(const std::string &fname)
 {
     std::string data;
     auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(fileDataType), fname, &data);
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &data);
     LOG_AND_RETURN_NOT_TRUE(ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "read file {} failed", fname);
     LOG_AND_RETURN_NOT_TRUE(ERROR,
                             json::json_forwarder<replica_init_info>::decode(
@@ -133,9 +110,9 @@ error_code replica_init_info::load_json(const std::string &fname, const dsn::uti
     return ERR_OK;
 }
 
-error_code replica_init_info::store_json(const std::string &fname, const dsn::utils::FileDataType &fileDataType)
+error_code replica_init_info::store_json(const std::string &fname)
 {
-    return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this), fileDataType);
+    return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this), dsn::utils::FileDataType &kSensitive);
 }
 
 std::string replica_init_info::to_string()
@@ -148,11 +125,11 @@ std::string replica_init_info::to_string()
     return oss.str();
 }
 
-error_code replica_app_info::load(const std::string &fname, const dsn::utils::FileDataType &fileDataType)
+error_code replica_app_info::load(const std::string &fname)
 {
     std::string data;
     auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(fileDataType), fname, &data);
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &data);
     LOG_AND_RETURN_NOT_TRUE(ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "read file {} failed", fname);
     binary_reader reader(blob::create_from_bytes(std::move(data)));
     int magic = 0;
@@ -163,7 +140,7 @@ error_code replica_app_info::load(const std::string &fname, const dsn::utils::Fi
     return ERR_OK;
 }
 
-error_code replica_app_info::store(const std::string &fname, const dsn::utils::FileDataType &fileDataType)
+error_code replica_app_info::store(const std::string &fname)
 {
     binary_writer writer;
     int magic = 0xdeadbeef;
@@ -183,7 +160,7 @@ error_code replica_app_info::store(const std::string &fname, const dsn::utils::F
         marshall(writer, tmp, DSF_THRIFT_JSON);
     }
 
-    return write_blob_to_file(fname, writer.get_buffer(), fileDataType);
+    return write_blob_to_file(fname, writer.get_buffer(), dsn::utils::FileDataType::kSensitive);
 }
 
 /*static*/
@@ -241,7 +218,7 @@ error_code replication_app_base::open_internal(replica *r)
 
     _last_committed_decree = last_durable_decree();
 
-    auto err = _info.load(r->dir(), dsn::utils::FileDataType::kSensitive);
+    auto err = _info.load(r->dir());
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, err, "load replica_init_info failed");
 
     LOG_AND_RETURN_NOT_TRUE(ERROR_PREFIX,
@@ -458,7 +435,7 @@ error_code replication_app_base::update_init_info(replica *r,
     _info.init_offset_in_shared_log = shared_log_offset;
     _info.init_offset_in_private_log = private_log_offset;
 
-    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, _info.store(r->dir(), dsn::utils::FileDataType::kSensitive), "store replica_init_info failed");
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, _info.store(r->dir()), "store replica_init_info failed");
 
     return ERR_OK;
 }

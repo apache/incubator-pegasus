@@ -72,7 +72,6 @@
 #include "runtime/task/async_calls.h"
 #include "split/replica_split_manager.h"
 #include "utils/command_manager.h"
-#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -2327,7 +2326,7 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
     dsn::app_info info;
     replica_app_info info2(&info);
     std::string path = utils::filesystem::path_combine(dir, replica::kAppInfo);
-    auto err = info2.load(path, dsn::utils::FileDataType::kSensitive);
+    auto err = info2.load(path);
     if (ERR_OK != err) {
         LOG_ERROR("load app-info from {} failed, err = {}", path, err);
         return nullptr;

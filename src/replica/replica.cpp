@@ -56,7 +56,6 @@
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
 #include "split/replica_split_manager.h"
-#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
@@ -593,7 +592,7 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
 {
     replica_app_info new_info((app_info *)&info);
     const auto &info_path = path.empty() ? utils::filesystem::path_combine(_dir, kAppInfo) : path;
-    auto err = new_info.store(info_path, dsn::utils::FileDataType::kSensitive);
+    auto err = new_info.store(info_path);
     if (dsn_unlikely(err != ERR_OK)) {
         LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);
     }

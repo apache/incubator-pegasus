@@ -54,6 +54,29 @@ class learn_state;
 class mutation;
 class replica;
 
+namespace{
+template <class T>
+error_code write_blob_to_file(const std::string &fname, const T &data, const dsn::utils::FileDataType &fileDataType)
+{
+    std::string tmp_fname = fname + ".tmp";
+    auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
+    auto s =
+        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(fileDataType),
+                                   rocksdb::Slice(data.data(), data.length()),
+                                   tmp_fname,
+                                   /* should_sync */ true);
+    LOG_AND_RETURN_NOT_TRUE(
+        ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_fname);
+    LOG_AND_RETURN_NOT_TRUE(ERROR,
+                            utils::filesystem::rename_path(tmp_fname, fname),
+                            ERR_FILE_OPERATION_FAILED,
+                            "move file from {} to {} failed",
+                            tmp_fname,
+                            fname);
+    return ERR_OK;
+}
+} // namespace
+
 class replica_init_info
 {
 public:
@@ -72,13 +95,13 @@ public:
 
 public:
     replica_init_info() { memset((void *)this, 0, sizeof(*this)); }
-    error_code load(const std::string &dir, const dsn::utils::FileDataType &fileDataType) WARN_UNUSED_RESULT;
-    error_code store(const std::string &dir, const dsn::utils::FileDataType &fileDataType);
+    error_code load(const std::string &dir) WARN_UNUSED_RESULT;
+    error_code store(const std::string &dir);
     std::string to_string();
 
 private:
-    error_code load_json(const std::string &fname, const dsn::utils::FileDataType &fileDataType);
-    error_code store_json(const std::string &fname, const dsn::utils::FileDataType &fileDataType);
+    error_code load_json(const std::string &fname);
+    error_code store_json(const std::string &fname);
 };
 
 class replica_app_info
@@ -88,8 +111,8 @@ private:
 
 public:
     replica_app_info(app_info *app) { _app = app; }
-    error_code load(const std::string &fname, const dsn::utils::FileDataType &fileDataType);
-    error_code store(const std::string &fname, const dsn::utils::FileDataType &fileDataType);
+    error_code load(const std::string &fname);
+    error_code store(const std::string &fname);
 };
 
 /// The store engine interface of Pegasus.
