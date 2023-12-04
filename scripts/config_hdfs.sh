@@ -44,7 +44,7 @@ export LD_LIBRARY_PATH=${JAVA_JVM_LIBRARY_DIR}:$LD_LIBRARY_PATH
 if [ ! -d "$HADOOP_HOME" ]; then
   PEGASUS_HADOOP_HOME=${ROOT}/hadoop-bin
   if [ ! -d "$PEGASUS_HADOOP_HOME" ]; then
-    "${SCRIPT_DIR}"/download_hadoop.sh hadoop-bin
+    "${SCRIPT_DIR}"/download_hadoop.sh "${PEGASUS_HADOOP_HOME}"
   fi
 
   # Set the HADOOP_HOME to the pegasus's hadoop directory.
