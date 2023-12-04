@@ -24,6 +24,7 @@
 #include "block_service/block_service.h"
 #include "block_service/hdfs/hdfs_service.h"
 #include "block_service/local/local_service.h"
+#include "fmt/core.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/config_api.h"
@@ -77,7 +78,7 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
     if (fs == nullptr) {
         LOG_ERROR("acquire block filesystem failed, provider = {}, provider_type = {}",
                   provider,
-                  std::string(provider_type));
+                  provider_type);
         return nullptr;
     }
 
@@ -88,13 +89,13 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
     utils::split_args(arguments, args);
     dsn::error_code err = fs->initialize(args);
 
+    const auto provider_desc = fmt::format(
+        "provider = {}, provider_type = {}, args = {}", provider, provider_type, arguments);
     if (dsn::ERR_OK == err) {
-        LOG_INFO("create block filesystem ok for provider {}", provider);
+        LOG_INFO("create block filesystem ok for {}", provider_desc);
         _fs_map.emplace(provider, std::unique_ptr<block_filesystem>(fs));
     } else {
-        LOG_ERROR("create block file system err {} for provider {}",
-                  std::string(err.to_string()),
-                  provider);
+        LOG_ERROR("create block filesystem failed for {}, error = {}", provider_desc, err);
         delete fs;
         fs = nullptr;
     }
