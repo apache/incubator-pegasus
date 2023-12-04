@@ -252,7 +252,6 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          . ./scripts/config_hdfs.sh
           ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
   build_ASAN:
@@ -392,7 +391,6 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          . ./scripts/config_hdfs.sh
           ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
@@ -534,7 +532,6 @@ jobs:
 #        run: |
 #          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
 #          ulimit -s unlimited
-#          . ./scripts/config_hdfs.sh
 #          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
   build_with_jemalloc:
@@ -647,7 +644,6 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          . ./scripts/config_hdfs.sh
           ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
   build_pegasus_on_macos:

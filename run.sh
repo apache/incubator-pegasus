@@ -784,7 +784,7 @@ function run_start_onebox()
         exit 1
     fi
 
-    echo "HDFS_SERVICE_ARGS $HDFS_SERVICE_ARGS"
+    source "${ROOT}"/scripts/config_hdfs.sh
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
@@ -1028,6 +1028,7 @@ function run_start_onebox_instance()
         esac
         shift
     done
+    source "${ROOT}"/scripts/config_hdfs.sh
     if [ $META_ID = "0" -a $REPLICA_ID = "0" -a $COLLECTOR_ID = "0" ]; then
         echo "ERROR: no meta_id or replica_id or collector set"
         exit 1
