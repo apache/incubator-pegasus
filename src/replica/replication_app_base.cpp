@@ -26,13 +26,13 @@
 
 #include <alloca.h>
 #include <rocksdb/env.h>
-#include <rocksdb/slice.h>
 #include <rocksdb/status.h>
 #include <fstream>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "common/bulk_load_common.h"
 #include "common/duplication_common.h"
 #include "common/replica_envs.h"
@@ -55,7 +55,6 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "absl/strings/string_view.h"
 
 namespace dsn {
 

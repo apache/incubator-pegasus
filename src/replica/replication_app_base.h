@@ -26,6 +26,9 @@
 
 #pragma once
 
+#include <rocksdb/env.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/status.h>
 #include <stdint.h>
 #include <string.h>
 #include <atomic>
@@ -41,8 +44,9 @@
 #include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
-#include "utils/fmt_utils.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
 
 namespace dsn {
