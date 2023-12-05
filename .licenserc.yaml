@@ -25,7 +25,7 @@ header:
     - '**/*.csv'
     - '**/*.json'
     # All the type of licenses of this project should be added to LICENSE.
-    - 'DISCLAIMER-WIP'
+    - 'DISCLAIMER'
     - 'LICENSE'
     - 'NOTICE'
     # Change log.
