@@ -328,9 +328,9 @@ function(dsn_setup_thirdparty_libs)
 
   # rocksdb and dependent libs
   find_package(RocksDB REQUIRED)
-  find_package(Snappy REQUIRED)
-  find_package(Zstd REQUIRED)
-  find_package(Lz4 REQUIRED)
+  find_package(snappy REQUIRED)
+  find_package(zstd REQUIRED)
+  find_package(lz4 REQUIRED)
   if(USE_JEMALLOC)
     find_package(Jemalloc REQUIRED)
   endif()
