@@ -30,5 +30,5 @@ find_library(LZ4_STATIC_LIB liblz4.a
   NO_SYSTEM_ENVIRONMENT_PATH)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Lz4 REQUIRED_VARS
+find_package_handle_standard_args(lz4 REQUIRED_VARS
   LZ4_STATIC_LIB LZ4_INCLUDE_DIR)
