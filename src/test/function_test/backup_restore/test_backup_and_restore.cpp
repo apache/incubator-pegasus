@@ -43,8 +43,6 @@ using namespace pegasus;
 class backup_restore_test : public test_util
 {
 public:
-    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
-
     void TearDown() override
     {
         ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0));
@@ -53,8 +51,8 @@ public:
 
     bool write_data()
     {
-        pegasus::pegasus_client *client = pegasus::pegasus_client_factory::get_client(
-            cluster_name_.c_str(), app_name_.c_str());
+        pegasus::pegasus_client *client =
+            pegasus::pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
         if (client == nullptr) {
             std::cout << "get pegasus client failed" << std::endl;
             return false;

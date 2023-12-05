@@ -41,6 +41,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
+#include "test/function_test/utils/test_util.h"
 #include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
@@ -51,57 +52,32 @@ using namespace ::dsn;
 using namespace ::dsn::replication;
 using namespace pegasus;
 
-// TODO(yingchun): backup & restore festure is on refactoring, we can refactor the related function
-// test later.
-class restore_test : public testing::Test
+class restore_test : public test_util
 {
 public:
-    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
-
     void SetUp() override
     {
+        test_util::SetUp();
+
         std::string provider_dir = "block_service/local_service";
         policy_dir = "onebox/" + provider_dir + '/' +
-                     dsn::utils::filesystem::path_combine(cluster_name, policy_name);
-        backup_dir = "onebox/" + provider_dir + '/' + cluster_name;
-
-        std::vector<dsn::rpc_address> meta_list;
-        ASSERT_TRUE(replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name.c_str()));
-        ASSERT_FALSE(meta_list.empty());
-        ddl_client = std::make_shared<replication_ddl_client>(meta_list);
-        ASSERT_TRUE(ddl_client != nullptr);
-        error_code err =
-            ddl_client->create_app(app_name, "pegasus", default_partition_cnt, 3, {}, false);
-        ASSERT_EQ(err, ERR_OK);
-        int32_t app_id = 0;
-        {
-            int32_t partition_id;
-            std::vector<partition_configuration> partitions;
-            err = ddl_client->list_app(app_name, app_id, partition_id, partitions);
-            ASSERT_EQ(err, ERR_OK);
-            old_app_id = app_id;
-        }
-        ASSERT_GE(app_id, 0);
-        pg_client =
-            pegasus::pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
-        ASSERT_NE(pg_client, nullptr);
+                     dsn::utils::filesystem::path_combine(cluster_name_, policy_name);
+        backup_dir = "onebox/" + provider_dir + '/' + cluster_name_;
 
         write_data();
 
-        std::vector<int32_t> app_ids;
-        app_ids.emplace_back(app_id);
-        err = ddl_client->add_backup_policy(policy_name,
-                                            backup_provider_name,
-                                            app_ids,
-                                            backup_interval_seconds,
-                                            backup_history_count_to_keep,
-                                            start_time);
+        std::vector<int32_t> app_ids({app_id_});
+        auto err = ddl_client_->add_backup_policy(policy_name,
+                                                  backup_provider_name,
+                                                  app_ids,
+                                                  backup_interval_seconds,
+                                                  backup_history_count_to_keep,
+                                                  start_time);
         std::cout << "add backup policy complete with err = " << err.to_string() << std::endl;
         ASSERT_EQ(err, ERR_OK);
     }
 
-    void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client->drop_app(app_name, 0)); }
+    void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
 
     void write_data()
     {
@@ -109,13 +85,13 @@ public:
                   << std::endl;
         int64_t start = dsn_now_ms();
         int err = PERR_OK;
-        ASSERT_NE(pg_client, nullptr);
+        ASSERT_NE(client_, nullptr);
         for (int i = 1; i <= kv_pair_cnt; i++) {
             std::string index = std::to_string(i);
             std::string h_key = hash_key_prefix + "_" + index;
             std::string s_key = sort_key_prefix + "_" + index;
             std::string value = value_prefix + "_" + index;
-            err = pg_client->set(h_key, s_key, value);
+            err = client_->set(h_key, s_key, value);
             ASSERT_EQ(err, PERR_OK);
         }
         int64_t end = dsn_now_ms();
@@ -127,8 +103,8 @@ public:
     {
         std::cout << "start to get " << kv_pair_cnt << " key-value pairs, using get()..."
                   << std::endl;
-        new_pg_client =
-            pegasus::pegasus_client_factory::get_client(cluster_name.c_str(), new_app_name.c_str());
+        pegasus_client *new_pg_client = pegasus::pegasus_client_factory::get_client(
+            cluster_name_.c_str(), new_app_name.c_str());
         ASSERT_NE(nullptr, new_pg_client);
 
         int64_t start = dsn_now_ms();
@@ -151,14 +127,14 @@ public:
     {
         std::this_thread::sleep_for(std::chrono::seconds(30));
         ASSERT_EQ(ERR_OK,
-                  ddl_client->do_restore(backup_provider_name,
-                                         cluster_name,
-                                         /*old_policy_name=*/"",
-                                         time_stamp,
-                                         app_name,
-                                         old_app_id,
-                                         new_app_name,
-                                         false));
+                  ddl_client_->do_restore(backup_provider_name,
+                                          cluster_name_,
+                                          /*old_policy_name=*/"",
+                                          time_stamp,
+                                          app_name_,
+                                          app_id_,
+                                          new_app_name,
+                                          false));
         ASSERT_NO_FATAL_FAILURE(wait_app_healthy());
     }
 
@@ -170,7 +146,7 @@ public:
                 int32_t partition_cnt = 0;
                 std::vector<partition_configuration> p_confs;
                 ASSERT_EQ(ERR_OK,
-                          ddl_client->list_app(new_app_name, app_id, partition_cnt, p_confs));
+                          ddl_client_->list_app(new_app_name, app_id, partition_cnt, p_confs));
                 for (int i = 0; i < p_confs.size(); i++) {
                     const auto &pc = p_confs[i];
                     ASSERT_FALSE(pc.primary.is_invalid());
@@ -245,15 +221,10 @@ public:
     }
 
 public:
-    pegasus_client *pg_client;
-    pegasus_client *new_pg_client;
-    std::shared_ptr<replication_ddl_client> ddl_client;
     std::string policy_dir;
     std::string backup_dir;
 
-    const std::string cluster_name = "mycluster";
     const std::string new_app_name = "backup_test_new";
-    int32_t old_app_id;
     int64_t time_stamp;
 
     const std::string policy_name = "policy_1";
@@ -269,14 +240,13 @@ public:
     const int backup_history_count_to_keep = 6;
     const std::string start_time = "24:0";
 
-    const std::string app_name = "backup_test";
+    const std::string app_name_ = "backup_test";
 
     const std::string hash_key_prefix = "hash_key";
     const std::string sort_key_prefix = "sort_key";
     const std::string value_prefix = "value";
 
     const int kv_pair_cnt = 10000;
-    const int default_partition_cnt = 8;
 };
 
 TEST_F(restore_test, restore)
