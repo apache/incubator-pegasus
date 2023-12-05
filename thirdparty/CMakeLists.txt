@@ -395,14 +395,34 @@ ExternalProject_Add(zstd
         https://github.com/facebook/zstd/releases/download/v1.5.5/zstd-1.5.5.tar.gz
         URL_MD5 63251602329a106220e0a5ad26ba656f
         PATCH_COMMAND ""
-        CMAKE_COMMAND cmake build/cmake
-        CMAKE_ARGS
+        CONFIGURE_COMMAND cmake build/cmake
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_BUILD_TYPE=Release
         -DZSTD_BUILD_PROGRAMS=OFF
         -DZSTD_BUILD_TESTS=OFF
         -DZSTD_BUILD_CONTRIB=OFF
         -DZSTD_BUILD_SHARED=OFF
+        -DZSTD_BUILD_STATIC=ON
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        BUILD_IN_SOURCE 1
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
+ExternalProject_Add(lz4
+        URL ${OSS_URL_PREFIX}/lz4-1.9.4.tar.gz
+        https://github.com/lz4/lz4/releases/download/v1.9.4/lz4-1.9.4.tar.gz
+        URL_MD5 e9286adb64040071c5e23498bf753261
+        PATCH_COMMAND ""
+        CONFIGURE_COMMAND cmake build/cmake
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DLZ4_POSITION_INDEPENDENT_LIB=ON
+        -DCMAKE_BUILD_TYPE=Release
+        -DLZ4_BUILD_CLI=OFF
+        -DBUILD_SHARED_LIBS=OFF
+        -DBUILD_STATIC_LIBS=ON
         BUILD_COMMAND make -j${PARALLEL}
         INSTALL_COMMAND make install
         BUILD_IN_SOURCE 1

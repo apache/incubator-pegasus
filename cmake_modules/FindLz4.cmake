@@ -15,20 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# - Find SNAPPY (snappy.h, libsnappy.a)
+# - Find LZ4 (lz4.h, liblz4.a)
 # This module defines
-#  SNAPPY_INCLUDE_DIR, directory containing headers
-#  SNAPPY_STATIC_LIB, path to snappy's static library
-#  SNAPPY_FOUND, whether snappy has been found
+#  LZ4_INCLUDE_DIR, directory containing headers
+#  LZ4_STATIC_LIB, path to lz4's static library
+#  LZ4_FOUND, whether lz4 has been found
 
-find_path(SNAPPY_INCLUDE_DIR snappy.h
+find_path(LZ4_INCLUDE_DIR lz4.h
   # make sure we don't accidentally pick up a different version
   NO_CMAKE_SYSTEM_PATH
   NO_SYSTEM_ENVIRONMENT_PATH)
-find_library(SNAPPY_STATIC_LIB libsnappy.a
+find_library(LZ4_STATIC_LIB liblz4.a
   NO_CMAKE_SYSTEM_PATH
   NO_SYSTEM_ENVIRONMENT_PATH)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Snappy REQUIRED_VARS
-  SNAPPY_STATIC_LIB SNAPPY_INCLUDE_DIR)
+find_package_handle_standard_args(Lz4 REQUIRED_VARS
+  LZ4_STATIC_LIB LZ4_INCLUDE_DIR)

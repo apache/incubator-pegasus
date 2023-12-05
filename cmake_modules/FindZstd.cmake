@@ -15,20 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# - Find SNAPPY (snappy.h, libsnappy.a)
+# - Find ZSTD (zstd.h, libzstd.a)
 # This module defines
-#  SNAPPY_INCLUDE_DIR, directory containing headers
-#  SNAPPY_STATIC_LIB, path to snappy's static library
-#  SNAPPY_FOUND, whether snappy has been found
+#  ZSTD_INCLUDE_DIR, directory containing headers
+#  ZSTD_STATIC_LIB, path to zstd's static library
+#  ZSTD_FOUND, whether zstd has been found
 
-find_path(SNAPPY_INCLUDE_DIR snappy.h
+find_path(ZSTD_INCLUDE_DIR zstd.h
   # make sure we don't accidentally pick up a different version
   NO_CMAKE_SYSTEM_PATH
   NO_SYSTEM_ENVIRONMENT_PATH)
-find_library(SNAPPY_STATIC_LIB libsnappy.a
+find_library(ZSTD_STATIC_LIB libzstd.a
   NO_CMAKE_SYSTEM_PATH
   NO_SYSTEM_ENVIRONMENT_PATH)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Snappy REQUIRED_VARS
-  SNAPPY_STATIC_LIB SNAPPY_INCLUDE_DIR)
+find_package_handle_standard_args(Zstd REQUIRED_VARS
+  ZSTD_STATIC_LIB ZSTD_INCLUDE_DIR)
