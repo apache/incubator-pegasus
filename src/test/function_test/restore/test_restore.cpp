@@ -33,7 +33,6 @@
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
-#include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
@@ -239,8 +238,6 @@ public:
     const int backup_interval_seconds = 700;
     const int backup_history_count_to_keep = 6;
     const std::string start_time = "24:0";
-
-    const std::string app_name_ = "backup_test";
 
     const std::string hash_key_prefix = "hash_key";
     const std::string sort_key_prefix = "sort_key";

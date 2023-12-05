@@ -25,7 +25,6 @@
 #include "backup_types.h"
 #include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
-#include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
