@@ -46,22 +46,15 @@ public:
     void TearDown() override
     {
         ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0));
-        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(new_app_name_, 0));
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(s_new_app_name, 0));
     }
 
     bool write_data()
     {
-        pegasus::pegasus_client *client =
-            pegasus::pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
-        if (client == nullptr) {
-            std::cout << "get pegasus client failed" << std::endl;
-            return false;
-        }
-
         for (int i = 0; i < s_num_of_rows; ++i) {
-            int ret = client->set("hashkey_" + std::to_string(i),
-                                  "sortkey_" + std::to_string(i),
-                                  "value_" + std::to_string(i));
+            int ret = client_->set("hashkey_" + std::to_string(i),
+                                   "sortkey_" + std::to_string(i),
+                                   "value_" + std::to_string(i));
             if (ret != pegasus::PERR_OK) {
                 std::cout << "write data failed. " << std::endl;
                 return false;
@@ -72,18 +65,11 @@ public:
 
     bool verify_data(const std::string &app_name)
     {
-        pegasus::pegasus_client *client =
-            pegasus::pegasus_client_factory::get_client(cluster_name_.c_str(), app_name.c_str());
-        if (client == nullptr) {
-            std::cout << "get pegasus client failed" << std::endl;
-            return false;
-        }
-
         for (int i = 0; i < s_num_of_rows; ++i) {
             const std::string &expected_value = "value_" + std::to_string(i);
             std::string value;
             int ret =
-                client->get("hashkey_" + std::to_string(i), "sortkey_" + std::to_string(i), value);
+                client_->get("hashkey_" + std::to_string(i), "sortkey_" + std::to_string(i), value);
             if (ret != pegasus::PERR_OK) {
                 return false;
             }
@@ -96,7 +82,7 @@ public:
 
     start_backup_app_response start_backup(const std::string &user_specified_path = "")
     {
-        return ddl_client_->backup_app(app_id_, provider_type_, user_specified_path).get_value();
+        return ddl_client_->backup_app(app_id_, s_provider_type, user_specified_path).get_value();
     }
 
     query_backup_status_response query_backup(int64_t backup_id)
@@ -106,13 +92,13 @@ public:
 
     error_code start_restore(int64_t backup_id, const std::string &user_specified_path = "")
     {
-        return ddl_client_->do_restore(provider_type_,
+        return ddl_client_->do_restore(s_provider_type,
                                        cluster_name_,
                                        /*policy_name=*/"",
                                        backup_id,
                                        app_name_,
                                        app_id_,
-                                       new_app_name_,
+                                       s_new_app_name,
                                        /*skip_bad_partition=*/false,
                                        user_specified_path);
     }
@@ -146,7 +132,6 @@ public:
             sleep(s_check_interval_sec);
             sleep_sec += s_check_interval_sec;
 
-            int32_t new_app_id;
             int32_t partition_count;
             std::vector<partition_configuration> partitions;
             auto err = ddl_client_->list_app(app_name, app_id_, partition_count, partitions);
@@ -171,8 +156,6 @@ public:
 
     void test_backup_and_restore(const std::string &user_specified_path = "")
     {
-        error_code err = ddl_client_->create_app(app_name_, "pegasus", 4, 3, {}, false);
-        ASSERT_EQ(ERR_OK, err);
         ASSERT_TRUE(wait_app_become_healthy(app_name_, 180));
 
         ASSERT_TRUE(write_data());
@@ -182,22 +165,21 @@ public:
         ASSERT_EQ(ERR_OK, resp.err);
         int64_t backup_id = resp.backup_id;
         ASSERT_TRUE(wait_backup_complete(backup_id, 180));
-        err = start_restore(backup_id, user_specified_path);
-        ASSERT_EQ(ERR_OK, err);
-        ASSERT_TRUE(wait_app_become_healthy(new_app_name_, 180));
+        ASSERT_EQ(ERR_OK, start_restore(backup_id, user_specified_path));
+        ASSERT_TRUE(wait_app_become_healthy(s_new_app_name, 180));
 
-        ASSERT_TRUE(verify_data(new_app_name_));
+        ASSERT_TRUE(verify_data(s_new_app_name));
     }
 
 private:
     static const uint32_t s_num_of_rows = 1000;
     static const uint8_t s_check_interval_sec = 10;
-    static const std::string new_app_name_;
-    static const std::string provider_type_;
+    static const std::string s_new_app_name;
+    static const std::string s_provider_type;
 };
 
-const std::string backup_restore_test::new_app_name_ = "new_app";
-const std::string backup_restore_test::provider_type_ = "local_service";
+const std::string backup_restore_test::s_new_app_name = "new_app";
+const std::string backup_restore_test::s_provider_type = "local_service";
 
 TEST_F(backup_restore_test, test_backup_and_restore) { test_backup_and_restore(); }
 

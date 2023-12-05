@@ -473,7 +473,7 @@ function run_test()
                 opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=onebox"
             fi
             if [ "${module}" == "restore_test" ]; then
-                opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=mycluster"
+                opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=onebox"
             fi
             [ -z ${onebox_opts} ] || opts="${opts},${onebox_opts}"
             if ! run_start_onebox -m ${m_count} -w -c --opts ${opts}; then
