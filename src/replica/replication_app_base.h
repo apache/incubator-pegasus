@@ -26,6 +26,9 @@
 
 #pragma once
 
+#include <rocksdb/env.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/status.h>
 #include <stdint.h>
 #include <string.h>
 #include <atomic>
@@ -38,7 +41,11 @@
 #include "metadata_types.h"
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
+#include "utils/defer.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
 #include "utils/ports.h"
 
@@ -52,6 +59,30 @@ namespace replication {
 class learn_state;
 class mutation;
 class replica;
+
+namespace {
+template <class T>
+error_code write_blob_to_file(const std::string &fname,
+                              const T &data,
+                              const dsn::utils::FileDataType &fileDataType)
+{
+    std::string tmp_fname = fname + ".tmp";
+    auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
+    auto s = rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(fileDataType),
+                                        rocksdb::Slice(data.data(), data.length()),
+                                        tmp_fname,
+                                        /* should_sync */ true);
+    LOG_AND_RETURN_NOT_TRUE(
+        ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_fname);
+    LOG_AND_RETURN_NOT_TRUE(ERROR,
+                            utils::filesystem::rename_path(tmp_fname, fname),
+                            ERR_FILE_OPERATION_FAILED,
+                            "move file from {} to {} failed",
+                            tmp_fname,
+                            fname);
+    return ERR_OK;
+}
+} // namespace
 
 class replica_init_info
 {

@@ -41,6 +41,7 @@
 #include <set>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "backup/replica_backup_server.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
@@ -77,7 +78,6 @@
 #include "utils/process_utils.h"
 #include "utils/rand.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #ifdef DSN_ENABLE_GPERF

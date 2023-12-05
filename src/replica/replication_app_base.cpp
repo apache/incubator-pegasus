@@ -26,13 +26,13 @@
 
 #include <alloca.h>
 #include <rocksdb/env.h>
-#include <rocksdb/slice.h>
 #include <rocksdb/status.h>
 #include <fstream>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "common/bulk_load_common.h"
 #include "common/duplication_common.h"
 #include "common/replica_envs.h"
@@ -51,43 +51,16 @@
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
-#include "utils/defer.h"
-#include "utils/env.h"
 #include "utils/factory_store.h"
 #include "utils/fail_point.h"
-#include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "absl/strings/string_view.h"
 
 namespace dsn {
 
 namespace replication {
 
 const std::string replica_init_info::kInitInfo = ".init-info";
-
-namespace {
-error_code write_blob_to_file(const std::string &fname, const blob &data)
-{
-    // TODO(yingchun): consider not encrypt the meta files.
-    std::string tmp_fname = fname + ".tmp";
-    auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice(data.data(), data.length()),
-                                   tmp_fname,
-                                   /* should_sync */ true);
-    LOG_AND_RETURN_NOT_TRUE(
-        ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_fname);
-    LOG_AND_RETURN_NOT_TRUE(ERROR,
-                            utils::filesystem::rename_path(tmp_fname, fname),
-                            ERR_FILE_OPERATION_FAILED,
-                            "move file from {} to {} failed",
-                            tmp_fname,
-                            fname);
-    return ERR_OK;
-}
-} // namespace
 
 error_code replica_init_info::load(const std::string &dir)
 {
@@ -136,7 +109,9 @@ error_code replica_init_info::load_json(const std::string &fname)
 
 error_code replica_init_info::store_json(const std::string &fname)
 {
-    return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this));
+    return write_blob_to_file(fname,
+                              json::json_forwarder<replica_init_info>::encode(*this),
+                              dsn::utils::FileDataType::kSensitive);
 }
 
 std::string replica_init_info::to_string()
@@ -184,7 +159,7 @@ error_code replica_app_info::store(const std::string &fname)
         marshall(writer, tmp, DSF_THRIFT_JSON);
     }
 
-    return write_blob_to_file(fname, writer.get_buffer());
+    return write_blob_to_file(fname, writer.get_buffer(), dsn::utils::FileDataType::kSensitive);
 }
 
 /*static*/
