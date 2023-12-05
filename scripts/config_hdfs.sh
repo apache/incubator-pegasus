@@ -19,6 +19,8 @@
 
 set -e
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+ROOT=$(dirname "${SCRIPT_DIR}")
 # This file should be sourced to set up LD_LIBRARY_PATH and CLASSPATH to
 # run Pegasus binaries which use libhdfs in the context of a dev environment.
 
@@ -39,11 +41,19 @@ fi
 JAVA_JVM_LIBRARY_DIR=$(dirname $(find "${JAVA_HOME}/" -name libjvm.so  | head -1))
 export LD_LIBRARY_PATH=${JAVA_JVM_LIBRARY_DIR}:$LD_LIBRARY_PATH
 
+if [ ! -d "$HADOOP_HOME" ]; then
+  PEGASUS_HADOOP_HOME=${ROOT}/hadoop-bin
+  if [ ! -d "$PEGASUS_HADOOP_HOME" ]; then
+    "${SCRIPT_DIR}"/download_hadoop.sh "${PEGASUS_HADOOP_HOME}"
+  fi
+
+  # Set the HADOOP_HOME to the pegasus's hadoop directory.
+  export HADOOP_HOME="${PEGASUS_HADOOP_HOME}"
+  echo "set HADOOP_HOME to ${PEGASUS_HADOOP_HOME}"
+fi
+
 # Set CLASSPATH to all the Hadoop jars needed to run Hadoop itself as well as
 # the right configuration directory containing core-site.xml or hdfs-site.xml.
-PEGASUS_HADOOP_HOME=`pwd`/hadoop-bin
-# Prefer the HADOOP_HOME set in the environment, but use the pegasus's hadoop dir otherwise.
-export HADOOP_HOME="${HADOOP_HOME:-${PEGASUS_HADOOP_HOME}}"
 if [ ! -d "$HADOOP_HOME/etc/hadoop" ] || [ ! -d "$HADOOP_HOME/share/hadoop" ]; then
   echo "HADOOP_HOME must be set to the location of your Hadoop jars and core-site.xml."
   return 1
