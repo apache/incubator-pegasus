@@ -41,9 +41,9 @@ set(MY_PROJ_LIBS
         dsn.failure_detector
         pegasus_client_static
         pegasus_geo_lib
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy
         absl::flat_hash_set
         absl::strings

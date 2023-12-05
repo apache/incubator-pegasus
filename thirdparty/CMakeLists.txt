@@ -381,7 +381,7 @@ ExternalProject_Add(snappy
         URL ${OSS_URL_PREFIX}/snappy-1.1.10.tar.gz
         https://github.com/google/snappy/archive/refs/tags/1.1.10.tar.gz
         URL_MD5 70153395ebe6d72febe2cf2e40026a44
-        PATCH_COMMAND ""
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_snappy-Wsign-compare-warning.patch
         CMAKE_ARGS ${SNAPPY_OPTIONS}
         BUILD_COMMAND make -j${PARALLEL}
         INSTALL_COMMAND make install

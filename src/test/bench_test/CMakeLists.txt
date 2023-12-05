@@ -30,9 +30,9 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
         pegasus_client_static
         dsn_utils
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy
         sasl2
         gssapi_krb5

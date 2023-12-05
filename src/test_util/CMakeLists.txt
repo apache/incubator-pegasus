@@ -24,9 +24,9 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
         gtest
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy)
 
 dsn_add_static_library()

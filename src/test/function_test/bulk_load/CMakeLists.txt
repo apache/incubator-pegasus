@@ -38,9 +38,9 @@ set(MY_PROJ_LIBS
         krb5
         function_test_utils
         test_utils
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)

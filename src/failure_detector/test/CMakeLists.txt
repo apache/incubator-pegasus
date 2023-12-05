@@ -41,9 +41,9 @@ set(MY_PROJ_LIBS
         dsn.failure_detector
         gtest
         hashtable
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)

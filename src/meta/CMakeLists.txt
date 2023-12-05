@@ -47,9 +47,9 @@ set(MY_PROJ_LIBS
         zookeeper
         hashtable
         hdfs
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)

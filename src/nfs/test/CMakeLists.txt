@@ -39,9 +39,9 @@ set(MY_PROJ_LIBS
         gtest
         dsn_aio
         dsn_http
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy
         test_utils)
 

@@ -38,9 +38,9 @@ set(MY_PROJ_LIBS
         dsn_runtime
         dsn_aio
         test_utils
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)

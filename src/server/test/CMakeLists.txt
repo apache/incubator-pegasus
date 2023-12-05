@@ -45,9 +45,9 @@ set(MY_PROJ_LIBS
         dsn.failure_detector
         dsn.replication.zookeeper_provider
         dsn_utils
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy
         pegasus_client_static
         event

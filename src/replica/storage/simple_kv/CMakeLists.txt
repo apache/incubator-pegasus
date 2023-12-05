@@ -43,9 +43,9 @@ set(MY_PROJ_LIBS
         dsn_client
         dsn_runtime
         hashtable
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)

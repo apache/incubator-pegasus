@@ -35,9 +35,9 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
         dsn_runtime
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy)
 
 #Extra files that will be installed

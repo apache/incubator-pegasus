@@ -34,9 +34,9 @@ set(MY_PROJ_LIBS
         s2testing
         s2
         pegasus_client_static
+        rocksdb
         lz4
         zstd
-        rocksdb
         snappy
         dsn_utils)
 
