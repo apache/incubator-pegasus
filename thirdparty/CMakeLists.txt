@@ -364,6 +364,7 @@ ExternalProject_Add(jemalloc
 set(SNAPPY_OPTIONS
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DCMAKE_BUILD_TYPE=Release
         -DBUILD_SHARED_LIBS=OFF
         -DSNAPPY_BUILD_TESTS=OFF
         -DSNAPPY_BUILD_BENCHMARKS=OFF
@@ -389,6 +390,26 @@ ExternalProject_Add(snappy
         DOWNLOAD_NO_PROGRESS true
 )
 
+ExternalProject_Add(zstd
+        URL ${OSS_URL_PREFIX}/zstd-1.5.5.tar.gz
+        https://github.com/facebook/zstd/releases/download/v1.5.5/zstd-1.5.5.tar.gz
+        URL_MD5 63251602329a106220e0a5ad26ba656f
+        PATCH_COMMAND ""
+        CMAKE_COMMAND cmake build/cmake
+        CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_BUILD_TYPE=Release
+        -DZSTD_BUILD_PROGRAMS=OFF
+        -DZSTD_BUILD_TESTS=OFF
+        -DZSTD_BUILD_CONTRIB=OFF
+        -DZSTD_BUILD_SHARED=OFF
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        BUILD_IN_SOURCE 1
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 set(ROCKSDB_OPTIONS
         -DFAIL_ON_WARNINGS=OFF
@@ -408,6 +429,7 @@ set(ROCKSDB_OPTIONS
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DPORTABLE=${ROCKSDB_PORTABLE})
 # Link error on MacOS, disable building encfs plugin.
 # See https://github.com/pegasus-kv/encfs/issues/4
@@ -424,8 +446,7 @@ ExternalProject_Add(rocksdb
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
         COMMAND git clone -b main --depth=1 https://github.com/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
         DEPENDS googletest jemalloc
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        ${ROCKSDB_OPTIONS}
+        CMAKE_ARGS ${ROCKSDB_OPTIONS}
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
 )
