@@ -51,10 +51,8 @@
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
-#include "utils/defer.h"
 #include "utils/factory_store.h"
 #include "utils/fail_point.h"
-#include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 #include "absl/strings/string_view.h"
@@ -112,7 +110,9 @@ error_code replica_init_info::load_json(const std::string &fname)
 
 error_code replica_init_info::store_json(const std::string &fname)
 {
-    return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this), dsn::utils::FileDataType &kSensitive);
+    return write_blob_to_file(fname,
+                              json::json_forwarder<replica_init_info>::encode(*this),
+                              dsn::utils::FileDataType::kSensitive);
 }
 
 std::string replica_init_info::to_string()

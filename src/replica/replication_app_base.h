@@ -38,9 +38,11 @@
 #include "metadata_types.h"
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
+#include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/fmt_utils.h"
+#include "utils/filesystem.h"
 #include "utils/ports.h"
 
 namespace dsn {
@@ -54,17 +56,18 @@ class learn_state;
 class mutation;
 class replica;
 
-namespace{
+namespace {
 template <class T>
-error_code write_blob_to_file(const std::string &fname, const T &data, const dsn::utils::FileDataType &fileDataType)
+error_code write_blob_to_file(const std::string &fname,
+                              const T &data,
+                              const dsn::utils::FileDataType &fileDataType)
 {
     std::string tmp_fname = fname + ".tmp";
     auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(fileDataType),
-                                   rocksdb::Slice(data.data(), data.length()),
-                                   tmp_fname,
-                                   /* should_sync */ true);
+    auto s = rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(fileDataType),
+                                        rocksdb::Slice(data.data(), data.length()),
+                                        tmp_fname,
+                                        /* should_sync */ true);
     LOG_AND_RETURN_NOT_TRUE(
         ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_fname);
     LOG_AND_RETURN_NOT_TRUE(ERROR,
