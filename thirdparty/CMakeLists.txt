@@ -465,7 +465,7 @@ ExternalProject_Add(rocksdb
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_rocksdb-cmake-PORTABLE-option.patch
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
         COMMAND git clone -b main --depth=1 https://github.com/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
-        DEPENDS googletest jemalloc
+        DEPENDS googletest jemalloc lz4 snappy zstd
         CMAKE_ARGS ${ROCKSDB_OPTIONS}
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
