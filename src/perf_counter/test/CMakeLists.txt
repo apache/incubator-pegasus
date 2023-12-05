@@ -34,6 +34,8 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+        dsn_meta_server
+        dsn_replication_common
         gtest
         dsn_runtime
         rocksdb
