@@ -331,8 +331,6 @@ TEST_F(throttle_test, test)
     plan = {"set test / throttle by size / normal value size", operation_type::set, 1024, 1, 50};
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -340,8 +338,6 @@ TEST_F(throttle_test, test)
 
     plan = {"set test / throttle by qps / normal value size", operation_type::set, 1024, 1, 50};
     NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env " << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -350,8 +346,6 @@ TEST_F(throttle_test, test)
     plan = {"get test / throttle by size / normal value size", operation_type::get, 1024, 1, 50};
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     auto actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -361,8 +355,6 @@ TEST_F(throttle_test, test)
 
     plan = {"get test / throttle by qps", operation_type::get, 1024, 1, 50};
     NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -376,8 +368,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -393,8 +383,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -406,8 +394,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            plan.limit_qps * plan.single_value_sz * plan.multi_count));
     NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -418,8 +404,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            plan.limit_qps * plan.single_value_sz * plan.multi_count));
     NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -436,8 +420,6 @@ TEST_F(throttle_test, test)
         plan.limit_qps * (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
             plan.multi_count * 1000));
     NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -453,8 +435,6 @@ TEST_F(throttle_test, test)
         plan.limit_qps * (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
             plan.multi_count * 1000));
     NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -468,8 +448,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            plan.limit_qps * plan.single_value_sz * plan.multi_count));
     NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps * 1000));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -485,8 +463,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            plan.limit_qps * plan.single_value_sz * plan.multi_count));
     NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps * 1000));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -503,8 +479,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -520,8 +494,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -537,8 +509,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -554,8 +524,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -567,8 +535,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -580,8 +546,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -593,8 +557,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            (plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -606,8 +568,6 @@ TEST_F(throttle_test, test)
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            (plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                                plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
@@ -623,8 +583,6 @@ TEST_F(throttle_test, test)
             50,
             true};
     NO_FATALS(set_throttle(throttle_type::read_by_size, 5000000));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -637,8 +595,6 @@ TEST_F(throttle_test, test)
             50,
             true};
     NO_FATALS(set_throttle(throttle_type::write_by_size, 5000000));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -648,8 +604,6 @@ TEST_F(throttle_test, test)
     plan = {
         "get test / throttle by qps / hotkey test", operation_type::get, 1024, 1, 50, false, true};
     NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -658,8 +612,6 @@ TEST_F(throttle_test, test)
     plan = {
         "set test / throttle by qps / hotkey test", operation_type::set, 1024, 1, 50, false, true};
     NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     result.finalize();
@@ -669,8 +621,6 @@ TEST_F(throttle_test, test)
         "set test / throttle by size / hotkey test", operation_type::set, 1024, 1, 50, false, true};
     NO_FATALS(set_throttle(throttle_type::write_by_size,
                            plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)plan.limit_qps * plan.single_value_sz * plan.multi_count;
@@ -681,8 +631,6 @@ TEST_F(throttle_test, test)
         "get test / throttle by size / hotkey test", operation_type::get, 1024, 1, 50, false, true};
     NO_FATALS(set_throttle(throttle_type::read_by_size,
                            plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
     NO_FATALS(start_test(plan));
     NO_FATALS(restore_throttle());
     actual_value = (uint64_t)plan.limit_qps * plan.single_value_sz * plan.multi_count;
