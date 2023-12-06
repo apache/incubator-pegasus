@@ -42,6 +42,8 @@ RUN yum -y install centos-release-scl \
                    which \
                    openssl-devel \
                    libaio-devel \
+                   zlib \
+                   zlib-devel \
                    bison \
                    flex \
                    krb5-devel \

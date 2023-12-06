@@ -31,6 +31,8 @@ RUN apt-get update -y; \
                        pkg-config \
                        python3-pip \
                        libaio-dev \
+                       zlib1g \
+                       zlib1g.dev \
                        patch \
                        netcat \
                        wget \

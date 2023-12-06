@@ -30,6 +30,8 @@ RUN apt-get update -y; \
                        openjdk-8-jdk \
                        python3-pip \
                        libaio-dev \
+                       zlib1g \
+                       zlib1g.dev \
                        patch \
                        netcat \
                        wget \
