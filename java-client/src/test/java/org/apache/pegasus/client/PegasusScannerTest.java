@@ -520,8 +520,8 @@ public class PegasusScannerTest {
   private static void checkAndPutSortMap(
       TreeMap<String, String> data, String hashKey, String sortKey, String value) {
     assertNull(
+        data.get(sortKey),
         String.format(
-            data.get(sortKey),
             "Duplicate: hashKey=%s, sortKye=%s, oldValue=%s, newValue=%s",
             hashKey,
             sortKey,

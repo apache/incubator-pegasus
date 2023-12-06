@@ -53,6 +53,7 @@ public class TestBench {
     item = scanners.get(0).next();
     scanners.get(0).close();
     assertNull(
+        item,
         item == null
             ? null
             : String.format(
