@@ -30,5 +30,5 @@ find_library(ZSTD_STATIC_LIB libzstd.a
   NO_SYSTEM_ENVIRONMENT_PATH)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Zstd REQUIRED_VARS
+find_package_handle_standard_args(zstd REQUIRED_VARS
   ZSTD_STATIC_LIB ZSTD_INCLUDE_DIR)

@@ -327,13 +327,13 @@ function(dsn_setup_thirdparty_libs)
   set(DEFAULT_THIRDPARTY_LIBS ${THRIFT_LIB} fmt::fmt CACHE STRING "default thirdparty libs" FORCE)
 
   # rocksdb and dependent libs
-  find_package(RocksDB REQUIRED)
   find_package(snappy REQUIRED)
   find_package(zstd REQUIRED)
   find_package(lz4 REQUIRED)
   if(USE_JEMALLOC)
     find_package(Jemalloc REQUIRED)
   endif()
+  find_package(RocksDB REQUIRED)
 
   # libhdfs
   find_package(JNI REQUIRED)

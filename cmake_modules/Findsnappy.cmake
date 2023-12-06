@@ -30,5 +30,5 @@ find_library(SNAPPY_STATIC_LIB libsnappy.a
   NO_SYSTEM_ENVIRONMENT_PATH)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Snappy REQUIRED_VARS
+find_package_handle_standard_args(snappy REQUIRED_VARS
   SNAPPY_STATIC_LIB SNAPPY_INCLUDE_DIR)
