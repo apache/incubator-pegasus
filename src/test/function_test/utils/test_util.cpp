@@ -37,6 +37,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"
+#include "test_util/test_util.h"
 #include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
@@ -141,6 +142,54 @@ int test_util::get_leader_count(const string &table_name, int replica_server_ind
         }
     }
     return leader_count;
+}
+
+void test_util::wait_app_healthy(const std::string &app_name) const
+{
+    ASSERT_IN_TIME(
+        [&] {
+            int32_t app_id = 0;
+            int32_t pcount = 0;
+            std::vector<partition_configuration> pcs;
+            ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(app_name, app_id, pcount, pcs));
+            for (const auto &pc : pcs) {
+                ASSERT_FALSE(pc.primary.is_invalid());
+                ASSERT_EQ(1 + pc.secondaries.size(), pc.max_replica_count);
+            }
+        },
+        180);
+}
+
+void test_util::write_data(int count) const
+{
+    fmt::print(stdout, "start to write {} key-value pairs...\n", count);
+    ASSERT_NE(client_, nullptr);
+    int64_t start = dsn_now_ms();
+    for (int i = 0; i < count; i++) {
+        ASSERT_EQ(PERR_OK,
+                  client_->set(fmt::format("hash_key_{}", i),
+                               fmt::format("sort_key_{}", i),
+                               fmt::format("value_{}", i)));
+    }
+    fmt::print(stdout, "write data complete, total time = {}s", (dsn_now_ms() - start) / 1000);
+}
+
+void test_util::verify_data(const std::string &app_name, int count) const
+{
+    fmt::print(stdout, "start to get {} key-value pairs...\n", count);
+    pegasus_client *client =
+        pegasus_client_factory::get_client(cluster_name_.c_str(), app_name.c_str());
+    ASSERT_NE(client, nullptr);
+    int64_t start = dsn_now_ms();
+    for (int i = 0; i < count; i++) {
+        std::string value_new;
+        ASSERT_EQ(
+            PERR_OK,
+            client->get(fmt::format("hash_key_{}", i), fmt::format("sort_key_{}", i), value_new));
+        ASSERT_EQ(fmt::format("value_{}", i), value_new);
+    }
+    int64_t end = dsn_now_ms();
+    fmt::print(stdout, "verify data complete, total time = {}s", (dsn_now_ms() - start) / 1000);
 }
 
 } // namespace pegasus

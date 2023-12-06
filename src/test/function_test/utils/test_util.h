@@ -63,6 +63,11 @@ public:
     // on the 'table_name'.
     static int get_leader_count(const std::string &table_name, int replica_server_index);
 
+    void wait_app_healthy(const std::string &app_name) const;
+
+    void write_data(int count) const;
+    void verify_data(const std::string &app_name, int count) const;
+
 protected:
     const std::string cluster_name_;
     std::string app_name_;
