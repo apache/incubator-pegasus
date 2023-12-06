@@ -54,7 +54,7 @@ using std::vector;
 namespace pegasus {
 
 test_util::test_util(map<string, string> create_envs)
-    : cluster_name_("mycluster"), app_name_("temp"), create_envs_(std::move(create_envs))
+    : cluster_name_("onebox"), app_name_("temp"), create_envs_(std::move(create_envs))
 {
 }
 
