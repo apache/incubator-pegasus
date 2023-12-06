@@ -16,8 +16,6 @@
 // under the License.
 
 #include <stdint.h>
-#include <unistd.h>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -25,11 +23,7 @@
 #include "backup_types.h"
 #include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
-#include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
-#include "include/pegasus/client.h"
-#include "include/pegasus/error.h"
-#include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/test_util.h"
 #include "test_util/test_util.h"
 #include "utils/error_code.h"

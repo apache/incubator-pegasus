@@ -20,6 +20,8 @@
 #include "test_util.h"
 
 #include <nlohmann/json.hpp>
+#include <pegasus/error.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <fstream>
 #include <initializer_list>
@@ -34,6 +36,7 @@
 #include "include/pegasus/client.h"
 #include "nlohmann/detail/iterators/iter_impl.hpp"
 #include "nlohmann/json_fwd.hpp"
+#include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"
