@@ -19,13 +19,15 @@
 
 package org.apache.pegasus.operator;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.pegasus.apps.check_and_mutate_request;
 import org.apache.pegasus.apps.multi_get_request;
 import org.apache.pegasus.apps.update_request;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.gpid;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ClientOperatorTest {
 
@@ -33,20 +35,20 @@ public class ClientOperatorTest {
   public void testSupportBackupRequest() {
     client_operator op =
         new rrdb_multi_get_operator(new gpid(1, 1), "test", new multi_get_request(), 0);
-    Assert.assertTrue(op.supportBackupRequest());
+    assertTrue(op.supportBackupRequest());
 
     op = new rrdb_get_operator(new gpid(1, 1), "test", new blob(), 0);
-    Assert.assertTrue(op.supportBackupRequest());
+    assertTrue(op.supportBackupRequest());
 
     op = new rrdb_ttl_operator(new gpid(1, 1), "test", new blob(), 0);
-    Assert.assertTrue(op.supportBackupRequest());
+    assertTrue(op.supportBackupRequest());
 
     op = new rrdb_put_operator(new gpid(1, 1), "test", new update_request(), 0);
-    Assert.assertFalse(op.supportBackupRequest());
+    assertFalse(op.supportBackupRequest());
 
     op =
         new rrdb_check_and_mutate_operator(
             new gpid(1, 1), "test", new check_and_mutate_request(), 0);
-    Assert.assertFalse(op.supportBackupRequest());
+    assertFalse(op.supportBackupRequest());
   }
 }

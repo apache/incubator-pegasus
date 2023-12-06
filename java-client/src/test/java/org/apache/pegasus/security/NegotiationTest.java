@@ -18,6 +18,8 @@
  */
 package org.apache.pegasus.security;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.nio.charset.Charset;
@@ -26,9 +28,8 @@ import org.apache.pegasus.apps.negotiation_response;
 import org.apache.pegasus.apps.negotiation_status;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.rpc.async.ReplicaSession;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class NegotiationTest {
@@ -40,16 +41,16 @@ public class NegotiationTest {
 
     Mockito.doNothing().when(mockNegotiation).send(any(), any());
     mockNegotiation.start();
-    Assert.assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_LIST_MECHANISMS);
+    assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_LIST_MECHANISMS);
   }
 
   @Test
   public void tetGetMatchMechanism() {
     String matchMechanism = negotiation.getMatchMechanism("GSSAPI,ABC");
-    Assert.assertEquals(matchMechanism, "GSSAPI");
+    assertEquals(matchMechanism, "GSSAPI");
 
     matchMechanism = negotiation.getMatchMechanism("TEST,ABC");
-    Assert.assertEquals(matchMechanism, "");
+    assertEquals(matchMechanism, "");
   }
 
   @Test
@@ -85,8 +86,7 @@ public class NegotiationTest {
                   negotiation_status.SASL_LIST_MECHANISMS_RESP,
                   new blob("GSSAPI".getBytes(Charset.defaultCharset())));
           mockNegotiation.onRecvMechanisms(response);
-          Assert.assertEquals(
-              mockNegotiation.getStatus(), negotiation_status.SASL_SELECT_MECHANISMS);
+          assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_SELECT_MECHANISMS);
         });
 
     // deal with wrong response.msg
@@ -121,7 +121,7 @@ public class NegotiationTest {
     try {
       Mockito.when(mockNegotiation.saslWrapper.getInitialResponse()).thenReturn(new blob());
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
 
     // normal case
@@ -129,7 +129,7 @@ public class NegotiationTest {
         new negotiation_response(
             negotiation_status.SASL_SELECT_MECHANISMS_RESP, new blob(new byte[0]));
     Assertions.assertDoesNotThrow(() -> mockNegotiation.onMechanismSelected(response));
-    Assert.assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_INITIATE);
+    assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_INITIATE);
 
     // deal with wrong response.status
     response.status = negotiation_status.SASL_LIST_MECHANISMS;
@@ -150,7 +150,7 @@ public class NegotiationTest {
     try {
       Mockito.when(mockNegotiation.saslWrapper.evaluateChallenge(any())).thenReturn(new blob());
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
 
     // normal case
@@ -159,11 +159,11 @@ public class NegotiationTest {
           negotiation_response response =
               new negotiation_response(negotiation_status.SASL_CHALLENGE, new blob(new byte[0]));
           mockNegotiation.onChallenge(response);
-          Assert.assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_CHALLENGE_RESP);
+          assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_CHALLENGE_RESP);
 
           response = new negotiation_response(negotiation_status.SASL_SUCC, new blob(new byte[0]));
           mockNegotiation.onChallenge(response);
-          Assert.assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_SUCC);
+          assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_SUCC);
         });
 
     // deal with wrong response.status

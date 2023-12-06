@@ -19,8 +19,12 @@
 package org.apache.pegasus.client;
 
 /** @author qinzuoyan */
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
 
 /** Created by mi on 18-7-17. */
 public class TestCheckAndSet {
@@ -48,11 +52,11 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -65,12 +69,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       options.returnCheckValue = false;
       result =
@@ -83,15 +87,15 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertFalse(result.isCheckValueReturned());
+      assertFalse(result.isSetSucceed());
+      assertFalse(result.isCheckValueReturned());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     try {
@@ -112,11 +116,11 @@ public class TestCheckAndSet {
               "k2".getBytes(),
               "".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k2".getBytes());
-      Assert.assertArrayEquals("".getBytes(), value);
+      assertArrayEquals("".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -129,17 +133,17 @@ public class TestCheckAndSet {
               "k2".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k2".getBytes());
-      Assert.assertArrayEquals("".getBytes(), value);
+      assertArrayEquals("".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     try {
@@ -161,17 +165,17 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k4".getBytes());
-      Assert.assertArrayEquals("v4".getBytes(), value);
+      assertArrayEquals("v4".getBytes(), value);
 
       client.del(tableName, hashKey, "k3".getBytes());
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -201,11 +205,11 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertNull(value);
+      assertNull(value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "".getBytes());
 
@@ -220,12 +224,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -238,17 +242,17 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     try {
@@ -270,18 +274,18 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v3".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v3".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k4".getBytes());
-      Assert.assertArrayEquals("v4".getBytes(), value);
+      assertArrayEquals("v4".getBytes(), value);
 
       client.del(tableName, hashKey, "k3".getBytes());
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -311,11 +315,11 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertNull(value);
+      assertNull(value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "".getBytes());
 
@@ -330,12 +334,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("".getBytes(), value);
+      assertArrayEquals("".getBytes(), value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "v1".getBytes());
 
@@ -350,17 +354,17 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     try {
@@ -382,18 +386,18 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v3".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v3".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k4".getBytes());
-      Assert.assertArrayEquals("v4".getBytes(), value);
+      assertArrayEquals("v4".getBytes(), value);
 
       client.del(tableName, hashKey, "k3".getBytes());
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -423,11 +427,11 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertNull(value);
+      assertNull(value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "".getBytes());
 
@@ -442,12 +446,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("".getBytes(), value);
+      assertArrayEquals("".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -460,12 +464,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -478,12 +482,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -496,12 +500,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v111v".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v111v".getBytes(), value);
+      assertArrayEquals("v111v".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -514,12 +518,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v111v".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v111v".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -532,12 +536,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -550,12 +554,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -568,17 +572,17 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v3".getBytes(), value);
+      assertArrayEquals("v3".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     try {
@@ -600,18 +604,18 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v333v".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v333v".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k4".getBytes());
-      Assert.assertArrayEquals("v4".getBytes(), value);
+      assertArrayEquals("v4".getBytes(), value);
 
       client.del(tableName, hashKey, "k3".getBytes());
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -641,11 +645,11 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertNull(value);
+      assertNull(value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "".getBytes());
 
@@ -660,12 +664,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("".getBytes(), value);
+      assertArrayEquals("".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -678,12 +682,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -696,12 +700,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -714,12 +718,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v111v".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v111v".getBytes(), value);
+      assertArrayEquals("v111v".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -732,12 +736,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v111v".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v111v".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v111v".getBytes(), value);
+      assertArrayEquals("v111v".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -750,12 +754,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v111v".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v111v".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -768,12 +772,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -786,12 +790,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -804,17 +808,17 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v3".getBytes(), value);
+      assertArrayEquals("v3".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     try {
@@ -836,18 +840,18 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v333v".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v333v".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k4".getBytes());
-      Assert.assertArrayEquals("v4".getBytes(), value);
+      assertArrayEquals("v4".getBytes(), value);
 
       client.del(tableName, hashKey, "k3".getBytes());
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -877,11 +881,11 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertNull(value);
+      assertNull(value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "".getBytes());
 
@@ -896,12 +900,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("".getBytes(), value);
+      assertArrayEquals("".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -914,12 +918,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -932,12 +936,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -950,12 +954,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v111v".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v111v".getBytes(), value);
+      assertArrayEquals("v111v".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -968,12 +972,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v111v".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v111v".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v111v".getBytes(), value);
+      assertArrayEquals("v111v".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -986,12 +990,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v111v".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v111v".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -1004,12 +1008,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -1022,12 +1026,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -1040,17 +1044,17 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v3".getBytes(), value);
+      assertArrayEquals("v3".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     try {
@@ -1072,18 +1076,18 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v333v".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v333v".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k4".getBytes());
-      Assert.assertArrayEquals("v4".getBytes(), value);
+      assertArrayEquals("v4".getBytes(), value);
 
       client.del(tableName, hashKey, "k3".getBytes());
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -1113,11 +1117,11 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertNull(value);
+      assertNull(value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "".getBytes());
 
@@ -1132,12 +1136,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -1150,12 +1154,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -1168,17 +1172,17 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     try {
@@ -1200,18 +1204,18 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v3".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v3".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k4".getBytes());
-      Assert.assertArrayEquals("v4".getBytes(), value);
+      assertArrayEquals("v4".getBytes(), value);
 
       client.del(tableName, hashKey, "k3".getBytes());
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     try {
@@ -1233,12 +1237,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       // v2 <= v2
       options.returnCheckValue = true;
@@ -1252,12 +1256,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("v3".getBytes(), value);
+      assertArrayEquals("v3".getBytes(), value);
 
       // v3 <= v4
       options.returnCheckValue = true;
@@ -1271,12 +1275,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v3".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v3".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("v4".getBytes(), value);
+      assertArrayEquals("v4".getBytes(), value);
 
       // v4 >= v4
       options.returnCheckValue = true;
@@ -1290,12 +1294,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "v5".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v4".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v4".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("v5".getBytes(), value);
+      assertArrayEquals("v5".getBytes(), value);
 
       // v5 >= v4
       options.returnCheckValue = true;
@@ -1309,12 +1313,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "v6".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v5".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v5".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("v6".getBytes(), value);
+      assertArrayEquals("v6".getBytes(), value);
 
       // v6 > v5
       options.returnCheckValue = true;
@@ -1328,17 +1332,17 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "v7".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("v6".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("v6".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("v7".getBytes(), value);
+      assertArrayEquals("v7".getBytes(), value);
 
       client.del(tableName, hashKey, "k5".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -1368,11 +1372,11 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertFalse(result.isCheckValueExist());
+      assertFalse(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertNull(value);
+      assertNull(value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "".getBytes());
 
@@ -1387,15 +1391,15 @@ public class TestCheckAndSet {
             "k1".getBytes(),
             "2".getBytes(),
             options);
-        Assert.fail();
+        assertTrue(false);
       } catch (PException ex) {
-        Assert.assertTrue(ex.getMessage(), ex.getMessage().endsWith("rocksdb error: 4"));
+        assertTrue(ex.getMessage().endsWith("rocksdb error: 4"), ex.getMessage());
 
       } catch (Exception ex) {
-        Assert.fail();
+        assertTrue(false);
       }
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("".getBytes(), value);
+      assertArrayEquals("".getBytes(), value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "1".getBytes());
 
@@ -1410,12 +1414,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("2".getBytes(), value);
+      assertArrayEquals("2".getBytes(), value);
 
       options.returnCheckValue = true;
       try {
@@ -1428,15 +1432,15 @@ public class TestCheckAndSet {
             "k1".getBytes(),
             "3".getBytes(),
             options);
-        Assert.assertTrue(false);
+        assertTrue(false);
       } catch (PException ex) {
-        Assert.assertTrue(ex.getMessage(), ex.getMessage().endsWith("rocksdb error: 4"));
+        assertTrue(ex.getMessage().endsWith("rocksdb error: 4"), ex.getMessage());
 
       } catch (Exception ex) {
-        Assert.assertTrue(false);
+        assertTrue(false);
       }
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("2".getBytes(), value);
+      assertArrayEquals("2".getBytes(), value);
 
       options.returnCheckValue = true;
       try {
@@ -1449,15 +1453,15 @@ public class TestCheckAndSet {
             "k1".getBytes(),
             "3".getBytes(),
             options);
-        Assert.assertTrue(false);
+        assertTrue(false);
       } catch (PException ex) {
-        Assert.assertTrue(ex.getMessage(), ex.getMessage().endsWith("rocksdb error: 4"));
+        assertTrue(ex.getMessage().endsWith("rocksdb error: 4"), ex.getMessage());
 
       } catch (Exception ex) {
-        Assert.assertTrue(false);
+        assertTrue(false);
       }
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("2".getBytes(), value);
+      assertArrayEquals("2".getBytes(), value);
 
       options.returnCheckValue = true;
       try {
@@ -1470,15 +1474,15 @@ public class TestCheckAndSet {
             "k1".getBytes(),
             "3".getBytes(),
             options);
-        Assert.assertTrue(false);
+        assertTrue(false);
       } catch (PException ex) {
-        Assert.assertTrue(ex.getMessage(), ex.getMessage().endsWith("rocksdb error: 4"));
+        assertTrue(ex.getMessage().endsWith("rocksdb error: 4"), ex.getMessage());
 
       } catch (Exception ex) {
-        Assert.assertTrue(false);
+        assertTrue(false);
       }
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("2".getBytes(), value);
+      assertArrayEquals("2".getBytes(), value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "0".getBytes());
 
@@ -1493,12 +1497,12 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "-1".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("0".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("0".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("-1".getBytes(), value);
+      assertArrayEquals("-1".getBytes(), value);
 
       options.returnCheckValue = true;
       result =
@@ -1511,17 +1515,17 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "-2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("-1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("-1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("-2".getBytes(), value);
+      assertArrayEquals("-2".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     try {
@@ -1543,18 +1547,18 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("3".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("3".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k4".getBytes());
-      Assert.assertArrayEquals("4".getBytes(), value);
+      assertArrayEquals("4".getBytes(), value);
 
       client.del(tableName, hashKey, "k3".getBytes());
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     try {
@@ -1576,12 +1580,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "2".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("1".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("1".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("2".getBytes(), value);
+      assertArrayEquals("2".getBytes(), value);
 
       // 2 <= 2
       options.returnCheckValue = true;
@@ -1595,12 +1599,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "3".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("2".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("2".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("3".getBytes(), value);
+      assertArrayEquals("3".getBytes(), value);
 
       // 3 <= 4
       options.returnCheckValue = true;
@@ -1614,12 +1618,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "4".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("3".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("3".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("4".getBytes(), value);
+      assertArrayEquals("4".getBytes(), value);
 
       // 4 >= 4
       options.returnCheckValue = true;
@@ -1633,12 +1637,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "5".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("4".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("4".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("5".getBytes(), value);
+      assertArrayEquals("5".getBytes(), value);
 
       // 5 >= 4
       options.returnCheckValue = true;
@@ -1652,12 +1656,12 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "6".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("5".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("5".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("6".getBytes(), value);
+      assertArrayEquals("6".getBytes(), value);
 
       // 6 > 5
       options.returnCheckValue = true;
@@ -1671,17 +1675,17 @@ public class TestCheckAndSet {
               "k5".getBytes(),
               "7".getBytes(),
               options);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
-      Assert.assertArrayEquals("6".getBytes(), result.getCheckValue());
+      assertTrue(result.isSetSucceed());
+      assertTrue(result.isCheckValueReturned());
+      assertTrue(result.isCheckValueExist());
+      assertArrayEquals("6".getBytes(), result.getCheckValue());
       value = client.get(tableName, hashKey, "k5".getBytes());
-      Assert.assertArrayEquals("7".getBytes(), value);
+      assertArrayEquals("7".getBytes(), value);
 
       client.del(tableName, hashKey, "k5".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -1702,41 +1706,41 @@ public class TestCheckAndSet {
       result =
           client.compareExchange(
               tableName, hashKey, "k1".getBytes(), "".getBytes(), "v1".getBytes(), 0);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertNull(result.getActualValue());
+      assertFalse(result.isSetSucceed());
+      assertNull(result.getActualValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertNull(value);
+      assertNull(value);
 
       client.set(tableName, hashKey, "k1".getBytes(), "".getBytes());
 
       result =
           client.compareExchange(
               tableName, hashKey, "k1".getBytes(), "".getBytes(), "v1".getBytes(), 0);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertNull(result.getActualValue());
+      assertTrue(result.isSetSucceed());
+      assertNull(result.getActualValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       result =
           client.compareExchange(
               tableName, hashKey, "k1".getBytes(), "".getBytes(), "v2".getBytes(), 0);
-      Assert.assertFalse(result.isSetSucceed());
-      Assert.assertArrayEquals("v1".getBytes(), result.getActualValue());
+      assertFalse(result.isSetSucceed());
+      assertArrayEquals("v1".getBytes(), result.getActualValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v1".getBytes(), value);
+      assertArrayEquals("v1".getBytes(), value);
 
       result =
           client.compareExchange(
               tableName, hashKey, "k1".getBytes(), "v1".getBytes(), "v2".getBytes(), 0);
-      Assert.assertTrue(result.isSetSucceed());
-      Assert.assertNull(result.getActualValue());
+      assertTrue(result.isSetSucceed());
+      assertNull(result.getActualValue());
       value = client.get(tableName, hashKey, "k1".getBytes());
-      Assert.assertArrayEquals("v2".getBytes(), value);
+      assertArrayEquals("v2".getBytes(), value);
 
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.fail();
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();

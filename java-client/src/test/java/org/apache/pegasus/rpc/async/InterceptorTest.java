@@ -18,13 +18,16 @@
  */
 package org.apache.pegasus.rpc.async;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.client.PException;
 import org.apache.pegasus.client.PegasusClientFactory;
 import org.apache.pegasus.client.PegasusTableInterface;
 import org.apache.pegasus.client.TableOptions;
-import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class InterceptorTest {
   @Test
@@ -42,20 +45,18 @@ public class InterceptorTest {
 
     // if origin value was not compressed, both commonTable and compressTable can read origin value
     commonTable.set(hashKey, sortKey, commonValue, 10000);
-    Assertions.assertEquals(
-        new String(commonTable.get(hashKey, sortKey, 10000)), new String(commonValue));
-    Assertions.assertEquals(
-        new String(compressTable.get(hashKey, sortKey, 10000)), new String(commonValue));
+    assertEquals(new String(commonTable.get(hashKey, sortKey, 10000)), new String(commonValue));
+    assertEquals(new String(compressTable.get(hashKey, sortKey, 10000)), new String(commonValue));
 
     // if origin value was compressed, only compressTable can read successfully
     compressTable.set(hashKey, sortKey, compressionValue, 10000);
-    Assertions.assertNotEquals(
+    assertNotEquals(
         new String(commonTable.get(hashKey, sortKey, 10000)), new String(compressionValue));
-    Assertions.assertEquals(
+    assertEquals(
         new String(compressTable.get(hashKey, sortKey, 10000)), new String(compressionValue));
 
     // if origin value is null, return null
     byte[] ret = compressTable.get("not-exist".getBytes(), sortKey, 10000);
-    Assertions.assertNull(ret);
+    assertNull(ret);
   }
 }

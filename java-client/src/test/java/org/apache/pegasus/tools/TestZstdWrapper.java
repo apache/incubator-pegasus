@@ -18,12 +18,15 @@
  */
 package org.apache.pegasus.tools;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.pegasus.client.PException;
 import org.apache.pegasus.client.PegasusClientFactory;
 import org.apache.pegasus.client.PegasusClientInterface;
 import org.apache.pegasus.client.PegasusTableInterface;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestZstdWrapper {
   @Test
@@ -46,31 +49,31 @@ public class TestZstdWrapper {
       byte[] compressedBuf = table.get("h".getBytes(), "s".getBytes(), 1000);
 
       // decompress the value
-      Assert.assertArrayEquals(ZstdWrapper.decompress(compressedBuf), value);
+      assertArrayEquals(ZstdWrapper.decompress(compressedBuf), value);
     }
 
     // ensure empty value won't break the program
     {
       try {
         ZstdWrapper.decompress("".getBytes());
-        Assert.fail("expecting a IllegalArgumentException");
+        fail("expecting a IllegalArgumentException");
       } catch (Exception e) {
-        Assert.assertTrue(e instanceof IllegalArgumentException);
+        assertTrue(e instanceof IllegalArgumentException);
       }
       try {
         ZstdWrapper.decompress(null);
-        Assert.fail("expecting a IllegalArgumentException");
+        fail("expecting a IllegalArgumentException");
       } catch (Exception e) {
-        Assert.assertTrue(e instanceof IllegalArgumentException);
+        assertTrue(e instanceof IllegalArgumentException);
       }
     }
 
     { // decompress invalid data
       try {
         ZstdWrapper.decompress("abc123".getBytes());
-        Assert.fail("expecting a PException");
+        fail("expecting a PException");
       } catch (Exception e) {
-        Assert.assertTrue(e instanceof PException);
+        assertTrue(e instanceof PException);
       }
     }
   }

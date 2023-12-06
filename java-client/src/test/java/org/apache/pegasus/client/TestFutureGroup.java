@@ -18,18 +18,17 @@
  */
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 public class TestFutureGroup {
-
-  @Rule public TestName name = new TestName();
 
   private static final class TestEventExecutor extends SingleThreadEventExecutor {
     TestEventExecutor() {
@@ -48,7 +47,7 @@ public class TestFutureGroup {
   }
 
   @Test
-  public void testBlockingOperationException() throws Exception {
+  public void testBlockingOperationException(TestInfo testInfo) throws Exception {
     // ensure pegasus client will throw PException when BlockingOperationException is thrown.
 
     TestEventExecutor executor = new TestEventExecutor();
@@ -65,7 +64,7 @@ public class TestFutureGroup {
             group.waitAllCompleteOrOneFail(10000);
           } catch (PException e) {
             success.set(false);
-            System.err.println(name.getMethodName() + ": " + e.toString());
+            System.err.println(testInfo.getDisplayName() + ": " + e.toString());
           }
           executed.set(true);
         });
@@ -81,11 +80,11 @@ public class TestFutureGroup {
       Thread.sleep(100);
     }
 
-    Assert.assertFalse(success.get());
+    assertFalse(success.get());
   }
 
   @Test
-  public void testFutureWaitTimeout() throws Exception {
+  public void testFutureWaitTimeout(TestInfo testInfo) throws Exception {
     TestEventExecutor executor = new TestEventExecutor();
     Promise<Void> promise = executor.newPromise();
 
@@ -96,9 +95,9 @@ public class TestFutureGroup {
       group.waitAllCompleteOrOneFail(10);
     } catch (PException e) {
       // must throw exception
-      System.err.println(name.getMethodName() + ": " + e.toString());
+      System.err.println(testInfo.getDisplayName() + ": " + e.toString());
       return;
     }
-    Assert.fail();
+    fail();
   }
 }
