@@ -326,7 +326,7 @@ function(dsn_setup_thirdparty_libs)
   find_package(fmt REQUIRED)
   set(DEFAULT_THIRDPARTY_LIBS ${THRIFT_LIB} fmt::fmt CACHE STRING "default thirdparty libs" FORCE)
 
-  # rocksdb and dependent libs
+  # rocksdb and dependencies
   file(GLOB ROCKSDB_DEPENDS_MODULE_PATH ${THIRDPARTY_ROOT}/build/Source/rocksdb/cmake/modules)
   if(NOT ROCKSDB_DEPENDS_MODULE_PATH)
     message(WARNING "Cannot find RocksDB depends cmake modules path, might not find snappy, zstd, lz4")
@@ -338,7 +338,7 @@ function(dsn_setup_thirdparty_libs)
   if(USE_JEMALLOC)
     find_package(Jemalloc REQUIRED)
   endif()
-  find_package(RocksDB)
+  find_package(RocksDB REQUIRED)
 
   # libhdfs
   find_package(JNI REQUIRED)
