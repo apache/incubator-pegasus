@@ -523,10 +523,7 @@ public class PegasusScannerTest {
         data.get(sortKey),
         String.format(
             "Duplicate: hashKey=%s, sortKye=%s, oldValue=%s, newValue=%s",
-            hashKey,
-            sortKey,
-            data.get(sortKey),
-            value));
+            hashKey, sortKey, data.get(sortKey), value));
     data.put(sortKey, value);
   }
 
