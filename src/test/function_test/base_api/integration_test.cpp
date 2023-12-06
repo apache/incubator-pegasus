@@ -70,7 +70,7 @@ TEST_F(integration_test, write_corrupt_db)
                 // cause timeout.
                 // Force to fetch the latest route table.
                 client_ =
-                    pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
+                    pegasus_client_factory::get_client(cluster_name_.c_str(), table_name_.c_str());
                 ASSERT_TRUE(client_ != nullptr);
             } else {
                 ASSERT_TRUE(false) << ret;
@@ -86,7 +86,8 @@ TEST_F(integration_test, write_corrupt_db)
                 break;
             }
             ASSERT_EQ(PERR_NOT_FOUND, ret);
-            client_ = pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
+            client_ =
+                pegasus_client_factory::get_client(cluster_name_.c_str(), table_name_.c_str());
             ASSERT_TRUE(client_ != nullptr);
 
             ret = client_->get(hkey, skey, got_value);
@@ -179,7 +180,7 @@ TEST_F(integration_test, read_corrupt_db)
                 // a new read operation on the primary replica it ever held will cause timeout.
                 // Force to fetch the latest route table.
                 client_ =
-                    pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
+                    pegasus_client_factory::get_client(cluster_name_.c_str(), table_name_.c_str());
                 ASSERT_TRUE(client_ != nullptr);
             } else {
                 ASSERT_TRUE(false) << ret;

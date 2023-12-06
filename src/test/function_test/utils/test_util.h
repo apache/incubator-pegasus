@@ -63,16 +63,19 @@ public:
     // on the 'table_name'.
     static int get_leader_count(const std::string &table_name, int replica_server_index);
 
-    void wait_app_healthy(const std::string &app_name) const;
+    void wait_table_healthy(const std::string &table_name) const;
 
     void write_data(int count) const;
-    void verify_data(const std::string &app_name, int count) const;
+    void verify_data(const std::string &table_name, int count) const;
+
+    void update_table_env(const std::vector<std::string> &keys,
+                          const std::vector<std::string> &values) const;
 
 protected:
     const std::string cluster_name_;
-    std::string app_name_;
+    std::string table_name_;
     const std::map<std::string, std::string> create_envs_;
-    int32_t app_id_;
+    int32_t table_id_;
     int32_t partition_count_ = 8;
     std::vector<dsn::partition_configuration> partitions_;
     pegasus_client *client_ = nullptr;

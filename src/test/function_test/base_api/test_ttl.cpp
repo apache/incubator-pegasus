@@ -29,11 +29,10 @@
 #include "client/replication_ddl_client.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
-#include "meta_admin_types.h"
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
 #include "utils/error_code.h"
-#include "utils/errors.h"
+#include "utils/test_macros.h"
 #include "utils/utils.h"
 
 using namespace ::dsn;
@@ -48,7 +47,7 @@ public:
         ASSERT_NO_FATAL_FAILURE(set_default_ttl_secs(0));
     }
 
-    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
+    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0)); }
 
     void set_default_ttl_secs(int32_t ttl)
     {
@@ -57,13 +56,7 @@ public:
 
         std::string env = envs[TABLE_LEVEL_DEFAULT_TTL];
         if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
-            auto response = ddl_client_->set_app_envs(
-                client_->get_app_name(), {TABLE_LEVEL_DEFAULT_TTL}, {std::to_string(ttl)});
-            ASSERT_EQ(true, response.is_ok());
-            ASSERT_EQ(ERR_OK, response.get_value().err);
-
-            // wait envs to be synced.
-            std::this_thread::sleep_for(std::chrono::seconds(sleep_secs_for_envs_effect));
+            NO_FATALS(update_table_env({TABLE_LEVEL_DEFAULT_TTL}, {std::to_string(ttl)}));
         }
     }
 
@@ -125,14 +118,8 @@ TEST_F(ttl_test, set_without_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    auto response = ddl_client_->set_app_envs(client_->get_app_name(),
-                                              {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-                                              {std::to_string(time(nullptr))});
-    ASSERT_EQ(true, response.is_ok());
-    ASSERT_EQ(ERR_OK, response.get_value().err);
-
-    // wait envs to be synced, and manual lcompaction has been finished.
-    std::this_thread::sleep_for(std::chrono::seconds(sleep_secs_for_envs_effect));
+    NO_FATALS(
+        update_table_env({MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY}, {std::to_string(time(nullptr))}));
 
     // check expired one
     ASSERT_EQ(PERR_NOT_FOUND, client_->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds));
@@ -199,14 +186,8 @@ TEST_F(ttl_test, set_with_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    auto response = ddl_client_->set_app_envs(client_->get_app_name(),
-                                              {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-                                              {std::to_string(time(nullptr))});
-    ASSERT_EQ(true, response.is_ok());
-    ASSERT_EQ(ERR_OK, response.get_value().err);
-
-    // wait envs to be synced, and manual compaction has been finished.
-    std::this_thread::sleep_for(std::chrono::seconds(sleep_secs_for_envs_effect));
+    NO_FATALS(
+        update_table_env({MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY}, {std::to_string(time(nullptr))}));
 
     // check forever one
     ASSERT_EQ(PERR_OK, client_->ttl(ttl_hash_key, ttl_test_sort_key_0, ttl_seconds));

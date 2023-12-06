@@ -19,6 +19,8 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <algorithm>
 #include <chrono>
@@ -36,6 +38,7 @@
 #include "gtest/gtest.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/test_util.h"
+#include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
@@ -60,7 +63,7 @@ public:
 
         NO_FATALS(write_data(kv_pair_cnt));
 
-        std::vector<int32_t> app_ids({app_id_});
+        std::vector<int32_t> app_ids({table_id_});
         auto err = ddl_client_->add_backup_policy(policy_name,
                                                   backup_provider_name,
                                                   app_ids,
@@ -71,7 +74,7 @@ public:
         ASSERT_EQ(err, ERR_OK);
     }
 
-    void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
+    void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client_->drop_app(table_name_, 0)); }
 
     void restore()
     {
@@ -79,37 +82,27 @@ public:
         ASSERT_EQ(ERR_OK,
                   ddl_client_->do_restore(backup_provider_name,
                                           cluster_name_,
-                                          /*old_policy_name=*/"",
+                                          /* policy_name */ "",
                                           time_stamp,
-                                          app_name_,
-                                          app_id_,
+                                          table_name_,
+                                          table_id_,
                                           new_app_name,
                                           false));
-        NO_FATALS(wait_app_healthy(new_app_name));
+        NO_FATALS(wait_table_healthy(new_app_name));
     }
 
-    bool wait_backup_complete(int64_t seconds)
+    void wait_backup_complete()
     {
-        // wait backup the first backup complete at most (seconds)second
-        int64_t sleep_time = 0;
-        bool is_backup_complete = false;
-        while (seconds > 0 && !is_backup_complete) {
-            sleep_time = 0;
-            if (seconds >= 3) {
-                sleep_time = 3;
-            } else {
-                sleep_time = seconds;
-            }
-            seconds -= sleep_time;
-            std::cout << "sleep " << sleep_time << "s to wait backup complete..." << std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+        ASSERT_IN_TIME(
+            [&] {
+                time_stamp = get_first_backup_timestamp();
+                fmt::print(stdout, "first backup_timestamp = {}", time_stamp);
 
-            time_stamp = get_first_backup_timestamp();
-            std::cout << "first backup_timestamp = " << time_stamp << std::endl;
-
-            is_backup_complete = is_app_info_backup_complete();
-        }
-        return is_backup_complete;
+                std::string backup_info =
+                    backup_dir + "/" + std::to_string(time_stamp) + "/backup_info";
+                ASSERT_TRUE(dsn::utils::filesystem::file_exists(backup_info));
+            },
+            180);
     }
 
     int64_t get_first_backup_timestamp()
@@ -132,24 +125,10 @@ public:
         }
         result = result.substr(0, index);
         if (!result.empty()) {
-            auto res = boost::lexical_cast<int64_t>(result);
-            return res;
+            return boost::lexical_cast<int64_t>(result);
         } else {
             return 0;
         }
-    }
-
-    bool find_second_backup_timestamp()
-    {
-        std::vector<std::string> dirs;
-        ::dsn::utils::filesystem::get_subdirectories(policy_dir, dirs, false);
-        return (dirs.size() >= 2);
-    }
-
-    bool is_app_info_backup_complete()
-    {
-        std::string backup_info = backup_dir + "/" + std::to_string(time_stamp) + "/backup_info";
-        return dsn::utils::filesystem::file_exists(backup_info);
     }
 
 public:
@@ -183,7 +162,7 @@ TEST_F(restore_test, restore)
 {
     std::cout << "start testing restore..." << std::endl;
     // step1: wait backup complete
-    ASSERT_TRUE(wait_backup_complete(180));
+    NO_FATALS(wait_backup_complete());
     // step2: test restore
     NO_FATALS(restore());
     // step3: verify_data

@@ -40,33 +40,15 @@ class backup_restore_test : public test_util
 public:
     void TearDown() override
     {
-        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0));
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(table_name_, 0));
         ASSERT_EQ(ERR_OK, ddl_client_->drop_app(s_new_app_name, 0));
-    }
-
-    start_backup_app_response start_backup(const std::string &user_specified_path = "")
-    {
-        return ddl_client_->backup_app(app_id_, s_provider_type, user_specified_path).get_value();
-    }
-
-    error_code start_restore(int64_t backup_id, const std::string &user_specified_path = "")
-    {
-        return ddl_client_->do_restore(s_provider_type,
-                                       cluster_name_,
-                                       /*policy_name=*/"",
-                                       backup_id,
-                                       app_name_,
-                                       app_id_,
-                                       s_new_app_name,
-                                       /*skip_bad_partition=*/false,
-                                       user_specified_path);
     }
 
     void wait_backup_complete(int64_t backup_id)
     {
         ASSERT_IN_TIME(
             [&] {
-                auto resp = ddl_client_->query_backup(app_id_, backup_id).get_value();
+                auto resp = ddl_client_->query_backup(table_id_, backup_id).get_value();
                 ASSERT_EQ(dsn::ERR_OK, resp.err);
                 ASSERT_FALSE(resp.backup_items.empty());
                 // we got only one backup_item for a certain app_id and backup_id.
@@ -77,18 +59,26 @@ public:
 
     void test_backup_and_restore(const std::string &user_specified_path = "")
     {
-        NO_FATALS(wait_app_healthy(app_name_));
-
+        NO_FATALS(wait_table_healthy(table_name_));
         NO_FATALS(write_data(s_num_of_rows));
-        NO_FATALS(verify_data(app_name_, s_num_of_rows));
+        NO_FATALS(verify_data(table_name_, s_num_of_rows));
 
-        auto resp = start_backup(user_specified_path);
+        auto resp =
+            ddl_client_->backup_app(table_id_, s_provider_type, user_specified_path).get_value();
         ASSERT_EQ(ERR_OK, resp.err);
         int64_t backup_id = resp.backup_id;
         NO_FATALS(wait_backup_complete(backup_id));
-        ASSERT_EQ(ERR_OK, start_restore(backup_id, user_specified_path));
-        NO_FATALS(wait_app_healthy(s_new_app_name));
-
+        ASSERT_EQ(ERR_OK,
+                  ddl_client_->do_restore(s_provider_type,
+                                          cluster_name_,
+                                          /* policy_name */ "",
+                                          backup_id,
+                                          table_name_,
+                                          table_id_,
+                                          s_new_app_name,
+                                          /* skip_bad_partition */ false,
+                                          user_specified_path));
+        NO_FATALS(wait_table_healthy(s_new_app_name));
         NO_FATALS(verify_data(s_new_app_name, s_num_of_rows));
     }
 
