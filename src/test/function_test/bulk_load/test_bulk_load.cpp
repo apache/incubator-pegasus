@@ -21,11 +21,14 @@
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
+#include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "base/pegasus_const.h"
@@ -39,7 +42,6 @@
 #include "include/pegasus/error.h"
 #include "meta/meta_bulk_load_service.h"
 #include "test/function_test/utils/test_util.h"
-#include "test_util/test_util.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"
 #include "utils/env.h"
