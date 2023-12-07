@@ -207,6 +207,7 @@ class replica;
 class mutation_queue
 {
 public:
+    explicit mutation_queue() {}
     mutation_queue(gpid gpid, int max_concurrent_op = 2, bool batch_write_disabled = false);
 
     ~mutation_queue()

@@ -46,6 +46,8 @@ struct replica_base
     {
     }
 
+    explicit replica_base() {}
+
     gpid get_gpid() const { return _gpid; }
 
     const char *replica_name() const { return _name.c_str(); }

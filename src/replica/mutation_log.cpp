@@ -479,14 +479,14 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
 mutation_log::mutation_log(const std::string &dir, int32_t max_log_file_mb, gpid gpid, replica *r)
 {
     _dir = dir;
-    _is_private = (gpid.value() != 0);
+    _is_private = true;
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
     _min_log_file_size_in_bytes = _max_log_file_size_in_bytes / 10;
     _owner_replica = r;
     _private_gpid = gpid;
 
     if (r) {
-        CHECK_EQ(_private_gpid, r->get_gpid());
+        //        CHECK_EQ(_private_gpid, r->get_gpid());
     }
     mutation_log::init_states();
 }

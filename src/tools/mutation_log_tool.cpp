@@ -33,6 +33,7 @@
 #include "consensus_types.h"
 #include "replica/mutation.h"
 #include "replica/mutation_log.h"
+#include "replica/replica.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
@@ -49,7 +50,10 @@ bool mutation_log_tool::dump(
     std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)>
         callback)
 {
-    mutation_log_ptr mlog = new mutation_log_shared(log_dir, 32, false);
+    app_info ai;
+    auto rep = new replica();
+    auto mlog = std::make_shared<mutation_log_private>(
+        log_dir, FLAGS_log_private_file_size_mb, gpid(2, 0), rep);
     error_code err = mlog->open(
         [mlog, &output, callback](int log_length, mutation_ptr &mu) -> bool {
             if (mlog->max_decree(mu->data.header.pid) == 0) {
@@ -92,6 +96,7 @@ bool mutation_log_tool::dump(
         },
         nullptr);
     mlog->close();
+    delete rep;
     if (err != dsn::ERR_OK) {
         output << "ERROR: dump mutation log failed, err = " << err.to_string() << std::endl;
         return false;
