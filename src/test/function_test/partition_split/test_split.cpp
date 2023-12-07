@@ -265,7 +265,7 @@ TEST_F(partition_split_test, split_with_scan)
         },
         300);
 
-    std::cout << "Partition split succeed" << std::endl;
+    fmt::print(stdout, "Partition split succeed\n");
     NO_FATALS(verify_data_after_split());
     std::this_thread::sleep_for(std::chrono::seconds(30));
     NO_FATALS(full_scan_after_split());
@@ -282,8 +282,7 @@ TEST_F(partition_split_test, pause_split)
             if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
                 ASSERT_EQ(ERR_OK,
                           control_partition_split(split_control_type::PAUSE, target_partition));
-                std::cout << "Table(" << table_name_ << ") pause partition[" << target_partition
-                          << "] split succeed" << std::endl;
+                fmt::print(stdout, "Table({}) pause partition[{}] split succeed\n", table_name_, target_partition);
                 already_pause = true;
             }
             // restart target partition split
@@ -291,15 +290,14 @@ TEST_F(partition_split_test, pause_split)
                 check_partition_split_status(target_partition, split_status::PAUSED)) {
                 ASSERT_EQ(ERR_OK,
                           control_partition_split(split_control_type::RESTART, target_partition));
-                std::cout << "Table(" << table_name_ << ") restart split partition["
-                          << target_partition << "] succeed" << std::endl;
+                fmt::print(stdout, "Table({}) restart split partition[{}] succeed\n", table_name_, target_partition);
                 already_restart = true;
             }
             ASSERT_TRUE(is_split_finished());
         },
         300);
 
-    std::cout << "Partition split succeed" << std::endl;
+    fmt::print(stdout, "Partition split succeed\n");
     NO_FATALS(verify_data_after_split());
 }
 
@@ -313,8 +311,7 @@ TEST_F(partition_split_test, cancel_split)
             // pause all partition split
             if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
                 ASSERT_EQ(ERR_OK, control_partition_split(split_control_type::PAUSE, -1));
-                std::cout << "Table(" << table_name_ << ") pause all partitions split succeed"
-                          << std::endl;
+                fmt::print(stdout, "Table({}) pause all partitions split succeed\n", table_name_);
                 already_pause = true;
             }
             ASSERT_TRUE(check_partition_split_status(-1, split_status::PAUSED));
@@ -323,7 +320,7 @@ TEST_F(partition_split_test, cancel_split)
 
     // cancel partition split
     ASSERT_EQ(ERR_OK, control_partition_split(split_control_type::CANCEL, -1, partition_count_));
-    std::cout << "Table(" << table_name_ << ") cancel partitions split succeed" << std::endl;
+    fmt::print(stdout, "Table({}) cancel partitions split succeed\n", table_name_);
     // write data during cancel partition split
     ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
         [&] {
@@ -332,6 +329,6 @@ TEST_F(partition_split_test, cancel_split)
         },
         300);
 
-    std::cout << "Partition split succeed" << std::endl;
+    fmt::print(stdout, "Partition split succeed\n");
     NO_FATALS(verify_data_after_split());
 }

@@ -98,8 +98,7 @@ public:
                 time_stamp = get_first_backup_timestamp();
                 fmt::print(stdout, "first backup_timestamp = {}", time_stamp);
 
-                std::string backup_info =
-                    backup_dir + "/" + std::to_string(time_stamp) + "/backup_info";
+                auto backup_info = fmt::format("{}/{}/backup_info", backup_dir, time_stamp);
                 ASSERT_TRUE(dsn::utils::filesystem::file_exists(backup_info));
             },
             180);

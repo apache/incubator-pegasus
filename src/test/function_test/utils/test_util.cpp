@@ -185,7 +185,7 @@ void test_util::write_data(int count) const
 void test_util::verify_data(const std::string &table_name, int count) const
 {
     fmt::print(stdout, "start to get {} key-value pairs...\n", count);
-    pegasus_client *client =
+    auto *client =
         pegasus_client_factory::get_client(cluster_name_.c_str(), table_name.c_str());
     ASSERT_NE(client, nullptr);
     int64_t start = dsn_now_ms();
@@ -204,7 +204,7 @@ void test_util::update_table_env(const std::vector<std::string> &keys,
                                  const std::vector<std::string> &values) const
 {
     auto resp = ddl_client_->set_app_envs(table_name_, keys, values);
-    ASSERT_EQ(true, resp.is_ok());
+    ASSERT_TRUE(resp.is_ok());
     ASSERT_EQ(dsn::ERR_OK, resp.get_value().err);
     // TODO(yingchun): update the sync interval to reduce time.
     fmt::print(stdout, "sleep 31s to wait app_envs update\n");

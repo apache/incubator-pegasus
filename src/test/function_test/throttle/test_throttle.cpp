@@ -19,9 +19,7 @@
 
 #include <fmt/core.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <atomic>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
