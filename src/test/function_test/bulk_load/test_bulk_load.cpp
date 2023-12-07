@@ -167,17 +167,26 @@ protected:
         NO_FATALS(run_cmd_from_project_root("rm " + file_path));
     }
 
-    void wait_bulk_load_finish(bulk_load_status::type expect_bls_type)
+    bulk_load_status::type wait_bulk_load_finish(int64_t remain_seconds)
     {
-        ASSERT_IN_TIME(
-            [&] {
-                auto last_status = bulk_load_status::BLS_INVALID;
-                // When bulk load finished, 'err' will transfer to ERR_INVALID_STATE.
-                auto resp = ddl_client_->query_bulk_load(table_name_).get_value();
-                ASSERT_EQ(ERR_OK, resp.err);
-                ASSERT_EQ(expect_bls_type, resp.app_status);
-            },
-            300);
+        int64_t sleep_time = 5;
+        auto err = ERR_OK;
+
+        auto last_status = bulk_load_status::BLS_INVALID;
+        // when bulk load end, err will be ERR_INVALID_STATE
+        while (remain_seconds > 0 && err == ERR_OK) {
+            sleep_time = std::min(sleep_time, remain_seconds);
+            remain_seconds -= sleep_time;
+            std::cout << "sleep " << sleep_time << "s to query bulk status" << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+
+            auto resp = ddl_client_->query_bulk_load(table_name_).get_value();
+            err = resp.err;
+            if (err == ERR_OK) {
+                last_status = resp.app_status;
+            }
+        }
+        return last_status;
     }
 
     void verify_bulk_load_data()
@@ -245,7 +254,7 @@ protected:
 
         // Start bulk load and wait until it complete.
         ASSERT_EQ(ERR_OK, start_bulk_load(ingest_behind));
-        NO_FATALS(wait_bulk_load_finish(bulk_load_status::BLS_SUCCEED));
+        ASSERT_EQ(bulk_load_status::BLS_SUCCEED, wait_bulk_load_finish(300));
 
         std::cout << "Start to verify data..." << std::endl;
         if (ingest_behind) {
@@ -320,7 +329,7 @@ TEST_F(bulk_load_test, missing_p0_bulk_load_metadata)
 {
     NO_FATALS(remove_file(bulk_load_local_app_root_ + "/0/bulk_load_metadata"));
     ASSERT_EQ(ERR_OK, start_bulk_load());
-    NO_FATALS(wait_bulk_load_finish(bulk_load_status::BLS_FAILED));
+    ASSERT_EQ(bulk_load_status::BLS_FAILED, wait_bulk_load_finish(300));
 }
 
 // Test bulk load failed because the allow_ingest_behind config is inconsistent.
