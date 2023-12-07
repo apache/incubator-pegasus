@@ -15,7 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <chrono>
 #include <iostream>
