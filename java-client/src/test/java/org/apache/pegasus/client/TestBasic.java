@@ -20,10 +20,12 @@ package org.apache.pegasus.client;
 
 /** @author qinzuoyan */
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -2847,13 +2849,13 @@ public class TestBasic {
       sortKeys.add("basic_test_sort_key_2".getBytes());
 
       tb.multiSet(hashKey.getBytes(), multiValues3, 5000);
-      Assertions.assertDoesNotThrow(
+      assertDoesNotThrow(
           () -> {
             tb.multiSet(hashKey.getBytes(), multiValues3, 5000);
           });
 
       Throwable exception3 =
-          Assertions.assertThrows(
+          assertThrows(
               PException.class,
               () -> {
                 client.multiDel(tableName, hashKey.getBytes(), sortKeys);
