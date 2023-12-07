@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.junit.jupiter.api.Test;
 
@@ -95,7 +96,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     try {
@@ -143,7 +144,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     try {
