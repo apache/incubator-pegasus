@@ -176,7 +176,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -253,7 +253,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     try {
@@ -365,7 +365,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     try {
@@ -583,7 +583,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     try {
@@ -616,7 +616,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -819,7 +819,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     try {
@@ -852,7 +852,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -1055,7 +1055,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     try {
@@ -1088,7 +1088,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -1183,7 +1183,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     try {
@@ -1392,12 +1392,12 @@ public class TestCheckAndSet {
             "k1".getBytes(),
             "2".getBytes(),
             options);
-        assertTrue(false);
+        fail();
       } catch (PException ex) {
         assertTrue(ex.getMessage().endsWith("rocksdb error: 4"), ex.getMessage());
 
       } catch (Exception ex) {
-        assertTrue(false);
+        fail();
       }
       value = client.get(tableName, hashKey, "k1".getBytes());
       assertArrayEquals("".getBytes(), value);
@@ -1741,7 +1741,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k1".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      assertTrue(false);
+      fail();
     }
 
     PegasusClientFactory.closeSingletonClient();
