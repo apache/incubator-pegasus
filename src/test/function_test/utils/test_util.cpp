@@ -185,8 +185,7 @@ void test_util::write_data(int count) const
 void test_util::verify_data(const std::string &table_name, int count) const
 {
     fmt::print(stdout, "start to get {} key-value pairs...\n", count);
-    auto *client =
-        pegasus_client_factory::get_client(cluster_name_.c_str(), table_name.c_str());
+    auto *client = pegasus_client_factory::get_client(cluster_name_.c_str(), table_name.c_str());
     ASSERT_NE(client, nullptr);
     int64_t start = dsn_now_ms();
     for (int i = 0; i < count; i++) {

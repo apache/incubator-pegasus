@@ -282,7 +282,10 @@ TEST_F(partition_split_test, pause_split)
             if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
                 ASSERT_EQ(ERR_OK,
                           control_partition_split(split_control_type::PAUSE, target_partition));
-                fmt::print(stdout, "Table({}) pause partition[{}] split succeed\n", table_name_, target_partition);
+                fmt::print(stdout,
+                           "Table({}) pause partition[{}] split succeed\n",
+                           table_name_,
+                           target_partition);
                 already_pause = true;
             }
             // restart target partition split
@@ -290,7 +293,10 @@ TEST_F(partition_split_test, pause_split)
                 check_partition_split_status(target_partition, split_status::PAUSED)) {
                 ASSERT_EQ(ERR_OK,
                           control_partition_split(split_control_type::RESTART, target_partition));
-                fmt::print(stdout, "Table({}) restart split partition[{}] succeed\n", table_name_, target_partition);
+                fmt::print(stdout,
+                           "Table({}) restart split partition[{}] succeed\n",
+                           table_name_,
+                           target_partition);
                 already_restart = true;
             }
             ASSERT_TRUE(is_split_finished());
