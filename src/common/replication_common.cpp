@@ -26,6 +26,7 @@
 
 #include "common/replication_common.h"
 
+#include <string.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
 #include <fstream>
@@ -99,7 +100,12 @@ DSN_DEFINE_bool(replication,
                 "whether to disable empty write, default is false");
 DSN_TAG_VARIABLE(empty_write_disabled, FT_MUTABLE);
 
-DSN_DEFINE_string(replication, slog_dir, "", "The shared log directory");
+DSN_DEFINE_string(replication,
+                  slog_dir,
+                  "",
+                  "The shared log directory. Deprecated since Pegasus "
+                  "2.6.0, but leave it and do not modify the value if "
+                  "upgrading from older versions.");
 DSN_DEFINE_string(replication, data_dirs, "", "replica directory list");
 DSN_DEFINE_string(replication,
                   data_dirs_black_list_file,
@@ -118,11 +124,7 @@ void replication_options::initialize()
     app_name = info.full_name;
     app_dir = info.data_dir;
 
-    // slog_dir:
-    // - if config[slog_dir] is empty: "app_dir/slog"
-    // - else: "config[slog_dir]/app_name/slog"
-    slog_dir = FLAGS_slog_dir;
-    if (slog_dir.empty()) {
+    if (strlen(FLAGS_slog_dir) == 0) {
         slog_dir = app_dir;
     } else {
         slog_dir = utils::filesystem::path_combine(slog_dir, app_name);

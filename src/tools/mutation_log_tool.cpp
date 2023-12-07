@@ -126,6 +126,7 @@ bool mutation_log_tool::dump(
         },
         nullptr);
     mlog->close();
+    delete rep;
     if (err != dsn::ERR_OK) {
         output << fmt::format("ERROR: dump mutation log failed, err = {}\n", err);
         return false;

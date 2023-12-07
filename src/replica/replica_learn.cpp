@@ -674,9 +674,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         }
 
         if (err == ERR_OK) {
-            err = _app->open_new_internal(this,
-                                          _stub->_log->on_partition_reset(get_gpid(), 0),
-                                          _private_log->on_partition_reset(get_gpid(), 0));
+            err = _app->open_new_internal(this, _private_log->on_partition_reset(get_gpid(), 0));
 
             if (err != ERR_OK) {
                 LOG_ERROR_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, open app (with "
@@ -764,7 +762,6 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         // appended by the mutations AFTER current position
         err = _app->update_init_info(
             this,
-            _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
             _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
             _app->last_committed_decree());
 

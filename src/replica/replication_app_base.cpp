@@ -125,7 +125,6 @@ std::string replica_init_info::to_string()
     // TODO(yingchun): use fmt instead
     std::ostringstream oss;
     oss << "init_ballot = " << init_ballot << ", init_durable_decree = " << init_durable_decree
-        << ", init_offset_in_shared_log = " << init_offset_in_shared_log
         << ", init_offset_in_private_log = " << init_offset_in_private_log;
     return oss.str();
 }
@@ -238,9 +237,7 @@ error_code replication_app_base::open_internal(replica *r)
     return ERR_OK;
 }
 
-error_code replication_app_base::open_new_internal(replica *r,
-                                                   int64_t shared_log_start,
-                                                   int64_t private_log_start)
+error_code replication_app_base::open_new_internal(replica *r, int64_t private_log_start)
 {
     CHECK(utils::filesystem::remove_path(_dir_data), "remove data dir {} failed", _dir_data);
     CHECK(utils::filesystem::create_directory(_dir_data), "create data dir {} failed", _dir_data);
@@ -252,9 +249,8 @@ error_code replication_app_base::open_new_internal(replica *r,
 
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, open(), "open replica app failed");
     _last_committed_decree = last_durable_decree();
-    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
-                          update_init_info(_replica, shared_log_start, private_log_start, 0),
-                          "open replica app failed");
+    LOG_AND_RETURN_NOT_OK(
+        ERROR_PREFIX, update_init_info(_replica, private_log_start, 0), "open replica app failed");
     return ERR_OK;
 }
 
@@ -430,7 +426,6 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
 }
 
 error_code replication_app_base::update_init_info(replica *r,
-                                                  int64_t shared_log_offset,
                                                   int64_t private_log_offset,
                                                   int64_t durable_decree)
 {
@@ -438,7 +433,6 @@ error_code replication_app_base::update_init_info(replica *r,
     _info.magic = 0xdeadbeef;
     _info.init_ballot = r->get_ballot();
     _info.init_durable_decree = durable_decree;
-    _info.init_offset_in_shared_log = shared_log_offset;
     _info.init_offset_in_private_log = private_log_offset;
 
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, _info.store(r->dir()), "store replica_init_info failed");
@@ -448,10 +442,7 @@ error_code replication_app_base::update_init_info(replica *r,
 
 error_code replication_app_base::update_init_info_ballot_and_decree(replica *r)
 {
-    return update_init_info(r,
-                            _info.init_offset_in_shared_log,
-                            _info.init_offset_in_private_log,
-                            r->last_durable_decree());
+    return update_init_info(r, _info.init_offset_in_private_log, r->last_durable_decree());
 }
 
 const app_info *replication_app_base::get_app_info() const { return _replica->get_app_info(); }

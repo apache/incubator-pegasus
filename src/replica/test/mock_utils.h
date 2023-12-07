@@ -365,8 +365,6 @@ public:
         }
     }
 
-    void set_log(mutation_log_ptr log) { _log = log; }
-
     int32_t get_bulk_load_downloading_count() const { return _bulk_load_downloading_count.load(); }
     void set_bulk_load_downloading_count(int32_t count)
     {
@@ -434,30 +432,6 @@ private:
     std::vector<dsn::replication::mutation_ptr> _mu_list;
 };
 typedef dsn::ref_ptr<mock_mutation_log_private> mock_mutation_log_private_ptr;
-
-class mock_mutation_log_shared : public mutation_log_shared
-{
-public:
-    mock_mutation_log_shared(const std::string &dir) : mutation_log_shared(dir, 1000, false) {}
-
-    ::dsn::task_ptr append(mutation_ptr &mu,
-                           dsn::task_code callback_code,
-                           dsn::task_tracker *tracker,
-                           aio_handler &&callback,
-                           int hash = 0,
-                           int64_t *pending_size = nullptr) override
-    {
-        _mu_list.push_back(mu);
-        return nullptr;
-    }
-
-    void flush() {}
-    void flush_once() {}
-
-private:
-    std::vector<dsn::replication::mutation_ptr> _mu_list;
-};
-typedef dsn::ref_ptr<mock_mutation_log_shared> mock_mutation_log_shared_ptr;
 
 struct mock_mutation_duplicator : public mutation_duplicator
 {

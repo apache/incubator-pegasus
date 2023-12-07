@@ -266,6 +266,14 @@ DSN_DECLARE_int32(checkpoint_max_interval_hours);
 
 const std::string replica::kAppInfo = ".app-info";
 
+replica::replica()
+    : serverlet<replica>("replica"),
+      replica_base(),
+      _primary_states(),
+      _potential_secondary_states(this)
+{
+}
+
 replica::replica(replica_stub *stub,
                  gpid gpid,
                  const app_info &app,
@@ -594,6 +602,10 @@ bool replica::verbose_commit_log() const { return _stub->_verbose_commit_log; }
 
 void replica::close()
 {
+    if (status() == partition_status::PS_INVALID) {
+        return;
+    }
+
     CHECK_PREFIX_MSG(status() == partition_status::PS_ERROR ||
                          status() == partition_status::PS_INACTIVE ||
                          _disk_migrator->status() == disk_migration_status::IDLE ||

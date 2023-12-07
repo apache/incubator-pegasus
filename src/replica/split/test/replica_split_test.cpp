@@ -125,12 +125,6 @@ public:
         }
     }
 
-    void mock_shared_log()
-    {
-        mock_mutation_log_shared_ptr shared_log_mock = new mock_mutation_log_shared("./");
-        stub->set_log(shared_log_mock);
-    }
-
     void mock_private_log(gpid pid, mock_replica_ptr rep, bool mock_log_file_flag)
     {
         mock_mutation_log_private_ptr private_log_mock = new mock_mutation_log_private(pid, rep);
@@ -160,7 +154,6 @@ public:
 
     void mock_parent_states()
     {
-        mock_shared_log();
         mock_private_log(PARENT_GPID, _parent_replica, true);
         mock_prepare_list(_parent_replica, true);
     }
@@ -179,7 +172,6 @@ public:
     void
     mock_child_async_learn_states(mock_replica_ptr plist_rep, bool add_to_plog, decree min_decree)
     {
-        mock_shared_log();
         mock_private_log(CHILD_GPID, _child_replica, false);
         mock_prepare_list(plist_rep, add_to_plog);
         // mock_learn_state
