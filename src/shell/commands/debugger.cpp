@@ -114,7 +114,8 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
 
     char splitters[] = {'\\', '/', 0};
     auto slog_dir_tmp = slog_dir;
-    std::string name = dsn::utils::get_last_component(dirname((char *)slog_dir_tmp.c_str()), splitters);
+    std::string name =
+        dsn::utils::get_last_component(dirname((char *)slog_dir_tmp.c_str()), splitters);
     if (name.empty()) {
         return false;
     }

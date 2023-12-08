@@ -70,8 +70,8 @@ bool mutation_log_tool::dump(
     ai.__set_app_type("pegasus");
     auto stub = std::make_shared<replica_stub>();
     auto *rep = new replica(stub.get(), pid, ai, dn.get(), false, false);
-    auto mlog = std::make_shared<mutation_log_private>(
-        log_dir, FLAGS_log_private_file_size_mb, pid, rep);
+    auto mlog =
+        std::make_shared<mutation_log_private>(log_dir, FLAGS_log_private_file_size_mb, pid, rep);
     error_code err = mlog->open(
         [mlog, &output, callback](int log_length, mutation_ptr &mu) -> bool {
             std::cout << "1" << std::endl;
