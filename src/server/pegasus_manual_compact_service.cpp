@@ -19,6 +19,7 @@
 
 #include "pegasus_manual_compact_service.h"
 
+#include <absl/strings/string_view.h>
 #include <limits.h>
 #include <rocksdb/options.h>
 #include <list>

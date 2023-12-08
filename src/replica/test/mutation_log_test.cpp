@@ -27,11 +27,6 @@
 #include "replica/mutation_log.h"
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
-#include <fcntl.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <stdio.h>
 #include <sys/types.h>
 #include <cstdint>
 #include <iostream>

@@ -15,12 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <gmock/gmock.h>
-#include <gmock/gmock-matchers.h>
-#include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <atomic>
@@ -43,6 +37,8 @@
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "http/http_server.h"
 #include "metadata_types.h"
 #include "replica/disk_cleaner.h"

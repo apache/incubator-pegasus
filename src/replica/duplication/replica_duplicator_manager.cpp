@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <absl/strings/string_view.h>
 #include <algorithm>
 #include <cstdint>
 #include <memory>

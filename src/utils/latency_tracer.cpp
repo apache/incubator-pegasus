@@ -17,6 +17,7 @@
 
 #include "utils/latency_tracer.h"
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <cstdint>
 #include <iterator>

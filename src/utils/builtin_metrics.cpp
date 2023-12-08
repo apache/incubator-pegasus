@@ -17,6 +17,7 @@
 
 #include "utils/builtin_metrics.h"
 
+#include <absl/strings/string_view.h>
 #include <stdint.h>
 #include <functional>
 

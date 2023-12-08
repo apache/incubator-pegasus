@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include <absl/strings/string_view.h>
+#include <fmt/core.h>
 #include <rocksdb/cache.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/options.h>
@@ -25,6 +27,7 @@
 #include <rocksdb/table.h>
 #include <rocksdb/write_buffer_manager.h>
 #include <stdio.h>
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <mutex>
