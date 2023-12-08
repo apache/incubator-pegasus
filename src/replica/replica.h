@@ -310,7 +310,6 @@ private:
             dir_node *dn,
             bool need_restore,
             bool is_duplication_follower = false);
-
     error_code initialize_on_new();
     error_code initialize_on_load();
     error_code init_app_and_prepare_list(bool create_new);
@@ -531,7 +530,7 @@ private:
 
 private:
     friend class ::dsn::replication::test::test_checker;
-    friend class mutation_log_tool;
+    friend class ::dsn::replication::mutation_log_tool;
     friend class ::dsn::replication::mutation_queue;
     friend class ::dsn::replication::replica_stub;
     friend class mock_replica;

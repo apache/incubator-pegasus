@@ -479,14 +479,14 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
 mutation_log::mutation_log(const std::string &dir, int32_t max_log_file_mb, gpid gpid, replica *r)
 {
     _dir = dir;
-    _is_private = true;
+    _is_private = (gpid.value() != 0);
     _max_log_file_size_in_bytes = static_cast<int64_t>(max_log_file_mb) * 1024L * 1024L;
     _min_log_file_size_in_bytes = _max_log_file_size_in_bytes / 10;
     _owner_replica = r;
     _private_gpid = gpid;
 
     if (r) {
-        //        CHECK_EQ(_private_gpid, r->get_gpid());
+        CHECK_EQ(_private_gpid, r->get_gpid());
     }
     mutation_log::init_states();
 }
@@ -521,7 +521,6 @@ error_code mutation_log::open(replay_callback read_callback,
                               io_failure_callback write_error_callback,
                               const std::map<gpid, decree> &replay_condition)
 {
-    LOG_ERROR("open begin");
     CHECK(!_is_opened, "cannot open an opened mutation_log");
     CHECK_NULL(_current_log_file, "");
 
@@ -537,7 +536,6 @@ error_code mutation_log::open(replay_callback read_callback,
     _log_files.clear();
     _io_error_callback = write_error_callback;
 
-    LOG_ERROR("_dir: {}", _dir);
     std::vector<std::string> file_list;
     if (!dsn::utils::filesystem::get_subfiles(_dir, file_list, false)) {
         LOG_ERROR("open mutation_log: get subfiles failed.");
@@ -550,7 +548,6 @@ error_code mutation_log::open(replay_callback read_callback,
 
     std::sort(file_list.begin(), file_list.end());
 
-    LOG_ERROR("file_list size: {}", file_list.size());
     error_code err = ERR_OK;
     for (auto &fpath : file_list) {
         log_file_ptr log = log_file::open_read(fpath.c_str(), err);
