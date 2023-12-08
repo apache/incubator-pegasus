@@ -31,7 +31,6 @@
 #include "utils/blob.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 #include "utils/token_bucket_throttling_controller.h"
 
 METRIC_DEFINE_counter(replica,

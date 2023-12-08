@@ -43,7 +43,6 @@
 #include "utils/command_manager.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
-#include "utils/string_view.h"
 
 METRIC_DEFINE_counter(server,
                       beacon_failed_count,

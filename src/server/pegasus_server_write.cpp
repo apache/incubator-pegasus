@@ -41,7 +41,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/string_view.h"
 
 METRIC_DEFINE_counter(replica,
                       corrupt_writes,

@@ -44,7 +44,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
-#include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 

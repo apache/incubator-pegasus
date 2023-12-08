@@ -53,7 +53,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
-#include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 

@@ -27,7 +27,6 @@
 
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 
 namespace rocksdb {
 class DB;

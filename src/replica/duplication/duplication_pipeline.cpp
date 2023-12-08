@@ -32,7 +32,6 @@
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 
 METRIC_DEFINE_counter(replica,
                       dup_shipped_bytes,

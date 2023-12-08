@@ -25,7 +25,6 @@
 #include <string>
 
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 
 METRIC_DEFINE_entity(partition);
 

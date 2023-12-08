@@ -24,7 +24,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
-#include "utils/string_view.h"
 
 METRIC_DEFINE_gauge_int64(server,
                           virtual_mem_usage_mb,

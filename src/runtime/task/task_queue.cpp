@@ -37,7 +37,6 @@
 #include "utils/error_code.h"
 #include "utils/exp_delay.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 #include "utils/threadpool_spec.h"
 
 METRIC_DEFINE_entity(queue);
