@@ -594,10 +594,6 @@ bool replica::verbose_commit_log() const { return _stub->_verbose_commit_log; }
 
 void replica::close()
 {
-    if (status() == partition_status::PS_INVALID) {
-        return;
-    }
-
     CHECK_PREFIX_MSG(status() == partition_status::PS_ERROR ||
                          status() == partition_status::PS_INACTIVE ||
                          _disk_migrator->status() == disk_migration_status::IDLE ||

@@ -104,11 +104,11 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
         }
     }
     if (slog_dir.empty()) {
-        fprintf(stderr, "ERROR: 'input' is not specified\n");
+        fmt::print(stderr, "ERROR: 'input' is not specified\n");
         return false;
     }
     if (!dsn::utils::filesystem::directory_exists(slog_dir)) {
-        fprintf(stderr, "ERROR: 'input' %s is not a directory\n", slog_dir.c_str());
+        fmt::print(stderr, "ERROR: '{}' is not a directory\n", slog_dir);
         return false;
     }
 
@@ -117,12 +117,14 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     std::string name =
         dsn::utils::get_last_component(dirname((char *)slog_dir_tmp.c_str()), splitters);
     if (name.empty()) {
+        fmt::print(stderr, "ERROR: '{}' is not a valid slog directory\n", slog_dir);
         return false;
     }
 
     char app_type[128];
     int32_t app_id, pidx;
     if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
+        fmt::print(stderr, "ERROR: '{}' is not a valid slog directory\n", slog_dir);
         return false;
     }
 
@@ -132,7 +134,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     } else {
         os_ptr = new std::ofstream(output);
         if (!*os_ptr) {
-            fprintf(stderr, "ERROR: open output file %s failed\n", output.c_str());
+            fmt::print(stderr, "ERROR: open output file {} failed\n", output);
             delete os_ptr;
             return true;
         }
@@ -233,13 +235,12 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
         };
     }
 
-    fmt::print(stdout, "slog_dir: {}\n", slog_dir);
     dsn::replication::mutation_log_tool tool;
     bool ret = tool.dump(slog_dir, dsn::gpid(app_id, pidx), os, callback);
     if (!ret) {
-        fprintf(stderr, "ERROR: dump failed\n");
+        fmt::print(stderr, "ERROR: dump failed\n");
     } else {
-        fprintf(stderr, "Done\n");
+        fmt::print(stderr, "Done\n");
     }
 
     if (os_ptr != &std::cout) {
@@ -263,7 +264,7 @@ bool local_get(command_executor *e, shell_context *sc, arguments args)
     rocksdb::DB *db;
     rocksdb::Status status = rocksdb::DB::OpenForReadOnly(db_opts, db_path, &db);
     if (!status.ok()) {
-        fprintf(stderr, "ERROR: open db failed: %s\n", status.ToString().c_str());
+        fmt::print(stderr, "ERROR: open db failed: {}\n", status.ToString());
         return true;
     }
 
@@ -274,15 +275,15 @@ bool local_get(command_executor *e, shell_context *sc, arguments args)
     rocksdb::ReadOptions rd_opts;
     status = db->Get(rd_opts, skey, &value);
     if (!status.ok()) {
-        fprintf(stderr, "ERROR: get failed: %s\n", status.ToString().c_str());
+        fmt::print(stderr, "ERROR: get failed: {}\n", status.ToString());
     } else {
         uint32_t expire_ts = pegasus::pegasus_extract_expire_ts(0, value);
         dsn::blob user_data;
         pegasus::pegasus_extract_user_data(0, std::move(value), user_data);
-        fprintf(stderr,
-                "%u : \"%s\"\n",
+        fmt::print(stderr,
+                "{} : \"{}\"\n",
                 expire_ts,
-                pegasus::utils::c_escape_string(user_data, sc->escape_all).c_str());
+                pegasus::utils::c_escape_string(user_data, sc->escape_all));
     }
 
     delete db;
@@ -299,7 +300,7 @@ bool rdb_key_str2hex(command_executor *e, shell_context *sc, arguments args)
     ::dsn::blob key;
     pegasus::pegasus_generate_key(key, hash_key, sort_key);
     rocksdb::Slice skey(key.data(), key.length());
-    fprintf(stderr, "\"%s\"\n", skey.ToString(true).c_str());
+    fmt::print(stderr, "\"{}\"\n", skey.ToString(true));
     return true;
 }
 
@@ -329,12 +330,12 @@ bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args)
     auto expire_ts = static_cast<int64_t>(pegasus::pegasus_extract_expire_ts(0, pegasus_value)) +
                      pegasus::utils::epoch_begin; // TODO(wutao): pass user specified version
     std::time_t tm(expire_ts);
-    fmt::print(stderr, "\nWhen to expire:\n  {:%Y-%m-%d %H:%M:%S}\n", *std::localtime(&tm));
+    fmt::print(stderr, "\nWhen to expire:\n  {:%Y-%m-%d %H:%M:%S}\n", fmt::localtime(tm));
 
     dsn::blob user_data;
     pegasus::pegasus_extract_user_data(0, std::move(pegasus_value), user_data);
-    fprintf(stderr,
-            "user_data:\n  \"%s\"\n",
-            pegasus::utils::c_escape_string(user_data.to_string(), sc->escape_all).c_str());
+    fmt::print(stderr,
+            "user_data:\n  \"{}\"\n",
+            pegasus::utils::c_escape_string(user_data.to_string(), sc->escape_all));
     return true;
 }

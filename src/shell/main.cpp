@@ -392,7 +392,7 @@ static command_executor commands[] = {
     {
         "mlog_dump",
         "dump mutation log dir",
-        "<-i|--input log_dir> [-o|--output file_name] [-d|--detailed]",
+        "<-i|--input log_dir(e.g. '/path/to/replica/reps/2.1.pegasus/plog/')> [-o|--output file_name] [-d|--detailed]",
         mlog_dump,
     },
     {
