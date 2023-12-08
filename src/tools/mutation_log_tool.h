@@ -31,6 +31,8 @@
 #include <iostream>
 #include <string>
 
+#include "common/gpid.h"
+
 namespace dsn {
 class message_ex;
 
@@ -41,6 +43,7 @@ class mutation_log_tool
 public:
     bool
     dump(const std::string &log_dir,
+         gpid pid,
          std::ostream &output,
          std::function<void(
              int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)> callback);

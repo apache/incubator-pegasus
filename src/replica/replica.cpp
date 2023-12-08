@@ -266,14 +266,6 @@ DSN_DECLARE_int32(checkpoint_max_interval_hours);
 
 const std::string replica::kAppInfo = ".app-info";
 
-replica::replica()
-    : serverlet<replica>("replica"),
-      replica_base(),
-      _primary_states(),
-      _potential_secondary_states(this)
-{
-}
-
 replica::replica(replica_stub *stub,
                  gpid gpid,
                  const app_info &app,

@@ -29,6 +29,7 @@
 // IWYU pragma: no_include <algorithm>
 // IWYU pragma: no_include <iterator>
 #include <getopt.h>
+#include <libgen.h>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <rocksdb/slice.h>
@@ -45,6 +46,7 @@
 #include <vector>
 
 #include "base/idl_utils.h"
+#include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
@@ -78,7 +80,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
                                            {0, 0, 0, 0}};
 
     bool detailed = false;
-    std::string input;
+    std::string slog_dir;
     std::string output;
     optind = 0;
     while (true) {
@@ -92,7 +94,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
             detailed = true;
             break;
         case 'i':
-            input = optarg;
+            slog_dir = optarg;
             break;
         case 'o':
             output = optarg;
@@ -101,12 +103,25 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
     }
-    if (input.empty()) {
-        fprintf(stderr, "ERROR: input is not specified\n");
+    if (slog_dir.empty()) {
+        fprintf(stderr, "ERROR: 'input' is not specified\n");
         return false;
     }
-    if (!dsn::utils::filesystem::directory_exists(input)) {
-        fprintf(stderr, "ERROR: input %s is not a directory\n", input.c_str());
+    if (!dsn::utils::filesystem::directory_exists(slog_dir)) {
+        fprintf(stderr, "ERROR: 'input' %s is not a directory\n", slog_dir.c_str());
+        return false;
+    }
+
+    char splitters[] = {'\\', '/', 0};
+    auto slog_dir_tmp = slog_dir;
+    std::string name = dsn::utils::get_last_component(dirname((char *)slog_dir_tmp.c_str()), splitters);
+    if (name.empty()) {
+        return false;
+    }
+
+    char app_type[128];
+    int32_t app_id, pidx;
+    if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
         return false;
     }
 
@@ -217,8 +232,9 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
         };
     }
 
+    fmt::print(stdout, "slog_dir: {}\n", slog_dir);
     dsn::replication::mutation_log_tool tool;
-    bool ret = tool.dump(input, os, callback);
+    bool ret = tool.dump(slog_dir, dsn::gpid(app_id, pidx), os, callback);
     if (!ret) {
         fprintf(stderr, "ERROR: dump failed\n");
     } else {

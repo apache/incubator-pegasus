@@ -521,6 +521,7 @@ error_code mutation_log::open(replay_callback read_callback,
                               io_failure_callback write_error_callback,
                               const std::map<gpid, decree> &replay_condition)
 {
+    LOG_ERROR("open begin");
     CHECK(!_is_opened, "cannot open an opened mutation_log");
     CHECK_NULL(_current_log_file, "");
 
@@ -536,6 +537,7 @@ error_code mutation_log::open(replay_callback read_callback,
     _log_files.clear();
     _io_error_callback = write_error_callback;
 
+    LOG_ERROR("_dir: {}", _dir);
     std::vector<std::string> file_list;
     if (!dsn::utils::filesystem::get_subfiles(_dir, file_list, false)) {
         LOG_ERROR("open mutation_log: get subfiles failed.");
@@ -548,6 +550,7 @@ error_code mutation_log::open(replay_callback read_callback,
 
     std::sort(file_list.begin(), file_list.end());
 
+    LOG_ERROR("file_list size: {}", file_list.size());
     error_code err = ERR_OK;
     for (auto &fpath : file_list) {
         log_file_ptr log = log_file::open_read(fpath.c_str(), err);
