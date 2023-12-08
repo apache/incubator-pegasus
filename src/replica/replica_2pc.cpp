@@ -137,7 +137,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    if (dsn_unlikely(FLAGS_max_allowed_write_size &&
+    if (dsn_unlikely(FLAGS_max_allowed_write_size > 0 &&
                      request->body_size() > FLAGS_max_allowed_write_size)) {
         std::string request_info = _app->dump_write_request(request);
         LOG_WARNING_PREFIX(
