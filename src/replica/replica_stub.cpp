@@ -1615,9 +1615,6 @@ void replica_stub::gc_slog(const replica_gc_info_map &replica_gc_map)
     // slog files from being removed for gc.
     flush_replicas_for_slog_gc(replica_gc_map, prevent_gc_replicas);
 
-    auto total_size = _log->total_size();
-    _counter_shared_log_size->set(total_size / (1024 * 1024));
-
     // TODO(wangdan): currently we could not yet call _log.reset() as below to close slog and
     // reset it to nullptr even if it was found that slog had become empty (which means there
     // had not been any file for slog).
