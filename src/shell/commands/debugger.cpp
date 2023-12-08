@@ -64,6 +64,7 @@
 #include "utils/blob.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 bool sst_dump(command_executor *e, shell_context *sc, arguments args)
 {

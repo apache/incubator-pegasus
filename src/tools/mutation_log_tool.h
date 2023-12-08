@@ -34,6 +34,7 @@
 #include "common/gpid.h"
 
 namespace dsn {
+class gpid;
 class message_ex;
 
 namespace replication {
