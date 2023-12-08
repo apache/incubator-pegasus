@@ -27,10 +27,12 @@
 #include "mutation_log_tool.h"
 
 #include <alloca.h>
+#include <memory>
 #include <vector>
 
 #include "common/gpid.h"
 #include "consensus_types.h"
+#include "dsn.layer2_types.h"
 #include "replica/mutation.h"
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
@@ -39,10 +41,13 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
 #include "utils/time_utils.h"
 
 namespace dsn {
 namespace replication {
+
+DSN_DECLARE_int32(log_private_file_size_mb);
 
 bool mutation_log_tool::dump(
     const std::string &log_dir,
