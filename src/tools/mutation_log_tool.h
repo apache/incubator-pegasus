@@ -31,7 +31,7 @@
 #include <iostream>
 #include <string>
 
-#include "common/gpid.h"
+#include "common/gpid.h" // IWYU pragma: keep
 
 namespace dsn {
 class gpid;
@@ -49,5 +49,5 @@ public:
          std::function<void(
              int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)> callback);
 };
-}
-}
+} // namespace replication
+} // namespace dsn
