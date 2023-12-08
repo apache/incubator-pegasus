@@ -266,7 +266,7 @@ INSTANTIATE_TEST_CASE_P(, replica_test, ::testing::Values(false, true));
 
 TEST_P(replica_test, write_size_limited)
 {
-    int count = 100;
+    const int count = 100;
     struct dsn::message_header header;
     header.body_length = 10000000;
 
@@ -277,11 +277,15 @@ TEST_P(replica_test, write_size_limited)
         new tools::sim_network_provider(nullptr, nullptr));
     write_request->io_session = sim_net->create_client_session(rpc_address());
 
+    const auto initial_write_size_exceed_threshold_requests =
+        METRIC_VALUE(*_mock_replica, write_size_exceed_threshold_requests);
+
     for (int i = 0; i < count; i++) {
         stub->on_client_write(_pid, write_request);
     }
 
-    ASSERT_EQ(count, METRIC_VALUE(*_mock_replica, write_size_exceed_threshold_requests));
+    ASSERT_EQ(initial_write_size_exceed_threshold_requests + count,
+              METRIC_VALUE(*_mock_replica, write_size_exceed_threshold_requests));
 }
 
 TEST_P(replica_test, backup_request_count)
@@ -295,8 +299,9 @@ TEST_P(replica_test, backup_request_count)
         new tools::sim_network_provider(nullptr, nullptr));
     backup_request->io_session = sim_net->create_client_session(rpc_address());
 
+    const auto initial_backup_request_count = get_backup_request_count();
     _mock_replica->on_client_read(backup_request);
-    ASSERT_EQ(get_backup_request_count(), 1);
+    ASSERT_EQ(initial_backup_request_count + 1, get_backup_request_count());
 }
 
 TEST_P(replica_test, query_data_version_test)
