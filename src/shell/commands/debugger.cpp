@@ -281,9 +281,9 @@ bool local_get(command_executor *e, shell_context *sc, arguments args)
         dsn::blob user_data;
         pegasus::pegasus_extract_user_data(0, std::move(value), user_data);
         fmt::print(stderr,
-                "{} : \"{}\"\n",
-                expire_ts,
-                pegasus::utils::c_escape_string(user_data, sc->escape_all));
+                   "{} : \"{}\"\n",
+                   expire_ts,
+                   pegasus::utils::c_escape_string(user_data, sc->escape_all));
     }
 
     delete db;
@@ -335,7 +335,7 @@ bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args)
     dsn::blob user_data;
     pegasus::pegasus_extract_user_data(0, std::move(pegasus_value), user_data);
     fmt::print(stderr,
-            "user_data:\n  \"{}\"\n",
-            pegasus::utils::c_escape_string(user_data.to_string(), sc->escape_all));
+               "user_data:\n  \"{}\"\n",
+               pegasus::utils::c_escape_string(user_data.to_string(), sc->escape_all));
     return true;
 }

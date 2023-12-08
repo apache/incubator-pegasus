@@ -41,6 +41,7 @@
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
@@ -60,38 +61,46 @@ bool mutation_log_tool::dump(
 {
     std::string absolute_path;
     if (!utils::filesystem::get_absolute_path(log_dir, absolute_path)) {
-        output << "ERROR: get absolute path failed" << std::endl;
+        output << fmt::format("ERROR: get absolute path failed\n");
         return false;
     }
     std::string norm_path;
     utils::filesystem::get_normalized_path(absolute_path, norm_path);
-    auto dn = std::make_shared<dir_node>("", norm_path);
+    auto dn = std::make_unique<dir_node>(/* tag_ */ "", norm_path);
     app_info ai;
     ai.__set_app_type("pegasus");
-    auto stub = std::make_shared<replica_stub>();
-    auto *rep = new replica(stub.get(), pid, ai, dn.get(), false, false);
+    auto stub = std::make_unique<replica_stub>();
+    // Constructor of replica is private which can not be accessed by std::make_unique, so use raw
+    // pointer here.
+    auto *rep = new replica(stub.get(),
+                            pid,
+                            ai,
+                            dn.get(),
+                            /* need_restore */ false,
+                            /* is_duplication_follower */ false);
+    auto cleanup = dsn::defer([rep]() { delete rep; });
     auto mlog =
         std::make_shared<mutation_log_private>(log_dir, FLAGS_log_private_file_size_mb, pid, rep);
     error_code err = mlog->open(
         [mlog, &output, callback](int log_length, mutation_ptr &mu) -> bool {
-            std::cout << "1" << std::endl;
             if (mlog->max_decree(mu->data.header.pid) == 0) {
                 mlog->set_valid_start_offset_on_open(mu->data.header.pid, 0);
             }
             char timestamp_buf[32] = {0};
             utils::time_ms_to_string(mu->data.header.timestamp / 1000, timestamp_buf);
-            output << "mutation [" << mu->name() << "]: "
-                   << "gpid=" << mu->data.header.pid.get_app_id() << "."
-                   << mu->data.header.pid.get_partition_index() << ", "
-                   << "ballot=" << mu->data.header.ballot << ", decree=" << mu->data.header.decree
-                   << ", "
-                   << "timestamp=" << timestamp_buf
-                   << ", last_committed_decree=" << mu->data.header.last_committed_decree << ", "
-                   << "log_offset=" << mu->data.header.log_offset << ", log_length=" << log_length
-                   << ", "
-                   << "update_count=" << mu->data.updates.size();
-            if (callback && mu->data.updates.size() > 0) {
-
+            output << fmt::format("mutation [{}]: gpid={}, ballot={}, decree={}, timestamp={}, "
+                                  "last_committed_decree={}, log_offset={}, log_length={}, "
+                                  "update_count={}\n",
+                                  mu->name(),
+                                  mu->data.header.pid,
+                                  mu->data.header.ballot,
+                                  mu->data.header.decree,
+                                  timestamp_buf,
+                                  mu->data.header.last_committed_decree,
+                                  mu->data.header.log_offset,
+                                  log_length,
+                                  mu->data.updates.size());
+            if (callback && !mu->data.updates.empty()) {
                 dsn::message_ex **batched_requests =
                     (dsn::message_ex **)alloca(sizeof(dsn::message_ex *) * mu->data.updates.size());
                 int batched_count = 0;
@@ -115,9 +124,8 @@ bool mutation_log_tool::dump(
         },
         nullptr);
     mlog->close();
-    delete rep;
     if (err != dsn::ERR_OK) {
-        output << "ERROR: dump mutation log failed, err = " << err.to_string() << std::endl;
+        output << fmt::format("ERROR: dump mutation log failed, err = {}\n", err);
         return false;
     } else {
         return true;
