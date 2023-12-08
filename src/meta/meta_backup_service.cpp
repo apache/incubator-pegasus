@@ -50,7 +50,6 @@
 #include "utils/defer.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 #include "utils/time_utils.h"
 
 METRIC_DEFINE_entity(backup_policy);

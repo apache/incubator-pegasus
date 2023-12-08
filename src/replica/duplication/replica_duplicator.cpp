@@ -38,7 +38,6 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 
 METRIC_DEFINE_counter(replica,
                       dup_confirmed_mutations,

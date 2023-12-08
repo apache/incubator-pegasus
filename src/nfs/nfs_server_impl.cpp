@@ -42,7 +42,6 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
 #include "utils/utils.h"
 
 METRIC_DEFINE_counter(

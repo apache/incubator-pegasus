@@ -71,7 +71,6 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
 #include "utils/metrics.h"
-#include "utils/string_view.h"
 
 METRIC_DEFINE_entity(profiler);
 
