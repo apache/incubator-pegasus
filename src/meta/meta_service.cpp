@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <absl/strings/string_view.h>
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <boost/lexical_cast.hpp>

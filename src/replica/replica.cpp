@@ -26,13 +26,10 @@
 
 #include "replica.h"
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
-#include <fmt/ostream.h>
-#include <inttypes.h>
 #include <rocksdb/status.h>
 #include <functional>
-#include <iosfwd>
-#include <set>
 #include <vector>
 
 #include "backup/replica_backup_manager.h"

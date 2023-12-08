@@ -15,13 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fmt/core.h>
 #include <functional>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "metadata_types.h"
@@ -33,7 +33,6 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
 
 METRIC_DEFINE_gauge_int64(replica,
                           dup_recent_lost_mutations,

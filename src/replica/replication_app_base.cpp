@@ -48,6 +48,7 @@
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"

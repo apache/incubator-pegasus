@@ -26,24 +26,22 @@
 
 #include "fs_manager.h"
 
+#include <fmt/std.h> // IWYU pragma: keep
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <utility>
 
-#include <fmt/std.h> // IWYU pragma: keep
-
+#include "absl/strings/string_view.h"
 #include "common/gpid.h"
 #include "common/replication_enums.h"
 #include "fmt/core.h"
-#include "fmt/ostream.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "absl/strings/string_view.h"
 
 METRIC_DEFINE_entity(disk);
 

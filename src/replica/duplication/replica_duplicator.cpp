@@ -17,6 +17,7 @@
 
 #include "replica_duplicator.h"
 
+#include <absl/strings/string_view.h>
 #include <rapidjson/document.h>
 #include <rapidjson/encodings.h>
 #include <rapidjson/stringbuffer.h>
