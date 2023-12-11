@@ -102,7 +102,7 @@ func (collector *Collector) Start(tom *tomb.Tomb) error {
 func getReplicaAddrs() ([]string, error) {
 	addrs := viper.GetStringSlice("meta_servers")
 	var rserverAddrs []string
-	for addr := range addrs {
+	for _, addr := range addrs {
 		url := fmt.Sprintf("http://%s/meta/nodes", addr)
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode != http.StatusOK {
@@ -291,29 +291,29 @@ func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics) {
 func updateMetric(metric Metric, endpoint string, level string, title string) {
 	role := RoleByDataSource[DataSource]
 	switch metric.mtype {
-		case "Counter":
-			if counter, ok := CounterMetricsMap[metric.name]; ok {
-				counter.With(
-					prometheus.Labels{"endpoint": endpoint,
-						"role": role, "level": level,
-						"title": title}).Add(float64(metric.value))
-			} else {
-				log.Warnf("Unknown metric name %s", metric.name)
-			}
-		case "Gauge":
-			if gauge, ok := GaugeMetricsMap[metric.name]; ok {
-				gauge.With(
-					prometheus.Labels{"endpoint": endpoint,
-						"role": role, "level": level,
-						"title": title}).Set(float64(metric.value))
-			} else {
-				log.Warnf("Unknown metric name %s", metric.name)
-			}
-		case "Percentile":
-			log.Warnf("Todo metric type %s", metric.mtype)
-		case "Histogram":
-		default:
-			log.Warnf("Unsupport metric type %s", metric.mtype)
+	case "Counter":
+		if counter, ok := CounterMetricsMap[metric.name]; ok {
+			counter.With(
+				prometheus.Labels{"endpoint": endpoint,
+					"role": role, "level": level,
+					"title": title}).Add(float64(metric.value))
+		} else {
+			log.Warnf("Unknown metric name %s", metric.name)
+		}
+	case "Gauge":
+		if gauge, ok := GaugeMetricsMap[metric.name]; ok {
+			gauge.With(
+				prometheus.Labels{"endpoint": endpoint,
+					"role": role, "level": level,
+					"title": title}).Set(float64(metric.value))
+		} else {
+			log.Warnf("Unknown metric name %s", metric.name)
+		}
+	case "Percentile":
+		log.Warnf("Todo metric type %s", metric.mtype)
+	case "Histogram":
+	default:
+		log.Warnf("Unsupport metric type %s", metric.mtype)
 	}
 }
 

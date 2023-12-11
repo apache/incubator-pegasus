@@ -29,7 +29,8 @@ on:
       - ci-test # testing branch for github action
       - '*dev'
     paths:
-      - collector/**
+      - '.github/workflows/lint_and_test_collector.yml'
+      - 'collector/**'
 
   # for manually triggering workflow
   workflow_dispatch:
@@ -47,7 +48,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.14
+          go-version: 1.17
           cache: false
       - name: Lint
         uses: golangci/golangci-lint-action@v3
@@ -66,7 +67,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.14
+          go-version: 1.17
       - name: Build
         working-directory: ./collector
         run: make
