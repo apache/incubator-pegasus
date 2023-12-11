@@ -91,9 +91,9 @@ type pegasusDetector struct {
 	detectTableName string
 	detectInterval  time.Duration
 	// timeout of a single detect.
-	detectTimeout	time.Duration
+	detectTimeout time.Duration
 	// partition count.
-	partitionCount	int
+	partitionCount int
 }
 
 func (d *pegasusDetector) Start(tom *tomb.Tomb) error {
