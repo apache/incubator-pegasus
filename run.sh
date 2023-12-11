@@ -444,15 +444,6 @@ function run_test()
     fi
     echo "test_modules=$test_modules"
 
-    # download bulk load test data
-    if [[ "$test_modules" =~ "bulk_load_test" && ! -d "$ROOT/src/test/function_test/bulk_load/pegasus-bulk-load-function-test-files" ]]; then
-        echo "Start to download files used for bulk load function test"
-        wget "https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-bulk-load-function-test-files.zip"
-        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test/bulk_load"
-        rm "pegasus-bulk-load-function-test-files.zip"
-        echo "Prepare files used for bulk load function test succeed"
-    fi
-
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
         # restart onebox when test pegasus

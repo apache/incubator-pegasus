@@ -31,6 +31,7 @@ set(MY_PROJ_LIBS
         dsn_client
         dsn_replication_common
         dsn_utils
+        dsn.block_service.local
         pegasus_client_static
         gtest
         sasl2

@@ -52,7 +52,7 @@ public:
         test_util::SetUp();
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0));
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->create_app(table_name_, "pegasus", 8, 3, {}, false));
-        client_ = pegasus_client_factory::get_client(cluster_name_.c_str(), table_name_.c_str());
+        client_ = pegasus_client_factory::get_client(kClusterName.c_str(), table_name_.c_str());
         ASSERT_TRUE(client_ != nullptr);
         ASSERT_NO_FATAL_FAILURE(fill_database());
     }

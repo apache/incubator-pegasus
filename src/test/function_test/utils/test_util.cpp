@@ -49,6 +49,7 @@
 #include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/rand.h"
+#include "utils/test_macros.h"
 
 using dsn::partition_configuration;
 using dsn::replication::replica_helper;
@@ -62,7 +63,16 @@ using std::vector;
 namespace pegasus {
 
 test_util::test_util(map<string, string> create_envs)
-    : cluster_name_("onebox"), table_name_("temp"), create_envs_(std::move(create_envs))
+    : kOpNames({{test_util::OperateDataType::kSet, "set"},
+                {test_util::OperateDataType::kGet, "get"},
+                {test_util::OperateDataType::kDelete, "delete"},
+                {test_util::OperateDataType::kCheckNotFound, "check not found"}}),
+      kClusterName("onebox"),
+      kHashkeyPrefix("hashkey_"),
+      kSortkey("sortkey"),
+      kValuePrefix("value_"),
+      kCreateEnvs(std::move(create_envs)),
+      table_name_("temp")
 {
 }
 
@@ -73,7 +83,7 @@ void test_util::SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize
 void test_util::SetUp()
 {
     ASSERT_TRUE(replica_helper::load_meta_servers(
-        meta_list_, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name_.c_str()));
+        meta_list_, PEGASUS_CLUSTER_SECTION_NAME.c_str(), kClusterName.c_str()));
     ASSERT_FALSE(meta_list_.empty());
 
     ddl_client_ = std::make_shared<replication_ddl_client>(meta_list_);
@@ -81,16 +91,16 @@ void test_util::SetUp()
     ddl_client_->set_max_wait_app_ready_secs(120);
 
     dsn::error_code ret =
-        ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, create_envs_, false);
+        ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, kCreateEnvs, false);
     if (ret == dsn::ERR_INVALID_PARAMETERS) {
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0));
         ASSERT_EQ(dsn::ERR_OK,
                   ddl_client_->create_app(
-                      table_name_, "pegasus", partition_count_, 3, create_envs_, false));
+                      table_name_, "pegasus", partition_count_, 3, kCreateEnvs, false));
     } else {
         ASSERT_EQ(dsn::ERR_OK, ret);
     }
-    client_ = pegasus_client_factory::get_client(cluster_name_.c_str(), table_name_.c_str());
+    client_ = pegasus_client_factory::get_client(kClusterName.c_str(), table_name_.c_str());
     ASSERT_TRUE(client_ != nullptr);
 
     int32_t partition_count;
@@ -168,35 +178,100 @@ void test_util::wait_table_healthy(const std::string &table_name) const
         180);
 }
 
+void test_util::operate_data(OperateDataType type,
+                             const std::string &table_name,
+                             const std::string &hashkey_prefix,
+                             const std::optional<std::string> &value_prefix,
+                             int count) const
+{
+    fmt::print(stdout, "start to {} {} key-value pairs...\n", kOpNames.at(type), count);
+    auto *client = pegasus_client_factory::get_client(kClusterName.c_str(), table_name.c_str());
+    ASSERT_NE(client, nullptr);
+    int64_t start = dsn_now_ms();
+    ASSERT_GT(count, 0);
+    ASSERT_LE(count, 10000);
+    for (int i = 0; i < count; i++) {
+        auto hashkey = fmt::format("{}{:04}", hashkey_prefix, i);
+        std::string value;
+        if (value_prefix) {
+            value = fmt::format("{}{}", *value_prefix, i);
+        }
+        switch (type) {
+        case OperateDataType::kSet:
+            ASSERT_FALSE(value.empty());
+            ASSERT_EQ(PERR_OK, client->set(hashkey, kSortkey, value));
+            break;
+        case OperateDataType::kGet: {
+            std::string value_new;
+            ASSERT_EQ(PERR_OK, client->get(hashkey, kSortkey, value_new));
+            ASSERT_FALSE(value.empty());
+            ASSERT_EQ(value, value_new);
+            break;
+        }
+        case OperateDataType::kDelete:
+            ASSERT_EQ(PERR_OK, client->del(hashkey, kSortkey));
+            break;
+        case OperateDataType::kCheckNotFound: {
+            std::string value_new;
+            ASSERT_EQ(PERR_NOT_FOUND, client->get(hashkey, kSortkey, value_new));
+            ASSERT_TRUE(value_new.empty());
+            break;
+        }
+        default:
+            ASSERT_FALSE(true);
+        }
+    }
+    fmt::print(stdout,
+               "{} data complete, total time = {}s\n",
+               kOpNames.at(type),
+               (dsn_now_ms() - start) / 1000);
+}
+
+void test_util::write_data(const std::string &hashkey_prefix,
+                           const std::string &value_prefix,
+                           int count) const
+{
+    NO_FATALS(
+        operate_data(OperateDataType::kSet, table_name_, hashkey_prefix, value_prefix, count));
+}
+
 void test_util::write_data(int count) const
 {
-    fmt::print(stdout, "start to write {} key-value pairs...\n", count);
-    ASSERT_NE(client_, nullptr);
-    int64_t start = dsn_now_ms();
-    for (int i = 0; i < count; i++) {
-        ASSERT_EQ(PERR_OK,
-                  client_->set(fmt::format("hash_key_{}", i),
-                               fmt::format("sort_key_{}", i),
-                               fmt::format("value_{}", i)));
-    }
-    fmt::print(stdout, "write data complete, total time = {}s", (dsn_now_ms() - start) / 1000);
+    NO_FATALS(write_data(kHashkeyPrefix, kValuePrefix, count));
+}
+
+void test_util::verify_data(const std::string &table_name,
+                            const std::string &hashkey_prefix,
+                            const std::string &value_prefix,
+                            int count) const
+{
+    NO_FATALS(operate_data(OperateDataType::kGet, table_name, hashkey_prefix, value_prefix, count));
 }
 
 void test_util::verify_data(const std::string &table_name, int count) const
 {
-    fmt::print(stdout, "start to get {} key-value pairs...\n", count);
-    auto *client = pegasus_client_factory::get_client(cluster_name_.c_str(), table_name.c_str());
-    ASSERT_NE(client, nullptr);
-    int64_t start = dsn_now_ms();
-    for (int i = 0; i < count; i++) {
-        std::string value_new;
-        ASSERT_EQ(
-            PERR_OK,
-            client->get(fmt::format("hash_key_{}", i), fmt::format("sort_key_{}", i), value_new));
-        ASSERT_EQ(fmt::format("value_{}", i), value_new);
-    }
-    int64_t end = dsn_now_ms();
-    fmt::print(stdout, "verify data complete, total time = {}s", (dsn_now_ms() - start) / 1000);
+    NO_FATALS(verify_data(table_name, kHashkeyPrefix, kValuePrefix, count));
+}
+
+void test_util::verify_data(int count) const
+{
+    NO_FATALS(verify_data(table_name_, kHashkeyPrefix, kValuePrefix, count));
+}
+
+void test_util::delete_data(const std::string &table_name,
+                            const std::string &hashkey_prefix,
+                            int count) const
+{
+    NO_FATALS(
+        operate_data(OperateDataType::kDelete, table_name, hashkey_prefix, std::nullopt, count));
+}
+
+void test_util::check_not_found(const std::string &table_name,
+                                const std::string &hashkey_prefix,
+                                int count) const
+{
+    NO_FATALS(operate_data(
+        OperateDataType::kCheckNotFound, table_name, hashkey_prefix, std::nullopt, count));
 }
 
 void test_util::update_table_env(const std::vector<std::string> &keys,
@@ -209,4 +284,5 @@ void test_util::update_table_env(const std::vector<std::string> &keys,
     fmt::print(stdout, "sleep 31s to wait app_envs update\n");
     std::this_thread::sleep_for(std::chrono::seconds(31));
 }
+
 } // namespace pegasus

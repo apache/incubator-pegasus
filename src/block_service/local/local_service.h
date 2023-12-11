@@ -22,6 +22,7 @@
 #include <nlohmann/json_fwd.hpp> // IWYU pragma: keep
 #include <stdint.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "block_service/block_service.h"
