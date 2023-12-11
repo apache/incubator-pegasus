@@ -102,7 +102,7 @@ func (collector *Collector) Start(tom *tomb.Tomb) error {
 func getReplicaAddrs() ([]string, error) {
 	addrs := viper.GetStringSlice("meta_servers")
 	var rserverAddrs []string
-	for addr := range addrs {
+	for _, addr := range addrs {
 		url := fmt.Sprintf("http://%s/meta/nodes", addr)
 		resp, err := http.Get(url)
 		if err == nil && resp.StatusCode != http.StatusOK {
