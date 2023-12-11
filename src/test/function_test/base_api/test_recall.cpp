@@ -72,7 +72,7 @@ TEST_F(drop_and_recall, simple)
     }
 
     // drop the table
-    ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0));
+    ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0));
 
     // wait for all elements to be dropped
     for (int i = 0; i < partition_count_; ++i) {
@@ -91,7 +91,7 @@ TEST_F(drop_and_recall, simple)
     }
 
     // then recall table
-    ASSERT_EQ(dsn::ERR_OK, ddl_client_->recall_app(app_id_, ""));
+    ASSERT_EQ(dsn::ERR_OK, ddl_client_->recall_app(table_id_, ""));
 
     // then read all keys
     for (int i = 0; i < kv_count; ++i) {

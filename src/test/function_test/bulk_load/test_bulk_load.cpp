@@ -41,7 +41,6 @@
 #include "include/pegasus/client.h"
 #include "include/pegasus/error.h"
 #include "meta/meta_bulk_load_service.h"
-#include "meta_admin_types.h"
 #include "test/function_test/utils/test_util.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"
@@ -82,7 +81,7 @@ protected:
     {
         TRICKY_CODE_TO_AVOID_LINK_ERROR;
         bulk_load_local_app_root_ =
-            fmt::format("{}/{}/{}", kLocalBulkLoadRoot, kCluster, app_name_);
+            fmt::format("{}/{}/{}", kLocalBulkLoadRoot, kCluster, table_name_);
     }
 
     void SetUp() override
@@ -93,7 +92,7 @@ protected:
 
     void TearDown() override
     {
-        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(app_name_, 0));
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(table_name_, 0));
         NO_FATALS(run_cmd_from_project_root("rm -rf " + kLocalBulkLoadRoot));
     }
 
@@ -119,7 +118,7 @@ protected:
         ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(bulk_load_info_path, fm.md5));
         std::string value = nlohmann::json(fm).dump();
         auto bulk_load_info_meta_path =
-            fmt::format("{}/{}/{}/.bulk_load_info.meta", kLocalBulkLoadRoot, kCluster, app_name_);
+            fmt::format("{}/{}/{}/.bulk_load_info.meta", kLocalBulkLoadRoot, kCluster, table_name_);
         auto s =
             rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
                                        rocksdb::Slice(value),
@@ -149,8 +148,8 @@ protected:
 
         // Generate 'bulk_load_info'.
         auto bulk_load_info_path =
-            fmt::format("{}/{}/{}/bulk_load_info", kLocalBulkLoadRoot, kCluster, app_name_);
-        NO_FATALS(generate_bulk_load_info(bulk_load_info(app_id_, app_name_, partition_count_),
+            fmt::format("{}/{}/{}/bulk_load_info", kLocalBulkLoadRoot, kCluster, table_name_);
+        NO_FATALS(generate_bulk_load_info(bulk_load_info(table_id_, table_name_, partition_count_),
                                           bulk_load_info_path));
 
         // Generate '.bulk_load_info.meta'.
@@ -160,7 +159,7 @@ protected:
     error_code start_bulk_load(bool ingest_behind = false)
     {
         return ddl_client_
-            ->start_bulk_load(app_name_, kCluster, kProvider, kBulkLoad, ingest_behind)
+            ->start_bulk_load(table_name_, kCluster, kProvider, kBulkLoad, ingest_behind)
             .get_value()
             .err;
     }
@@ -168,15 +167,6 @@ protected:
     void remove_file(const string &file_path)
     {
         NO_FATALS(run_cmd_from_project_root("rm " + file_path));
-    }
-
-    void update_allow_ingest_behind(const string &allow_ingest_behind)
-    {
-        const auto ret = ddl_client_->set_app_envs(
-            app_name_, {ROCKSDB_ALLOW_INGEST_BEHIND}, {allow_ingest_behind});
-        ASSERT_EQ(ERR_OK, ret.get_value().err);
-        std::cout << "sleep 31s to wait app_envs update" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(31));
     }
 
     bulk_load_status::type wait_bulk_load_finish(int64_t remain_seconds)
@@ -192,7 +182,7 @@ protected:
             std::cout << "sleep " << sleep_time << "s to query bulk status" << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
 
-            auto resp = ddl_client_->query_bulk_load(app_name_).get_value();
+            auto resp = ddl_client_->query_bulk_load(table_name_).get_value();
             err = resp.err;
             if (err == ERR_OK) {
                 last_status = resp.app_status;
@@ -320,12 +310,12 @@ TEST_F(bulk_load_test, inconsistent_bulk_load_info)
 {
     // Only 'app_id' and 'partition_count' will be checked in Pegasus server, so just inject these
     // kind of inconsistencies.
-    bulk_load_info tests[] = {{app_id_ + 1, app_name_, partition_count_},
-                              {app_id_, app_name_, partition_count_ * 2}};
+    bulk_load_info tests[] = {{table_id_ + 1, table_name_, partition_count_},
+                              {table_id_, table_name_, partition_count_ * 2}};
     for (const auto &test : tests) {
         // Generate inconsistent 'bulk_load_info'.
         auto bulk_load_info_path =
-            fmt::format("{}/{}/{}/bulk_load_info", kLocalBulkLoadRoot, kCluster, app_name_);
+            fmt::format("{}/{}/{}/bulk_load_info", kLocalBulkLoadRoot, kCluster, table_name_);
         NO_FATALS(generate_bulk_load_info(test, bulk_load_info_path));
 
         // Generate '.bulk_load_info.meta'.
@@ -347,7 +337,7 @@ TEST_F(bulk_load_test, missing_p0_bulk_load_metadata)
 // Test bulk load failed because the allow_ingest_behind config is inconsistent.
 TEST_F(bulk_load_test, allow_ingest_behind_inconsistent)
 {
-    NO_FATALS(update_allow_ingest_behind("false"));
+    NO_FATALS(update_table_env({ROCKSDB_ALLOW_INGEST_BEHIND}, {"false"}));
     ASSERT_EQ(ERR_INCONSISTENT_STATE, start_bulk_load(true));
 }
 
@@ -358,6 +348,6 @@ TEST_F(bulk_load_test, normal) { check_bulk_load(false, "oldValue", "valueAfterB
 // load data.
 TEST_F(bulk_load_test, allow_ingest_behind)
 {
-    NO_FATALS(update_allow_ingest_behind("true"));
+    NO_FATALS(update_table_env({ROCKSDB_ALLOW_INGEST_BEHIND}, {"true"}));
     check_bulk_load(true, "oldValue", "valueAfterBulkLoad");
 }

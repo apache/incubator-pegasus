@@ -20,14 +20,12 @@
 #include <string.h>
 #include <time.h>
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -36,14 +34,13 @@
 #include "client/replication_ddl_client.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
-#include "meta_admin_types.h"
 #include "pegasus/error.h"
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"
 #include "utils/error_code.h"
-#include "utils/errors.h"
 #include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
+#include "utils/test_macros.h"
 
 using namespace ::pegasus;
 
@@ -53,14 +50,14 @@ public:
     void SetUp() override
     {
         test_util::SetUp();
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0));
-        ASSERT_EQ(dsn::ERR_OK, ddl_client_->create_app(app_name_, "pegasus", 8, 3, {}, false));
-        client_ = pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
+        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0));
+        ASSERT_EQ(dsn::ERR_OK, ddl_client_->create_app(table_name_, "pegasus", 8, 3, {}, false));
+        client_ = pegasus_client_factory::get_client(cluster_name_.c_str(), table_name_.c_str());
         ASSERT_TRUE(client_ != nullptr);
         ASSERT_NO_FATAL_FAILURE(fill_database());
     }
 
-    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
+    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0)); }
 
     // REQUIRED: 'buffer_' has been filled with random chars.
     const std::string random_string() const
@@ -425,12 +422,7 @@ TEST_F(scan_test, REQUEST_EXPIRE_TS)
 TEST_F(scan_test, ITERATION_TIME_LIMIT)
 {
     // update iteration threshold to 1ms
-    auto response = ddl_client_->set_app_envs(
-        client_->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(1)});
-    ASSERT_EQ(true, response.is_ok());
-    ASSERT_EQ(dsn::ERR_OK, response.get_value().err);
-    // wait envs to be synced.
-    std::this_thread::sleep_for(std::chrono::seconds(30));
+    NO_FATALS(update_table_env({ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(1)}));
 
     // write data into table
     int32_t i = 0;
@@ -450,8 +442,5 @@ TEST_F(scan_test, ITERATION_TIME_LIMIT)
     ASSERT_EQ(-1, count);
 
     // set iteration threshold to 100ms
-    response = ddl_client_->set_app_envs(
-        client_->get_app_name(), {ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(100)});
-    ASSERT_TRUE(response.is_ok());
-    ASSERT_EQ(dsn::ERR_OK, response.get_value().err);
+    NO_FATALS(update_table_env({ROCKSDB_ITERATION_THRESHOLD_TIME_MS}, {std::to_string(100)}));
 }

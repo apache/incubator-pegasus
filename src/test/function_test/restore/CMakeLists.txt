@@ -28,17 +28,16 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-    dsn_client
-    dsn_replication_common
-    dsn_utils
-    pegasus_client_static
-    gtest
-    sasl2
-    gssapi_krb5
-    krb5
-    function_test_utils
-    test_utils
-    )
+        dsn_client
+        dsn_replication_common
+        dsn_utils
+        gtest
+        sasl2
+        gssapi_krb5
+        krb5
+        function_test_utils
+        pegasus_client_static
+        test_utils)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
