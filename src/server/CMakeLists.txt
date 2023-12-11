@@ -40,7 +40,6 @@ set(MY_PROJ_LIBS
         lz4
         zstd
         snappy
-        pegasus_reporter
         pegasus_base
         pegasus_client_static
         event
