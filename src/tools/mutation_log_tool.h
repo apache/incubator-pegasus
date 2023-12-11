@@ -31,8 +31,6 @@
 #include <iostream>
 #include <string>
 
-#include "common/gpid.h" // IWYU pragma: keep
-
 namespace dsn {
 class gpid;
 class message_ex;
