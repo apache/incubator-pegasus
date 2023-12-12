@@ -113,10 +113,8 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    char splitters[] = {'\\', '/', 0};
-    auto slog_dir_tmp = plog_dir;
-    std::string name =
-        dsn::utils::get_last_component(dirname((char *)slog_dir_tmp.c_str()), splitters);
+    const auto replica_path = std::filesystem::path(plog_dir).parent_path();
+    const auto name = replica_path.filename().string();
     if (name.empty()) {
         fmt::print(stderr, "ERROR: '{}' is not a valid plog directory\n", plog_dir);
         return false;
