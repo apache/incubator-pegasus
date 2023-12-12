@@ -45,14 +45,17 @@ set(MY_PROJ_LIBS
         dsn.failure_detector
         dsn.replication.zookeeper_provider
         dsn_utils
-        RocksDB::rocksdb
+        rocksdb
+        lz4
+        zstd
+        snappy
         pegasus_client_static
         event
         pegasus_base
         gtest
         gmock
         hashtable
-        )
+)
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
 

@@ -361,6 +361,75 @@ ExternalProject_Add(jemalloc
         DOWNLOAD_NO_PROGRESS true
 )
 
+set(SNAPPY_OPTIONS
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DCMAKE_BUILD_TYPE=Release
+        -DBUILD_SHARED_LIBS=OFF
+        -DSNAPPY_BUILD_TESTS=OFF
+        -DSNAPPY_BUILD_BENCHMARKS=OFF
+        -DSNAPPY_FUZZING_BUILD=OFF
+        -DSNAPPY_INSTALL=ON)
+execute_process(COMMAND arch OUTPUT_VARIABLE ARCH_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "ARCH_NAME = ${ARCH_NAME}")
+if (ARCH_NAME EQUAL "x86_64")
+    set(SNAPPY_OPTIONS
+            ${SNAPPY_OPTIONS}
+            -DSNAPPY_REQUIRE_AVX=ON
+            -DSNAPPY_REQUIRE_AVX2=ON)
+endif ()
+ExternalProject_Add(snappy
+        URL ${OSS_URL_PREFIX}/snappy-1.1.10.tar.gz
+        https://github.com/google/snappy/archive/refs/tags/1.1.10.tar.gz
+        URL_MD5 70153395ebe6d72febe2cf2e40026a44
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_snappy-Wsign-compare-warning.patch
+        CMAKE_ARGS ${SNAPPY_OPTIONS}
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
+ExternalProject_Add(zstd
+        URL ${OSS_URL_PREFIX}/zstd-1.5.5.tar.gz
+        https://github.com/facebook/zstd/releases/download/v1.5.5/zstd-1.5.5.tar.gz
+        URL_MD5 63251602329a106220e0a5ad26ba656f
+        PATCH_COMMAND ""
+        CONFIGURE_COMMAND cmake build/cmake
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DCMAKE_BUILD_TYPE=Release
+        -DZSTD_BUILD_PROGRAMS=OFF
+        -DZSTD_BUILD_TESTS=OFF
+        -DZSTD_BUILD_CONTRIB=OFF
+        -DZSTD_BUILD_SHARED=OFF
+        -DZSTD_BUILD_STATIC=ON
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        BUILD_IN_SOURCE 1
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
+ExternalProject_Add(lz4
+        URL ${OSS_URL_PREFIX}/lz4-1.9.4.tar.gz
+        https://github.com/lz4/lz4/releases/download/v1.9.4/lz4-1.9.4.tar.gz
+        URL_MD5 e9286adb64040071c5e23498bf753261
+        PATCH_COMMAND ""
+        CONFIGURE_COMMAND cmake build/cmake
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DLZ4_POSITION_INDEPENDENT_LIB=ON
+        -DCMAKE_BUILD_TYPE=Release
+        -DLZ4_BUILD_CLI=OFF
+        -DBUILD_SHARED_LIBS=OFF
+        -DBUILD_STATIC_LIBS=ON
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        BUILD_IN_SOURCE 1
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
 option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
 set(ROCKSDB_OPTIONS
         -DFAIL_ON_WARNINGS=OFF
@@ -378,6 +447,7 @@ set(ROCKSDB_OPTIONS
         -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DPORTABLE=${ROCKSDB_PORTABLE})
 # Link error on MacOS, disable building encfs plugin.
 # See https://github.com/pegasus-kv/encfs/issues/4
@@ -393,9 +463,8 @@ ExternalProject_Add(rocksdb
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_rocksdb-cmake-PORTABLE-option.patch
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
         COMMAND git clone -b main --depth=1 https://github.com/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
-        DEPENDS googletest jemalloc
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        ${ROCKSDB_OPTIONS}
+        DEPENDS googletest jemalloc lz4 snappy zstd
+        CMAKE_ARGS ${ROCKSDB_OPTIONS}
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
 )

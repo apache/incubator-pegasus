@@ -28,25 +28,27 @@ set(MY_PROJ_SRC "linenoise/linenoise.c" "sds/sds.c")
 set(MY_SRC_SEARCH_MODE "GLOB_RECURSE")
 
 set(MY_PROJ_LIBS
-    pegasus_base
-    dsn.replication.tool
-    dsn_replica_server
-    dsn_meta_server
-    dsn_replication_common
-    dsn_client
-    dsn_utils
-    dsn.block_service.local
-    dsn.block_service.hdfs
-    dsn.block_service
-    dsn.failure_detector
-    pegasus_client_static
-    pegasus_geo_lib
-    RocksDB::rocksdb
-    absl::flat_hash_set
-    absl::strings
-    s2
-    hdfs
-    )
+        pegasus_base
+        dsn.replication.tool
+        dsn_replica_server
+        dsn_meta_server
+        dsn_replication_common
+        dsn_client
+        dsn_utils
+        dsn.block_service.local
+        dsn.block_service.hdfs
+        dsn.block_service
+        dsn.failure_detector
+        pegasus_client_static
+        pegasus_geo_lib
+        rocksdb
+        lz4
+        zstd
+        snappy
+        absl::flat_hash_set
+        absl::strings
+        s2
+        hdfs)
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 

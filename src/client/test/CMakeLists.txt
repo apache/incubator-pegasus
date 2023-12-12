@@ -22,12 +22,15 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-    dsn_client
-    dsn_replication_common
-    dsn_runtime
-    dsn_utils
-    gtest
-    rocksdb)
+        dsn_client
+        dsn_replication_common
+        dsn_runtime
+        dsn_utils
+        gtest
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

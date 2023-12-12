@@ -27,21 +27,23 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-    dsn_replica_server
-    dsn_meta_server
-    dsn_replication_common
-    dsn_client
-    dsn.block_service.local
-    dsn.block_service
-    dsn.failure_detector
-    dsn.replication.zookeeper_provider
-    dsn_utils
-    RocksDB::rocksdb
-    pegasus_base
-    pegasus_client_static
-    event
-    hashtable
-    )
+        dsn_replica_server
+        dsn_meta_server
+        dsn_replication_common
+        dsn_client
+        dsn.block_service.local
+        dsn.block_service
+        dsn.failure_detector
+        dsn.replication.zookeeper_provider
+        dsn_utils
+        rocksdb
+        lz4
+        zstd
+        snappy
+        pegasus_base
+        pegasus_client_static
+        event
+        hashtable)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

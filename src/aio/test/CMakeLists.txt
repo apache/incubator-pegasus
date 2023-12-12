@@ -33,7 +33,17 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS gtest dsn_runtime dsn_aio test_utils rocksdb)
+set(MY_PROJ_LIBS
+        dsn_meta_server
+        dsn_replication_common
+        gtest
+        dsn_runtime
+        dsn_aio
+        test_utils
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

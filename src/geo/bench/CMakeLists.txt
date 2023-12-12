@@ -34,9 +34,11 @@ set(MY_PROJ_LIBS
         s2testing
         s2
         pegasus_client_static
-        RocksDB::rocksdb
-        dsn_utils
-        )
+        rocksdb
+        lz4
+        zstd
+        snappy
+        dsn_utils)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

@@ -31,7 +31,10 @@ set(MY_PROJ_LIBS dsn_meta_server
         hashtable
         gtest
         test_utils
-        rocksdb)
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

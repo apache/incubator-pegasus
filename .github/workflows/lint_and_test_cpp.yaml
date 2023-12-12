@@ -673,9 +673,6 @@ jobs:
         run: |
           # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md
           brew install ccache
-          brew install snappy
-          brew install lz4
-          brew install zstd
           brew install openssl@1.1
       - uses: actions/checkout@v3
       - name: Setup cache
