@@ -26,16 +26,13 @@
 
 #pragma once
 
-#include <fmt/core.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <algorithm>
 #include <atomic>
 #include <functional>
-#include <iosfwd>
 #include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -52,7 +49,6 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
