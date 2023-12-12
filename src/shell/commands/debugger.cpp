@@ -20,16 +20,10 @@
 // IWYU pragma: no_include <bits/getopt_core.h>
 // TODO(yingchun): refactor this after libfmt upgraded
 #include <fmt/chrono.h> // IWYU pragma: keep
-// IWYU pragma: no_include <fmt/core.h>
-// IWYU pragma: no_include <fmt/format.h>
-#if FMT_VERSION < 60000
-#include <fmt/time.h> // IWYU pragma: keep
-#endif
 #include <fmt/printf.h> // IWYU pragma: keep
 // IWYU pragma: no_include <algorithm>
 // IWYU pragma: no_include <iterator>
 #include <getopt.h>
-#include <libgen.h>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <rocksdb/slice.h>
@@ -39,6 +33,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <ctime>
+// IWYU pragma: no_include <fmt/core.h>
+// IWYU pragma: no_include <fmt/format.h>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <string>
@@ -64,7 +61,6 @@
 #include "utils/blob.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/strings.h"
 
 bool sst_dump(command_executor *e, shell_context *sc, arguments args)
 {
