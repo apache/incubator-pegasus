@@ -311,7 +311,6 @@ private:
             bool need_restore,
             bool is_duplication_follower = false);
 
-    explicit replica();
     error_code initialize_on_new();
     error_code initialize_on_load();
     error_code init_app_and_prepare_list(bool create_new);
