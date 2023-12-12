@@ -81,7 +81,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
                                            {0, 0, 0, 0}};
 
     bool detailed = false;
-    std::string slog_dir;
+    std::string plog_dir;
     std::string output;
     optind = 0;
     while (true) {
@@ -95,7 +95,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
             detailed = true;
             break;
         case 'i':
-            slog_dir = optarg;
+            plog_dir = optarg;
             break;
         case 'o':
             output = optarg;
@@ -104,28 +104,28 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
     }
-    if (slog_dir.empty()) {
+    if (plog_dir.empty()) {
         fmt::print(stderr, "ERROR: 'input' is not specified\n");
         return false;
     }
-    if (!dsn::utils::filesystem::directory_exists(slog_dir)) {
-        fmt::print(stderr, "ERROR: '{}' is not a directory\n", slog_dir);
+    if (!dsn::utils::filesystem::directory_exists(plog_dir)) {
+        fmt::print(stderr, "ERROR: '{}' is not a directory\n", plog_dir);
         return false;
     }
 
     char splitters[] = {'\\', '/', 0};
-    auto slog_dir_tmp = slog_dir;
+    auto slog_dir_tmp = plog_dir;
     std::string name =
         dsn::utils::get_last_component(dirname((char *)slog_dir_tmp.c_str()), splitters);
     if (name.empty()) {
-        fmt::print(stderr, "ERROR: '{}' is not a valid slog directory\n", slog_dir);
+        fmt::print(stderr, "ERROR: '{}' is not a valid slog directory\n", plog_dir);
         return false;
     }
 
     char app_type[128];
     int32_t app_id, pidx;
     if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
-        fmt::print(stderr, "ERROR: '{}' is not a valid slog directory\n", slog_dir);
+        fmt::print(stderr, "ERROR: '{}' is not a valid slog directory\n", plog_dir);
         return false;
     }
 
@@ -237,7 +237,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     }
 
     dsn::replication::mutation_log_tool tool;
-    bool ret = tool.dump(slog_dir, dsn::gpid(app_id, pidx), os, callback);
+    bool ret = tool.dump(plog_dir, dsn::gpid(app_id, pidx), os, callback);
     if (!ret) {
         fmt::print(stderr, "ERROR: dump failed\n");
     } else {
