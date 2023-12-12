@@ -39,7 +39,7 @@ Then build the image:
 
 ```
 cd /your/local/pegasus-docker/pegasus-docker-compose
-./build_docker.sh /your/local/apache-pegasus-source
+./build_docker.sh /your/local/apache-pegasus-source github-branch-for-build-env-image(default: master)
 ```
 
 You will have a docker image called "pegasus:latest" right now built on you machine. Check it out:
