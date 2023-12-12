@@ -18,13 +18,13 @@
 ARG GITHUB_BRANCH=master
 ARG OS_VERSION=centos7
 FROM apache/pegasus:thirdparties-src-${GITHUB_BRANCH} as builder
-FROM apache/pegasus:build-env-${OS_VERSION}
+FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH}
 
 WORKDIR /root
 
 COPY --from=builder /root/thirdparties-src.zip /root/thirdparties-src.zip
 
-ARG GITHUB_BRANCH=master
+ARG GITHUB_BRANCH
 ARG GITHUB_REPOSITORY_URL=https://github.com/apache/incubator-pegasus.git
 ARG ROCKSDB_PORTABLE=OFF
 ARG USE_JEMALLOC=OFF
