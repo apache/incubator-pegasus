@@ -32,6 +32,7 @@
 #include <string>
 
 namespace dsn {
+class gpid;
 class message_ex;
 
 namespace replication {
@@ -41,9 +42,10 @@ class mutation_log_tool
 public:
     bool
     dump(const std::string &log_dir,
+         gpid pid,
          std::ostream &output,
          std::function<void(
              int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)> callback);
 };
-}
-}
+} // namespace replication
+} // namespace dsn
