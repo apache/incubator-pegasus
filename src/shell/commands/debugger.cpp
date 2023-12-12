@@ -118,7 +118,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     std::string name =
         dsn::utils::get_last_component(dirname((char *)slog_dir_tmp.c_str()), splitters);
     if (name.empty()) {
-        fmt::print(stderr, "ERROR: '{}' is not a valid slog directory\n", plog_dir);
+        fmt::print(stderr, "ERROR: '{}' is not a valid plog directory\n", plog_dir);
         return false;
     }
 
