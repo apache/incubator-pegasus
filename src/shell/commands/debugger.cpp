@@ -125,7 +125,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     char app_type[128];
     int32_t app_id, pidx;
     if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
-        fmt::print(stderr, "ERROR: '{}' is not a valid slog directory\n", plog_dir);
+        fmt::print(stderr, "ERROR: '{}' is not a valid plog directory\n", plog_dir);
         return false;
     }
 
