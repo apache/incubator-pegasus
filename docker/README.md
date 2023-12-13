@@ -35,10 +35,10 @@ Building environment for Pegasus compilation.
 
 Github Actions automatically rebuilds and publishes build-env for every commit.
 
-- `apache/pegasus:build-env-centos7`
-- `apache/pegasus:build-env-ubuntu1604`
-- `apache/pegasus:build-env-ubuntu1804`
-- `apache/pegasus:build-env-ubuntu2004`
+- `apache/pegasus:build-env-centos7-<branch>`
+- `apache/pegasus:build-env-ubuntu1604-<branch>`
+- `apache/pegasus:build-env-ubuntu1804-<branch>`
+- `apache/pegasus:build-env-ubuntu2004-<branch>`
 
 DockerHub: https://hub.docker.com/r/apache/pegasus
 
@@ -58,7 +58,7 @@ without downloading from the cloud object storage.
 This is a Docker image for Pegasus unit-testing. It prebuilts the thirdparty libraries,
 so jobs based on this image can skip building third-parties.
 
-- `apache/pegasus:thirdparties-bin-centos7-master`
-- `apache/pegasus:thirdparties-bin-ubuntu1604-master`
-- `apache/pegasus:thirdparties-bin-ubuntu1804-master`
-- `apache/pegasus:thirdparties-bin-ubuntu2004-master`
+- `apache/pegasus:thirdparties-bin-centos7-<branch>`
+- `apache/pegasus:thirdparties-bin-ubuntu1604-<branch>`
+- `apache/pegasus:thirdparties-bin-ubuntu1804-<branch>`
+- `apache/pegasus:thirdparties-bin-ubuntu2004-<branch>`
