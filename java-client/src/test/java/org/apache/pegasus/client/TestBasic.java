@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /** Created by mi on 16-3-22. */
@@ -2388,8 +2387,8 @@ public class TestBasic {
     List<byte[]> remainingSortKey = new ArrayList<byte[]>();
     List<Pair<byte[], byte[]>> remainingValue = new ArrayList<Pair<byte[], byte[]>>();
 
-    Assertions.assertNull(
-        Assertions.assertDoesNotThrow(
+    assertNull(
+        assertDoesNotThrow(
             () -> {
               client.multiSet(tableName, "delRange".getBytes(), values);
               client.delRange(
@@ -2418,17 +2417,17 @@ public class TestBasic {
     for (Pair<byte[], byte[]> pair : remainingValue) {
       valueStr.add(new String(pair.getValue()));
     }
-    Assertions.assertEquals(10, valueStr.size());
-    Assertions.assertTrue(valueStr.contains("v_90"));
-    Assertions.assertTrue(valueStr.contains("v_91"));
-    Assertions.assertTrue(valueStr.contains("v_92"));
-    Assertions.assertTrue(valueStr.contains("v_93"));
-    Assertions.assertTrue(valueStr.contains("v_94"));
-    Assertions.assertTrue(valueStr.contains("v_95"));
-    Assertions.assertTrue(valueStr.contains("v_96"));
-    Assertions.assertTrue(valueStr.contains("v_97"));
-    Assertions.assertTrue(valueStr.contains("v_98"));
-    Assertions.assertTrue(valueStr.contains("v_99"));
+    assertEquals(10, valueStr.size());
+    assertTrue(valueStr.contains("v_90"));
+    assertTrue(valueStr.contains("v_91"));
+    assertTrue(valueStr.contains("v_92"));
+    assertTrue(valueStr.contains("v_93"));
+    assertTrue(valueStr.contains("v_94"));
+    assertTrue(valueStr.contains("v_95"));
+    assertTrue(valueStr.contains("v_96"));
+    assertTrue(valueStr.contains("v_97"));
+    assertTrue(valueStr.contains("v_98"));
+    assertTrue(valueStr.contains("v_99"));
     remainingValue.clear();
     valueStr.clear();
 
@@ -2436,7 +2435,7 @@ public class TestBasic {
     delRangeOptions.sortKeyFilterType = FilterType.FT_MATCH_POSTFIX;
     delRangeOptions.sortKeyFilterPattern = "k_93".getBytes();
 
-    Assertions.assertDoesNotThrow(
+    assertDoesNotThrow(
         () -> {
           client.delRange(
               tableName,
@@ -2449,8 +2448,8 @@ public class TestBasic {
     for (Pair<byte[], byte[]> pair : remainingValue) {
       valueStr.add(new String(pair.getValue()));
     }
-    Assertions.assertEquals(9, valueStr.size());
-    Assertions.assertTrue(!valueStr.contains("v_93"));
+    assertEquals(9, valueStr.size());
+    assertTrue(!valueStr.contains("v_93"));
     remainingValue.clear();
     valueStr.clear();
 
@@ -2459,7 +2458,7 @@ public class TestBasic {
     delRangeOptions.stopInclusive = true;
     delRangeOptions.sortKeyFilterType = FilterType.FT_NO_FILTER;
     delRangeOptions.sortKeyFilterPattern = null;
-    Assertions.assertDoesNotThrow(
+    assertDoesNotThrow(
         () -> {
           client.delRange(
               tableName,
@@ -2474,20 +2473,20 @@ public class TestBasic {
       valueStr.add(new String(pair.getValue()));
     }
 
-    Assertions.assertEquals(5, valueStr.size());
-    Assertions.assertTrue(valueStr.contains("v_90"));
-    Assertions.assertTrue(valueStr.contains("v_96"));
-    Assertions.assertTrue(valueStr.contains("v_97"));
-    Assertions.assertTrue(valueStr.contains("v_98"));
-    Assertions.assertTrue(valueStr.contains("v_99"));
+    assertEquals(5, valueStr.size());
+    assertTrue(valueStr.contains("v_90"));
+    assertTrue(valueStr.contains("v_96"));
+    assertTrue(valueStr.contains("v_97"));
+    assertTrue(valueStr.contains("v_98"));
+    assertTrue(valueStr.contains("v_99"));
     remainingValue.clear();
     valueStr.clear();
 
     DelRangeOptions delRangeOptions2 = new DelRangeOptions();
     // test hashKey can't be null or ""
-    Assertions.assertEquals(
+    assertEquals(
         "{version}: Invalid parameter: hash key can't be empty",
-        Assertions.assertThrows(
+        assertThrows(
                 PException.class,
                 () -> {
                   client.delRange(
@@ -2495,9 +2494,9 @@ public class TestBasic {
                 })
             .getMessage());
 
-    Assertions.assertEquals(
+    assertEquals(
         "{version}: Invalid parameter: hash key can't be empty",
-        Assertions.assertThrows(
+        assertThrows(
                 PException.class,
                 () -> {
                   client.delRange(
@@ -2506,8 +2505,8 @@ public class TestBasic {
             .getMessage());
 
     // test sortKey can be null, means delete from first to last
-    Assertions.assertNull(
-        Assertions.assertDoesNotThrow(
+    assertNull(
+        assertDoesNotThrow(
             () -> {
               client.multiSet(tableName, "delRange".getBytes(), values);
               client.delRange(tableName, "delRange".getBytes(), null, null, delRangeOptions2);
@@ -2515,7 +2514,7 @@ public class TestBasic {
               return delRangeOptions2.nextSortKey;
             }));
 
-    Assertions.assertEquals(remainingValue.size(), 0);
+    assertEquals(remainingValue.size(), 0);
   }
 
   @Test
@@ -2712,7 +2711,7 @@ public class TestBasic {
     assertFalse(caseD1.allFetched);
     assertEquals(5, caseD1.keys.size());
     for (int i = 0; i <= 4; i++) {
-      Assertions.assertEquals("persistent_" + i, new String(caseD1.keys.get(i)));
+      assertEquals("persistent_" + i, new String(caseD1.keys.get(i)));
     }
     // case D1: maxFetchCount < 0, return all valid record
     PegasusTableInterface.MultiGetSortKeysResult caseD2 =
@@ -2720,7 +2719,7 @@ public class TestBasic {
     assertTrue(caseD2.allFetched);
     assertEquals(10, caseD2.keys.size());
     for (int i = 0; i <= 9; i++) {
-      Assertions.assertEquals("persistent_" + i, new String(caseD2.keys.get(i)));
+      assertEquals("persistent_" + i, new String(caseD2.keys.get(i)));
     }
   }
 
@@ -2756,15 +2755,15 @@ public class TestBasic {
       int stopIndex,
       boolean expectAllFetched,
       PegasusTable.ScanRangeResult actuallyRes) {
-    Assertions.assertEquals(expectAllFetched, actuallyRes.allFetched);
-    Assertions.assertEquals(stopIndex - startIndex + 1, actuallyRes.results.size());
+    assertEquals(expectAllFetched, actuallyRes.allFetched);
+    assertEquals(stopIndex - startIndex + 1, actuallyRes.results.size());
     for (int i = startIndex; i <= stopIndex; i++) {
-      Assertions.assertEquals(
+      assertEquals(
           "hashKey", new String(actuallyRes.results.get(i - startIndex).getLeft().getKey()));
-      Assertions.assertEquals(
+      assertEquals(
           "persistent_" + i,
           new String(actuallyRes.results.get(i - startIndex).getLeft().getValue()));
-      Assertions.assertEquals(
+      assertEquals(
           "persistent_" + i + "_value",
           new String(actuallyRes.results.get(i - startIndex).getRight()));
     }
@@ -2797,7 +2796,7 @@ public class TestBasic {
       }
 
       Throwable exception =
-          Assertions.assertThrows(
+          assertThrows(
               PException.class,
               () -> {
                 client.multiSet(tableName, hashKey.getBytes(), multiValues2);
@@ -2816,7 +2815,7 @@ public class TestBasic {
       CheckAndMutateOptions options = new CheckAndMutateOptions();
       options.returnCheckValue = true;
       Throwable exception2 =
-          Assertions.assertThrows(
+          assertThrows(
               PException.class,
               () -> {
                 client.checkAndMutate(
@@ -2865,7 +2864,6 @@ public class TestBasic {
               .getMessage()
               .contains(
                   "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=3,valueLength=-1]"));
-
     } catch (Throwable e) {
       fail();
     }

@@ -18,8 +18,10 @@
  */
 package org.apache.pegasus.security;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.nio.charset.Charset;
@@ -28,7 +30,6 @@ import org.apache.pegasus.apps.negotiation_response;
 import org.apache.pegasus.apps.negotiation_status;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.rpc.async.ReplicaSession;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -57,10 +58,10 @@ public class NegotiationTest {
   public void testCheckStatus() {
     negotiation_status expectedStatus = negotiation_status.SASL_LIST_MECHANISMS;
 
-    Assertions.assertDoesNotThrow(
+    assertDoesNotThrow(
         () -> negotiation.checkStatus(negotiation_status.SASL_LIST_MECHANISMS, expectedStatus));
 
-    Assertions.assertThrows(
+    assertThrows(
         Exception.class,
         () ->
             negotiation.checkStatus(negotiation_status.SASL_LIST_MECHANISMS_RESP, expectedStatus));
@@ -73,13 +74,13 @@ public class NegotiationTest {
     mockNegotiation.saslWrapper = mockSaslWrapper;
 
     Mockito.doNothing().when(mockNegotiation).send(any(), any());
-    Assertions.assertDoesNotThrow(
+    assertDoesNotThrow(
         () -> {
           Mockito.when(mockNegotiation.saslWrapper.init(any())).thenReturn(new byte[0]);
         });
 
     // normal case
-    Assertions.assertDoesNotThrow(
+    assertDoesNotThrow(
         () -> {
           negotiation_response response =
               new negotiation_response(
@@ -90,7 +91,7 @@ public class NegotiationTest {
         });
 
     // deal with wrong response.msg
-    Assertions.assertThrows(
+    assertThrows(
         Exception.class,
         () -> {
           negotiation_response response =
@@ -101,7 +102,7 @@ public class NegotiationTest {
         });
 
     // deal with wrong response.status
-    Assertions.assertThrows(
+    assertThrows(
         Exception.class,
         () -> {
           negotiation_response response =
@@ -128,12 +129,12 @@ public class NegotiationTest {
     negotiation_response response =
         new negotiation_response(
             negotiation_status.SASL_SELECT_MECHANISMS_RESP, new blob(new byte[0]));
-    Assertions.assertDoesNotThrow(() -> mockNegotiation.onMechanismSelected(response));
+    assertDoesNotThrow(() -> mockNegotiation.onMechanismSelected(response));
     assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_INITIATE);
 
     // deal with wrong response.status
     response.status = negotiation_status.SASL_LIST_MECHANISMS;
-    Assertions.assertThrows(Exception.class, () -> mockNegotiation.onMechanismSelected(response));
+    assertThrows(Exception.class, () -> mockNegotiation.onMechanismSelected(response));
   }
 
   @Test
@@ -154,7 +155,7 @@ public class NegotiationTest {
     }
 
     // normal case
-    Assertions.assertDoesNotThrow(
+    assertDoesNotThrow(
         () -> {
           negotiation_response response =
               new negotiation_response(negotiation_status.SASL_CHALLENGE, new blob(new byte[0]));
@@ -167,7 +168,7 @@ public class NegotiationTest {
         });
 
     // deal with wrong response.status
-    Assertions.assertThrows(
+    assertThrows(
         Exception.class,
         () -> {
           negotiation_response response =
