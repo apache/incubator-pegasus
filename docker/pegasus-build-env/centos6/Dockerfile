@@ -76,7 +76,7 @@ ENV MAVEN_HOME=/opt/rh/rh-maven33/root/usr/
 ENV PATH=$MAVEN_HOME/bin:$JAVA_HOME/bin:$GCC_HOME/bin:$PYTHON2_HOME/bin/:$PATH
 ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$PYTHON2_HOME/lib64/:$LD_LIBRARY_PATH
 
-RUN pip install --no-cache-dir cmake
+RUN python -m pip install --user --upgrade pip==20.3.4 && python -m pip install --no-cache-dir cmake -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -P /opt/thrift && \
     cd /opt/thrift && tar xzf 0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
