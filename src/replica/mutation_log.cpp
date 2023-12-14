@@ -606,7 +606,7 @@ error_code mutation_log::create_new_log_file()
     // write file header into pending buffer
     size_t header_len = 0;
     binary_writer temp_writer;
-    CHECK(_is_private, "");
+    CHECK_TRUE(_is_private);
     replica_log_info_map ds;
     ds[_private_gpid] =
         replica_log_info(_private_log_info.max_decree, _private_log_info.valid_start_offset);
@@ -696,7 +696,7 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size,
 decree mutation_log::max_decree(gpid gpid) const
 {
     zauto_lock l(_lock);
-    CHECK(_is_private, "");
+    CHECK_TRUE(_is_private);
     CHECK_EQ(gpid, _private_gpid);
     return _private_log_info.max_decree;
 }
@@ -735,7 +735,7 @@ decree mutation_log::max_gced_decree_no_lock(gpid gpid) const
 void mutation_log::check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const
 {
     zauto_lock l(_lock);
-    CHECK(_is_private, "");
+    CHECK_TRUE(_is_private);
     CHECK_EQ(valid_start_offset, _private_log_info.valid_start_offset);
 }
 
@@ -823,7 +823,7 @@ error_code mutation_log::reset_from(const std::string &dir,
 void mutation_log::set_valid_start_offset_on_open(gpid gpid, int64_t valid_start_offset)
 {
     zauto_lock l(_lock);
-    CHECK(_is_private, "");
+    CHECK_TRUE(_is_private);
     CHECK_EQ(gpid, _private_gpid);
     _private_log_info.valid_start_offset = valid_start_offset;
 }
@@ -831,7 +831,7 @@ void mutation_log::set_valid_start_offset_on_open(gpid gpid, int64_t valid_start
 int64_t mutation_log::on_partition_reset(gpid gpid, decree max_decree)
 {
     zauto_lock l(_lock);
-    CHECK(_is_private, "");
+    CHECK_TRUE(_is_private);
     CHECK_EQ(_private_gpid, gpid);
     replica_log_info old_info = _private_log_info;
     _private_log_info.max_decree = max_decree;
@@ -854,7 +854,7 @@ void mutation_log::update_max_decree(gpid gpid, decree d)
 
 void mutation_log::update_max_decree_no_lock(gpid gpid, decree d)
 {
-    CHECK(_is_private, "");
+    CHECK_TRUE(_is_private);
     CHECK_EQ(gpid, _private_gpid);
     if (d > _private_log_info.max_decree) {
         _private_log_info.max_decree = d;
