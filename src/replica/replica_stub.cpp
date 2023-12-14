@@ -232,7 +232,10 @@ DSN_DEFINE_bool(replication,
                 log_shared_force_flush,
                 false,
                 "when write shared log, whether to flush file after write done");
-DSN_DEFINE_bool(replication, gc_disabled, false, "whether to disable garbage collection");
+DSN_DEFINE_bool(replication,
+                gc_disabled,
+                false,
+                "whether to disable replica stat. The name contains 'gc' is for legacy reason.");
 DSN_DEFINE_bool(replication, disk_stat_disabled, false, "whether to disable disk stat");
 DSN_DEFINE_bool(replication,
                 delay_for_fd_timeout_on_start,
@@ -504,12 +507,12 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
     }
 
-    // gc
+    // replicas stat
     if (!FLAGS_gc_disabled) {
-        _gc_timer_task = tasking::enqueue_timer(
+        _replicas_stat_timer_task = tasking::enqueue_timer(
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
             &_tracker,
-            [this] { on_gc(); },
+            [this] { on_replicas_stat(); },
             std::chrono::milliseconds(FLAGS_gc_interval_ms),
             0,
             std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms)));
@@ -1430,17 +1433,6 @@ void replica_stub::response_client(gpid id,
     }
 }
 
-void replica_stub::init_gc_for_test()
-{
-    CHECK(FLAGS_gc_disabled, "");
-
-    _gc_timer_task = tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
-                                      &_tracker,
-                                      [this] { on_gc(); },
-                                      0,
-                                      std::chrono::milliseconds(FLAGS_gc_interval_ms));
-}
-
 void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
 {
     std::pair<app_info, replica_info> closed_info;
@@ -1483,27 +1475,27 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
     }
 }
 
-void replica_stub::on_gc()
+void replica_stub::on_replicas_stat()
 {
     uint64_t start = dsn_now_ns();
 
-    replica_gc_info_map replica_gc_map;
+    replica_stat_info_by_gpid rep_stat_info_by_gpid;
     {
         zauto_read_lock l(_replicas_lock);
         // A replica was removed from _replicas before it would be closed by replica::close().
         // Thus it's safe to use the replica after fetching its ref pointer from _replicas.
-        for (const auto &rep_pair : _replicas) {
-            const replica_ptr &rep = rep_pair.second;
+        for (const auto &replica : _replicas) {
+            const auto &rep = replica.second;
 
-            auto &replica_gc = replica_gc_map[rep_pair.first];
-            replica_gc.rep = rep;
-            replica_gc.status = rep->status();
-            replica_gc.plog = rep->private_log();
-            replica_gc.last_durable_decree = rep->last_durable_decree();
+            auto &rep_stat_info = rep_stat_info_by_gpid[replica.first];
+            rep_stat_info.rep = rep;
+            rep_stat_info.status = rep->status();
+            rep_stat_info.plog = rep->private_log();
+            rep_stat_info.last_durable_decree = rep->last_durable_decree();
         }
     }
 
-    LOG_INFO("start to garbage collection, replica_count = {}", replica_gc_map.size());
+    LOG_INFO("start replicas statistics, replica_count = {}", rep_stat_info_by_gpid.size());
 
     // statistic learning info
     uint64_t learning_count = 0;
@@ -1516,8 +1508,8 @@ void replica_stub::on_gc()
     uint64_t splitting_max_duration_time_ms = 0;
     uint64_t splitting_max_async_learn_time_ms = 0;
     uint64_t splitting_max_copy_file_size = 0;
-    for (auto &kv : replica_gc_map) {
-        replica_ptr &rep = kv.second.rep;
+    for (const auto & [ _, rep_stat_info ] : rep_stat_info_by_gpid) {
+        const auto &rep = rep_stat_info.rep;
         if (rep->status() == partition_status::PS_POTENTIAL_SECONDARY) {
             learning_count++;
             learning_max_duration_time_ms = std::max(
@@ -1560,7 +1552,7 @@ void replica_stub::on_gc()
                    splitting_max_async_learn_time_ms);
     METRIC_VAR_SET(splitting_replicas_max_copy_file_bytes, splitting_max_copy_file_size);
 
-    LOG_INFO("finish to garbage collection, time_used_ns = {}", dsn_now_ns() - start);
+    LOG_INFO("finish replicas statistics, time used {}ns", dsn_now_ns() - start);
 }
 
 void replica_stub::on_disk_stat()
@@ -2417,9 +2409,9 @@ void replica_stub::close()
         _disk_stat_timer_task = nullptr;
     }
 
-    if (_gc_timer_task != nullptr) {
-        _gc_timer_task->cancel(true);
-        _gc_timer_task = nullptr;
+    if (_replicas_stat_timer_task != nullptr) {
+        _replicas_stat_timer_task->cancel(true);
+        _replicas_stat_timer_task = nullptr;
     }
 
     if (_mem_release_timer_task != nullptr) {

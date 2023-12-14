@@ -176,13 +176,12 @@ public:
     //
     void on_meta_server_connected();
     void on_meta_server_disconnected();
-    void on_gc();
+    void on_replicas_stat();
     void on_disk_stat();
 
     //
     //  routines published for test
     //
-    void init_gc_for_test();
     void set_meta_server_disconnected_for_test() { on_meta_server_disconnected(); }
     void set_meta_server_connected_for_test(const configuration_query_by_node_response &config);
     void set_replica_state_subscriber_for_test(replica_state_subscriber subscriber,
@@ -355,14 +354,14 @@ private:
     replica_life_cycle get_replica_life_cycle(gpid id);
     void on_gc_replica(replica_stub_ptr this_, gpid id);
 
-    struct replica_gc_info
+    struct replica_stat_info
     {
         replica_ptr rep;
         partition_status::type status;
         mutation_log_ptr plog;
         decree last_durable_decree;
     };
-    using replica_gc_info_map = std::unordered_map<gpid, replica_gc_info>;
+    using replica_stat_info_by_gpid = std::unordered_map<gpid, replica_stat_info>;
 
     void response_client(gpid id,
                          bool is_read,
@@ -454,7 +453,7 @@ private:
     // temproal states
     ::dsn::task_ptr _config_query_task;
     ::dsn::timer_task_ptr _config_sync_timer_task;
-    ::dsn::task_ptr _gc_timer_task;
+    ::dsn::task_ptr _replicas_stat_timer_task;
     ::dsn::task_ptr _disk_stat_timer_task;
     ::dsn::task_ptr _mem_release_timer_task;
 

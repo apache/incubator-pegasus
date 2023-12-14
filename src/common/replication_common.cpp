@@ -64,7 +64,7 @@ DSN_DEFINE_int32(
     replication,
     gc_interval_ms,
     30 * 1000,
-    "every what period (ms) we do garbage collection for dead replicas, on-disk state, log, etc.");
+    "every what period (ms) we do replica stat. The name contains 'gc' is for legacy reason.");
 DSN_DEFINE_int32(replication,
                  fd_check_interval_seconds,
                  2,
