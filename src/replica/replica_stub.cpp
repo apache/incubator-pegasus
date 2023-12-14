@@ -38,6 +38,7 @@
 #include <mutex>
 #include <ostream>
 #include <set>
+#include <type_traits>
 #include <vector>
 
 #include "absl/strings/string_view.h"
