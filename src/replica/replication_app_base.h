@@ -92,7 +92,9 @@ public:
     int32_t crc;
     ballot init_ballot;
     decree init_durable_decree;
-    int64_t init_offset_in_shared_log;
+    int64_t init_offset_in_shared_log; // Deprecated since Pegasus 2.6.0, but leave it to keep
+                                       // compatible readability to read replica_init_info from
+                                       // older Pegasus version.
     int64_t init_offset_in_private_log;
     DEFINE_JSON_SERIALIZATION(init_ballot,
                               init_durable_decree,
@@ -325,13 +327,10 @@ private:
     friend class replica_disk_migrator;
 
     error_code open_internal(replica *r);
-    error_code open_new_internal(replica *r, int64_t shared_log_start, int64_t private_log_start);
+    error_code open_new_internal(replica *r, int64_t private_log_start);
 
     const replica_init_info &init_info() const { return _info; }
-    error_code update_init_info(replica *r,
-                                int64_t shared_log_offset,
-                                int64_t private_log_offset,
-                                int64_t durable_decree);
+    error_code update_init_info(replica *r, int64_t private_log_offset, int64_t durable_decree);
     error_code update_init_info_ballot_and_decree(replica *r);
 
 protected:

@@ -69,8 +69,6 @@ TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
         node.assign_ipv4("127.0.0.11", static_cast<uint16_t>(12321 + i + 1));
 
         _replica->register_service();
-        mock_mutation_log_shared_ptr shared_log_mock = new mock_mutation_log_shared("./tmp_dir");
-        stub->set_log(shared_log_mock);
 
         partition_configuration config;
         config.pid = pid;
