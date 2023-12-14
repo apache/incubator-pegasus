@@ -53,14 +53,38 @@ namespace block_service {
 
 DEFINE_TASK_CODE(LPC_LOCAL_SERVICE_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_BLOCK_SERVICE)
 
-bool file_metadata_from_json(const std::string &data, file_metadata &fmeta) noexcept
+error_code file_metadata::dump_to_file(const std::string &file_path) const
 {
+    std::string data = nlohmann::json(*this).dump();
+    auto s =
+        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                   rocksdb::Slice(data),
+                                   file_path,
+                                   /* should_sync */ true);
+    if (!s.ok()) {
+        LOG_WARNING("write to metadata file '{}' failed, err = {}", file_path, s.ToString());
+        return ERR_FS_INTERNAL;
+    }
+
+    return ERR_OK;
+}
+
+error_code file_metadata::load_from_file(const std::string &file_path)
+{
+    std::string data;
+    auto s = rocksdb::ReadFileToString(
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), file_path, &data);
+    if (!s.ok()) {
+        LOG_WARNING("load from metadata file '{}' failed, err = {}", file_path, s.ToString());
+        return ERR_FS_INTERNAL;
+    }
+
     try {
-        nlohmann::json::parse(data).get_to(fmeta);
-        return true;
+        nlohmann::json::parse(data).get_to(*this);
+        return ERR_OK;
     } catch (nlohmann::json::exception &exp) {
-        LOG_WARNING("decode metadata from json failed: {} [{}]", exp.what(), data);
-        return false;
+        LOG_WARNING("decode metadata from json failed: {}, data = [{}]", exp.what(), data);
+        return ERR_FS_INTERNAL;
     }
 }
 
@@ -264,47 +288,20 @@ uint64_t local_file_object::get_size() { return _size; }
 
 error_code local_file_object::load_metadata()
 {
-    if (_has_meta_synced)
+    if (_has_meta_synced) {
         return ERR_OK;
-
-    std::string metadata_path = local_service::get_metafile(file_name());
-    std::string data;
-    auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), metadata_path, &data);
-    if (!s.ok()) {
-        LOG_WARNING("read file '{}' failed, err = {}", metadata_path, s.ToString());
-        return ERR_FS_INTERNAL;
     }
 
-    file_metadata meta;
-    bool ans = file_metadata_from_json(data, meta);
-    if (!ans) {
-        LOG_WARNING("decode metadata '{}' file content failed", metadata_path);
+    file_metadata fmd;
+    std::string filepath = local_service::get_metafile(file_name());
+    auto ec = fmd.load_from_file(filepath);
+    if (ec != ERR_OK) {
+        LOG_WARNING("load metadata file '{}' failed", filepath);
         return ERR_FS_INTERNAL;
     }
-    _size = meta.size;
-    _md5_value = meta.md5;
+    _size = fmd.size;
+    _md5_value = fmd.md5;
     _has_meta_synced = true;
-    return ERR_OK;
-}
-
-error_code local_file_object::store_metadata()
-{
-    file_metadata meta;
-    meta.md5 = _md5_value;
-    meta.size = _size;
-    std::string data = nlohmann::json(meta).dump();
-    std::string metadata_path = local_service::get_metafile(file_name());
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice(data),
-                                   metadata_path,
-                                   /* should_sync */ true);
-    if (!s.ok()) {
-        LOG_WARNING("store to metadata file {} failed, err={}", metadata_path, s.ToString());
-        return ERR_FS_INTERNAL;
-    }
-
     return ERR_OK;
 }
 
@@ -359,11 +356,10 @@ dsn::task_ptr local_file_object::write(const write_request &req,
                 // a lot, but it is somewhat not correct.
                 _size = resp.written_size;
                 _md5_value = utils::string_md5(req.buffer.data(), req.buffer.length());
-                // TODO(yingchun): make store_metadata as a local function, do not depend on the
-                //  member variables (i.e. _size and _md5_value).
-                auto err = store_metadata();
+                auto err = file_metadata(_size, _md5_value)
+                               .dump_to_file(local_service::get_metafile(file_name()));
                 if (err != ERR_OK) {
-                    LOG_WARNING("store_metadata failed");
+                    LOG_ERROR("file_metadata write failed");
                     resp.err = ERR_FS_INTERNAL;
                     break;
                 }
@@ -502,9 +498,10 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
                 break;
             }
 
-            auto err = store_metadata();
+            auto err = file_metadata(_size, _md5_value)
+                           .dump_to_file(local_service::get_metafile(file_name()));
             if (err != ERR_OK) {
-                LOG_ERROR("store_metadata failed");
+                LOG_ERROR("file_metadata write failed");
                 resp.err = ERR_FS_INTERNAL;
                 break;
             }

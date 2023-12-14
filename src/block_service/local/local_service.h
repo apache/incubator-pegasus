@@ -39,6 +39,14 @@ struct file_metadata
 {
     int64_t size = 0;
     std::string md5;
+
+    file_metadata(int64_t s = 0, const std::string &m = "") : size(s), md5(m) {}
+
+    // Dump the object to a file in JSON format.
+    error_code dump_to_file(const std::string &file_path) const;
+
+    // Load the object from a file in JSON format.
+    error_code load_from_file(const std::string &file_path);
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(file_metadata, size, md5)
 
@@ -102,7 +110,6 @@ public:
                                    dsn::task_tracker *tracker = nullptr) override;
 
     error_code load_metadata();
-    error_code store_metadata();
 
 private:
     std::string compute_md5();
