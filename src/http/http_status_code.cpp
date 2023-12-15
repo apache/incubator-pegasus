@@ -17,28 +17,21 @@
 
 #include "http/http_status_code.h"
 
-#include <vector>
+#include <array>
 
-#include "utils/ports.h"
+#include "utils/enum_helper.h"
+#include "utils/fmt_logging.h"
 
-const std::vector<std::string> kHttpStatusCodeMessages = {"200 OK", "307 Temporary Redirect", "400 Bad Request", "404 Not Found", "500 Internal Server Error"};
+namespace dsn {
+
+const std::array kHttpStatusCodeMessages = {std::string("200 OK"), std::string("307 Temporary Redirect"), std::string("400 Bad Request"), std::string("404 Not Found"), std::string("500 Internal Server Error")};
+
+static_assert(enum_to_integral(http_status_code::invalid) == kHttpStatusCodeMessages.size(), "http_status_code is not consistent with its messages");
 
 std::string http_status_code_to_string(http_status_code code)
 {
-    if (dsn_likely(static_cast<size_t>(code) < kHttpStatusCodeMessages.size())
-    switch (code) {
-    case http_status_code::ok:
-        return ;
-    case http_status_code::temporary_redirect:
-        return ;
-    case http_status_code::bad_request:
-        return ;
-    case http_status_code::not_found:
-        return ;
-    case http_status_code::internal_server_error:
-        return ;
-    default:
-        LOG_FATAL("invalid code: {}", static_cast<int>(code));
-        __builtin_unreachable();
-    }
+    CHECK_LT(enum_to_integral(code), kHttpStatusCodeMessages.size());
+    return kHttpStatusCodeMessages[enum_to_integral(code)];
 }
+
+} // namespace dsn

@@ -28,6 +28,7 @@ enum class http_status_code : size_t
     bad_request,           // 400
     not_found,             // 404
     internal_server_error, // 500
+    invalid,
 };
 
 std::string http_status_code_to_string(http_status_code code);
