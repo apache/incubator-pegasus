@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "http_server.h"
+#include "http/http_server.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -23,19 +23,19 @@
 #include <ostream>
 #include <vector>
 
-#include "builtin_http_calls.h"
+#include "http/builtin_http_calls.h"
 #include "fmt/core.h"
 #include "http/http_method.h"
-#include "http_call_registry.h"
-#include "http_message_parser.h"
-#include "http_server_impl.h"
+#include "http/http_call_registry.h"
+#include "http/http_message_parser.h"
+#include "http/http_server_impl.h"
 #include "nodejs/http_parser.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/tool_api.h"
-#include "uri_decoder.h"
+#include "http/uri_decoder.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
@@ -58,25 +58,6 @@ error_s update_config(const http_request &req)
 }
 
 } // anonymous namespace
-
-/*extern*/ std::string http_status_code_to_string(http_status_code code)
-{
-    switch (code) {
-    case http_status_code::ok:
-        return "200 OK";
-    case http_status_code::temporary_redirect:
-        return "307 Temporary Redirect";
-    case http_status_code::bad_request:
-        return "400 Bad Request";
-    case http_status_code::not_found:
-        return "404 Not Found";
-    case http_status_code::internal_server_error:
-        return "500 Internal Server Error";
-    default:
-        LOG_FATAL("invalid code: {}", static_cast<int>(code));
-        __builtin_unreachable();
-    }
-}
 
 /*extern*/ http_call &register_http_call(std::string full_path)
 {

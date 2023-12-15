@@ -25,7 +25,8 @@
 #include <unordered_map>
 #include <utility>
 
-#include "http_method.h"
+#include "http/http_method.h"
+#include "http/http_status_code.h"
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
 #include "utils/errors.h"
@@ -52,17 +53,6 @@ struct http_request
     blob full_url;
     http_method method;
 };
-
-enum class http_status_code
-{
-    ok,                    // 200
-    temporary_redirect,    // 307
-    bad_request,           // 400
-    not_found,             // 404
-    internal_server_error, // 500
-};
-
-extern std::string http_status_code_to_string(http_status_code code);
 
 struct http_response
 {

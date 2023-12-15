@@ -158,7 +158,7 @@ public:
                      const long expected_http_status,
                      const std::string &expected_response)
     {
-        _client.set_url(url);
+        ASSERT_TRUE(_client.set_url(url));
 
         switch (method) {
         case http_method::GET:

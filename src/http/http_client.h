@@ -24,6 +24,7 @@
 #include <unordered_map>
 
 #include "http/http_method.h"
+#include "http/http_status_code.h"
 #include "utils/errors.h"
 #include "utils/ports.h"
 #include "absl/strings/string_view.h"
@@ -44,7 +45,7 @@ namespace dsn {
 // auto err = client.init();
 //
 // Specify the target url that you would request for:
-// err = client.set_url(method);
+// err = client.set_url("http://<ip>:<port>/your/path");
 //
 // If you would use GET method, call `with_get_method`:
 // err = client.with_get_method();
