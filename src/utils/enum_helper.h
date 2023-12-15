@@ -177,10 +177,10 @@ private:
 template <typename TEnum>
 std::unique_ptr<enum_helper_xxx<TEnum>> enum_helper_xxx<TEnum>::_instance;
 
-template<typename TEnum>
+template <typename TEnum>
 constexpr auto enum_to_integral(TEnum e)
 {
-   return static_cast<std::underlying_type_t<TEnum>>(e);
+    return static_cast<std::underlying_type_t<TEnum>>(e);
 }
 
 } // namespace dsn
