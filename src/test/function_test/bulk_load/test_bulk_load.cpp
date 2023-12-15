@@ -16,15 +16,14 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
 #include <rocksdb/env.h>
+#include <rocksdb/options.h>
 #include <rocksdb/slice.h>
+#include <rocksdb/sst_file_writer.h>
 #include <rocksdb/status.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -32,24 +31,29 @@
 #include <vector>
 
 #include "base/pegasus_const.h"
+#include "base/pegasus_key_schema.h"
+#include "base/pegasus_utils.h"
+#include "base/pegasus_value_schema.h"
 #include "block_service/local/local_service.h"
 #include "bulk_load_types.h"
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
+#include "common/bulk_load_common.h"
 #include "common/json_helper.h"
 #include "gtest/gtest.h"
-#include "include/pegasus/client.h"
-#include "include/pegasus/error.h"
+#include "include/pegasus/client.h" // IWYU pragma: keep
 #include "meta/meta_bulk_load_service.h"
+#include "metadata_types.h"
+#include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/test_util.h"
 #include "utils/blob.h"
-#include "utils/enum_helper.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/test_macros.h"
+#include "utils/utils.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
@@ -59,41 +63,30 @@ using namespace pegasus;
 using std::map;
 using std::string;
 
-///
-/// Files:
-/// `pegasus-bulk-load-function-test-files` folder stores sst files and metadata files used for
-/// bulk load function tests
-///  - `mock_bulk_load_info` sub-directory stores stores wrong bulk_load_info
-///  - `bulk_load_root` sub-directory stores right data
-///     - Please do not rename any files or directories under this folder
-///
-/// The app to test bulk load functionality:
-/// - partition count should be 8
-///
-/// Data:
-/// hashkey: hash${i} sortkey: sort${i} value: newValue       i=[0, 1000]
-/// hashkey: hashkey${j} sortkey: sortkey${j} value: newValue j=[0, 1000]
-///
 class bulk_load_test : public test_util
 {
 protected:
     bulk_load_test() : test_util(map<string, string>({{"rocksdb.allow_ingest_behind", "true"}}))
     {
         TRICKY_CODE_TO_AVOID_LINK_ERROR;
-        bulk_load_local_app_root_ =
-            fmt::format("{}/{}/{}", kLocalBulkLoadRoot, kCluster, table_name_);
+        bulk_load_local_app_root_ = fmt::format("{}/{}/{}/{}/{}",
+                                                global_env::instance()._pegasus_root,
+                                                kLocalServiceRoot,
+                                                kBulkLoad,
+                                                kClusterName,
+                                                table_name_);
     }
 
     void SetUp() override
     {
         test_util::SetUp();
-        NO_FATALS(copy_bulk_load_files());
+        NO_FATALS(generate_bulk_load_files());
     }
 
     void TearDown() override
     {
         ASSERT_EQ(ERR_OK, ddl_client_->drop_app(table_name_, 0));
-        NO_FATALS(run_cmd_from_project_root("rm -rf " + kLocalBulkLoadRoot));
+        NO_FATALS(run_cmd_from_project_root("rm -rf " + bulk_load_local_app_root_));
     }
 
     // Generate the 'bulk_load_info' file according to 'bli' to path 'bulk_load_info_path'.
@@ -108,35 +101,120 @@ protected:
         ASSERT_TRUE(s.ok()) << s.ToString();
     }
 
-    // Generate the '.bulk_load_info.meta' file according to the 'bulk_load_info' file
-    // in path 'bulk_load_info_path'.
-    void generate_bulk_load_info_meta(const std::string &bulk_load_info_path)
+    // Generate the '.xxx.meta' file according to the 'xxx' file
+    // in path 'file_path'.
+    void generate_metadata_file(const std::string &file_path)
     {
         dist::block_service::file_metadata fm;
-        ASSERT_TRUE(utils::filesystem::file_size(
-            bulk_load_info_path, dsn::utils::FileDataType::kSensitive, fm.size));
-        ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(bulk_load_info_path, fm.md5));
-        std::string value = nlohmann::json(fm).dump();
-        auto bulk_load_info_meta_path =
-            fmt::format("{}/{}/{}/.bulk_load_info.meta", kLocalBulkLoadRoot, kCluster, table_name_);
-        auto s =
-            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                       rocksdb::Slice(value),
-                                       bulk_load_info_meta_path,
-                                       /* should_sync */ true);
-        ASSERT_TRUE(s.ok()) << s.ToString();
+        ASSERT_TRUE(dsn::utils::filesystem::file_size(
+            file_path, dsn::utils::FileDataType::kSensitive, fm.size));
+        ASSERT_EQ(ERR_OK, dsn::utils::filesystem::md5sum(file_path, fm.md5));
+        auto metadata_file_path = dist::block_service::local_service::get_metafile(file_path);
+        ASSERT_EQ(ERR_OK, fm.dump_to_file(metadata_file_path));
     }
 
-    void copy_bulk_load_files()
+    void generate_bulk_load_files()
     {
-        // TODO(yingchun): remove the 'mock_bulk_load_info' file, because we can generate it.
-        // Prepare bulk load files.
-        // The source data has 8 partitions.
-        ASSERT_EQ(8, partition_count_);
-        NO_FATALS(run_cmd_from_project_root("mkdir -p " + kLocalBulkLoadRoot));
-        NO_FATALS(run_cmd_from_project_root(
-            fmt::format("cp -r {}/{} {}", kSourceFilesRoot, kBulkLoad, kLocalServiceRoot)));
+        // Generate data for each partition.
+        for (int i = 0; i < partition_count_; i++) {
+            // Prepare the path of partition i.
+            auto partition_path = fmt::format("{}/{}", bulk_load_local_app_root_, i);
+            NO_FATALS(run_cmd_from_project_root(fmt::format("mkdir -p {}", partition_path)));
 
+            // Generate 2 sst files for each partition.
+            for (int j = 1; j <= 2; j++) {
+                auto sst_file = fmt::format("{}/{:05}.sst", partition_path, j);
+
+                // Create a SstFileWriter to generate the external sst file.
+                rocksdb::EnvOptions env_opts;
+                rocksdb::Options opts;
+                rocksdb::SstFileWriter sfw(env_opts, opts);
+                auto s = sfw.Open(sst_file);
+                ASSERT_TRUE(s.ok()) << s.ToString();
+
+                // Make sure the keys must be added in strict ascending order.
+                //
+                // TODO(yingchun): Now we write the same data to all partitions, i.e. hashkeys are
+                //  <kDefaultHashkeyPrefix><j><k>, it doesn't matter, the correct primary partition
+                //  will be selected when read from client. That is to say, it will not take effect
+                //  on the result.
+                //  We can improve to generate only the data which belongs to the partition later.
+                for (int k = 0; k < kBulkLoadItemCount; k++) {
+                    dsn::blob bb_key;
+                    pegasus_generate_key(
+                        bb_key,
+                        fmt::format(
+                            "{}{:04}", j == 1 ? kHashkeyPrefix : kNonOverlapHashKeyPrefix, k),
+                        kSortkey);
+                    std::string buf;
+                    rocksdb::Slice value(pegasus_value_generator().generate_value(
+                                             1, fmt::format("{}{}", kBulkLoadValue, k), 0, 0),
+                                         &buf);
+                    s = sfw.Put(pegasus::utils::to_rocksdb_slice(bb_key.to_string_view()), value);
+                    ASSERT_TRUE(s.ok()) << s.ToString();
+                }
+                s = sfw.Finish();
+                ASSERT_TRUE(s.ok()) << s.ToString();
+            }
+
+            // Find the generated files.
+            std::vector<std::string> src_files;
+            ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(
+                partition_path, src_files, /* recursive */ false));
+            ASSERT_FALSE(src_files.empty());
+
+            bulk_load_metadata blm;
+            for (const auto &src_file : src_files) {
+                // Only .sst files are needed.
+                if (src_file.find(".sst") == std::string::npos) {
+                    continue;
+                }
+
+                // Get file name.
+                file_meta fm;
+                fm.name = dsn::utils::filesystem::get_file_name(src_file);
+
+                // Get file size.
+                int64_t file_size;
+                ASSERT_TRUE(dsn::utils::filesystem::file_size(
+                    src_file, dsn::utils::FileDataType::kSensitive, file_size));
+                fm.size = file_size;
+                blm.file_total_size += file_size;
+
+                // Get file md5sum.
+                ASSERT_EQ(dsn::ERR_OK, dsn::utils::filesystem::md5sum(src_file, fm.md5));
+
+                // Write metadata for each file.
+                NO_FATALS(generate_metadata_file(src_file));
+
+                // Append the metadata.
+                blm.files.push_back(fm);
+            }
+
+            // Generate 'bulk_load_metadata' file for each partition.
+            blob bb = json::json_forwarder<bulk_load_metadata>::encode(blm);
+            std::string blm_path = dsn::utils::filesystem::path_combine(
+                partition_path, bulk_load_constant::BULK_LOAD_METADATA);
+            auto s = rocksdb::WriteStringToFile(
+                dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                rocksdb::Slice(bb.data(), bb.length()),
+                blm_path,
+                /* should_sync */ true);
+            ASSERT_TRUE(s.ok()) << s.ToString();
+
+            // Generate '.bulk_load_metadata.meta' file of 'bulk_load_metadata'.
+            NO_FATALS(generate_metadata_file(blm_path));
+        }
+
+        // Generate 'bulk_load_info' file for this table.
+        auto bulk_load_info_path = fmt::format("{}/bulk_load_info", bulk_load_local_app_root_);
+        NO_FATALS(generate_bulk_load_info(bulk_load_info(table_id_, table_name_, partition_count_),
+                                          bulk_load_info_path));
+
+        // Generate '.bulk_load_info.meta' file of 'bulk_load_info'.
+        NO_FATALS(generate_metadata_file(bulk_load_info_path));
+
+        // TODO(yingchun): not enabled yet!
         if (FLAGS_encrypt_data_at_rest) {
             std::vector<std::string> src_files;
             ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(kLocalServiceRoot, src_files, true));
@@ -145,21 +223,12 @@ protected:
                 ASSERT_TRUE(s.ok()) << s.ToString();
             }
         }
-
-        // Generate 'bulk_load_info'.
-        auto bulk_load_info_path =
-            fmt::format("{}/{}/{}/bulk_load_info", kLocalBulkLoadRoot, kCluster, table_name_);
-        NO_FATALS(generate_bulk_load_info(bulk_load_info(table_id_, table_name_, partition_count_),
-                                          bulk_load_info_path));
-
-        // Generate '.bulk_load_info.meta'.
-        NO_FATALS(generate_bulk_load_info_meta(bulk_load_info_path));
     }
 
-    error_code start_bulk_load(bool ingest_behind = false)
+    error_code start_bulk_load(bool ingest_behind)
     {
         return ddl_client_
-            ->start_bulk_load(table_name_, kCluster, kProvider, kBulkLoad, ingest_behind)
+            ->start_bulk_load(table_name_, kClusterName, "local_service", kBulkLoad, ingest_behind)
             .get_value()
             .err;
     }
@@ -179,7 +248,7 @@ protected:
         while (remain_seconds > 0 && err == ERR_OK) {
             sleep_time = std::min(sleep_time, remain_seconds);
             remain_seconds -= sleep_time;
-            std::cout << "sleep " << sleep_time << "s to query bulk status" << std::endl;
+            fmt::print("sleep {}s to query bulk status\n", sleep_time);
             std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
 
             auto resp = ddl_client_->query_bulk_load(table_name_).get_value();
@@ -191,138 +260,90 @@ protected:
         return last_status;
     }
 
-    void verify_bulk_load_data()
+    void check_bulk_load(bool ingest_behind)
     {
-        NO_FATALS(verify_data(kBulkLoadHashKeyPrefix1, kBulkLoadSortKeyPrefix1));
-        NO_FATALS(verify_data(kBulkLoadHashKeyPrefix2, kBulkLoadSortKeyPrefix2));
-    }
+        const std::string &kValuePrefixBeforeBulkLoad = "valuePrefixBeforeBulkLoad";
+        const std::string &kValuePrefixAfterBulkLoad = "valuePrefixAfterBulkLoad";
 
-    void verify_data(const string &hashkey_prefix, const string &sortkey_prefix)
-    {
-        for (int i = 0; i < kBulkLoadItemCount; ++i) {
-            string hash_key = hashkey_prefix + std::to_string(i);
-            for (int j = 0; j < kBulkLoadItemCount; ++j) {
-                string sort_key = sortkey_prefix + std::to_string(j);
-                string actual_value;
-                ASSERT_EQ(PERR_OK, client_->get(hash_key, sort_key, actual_value))
-                    << hash_key << "," << sort_key;
-                ASSERT_EQ(kBulkLoadValue, actual_value) << hash_key << "," << sort_key;
-            }
-        }
-    }
+        // 1. Write some data before bulk load.
+        // <kHashkeyPrefix>${i} : kSortkey -> <kValuePrefixBeforeBulkLoad>${i}, i=[0, 10]
+        NO_FATALS(write_data(kHashkeyPrefix, kValuePrefixBeforeBulkLoad, kBulkLoadItemCount));
+        NO_FATALS(verify_data(
+            table_name_, kHashkeyPrefix, kValuePrefixBeforeBulkLoad, kBulkLoadItemCount));
 
-    enum class operation
-    {
-        GET,
-        SET,
-        DEL,
-        NO_VALUE
-    };
-    void operate_data(operation op, const string &value, int count)
-    {
-        for (int i = 0; i < count; ++i) {
-            auto hash_key = fmt::format("{}{}", kBulkLoadHashKeyPrefix2, i);
-            auto sort_key = fmt::format("{}{}", kBulkLoadSortKeyPrefix2, i);
-            switch (op) {
-            case operation::GET: {
-                string actual_value;
-                ASSERT_EQ(PERR_OK, client_->get(hash_key, sort_key, actual_value));
-                ASSERT_EQ(value, actual_value);
-            } break;
-            case operation::DEL: {
-                ASSERT_EQ(PERR_OK, client_->del(hash_key, sort_key));
-            } break;
-            case operation::SET: {
-                ASSERT_EQ(PERR_OK, client_->set(hash_key, sort_key, value));
-            } break;
-            case operation::NO_VALUE: {
-                string actual_value;
-                ASSERT_EQ(PERR_NOT_FOUND, client_->get(hash_key, sort_key, actual_value));
-            } break;
-            default:
-                ASSERT_TRUE(false);
-                break;
-            }
-        }
-    }
-
-    void check_bulk_load(bool ingest_behind,
-                         const std::string &value_before_bulk_load,
-                         const std::string &value_after_bulk_load)
-    {
-        // Write some data before bulk load.
-        NO_FATALS(operate_data(operation::SET, value_before_bulk_load, 10));
-        NO_FATALS(operate_data(operation::GET, value_before_bulk_load, 10));
-
-        // Start bulk load and wait until it complete.
+        // 2. Start bulk load and wait until it complete.
+        // <kHashkeyPrefix>${i} : kSortkey -> <kBulkLoadValue>${i}, i=[0, kBulkLoadItemCount]
+        // <kNonOverlapHashKeyPrefix>${i} : kSortkey -> <kBulkLoadValue>${i}, i=[0,
+        // kBulkLoadItemCount]
         ASSERT_EQ(ERR_OK, start_bulk_load(ingest_behind));
         ASSERT_EQ(bulk_load_status::BLS_SUCCEED, wait_bulk_load_finish(300));
 
-        std::cout << "Start to verify data..." << std::endl;
+        // 3. Verify the data.
+        fmt::print("Start to verify data...\n");
+        std::string overwrite_value;
         if (ingest_behind) {
             // Values have NOT been overwritten by the bulk load data.
-            NO_FATALS(operate_data(operation::GET, value_before_bulk_load, 10));
-            NO_FATALS(verify_data(kBulkLoadHashKeyPrefix1, kBulkLoadSortKeyPrefix1));
+            overwrite_value = kValuePrefixBeforeBulkLoad;
         } else {
             // Values have been overwritten by the bulk load data.
-            NO_FATALS(operate_data(operation::GET, kBulkLoadValue, 10));
-            NO_FATALS(verify_bulk_load_data());
+            overwrite_value = kBulkLoadValue;
         }
+        // 3.1. Check overlap data.
+        // <kHashkeyPrefix>${i} : kSortkey -> <overwrite_value>${i}, i=[0, kBulkLoadItemCount]
+        NO_FATALS(verify_data(table_name_, kHashkeyPrefix, overwrite_value, kBulkLoadItemCount));
 
-        // Write new data succeed after bulk load.
-        NO_FATALS(operate_data(operation::SET, value_after_bulk_load, 20));
-        NO_FATALS(operate_data(operation::GET, value_after_bulk_load, 20));
+        // 3.2. The non-overlap data.
+        // <kNonOverlapHashKeyPrefix>${i} : kSortkey -> <kBulkLoadValue>${i}, i=[0,
+        // kBulkLoadItemCount]
+        NO_FATALS(
+            verify_data(table_name_, kNonOverlapHashKeyPrefix, kBulkLoadValue, kBulkLoadItemCount));
 
-        // Delete data succeed after bulk load.
-        NO_FATALS(operate_data(operation::DEL, "", 15));
-        NO_FATALS(operate_data(operation::NO_VALUE, "", 15));
+        // 4. Write new data after bulk load.
+        // <kHashkeyPrefix>${i} : kSortkey -> <kValuePrefixAfterBulkLoad>${i}, i=[0, 20]
+        NO_FATALS(write_data(kHashkeyPrefix, kValuePrefixAfterBulkLoad, 20));
+        NO_FATALS(verify_data(table_name_, kHashkeyPrefix, kValuePrefixAfterBulkLoad, 20));
+
+        // 5. Delete data after bulk load.
+        // <kHashkeyPrefix>${i} : kSortkey -> none, i=[0, 15]
+        NO_FATALS(delete_data(table_name_, kHashkeyPrefix, 15));
+        NO_FATALS(check_not_found(table_name_, kHashkeyPrefix, 15));
     }
 
 protected:
     string bulk_load_local_app_root_;
-    const string kSourceFilesRoot =
-        "src/test/function_test/bulk_load/pegasus-bulk-load-function-test-files";
     const string kLocalServiceRoot = "onebox/block_service/local_service";
-    const string kLocalBulkLoadRoot = "onebox/block_service/local_service/bulk_load_root";
     const string kBulkLoad = "bulk_load_root";
-    const string kCluster = "cluster";
-    const string kProvider = "local_service";
 
     const int32_t kBulkLoadItemCount = 1000;
-    const string kBulkLoadHashKeyPrefix1 = "hashkey";
-    const string kBulkLoadSortKeyPrefix1 = "sortkey";
-    const string kBulkLoadValue = "newValue";
-
-    // Real time write operations will use this prefix as well.
-    const string kBulkLoadHashKeyPrefix2 = "hash";
-    const string kBulkLoadSortKeyPrefix2 = "sort";
+    const string kNonOverlapHashKeyPrefix = "hashkey2";
+    const string kBulkLoadValue = "bulkLoadValue";
 };
 
 // Test bulk load failed because the 'bulk_load_info' file is missing
 TEST_F(bulk_load_test, missing_bulk_load_info)
 {
     NO_FATALS(remove_file(bulk_load_local_app_root_ + "/bulk_load_info"));
-    ASSERT_EQ(ERR_OBJECT_NOT_FOUND, start_bulk_load());
+    ASSERT_EQ(ERR_OBJECT_NOT_FOUND, start_bulk_load(/* ingest_behind */ false));
 }
 
 // Test bulk load failed because the 'bulk_load_info' file is inconsistent with the actual app info.
 TEST_F(bulk_load_test, inconsistent_bulk_load_info)
 {
+    std::string pegasus_root = global_env::instance()._pegasus_root;
     // Only 'app_id' and 'partition_count' will be checked in Pegasus server, so just inject these
     // kind of inconsistencies.
     bulk_load_info tests[] = {{table_id_ + 1, table_name_, partition_count_},
                               {table_id_, table_name_, partition_count_ * 2}};
     for (const auto &test : tests) {
         // Generate inconsistent 'bulk_load_info'.
-        auto bulk_load_info_path =
-            fmt::format("{}/{}/{}/bulk_load_info", kLocalBulkLoadRoot, kCluster, table_name_);
+        auto bulk_load_info_path = fmt::format("{}/bulk_load_info", bulk_load_local_app_root_);
         NO_FATALS(generate_bulk_load_info(test, bulk_load_info_path));
 
         // Generate '.bulk_load_info.meta'.
-        NO_FATALS(generate_bulk_load_info_meta(bulk_load_info_path));
+        NO_FATALS(generate_metadata_file(bulk_load_info_path));
 
-        ASSERT_EQ(ERR_INCONSISTENT_STATE, start_bulk_load()) << test.app_id << "," << test.app_name
-                                                             << "," << test.partition_count;
+        ASSERT_EQ(ERR_INCONSISTENT_STATE, start_bulk_load(/* ingest_behind */ false))
+            << test.app_id << "," << test.app_name << "," << test.partition_count;
     }
 }
 
@@ -330,7 +351,7 @@ TEST_F(bulk_load_test, inconsistent_bulk_load_info)
 TEST_F(bulk_load_test, missing_p0_bulk_load_metadata)
 {
     NO_FATALS(remove_file(bulk_load_local_app_root_ + "/0/bulk_load_metadata"));
-    ASSERT_EQ(ERR_OK, start_bulk_load());
+    ASSERT_EQ(ERR_OK, start_bulk_load(/* ingest_behind */ false));
     ASSERT_EQ(bulk_load_status::BLS_FAILED, wait_bulk_load_finish(300));
 }
 
@@ -338,16 +359,16 @@ TEST_F(bulk_load_test, missing_p0_bulk_load_metadata)
 TEST_F(bulk_load_test, allow_ingest_behind_inconsistent)
 {
     NO_FATALS(update_table_env({ROCKSDB_ALLOW_INGEST_BEHIND}, {"false"}));
-    ASSERT_EQ(ERR_INCONSISTENT_STATE, start_bulk_load(true));
+    ASSERT_EQ(ERR_INCONSISTENT_STATE, start_bulk_load(/* ingest_behind */ true));
 }
 
 // Test normal bulk load, old data will be overwritten by bulk load data.
-TEST_F(bulk_load_test, normal) { check_bulk_load(false, "oldValue", "valueAfterBulkLoad"); }
+TEST_F(bulk_load_test, normal) { check_bulk_load(/* ingest_behind */ false); }
 
 // Test normal bulk load with allow_ingest_behind=true, old data will NOT be overwritten by bulk
 // load data.
 TEST_F(bulk_load_test, allow_ingest_behind)
 {
     NO_FATALS(update_table_env({ROCKSDB_ALLOW_INGEST_BEHIND}, {"true"}));
-    check_bulk_load(true, "oldValue", "valueAfterBulkLoad");
+    check_bulk_load(/* ingest_behind */ true);
 }

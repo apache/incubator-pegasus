@@ -61,7 +61,7 @@ public:
     {
         NO_FATALS(wait_table_healthy(table_name_));
         NO_FATALS(write_data(s_num_of_rows));
-        NO_FATALS(verify_data(table_name_, s_num_of_rows));
+        NO_FATALS(verify_data(s_num_of_rows));
 
         auto resp =
             ddl_client_->backup_app(table_id_, s_provider_type, user_specified_path).get_value();
@@ -70,7 +70,7 @@ public:
         NO_FATALS(wait_backup_complete(backup_id));
         ASSERT_EQ(ERR_OK,
                   ddl_client_->do_restore(s_provider_type,
-                                          cluster_name_,
+                                          kClusterName,
                                           /* policy_name */ "",
                                           backup_id,
                                           table_name_,

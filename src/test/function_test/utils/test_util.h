@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -65,16 +66,52 @@ public:
 
     void wait_table_healthy(const std::string &table_name) const;
 
+    // Write some data to table 'table_name_' according to the parameters.
+    void
+    write_data(const std::string &hashkey_prefix, const std::string &value_prefix, int count) const;
     void write_data(int count) const;
+
+    // Verify the data can be read from the table according to the parameters.
+    void verify_data(const std::string &table_name,
+                     const std::string &hashkey_prefix,
+                     const std::string &value_prefix,
+                     int count) const;
+    void verify_data(int count) const;
     void verify_data(const std::string &table_name, int count) const;
+
+    // Delete some data from the table according to the parameters.
+    void
+    delete_data(const std::string &table_name, const std::string &hashkey_prefix, int count) const;
+
+    // Verify the data can NOT be read from the table according to the parameters.
+    void check_not_found(const std::string &table_name,
+                         const std::string &hashkey_prefix,
+                         int count) const;
 
     void update_table_env(const std::vector<std::string> &keys,
                           const std::vector<std::string> &values) const;
 
 protected:
-    const std::string cluster_name_;
+    enum class OperateDataType
+    {
+        kSet,
+        kGet,
+        kDelete,
+        kCheckNotFound
+    };
+    std::map<test_util::OperateDataType, std::string> kOpNames;
+    void operate_data(OperateDataType type,
+                      const std::string &table_name,
+                      const std::string &hashkey_prefix,
+                      const std::optional<std::string> &value_prefix,
+                      int count) const;
+
+    const std::string kClusterName;
+    const std::string kHashkeyPrefix;
+    const std::string kSortkey;
+    const std::string kValuePrefix;
+    const std::map<std::string, std::string> kCreateEnvs;
     std::string table_name_;
-    const std::map<std::string, std::string> create_envs_;
     int32_t table_id_;
     int32_t partition_count_ = 8;
     std::vector<dsn::partition_configuration> partitions_;
