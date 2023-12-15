@@ -18,6 +18,11 @@
  */
 
 // IWYU pragma: no_include <bits/getopt_core.h>
+// TODO(wangdan): Since std::filesystem was first introduced in
+// gcc 8 and clang 10, we could only use boost::filesystem for
+// now. Once the minimum version of all the compilers we support
+// has reached these versions, use #include <filesystem> instead.
+#include <boost/filesystem/path.hpp>
 // TODO(yingchun): refactor this after libfmt upgraded
 #include <fmt/chrono.h> // IWYU pragma: keep
 #include <fmt/printf.h> // IWYU pragma: keep
@@ -35,7 +40,6 @@
 #include <ctime>
 // IWYU pragma: no_include <fmt/core.h>
 // IWYU pragma: no_include <fmt/format.h>
-#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <string>
@@ -109,7 +113,7 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    const auto replica_path = std::filesystem::path(plog_dir).parent_path();
+    const auto replica_path = boost::filesystem::path(plog_dir).parent_path();
     const auto name = replica_path.filename().string();
     if (name.empty()) {
         fmt::print(stderr, "ERROR: '{}' is not a valid plog directory\n", plog_dir);
