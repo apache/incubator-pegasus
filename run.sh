@@ -465,7 +465,7 @@ function run_test()
             # Clean up onebox at first.
             run_clear_onebox
             master_count=3
-            # Update options id needed, this should be done before starting onebox to make new options take effect.
+            # Update options if needed, this should be done before starting onebox to make new options take effect.
             if [ "${module}" == "recovery_test" ]; then
                 master_count=1
                 opts="meta_state_service_type=meta_state_service_simple,distributed_lock_service_type=distributed_lock_service_simple"
