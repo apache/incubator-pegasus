@@ -394,7 +394,6 @@ function run_test()
       recovery_test
       restore_test
       throttle_test
-      java_client_test
     )
     local onebox_opts=""
     local test_opts=""
@@ -460,7 +459,6 @@ function run_test()
           recovery_test
           restore_test
           throttle_test
-          java_client_test
         )
         # Restart onebox if needed.
         if [[ "${need_onebox_tests[@]}" =~ "${module}" ]]; then
@@ -493,23 +491,12 @@ function run_test()
             run_start_zk
         fi
 
-        if [ "${module}" == "java_client_test" ]; then
-            # Run Java client test.
-            pushd java_client/scripts
-            echo "run recompile_thrift.sh"
-            ./recompile_thrift.sh
-            popd
-            pushd java_client
-            mvn clean test
-            popd
-        else
-            # Run server test.
-            pushd ${BUILD_LATEST_DIR}/bin/${module}
-            REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
-            if [ $? != 0 ]; then
-                echo "run test \"$module\" in `pwd` failed"
-                exit 1
-            fi
+        # Run server test.
+        pushd ${BUILD_LATEST_DIR}/bin/${module}
+        REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
+        if [ $? != 0 ]; then
+            echo "run test \"$module\" in `pwd` failed"
+            exit 1
         fi
 
         # Clear onebox if needed.

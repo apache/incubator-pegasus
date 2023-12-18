@@ -109,8 +109,11 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
-      - name: Unit Testing
+      - name: Start onebox
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh test -m java_client_test
+          ./run.sh start_onebox
+      - name: Run tests
+        working-directory: ./java-client
+        run: mvn test
