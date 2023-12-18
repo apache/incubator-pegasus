@@ -30,6 +30,7 @@
 #include "common/gpid.h"
 #include "duplication/duplication_sync_timer.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "replica/replica_stub.h"
 #include "utils/string_conv.h"
 

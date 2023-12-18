@@ -22,6 +22,7 @@
 
 #include "builtin_http_calls.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "http_call_registry.h"
 #include "pprof_http_service.h"
 #include "service_version.h"

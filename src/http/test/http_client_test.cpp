@@ -28,6 +28,7 @@
 #include "gtest/gtest.h"
 #include "http/http_client.h"
 #include "http/http_method.h"
+#include "http/http_status_code.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"

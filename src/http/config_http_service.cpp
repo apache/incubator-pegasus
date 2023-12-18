@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "http/http_status_code.h"
 #include "http_server.h"
 #include "utils/errors.h"
 #include "utils/flags.h"

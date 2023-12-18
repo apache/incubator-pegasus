@@ -30,6 +30,7 @@
 #include "common/replication_other_types.h"
 #include "gtest/gtest.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"

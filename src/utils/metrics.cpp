@@ -25,6 +25,7 @@
 #include <new>
 
 #include "http/http_method.h"
+#include "http/http_status_code.h"
 #include "runtime/api_layer1.h"
 #include "utils/flags.h"
 #include "utils/rand.h"

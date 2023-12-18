@@ -26,6 +26,7 @@
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "replica/replica_http_service.h"
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"

@@ -47,6 +47,7 @@
 #include "duplication_types.h"
 #include "gtest/gtest.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "meta/duplication/duplication_info.h"
 #include "meta/duplication/meta_duplication_service.h"
 #include "meta/meta_data.h"

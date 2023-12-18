@@ -25,6 +25,7 @@
 
 #include "http/http_method.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
 #include "utils/blob.h"

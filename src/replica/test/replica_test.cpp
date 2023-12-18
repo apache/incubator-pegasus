@@ -40,6 +40,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "metadata_types.h"
 #include "replica/disk_cleaner.h"
 #include "replica/replica.h"

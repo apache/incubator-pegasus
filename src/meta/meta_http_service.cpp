@@ -37,6 +37,7 @@
 #include "common/replication_enums.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "duplication_types.h"
+#include "http/http_status_code.h"
 #include "meta/duplication/meta_duplication_service.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_bulk_load_service.h"
