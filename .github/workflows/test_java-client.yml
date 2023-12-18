@@ -112,9 +112,12 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: Start Pegasus cluster
         run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:$JAVA_HOME/jre/lib/amd64/server
           ulimit -s unlimited
           ./run.sh start_onebox
+      - name: Recompile thrift
+        working-directory: ./java-client/scripts
+        run: ./recompile_thrift.sh
       - name: Run Java client tests
         working-directory: ./java-client
         run: mvn test
