@@ -48,7 +48,7 @@ http_status_code http_status_code_from_int(TInt val)
         {404, http_status_code::not_found},
         {500, http_status_code::internal_server_error},
     };
-    CHECK_EQ(enum_to_int(http_status_code::invalid), kIntToHttpStatusCodes.size() - 1);
+    CHECK_EQ(enum_to_int(http_status_code::invalid), kIntToHttpStatusCodes.size() + 1);
 
     if (dsn_likely(val == 200)) {
         return http_status_code::ok;
