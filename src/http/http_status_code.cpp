@@ -19,9 +19,6 @@
 
 #include <array>
 
-#include "utils/enum_helper.h"
-#include "utils/fmt_logging.h"
-
 namespace dsn {
 
 const std::array kHttpStatusCodeMessages = {std::string("200 OK"),
@@ -30,13 +27,13 @@ const std::array kHttpStatusCodeMessages = {std::string("200 OK"),
                                             std::string("404 Not Found"),
                                             std::string("500 Internal Server Error")};
 
-static_assert(enum_to_integral(http_status_code::invalid) == kHttpStatusCodeMessages.size(),
-              "http_status_code is not consistent with its messages");
+static_assert(enum_to_int(http_status_code::invalid) == kHttpStatusCodeMessages.size(),
+              "kHttpStatusCodeMessages is not consistent with http_status_code");
 
 std::string http_status_code_to_string(http_status_code code)
 {
-    CHECK_LT(enum_to_integral(code), kHttpStatusCodeMessages.size());
-    return kHttpStatusCodeMessages[enum_to_integral(code)];
+    CHECK_LT(enum_to_int(code), kHttpStatusCodeMessages.size());
+    return kHttpStatusCodeMessages[enum_to_int(code)];
 }
 
 } // namespace dsn

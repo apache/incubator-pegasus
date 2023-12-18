@@ -87,9 +87,9 @@ TEST(HttpClientTest, Callback)
     const auto &err = client.exec_method(callback);
     ASSERT_EQ(dsn::ERR_CURL_FAILED, err.code());
 
-    long actual_http_status;
+    http_status_code actual_http_status;
     ASSERT_TRUE(client.get_http_status(actual_http_status));
-    EXPECT_EQ(200, actual_http_status);
+    EXPECT_EQ(http_status_code::ok, actual_http_status);
 
     std::cout << "failed for callback: ";
 
@@ -109,27 +109,27 @@ TEST(HttpClientTest, Callback)
 }
 
 using http_client_method_case =
-    std::tuple<const char *, http_method, const char *, long, const char *>;
+    std::tuple<const char *, http_method, const char *, http_status_code, const char *>;
 
 class HttpClientMethodTest : public testing::TestWithParam<http_client_method_case>
 {
 public:
     void SetUp() override { ASSERT_TRUE(_client.init()); }
 
-    void test_method_with_response_string(const long expected_http_status,
+    void test_method_with_response_string(const http_status_code expected_http_status,
                                           const std::string &expected_response)
     {
         std::string actual_response;
         ASSERT_TRUE(_client.exec_method(&actual_response));
 
-        long actual_http_status;
+        http_status_code actual_http_status;
         ASSERT_TRUE(_client.get_http_status(actual_http_status));
 
         EXPECT_EQ(expected_http_status, actual_http_status);
         EXPECT_EQ(expected_response, actual_response);
     }
 
-    void test_method_with_response_callback(const long expected_http_status,
+    void test_method_with_response_callback(const http_status_code expected_http_status,
                                             const std::string &expected_response)
     {
         auto callback = [&expected_response](const void *data, size_t length) {
@@ -147,7 +147,7 @@ public:
         };
         ASSERT_TRUE(_client.exec_method(callback));
 
-        long actual_http_status;
+        http_status_code actual_http_status;
         ASSERT_TRUE(_client.get_http_status(actual_http_status));
         EXPECT_EQ(expected_http_status, actual_http_status);
     }
@@ -155,7 +155,7 @@ public:
     void test_mothod(const std::string &url,
                      const http_method method,
                      const std::string &post_data,
-                     const long expected_http_status,
+                     const http_status_code expected_http_status,
                      const std::string &expected_response)
     {
         ASSERT_TRUE(_client.set_url(url));
@@ -184,7 +184,7 @@ TEST_P(HttpClientMethodTest, ExecMethod)
     const char *url;
     http_method method;
     const char *post_data;
-    long expected_http_status;
+    http_status_code expected_http_status;
     const char *expected_response;
     std::tie(url, method, post_data, expected_http_status, expected_response) = GetParam();
 
@@ -196,15 +196,23 @@ const std::vector<http_client_method_case> http_client_method_tests = {
     {"http://127.0.0.1:20001/test/get",
      http_method::POST,
      "with POST DATA",
-     400,
+     http_status_code::bad_request,
      "please use GET method"},
-    {"http://127.0.0.1:20001/test/get", http_method::GET, "", 200, "you are using GET method"},
+    {"http://127.0.0.1:20001/test/get",
+     http_method::GET,
+     "",
+     http_status_code::ok,
+     "you are using GET method"},
     {"http://127.0.0.1:20001/test/post",
      http_method::POST,
      "with POST DATA",
-     200,
+     http_status_code::ok,
      "you are using POST method with POST DATA"},
-    {"http://127.0.0.1:20001/test/post", http_method::GET, "", 400, "please use POST method"},
+    {"http://127.0.0.1:20001/test/post",
+     http_method::GET,
+     "",
+     http_status_code::bad_request,
+     "please use POST method"},
 };
 
 INSTANTIATE_TEST_CASE_P(HttpClientTest,

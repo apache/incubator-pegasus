@@ -68,8 +68,8 @@ namespace dsn {
 // err = client.exec_method(&response);
 //
 // Get the http status code after requesting:
-// long http_status;
-// err = client.get_http_status(http_status);
+// http_status_code status_code;
+// err = client.get_http_status(status_code);
 class http_client
 {
 public:
@@ -119,7 +119,7 @@ public:
     dsn::error_s exec_method(std::string *response);
 
     // Get the last http status code after requesting.
-    dsn::error_s get_http_status(long &http_status) const;
+    dsn::error_s get_http_status(http_status_code &status_code) const;
 
 private:
     using header_field_map = std::unordered_map<std::string, std::string>;

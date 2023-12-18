@@ -120,6 +120,12 @@ class enum_helper_xxx;
 namespace dsn {
 
 template <typename TEnum>
+constexpr auto enum_to_int(TEnum e)
+{
+    return static_cast<std::underlying_type_t<TEnum>>(e);
+}
+
+template <typename TEnum>
 class enum_helper_xxx
 {
 private:
@@ -176,11 +182,5 @@ private:
 
 template <typename TEnum>
 std::unique_ptr<enum_helper_xxx<TEnum>> enum_helper_xxx<TEnum>::_instance;
-
-template <typename TEnum>
-constexpr auto enum_to_integral(TEnum e)
-{
-    return static_cast<std::underlying_type_t<TEnum>>(e);
-}
 
 } // namespace dsn

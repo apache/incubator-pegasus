@@ -18,6 +18,12 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
+#include <unordered_map>
+
+#include "utils/enum_helper.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace dsn {
 
@@ -32,5 +38,28 @@ enum class http_status_code : size_t
 };
 
 std::string http_status_code_to_string(http_status_code code);
+
+template <typename TInt, typename = std::enable_if_t<std::is_integral_v<TInt>>>
+http_status_code http_status_code_from_int(TInt val)
+{
+    static const std::unordered_map<TInt, http_status_code> kIntToHttpStatusCodes = {
+        {307, http_status_code::temporary_redirect},
+        {400, http_status_code::bad_request},
+        {404, http_status_code::not_found},
+        {500, http_status_code::internal_server_error},
+    };
+    CHECK_EQ(enum_to_int(http_status_code::invalid), kIntToHttpStatusCodes.size() - 1);
+
+    if (dsn_likely(val == 200)) {
+        return http_status_code::ok;
+    }
+
+    const auto &iter = kIntToHttpStatusCodes.find(val);
+    if (dsn_unlikely(iter == kIntToHttpStatusCodes.end())) {
+        return http_status_code::invalid;
+    }
+
+    return iter->second;
+}
 
 } // namespace dsn
