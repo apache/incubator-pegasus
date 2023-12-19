@@ -18,14 +18,16 @@
  */
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.google.common.io.ByteStreams;
 import java.io.InputStream;
 import java.util.Arrays;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** @author qinzuoyan */
 public class TestPingZK {
@@ -73,7 +75,7 @@ public class TestPingZK {
 
     System.out.println("get value ...");
     byte[] result = client.get(tableName, hashKey, sortKey);
-    Assert.assertTrue(Arrays.equals(value, result));
+    assertTrue(Arrays.equals(value, result));
     System.out.println("get value ok");
 
     System.out.println("del value ...");
@@ -82,7 +84,7 @@ public class TestPingZK {
 
     System.out.println("get deleted value ...");
     result = client.get(tableName, hashKey, sortKey);
-    Assert.assertEquals(result, null);
+    assertEquals(result, null);
     System.out.println("get deleted value ok");
 
     System.out.println("set value ...");
