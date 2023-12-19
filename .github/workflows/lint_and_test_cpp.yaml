@@ -608,7 +608,7 @@ jobs:
         run: |
           ccache -p
           ccache -z
-          ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc
+          ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc -m dsn_utils_tests
           ccache -s
       - name: Clear Build Files
         run: |
