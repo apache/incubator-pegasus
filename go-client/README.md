@@ -22,7 +22,7 @@ under the License.
 
 ## Requirement
 
-Go1.14+.
+Go1.17+.
 
 ## Logging
 

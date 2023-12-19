@@ -17,7 +17,7 @@
 
 module github.com/apache/incubator-pegasus/admin-cli
 
-go 1.14
+go 1.17
 
 require (
 	github.com/apache/incubator-pegasus/go-client v0.0.0-20220617101220-e49a69d25a52
