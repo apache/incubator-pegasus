@@ -35,23 +35,92 @@ defaults:
     shell: bash
 
 jobs:
+  spotless:
+    name: spotless
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: spotless
+        working-directory: ./java-client
+        run: mvn spotless:check
   test:
     name: test
+    needs: spotless
     runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     strategy:
+      fail-fast: false
       matrix:
         java: [ '8', '11']
     steps:
+      - uses: actions/checkout@v3
       - uses: actions/cache@v2
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - uses: actions/checkout@v3
+      - name: Free Disk Space (Ubuntu)
+        run: |
+          .github/workflows/free_disk_space.sh
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
+              - 'thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: |
+          rm -f /root/thirdparties-src.zip
+          unzip /root/thirdparties-bin.zip -d ./thirdparty
+          rm -f /root/thirdparties-bin.zip
+          find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+          rm -rf ./thirdparty/hadoop-bin/share/doc
+          rm -rf ./thirdparty/zookeeper-bin/docs
+      # TODO(yingchun): Build a docker image with prebuilt server binaries, we can use them directly without building server binaries if no server changes.
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: thirdparty
+        # Build thirdparties and leave some necessary libraries and source
+        run: |
+          rm -f /root/thirdparties-src.zip
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -B build/
+          cmake --build build/ -j $(nproc)
+          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
+          find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+          ../scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_zk.sh zookeeper-bin
+          rm -rf hadoop-bin/share/doc
+          rm -rf zookeeper-bin/docs
+      - name: Build Pegasus server
+        run: |
+          ./run.sh build --skip_thirdparty -j $(nproc) -t release
+      - name: Clear build temporary files
+        run: |
+          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
-      - name: ci
+      - name: Start Pegasus cluster
+        run: |
+          apt-get update
+          apt-get -y install tree
+          tree ${JAVA_HOME}
+          export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh start_onebox
+      - name: Recompile thrift
+        working-directory: ./java-client/scripts
+        run: ./recompile_thrift.sh
+      - name: Run Java client tests
         working-directory: ./java-client
-        run: ./scripts/ci-test.sh
+        run: mvn test --no-transfer-progress
