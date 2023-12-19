@@ -112,6 +112,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: Start Pegasus cluster
         run: |
+          apt-get update
           apt-get -y install tree
           tree ${JAVA_HOME}
           export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
