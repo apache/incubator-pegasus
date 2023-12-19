@@ -363,6 +363,7 @@ ExternalProject_Add(jemalloc
 
 set(SNAPPY_OPTIONS
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_INSTALL_LIBDIR=lib
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_BUILD_TYPE=Release
         -DBUILD_SHARED_LIBS=OFF
@@ -397,6 +398,7 @@ ExternalProject_Add(zstd
         PATCH_COMMAND ""
         CONFIGURE_COMMAND cmake build/cmake
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_INSTALL_LIBDIR=lib
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_BUILD_TYPE=Release
         -DZSTD_BUILD_PROGRAMS=OFF
@@ -418,6 +420,7 @@ ExternalProject_Add(lz4
         PATCH_COMMAND ""
         CONFIGURE_COMMAND cmake build/cmake
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_INSTALL_LIBDIR=lib
         -DLZ4_POSITION_INDEPENDENT_LIB=ON
         -DCMAKE_BUILD_TYPE=Release
         -DLZ4_BUILD_CLI=OFF
@@ -436,8 +439,11 @@ set(ROCKSDB_OPTIONS
         -DWITH_BENCHMARK_TOOLS=OFF
         -DWITH_TOOLS=OFF
         -DWITH_LZ4=ON
+        -Dlz4_ROOT_DIR=${TP_OUTPUT}
         -DWITH_ZSTD=ON
+        -Dzstd_ROOT_DIR=${TP_OUTPUT}
         -DWITH_SNAPPY=ON
+        -Dsnappy_ROOT_DIR=${TP_OUTPUT}
         -DWITH_BZ2=OFF
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
