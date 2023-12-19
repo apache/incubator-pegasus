@@ -439,6 +439,7 @@ function run_test()
         mkdir -p $REPORT_DIR
     fi
 
+    # Run all tests if none specified.
     if [ "$test_modules" == "" ]; then
         test_modules=$(IFS=,; echo "${all_tests[*]}")
     fi
@@ -446,7 +447,7 @@ function run_test()
 
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
-        # restart onebox when test pegasus
+        # The tests which need start onebox.
         local need_onebox_tests=(
           backup_restore_test
           base_api_test
@@ -459,11 +460,14 @@ function run_test()
           restore_test
           throttle_test
         )
+        # Restart onebox if needed.
         if [[ "${need_onebox_tests[@]}" =~ "${module}" ]]; then
+            # Clean up onebox at first.
             run_clear_onebox
-            m_count=3
+            master_count=3
+            # Update options if needed, this should be done before starting onebox to make new options take effect.
             if [ "${module}" == "recovery_test" ]; then
-                m_count=1
+                master_count=1
                 opts="meta_state_service_type=meta_state_service_simple,distributed_lock_service_type=distributed_lock_service_simple"
             fi
             if [ "${module}" == "backup_restore_test" ]; then
@@ -472,24 +476,30 @@ function run_test()
             if [ "${module}" == "restore_test" ]; then
                 opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=onebox"
             fi
+            # Append onebox_opts if needed.
             [ -z ${onebox_opts} ] || opts="${opts},${onebox_opts}"
-            if ! run_start_onebox -m ${m_count} -w -c --opts ${opts}; then
+            # Start onebox.
+            if ! run_start_onebox -m ${master_count} -w -c --opts ${opts}; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
                 exit 1
             fi
             # TODO(yingchun): remove it?
             sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  ${BUILD_LATEST_DIR}/src/server/test/config.ini
         else
+            # Restart ZK in what ever case.
             run_stop_zk
             run_start_zk
         fi
+
+        # Run server test.
         pushd ${BUILD_LATEST_DIR}/bin/${module}
         REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
             exit 1
         fi
-        # clear onebox if needed
+
+        # Clear onebox if needed.
         if [[ "${need_onebox_tests[@]}"  =~ "${test_modules}" ]]; then
             if [ "$clear_flags" == "1" ]; then
                 run_clear_onebox
@@ -503,6 +513,7 @@ function run_test()
     used_time=$((finish_time-start_time))
     echo "Test elapsed time: $((used_time/60))m $((used_time%60))s"
 
+    # TODO(yingchun): make sure if gcov can be ran normally.
     if [ "$enable_gcov" == "yes" ]; then
         echo "Generating gcov report..."
         cd $ROOT

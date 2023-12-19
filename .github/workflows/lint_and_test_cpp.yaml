@@ -14,12 +14,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
----
-# Developer Notes:
-#
-# This config is for github actions. Before merging your changes of this file,
-# it's recommended to create a PR against the ci-test branch to test if it works
-# as expected.
 
 name: Cpp CI
 
@@ -33,17 +27,18 @@ on:
       - ci-test # testing branch for github action
       - '*dev'
     paths:
-      - '.github/workflows/lint_and_test_cpp.yaml'
-      - '.github/workflows/thirdparty-regular-push.yml'
-      - 'docker/thirdparties-src/**'
-      - 'docker/thirdparties-bin/**'
-      - 'CMakeLists.txt'
-      - 'run.sh'
-      - 'scripts/pack_server.sh'
-      - 'scripts/pack_tools.sh'
-      - 'cmake_modules/**'
-      - 'src/**'
-      - 'thirdparty/**'
+      - .github/actions
+      - .github/workflows/lint_and_test_cpp.yaml
+      - .github/workflows/thirdparty-regular-push.yml
+      - docker/thirdparties-bin/**
+      - docker/thirdparties-src/**
+      - CMakeLists.txt
+      - cmake_modules/**
+      - run.sh
+      - scripts/pack_server.sh
+      - scripts/pack_tools.sh
+      - src/**
+      - thirdparty/**
 
   # for manually triggering workflow
   workflow_dispatch:
@@ -68,6 +63,8 @@ jobs:
     name: IWYU
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: OFF
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
@@ -75,29 +72,7 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            thirdparty:
-              - '.github/workflows/thirdparty-regular-push.yml'
-              - 'docker/thirdparties-src/**'
-              - 'docker/thirdparties-bin/**'
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        # Build thirdparties and leave some necessary libraries and source
-        run: |
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -B build/
-          cmake --build build/ -j $(nproc)
-          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
-          ../scripts/download_hadoop.sh hadoop-bin
-          ../scripts/download_zk.sh zookeeper-bin
+      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build IWYU binary
         run: |
           mkdir iwyu && cd iwyu && git clone https://github.com/include-what-you-use/include-what-you-use.git
@@ -115,80 +90,17 @@ jobs:
     name: Build Release
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: OFF
+      ARTIFACT_NAME: release
+      BUILD_OPTIONS: -t release --test
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
-      - name: Setup cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            /github/home/.ccache
-          key: release_ccache
-      - name: Free Disk Space (Ubuntu)
-        run: |
-          .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            thirdparty:
-              - '.github/workflows/thirdparty-regular-push.yml'
-              - 'docker/thirdparties-src/**'
-              - 'docker/thirdparties-bin/**'
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: |
-          rm -f /root/thirdparties-src.zip
-          unzip /root/thirdparties-bin.zip -d ./thirdparty
-          rm -f /root/thirdparties-bin.zip
-          find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          rm -rf ./thirdparty/hadoop-bin/share/doc
-          rm -rf ./thirdparty/zookeeper-bin/docs
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        # Build thirdparties and leave some necessary libraries and source
-        run: |
-          rm -f /root/thirdparties-src.zip
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -B build/
-          cmake --build build/ -j $(nproc)
-          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
-          find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          ../scripts/download_hadoop.sh hadoop-bin
-          ../scripts/download_zk.sh zookeeper-bin
-          rm -rf hadoop-bin/share/doc
-          rm -rf zookeeper-bin/docs
-      - name: Compilation
-        run: |
-          ccache -p
-          ccache -z
-          ./run.sh build --test --skip_thirdparty -j $(nproc) -t release
-          ccache -s
-      - name: Clear Build Files
-        run: |
-          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-      - name: Pack Server
-        run: |
-          ./run.sh pack_server
-          rm -rf pegasus-server-*
-      - name: Pack Tools
-        run: |
-          ./run.sh pack_tools
-          rm -rf pegasus-tools-*
-      - name: Tar files
-        run: |
-          mv thirdparty/hadoop-bin ./
-          mv thirdparty/zookeeper-bin ./
-          rm -rf thirdparty
-          tar -zcvhf release__builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: release_artifact_${{ github.sha }}
-          path: release__builder.tar
+      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - uses: "./.github/actions/build_pegasus"
+      - uses: "./.github/actions/upload_artifact"
 
   test_Release:
     name: Test Release
@@ -238,100 +150,31 @@ jobs:
           - throttle_test
     needs: build_Release
     runs-on: ubuntu-latest
+    env:
+      ARTIFACT_NAME: release
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v3
-      - name: Unpack prebuilt third-parties
-        run: |
-          unzip /root/thirdparties-bin.zip -d ./thirdparty
-          rm -f /root/thirdparties-bin.zip
-      - name: Download Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: release_artifact_${{ github.sha }}
-          path: .
-      - name: Tar files
-        run: |
-          tar -zxvf release__builder.tar
-          rm -f release__builder.tar
-      - name: Unit Testing
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-          ulimit -s unlimited
-          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+      - uses: "./.github/actions/download_artifact"
+      - uses: "./.github/actions/run_server_tests"
 
   build_ASAN:
     name: Build ASAN
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: OFF
+      ARTIFACT_NAME: release_address
+      BUILD_OPTIONS: --sanitizer address --disable_gperf --test
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
-      - name: Setup cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            /github/home/.ccache
-          key: asan_ccache
-      - name: Free Disk Space (Ubuntu)
-        run: |
-          .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            thirdparty:
-              - '.github/workflows/thirdparty-regular-push.yml'
-              - 'docker/thirdparties-src/**'
-              - 'docker/thirdparties-bin/**'
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: |
-          rm -f /root/thirdparties-src.zip
-          unzip /root/thirdparties-bin.zip -d ./thirdparty
-          rm -f /root/thirdparties-bin.zip
-          find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          rm -rf ./thirdparty/hadoop-bin/share/doc
-          rm -rf ./thirdparty/zookeeper-bin/docs
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        # Build thirdparties and leave some necessary libraries and source
-        run: |
-          rm -f /root/thirdparties-src.zip
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -B build/
-          cmake --build build/ -j $(nproc)
-          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
-          find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          ../scripts/download_hadoop.sh hadoop-bin
-          ../scripts/download_zk.sh zookeeper-bin
-          rm -rf hadoop-bin/share/doc
-          rm -rf zookeeper-bin/docs
-      - name: Compilation
-        run: |
-          ccache -p
-          ccache -z
-          ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc)
-          ccache -s
-      - name: Clear Build Files
-        run: |
-          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-      - name: Tar files
-        run: |
-          mv thirdparty/hadoop-bin ./
-          mv thirdparty/zookeeper-bin ./
-          rm -rf thirdparty
-          tar -zcvhf release_address_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: release_address_artifact_${{ github.sha }}
-          path: release_address_builder.tar
+      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - uses: "./.github/actions/build_pegasus"
+      - uses: "./.github/actions/upload_artifact"
 
   test_ASAN:
     name: Test ASAN
@@ -383,29 +226,15 @@ jobs:
 #          - throttle_test
     needs: build_ASAN
     runs-on: ubuntu-latest
+    env:
+      ARTIFACT_NAME: release_address
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v3
-      - name: Unpack prebuilt third-parties
-        run: |
-          unzip /root/thirdparties-bin.zip -d ./thirdparty
-          rm -f /root/thirdparties-bin.zip
-      - name: Download Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: release_address_artifact_${{ github.sha }}
-          path: .
-      - name: Tar files
-        run: |
-          tar -zxvf release_address_builder.tar
-          rm -f release_address_builder.tar
-      - name: Unit Testing
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-          ulimit -s unlimited
-          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+      - uses: "./.github/actions/download_artifact"
+      - uses: "./.github/actions/run_server_tests"
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
 #                 when we are going to release a stable version. So we disable them in regular CI
@@ -414,72 +243,17 @@ jobs:
 #    name: Build UBSAN
 #    needs: cpp_clang_format_linter
 #    runs-on: ubuntu-latest
+#    env:
+#      USE_JEMALLOC: OFF
+#      ARTIFACT_NAME: release_undefined
+#      BUILD_OPTIONS: --sanitizer undefined --disable_gperf --test
 #    container:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #    steps:
 #      - uses: actions/checkout@v3
-#      - name: Setup cache
-#        uses: actions/cache@v3
-#        with:
-#          path: |
-#            /github/home/.ccache
-#          key: ubsan_ccache
-#      - name: Free Disk Space (Ubuntu)
-#        run: |
-#          .github/workflows/free_disk_space.sh
-#      - uses: dorny/paths-filter@v2
-#        id: changes
-#        with:
-#          filters: |
-#            thirdparty:
-#              - '.github/workflows/thirdparty-regular-push.yml'
-#              - 'docker/thirdparties-src/**'
-#              - 'docker/thirdparties-bin/**'
-#              - 'thirdparty/**'
-#      - name: Unpack prebuilt third-parties
-#        if: steps.changes.outputs.thirdparty == 'false'
-#        run: |
-#          rm -f /root/thirdparties-src.zip
-#          unzip /root/thirdparties-bin.zip -d ./thirdparty
-#          rm -f /root/thirdparties-bin.zip
-#          find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-#          rm -rf ./thirdparty/hadoop-bin/share/doc
-#          rm -rf ./thirdparty/zookeeper-bin/docs
-#      - name: Rebuild third-parties
-#        if: steps.changes.outputs.thirdparty == 'true'
-#        working-directory: thirdparty
-#        # Build thirdparties and leave some necessary libraries and source
-#        run: |
-#          rm -f /root/thirdparties-src.zip
-#          mkdir build
-#          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -B build/
-#          cmake --build build/ -j $(nproc)
-#          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
-#          find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-#          ../scripts/download_hadoop.sh hadoop-bin
-#          ../scripts/download_zk.sh zookeeper-bin
-#          rm -rf hadoop-bin/share/doc
-#          rm -rf zookeeper-bin/docs
-#      - name: Compilation
-#        run: |
-#          ccache -p
-#          ccache -z
-#          ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc)
-#          ccache -s
-#      - name: Clear Build Files
-#        run: |
-#          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-#      - name: Tar files
-#        run: |
-#          mv thirdparty/hadoop-bin ./
-#          mv thirdparty/zookeeper-bin ./
-#          rm -rf thirdparty
-#          tar -zcvhf release_undefined_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
-#      - name: Upload Artifact
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: release_undefined_artifact_${{ github.sha }}
-#          path: release_undefined_builder.tar
+#      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+#      - uses: "./.github/actions/build_pegasus"
+#      - uses: "./.github/actions/upload_artifact"
 #
 #  test_UBSAN:
 #    name: Test UBSAN
@@ -527,111 +301,31 @@ jobs:
 #          - throttle_test
 #    needs: build_UBSAN
 #    runs-on: ubuntu-latest
+#    env:
+#      ARTIFACT_NAME: release_undefined
 #    container:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #      options: --cap-add=SYS_PTRACE
 #    steps:
 #      - uses: actions/checkout@v3
-#      - name: Free Disk Space (Ubuntu)
-#        run: |
-#          .github/workflows/free_disk_space.sh
-#      - name: Unpack prebuilt third-parties
-#        run: |
-#          unzip /root/thirdparties-bin.zip -d ./thirdparty
-#          rm -f /root/thirdparties-bin.zip
-#      - name: Download Artifact
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: release_undefined_artifact_${{ github.sha }}
-#          path: .
-#      - name: Tar files
-#        run: |
-#          tar -zxvf release_undefined_builder.tar
-#          rm -f release_undefined_builder.tar
-#      - name: Unit Testing
-#        run: |
-#          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-#          ulimit -s unlimited
-#          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+#      - uses: "./.github/actions/download_artifact"
+#      - uses: "./.github/actions/run_server_tests"
 
   build_with_jemalloc:
     name: Build with jemalloc
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: ON
+      ARTIFACT_NAME: release_jemalloc
+      BUILD_OPTIONS: -t release --use_jemalloc --test
     container:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
-      - name: Setup cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            /github/home/.ccache
-          key: jemalloc_ccache
-      - name: Free Disk Space (Ubuntu)
-        run: |
-          .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            thirdparty:
-              - '.github/workflows/thirdparty-regular-push.yml'
-              - 'docker/thirdparties-src/**'
-              - 'docker/thirdparties-bin/**'
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: |
-          rm -f /root/thirdparties-src.zip
-          unzip /root/thirdparties-bin.zip -d ./thirdparty
-          rm -f /root/thirdparties-bin.zip
-          find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          rm -rf ./thirdparty/hadoop-bin/share/doc
-          rm -rf ./thirdparty/zookeeper-bin/docs
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        # Build thirdparties and leave some necessary libraries and source
-        run: |
-          rm -f /root/thirdparties-src.zip
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -DUSE_JEMALLOC=ON -B build/
-          cmake --build build/ -j $(nproc)
-          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
-          find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          ../scripts/download_hadoop.sh hadoop-bin
-          ../scripts/download_zk.sh zookeeper-bin
-          rm -rf hadoop-bin/share/doc
-          rm -rf zookeeper-bin/docs
-      - name: Compilation
-        run: |
-          ccache -p
-          ccache -z
-          ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc
-          ccache -s
-      - name: Clear Build Files
-        run: |
-          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-      - name: Pack Server
-        run: |
-          ./run.sh pack_server -j
-          rm -rf pegasus-server-*
-      - name: Pack Tools
-        run: |
-          ./run.sh pack_tools -j
-          rm -rf pegasus-tools-*
-      - name: Tar files
-        run: |
-          mv thirdparty/hadoop-bin ./
-          mv thirdparty/zookeeper-bin ./
-          rm -rf thirdparty
-          tar -zcvhf release_jemalloc_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: release_jemalloc_artifact_${{ github.sha }}
-          path: release_jemalloc_builder.tar
+      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - uses: "./.github/actions/build_pegasus"
+      - uses: "./.github/actions/upload_artifact"
 
   test_with_jemalloc:
     name: Test with jemallc
@@ -642,29 +336,15 @@ jobs:
           - dsn_utils_tests
     needs: build_with_jemalloc
     runs-on: ubuntu-latest
+    env:
+      ARTIFACT_NAME: release_jemalloc
     container:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v3
-      - name: Unpack prebuilt third-parties
-        run: |
-          unzip /root/thirdparties-bin.zip -d ./thirdparty
-          rm -f /root/thirdparties-bin.zip
-      - name: Download Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: release_jemalloc_artifact_${{ github.sha }}
-          path: .
-      - name: Tar files
-        run: |
-          tar -zxvf release_jemalloc_builder.tar
-          rm -f release_jemalloc_builder.tar
-      - name: Unit Testing
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-          ulimit -s unlimited
-          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+      - uses: "./.github/actions/download_artifact"
+      - uses: "./.github/actions/run_server_tests"
 
   build_pegasus_on_macos:
     name: macOS
