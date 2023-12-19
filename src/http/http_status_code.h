@@ -28,7 +28,7 @@
 
 namespace dsn {
 
-enum class http_status_code : size_t
+/*
 {
     ok,                    // 200
     temporary_redirect,    // 307
@@ -37,6 +37,25 @@ enum class http_status_code : size_t
     internal_server_error, // 500
     invalid,
 };
+ */
+
+#define ENUM_FOREACH_HTTP_STATUS_CODE(DEF)                                                         \
+    DEF(Ok)                                                                                        \
+    DEF(TemporaryRedirect)                                                                         \
+    DEF(BadRequest)                                                                                \
+    DEF(NotFound)                                                                                  \
+    DEF(InternalServerError)
+
+enum class http_status_code : size_t
+{
+    ENUM_FOREACH_HTTP_STATUS_CODE(ENUM_CONST_DEF) kInvalidCode,
+};
+
+#define ENUM_CONST_REG_STR_HTTP_STATUS_CODE(str) ENUM_CONST_REG_STR(http_status_code, str)
+
+ENUM_BEGIN(http_status_code, http_status_code::kInvalidCode)
+ENUM_FOREACH_HTTP_STATUS_CODE(ENUM_CONST_REG_STR_HTTP_STATUS_CODE)
+ENUM_END(http_status_code)
 
 std::string http_status_code_to_string(http_status_code code);
 
@@ -44,20 +63,20 @@ template <typename TInt, typename = std::enable_if_t<std::is_integral_v<TInt>>>
 http_status_code http_status_code_from_int(TInt val)
 {
     static const std::unordered_map<TInt, http_status_code> kIntToHttpStatusCodes = {
-        {307, http_status_code::temporary_redirect},
-        {400, http_status_code::bad_request},
-        {404, http_status_code::not_found},
-        {500, http_status_code::internal_server_error},
+        {307, http_status_code::kTemporaryRedirect},
+        {400, http_status_code::kBadRequest},
+        {404, http_status_code::kNotFound},
+        {500, http_status_code::kInternalServerError},
     };
-    CHECK_EQ(enum_to_int(http_status_code::invalid), kIntToHttpStatusCodes.size() + 1);
+    CHECK_EQ(enum_to_int(http_status_code::kInvalidCode), kIntToHttpStatusCodes.size() + 1);
 
     if (dsn_likely(val == 200)) {
-        return http_status_code::ok;
+        return http_status_code::kOk;
     }
 
     const auto &iter = kIntToHttpStatusCodes.find(val);
     if (dsn_unlikely(iter == kIntToHttpStatusCodes.end())) {
-        return http_status_code::invalid;
+        return http_status_code::kInvalidCode;
     }
 
     return iter->second;

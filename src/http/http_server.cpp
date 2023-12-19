@@ -102,7 +102,7 @@ void http_server_base::update_config_handler(const http_request &req, http_respo
     std::ostringstream out;
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 http_server::http_server() : serverlet<http_server>("http_server")
@@ -124,7 +124,7 @@ void http_server::serve(message_ex *msg)
     error_with<http_request> res = http_request::parse(msg);
     http_response resp;
     if (!res.is_ok()) {
-        resp.status_code = http_status_code::bad_request;
+        resp.status_code = http_status_code::kBadRequest;
         resp.body = fmt::format("failed to parse request: {}", res.get_error());
     } else {
         const http_request &req = res.get_value();
@@ -132,7 +132,7 @@ void http_server::serve(message_ex *msg)
         if (call) {
             call->callback(req, resp);
         } else {
-            resp.status_code = http_status_code::not_found;
+            resp.status_code = http_status_code::kNotFound;
             resp.body = fmt::format("service not found for \"{}\"", req.path);
         }
     }

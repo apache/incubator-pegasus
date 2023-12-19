@@ -57,7 +57,7 @@ struct http_request
 struct http_response
 {
     std::string body;
-    http_status_code status_code{http_status_code::ok};
+    http_status_code status_code{http_status_code::kOk};
     std::string content_type = "text/plain";
     std::string location;
 };

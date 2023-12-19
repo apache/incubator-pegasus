@@ -288,7 +288,7 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
 {
     if (req.method != http_method::GET) {
         resp.body = encode_error_as_json("please use 'GET' method while querying for metrics");
-        resp.status_code = http_status_code::bad_request;
+        resp.status_code = http_status_code::kBadRequest;
         return;
     }
 
@@ -309,7 +309,7 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
                 resp.body =
                     encode_error_as_json("the number of arguments for attributes should be even, "
                                          "since each attribute name always pairs with a value");
-                resp.status_code = http_status_code::bad_request;
+                resp.status_code = http_status_code::kBadRequest;
                 return;
             }
         } else if (field.first == "metrics") {
@@ -318,13 +318,13 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
             if (!buf2bool(field.second, detail)) {
                 resp.body = encode_error_as_json("the value of detail should be a boolean value, "
                                                  "i.e. true or false");
-                resp.status_code = http_status_code::bad_request;
+                resp.status_code = http_status_code::kBadRequest;
                 return;
             }
         } else {
             auto error_message = fmt::format("unknown field {}={}", field.first, field.second);
             resp.body = encode_error_as_json(error_message.c_str());
-            resp.status_code = http_status_code::bad_request;
+            resp.status_code = http_status_code::kBadRequest;
             return;
         }
     }
@@ -336,7 +336,7 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
     }
 
     resp.body = take_snapshot_as_json(_registry, filters);
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 metric_registry::metric_registry() : _http_service(this)

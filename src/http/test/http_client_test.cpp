@@ -90,7 +90,7 @@ TEST(HttpClientTest, Callback)
 
     http_status_code actual_http_status;
     ASSERT_TRUE(client.get_http_status(actual_http_status));
-    EXPECT_EQ(http_status_code::ok, actual_http_status);
+    EXPECT_EQ(http_status_code::kOk, actual_http_status);
 
     std::cout << "failed for callback: ";
 
@@ -197,22 +197,22 @@ const std::vector<http_client_method_case> http_client_method_tests = {
     {"http://127.0.0.1:20001/test/get",
      http_method::POST,
      "with POST DATA",
-     http_status_code::bad_request,
+     http_status_code::kBadRequest,
      "please use GET method"},
     {"http://127.0.0.1:20001/test/get",
      http_method::GET,
      "",
-     http_status_code::ok,
+     http_status_code::kOk,
      "you are using GET method"},
     {"http://127.0.0.1:20001/test/post",
      http_method::POST,
      "with POST DATA",
-     http_status_code::ok,
+     http_status_code::kOk,
      "you are using POST method with POST DATA"},
     {"http://127.0.0.1:20001/test/post",
      http_method::GET,
      "",
-     http_status_code::bad_request,
+     http_status_code::kBadRequest,
      "please use POST method"},
 };
 

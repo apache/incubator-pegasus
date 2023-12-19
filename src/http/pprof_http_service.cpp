@@ -360,7 +360,7 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
         LOG_WARNING("node is already exectuting pprof action, please wait and retry");
-        resp.status_code = http_status_code::internal_server_error;
+        resp.status_code = http_status_code::kInternalServerError;
         return;
     }
     auto cleanup = dsn::defer([this]() { _in_pprof_action.store(false); });
@@ -377,7 +377,7 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
         if (IsHeapProfilerRunning()) {
             LOG_WARNING("heap profiling is running, dump the full profile directly");
             char *profile = GetHeapProfile();
-            resp.status_code = http_status_code::ok;
+            resp.status_code = http_status_code::kOk;
             resp.body = profile;
             free(profile);
             return;
@@ -391,7 +391,7 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
         char *profile = GetHeapProfile();
         HeapProfilerStop();
 
-        resp.status_code = http_status_code::ok;
+        resp.status_code = http_status_code::kOk;
         resp.body = profile;
         free(profile);
     } else {
@@ -400,14 +400,14 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
                                                  "TCMALLOC_SAMPLE_PARAMETER should set to a "
                                                  "positive value, such as 524288, before running.";
             LOG_WARNING(kNoEnvMsg);
-            resp.status_code = http_status_code::internal_server_error;
+            resp.status_code = http_status_code::kInternalServerError;
             resp.body = kNoEnvMsg;
             return;
         }
 
         std::string buf;
         MallocExtension::instance()->GetHeapSample(&buf);
-        resp.status_code = http_status_code::ok;
+        resp.status_code = http_status_code::kOk;
         resp.body = std::move(buf);
     }
 }
@@ -479,7 +479,7 @@ void pprof_http_service::growth_handler(const http_request &req, http_response &
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
         LOG_WARNING("node is already exectuting pprof action, please wait and retry");
-        resp.status_code = http_status_code::internal_server_error;
+        resp.status_code = http_status_code::kInternalServerError;
         return;
     }
 
@@ -522,7 +522,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
         LOG_WARNING("node is already exectuting pprof action, please wait and retry");
-        resp.status_code = http_status_code::internal_server_error;
+        resp.status_code = http_status_code::kInternalServerError;
         return;
     }
 
@@ -545,7 +545,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
         }
     }
 
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 
     get_cpu_profile(resp.body, seconds);
 

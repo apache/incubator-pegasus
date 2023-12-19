@@ -79,10 +79,10 @@ TEST(bultin_http_calls_test, meta_query)
     http_request req;
     http_response resp;
     get_recent_start_time_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
 
     get_version_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
 }
 
 TEST(bultin_http_calls_test, get_help)
@@ -104,7 +104,7 @@ TEST(bultin_http_calls_test, get_help)
     http_request req;
     http_response resp;
     get_help_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
     ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\"}\n");
 
     register_http_call("recentStartTime")

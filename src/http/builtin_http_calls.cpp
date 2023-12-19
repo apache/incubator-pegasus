@@ -42,7 +42,7 @@ namespace dsn {
     }
     tp.output(oss, utils::table_printer::output_format::kJsonCompact);
     resp.body = oss.str();
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 /*extern*/ void get_version_handler(const http_request &req, http_response &resp)
@@ -55,7 +55,7 @@ namespace dsn {
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 /*extern*/ void get_recent_start_time_handler(const http_request &req, http_response &resp)
@@ -68,7 +68,7 @@ namespace dsn {
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 /*extern*/ void register_builtin_http_calls()

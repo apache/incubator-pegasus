@@ -27,7 +27,7 @@ const std::array kHttpStatusCodeMessages = {std::string("200 OK"),
                                             std::string("404 Not Found"),
                                             std::string("500 Internal Server Error")};
 
-static_assert(enum_to_int(http_status_code::invalid) == kHttpStatusCodeMessages.size(),
+static_assert(enum_to_int(http_status_code::kInvalidCode) == kHttpStatusCodeMessages.size(),
               "kHttpStatusCodeMessages is not consistent with http_status_code");
 
 std::string http_status_code_to_string(http_status_code code)
