@@ -37,12 +37,12 @@
 
 #include "aio/aio_task.h"
 #include "aio/file_io.h"
+#include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "rocksdb/env.h"
 #include "rocksdb/slice.h"
 #include "rocksdb/status.h"
 #include "runtime/serverlet.h"
-#include "runtime/task/task_code.h"
 #include "simple_kv_types.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
@@ -50,7 +50,6 @@
 #include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
 // TODO(yingchun): most of the code are the same as
