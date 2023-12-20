@@ -68,8 +68,6 @@ namespace dsn {
 namespace replication {
 namespace test {
 
-DEFINE_TASK_CODE(LPC_AIO_IMMEDIATE_CALLBACK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
-
 bool simple_kv_service_impl::s_simple_kv_open_fail = false;
 bool simple_kv_service_impl::s_simple_kv_close_fail = false;
 bool simple_kv_service_impl::s_simple_kv_get_checkpoint_fail = false;
