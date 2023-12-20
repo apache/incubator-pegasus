@@ -56,7 +56,7 @@ type response struct {
 	Value   string
 }
 
-//TODO(jiashuo1) not support update collector config
+// TODO(jiashuo1) not support update collector config
 func ConfigCommand(client *Client, nodeType session.NodeType, nodeAddr string, name string, actionType string, value string) error {
 	var nodes []*util.PegasusNode
 	if len(nodeAddr) == 0 {

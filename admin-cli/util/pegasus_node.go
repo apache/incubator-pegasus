@@ -86,8 +86,8 @@ func (n *PegasusNode) RPCAddress() *base.RPCAddress {
 
 // NewNodeFromTCPAddr creates a node from tcp address.
 // NOTE:
-//  - Will not initialize TCP connection unless needed.
-//  - Should not be called too frequently because it costs 1 DNS resolution.
+//   - Will not initialize TCP connection unless needed.
+//   - Should not be called too frequently because it costs 1 DNS resolution.
 func NewNodeFromTCPAddr(addr string, ntype session.NodeType) *PegasusNode {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
