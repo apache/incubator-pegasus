@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/security/server_negotiation.h"
+#include "security/server_negotiation.h"
 
 #include <memory>
 #include <utility>
@@ -24,8 +24,8 @@
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "runtime/security/negotiation.h"
-#include "runtime/security/negotiation_utils.h"
+#include "security/negotiation.h"
+#include "security/negotiation_utils.h"
 #include "security_types.h"
 #include "utils/blob.h"
 #include "utils/fail_point.h"

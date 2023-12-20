@@ -21,7 +21,7 @@
 
 #include "client_negotiation.h"
 #include "negotiation_utils.h"
-#include "runtime/security/sasl_wrapper.h"
+#include "security/sasl_wrapper.h"
 #include "server_negotiation.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

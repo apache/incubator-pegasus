@@ -20,7 +20,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "runtime/security/negotiation.h"
+#include "security/negotiation.h"
 #include "runtime/serverlet.h"
 #include "utils/singleton.h"
 
