@@ -42,7 +42,7 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -137,8 +137,9 @@ TEST(async_call, rpc_call)
                        *str_command,
                        &tc->_tracker,
                        [str_command](error_code ec, std::string &&resp) {
-                           if (ERR_OK == ec)
+                           if (ERR_OK == ec) {
                                EXPECT_TRUE(str_command->substr(5) == resp);
+                           }
                        });
     task_vec.push_back(t);
     t = rpc::call(addr2,

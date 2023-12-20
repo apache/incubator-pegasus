@@ -21,7 +21,7 @@
 #include <string>
 #include <unordered_set>
 
-#include "runtime/ranger/access_type.h"
+#include "ranger/access_type.h"
 
 namespace dsn {
 class message_ex;

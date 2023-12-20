@@ -45,7 +45,6 @@
 #include "gtest/gtest.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
-#include "meta/meta_options.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_service.h"
 #include "meta/partition_guardian.h"
@@ -62,6 +61,7 @@
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {
@@ -179,7 +179,8 @@ void meta_partition_guardian_test::cure_test()
     svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *state = svc->_state.get();
-    state->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
+    state->initialize(svc.get(),
+                      utils::filesystem::concat_path_unix_style(svc->_cluster_root, "apps"));
     dsn::app_info info;
     info.is_stateful = true;
     info.status = dsn::app_status::AS_CREATING;

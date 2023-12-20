@@ -45,7 +45,6 @@
 #include "gtest/gtest.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
-#include "meta/meta_options.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_service.h"
 #include "meta/partition_guardian.h"
@@ -63,6 +62,7 @@
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
@@ -224,7 +224,8 @@ void meta_service_test_app::update_configuration_test()
     svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *ss = svc->_state.get();
-    ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
+    ss->initialize(svc.get(),
+                   utils::filesystem::concat_path_unix_style(svc->_cluster_root, "apps"));
     dsn::app_info info;
     info.is_stateful = true;
     info.status = dsn::app_status::AS_CREATING;
@@ -303,7 +304,8 @@ void meta_service_test_app::adjust_dropped_size()
     svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *ss = svc->_state.get();
-    ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
+    ss->initialize(svc.get(),
+                   utils::filesystem::concat_path_unix_style(svc->_cluster_root, "apps"));
     dsn::app_info info;
     info.is_stateful = true;
     info.status = dsn::app_status::AS_CREATING;

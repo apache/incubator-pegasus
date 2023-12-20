@@ -54,10 +54,6 @@ public:
 
 public:
     void initialize();
-
-public:
-    static std::string concat_path_unix_style(const std::string &prefix,
-                                              const std::string &postfix);
 };
 } // namespace replication
 } // namespace dsn

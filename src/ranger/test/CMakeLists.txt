@@ -15,12 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME dsn_ranger)
-
+set(MY_PROJ_NAME dsn_ranger_tests)
 set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
+        dsn_ranger
+        dsn_runtime
         dsn_meta_server
-        dsn_replication_common)
-
-dsn_add_static_library()
+        dsn_replication_common
+        dsn_utils
+        gtest)
+set(MY_BINPLACES
+        run.sh)
+dsn_add_test()

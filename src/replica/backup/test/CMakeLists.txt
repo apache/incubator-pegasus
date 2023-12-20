@@ -16,12 +16,11 @@
 # under the License.
 
 set(MY_PROJ_NAME dsn_replica_backup_test)
-
 set(MY_PROJ_SRC "")
-
 set(MY_SRC_SEARCH_MODE "GLOB")
-
-set(MY_PROJ_LIBS dsn_meta_server
+set(MY_PROJ_LIBS
+        dsn_meta_server
+        dsn_ranger
         dsn_replica_server
         dsn_replication_common
         dsn.block_service
@@ -33,12 +32,8 @@ set(MY_PROJ_LIBS dsn_meta_server
         lz4
         zstd
         snappy)
-
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
-
 set(MY_BINPLACES
         config-test.ini
-        run.sh
-)
-
+        run.sh)
 dsn_add_test()

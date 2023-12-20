@@ -31,7 +31,7 @@
 #include <gtest/gtest.h>
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/flags.h"
 #include "utils/strings.h"
 

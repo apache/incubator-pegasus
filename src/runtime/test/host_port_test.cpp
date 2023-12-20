@@ -34,7 +34,7 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"
 #include "runtime/task/task_tracker.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"

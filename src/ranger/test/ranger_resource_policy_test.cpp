@@ -20,8 +20,8 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "runtime/ranger/access_type.h"
-#include "runtime/ranger/ranger_resource_policy.h"
+#include "ranger/access_type.h"
+#include "ranger/ranger_resource_policy.h"
 
 namespace dsn {
 namespace ranger {
