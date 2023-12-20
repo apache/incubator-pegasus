@@ -39,6 +39,8 @@ on:
       - 'docker/thirdparties-bin/**'
       - 'CMakeLists.txt'
       - 'run.sh'
+      - 'scripts/pack_server.sh'
+      - 'scripts/pack_tools.sh'
       - 'cmake_modules/**'
       - 'src/**'
       - 'thirdparty/**'

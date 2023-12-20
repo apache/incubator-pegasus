@@ -454,6 +454,7 @@ set(ROCKSDB_OPTIONS
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_INSTALL_LIBDIR=lib
         -DPORTABLE=${ROCKSDB_PORTABLE})
 # Link error on MacOS, disable building encfs plugin.
 # See https://github.com/pegasus-kv/encfs/issues/4
