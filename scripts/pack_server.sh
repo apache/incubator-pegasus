@@ -135,11 +135,8 @@ pack_server_lib() {
     pack_system_lib "${pack}/bin" server "$1"
 }
 
-pack_server_lib snappy
 pack_server_lib crypto
 pack_server_lib ssl
-pack_server_lib zstd
-pack_server_lib lz4
 
 # Pack hadoop-related files.
 # If you want to use hdfs service to backup/restore/bulkload pegasus tables,
