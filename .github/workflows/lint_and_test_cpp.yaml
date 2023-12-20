@@ -605,10 +605,10 @@ jobs:
           rm -rf hadoop-bin/share/doc
           rm -rf zookeeper-bin/docs
       - name: Compilation
+        # TODO(yingchun): Append "-m dsn_utils_tests" to the command if not needed to pack server or tools, for example, the dependencies are static linked.
         run: |
           ccache -p
           ccache -z
-          // TODO(yingchun): Append "-m dsn_utils_tests" to the command if not needed to pack server or tools, for example, the dependencies are static linked.
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc
           ccache -s
       - name: Clear Build Files
