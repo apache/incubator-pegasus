@@ -72,7 +72,7 @@ DSN_DEFINE_validator(stderr_start_level, [](const char *level) -> bool {
     return !utils::equals(level, "LOG_LEVEL_INVALID");
 });
 
-static void print_header(FILE *fp, dsn_log_level_t log_level)
+static void print_header(FILE *fp, log_level_t log_level)
 {
     // The leading character of each log lines, corresponding to the log level
     // D: Debug
@@ -98,7 +98,7 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
 
 namespace {
 
-inline void process_fatal_log(dsn_log_level_t log_level)
+inline void process_fatal_log(log_level_t log_level)
 {
     if (dsn_likely(log_level < LOG_LEVEL_FATAL)) {
         return;
@@ -122,33 +122,10 @@ screen_logger::screen_logger(bool short_header) { _short_header = short_header; 
 
 screen_logger::~screen_logger(void) {}
 
-void screen_logger::dsn_logv(const char *file,
-                             const char *function,
-                             const int line,
-                             dsn_log_level_t log_level,
-                             const char *fmt,
-                             va_list args)
-{
-    utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
-
-    print_header(stdout, log_level);
-    if (!_short_header) {
-        printf("%s:%d:%s(): ", file, line, function);
-    }
-    vprintf(fmt, args);
-    printf("\n");
-
-    if (log_level >= LOG_LEVEL_ERROR) {
-        ::fflush(stdout);
-    }
-
-    process_fatal_log(log_level);
-}
-
-void screen_logger::dsn_log(const char *file,
+void screen_logger::log(const char *file,
                             const char *function,
                             const int line,
-                            dsn_log_level_t log_level,
+                            log_level_t log_level,
                             const char *str)
 {
     utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
@@ -225,19 +202,19 @@ simple_logger::simple_logger(const char *log_dir)
         "reset-log-start-level - reset the log start level",
         "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
         [](const std::vector<std::string> &args) {
-            dsn_log_level_t start_level;
+            log_level_t start_level;
             if (args.size() == 0) {
                 start_level =
-                    enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
+                    enum_from_string(FLAGS_logging_start_level, log_level_t::LOG_LEVEL_INVALID);
             } else {
                 std::string level_str = "LOG_LEVEL_" + args[0];
                 start_level =
-                    enum_from_string(level_str.c_str(), dsn_log_level_t::LOG_LEVEL_INVALID);
-                if (start_level == dsn_log_level_t::LOG_LEVEL_INVALID) {
+                    enum_from_string(level_str.c_str(), log_level_t::LOG_LEVEL_INVALID);
+                if (start_level == log_level_t::LOG_LEVEL_INVALID) {
                     return "ERROR: invalid level '" + args[0] + "'";
                 }
             }
-            dsn_log_set_start_level(start_level);
+            set_log_start_level(start_level);
             return std::string("OK, current level is ") + enum_to_string(start_level);
         }));
 }
@@ -280,50 +257,10 @@ void simple_logger::flush()
     ::fflush(stdout);
 }
 
-void simple_logger::dsn_logv(const char *file,
-                             const char *function,
-                             const int line,
-                             dsn_log_level_t log_level,
-                             const char *fmt,
-                             va_list args)
-{
-    va_list args2;
-    if (log_level >= _stderr_start_level) {
-        va_copy(args2, args);
-    }
-
-    utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
-
-    print_header(_log, log_level);
-    if (!FLAGS_short_header) {
-        fprintf(_log, "%s:%d:%s(): ", file, line, function);
-    }
-    vfprintf(_log, fmt, args);
-    fprintf(_log, "\n");
-    if (FLAGS_fast_flush || log_level >= LOG_LEVEL_ERROR) {
-        ::fflush(_log);
-    }
-
-    if (log_level >= _stderr_start_level) {
-        print_header(stdout, log_level);
-        if (!FLAGS_short_header) {
-            printf("%s:%d:%s(): ", file, line, function);
-        }
-        vprintf(fmt, args2);
-        printf("\n");
-    }
-
-    process_fatal_log(log_level);
-
-    if (++_lines >= 200000) {
-        create_log_file();
-    }
-}
-
-void simple_logger::dsn_log(const char *file,
+void simple_logger::log(const char *file,
                             const char *function,
                             const int line,
-                            dsn_log_level_t log_level,
+                            log_level_t log_level,
                             const char *str)
 {
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);

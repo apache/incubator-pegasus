@@ -245,7 +245,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     const auto request_count = mu->client_requests.size();
     mu->data.header.last_committed_decree = last_committed_decree();
 
-    dsn_log_level_t level = LOG_LEVEL_DEBUG;
+    log_level_t level = LOG_LEVEL_DEBUG;
     if (mu->data.header.decree == invalid_decree) {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
         // print a debug log if necessary
@@ -258,7 +258,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     }
 
     mu->_tracer->set_name(fmt::format("mutation[{}]", mu->name()));
-    dlog_f(level, "{}: mutation {} init_prepare, mutation_tid={}", name(), mu->name(), mu->tid());
+    LOG(level, "{}: mutation {} init_prepare, mutation_tid={}", name(), mu->name(), mu->tid());
 
     // child should prepare mutation synchronously
     mu->set_is_sync_to_child(_primary_states.sync_send_write_request);

@@ -46,17 +46,10 @@ public:
     explicit screen_logger(bool short_header);
     ~screen_logger() override;
 
-    void dsn_logv(const char *file,
-                  const char *function,
-                  const int line,
-                  dsn_log_level_t log_level,
-                  const char *fmt,
-                  va_list args) override;
-
-    void dsn_log(const char *file,
+    void log(const char *file,
                  const char *function,
                  const int line,
-                 dsn_log_level_t log_level,
+                 log_level_t log_level,
                  const char *str) override;
 
     virtual void flush();
@@ -76,17 +69,10 @@ public:
     simple_logger(const char *log_dir);
     ~simple_logger() override;
 
-    void dsn_logv(const char *file,
-                  const char *function,
-                  const int line,
-                  dsn_log_level_t log_level,
-                  const char *fmt,
-                  va_list args) override;
-
-    void dsn_log(const char *file,
+    void log(const char *file,
                  const char *function,
                  const int line,
-                 dsn_log_level_t log_level,
+                 log_level_t log_level,
                  const char *str) override;
 
     void flush() override;
@@ -102,7 +88,7 @@ private:
     int _start_index;
     int _index;
     int _lines;
-    dsn_log_level_t _stderr_start_level;
+    log_level_t _stderr_start_level;
 };
 } // namespace tools
 } // namespace dsn

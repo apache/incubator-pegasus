@@ -34,49 +34,40 @@
 
 TEST(core, logging)
 {
-    dsn_log_level_t level = dsn_log_get_start_level();
+    log_level_t level = get_log_start_level();
     std::cout << "logging start level = " << level << std::endl;
-    dsn_logf(__FILENAME__,
-             __FUNCTION__,
-             __LINE__,
-             dsn_log_level_t::LOG_LEVEL_INFO,
-             "in TEST(core, logging)");
-    dsn_log(__FILENAME__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_INFO, "");
+    global_log(__FILENAME__, __FUNCTION__, __LINE__, log_level_t::LOG_LEVEL_INFO, "in TEST(core, logging)");
 }
 
 TEST(core, logging_big_log)
 {
     std::string big_str(128000, 'x');
-    dsn_logf(__FILENAME__,
+    global_log(__FILENAME__,
              __FUNCTION__,
              __LINE__,
-             dsn_log_level_t::LOG_LEVEL_INFO,
-             "write big str %s",
+             log_level_t::LOG_LEVEL_INFO,
              big_str.c_str());
 }
 
-TEST(core, dlog)
+TEST(core, log)
 {
     struct test_case
     {
-        enum dsn_log_level_t level;
+        enum log_level_t level;
         std::string str;
-    } tests[] = {{dsn_log_level_t::LOG_LEVEL_DEBUG, "This is a test"},
-                 {dsn_log_level_t::LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_INFO, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
+    } tests[] = {{log_level_t::LOG_LEVEL_DEBUG, "This is a test"},
+                 {log_level_t::LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
+                 {log_level_t::LOG_LEVEL_INFO, "\\x00%d\\x00\\x01%n/nm"},
+                 {log_level_t::LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
+                 {log_level_t::LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
+                 {log_level_t::LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
 
     dsn::fail::setup();
     dsn::fail::cfg("coredump_for_fatal_log", "void(false)");
 
     for (auto test : tests) {
-        // Test logging_provider::dsn_log
-        dlog_f(test.level, "dlog_f: sortkey = {}", test.str);
-
-        // Test logging_provider::dsn_logv
-        dlog(test.level, "dlog: sortkey = %s", test.str.c_str());
+        // Test logging_provider::log
+        LOG(test.level, "LOG: sortkey = {}", test.str);
     }
 
     dsn::fail::teardown();

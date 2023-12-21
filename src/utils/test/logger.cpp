@@ -92,13 +92,8 @@ static void finish_test_dir()
     ASSERT_TRUE(utils::filesystem::remove_path(dir)) << "remove_directory " << dir << " failed";
 }
 
-void log_print(logging_provider *logger, const char *fmt, ...)
-{
-    va_list vl;
-    va_start(vl, fmt);
-    logger->dsn_logv(__FILE__, __FUNCTION__, __LINE__, LOG_LEVEL_DEBUG, fmt, vl);
-    va_end(vl);
-}
+#define LOG_PRINT(logger, ...) \
+    (logger)->log(__FILE__, __FUNCTION__, __LINE__, LOG_LEVEL_DEBUG, fmt::format(__VA_ARGS__).c_str())
 
 TEST(tools_common, simple_logger)
 {
@@ -107,8 +102,8 @@ TEST(tools_common, simple_logger)
 
     {
         auto logger = std::make_unique<screen_logger>(true);
-        log_print(logger.get(), "%s", "test_print");
-        std::thread t([](screen_logger *lg) { log_print(lg, "%s", "test_print"); }, logger.get());
+        LOG_PRINT(logger.get(), "{}", "test_print");
+        std::thread t([](screen_logger *lg) { LOG_PRINT(lg, "{}", "test_print"); }, logger.get());
         t.join();
 
         logger->flush();
@@ -119,7 +114,7 @@ TEST(tools_common, simple_logger)
     for (unsigned int i = 0; i < simple_logger_gc_gap + 10; ++i) {
         auto logger = std::make_unique<simple_logger>("./");
         for (unsigned int i = 0; i != 1000; ++i) {
-            log_print(logger.get(), "%s", "test_print");
+            LOG_PRINT(logger.get(), "{}", "test_print");
         }
         logger->flush();
     }
