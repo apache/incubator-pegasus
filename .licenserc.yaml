@@ -594,7 +594,7 @@ header:
     - 'src/runtime/test/service_api_c.cpp'
     - 'src/runtime/test/sim_lock.cpp'
     - 'src/runtime/test/task_engine.cpp'
-    - 'src/runtime/test/test_utils.h'
+    - 'src/runtime/test_utils.h'
     - 'src/runtime/threadpool_code.cpp'
     - 'src/runtime/tool_api.cpp'
     - 'src/runtime/tracer.cpp'
