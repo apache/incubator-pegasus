@@ -29,7 +29,7 @@ runs:
       with:
         name: ${{ env.ARTIFACT_NAME }}_artifact_${{ github.sha }}
         path: .
-    - name: Tar files
+    - name: Unpack tarball
       run: |
         tar -zxvf ${ARTIFACT_NAME}_builder.tar
         rm -f ${ARTIFACT_NAME}_builder.tar
