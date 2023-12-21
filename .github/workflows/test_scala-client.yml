@@ -15,7 +15,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
 
 name: Test - scala client
 on:
@@ -24,7 +23,8 @@ on:
         - master
         - 'v[0-9]+.*' # release branch
     paths:
-        - scala-client/**
+      - .github/workflows/test_scala-client.yml
+      - scala-client/**
 
   workflow_dispatch:
 

@@ -26,6 +26,7 @@ on:
         - ci-test # testing branch for github action
         - '*dev'      # developing branch
     paths:
+      - .github/workflows/test_python-client.yml
       - python-client/**
 
   workflow_dispatch:

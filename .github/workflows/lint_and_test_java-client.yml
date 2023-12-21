@@ -15,7 +15,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
 
 name: Test - java client
 on:
@@ -26,6 +25,7 @@ on:
         - ci-test # testing branch for github action
         - '*dev'      # developing branch
     paths:
+      - .github/workflows/lint_and_test_java-client.yml
       - java-client/**
 
   workflow_dispatch:
@@ -36,7 +36,7 @@ defaults:
 
 jobs:
   spotless:
-    name: spotless
+    name: Spotless
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -46,10 +46,29 @@ jobs:
       - name: spotless
         working-directory: ./java-client
         run: mvn spotless:check
-  test:
-    name: test
+
+  build_server:
+    name: Build server
     needs: spotless
     runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: OFF
+      ARTIFACT_NAME: release_for_java_client
+      BUILD_OPTIONS: -t release
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - uses: "./.github/actions/build_pegasus"
+      - uses: "./.github/actions/upload_artifact"
+
+  test_java_client:
+    name: Test Java client
+    needs: build_server
+    runs-on: ubuntu-latest
+    env:
+      ARTIFACT_NAME: release_for_java_client
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     strategy:
@@ -64,52 +83,10 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Free Disk Space (Ubuntu)
-        run: |
-          .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            thirdparty:
-              - '.github/workflows/thirdparty-regular-push.yml'
-              - 'docker/thirdparties-src/**'
-              - 'docker/thirdparties-bin/**'
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: |
-          rm -f /root/thirdparties-src.zip
-          unzip /root/thirdparties-bin.zip -d ./thirdparty
-          rm -f /root/thirdparties-bin.zip
-          find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          rm -rf ./thirdparty/hadoop-bin/share/doc
-          rm -rf ./thirdparty/zookeeper-bin/docs
-      # TODO(yingchun): Build a docker image with prebuilt server binaries, we can use them directly without building server binaries if no server changes.
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        # Build thirdparties and leave some necessary libraries and source
-        run: |
-          rm -f /root/thirdparties-src.zip
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -B build/
-          cmake --build build/ -j $(nproc)
-          rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
-          find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          ../scripts/download_hadoop.sh hadoop-bin
-          ../scripts/download_zk.sh zookeeper-bin
-          rm -rf hadoop-bin/share/doc
-          rm -rf zookeeper-bin/docs
-      - name: Build Pegasus server
-        run: |
-          ./run.sh build --skip_thirdparty -j $(nproc) -t release
-      - name: Clear build temporary files
-        run: |
-          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
+      - uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster
         run: |
           apt-get update
