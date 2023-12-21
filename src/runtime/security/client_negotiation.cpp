@@ -38,7 +38,6 @@
 
 namespace dsn {
 namespace security {
-extern const std::set<std::string> supported_mechanisms;
 
 client_negotiation::client_negotiation(rpc_session_ptr session) : negotiation(session)
 {
