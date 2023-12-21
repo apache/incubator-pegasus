@@ -47,10 +47,10 @@ public:
     ~screen_logger() override;
 
     void log(const char *file,
-                 const char *function,
-                 const int line,
-                 log_level_t log_level,
-                 const char *str) override;
+             const char *function,
+             const int line,
+             log_level_t log_level,
+             const char *str) override;
 
     virtual void flush();
 
@@ -70,10 +70,10 @@ public:
     ~simple_logger() override;
 
     void log(const char *file,
-                 const char *function,
-                 const int line,
-                 log_level_t log_level,
-                 const char *str) override;
+             const char *function,
+             const int line,
+             log_level_t log_level,
+             const char *str) override;
 
     void flush() override;
 

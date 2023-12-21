@@ -73,8 +73,7 @@ void dsn_log_init(const std::string &logging_factory_name,
                   const std::string &dir_log,
                   std::function<std::string()> dsn_log_prefixed_message_func)
 {
-    log_start_level =
-        enum_from_string(FLAGS_logging_start_level, log_level_t::LOG_LEVEL_INVALID);
+    log_start_level = enum_from_string(FLAGS_logging_start_level, log_level_t::LOG_LEVEL_INVALID);
 
     CHECK_NE_MSG(log_start_level,
                  log_level_t::LOG_LEVEL_INVALID,
@@ -98,11 +97,8 @@ log_level_t get_log_start_level() { return log_start_level; }
 
 void set_log_start_level(log_level_t level) { log_start_level = level; }
 
-void global_log(const char *file,
-             const char *function,
-             const int line,
-             log_level_t log_level,
-             const char *str)
+void global_log(
+    const char *file, const char *function, const int line, log_level_t log_level, const char *str)
 {
     dsn::logging_provider *logger = dsn::logging_provider::instance();
     logger->log(file, function, line, log_level, str);

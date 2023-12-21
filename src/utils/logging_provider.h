@@ -59,10 +59,10 @@ public:
     static void set_logger(logging_provider *logger);
 
     virtual void log(const char *file,
-                         const char *function,
-                         const int line,
-                         log_level_t log_level,
-                         const char *str) = 0;
+                     const char *function,
+                     const int line,
+                     log_level_t log_level,
+                     const char *str) = 0;
 
     virtual void flush() = 0;
 

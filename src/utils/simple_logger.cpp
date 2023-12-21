@@ -122,11 +122,8 @@ screen_logger::screen_logger(bool short_header) { _short_header = short_header; 
 
 screen_logger::~screen_logger(void) {}
 
-void screen_logger::log(const char *file,
-                            const char *function,
-                            const int line,
-                            log_level_t log_level,
-                            const char *str)
+void screen_logger::log(
+    const char *file, const char *function, const int line, log_level_t log_level, const char *str)
 {
     utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
@@ -208,8 +205,7 @@ simple_logger::simple_logger(const char *log_dir)
                     enum_from_string(FLAGS_logging_start_level, log_level_t::LOG_LEVEL_INVALID);
             } else {
                 std::string level_str = "LOG_LEVEL_" + args[0];
-                start_level =
-                    enum_from_string(level_str.c_str(), log_level_t::LOG_LEVEL_INVALID);
+                start_level = enum_from_string(level_str.c_str(), log_level_t::LOG_LEVEL_INVALID);
                 if (start_level == log_level_t::LOG_LEVEL_INVALID) {
                     return "ERROR: invalid level '" + args[0] + "'";
                 }
@@ -257,11 +253,8 @@ void simple_logger::flush()
     ::fflush(stdout);
 }
 
-void simple_logger::log(const char *file,
-                            const char *function,
-                            const int line,
-                            log_level_t log_level,
-                            const char *str)
+void simple_logger::log(
+    const char *file, const char *function, const int line, log_level_t log_level, const char *str)
 {
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 

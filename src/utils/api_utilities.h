@@ -48,7 +48,8 @@
 @{
 */
 
-enum log_level_t {
+enum log_level_t
+{
     LOG_LEVEL_DEBUG,
     LOG_LEVEL_INFO,
     LOG_LEVEL_WARNING,
@@ -64,11 +65,8 @@ USER_DEFINED_ENUM_FORMATTER(log_level_t)
 extern log_level_t log_start_level;
 extern log_level_t get_log_start_level();
 extern void set_log_start_level(log_level_t level);
-extern void global_log(const char *file,
-                    const char *function,
-                    const int line,
-                    log_level_t log_level,
-                    const char *str);
+extern void global_log(
+    const char *file, const char *function, const int line, log_level_t log_level, const char *str);
 extern void dsn_coredump();
 
 #define dreturn_not_ok_logged(err, ...)                                                            \
@@ -105,7 +103,7 @@ extern void dsn_coredump();
 #define dverify_logged(exp, level, ...)                                                            \
     do {                                                                                           \
         if (dsn_unlikely(!(exp))) {                                                                \
-            LOG(level, __VA_ARGS__);                                                              \
+            LOG(level, __VA_ARGS__);                                                               \
             return false;                                                                          \
         }                                                                                          \
     } while (0)
@@ -116,7 +114,7 @@ extern void dsn_coredump();
 #define dstop_on_false_logged(exp, level, ...)                                                     \
     do {                                                                                           \
         if (dsn_unlikely(!(exp))) {                                                                \
-            LOG(level, __VA_ARGS__);                                                              \
+            LOG(level, __VA_ARGS__);                                                               \
             return;                                                                                \
         }                                                                                          \
     } while (0)

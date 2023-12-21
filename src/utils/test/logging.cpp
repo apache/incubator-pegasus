@@ -36,17 +36,17 @@ TEST(core, logging)
 {
     log_level_t level = get_log_start_level();
     std::cout << "logging start level = " << level << std::endl;
-    global_log(__FILENAME__, __FUNCTION__, __LINE__, log_level_t::LOG_LEVEL_INFO, "in TEST(core, logging)");
+    global_log(__FILENAME__,
+               __FUNCTION__,
+               __LINE__,
+               log_level_t::LOG_LEVEL_INFO,
+               "in TEST(core, logging)");
 }
 
 TEST(core, logging_big_log)
 {
     std::string big_str(128000, 'x');
-    global_log(__FILENAME__,
-             __FUNCTION__,
-             __LINE__,
-             log_level_t::LOG_LEVEL_INFO,
-             big_str.c_str());
+    global_log(__FILENAME__, __FUNCTION__, __LINE__, log_level_t::LOG_LEVEL_INFO, big_str.c_str());
 }
 
 TEST(core, log)

@@ -92,8 +92,9 @@ static void finish_test_dir()
     ASSERT_TRUE(utils::filesystem::remove_path(dir)) << "remove_directory " << dir << " failed";
 }
 
-#define LOG_PRINT(logger, ...) \
-    (logger)->log(__FILE__, __FUNCTION__, __LINE__, LOG_LEVEL_DEBUG, fmt::format(__VA_ARGS__).c_str())
+#define LOG_PRINT(logger, ...)                                                                     \
+    (logger)->log(                                                                                 \
+        __FILE__, __FUNCTION__, __LINE__, LOG_LEVEL_DEBUG, fmt::format(__VA_ARGS__).c_str())
 
 TEST(tools_common, simple_logger)
 {

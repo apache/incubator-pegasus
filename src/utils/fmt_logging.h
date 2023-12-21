@@ -29,10 +29,10 @@
 // TODO(wutao1): prevent construction of std::string for each log.
 
 // __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.
-#define LOG(level, ...)                                                                         \
+#define LOG(level, ...)                                                                            \
     do {                                                                                           \
-        if (level >= log_start_level)                                                          \
-            global_log(                                                                               \
+        if (level >= log_start_level)                                                              \
+            global_log(                                                                            \
                 __FILENAME__, __FUNCTION__, __LINE__, level, fmt::format(__VA_ARGS__).c_str());    \
     } while (false)
 
