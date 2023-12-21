@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <stdarg.h>
 #include <cstdio>
 #include <string>
 

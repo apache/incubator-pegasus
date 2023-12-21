@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <stdarg.h>
 #include <algorithm>
 #include <functional>
 #include <memory>

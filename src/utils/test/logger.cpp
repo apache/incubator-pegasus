@@ -25,7 +25,7 @@
  */
 
 #include <errno.h>
-#include <stdarg.h>
+#include <fmt/core.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <algorithm>
