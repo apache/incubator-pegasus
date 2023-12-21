@@ -32,35 +32,31 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 
-TEST(core, logging)
+TEST(LoggingTest, GlobalLog)
 {
     log_level_t level = get_log_start_level();
-    std::cout << "logging start level = " << level << std::endl;
-    global_log(__FILENAME__,
-               __FUNCTION__,
-               __LINE__,
-               log_level_t::LOG_LEVEL_INFO,
-               "in TEST(core, logging)");
+    std::cout << "logging start level = " << enum_to_string(level) << std::endl;
+    global_log(__FILENAME__, __FUNCTION__, __LINE__, LOG_LEVEL_INFO, "in TEST(core, logging)");
 }
 
-TEST(core, logging_big_log)
+TEST(LoggingTest, GlobalLogBig)
 {
     std::string big_str(128000, 'x');
-    global_log(__FILENAME__, __FUNCTION__, __LINE__, log_level_t::LOG_LEVEL_INFO, big_str.c_str());
+    global_log(__FILENAME__, __FUNCTION__, __LINE__, LOG_LEVEL_INFO, big_str.c_str());
 }
 
-TEST(core, log)
+TEST(LoggingTest, LogMacro)
 {
     struct test_case
     {
-        enum log_level_t level;
+        log_level_t level;
         std::string str;
-    } tests[] = {{log_level_t::LOG_LEVEL_DEBUG, "This is a test"},
-                 {log_level_t::LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
-                 {log_level_t::LOG_LEVEL_INFO, "\\x00%d\\x00\\x01%n/nm"},
-                 {log_level_t::LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
-                 {log_level_t::LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
-                 {log_level_t::LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
+    } tests[] = {{LOG_LEVEL_DEBUG, "This is a test"},
+                 {LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
+                 {LOG_LEVEL_INFO, "\\x00%d\\x00\\x01%n/nm"},
+                 {LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
+                 {LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
+                 {LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
 
     dsn::fail::setup();
     dsn::fail::cfg("coredump_for_fatal_log", "void(false)");

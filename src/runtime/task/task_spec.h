@@ -43,14 +43,6 @@
 #include "utils/join_point.h"
 #include "utils/threadpool_code.h"
 
-ENUM_BEGIN(log_level_t, LOG_LEVEL_INVALID)
-ENUM_REG(LOG_LEVEL_DEBUG)
-ENUM_REG(LOG_LEVEL_INFO)
-ENUM_REG(LOG_LEVEL_WARNING)
-ENUM_REG(LOG_LEVEL_ERROR)
-ENUM_REG(LOG_LEVEL_FATAL)
-ENUM_END(log_level_t)
-
 namespace dsn {
 
 enum task_state

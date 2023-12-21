@@ -118,7 +118,7 @@ inline void process_fatal_log(log_level_t log_level)
 
 } // anonymous namespace
 
-screen_logger::screen_logger(bool short_header) { _short_header = short_header; }
+screen_logger::screen_logger(bool short_header) : _short_header(short_header) {}
 
 screen_logger::~screen_logger(void) {}
 
@@ -143,15 +143,14 @@ void screen_logger::log(
 void screen_logger::flush() { ::fflush(stdout); }
 
 simple_logger::simple_logger(const char *log_dir)
+    : _log_dir(std::string(log_dir)),
+      _log(nullptr),
+      // we assume all valid entries are positive
+      _start_index(0),
+      _index(1),
+      _lines(0),
+      _stderr_start_level(enum_from_string(FLAGS_stderr_start_level, LOG_LEVEL_INVALID))
 {
-    _log_dir = std::string(log_dir);
-    // we assume all valid entries are positive
-    _start_index = 0;
-    _index = 1;
-    _lines = 0;
-    _log = nullptr;
-    _stderr_start_level = enum_from_string(FLAGS_stderr_start_level, LOG_LEVEL_INVALID);
-
     // check existing log files
     std::vector<std::string> sub_list;
     CHECK(dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false),
@@ -159,25 +158,30 @@ simple_logger::simple_logger(const char *log_dir)
           _log_dir);
     for (auto &fpath : sub_list) {
         auto &&name = dsn::utils::filesystem::get_file_name(fpath);
-        if (name.length() <= 8 || name.substr(0, 4) != "log.")
+        if (name.length() <= 8 || name.substr(0, 4) != "log.") {
             continue;
+        }
 
         int index;
-        if (1 != sscanf(name.c_str(), "log.%d.txt", &index) || index <= 0)
+        if (1 != sscanf(name.c_str(), "log.%d.txt", &index) || index <= 0) {
             continue;
+        }
 
-        if (index > _index)
+        if (index > _index) {
             _index = index;
+        }
 
-        if (_start_index == 0 || index < _start_index)
+        if (_start_index == 0 || index < _start_index) {
             _start_index = index;
+        }
     }
     sub_list.clear();
 
-    if (_start_index == 0)
+    if (_start_index == 0) {
         _start_index = _index;
-    else
+    } else {
         ++_index;
+    }
 
     create_log_file();
 
@@ -201,12 +205,11 @@ simple_logger::simple_logger(const char *log_dir)
         [](const std::vector<std::string> &args) {
             log_level_t start_level;
             if (args.size() == 0) {
-                start_level =
-                    enum_from_string(FLAGS_logging_start_level, log_level_t::LOG_LEVEL_INVALID);
+                start_level = enum_from_string(FLAGS_logging_start_level, LOG_LEVEL_INVALID);
             } else {
                 std::string level_str = "LOG_LEVEL_" + args[0];
-                start_level = enum_from_string(level_str.c_str(), log_level_t::LOG_LEVEL_INVALID);
-                if (start_level == log_level_t::LOG_LEVEL_INVALID) {
+                start_level = enum_from_string(level_str.c_str(), LOG_LEVEL_INVALID);
+                if (start_level == LOG_LEVEL_INVALID) {
                     return "ERROR: invalid level '" + args[0] + "'";
                 }
             }
@@ -217,8 +220,9 @@ simple_logger::simple_logger(const char *log_dir)
 
 void simple_logger::create_log_file()
 {
-    if (_log != nullptr)
+    if (_log != nullptr) {
         ::fclose(_log);
+    }
 
     _lines = 0;
 

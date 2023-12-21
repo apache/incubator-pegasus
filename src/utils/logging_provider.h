@@ -26,8 +26,6 @@
 
 #pragma once
 
-#include <stdarg.h>
-
 #include "utils/api_utilities.h"
 #include "utils/command_manager.h"
 #include "utils/factory_store.h"

@@ -31,10 +31,9 @@
 
 #pragma once
 
-#include <stdarg.h>
-
-#include "ports.h"
+#include "utils/enum_helper.h"
 #include "utils/fmt_utils.h"
+#include "utils/ports.h"
 
 /*!
 @defgroup logging Logging Service
@@ -58,6 +57,14 @@ enum log_level_t
     LOG_LEVEL_COUNT,
     LOG_LEVEL_INVALID
 };
+
+ENUM_BEGIN(log_level_t, LOG_LEVEL_INVALID)
+ENUM_REG(LOG_LEVEL_DEBUG)
+ENUM_REG(LOG_LEVEL_INFO)
+ENUM_REG(LOG_LEVEL_WARNING)
+ENUM_REG(LOG_LEVEL_ERROR)
+ENUM_REG(LOG_LEVEL_FATAL)
+ENUM_END(log_level_t)
 
 USER_DEFINED_ENUM_FORMATTER(log_level_t)
 

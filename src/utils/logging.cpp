@@ -40,7 +40,7 @@
 #include "utils/logging_provider.h"
 #include "utils/sys_exit_hook.h"
 
-log_level_t log_start_level = log_level_t::LOG_LEVEL_INFO;
+log_level_t log_start_level = LOG_LEVEL_INFO;
 DSN_DEFINE_string(core,
                   logging_start_level,
                   "LOG_LEVEL_INFO",
@@ -72,11 +72,10 @@ void dsn_log_init(const std::string &logging_factory_name,
                   const std::string &dir_log,
                   std::function<std::string()> dsn_log_prefixed_message_func)
 {
-    log_start_level = enum_from_string(FLAGS_logging_start_level, log_level_t::LOG_LEVEL_INVALID);
+    log_start_level = enum_from_string(FLAGS_logging_start_level, LOG_LEVEL_INVALID);
 
-    CHECK_NE_MSG(log_start_level,
-                 log_level_t::LOG_LEVEL_INVALID,
-                 "invalid [core] logging_start_level specified");
+    CHECK_NE_MSG(
+        log_start_level, LOG_LEVEL_INVALID, "invalid [core] logging_start_level specified");
 
     // register log flush on exit
     if (FLAGS_logging_flush_on_exit) {

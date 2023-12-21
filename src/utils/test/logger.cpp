@@ -43,22 +43,18 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/simple_logger.h"
 
-using std::vector;
-using std::string;
+namespace {
 
-using namespace dsn;
-using namespace dsn::tools;
+const int kSimpleLoggerGcGap = 20;
 
-static const int simple_logger_gc_gap = 20;
-
-static void get_log_file_index(vector<int> &log_index)
+void get_log_file_index(std::vector<int> &log_index)
 {
-    vector<string> sub_list;
-    string path = "./";
-    ASSERT_TRUE(utils::filesystem::get_subfiles(path, sub_list, false));
+    std::vector<std::string> sub_list;
+    std::string path = "./";
+    ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(path, sub_list, false));
 
     for (auto &ptr : sub_list) {
-        auto &&name = utils::filesystem::get_file_name(ptr);
+        auto &&name = dsn::utils::filesystem::get_file_name(ptr);
         if (name.length() <= 8 || name.substr(0, 4) != "log.")
             continue;
         int index;
@@ -68,43 +64,47 @@ static void get_log_file_index(vector<int> &log_index)
     }
 }
 
-static void clear_files(vector<int> &log_index)
+void clear_files(std::vector<int> &log_index)
 {
     char file[256] = {};
     for (auto i : log_index) {
         snprintf_p(file, 256, "log.%d.txt", i);
-        dsn::utils::filesystem::remove_path(string(file));
+        dsn::utils::filesystem::remove_path(std::string(file));
     }
 }
 
-static void prepare_test_dir()
+void prepare_test_dir()
 {
     const char *dir = "./test";
-    string dr(dir);
+    std::string dr(dir);
     ASSERT_TRUE(dsn::utils::filesystem::create_directory(dr));
     ASSERT_EQ(0, ::chdir(dir));
 }
 
-static void finish_test_dir()
+void finish_test_dir()
 {
     const char *dir = "./test";
-    ASSERT_EQ(0, ::chdir("..")) << "chdir failed, err = " << utils::safe_strerror(errno);
-    ASSERT_TRUE(utils::filesystem::remove_path(dir)) << "remove_directory " << dir << " failed";
+    ASSERT_EQ(0, ::chdir("..")) << "chdir failed, err = " << dsn::utils::safe_strerror(errno);
+    ASSERT_TRUE(dsn::utils::filesystem::remove_path(dir)) << "remove_directory " << dir
+                                                          << " failed";
 }
+
+} // anonymous namespace
 
 #define LOG_PRINT(logger, ...)                                                                     \
     (logger)->log(                                                                                 \
         __FILE__, __FUNCTION__, __LINE__, LOG_LEVEL_DEBUG, fmt::format(__VA_ARGS__).c_str())
 
-TEST(tools_common, simple_logger)
+TEST(LoggerTest, SimpleLogger)
 {
     // Deregister commands to avoid re-register error.
     dsn::logging_provider::instance()->deregister_commands();
 
     {
-        auto logger = std::make_unique<screen_logger>(true);
+        auto logger = std::make_unique<dsn::tools::screen_logger>(true);
         LOG_PRINT(logger.get(), "{}", "test_print");
-        std::thread t([](screen_logger *lg) { LOG_PRINT(lg, "{}", "test_print"); }, logger.get());
+        std::thread t([](dsn::tools::screen_logger *lg) { LOG_PRINT(lg, "{}", "test_print"); },
+                      logger.get());
         t.join();
 
         logger->flush();
@@ -112,19 +112,19 @@ TEST(tools_common, simple_logger)
 
     prepare_test_dir();
     // create multiple files
-    for (unsigned int i = 0; i < simple_logger_gc_gap + 10; ++i) {
-        auto logger = std::make_unique<simple_logger>("./");
+    for (unsigned int i = 0; i < kSimpleLoggerGcGap + 10; ++i) {
+        auto logger = std::make_unique<dsn::tools::simple_logger>("./");
         for (unsigned int i = 0; i != 1000; ++i) {
             LOG_PRINT(logger.get(), "{}", "test_print");
         }
         logger->flush();
     }
 
-    vector<int> index;
+    std::vector<int> index;
     get_log_file_index(index);
     ASSERT_TRUE(!index.empty());
     sort(index.begin(), index.end());
-    ASSERT_EQ(simple_logger_gc_gap, index.size());
+    ASSERT_EQ(kSimpleLoggerGcGap, index.size());
     clear_files(index);
     finish_test_dir();
 }

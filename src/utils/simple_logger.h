@@ -55,7 +55,7 @@ public:
 
 private:
     ::dsn::utils::ex_lock_nr _lock;
-    bool _short_header;
+    const bool _short_header;
 };
 
 /*
@@ -80,9 +80,9 @@ private:
     void create_log_file();
 
 private:
-    std::string _log_dir;
     ::dsn::utils::ex_lock _lock; // use recursive lock to avoid dead lock when flush() is called
                                  // in signal handler if cored for bad logging format reason.
+    const std::string _log_dir;
     FILE *_log;
     int _start_index;
     int _index;
