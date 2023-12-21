@@ -39,7 +39,7 @@ set(MY_PROJ_LIBS
         hashtable)
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 set(MY_BINPLACES
-        ${CMAKE_CURRENT_SOURCE_DIR}/config.ini)
+        config.ini)
 add_definitions(-Wno-attributes)
 SET(CMAKE_INSTALL_RPATH ".")
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
