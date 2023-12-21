@@ -138,6 +138,31 @@ void screen_logger::dsn_logv(const char *file,
     vprintf(fmt, args);
     printf("\n");
 
+    if (log_level >= LOG_LEVEL_ERROR) {
+        ::fflush(stdout);
+    }
+
+    process_fatal_log(log_level);
+}
+
+void screen_logger::dsn_log(const char *file,
+                            const char *function,
+                            const int line,
+                            dsn_log_level_t log_level,
+                            const char *str)
+{
+    utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+
+    print_header(stdout, log_level);
+    if (!_short_header) {
+        printf("%s:%d:%s(): ", file, line, function);
+    }
+    printf("%s\n", str);
+
+    if (log_level >= LOG_LEVEL_ERROR) {
+        ::fflush(stdout);
+    }
+
     process_fatal_log(log_level);
 }
 

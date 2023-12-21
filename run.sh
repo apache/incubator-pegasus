@@ -81,6 +81,9 @@ function usage_build()
 {
     echo "Options for subcommand 'build':"
     echo "   -h|--help             print the help info"
+    echo "   -m|--modules          specify modules to build, split by ',',"
+    echo "                         e.g., \"pegasus_unit_test,dsn_runtime_tests,dsn_meta_state_tests\","
+    echo "                         if not set, then build all objects"
     echo "   -t|--type             build type: debug|release, default is release"
     echo "   -c|--clear            clear pegasus before building, not clear thirdparty"
     echo "   --clear_thirdparty    clear thirdparty/pegasus before building"
@@ -128,12 +131,17 @@ function run_build()
     USE_JEMALLOC=OFF
     BUILD_TEST=OFF
     IWYU=""
+    BUILD_MODULES=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
             -h|--help)
                 usage_build
                 exit 0
+                ;;
+            -m|--modules)
+                BUILD_MODULES=$2
+                shift
                 ;;
             -t|--type)
                 BUILD_TYPE="$2"
@@ -212,6 +220,12 @@ function run_build()
         usage_build
         exit 1
     fi
+
+    # Replace all ',' to ' ' in $BUILD_MODULES.
+    if [ "$BUILD_MODULES" != "" ]; then
+        BUILD_MODULES=${BUILD_MODULES//,/ }
+    fi
+    echo "build_modules=$BUILD_MODULES"
 
     CMAKE_OPTIONS="-DCMAKE_C_COMPILER=${C_COMPILER}
                    -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
@@ -325,6 +339,8 @@ function run_build()
     pushd $BUILD_DIR
     if [ ! -z "${IWYU}" ]; then
         make $MAKE_OPTIONS 2> iwyu.out
+    elif [ "$BUILD_MODULES" != "" ]; then
+        make $BUILD_MODULES $MAKE_OPTIONS
     else
         make install $MAKE_OPTIONS
     fi

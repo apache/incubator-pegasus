@@ -57,9 +57,7 @@ public:
                  const char *function,
                  const int line,
                  dsn_log_level_t log_level,
-                 const char *str) override
-    {
-    }
+                 const char *str) override;
 
     virtual void flush();
 
