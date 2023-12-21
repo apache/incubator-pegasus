@@ -24,7 +24,7 @@ runs:
         unzip /root/thirdparties-bin.zip -d ./thirdparty
         rm -f /root/thirdparties-bin.zip
       shell: bash
-    - name: Download Artifact
+    - name: Download tarball
       uses: actions/download-artifact@v3
       with:
         name: ${{ env.ARTIFACT_NAME }}_artifact_${{ github.sha }}
