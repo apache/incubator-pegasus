@@ -19,6 +19,7 @@
 
 #include <boost/algorithm/string/join.hpp>
 #include <memory>
+#include <set>
 
 #include "fmt/core.h"
 #include "runtime/rpc/network.h"
