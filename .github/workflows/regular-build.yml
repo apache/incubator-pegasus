@@ -72,30 +72,11 @@ jobs:
         working-directory: /root/incubator-pegasus
     steps:
       - name: Clone Apache Pegasus Source
-        working-directory: /root
-        run: |
-          git clone -b ${{ github.ref_name }} --depth=1 https://github.com/apache/incubator-pegasus.git
-      - name: Free Disk Space (Ubuntu)
-        run: |
-          .github/workflows/free_disk_space.sh
+        uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties
-        run: |
-          rm -f /root/thirdparties-src.zip
-          unzip /root/thirdparties-bin.zip -d ./thirdparty
-          rm -f /root/thirdparties-bin.zip
-          find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-          rm -rf ./thirdparty/hadoop-bin/share/doc
-          rm -rf ./thirdparty/zookeeper-bin/docs
-      - name: Compilation Pegasus
-        run: |
-          ./run.sh build --test --compiler ${{ matrix.compiler }} --skip_thirdparty -j $(nproc)
-      - name: Clear Build Files
-        run: |
-          find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-      - name: Packaging Server
-        run: |
-          ./run.sh pack_server
-          rm -rf pegasus-server-*
+        uses: ".github/actions/unpack_prebuilt_thirdparties/action.yaml"
+      - name: Build Pegasus
+        uses: "./.github/actions/build_pegasus"
 
   build_and_lint_go:
     name: Build and Lint Golang

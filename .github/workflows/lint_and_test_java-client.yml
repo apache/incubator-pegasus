@@ -59,9 +59,12 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
-      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
-      - uses: "./.github/actions/build_pegasus"
-      - uses: "./.github/actions/upload_artifact"
+      - name: Rebuild thirdparty if needed
+        uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - name: Build Pegasus
+        uses: "./.github/actions/build_pegasus"
+      - name: Upload artifact
+        uses: "./.github/actions/upload_artifact"
 
   test_java_client:
     name: Test Java client
@@ -86,7 +89,8 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
-      - uses: "./.github/actions/download_artifact"
+      - name: Download artifact
+        uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster
         run: |
           apt-get update

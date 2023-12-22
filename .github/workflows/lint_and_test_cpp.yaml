@@ -72,7 +72,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - name: Rebuild thirdparty if needed
+        uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build IWYU binary
         run: |
           mkdir iwyu && cd iwyu && git clone https://github.com/include-what-you-use/include-what-you-use.git
@@ -97,10 +98,14 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
-      - uses: "./.github/actions/build_pegasus"
-      - uses: "./.github/actions/upload_artifact"
+      - name: Clone code
+        uses: actions/checkout@v3
+      - name: Rebuild thirdparty if needed
+        uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - name: Build Pegasus
+        uses: "./.github/actions/build_pegasus"
+      - name: Upload artifact
+        uses: "./.github/actions/upload_artifact"
 
   test_Release:
     name: Test Release
@@ -157,8 +162,10 @@ jobs:
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v3
-      - uses: "./.github/actions/download_artifact"
-      - uses: "./.github/actions/run_server_tests"
+      - name: Download artifact
+        uses: "./.github/actions/download_artifact"
+      - name: Run server tests
+        uses: "./.github/actions/run_server_tests"
 
   build_ASAN:
     name: Build ASAN
@@ -172,9 +179,12 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
-      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
-      - uses: "./.github/actions/build_pegasus"
-      - uses: "./.github/actions/upload_artifact"
+      - name: Rebuild thirdparty if needed
+        uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - name: Build Pegasus
+        uses: "./.github/actions/build_pegasus"
+      - name: Upload artifact
+        uses: "./.github/actions/upload_artifact"
 
   test_ASAN:
     name: Test ASAN
@@ -233,8 +243,10 @@ jobs:
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v3
-      - uses: "./.github/actions/download_artifact"
-      - uses: "./.github/actions/run_server_tests"
+      - name: Download artifact
+        uses: "./.github/actions/download_artifact"
+      - name: Run server tests
+        uses: "./.github/actions/run_server_tests"
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
 #                 when we are going to release a stable version. So we disable them in regular CI
@@ -251,9 +263,12 @@ jobs:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #    steps:
 #      - uses: actions/checkout@v3
-#      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
-#      - uses: "./.github/actions/build_pegasus"
-#      - uses: "./.github/actions/upload_artifact"
+#      - name: Rebuild thirdparty if needed
+#        uses: "./.github/actions/rebuild_thirdparty_if_needed"
+#      - name: Build Pegasus
+#        uses: "./.github/actions/build_pegasus"
+#      - name: Upload artifact
+#        uses: "./.github/actions/upload_artifact"
 #
 #  test_UBSAN:
 #    name: Test UBSAN
@@ -308,8 +323,10 @@ jobs:
 #      options: --cap-add=SYS_PTRACE
 #    steps:
 #      - uses: actions/checkout@v3
-#      - uses: "./.github/actions/download_artifact"
-#      - uses: "./.github/actions/run_server_tests"
+#      - name: Download artifact
+#        uses: "./.github/actions/download_artifact"
+#      - name: Run server tests
+#        uses: "./.github/actions/run_server_tests"
 
   build_with_jemalloc:
     name: Build with jemalloc
@@ -323,10 +340,13 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
-      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - name: Rebuild thirdparty if needed
+        uses: "./.github/actions/rebuild_thirdparty_if_needed"
       # TODO(yingchun): Append "-m dsn_utils_tests" to the command if not needed to pack server or tools, for example, the dependencies are static linked.
-      - uses: "./.github/actions/build_pegasus"
-      - uses: "./.github/actions/upload_artifact"
+      - name: Build Pegasus
+        uses: "./.github/actions/build_pegasus"
+      - name: Upload artifact
+        uses: "./.github/actions/upload_artifact"
 
   test_with_jemalloc:
     name: Test with jemallc
@@ -344,8 +364,10 @@ jobs:
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v3
-      - uses: "./.github/actions/download_artifact"
-      - uses: "./.github/actions/run_server_tests"
+      - name: Download artifact
+        uses: "./.github/actions/download_artifact"
+      - name: Run server tests
+        uses: "./.github/actions/run_server_tests"
 
   build_pegasus_on_macos:
     name: macOS
