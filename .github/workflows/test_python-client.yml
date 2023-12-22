@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +14,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
 
 name: Test - python client
 on:
@@ -35,21 +33,63 @@ defaults:
   run:
     shell: bash
 
+env:
+  ARTIFACT_NAME: release_for_python_client
+
 jobs:
-  test:
-    name: test
-    runs-on: ubuntu-20.04
+  build_server:
+    name: Build server
+    runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: OFF
+      BUILD_OPTIONS: -t release
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - name: Install thrift
-        # python-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
-        # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
-        run: sudo apt-get install -y thrift-compiler
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - uses: "./.github/actions/build_pegasus"
+      - uses: "./.github/actions/upload_artifact"
+
+  test:
+    name: Test Python client
+    needs: build_server
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
-      - name: test
+          python-version: '3.11'
+      # python-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
+      # to generate code as well. The thrift-compiler version on ubuntu-22.04 is 0.16.0, so
+      # build and install thrift-compiler 0.13.0 manually.
+      - name: Install thrift
+        run: |
+          export THRIFT_VERSION=0.13.0
+          wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/v${THRIFT_VERSION}.tar.gz
+          tar -xzf v${THRIFT_VERSION}.tar.gz
+          cd thrift-${THRIFT_VERSION}
+          ./bootstrap.sh
+          ./configure --enable-libs=no
+          make -j $(nproc)
+          make install
+          cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
+      - name: Download artifact
+        uses: "./.github/actions/download_artifact"
+      - name: Start Pegasus cluster
+        run: |
+          export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh start_onebox
+      - name: Run Python client tests
         working-directory: ./python-client
         run: |
-          pip install -r requirement.txt
-          ./test.sh
+          python -m pip install -r requirement.txt
+          thrift -v --gen py -out . ../idl/dsn.layer2.thrift
+          thrift -v --gen py -out . ../idl/rrdb.thrift
+          python setup.py install
+          python sample.py
+          cd tests
+          python -m unittest -v test_basics.TestBasics
