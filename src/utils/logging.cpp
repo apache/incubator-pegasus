@@ -29,7 +29,6 @@
 #include <memory>
 #include <string>
 
-#include "runtime/task/task_spec.h"
 #include "runtime/tool_api.h"
 #include "simple_logger.h"
 #include "utils/api_utilities.h"

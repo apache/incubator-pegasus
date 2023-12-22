@@ -34,8 +34,8 @@
 #include <sstream>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/task_spec.h"
 #include "utils/command_manager.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
@@ -44,7 +44,6 @@
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
