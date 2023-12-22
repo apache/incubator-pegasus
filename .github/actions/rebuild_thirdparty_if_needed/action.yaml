@@ -30,7 +30,7 @@ runs:
             - 'thirdparty/**'
     - name: Unpack prebuilt third-parties
       if: steps.changes.outputs.thirdparty == 'false'
-      uses: ".github/actions/unpack_prebuilt_thirdparties/action.yaml"
+      uses: ".github/actions/unpack_prebuilt_thirdparties"
     - name: Rebuild third-parties
       if: steps.changes.outputs.thirdparty == 'true'
       working-directory: thirdparty

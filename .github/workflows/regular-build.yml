@@ -74,7 +74,7 @@ jobs:
       - name: Clone Apache Pegasus Source
         uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties
-        uses: ".github/actions/unpack_prebuilt_thirdparties/action.yaml"
+        uses: ".github/actions/unpack_prebuilt_thirdparties"
       - name: Build Pegasus
         uses: "./.github/actions/build_pegasus"
 
