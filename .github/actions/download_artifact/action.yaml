@@ -20,7 +20,7 @@ runs:
   using: composite
   steps:
     - name: Unpack prebuilt third-parties
-      uses: ".github/actions/unpack_prebuilt_thirdparties"
+      uses: "./.github/actions/unpack_prebuilt_thirdparties"
     - name: Download tarball
       uses: actions/download-artifact@v3
       with:
