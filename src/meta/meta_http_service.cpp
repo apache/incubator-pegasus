@@ -460,8 +460,9 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
 
 void meta_http_service::get_cluster_info_handler(const http_request &req, http_response &resp)
 {
-    if (!redirect_if_not_primary(req, resp))
+    if (!redirect_if_not_primary(req, resp)) {
         return;
+    }
 
     dsn::utils::table_printer tp;
     std::ostringstream out;
@@ -828,11 +829,20 @@ void meta_http_service::update_scenario_handler(const http_request &req, http_re
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)
 {
 #ifdef DSN_MOCK_TEST
-    return true;
-#endif
-    rpc_address leader;
-    if (_service->_failure_detector->get_leader(&leader))
+    // For running tests, `_service->_balancer` must has been initialized, in which case just
+    // returning true is ok. Otherwise, once `_service->_balancer` is nullptr, which means Pegasus
+    // must has been built with `./run.sh build --test` for running tests, sending http request
+    // for `get_cluster_info_handler` would lead to coredump due to null _service->_balancer.
+    if (_service->_balancer) {
         return true;
+    }
+#endif
+
+    rpc_address leader;
+    if (_service->_failure_detector->get_leader(&leader)) {
+        return true;
+    }
+
     // set redirect response
     resp.location = "http://" + leader.to_std_string() + '/' + req.path;
     if (!req.query_args.empty()) {

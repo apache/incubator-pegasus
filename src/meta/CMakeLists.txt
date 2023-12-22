@@ -57,8 +57,6 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
-add_definitions(-DDSN_MOCK_TEST)
-
 dsn_add_shared_library()
 
 add_subdirectory(test)
