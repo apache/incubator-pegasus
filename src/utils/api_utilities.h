@@ -98,7 +98,7 @@ extern void dsn_coredump();
         }                                                                                          \
     } while (0)
 
-#ifdef DSN_MOCK_TEST
+#ifdef MOCK_TEST
 #define mock_private public
 #define mock_virtual virtual
 #else

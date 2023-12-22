@@ -828,11 +828,16 @@ void meta_http_service::update_scenario_handler(const http_request &req, http_re
 
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)
 {
-#ifdef DSN_MOCK_TEST
-    // For running tests, `_service->_balancer` must has been initialized, in which case just
-    // returning true is ok. Otherwise, once `_service->_balancer` is nullptr, which means Pegasus
-    // must has been built with `./run.sh build --test` for running tests, sending http request
-    // for `get_cluster_info_handler` would lead to coredump due to null _service->_balancer.
+#ifdef MOCK_TEST
+    // Once MOCK_TEST is defined, the meta server must has been built with `./run.sh build --test`.
+    //
+    // If `_service->_balancer` is not null, it must has been initialized by mocking, in which case
+    // just returning true is ok.
+    //
+    // Otherwise, once `_service->_balancer` is null, which means this must be a standby meta
+    // server, returning true would lead to coredump due to null `_service->_balancer` while
+    // processing requests in `get_cluster_info_handler`. Thus it should go through the following
+    // normal process instead of just returning true.
     if (_service->_balancer) {
         return true;
     }
