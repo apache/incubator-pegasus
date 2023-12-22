@@ -34,8 +34,7 @@
 
 TEST(LoggingTest, GlobalLog)
 {
-    log_level_t level = get_log_start_level();
-    std::cout << "logging start level = " << enum_to_string(level) << std::endl;
+    std::cout << "logging start level = " << enum_to_string(get_log_start_level()) << std::endl;
     global_log(__FILENAME__, __FUNCTION__, __LINE__, LOG_LEVEL_INFO, "in TEST(core, logging)");
 }
 
