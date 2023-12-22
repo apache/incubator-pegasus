@@ -40,7 +40,6 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/logging_provider.h"
-#include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/simple_logger.h"
 
