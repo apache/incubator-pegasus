@@ -51,32 +51,32 @@ jobs:
       - uses: "./.github/actions/build_pegasus"
       - uses: "./.github/actions/upload_artifact"
 
-    test:
-      name: Test NodeJS client
-      needs: build_server
-      runs-on: ubuntu-latest
-      env:
-        ARTIFACT_NAME: release_for_nodejs_client
-      container:
-        image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
-      steps:
-        - uses: actions/checkout@v3
-        - name: Install nodejs
-          uses: actions/setup-node@v3
-          with:
-            node-version: 16
-        - name: Install thrift
-          run: sudo apt-get install -y thrift-compiler
-        - name: Download artifact
-          uses: "./.github/actions/download_artifact"
-        - name: Start Pegasus cluster
-          run: |
-            export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
-            ulimit -s unlimited
-            ./run.sh start_onebox
-        - name: Run NodeJS client tests
-          working-directory: ./nodejs-client
-          run: |
-            ./recompile_thrift.sh
-            npm install
-            npm test
+  test:
+    name: Test NodeJS client
+    needs: build_server
+    runs-on: ubuntu-latest
+    env:
+      ARTIFACT_NAME: release_for_nodejs_client
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install nodejs
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: Install thrift
+        run: sudo apt-get install -y thrift-compiler
+      - name: Download artifact
+        uses: "./.github/actions/download_artifact"
+      - name: Start Pegasus cluster
+        run: |
+          export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh start_onebox
+      - name: Run NodeJS client tests
+        working-directory: ./nodejs-client
+        run: |
+          ./recompile_thrift.sh
+          npm install
+          npm test
