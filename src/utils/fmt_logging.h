@@ -28,18 +28,19 @@
 // instead we use fmt::format.
 // TODO(wutao1): prevent construction of std::string for each log.
 
-#define dlog_f(level, ...)                                                                         \
+// __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.
+#define LOG(level, ...)                                                                            \
     do {                                                                                           \
-        if (level >= dsn_log_start_level)                                                          \
-            dsn_log(                                                                               \
+        if (level >= log_start_level)                                                              \
+            global_log(                                                                            \
                 __FILENAME__, __FUNCTION__, __LINE__, level, fmt::format(__VA_ARGS__).c_str());    \
     } while (false)
 
-#define LOG_DEBUG(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define LOG_INFO(...) dlog_f(LOG_LEVEL_INFO, __VA_ARGS__)
-#define LOG_WARNING(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
-#define LOG_ERROR(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
-#define LOG_FATAL(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
+#define LOG_DEBUG(...) LOG(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define LOG_INFO(...) LOG(LOG_LEVEL_INFO, __VA_ARGS__)
+#define LOG_WARNING(...) LOG(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define LOG_ERROR(...) LOG(LOG_LEVEL_ERROR, __VA_ARGS__)
+#define LOG_FATAL(...) LOG(LOG_LEVEL_FATAL, __VA_ARGS__)
 
 #define LOG_WARNING_IF(x, ...)                                                                     \
     do {                                                                                           \

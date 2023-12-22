@@ -32,7 +32,7 @@ namespace dsn {
 namespace security {
 DSN_DEFINE_string(security, sasl_plugin_path, "/usr/lib/sasl2", "path to search sasl plugins");
 
-dsn_log_level_t get_dsn_log_level(int level)
+log_level_t get_log_level(int level)
 {
     switch (level) {
     case SASL_LOG_ERR:
@@ -53,7 +53,7 @@ int sasl_simple_logger(void *context, int level, const char *msg)
         return SASL_OK;
     }
 
-    dlog_f(get_dsn_log_level(level), "sasl log info: {}", msg);
+    LOG(get_log_level(level), "sasl log info: {}", msg);
     return SASL_OK;
 }
 
