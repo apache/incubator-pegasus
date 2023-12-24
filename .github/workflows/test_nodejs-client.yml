@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +14,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
 
 name: Test - node.js client
 on:
@@ -35,13 +33,15 @@ defaults:
   run:
     shell: bash
 
+env:
+  ARTIFACT_NAME: release_for_nodejs_client
+
 jobs:
   build_server:
     name: Build server
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
-      ARTIFACT_NAME: release_for_nodejs_client
       BUILD_OPTIONS: -t release
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
@@ -55,8 +55,6 @@ jobs:
     name: Test NodeJS client
     needs: build_server
     runs-on: ubuntu-latest
-    env:
-      ARTIFACT_NAME: release_for_nodejs_client
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
@@ -66,7 +64,7 @@ jobs:
         with:
           node-version: 16
       - name: Install thrift
-        run: sudo apt-get install -y thrift-compiler
+        run: apt-get install -y thrift-compiler
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster
