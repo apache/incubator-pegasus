@@ -63,8 +63,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: Install thrift
-        run: apt-get install -y thrift-compiler
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster
