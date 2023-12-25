@@ -31,6 +31,9 @@
 #include <mutex>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
+
+#include "utils/ports.h"
 
 namespace dsn {
 template <typename TEnum>
@@ -49,8 +52,8 @@ class enum_helper_xxx;
 #define ENUM_REG_WITH_CUSTOM_NAME(type, name) helper->register_enum(#name, type);
 #define ENUM_REG(e) helper->register_enum(#e, e);
 
-// Argument `type invalid_value` for enum_from_string, albeit unused, has to be provided due to
-// overloading.
+// The argument `type invalid_value`, albeit unused, has to be provided since `enum_from_string`
+// could be overloaded by different enumeration types.
 #define ENUM_END2(type, name)                                                                      \
     return helper;                                                                                 \
     }                                                                                              \
@@ -113,9 +116,42 @@ class enum_helper_xxx;
 // ENUM_FOREACH_STATUS_CODE(ENUM_CONST_REG_STR_STATUS_CODE)
 // ENUM_END(status_code)
 #define ENUM_CONST(str) k##str
-#define ENUM_CONST_DEF(str) ENUM_CONST(str),
+// To define an enumerator, we could use a macro with some arguments. However, not all of the
+// macros have identical arguments. To make each macro accept the same arguments, we could:
+// * keep the arguments of all macros in the same order
+// * use variable arguments as the placeholders that represent the missing arguments
+//
+// To be specific, the variadic macros are as follows, all of which have the same sequence of
+// variable arguments: `str, val, enum_class, ...`:
+// * ENUM_CONST_DEF
+// * ENUM_CONST_DEF_TO_ENUM_ITEM
+// * ENUM_CONST_DEF_FROM_ENUM_ITEM
+#define ENUM_CONST_DEF(str, ...) ENUM_CONST(str),
 #define ENUM_CONST_REG_STR(enum_class, str)                                                        \
     helper->register_enum(#str, enum_class::ENUM_CONST(str));
+
+#define ENUM_CONST_DEF_MAPPER(direction, from_type, to_type, enum_foreach, enum_def)               \
+    inline to_type enum_##direction##_val(from_type from_val, to_type invalid_to_val)              \
+    {                                                                                              \
+        static const std::unordered_map<from_type, to_type> kMap = {enum_foreach(enum_def)};       \
+                                                                                                   \
+        const auto &iter = kMap.find(from_val);                                                    \
+        if (dsn_unlikely(iter == kMap.end())) {                                                    \
+            return invalid_to_val;                                                                 \
+        }                                                                                          \
+                                                                                                   \
+        return iter->second;                                                                       \
+    }
+
+#define ENUM_CONST_DEF_TO_ENUM_ITEM(str, from_val, enum_class, ...)                                \
+    {from_val, enum_class::ENUM_CONST(str)},
+#define ENUM_CONST_DEF_TO_ENUM_FUNC(from_type, enum_class, enum_foreach)                           \
+    ENUM_CONST_DEF_MAPPER(from, from_type, enum_class, enum_foreach, ENUM_CONST_DEF_TO_ENUM_ITEM)
+
+#define ENUM_CONST_DEF_FROM_ENUM_ITEM(str, to_val, enum_class, ...)                                \
+    {enum_class::ENUM_CONST(str), to_val},
+#define ENUM_CONST_DEF_FROM_ENUM_FUNC(to_type, enum_class, enum_foreach)                           \
+    ENUM_CONST_DEF_MAPPER(to, enum_class, to_type, enum_foreach, ENUM_CONST_DEF_FROM_ENUM_ITEM)
 
 namespace dsn {
 

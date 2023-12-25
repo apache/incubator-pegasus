@@ -19,6 +19,8 @@
 
 #include <array>
 
+#include "utils/fmt_logging.h"
+
 namespace dsn {
 
 const std::array kHttpStatusCodeMessages = {std::string("200 OK"),
