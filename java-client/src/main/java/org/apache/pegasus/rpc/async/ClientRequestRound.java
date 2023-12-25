@@ -68,9 +68,11 @@ public final class ClientRequestRound {
       Table.ClientOPCallback cb,
       boolean enableCounter,
       long expireNanoTime,
-      long timeoutInMilliseconds) {
+      long timeoutInMilliseconds,
+      int tryId) {
     this(op, cb, enableCounter, timeoutInMilliseconds);
     this.expireNanoTime = expireNanoTime;
+    this.tryId = tryId;
   }
 
   public long timeoutMs() {

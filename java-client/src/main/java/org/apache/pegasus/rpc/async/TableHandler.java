@@ -20,6 +20,7 @@ package org.apache.pegasus.rpc.async;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.EventExecutor;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,6 +37,7 @@ import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.FutureGroup;
 import org.apache.pegasus.client.PException;
+import org.apache.pegasus.client.retry.RetryPolicy;
 import org.apache.pegasus.operator.client_operator;
 import org.apache.pegasus.operator.query_cfg_operator;
 import org.apache.pegasus.replication.partition_configuration;
@@ -263,7 +265,7 @@ public class TableHandler extends Table {
     if (!inQuerying_.compareAndSet(false, true)) return false;
 
     long now = System.currentTimeMillis();
-    if (now - lastQueryTime_ < manager_.getRetryDelay()) {
+    if (now - lastQueryTime_ < Math.max(1, manager_.getTimeout() / 3)) {
       inQuerying_.set(false);
       return false;
     }
@@ -383,14 +385,26 @@ public class TableHandler extends Table {
             round.callback,
             round.enableCounter,
             round.expireNanoTime,
-            round.timeoutMs);
+            round.timeoutMs,
+            round.tryId);
     tryDelayCall(delayRequestRound);
   }
 
-  void tryDelayCall(final ClientRequestRound round) {
-    round.tryId++;
-    long nanoDelay = manager_.getRetryDelay(round.timeoutMs) * 1000000L;
-    if (round.expireNanoTime - System.nanoTime() > nanoDelay) {
+  private void tryDelayCall(final ClientRequestRound round) {
+    // tryId starts from 1 so here we minus 1
+    RetryPolicy.RetryAction action =
+        manager_
+            .getRetryPolicy()
+            .shouldRetry(round.tryId - 1, round.expireNanoTime, Duration.ofMillis(round.timeoutMs));
+    if (action.getDecision() == RetryPolicy.RetryDecision.RETRY) {
+      logger.debug(
+          "retry policy {} decided to retry after {} for operation with hashcode {},"
+              + " retry = {}",
+          manager_.getRetryPolicy().getClass().getSimpleName(),
+          action.getDelay(),
+          System.identityHashCode(round.getOperator()),
+          round.tryId);
+      round.tryId++;
       executor_.schedule(
           new Runnable() {
             @Override
@@ -398,9 +412,14 @@ public class TableHandler extends Table {
               call(round);
             }
           },
-          nanoDelay,
+          action.getDelay().toNanos(),
           TimeUnit.NANOSECONDS);
     } else {
+      logger.debug(
+          "retry policy {} decided to fail for operation with hashcode {}," + " retry = {}",
+          manager_.getRetryPolicy().getClass().getSimpleName(),
+          System.identityHashCode(round.getOperator()),
+          round.tryId);
       // errno == ERR_UNKNOWN means the request has never attemptted to contact any replica servers
       // this may happen when we can't initialize a null replica session for a long time
       if (round.getOperator().rpc_error.errno == error_code.error_types.ERR_UNKNOWN) {

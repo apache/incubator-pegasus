@@ -442,7 +442,7 @@ public class ReplicaSession {
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, final RequestEntry msg) {
-      logger.debug("{}: handle response with seqid({})", name(), msg.sequenceId);
+      logger.trace("{}: handle response with seqid({})", name(), msg.sequenceId);
       firstRecentTimedOutMs.set(0); // This session is currently healthy.
       if (msg.callback != null) {
         msg.callback.run();
