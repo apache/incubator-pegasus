@@ -829,7 +829,10 @@ void meta_http_service::update_scenario_handler(const http_request &req, http_re
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)
 {
 #ifdef MOCK_TEST
-    // Once MOCK_TEST is defined, the meta server must has been built with `./run.sh build --test`.
+    // To enable MOCK_TEST, the option BUILD_TEST for cmake should be opened by:
+    //     cmake -DBUILD_TEST=ON ...
+    // which could be done by building Pegasus with tests by:
+    //     ./run.sh build --test ...
     //
     // If `_service->_balancer` is not null, it must has been initialized by mocking, in which case
     // just returning true is ok.
