@@ -205,6 +205,10 @@ function(dsn_setup_compiler_flags)
   # We want access to the PRI* print format macros.
   add_definitions(-D__STDC_FORMAT_MACROS)
 
+  if(${BUILD_TEST})
+    add_definitions(-DMOCK_TEST)
+  endif()
+
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -gdwarf-4" CACHE STRING "" FORCE)
 
   #  -Wall: Enable all warnings.

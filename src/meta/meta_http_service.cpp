@@ -460,8 +460,9 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
 
 void meta_http_service::get_cluster_info_handler(const http_request &req, http_response &resp)
 {
-    if (!redirect_if_not_primary(req, resp))
+    if (!redirect_if_not_primary(req, resp)) {
         return;
+    }
 
     dsn::utils::table_printer tp;
     std::ostringstream out;
@@ -827,12 +828,29 @@ void meta_http_service::update_scenario_handler(const http_request &req, http_re
 
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)
 {
-#ifdef DSN_MOCK_TEST
-    return true;
-#endif
-    rpc_address leader;
-    if (_service->_failure_detector->get_leader(&leader))
+#ifdef MOCK_TEST
+    // To enable MOCK_TEST, the option BUILD_TEST for cmake should be opened by:
+    //     cmake -DBUILD_TEST=ON ...
+    // which could be done by building Pegasus with tests by:
+    //     ./run.sh build --test ...
+    //
+    // If `_service->_balancer` is not null, it must has been initialized by mocking, in which case
+    // just returning true is ok.
+    //
+    // Otherwise, once `_service->_balancer` is null, which means this must be a standby meta
+    // server, returning true would lead to coredump due to null `_service->_balancer` while
+    // processing requests in `get_cluster_info_handler`. Thus it should go through the following
+    // normal process instead of just returning true.
+    if (_service->_balancer) {
         return true;
+    }
+#endif
+
+    rpc_address leader;
+    if (_service->_failure_detector->get_leader(&leader)) {
+        return true;
+    }
+
     // set redirect response
     resp.location = "http://" + leader.to_std_string() + '/' + req.path;
     if (!req.query_args.empty()) {
