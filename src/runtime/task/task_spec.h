@@ -32,7 +32,6 @@
 #include <vector>
 
 #include "runtime/task/task_code.h"
-#include "utils/api_utilities.h"
 #include "utils/config_api.h"
 #include "utils/config_helper.h"
 #include "utils/customizable_id.h"
@@ -42,14 +41,6 @@
 #include "utils/fmt_utils.h"
 #include "utils/join_point.h"
 #include "utils/threadpool_code.h"
-
-ENUM_BEGIN(dsn_log_level_t, LOG_LEVEL_INVALID)
-ENUM_REG(LOG_LEVEL_DEBUG)
-ENUM_REG(LOG_LEVEL_INFO)
-ENUM_REG(LOG_LEVEL_WARNING)
-ENUM_REG(LOG_LEVEL_ERROR)
-ENUM_REG(LOG_LEVEL_FATAL)
-ENUM_END(dsn_log_level_t)
 
 namespace dsn {
 

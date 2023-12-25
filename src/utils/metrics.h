@@ -1404,7 +1404,7 @@ protected:
             _full_nth_elements[i].store(value_type{}, std::memory_order_relaxed);
         }
 
-#ifdef DSN_MOCK_TEST
+#ifdef MOCK_TEST
         if (interval_ms == 0) {
             // Timer is disabled.
             return;
