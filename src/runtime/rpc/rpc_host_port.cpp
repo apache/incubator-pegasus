@@ -30,7 +30,9 @@
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/string_conv.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -57,7 +59,6 @@ error_s GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo
     if (info != nullptr) {
         info->swap(result);
     }
-
     return error_s::ok();
 }
 }
@@ -73,7 +74,7 @@ host_port::host_port(rpc_address addr)
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
         CHECK(utils::hostname_from_ip(htonl(addr.ip()), &_host),
-              "invalid address {}",
+              "invalid host_port {}",
               addr.ipv4_str());
         _port = addr.port();
     } break;
@@ -84,6 +85,34 @@ host_port::host_port(rpc_address addr)
         break;
     }
     _type = addr.type();
+}
+
+bool host_port::from_string(const std::string s)
+{
+    auto pos = s.find_last_of(':');
+    if (pos == std::string::npos) {
+        return false;
+    }
+    _host = s.substr(0, pos);
+    std::string port = s.substr(pos + 1);
+
+    if (!internal::buf2unsigned(port, _port) || _port > UINT16_MAX) {
+        return false;
+    }
+
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    AddrInfo result;
+    auto err_code = GetAddrInfo(_host, hints, &result);
+
+    if (dsn_unlikely(!err_code.is_ok())) {
+        return false;
+    }
+
+    _type = HOST_TYPE_IPV4;
+    return true;
 }
 
 void host_port::reset()

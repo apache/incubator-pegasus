@@ -424,6 +424,21 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::rpc_address &addre
     return address.from_string_ipv4(rpc_address_string.c_str());
 }
 
+// json serialization for rpc host_port, we use the string representation of a host_port
+inline void json_encode(JsonWriter &out, const dsn::host_port &hp)
+{
+    json_encode(out, hp.to_string());
+}
+inline bool json_decode(const dsn::json::JsonObject &in, dsn::host_port &hp)
+{
+    std::string host_port_string;
+    dverify(json_decode(in, host_port_string));
+    if (host_port_string == "invalid host_port") {
+        return true;
+    }
+    return hp.from_string(host_port_string);
+}
+
 inline void json_encode(JsonWriter &out, const dsn::partition_configuration &config);
 inline bool json_decode(const JsonObject &in, dsn::partition_configuration &config);
 inline void json_encode(JsonWriter &out, const dsn::app_info &info);
