@@ -16,15 +16,14 @@
 // under the License.
 
 #include <rocksdb/env.h>
-#include <initializer_list>
 #include <memory>
 #include <set>
 #include <type_traits>
 #include <utility>
 
+#include "absl/strings/string_view.h"
 #include "local_service.h"
 #include "nlohmann/json.hpp"
-#include "nlohmann/json_fwd.hpp"
 #include "rocksdb/slice.h"
 #include "rocksdb/status.h"
 #include "runtime/task/async_calls.h"
@@ -36,7 +35,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
+#include "utils/load_dump_object.h"
 #include "utils/strings.h"
 
 DSN_DECLARE_bool(enable_direct_io);
@@ -52,41 +51,6 @@ namespace dist {
 namespace block_service {
 
 DEFINE_TASK_CODE(LPC_LOCAL_SERVICE_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_BLOCK_SERVICE)
-
-error_code file_metadata::dump_to_file(const std::string &file_path) const
-{
-    std::string data = nlohmann::json(*this).dump();
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice(data),
-                                   file_path,
-                                   /* should_sync */ true);
-    if (!s.ok()) {
-        LOG_WARNING("write to metadata file '{}' failed, err = {}", file_path, s.ToString());
-        return ERR_FS_INTERNAL;
-    }
-
-    return ERR_OK;
-}
-
-error_code file_metadata::load_from_file(const std::string &file_path)
-{
-    std::string data;
-    auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), file_path, &data);
-    if (!s.ok()) {
-        LOG_WARNING("load from metadata file '{}' failed, err = {}", file_path, s.ToString());
-        return ERR_FS_INTERNAL;
-    }
-
-    try {
-        nlohmann::json::parse(data).get_to(*this);
-        return ERR_OK;
-    } catch (nlohmann::json::exception &exp) {
-        LOG_WARNING("decode metadata from json failed: {}, data = [{}]", exp.what(), data);
-        return ERR_FS_INTERNAL;
-    }
-}
 
 std::string local_service::get_metafile(const std::string &filepath)
 {
@@ -294,7 +258,7 @@ error_code local_file_object::load_metadata()
 
     file_metadata fmd;
     std::string filepath = local_service::get_metafile(file_name());
-    auto ec = fmd.load_from_file(filepath);
+    auto ec = dsn::utils::load_njobj_from_file(filepath, &fmd);
     if (ec != ERR_OK) {
         LOG_WARNING("load metadata file '{}' failed", filepath);
         return ERR_FS_INTERNAL;
@@ -356,8 +320,8 @@ dsn::task_ptr local_file_object::write(const write_request &req,
                 // a lot, but it is somewhat not correct.
                 _size = resp.written_size;
                 _md5_value = utils::string_md5(req.buffer.data(), req.buffer.length());
-                auto err = file_metadata(_size, _md5_value)
-                               .dump_to_file(local_service::get_metafile(file_name()));
+                auto err = dsn::utils::dump_njobj_to_file(file_metadata(_size, _md5_value),
+                                                          local_service::get_metafile(file_name()));
                 if (err != ERR_OK) {
                     LOG_ERROR("file_metadata write failed");
                     resp.err = ERR_FS_INTERNAL;
@@ -498,8 +462,8 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
                 break;
             }
 
-            auto err = file_metadata(_size, _md5_value)
-                           .dump_to_file(local_service::get_metafile(file_name()));
+            auto err = dsn::utils::dump_njobj_to_file(file_metadata(_size, _md5_value),
+                                                      local_service::get_metafile(file_name()));
             if (err != ERR_OK) {
                 LOG_ERROR("file_metadata write failed");
                 resp.err = ERR_FS_INTERNAL;

@@ -26,12 +26,8 @@
 
 #pragma once
 
-#include <rocksdb/env.h>
-#include <rocksdb/slice.h>
-#include <rocksdb/status.h>
-#include <stdint.h>
-#include <string.h>
 #include <atomic>
+#include <cstdint>
 #include <map>
 #include <string>
 
@@ -41,11 +37,7 @@
 #include "metadata_types.h"
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
-#include "utils/defer.h"
-#include "utils/env.h"
 #include "utils/error_code.h"
-#include "utils/filesystem.h"
-#include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
@@ -56,46 +48,21 @@ class blob;
 class message_ex;
 
 namespace replication {
-
 class learn_state;
 class mutation;
 class replica;
 
-namespace {
-template <class T>
-error_code write_blob_to_file(const std::string &fname,
-                              const T &data,
-                              const dsn::utils::FileDataType &fileDataType)
-{
-    std::string tmp_fname = fname + ".tmp";
-    auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
-    auto s = rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(fileDataType),
-                                        rocksdb::Slice(data.data(), data.length()),
-                                        tmp_fname,
-                                        /* should_sync */ true);
-    LOG_AND_RETURN_NOT_TRUE(
-        ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_fname);
-    LOG_AND_RETURN_NOT_TRUE(ERROR,
-                            utils::filesystem::rename_path(tmp_fname, fname),
-                            ERR_FILE_OPERATION_FAILED,
-                            "move file from {} to {} failed",
-                            tmp_fname,
-                            fname);
-    return ERR_OK;
-}
-} // namespace
-
 class replica_init_info
 {
 public:
-    int32_t magic;
-    int32_t crc;
-    ballot init_ballot;
-    decree init_durable_decree;
-    int64_t init_offset_in_shared_log; // Deprecated since Pegasus 2.6.0, but leave it to keep
-                                       // compatible readability to read replica_init_info from
-                                       // older Pegasus version.
-    int64_t init_offset_in_private_log;
+    int32_t magic = 0;
+    int32_t crc = 0;
+    ballot init_ballot = 0;
+    decree init_durable_decree = 0;
+    int64_t init_offset_in_shared_log = 0; // Deprecated since Pegasus 2.6.0, but leave it to keep
+                                           // compatible readability to read replica_init_info from
+                                           // older Pegasus version.
+    int64_t init_offset_in_private_log = 0;
     DEFINE_JSON_SERIALIZATION(init_ballot,
                               init_durable_decree,
                               init_offset_in_shared_log,
@@ -104,14 +71,7 @@ public:
     static const std::string kInitInfo;
 
 public:
-    replica_init_info() { memset((void *)this, 0, sizeof(*this)); }
-    error_code load(const std::string &dir) WARN_UNUSED_RESULT;
-    error_code store(const std::string &dir);
     std::string to_string();
-
-private:
-    error_code load_json(const std::string &fname);
-    error_code store_json(const std::string &fname);
 };
 
 class replica_app_info

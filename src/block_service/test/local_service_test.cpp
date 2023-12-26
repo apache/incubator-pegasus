@@ -32,6 +32,7 @@
 #include "test_util/test_util.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
+#include "utils/load_dump_object.h"
 
 namespace dsn {
 namespace dist {
@@ -49,11 +50,11 @@ TEST_P(local_service_test, file_metadata)
     const int64_t kSize = 12345;
     const std::string kMD5 = "0123456789abcdef0123456789abcdef";
     auto meta_file_path = local_service::get_metafile("a.txt");
-    ASSERT_EQ(ERR_OK, file_metadata(kSize, kMD5).dump_to_file(meta_file_path));
+    ASSERT_EQ(ERR_OK, dsn::utils::dump_njobj_to_file(file_metadata(kSize, kMD5), meta_file_path));
     ASSERT_TRUE(boost::filesystem::exists(meta_file_path));
 
     file_metadata fm;
-    fm.load_from_file(meta_file_path);
+    ASSERT_EQ(ERR_OK, dsn::utils::load_njobj_from_file(meta_file_path, &fm));
     ASSERT_EQ(kSize, fm.size);
     ASSERT_EQ(kMD5, fm.md5);
 }
@@ -64,7 +65,8 @@ TEST_P(local_service_test, load_metadata)
     auto meta_file_path = local_service::get_metafile(file.file_name());
 
     {
-        ASSERT_EQ(ERR_OK, file_metadata(5, "abcde").dump_to_file(meta_file_path));
+        ASSERT_EQ(ERR_OK,
+                  dsn::utils::dump_njobj_to_file(file_metadata(5, "abcde"), meta_file_path));
         ASSERT_EQ(ERR_OK, file.load_metadata());
         ASSERT_EQ("abcde", file.get_md5sum());
         ASSERT_EQ(5, file.get_size());
