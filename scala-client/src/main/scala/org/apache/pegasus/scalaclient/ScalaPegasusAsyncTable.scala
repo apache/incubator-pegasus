@@ -21,7 +21,10 @@ package org.apache.pegasus.scalaclient
 
 import org.apache.pegasus.client.{PException, PegasusTableInterface => ITable}
 import org.apache.pegasus.scalaclient.{Serializer => SER}
-import io.netty.util.concurrent.{GenericFutureListener, Future => NFuture}
+import org.apache.pegasus.thirdparty.io.netty.util.concurrent.{
+  GenericFutureListener,
+  Future => NFuture
+}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._

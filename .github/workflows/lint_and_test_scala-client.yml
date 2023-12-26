@@ -1,0 +1,111 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: Lint and Test - scala client
+on:
+  pull_request:
+    branches:
+      - master
+      - 'v[0-9]+.*' # release branch
+    paths:
+      - .github/workflows/lint_and_test_scala-client.yml
+      - scala-client/**
+
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  ARTIFACT_NAME: release_for_scala_client
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: format
+        working-directory: ./scala-client
+        run: sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
+
+  build_server:
+    name: Build server
+    needs: format
+    runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: OFF
+      BUILD_OPTIONS: -t release
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - uses: "./.github/actions/build_pegasus"
+      - uses: "./.github/actions/upload_artifact"
+
+  test:
+    name: Test Scala client
+    needs: build_server
+    runs-on: ubuntu-22.04
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '8', '11']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: Setup sbt
+        run: |
+          curl -s "https://get.sdkman.io" | bash
+          source /github/home/.sdkman/bin/sdkman-init.sh
+          sdk install sbt
+          sbt -V
+      - name: Recompile thrift
+        working-directory: ./java-client/scripts
+        run: ./recompile_thrift.sh
+      - name: Build Java client
+        working-directory: ./java-client
+        run: |
+          mvn clean package -DskipTests -Dcheckstyle.skip=true
+          mvn clean install -DskipTests -Dcheckstyle.skip=true
+      - name: Download artifact
+        uses: "./.github/actions/download_artifact"
+      - name: Start Pegasus cluster
+        run: |
+          export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh start_onebox
+      - name: Run Scala client tests
+        working-directory: ./scala-client
+        run: |
+          source /github/home/.sdkman/bin/sdkman-init.sh
+          sbt test

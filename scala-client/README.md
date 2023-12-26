@@ -23,7 +23,6 @@ It's built on top of the java client [apache/incubator-pegasus/java-client](http
 ## Features:
 
 * Scala friendly.
-
 * Serialize/deserialize automatically.
 
 ## Example:
@@ -52,4 +51,30 @@ It's built on top of the java client [apache/incubator-pegasus/java-client](http
     c.multiDel(table, hashKey, Seq("sort_1", "sort_2"))
     
     c.close
+```
+
+## Development
+
+### Format the code
+
+Use scala format tool, see https://github.com/scalameta/scalafmt
+```
+sbt scalafmtSbt scalafmt test:scalafmt
+```
+
+### Run tests
+
+NOTE: It requires the Pegasus [onebox](https://pegasus.apache.org/overview/onebox/) has been started.
+
+Build Java dependency at first, then build and test Scala client.
+```
+cd ${PROJECT_ROOT}/java-client/scripts
+./recompile_thrift.sh
+
+cd ${PROJECT_ROOT}/java-client
+mvn clean package -DskipTests -Dcheckstyle.skip=true
+mvn clean install -DskipTests -Dcheckstyle.skip=true
+
+cd ${PROJECT_ROOT}/scala-client
+sbt test
 ```
