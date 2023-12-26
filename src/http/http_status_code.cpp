@@ -18,8 +18,9 @@
 #include "http/http_status_code.h"
 
 #include <array>
+#include <fmt/core.h>
 
-#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace dsn {
 
@@ -34,8 +35,12 @@ static_assert(enum_to_int(http_status_code::kCount) == kHttpStatusMessages.size(
 
 std::string get_http_status_message(http_status_code code)
 {
-    CHECK_LT(enum_to_int(code), kHttpStatusMessages.size());
-    return kHttpStatusMessages[enum_to_int(code)];
+    const size_t index = enum_to_int(code);
+    if (dsn_unlikely(index >= kHttpStatusMessages.size())) {
+        return fmt::format("Unknown http_status_code: index={}", index);
+    }
+
+    return kHttpStatusMessages[index];
 }
 
 } // namespace dsn

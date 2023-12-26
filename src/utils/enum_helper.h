@@ -99,6 +99,15 @@ class enum_helper_xxx;
  *    DEF(Corruption)                       \
  *    DEF(IOError)
  */
+// If each enumerator needs to be bound to a value, define the macro as below, where `status_code`
+// is the name of enum class:
+/*
+ * #define ENUM_FOREACH_STATUS_CODE(DEF)    \
+ *    DEF(Ok, 100, status_code)             \
+ *    DEF(NotFound, 101, status_code)       \
+ *    DEF(Corruption, 102, status_code)     \
+ *    DEF(IOError, 103, status_code)
+ */
 // 2. Declare an enum class by above user-defined macro, with an Invalid and an Count enumerator if
 // necessary:
 // ------------------------------------------------------------------------------------------------
@@ -111,23 +120,61 @@ class enum_helper_xxx;
 // ------------------------------------------------------------------------
 // #define ENUM_CONST_REG_STR_STATUS_CODE(str) ENUM_CONST_REG_STR(status_code, str)
 //
-// 4. Define enum helper class:
-// ----------------------------
+// If each enumerator needs to be bound to a value, define the macro as below, and for the reason
+// please see the comments for the definition of ENUM_CONST_DEF:
+// #define ENUM_CONST_REG_STR_STATUS_CODE(str, ...) ENUM_CONST_REG_STR(status_code, str)
+//
+// 4. Define converters between enumerators and string representations:
+// --------------------------------------------------------------------
 // ENUM_BEGIN(status_code, status_code::kInvalidCode)
 // ENUM_FOREACH_STATUS_CODE(ENUM_CONST_REG_STR_STATUS_CODE)
 // ENUM_END(status_code)
+//
+// Call converters between enumerators and string representations:
+// auto code = enum_from_string("Ok", status_code::kInvalidCode);
+// const char *str = enum_to_string(status_code::kOk);
+//
+// 5. Define converters from values with any type to enumerators:
+// ------------------------------------------------------------------
+// For values with long type:
+// ENUM_CONST_DEF_FROM_VAL_FUNC(long, status_code, ENUM_FOREACH_STATUS_CODE)
+//
+// For values with uint64_t:
+// ENUM_CONST_DEF_FROM_VAL_FUNC(uint64_t, status_code, ENUM_FOREACH_STATUS_CODE)
+//
+// Call the converter to get the enumerator corresponding to the value:
+// long val = 100;
+// auto code = enum_from_val(val, status_code::kInvalidCode);
+//
+// 6. Define converters from enumerators to values with any type:
+// ------------------------------------------------------------------
+// For values with long type:
+// ENUM_CONST_DEF_TO_VAL_FUNC(long, status_code, ENUM_FOREACH_STATUS_CODE)
+//
+// For values with uint64_t:
+// ENUM_CONST_DEF_TO_VAL_FUNC(uint64_t, status_code, ENUM_FOREACH_STATUS_CODE)
+//
+// Define an invalid value for long type:
+// const long kInvalidStatus = -1;
+//
+// Call the converter to get the value corresponding to the enumerator:
+// auto code = status_code::kOk;
+// auto val = enum_to_val(code, kInvalidStatus);
+
 #define ENUM_CONST(str) k##str
+
 // To define an enumerator, we could use a macro with some arguments. However, not all of the
 // macros have identical arguments. To make each macro accept the same arguments, we could:
 // * keep the arguments of all macros in the same order
 // * use variable arguments as the placeholders that represent the missing arguments
 //
-// To be specific, the variadic macros are as follows, all of which have the same sequence of
-// variable arguments: `str, val, enum_class, ...`:
-// * ENUM_CONST_DEF
-// * ENUM_CONST_DEF_TO_ENUM_ITEM
-// * ENUM_CONST_DEF_FROM_ENUM_ITEM
+// To be specific, examples of variadic macros are as follows, all of which have the same sequence
+// of variable arguments: `str, val, enum_class, ...`:
+// * ENUM_CONST_DEF(str, ...)
+// * ENUM_CONST_DEF_FROM_VAL_ITEM(str, from_val, enum_class, ...)
+// * ENUM_CONST_DEF_TO_VAL_ITEM(str, to_val, enum_class, ...)
 #define ENUM_CONST_DEF(str, ...) ENUM_CONST(str),
+
 #define ENUM_CONST_REG_STR(enum_class, str)                                                        \
     helper->register_enum(#str, enum_class::ENUM_CONST(str));
 
@@ -144,15 +191,15 @@ class enum_helper_xxx;
         return iter->second;                                                                       \
     }
 
-#define ENUM_CONST_DEF_TO_ENUM_ITEM(str, from_val, enum_class, ...)                                \
+#define ENUM_CONST_DEF_FROM_VAL_ITEM(str, from_val, enum_class, ...)                               \
     {from_val, enum_class::ENUM_CONST(str)},
-#define ENUM_CONST_DEF_TO_ENUM_FUNC(from_type, enum_class, enum_foreach)                           \
-    ENUM_CONST_DEF_MAPPER(from, from_type, enum_class, enum_foreach, ENUM_CONST_DEF_TO_ENUM_ITEM)
+#define ENUM_CONST_DEF_FROM_VAL_FUNC(from_type, enum_class, enum_foreach)                          \
+    ENUM_CONST_DEF_MAPPER(from, from_type, enum_class, enum_foreach, ENUM_CONST_DEF_FROM_VAL_ITEM)
 
-#define ENUM_CONST_DEF_FROM_ENUM_ITEM(str, to_val, enum_class, ...)                                \
+#define ENUM_CONST_DEF_TO_VAL_ITEM(str, to_val, enum_class, ...)                                   \
     {enum_class::ENUM_CONST(str), to_val},
-#define ENUM_CONST_DEF_FROM_ENUM_FUNC(to_type, enum_class, enum_foreach)                           \
-    ENUM_CONST_DEF_MAPPER(to, enum_class, to_type, enum_foreach, ENUM_CONST_DEF_FROM_ENUM_ITEM)
+#define ENUM_CONST_DEF_TO_VAL_FUNC(to_type, enum_class, enum_foreach)                              \
+    ENUM_CONST_DEF_MAPPER(to, enum_class, to_type, enum_foreach, ENUM_CONST_DEF_TO_VAL_ITEM)
 
 namespace dsn {
 

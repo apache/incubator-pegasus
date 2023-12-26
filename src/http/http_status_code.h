@@ -45,8 +45,8 @@ ENUM_END(http_status_code)
 
 std::string get_http_status_message(http_status_code code);
 
-ENUM_CONST_DEF_TO_ENUM_FUNC(long, http_status_code, ENUM_FOREACH_HTTP_STATUS_CODE)
-ENUM_CONST_DEF_FROM_ENUM_FUNC(long, http_status_code, ENUM_FOREACH_HTTP_STATUS_CODE)
+ENUM_CONST_DEF_FROM_VAL_FUNC(long, http_status_code, ENUM_FOREACH_HTTP_STATUS_CODE)
+ENUM_CONST_DEF_TO_VAL_FUNC(long, http_status_code, ENUM_FOREACH_HTTP_STATUS_CODE)
 const long kInvalidHttpStatus = -1;
 
 } // namespace dsn
