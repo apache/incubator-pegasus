@@ -87,16 +87,16 @@ host_port::host_port(rpc_address addr)
     _type = addr.type();
 }
 
-bool host_port::from_string(const std::string s)
+bool host_port::from_string(const std::string &s)
 {
-    auto pos = s.find_last_of(':');
+    const auto pos = s.find_last_of(':');
     if (pos == std::string::npos) {
         return false;
     }
     _host = s.substr(0, pos);
     std::string port = s.substr(pos + 1);
 
-    if (!internal::buf2unsigned(port, _port) || _port > UINT16_MAX) {
+    if (!dsn::buf2uint16(port, _port)) {
         return false;
     }
 
@@ -105,8 +105,7 @@ bool host_port::from_string(const std::string s)
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     AddrInfo result;
-    auto err_code = GetAddrInfo(_host, hints, &result);
-    if (dsn_unlikely(!err_code.is_ok())) {
+    if (dsn_unlikely(!GetAddrInfo(_host, hints, &result))) {
         return false;
     }
 
