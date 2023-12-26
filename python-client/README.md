@@ -49,14 +49,14 @@ Note: Before testing, you should firstly start an [onebox](https://pegasus.apach
 python3 sample.py
 ```
 
-### Basic interfaces test:
+### Basic interfaces test
 
 ```shell
 cd tests
 python3 -m unittest test_basics.TestBasics
 ```
 
-### Integration test:
+### Integration test
 
 > Note: You should firstly set proper Pegasus shell path in test_integration.py.
 > ```python
@@ -68,7 +68,7 @@ cd tests
 python3 -m twisted.trial test_integration.py
 ```
 
-## Benchmark test:
+## Benchmark test
 
 ```shell
 cd tests
