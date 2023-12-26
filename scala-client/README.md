@@ -64,6 +64,8 @@ sbt scalafmtSbt scalafmt test:scalafmt
 
 ### Run tests
 
+NOTE: It requires the Pegasus [onebox](https://pegasus.apache.org/overview/onebox/) has been started.
+
 Build Java dependency at first, then build and test Scala client.
 ```
 cd ${PROJECT_ROOT}/java-client/scripts
