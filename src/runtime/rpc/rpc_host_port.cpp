@@ -106,7 +106,6 @@ bool host_port::from_string(const std::string s)
     hints.ai_socktype = SOCK_STREAM;
     AddrInfo result;
     auto err_code = GetAddrInfo(_host, hints, &result);
-
     if (dsn_unlikely(!err_code.is_ok())) {
         return false;
     }
