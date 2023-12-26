@@ -242,7 +242,7 @@ void http_server::serve(message_ex *msg)
     message_ptr resp_msg = req->create_response();
 
     std::ostringstream os;
-    os << "HTTP/1.1 " << http_status_code_to_string(resp.status_code) << "\r\n";
+    os << "HTTP/1.1 " << get_http_status_message(resp.status_code) << "\r\n";
     os << "Content-Type: " << resp.content_type << "\r\n";
     os << "Content-Length: " << resp.body.length() << "\r\n";
     if (!resp.location.empty()) {

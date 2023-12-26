@@ -17,10 +17,9 @@
 
 #include "utils/enum_helper.h"
 
+#include <gtest/gtest.h>
 #include <tuple>
 #include <vector>
-
-#include "gtest/gtest.h"
 
 namespace dsn {
 
@@ -243,5 +242,36 @@ const std::vector<status_code_enum_from_long_case> status_code_enum_from_long_te
 INSTANTIATE_TEST_CASE_P(EnumHelperTest,
                         StatusCodeEnumFromLongTest,
                         testing::ValuesIn(status_code_enum_from_long_tests));
+
+using status_code_enum_to_long_case = std::tuple<status_code, long>;
+
+class StatusCodeEnumToLongTest : public testing::TestWithParam<status_code_enum_to_long_case>
+{
+};
+
+const long kInvalidLongValue = -1;
+
+TEST_P(StatusCodeEnumToLongTest, EnumToLong)
+{
+    status_code code;
+    long expected_val;
+    std::tie(code, expected_val) = GetParam();
+
+    long actual_val(enum_to_val(code, kInvalidLongValue));
+    EXPECT_EQ(expected_val, actual_val);
+}
+
+const std::vector<status_code_enum_to_long_case> status_code_enum_to_long_tests = {
+    {status_code::kOk, 100},
+    {status_code::kNotFound, 101},
+    {status_code::kCorruption, 102},
+    {status_code::kIOError, 103},
+    {status_code::kCount, kInvalidLongValue},
+    {status_code::kInvalidCode, kInvalidLongValue},
+};
+
+INSTANTIATE_TEST_CASE_P(EnumHelperTest,
+                        StatusCodeEnumToLongTest,
+                        testing::ValuesIn(status_code_enum_to_long_tests));
 
 } // namespace dsn

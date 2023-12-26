@@ -23,19 +23,19 @@
 
 namespace dsn {
 
-const std::array kHttpStatusCodeMessages = {std::string("200 OK"),
-                                            std::string("307 Temporary Redirect"),
-                                            std::string("400 Bad Request"),
-                                            std::string("404 Not Found"),
-                                            std::string("500 Internal Server Error")};
+const std::array kHttpStatusMessages = {std::string("200 OK"),
+                                        std::string("307 Temporary Redirect"),
+                                        std::string("400 Bad Request"),
+                                        std::string("404 Not Found"),
+                                        std::string("500 Internal Server Error")};
 
-static_assert(enum_to_int(http_status_code::kInvalidCode) == kHttpStatusCodeMessages.size(),
-              "kHttpStatusCodeMessages is not consistent with http_status_code");
+static_assert(enum_to_int(http_status_code::kCount) == kHttpStatusMessages.size(),
+              "kHttpStatusMessages is not consistent with http_status_code");
 
-std::string http_status_code_to_string(http_status_code code)
+std::string get_http_status_message(http_status_code code)
 {
-    CHECK_LT(enum_to_int(code), kHttpStatusCodeMessages.size());
-    return kHttpStatusCodeMessages[enum_to_int(code)];
+    CHECK_LT(enum_to_int(code), kHttpStatusMessages.size());
+    return kHttpStatusMessages[enum_to_int(code)];
 }
 
 } // namespace dsn

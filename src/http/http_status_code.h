@@ -33,7 +33,8 @@ namespace dsn {
 
 enum class http_status_code : size_t
 {
-    ENUM_FOREACH_HTTP_STATUS_CODE(ENUM_CONST_DEF) kInvalidCode,
+    ENUM_FOREACH_HTTP_STATUS_CODE(ENUM_CONST_DEF) kCount,
+    kInvalidCode,
 };
 
 #define ENUM_CONST_REG_STR_HTTP_STATUS_CODE(str, ...) ENUM_CONST_REG_STR(http_status_code, str)
@@ -42,8 +43,10 @@ ENUM_BEGIN(http_status_code, http_status_code::kInvalidCode)
 ENUM_FOREACH_HTTP_STATUS_CODE(ENUM_CONST_REG_STR_HTTP_STATUS_CODE)
 ENUM_END(http_status_code)
 
-std::string http_status_code_to_string(http_status_code code);
+std::string get_http_status_message(http_status_code code);
 
 ENUM_CONST_DEF_TO_ENUM_FUNC(long, http_status_code, ENUM_FOREACH_HTTP_STATUS_CODE)
+ENUM_CONST_DEF_FROM_ENUM_FUNC(long, http_status_code, ENUM_FOREACH_HTTP_STATUS_CODE)
+const long kInvalidHttpStatus = -1;
 
 } // namespace dsn
