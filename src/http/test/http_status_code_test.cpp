@@ -18,9 +18,10 @@
 #include "http/http_status_code.h"
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <gtest/gtest.h>
 #include <tuple>
 #include <vector>
+
+#include "gtest/gtest.h"
 
 namespace dsn {
 

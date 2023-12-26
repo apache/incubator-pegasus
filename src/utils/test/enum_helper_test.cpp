@@ -17,9 +17,10 @@
 
 #include "utils/enum_helper.h"
 
-#include <gtest/gtest.h>
 #include <tuple>
 #include <vector>
+
+#include "gtest/gtest.h"
 
 namespace dsn {
 
