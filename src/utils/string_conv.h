@@ -128,6 +128,7 @@ inline bool buf2uint16(absl::string_view buf, uint16_t &result)
 {
     return internal::buf2unsigned(buf, result);
 }
+
 inline bool buf2bool(absl::string_view buf, bool &result, bool ignore_case = true)
 {
     std::string data(buf.data(), buf.length());

@@ -90,13 +90,13 @@ host_port::host_port(rpc_address addr)
 bool host_port::from_string(const std::string &s)
 {
     const auto pos = s.find_last_of(':');
-    if (pos == std::string::npos) {
+    if (dsn_unlikely(pos == std::string::npos)) {
         return false;
     }
     _host = s.substr(0, pos);
     std::string port = s.substr(pos + 1);
 
-    if (!dsn::buf2uint16(port, _port)) {
+    if (dsn_unlikely(!dsn::buf2uint16(port, _port))) {
         return false;
     }
 
