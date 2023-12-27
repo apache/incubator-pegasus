@@ -82,6 +82,8 @@ public:
     // Resolve host_port to rpc_addresses.
     // Trere may be multiple rpc_addresses for one host_port.
     error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
+    // This function is used for validating the format of string like "localhost:8888".
+    bool from_string(const std::string &s);
 
     // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
