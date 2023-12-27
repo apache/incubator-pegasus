@@ -104,8 +104,7 @@ bool host_port::from_string(const std::string &s)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    AddrInfo result;
-    if (dsn_unlikely(!GetAddrInfo(_host, hints, &result))) {
+    if (dsn_unlikely(!GetAddrInfo(_host, hints, nullptr))) {
         return false;
     }
 
