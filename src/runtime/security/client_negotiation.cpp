@@ -17,13 +17,13 @@
 
 #include "client_negotiation.h"
 
-#include <boost/algorithm/string/join.hpp>
 #include <memory>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "fmt/core.h"
+#include "fmt/format.h"
 #include "negotiation_manager.h"
 #include "negotiation_utils.h"
 #include "runtime/rpc/network.h"

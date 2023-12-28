@@ -17,11 +17,11 @@
 
 #include "server_negotiation.h"
 
-#include <boost/algorithm/string/join.hpp>
 #include <memory>
 #include <set>
 
 #include "fmt/core.h"
+#include "fmt/format.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/security/negotiation.h"
