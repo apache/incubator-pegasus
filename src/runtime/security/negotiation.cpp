@@ -37,7 +37,7 @@ DSN_DEFINE_bool(security,
 DSN_DEFINE_bool(security, mandatory_auth, false, "wheter to do authertication mandatorily");
 DSN_TAG_VARIABLE(mandatory_auth, FT_MUTABLE);
 
-const std::set<std::string> negotiation::supported_mechanisms{"GSSAPI"};
+const std::set<std::string> negotiation::kSupportedMechanisms{"GSSAPI"};
 
 negotiation::~negotiation() {}
 

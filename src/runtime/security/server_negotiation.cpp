@@ -77,7 +77,7 @@ void server_negotiation::on_list_mechanisms(negotiation_rpc rpc)
         return;
     }
 
-    std::string mech_list = boost::join(supported_mechanisms, ",");
+    std::string mech_list = fmt::format("{}", fmt::join(kSupportedMechanisms, ","));
     negotiation_response &response = rpc.response();
     _status = response.status = negotiation_status::type::SASL_LIST_MECHANISMS_RESP;
     response.msg = blob::create_from_bytes(mech_list.data(), mech_list.length());
@@ -92,7 +92,7 @@ void server_negotiation::on_select_mechanism(negotiation_rpc rpc)
     }
 
     _selected_mechanism = request.msg.to_string();
-    if (supported_mechanisms.find(_selected_mechanism) == supported_mechanisms.end()) {
+    if (kSupportedMechanisms.find(_selected_mechanism) == kSupportedMechanisms.end()) {
         LOG_WARNING("the mechanism of {} is not supported", _selected_mechanism);
         fail_negotiation();
         return;

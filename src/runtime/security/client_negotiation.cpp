@@ -107,7 +107,7 @@ void client_negotiation::on_recv_mechanisms(const negotiation_response &resp)
     utils::split_args(resp_string.c_str(), server_support_mechanisms, ',');
 
     for (const std::string &server_support_mechanism : server_support_mechanisms) {
-        if (supported_mechanisms.find(server_support_mechanism) != supported_mechanisms.end()) {
+        if (kSupportedMechanisms.find(server_support_mechanism) != kSupportedMechanisms.end()) {
             match_mechanism = server_support_mechanism;
             break;
         }
@@ -115,7 +115,7 @@ void client_negotiation::on_recv_mechanisms(const negotiation_response &resp)
 
     if (match_mechanism.empty()) {
         LOG_WARNING("server only support mechanisms of ({}), can't find expected ({})",
-                    boost::join(supported_mechanisms, ","),
+                    fmt::join(kSupportedMechanisms, ","),
                     resp_string);
         fail_negotiation();
         return;

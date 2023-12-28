@@ -57,7 +57,7 @@ public:
 protected:
     // TODO(zlw):we can't get string list from cflags now,
     //  so we should get supported mechanisms from config in the later
-    static const std::set<std::string> supported_mechanisms;
+    static const std::set<std::string> kSupportedMechanisms;
 
     rpc_session_ptr _session;
     std::string _name;
