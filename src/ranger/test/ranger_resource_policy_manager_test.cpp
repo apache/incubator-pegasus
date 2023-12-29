@@ -27,9 +27,9 @@
 
 #include "common/json_helper.h"
 #include "gtest/gtest.h"
-#include "runtime/ranger/access_type.h"
-#include "runtime/ranger/ranger_resource_policy.h"
-#include "runtime/ranger/ranger_resource_policy_manager.h"
+#include "ranger/access_type.h"
+#include "ranger/ranger_resource_policy.h"
+#include "ranger/ranger_resource_policy_manager.h"
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
 #include "utils/flags.h"

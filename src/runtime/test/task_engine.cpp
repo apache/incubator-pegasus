@@ -32,7 +32,7 @@
 #include "runtime/global_config.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/enum_helper.h"
 #include "utils/threadpool_code.h"
 

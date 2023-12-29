@@ -32,7 +32,7 @@
 #include "gtest/gtest.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/async_calls.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/error_code.h"
 
 // this only works with the fault injector

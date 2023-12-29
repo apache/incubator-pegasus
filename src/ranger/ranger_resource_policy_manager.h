@@ -27,7 +27,7 @@
 #include "gtest/gtest_prod.h"
 #include "ranger_resource_policy.h"
 #include "rapidjson/document.h"
-#include "runtime/ranger/access_type.h"
+#include "ranger/access_type.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/enum_helper.h"
 #include "utils/error_code.h"

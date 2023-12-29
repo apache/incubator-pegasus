@@ -569,6 +569,17 @@ std::string path_combine(const std::string &path1, const std::string &path2)
     return npath;
 }
 
+std::string concat_path_unix_style(const std::string &prefix, const std::string &postfix)
+{
+    size_t pos1 = prefix.size(); // last_valid_pos + 1
+    while (pos1 > 0 && prefix[pos1 - 1] == '/')
+        pos1--;
+    size_t pos2 = 0; // first non '/' position
+    while (pos2 < postfix.size() && postfix[pos2] == '/')
+        pos2++;
+    return prefix.substr(0, pos1) + "/" + postfix.substr(pos2);
+}
+
 bool get_current_directory(std::string &path)
 {
     bool succ;

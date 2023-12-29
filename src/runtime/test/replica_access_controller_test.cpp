@@ -22,7 +22,7 @@
 
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
-#include "runtime/ranger/access_type.h"
+#include "ranger/access_type.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"

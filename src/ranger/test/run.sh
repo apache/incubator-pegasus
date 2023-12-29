@@ -1,3 +1,4 @@
+#!/bin/sh
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,24 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME dsn_replica_bulk_load_test)
-set(MY_PROJ_SRC "")
-set(MY_SRC_SEARCH_MODE "GLOB")
-set(MY_PROJ_LIBS
-        dsn_meta_server
-        dsn_ranger
-        dsn_replica_server
-        dsn_replication_common
-        dsn_runtime
-        hashtable
-        gtest
-        test_utils
-        rocksdb
-        lz4
-        zstd
-        snappy)
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
-set(MY_BINPLACES
-        config-test.ini
-        run.sh)
-dsn_add_test()
+if [ -z "${REPORT_DIR}" ]; then
+    REPORT_DIR="."
+fi
+
+rm -rf data dsn_ranger_tests.xml
+output_xml="${REPORT_DIR}/dsn_ranger_tests.xml"
+GTEST_OUTPUT="xml:${output_xml}" ./dsn_ranger_tests

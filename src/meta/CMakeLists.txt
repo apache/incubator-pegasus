@@ -23,17 +23,12 @@
 # THE SOFTWARE.
 
 set(MY_PROJ_NAME dsn_meta_server)
-
 set(DUPLICATION_SRC
         duplication/duplication_info.cpp
-        duplication/meta_duplication_service.cpp
-        )
-
-# Source files under CURRENT project directory will be automatically included.
-# You can manually set MY_PROJ_SRC to include source files under other directories.
+        duplication/meta_duplication_service.cpp)
 set(MY_PROJ_SRC "${DUPLICATION_SRC}")
-
 set(MY_PROJ_LIBS
+        dsn_ranger
         dsn_replication_common
         dsn.block_service
         dsn.block_service.local
@@ -51,12 +46,7 @@ set(MY_PROJ_LIBS
         lz4
         zstd
         snappy)
-
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
-
-# Extra files that will be installed
 set(MY_BINPLACES "")
-
 dsn_add_shared_library()
-
 add_subdirectory(test)

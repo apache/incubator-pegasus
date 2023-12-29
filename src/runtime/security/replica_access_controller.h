@@ -23,8 +23,8 @@
 
 #include "access_controller.h"
 #include "common/json_helper.h"
-#include "runtime/ranger/access_type.h"
-#include "runtime/ranger/ranger_resource_policy.h"
+#include "ranger/access_type.h"
+#include "ranger/ranger_resource_policy.h"
 #include "utils/synchronize.h"
 
 namespace dsn {

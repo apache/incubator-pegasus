@@ -15,22 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "access_type.h"
+#include <gtest/gtest.h>
 
-namespace dsn {
-namespace ranger {
+#include "runtime/app_model.h"
 
-access_type operator|(access_type lhs, access_type rhs)
+GTEST_API_ int main(int argc, char **argv)
 {
-    return access_type(static_cast<act>(lhs) | static_cast<act>(rhs));
+    testing::InitGoogleTest(&argc, argv);
+
+    int ret = RUN_ALL_TESTS();
+    dsn_exit(ret);
 }
-
-access_type operator&(access_type lhs, access_type rhs)
-{
-    return access_type(static_cast<act>(lhs) & static_cast<act>(rhs));
-}
-
-access_type &operator|=(access_type &lhs, access_type rhs) { return lhs = lhs | rhs; }
-
-} // namespace ranger
-} // namespace dsn

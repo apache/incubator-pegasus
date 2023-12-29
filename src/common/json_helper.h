@@ -59,7 +59,7 @@
 #include "consensus_types.h"
 #include "replica_admin_types.h"
 #include "common/replication_enums.h"
-#include "runtime/ranger/access_type.h"
+#include "ranger/access_type.h"
 
 #define JSON_ENCODE_ENTRY(out, prefix, T)                                                          \
     out.Key(#T);                                                                                   \

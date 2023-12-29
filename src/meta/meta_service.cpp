@@ -56,7 +56,7 @@
 #include "meta_split_service.h"
 #include "partition_split_types.h"
 #include "remote_cmd/remote_command.h"
-#include "runtime/ranger/ranger_resource_policy_manager.h"
+#include "ranger/ranger_resource_policy_manager.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "server_load_balancer.h"
@@ -64,6 +64,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/command_manager.h"
 #include "utils/factory_store.h"
+#include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
@@ -224,7 +225,7 @@ error_code meta_service::remote_storage_initialize()
     utils::split_args(FLAGS_cluster_root, slices, '/');
     std::string current = "";
     for (unsigned int i = 0; i != slices.size(); ++i) {
-        current = meta_options::concat_path_unix_style(current, slices[i]);
+        current = utils::filesystem::concat_path_unix_style(current, slices[i]);
         task_ptr tsk =
             _storage->create_node(current, LPC_META_CALLBACK, [&err](error_code ec) { err = ec; });
         tsk->wait();
@@ -445,16 +446,16 @@ error_code meta_service::start()
         LOG_INFO("initialize backup handler");
         _backup_handler = std::make_shared<backup_service>(
             this,
-            meta_options::concat_path_unix_style(_cluster_root, "backup"),
+            utils::filesystem::concat_path_unix_style(_cluster_root, "backup"),
             FLAGS_cold_backup_root,
             [](backup_service *bs) { return std::make_shared<policy_context>(bs); });
     }
 
     _bulk_load_svc = std::make_unique<bulk_load_service>(
-        this, meta_options::concat_path_unix_style(_cluster_root, "bulk_load"));
+        this, utils::filesystem::concat_path_unix_style(_cluster_root, "bulk_load"));
 
     // initialize the server_state
-    _state->initialize(this, meta_options::concat_path_unix_style(_cluster_root, "apps"));
+    _state->initialize(this, utils::filesystem::concat_path_unix_style(_cluster_root, "apps"));
     while ((err = _state->initialize_data_structure()) != ERR_OK) {
         if (err == ERR_OBJECT_NOT_FOUND && FLAGS_recover_from_replica_server) {
             LOG_INFO("can't find apps from remote storage, and "

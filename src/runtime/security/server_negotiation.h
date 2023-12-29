@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <set>
 #include <string>
 
 #include "negotiation.h"
@@ -28,7 +27,6 @@ class blob;
 class error_s;
 
 namespace security {
-extern const std::set<std::string> supported_mechanisms;
 
 // server_negotiation negotiates a session on server side.
 class server_negotiation : public negotiation

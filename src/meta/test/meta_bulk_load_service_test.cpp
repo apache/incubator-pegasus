@@ -41,7 +41,6 @@
 #include "gtest/gtest.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
-#include "meta/meta_options.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_service.h"
 #include "meta/meta_state_service_utils.h"
@@ -54,6 +53,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
+#include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
@@ -344,7 +344,7 @@ public:
 
         // initialize bulk load service
         _ms->_bulk_load_svc = std::make_unique<bulk_load_service>(
-            _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
+            _ms.get(), utils::filesystem::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
         mock_bulk_load_on_remote_storage(
             app_id_set, app_bulk_load_info_map, partition_bulk_load_info_map);
 

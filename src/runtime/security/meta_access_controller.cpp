@@ -19,8 +19,8 @@
 
 #include <vector>
 
-#include "runtime/ranger/ranger_resource_policy_manager.h"
-#include "runtime/ranger/ranger_resource_policy.h"
+#include "ranger/ranger_resource_policy_manager.h"
+#include "ranger/ranger_resource_policy.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_code.h"

@@ -16,12 +16,11 @@
 # under the License.
 
 set(MY_PROJ_NAME dsn_replica_dup_test)
-
 set(MY_PROJ_SRC "")
-
 set(MY_SRC_SEARCH_MODE "GLOB")
-
-set(MY_PROJ_LIBS dsn_meta_server
+set(MY_PROJ_LIBS
+        dsn_meta_server
+        dsn_ranger
         dsn_replica_server
         dsn.replication.zookeeper_provider
         dsn_replication_common
@@ -35,15 +34,11 @@ set(MY_PROJ_LIBS dsn_meta_server
         lz4
         zstd
         snappy)
-
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
-
 set(MY_BINPLACES
         config-test.ini
         log.1.0.handle_real_private_log
         log.1.0.all_loaded_are_write_empties
         log.1.0.handle_real_private_log2
-        run.sh
-)
-
+        run.sh)
 dsn_add_test()

@@ -28,9 +28,6 @@
 
 namespace dsn {
 namespace security {
-/// TODO(zlw):we can't get string list from cflags now,
-/// so we should get supported mechanisms from config in the later
-const std::set<std::string> supported_mechanisms{"GSSAPI"};
 
 DSN_DEFINE_bool(security, enable_auth, false, "whether open auth or not");
 DSN_DEFINE_bool(security,
@@ -39,6 +36,8 @@ DSN_DEFINE_bool(security,
                 "whether to enable kerberos for zookeeper client");
 DSN_DEFINE_bool(security, mandatory_auth, false, "wheter to do authertication mandatorily");
 DSN_TAG_VARIABLE(mandatory_auth, FT_MUTABLE);
+
+const std::set<std::string> negotiation::kSupportedMechanisms{"GSSAPI"};
 
 negotiation::~negotiation() {}
 

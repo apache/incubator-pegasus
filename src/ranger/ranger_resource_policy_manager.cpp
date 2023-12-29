@@ -38,19 +38,19 @@
 #include "common/replication_common.h"
 #include "dsn.layer2_types.h"
 #include "fmt/core.h"
-#include "meta/meta_options.h"
 #include "meta/meta_service.h"
 #include "meta/meta_state_service.h"
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
+#include "ranger/ranger_resource_policy.h"
+#include "ranger/ranger_resource_policy_manager.h"
 #include "ranger_resource_policy_manager.h"
 #include "rapidjson/allocators.h"
-#include "runtime/ranger/ranger_resource_policy.h"
-#include "runtime/ranger/ranger_resource_policy_manager.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
+#include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
@@ -205,7 +205,7 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
 void ranger_resource_policy_manager::start()
 {
     CHECK_NOTNULL(_meta_svc, "");
-    _ranger_policy_meta_root = dsn::replication::meta_options::concat_path_unix_style(
+    _ranger_policy_meta_root = dsn::utils::filesystem::concat_path_unix_style(
         _meta_svc->cluster_root(), "ranger_policy_meta_root");
     tasking::enqueue_timer(LPC_USE_RANGER_ACCESS_CONTROL,
                            &_tracker,

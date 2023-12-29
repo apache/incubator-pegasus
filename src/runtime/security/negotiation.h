@@ -18,6 +18,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -54,6 +55,10 @@ public:
     bool check_status(negotiation_status::type status, negotiation_status::type expected_status);
 
 protected:
+    // TODO(zlw):we can't get string list from cflags now,
+    //  so we should get supported mechanisms from config in the later
+    static const std::set<std::string> kSupportedMechanisms;
+
     rpc_session_ptr _session;
     std::string _name;
     negotiation_status::type _status;

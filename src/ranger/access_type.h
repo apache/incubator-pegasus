@@ -49,11 +49,17 @@ ENUM_END(access_type)
 
 using act = std::underlying_type<access_type>::type;
 
-access_type operator|(access_type lhs, access_type rhs);
+inline access_type operator|(access_type lhs, access_type rhs)
+{
+    return access_type(static_cast<act>(lhs) | static_cast<act>(rhs));
+}
 
-access_type operator&(access_type lhs, access_type rhs);
+inline access_type operator&(access_type lhs, access_type rhs)
+{
+    return access_type(static_cast<act>(lhs) & static_cast<act>(rhs));
+}
 
-access_type &operator|=(access_type &lhs, access_type rhs);
+inline access_type &operator|=(access_type &lhs, access_type rhs) { return lhs = lhs | rhs; }
 
 const access_type kAccessTypeNone = access_type::kInvalid;
 const access_type kAccessTypeAll = access_type::kRead | access_type::kWrite | access_type::kCreate |

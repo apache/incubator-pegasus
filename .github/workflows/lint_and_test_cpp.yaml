@@ -128,6 +128,7 @@ jobs:
           # TODO(wangdan): Since builtin_counters (memused.virt and memused.res) for perf-counters
           # have been removed and dsn_perf_counter_test depends on them, disable it.
           # - dsn_perf_counter_test
+          - dsn_ranger_tests
           - dsn_replica_backup_test
           - dsn_replica_bulk_load_test
           - dsn_replica_dup_test
@@ -202,6 +203,7 @@ jobs:
           # TODO(wangdan): Since builtin_counters (memused.virt and memused.res) for perf-counters
           # have been removed and dsn_perf_counter_test depends on them, disable it.
           # - dsn_perf_counter_test
+          - dsn_ranger_tests
           - dsn_replica_backup_test
           - dsn_replica_bulk_load_test
           - dsn_replica_dup_test
@@ -281,6 +283,7 @@ jobs:
 #          # TODO(wangdan): Since builtin_counters (memused.virt and memused.res) for perf-counters
 #          # have been removed and dsn_perf_counter_test depends on them, disable it.
 #          # - dsn_perf_counter_test
+#          - dsn_ranger_tests
 #          - dsn_replica_backup_test
 #          - dsn_replica_bulk_load_test
 #          - dsn_replica_dup_test
