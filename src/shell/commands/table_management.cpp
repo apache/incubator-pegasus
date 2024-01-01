@@ -38,7 +38,7 @@
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"

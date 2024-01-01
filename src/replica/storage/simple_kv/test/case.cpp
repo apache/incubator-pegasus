@@ -46,7 +46,7 @@
 #include "checker.h"
 #include "replica/replica_stub.h"
 #include "replica/storage/simple_kv/test/common.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"

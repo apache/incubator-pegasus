@@ -33,8 +33,8 @@
 #include <vector>
 
 #include "failure_detector/failure_detector.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
@@ -43,21 +43,25 @@ namespace dsn {
 namespace dist {
 class distributed_lock_service;
 } // namespace dist
+
 namespace fd {
 class beacon_ack;
 class beacon_msg;
 } // namespace fd
+
 template <typename TResponse>
 class rpc_replier;
 
 namespace replication {
 
 class fd_suboptions;
+
 class meta_service;
 
 namespace test {
 class test_checker;
 }
+
 class meta_server_failure_detector : public fd::failure_detector
 {
 public:

@@ -54,10 +54,10 @@
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -76,6 +76,7 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+
 namespace security {
 class kms_key_provider;
 } // namespace security
@@ -92,8 +93,9 @@ class configuration_query_by_node_response;
 class configuration_update_request;
 class potential_secondary_context;
 
-typedef rpc_holder<group_check_response, learn_notify_response> learn_completion_notification_rpc;
 typedef rpc_holder<group_check_request, group_check_response> group_check_rpc;
+typedef rpc_holder<group_check_response, learn_notify_response> learn_completion_notification_rpc;
+
 typedef rpc_holder<query_replica_decree_request, query_replica_decree_response>
     query_replica_decree_rpc;
 typedef rpc_holder<learn_request, learn_response> query_last_checkpoint_info_rpc;
@@ -113,12 +115,11 @@ class test_checker;
 }
 class cold_backup_context;
 class replica_split_manager;
-
-typedef std::unordered_map<gpid, replica_ptr> replicas;
 typedef std::function<void(const ::dsn::host_port & /*from*/,
                            const replica_configuration & /*new_config*/,
                            bool /*is_closing*/)>
     replica_state_subscriber;
+typedef std::unordered_map<gpid, replica_ptr> replicas;
 
 class replica_stub;
 
@@ -129,6 +130,7 @@ class replica_backup_server;
 
 // The replica_stub is the *singleton* entry to access all replica managed in the same process
 //   replica_stub(singleton) --> replica --> replication_app_base
+
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:

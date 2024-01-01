@@ -31,7 +31,7 @@
 #include "partition_resolver_manager.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
-#include "runtime/rpc/dns_resolver.h"
+#include "rpc/dns_resolver.h"
 #include "runtime/task/task_spec.h"
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"

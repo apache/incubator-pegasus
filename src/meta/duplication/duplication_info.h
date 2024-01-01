@@ -31,7 +31,7 @@
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -42,6 +42,7 @@ namespace dsn {
 namespace replication {
 
 class app_state;
+
 class duplication_info;
 
 using duplication_info_s_ptr = std::shared_ptr<duplication_info>;

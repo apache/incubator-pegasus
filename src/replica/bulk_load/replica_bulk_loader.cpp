@@ -18,11 +18,11 @@
 #include <fmt/core.h>
 #include <functional>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include <string_view>
 #include "block_service/block_service_manager.h"
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
@@ -36,10 +36,10 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_bulk_loader.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"

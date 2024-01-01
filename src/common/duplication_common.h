@@ -24,7 +24,7 @@
 #include <string>
 
 #include "duplication_types.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_utils.h"

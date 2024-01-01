@@ -24,9 +24,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <string_view>
 #include <type_traits>
 
-#include <string_view>
 #include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"
 #include "common/replica_envs.h"
@@ -39,11 +39,11 @@
 #include "meta/meta_state_service.h"
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"

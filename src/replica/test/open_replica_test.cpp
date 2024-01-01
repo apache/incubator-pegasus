@@ -31,8 +31,8 @@
 #include "mock_utils.h"
 #include "replica/replica_stub.h"
 #include "replica_test_base.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "utils/filesystem.h"
 

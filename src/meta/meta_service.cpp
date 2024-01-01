@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <string_view>
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <boost/lexical_cast.hpp>
@@ -32,6 +31,7 @@
 #include <chrono>
 #include <functional>
 #include <ostream>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -57,8 +57,8 @@
 #include "partition_split_types.h"
 #include "ranger/ranger_resource_policy_manager.h"
 #include "remote_cmd/remote_command.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "server_load_balancer.h"
 #include "server_state.h"

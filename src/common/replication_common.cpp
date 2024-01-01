@@ -34,8 +34,8 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "fmt/core.h"
-#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
+#include "rpc/rpc_address.h"
 #include "runtime/service_app.h"
 #include "utils/config_api.h"
 #include "utils/filesystem.h"

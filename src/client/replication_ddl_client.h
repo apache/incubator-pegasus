@@ -33,6 +33,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -43,11 +44,11 @@
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -59,7 +60,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include <string_view>
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);

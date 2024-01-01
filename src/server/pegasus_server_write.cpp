@@ -17,11 +17,11 @@
  * under the License.
  */
 
-#include <string_view>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <thrift/transport/TTransportException.h>
 #include <algorithm>
+#include <string_view>
 #include <utility>
 
 #include "base/pegasus_key_schema.h"
@@ -32,9 +32,9 @@
 #include "pegasus_server_impl.h"
 #include "pegasus_server_write.h"
 #include "pegasus_utils.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_message.h"
 #include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

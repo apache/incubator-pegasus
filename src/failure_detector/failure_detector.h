@@ -35,7 +35,7 @@
 
 #include "failure_detector/fd.client.h"
 #include "failure_detector/fd.server.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
@@ -46,6 +46,7 @@
 
 namespace dsn {
 class command_deregister;
+
 template <typename TResponse>
 class rpc_replier;
 

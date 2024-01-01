@@ -34,7 +34,7 @@
 #include <utility>
 
 #include "runtime/global_config.h"
-#include "runtime/rpc/message_parser_manager.h"
+#include "rpc/message_parser_manager.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"

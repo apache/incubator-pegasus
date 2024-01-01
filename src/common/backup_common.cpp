@@ -19,8 +19,8 @@
 
 #include "common/gpid.h"
 #include "fmt/core.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
 
 namespace dsn {
 namespace replication {

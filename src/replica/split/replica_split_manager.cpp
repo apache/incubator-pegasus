@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <functional>
+#include <string_view>
 #include <utility>
 
 #include "common/partition_split_common.h"
@@ -34,11 +35,11 @@
 #include "replica/replica_context.h"
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
@@ -48,7 +49,6 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include <string_view>
 #include "utils/thread_access_checker.h"
 
 METRIC_DEFINE_counter(replica,

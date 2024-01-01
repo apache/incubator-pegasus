@@ -35,12 +35,12 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include <string_view>
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
@@ -51,6 +51,7 @@
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
+#include "gutil/map_util.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
@@ -59,12 +60,12 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "security/access_controller.h"
@@ -74,7 +75,6 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "gutil/map_util.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"

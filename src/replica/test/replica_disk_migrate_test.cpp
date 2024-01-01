@@ -39,7 +39,7 @@
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_disk_test_base.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"

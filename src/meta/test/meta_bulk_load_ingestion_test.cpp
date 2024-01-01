@@ -24,13 +24,13 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
+#include "gutil/map_util.h"
 #include "meta/meta_bulk_load_ingestion_context.h"
 #include "meta/meta_data.h"
 #include "meta_test_base.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/fail_point.h"
-#include "gutil/map_util.h"
 
 namespace dsn {
 namespace replication {

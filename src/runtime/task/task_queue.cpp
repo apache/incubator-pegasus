@@ -28,9 +28,9 @@
 
 #include <string_view>
 #include "fmt/core.h"
-#include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_engine.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/network.h"
+#include "rpc/rpc_engine.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"
 #include "task_engine.h"

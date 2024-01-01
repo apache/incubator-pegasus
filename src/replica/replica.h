@@ -49,8 +49,8 @@
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
+#include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
@@ -73,6 +73,7 @@ class gpid;
 class host_port;
 
 namespace dist {
+
 namespace block_service {
 class block_filesystem;
 } // namespace block_service
@@ -85,6 +86,7 @@ namespace replication {
 
 class backup_request;
 class backup_response;
+
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -105,7 +107,6 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
-
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
 namespace test {

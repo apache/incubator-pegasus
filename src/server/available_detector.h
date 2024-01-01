@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/synchronize.h"

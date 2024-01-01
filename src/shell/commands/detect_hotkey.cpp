@@ -24,7 +24,7 @@
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "shell/argh.h"
 #include "shell/command_executor.h"
 #include "shell/command_utils.h"

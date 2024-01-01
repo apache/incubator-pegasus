@@ -28,7 +28,7 @@
 
 #include <string.h>
 
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 
 namespace dsn {
 

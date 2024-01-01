@@ -33,7 +33,7 @@
 #include "replica.h"
 #include "replica_context.h"
 #include "replica_stub.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "utils/utils.h"
 

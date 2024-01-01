@@ -32,7 +32,7 @@
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "test/function_test/utils/test_util.h"
 #include "utils/error_code.h"
 #include "utils/rand.h"

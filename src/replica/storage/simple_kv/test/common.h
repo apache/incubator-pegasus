@@ -37,8 +37,8 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/fmt_utils.h"
-#include "runtime/rpc/rpc_host_port.h"
 
 namespace dsn {
 class partition_configuration;
