@@ -41,7 +41,7 @@
 #include "replica_admin_types.h"
 #include "replica_disk_test_base.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"

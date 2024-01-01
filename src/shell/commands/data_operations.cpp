@@ -49,7 +49,7 @@
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/task/async_calls.h"
 #include "shell/args.h"
 #include "shell/command_executor.h"

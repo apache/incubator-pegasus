@@ -36,8 +36,8 @@
 
 #include "gtest/gtest.h"
 #include "runtime/api_task.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"

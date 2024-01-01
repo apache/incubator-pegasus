@@ -30,8 +30,8 @@
 #include <vector>
 
 #include "failure_detector/failure_detector.h"
-#include "runtime/rpc/group_address.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/group_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 

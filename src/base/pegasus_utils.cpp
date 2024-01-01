@@ -26,7 +26,7 @@
 #include <sys/socket.h>
 #include <cctype>
 
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
 
 namespace pegasus {

@@ -35,7 +35,7 @@
 #include <vector>
 
 #include "meta_data.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/extensible_object.h"
 
 namespace dsn {

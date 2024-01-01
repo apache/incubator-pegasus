@@ -28,7 +28,7 @@
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"

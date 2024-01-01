@@ -21,9 +21,9 @@
 #include <utility>
 
 #include "gtest/gtest.h"
-#include "runtime/rpc/network.sim.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/network.sim.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
 #include "security/negotiation.h"
 #include "security/negotiation_utils.h"
 #include "security_types.h"

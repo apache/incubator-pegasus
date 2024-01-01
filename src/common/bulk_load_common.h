@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <string>
 
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 
 namespace dsn {
 namespace replication {

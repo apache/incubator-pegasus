@@ -22,7 +22,7 @@
 #include <unordered_map>
 
 #include "common/gpid.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/flags.h"
 
 namespace dsn {

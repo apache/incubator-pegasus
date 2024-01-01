@@ -36,7 +36,7 @@
 #include "replica/mutation_log.h"
 #include "replica/test/mock_utils.h"
 #include "runtime/pipeline.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"

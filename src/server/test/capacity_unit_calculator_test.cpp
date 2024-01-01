@@ -31,7 +31,7 @@
 #include "pegasus_server_test_base.h"
 #include "replica_admin_types.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "server/capacity_unit_calculator.h"
 #include "server/hotkey_collector.h"
 #include "utils/autoref_ptr.h"

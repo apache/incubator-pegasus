@@ -26,7 +26,7 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "replica/replica_base.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"

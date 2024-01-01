@@ -32,7 +32,7 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/commands.h"

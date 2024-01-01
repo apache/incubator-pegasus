@@ -32,8 +32,8 @@
 #include <vector>
 
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
 #include "runtime/task/task.h"
 
 namespace dsn {

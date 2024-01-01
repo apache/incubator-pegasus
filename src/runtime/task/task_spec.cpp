@@ -31,7 +31,7 @@
 #include <memory>
 #include <thread>
 
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_spec.h"

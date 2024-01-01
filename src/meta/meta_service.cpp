@@ -57,7 +57,7 @@
 #include "partition_split_types.h"
 #include "remote_cmd/remote_command.h"
 #include "ranger/ranger_resource_policy_manager.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "server_load_balancer.h"
 #include "server_state.h"

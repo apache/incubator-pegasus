@@ -35,7 +35,7 @@
 #include "common/replication_other_types.h"
 #include "meta/meta_state_service_utils.h"
 #include "meta_bulk_load_ingestion_context.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/task/task_tracker.h"
 #include "server_state.h"
 #include "utils/error_code.h"

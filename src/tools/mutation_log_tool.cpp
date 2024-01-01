@@ -39,7 +39,7 @@
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

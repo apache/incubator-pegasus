@@ -35,7 +35,7 @@
 #include "meta/meta_data.h"
 #include "metadata_types.h"
 #include "misc/misc.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 
 using namespace dsn::replication;
 

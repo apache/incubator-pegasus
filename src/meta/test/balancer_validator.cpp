@@ -47,7 +47,7 @@
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {

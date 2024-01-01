@@ -62,7 +62,7 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include "fmt/core.h"
 #include "profiler_header.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"

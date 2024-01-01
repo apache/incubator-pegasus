@@ -48,7 +48,7 @@
 #include "fmt/format.h"
 #include "meta/meta_rpc_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/group_address.h"
+#include "rpc/group_address.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"

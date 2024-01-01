@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
 #include "duplication_types.h"

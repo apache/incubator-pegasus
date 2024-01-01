@@ -31,8 +31,8 @@
 #include "common/replication_enums.h"
 #include "meta_data.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_message.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 

@@ -36,7 +36,7 @@
 
 #include "common/json_helper.h"
 #include "gtest/gtest.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/blob.h"
 
 namespace dsn {

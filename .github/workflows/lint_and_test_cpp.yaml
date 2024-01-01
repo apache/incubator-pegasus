@@ -138,6 +138,7 @@ jobs:
           - dsn_replica_bulk_load_test
           - dsn_replica_dup_test
           - dsn_replica_split_test
+          - dsn_rpc_tests
           - dsn.replica.test
           - dsn_replication_common_test
           - dsn.replication.simple_kv
@@ -219,6 +220,7 @@ jobs:
           - dsn_replica_bulk_load_test
           - dsn_replica_dup_test
           - dsn_replica_split_test
+          - dsn_rpc_tests
           - dsn.replica.test
           - dsn_replication_common_test
           - dsn.replication.simple_kv
@@ -305,6 +307,7 @@ jobs:
 #          - dsn_replica_bulk_load_test
 #          - dsn_replica_dup_test
 #          - dsn_replica_split_test
+#          - dsn_rpc_tests
 #          - dsn.replica.test
 #          - dsn_replication_common_test
 #          - dsn.replication.simple_kv

@@ -35,7 +35,7 @@
 
 #include "common.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "utils/fmt_utils.h"
 #include "utils/singleton.h"

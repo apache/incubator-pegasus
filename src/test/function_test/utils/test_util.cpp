@@ -40,7 +40,7 @@
 #include "nlohmann/detail/iterators/iter_impl.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"
 #include "test_util/test_util.h"

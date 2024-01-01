@@ -34,7 +34,7 @@
 
 #include "client/partition_resolver.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"

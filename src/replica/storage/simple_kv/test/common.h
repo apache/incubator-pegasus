@@ -37,7 +37,7 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/fmt_utils.h"
 
 namespace dsn {

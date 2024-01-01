@@ -39,7 +39,7 @@
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

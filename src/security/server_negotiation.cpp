@@ -22,8 +22,8 @@
 
 #include "fmt/core.h"
 #include "fmt/format.h"
-#include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/network.h"
+#include "rpc/rpc_address.h"
 #include "security/negotiation.h"
 #include "security/sasl_wrapper.h"
 #include "security_types.h"

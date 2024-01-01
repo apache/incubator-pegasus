@@ -30,8 +30,8 @@
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/test/mock_utils.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_message.h"
 #include "utils/error_code.h"
 
 namespace dsn {

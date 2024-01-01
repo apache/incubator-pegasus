@@ -33,7 +33,7 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "meta_data.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/enum_helper.h"
 #include "utils/zlocks.h"
 

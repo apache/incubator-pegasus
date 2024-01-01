@@ -32,7 +32,7 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "kill_testor.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

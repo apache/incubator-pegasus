@@ -33,7 +33,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
@@ -246,6 +246,8 @@ static bool fault_on_rpc_call(task *caller, message_ex *req, rpc_response_task *
                  req->to_address);
         return false;
     } else {
+        // TODO(yingchun): this fault can not be injected successfully, the tests
+        // corrupt_message_test* are disabled now.
         if (rand::next_double01() < opt.rpc_request_data_corrupted_ratio) {
             LOG_INFO("corrupt the rpc call message from: {}, type: {}",
                      req->header->from_address,

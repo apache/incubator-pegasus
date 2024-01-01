@@ -33,8 +33,8 @@
 
 #include "geo/lib/geo_client.h"
 #include "proxy_layer.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/rpc_stream.h"
+#include "rpc/rpc_message.h"
+#include "rpc/rpc_stream.h"
 #include "utils/blob.h"
 #include "utils/zlocks.h"
 

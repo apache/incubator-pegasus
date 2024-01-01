@@ -34,8 +34,8 @@
 
 #include "common/gpid.h"
 #include "runtime/node_scoper.h"
-#include "runtime/rpc/rpc_engine.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_engine.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_engine.h"
 #include "runtime/task/task_spec.h"
