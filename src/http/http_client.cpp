@@ -333,9 +333,11 @@ dsn::error_s http_client::exec_method(std::string *response)
     return exec_method(callback);
 }
 
-dsn::error_s http_client::get_http_status(long &http_status) const
+dsn::error_s http_client::get_http_status(http_status_code &status_code) const
 {
-    RETURN_IF_GETINFO_NOT_OK(CURLINFO_RESPONSE_CODE, &http_status);
+    long response_code;
+    RETURN_IF_GETINFO_NOT_OK(CURLINFO_RESPONSE_CODE, &response_code);
+    status_code = enum_from_val(response_code, http_status_code::kInvalidCode);
     return dsn::error_s::ok();
 }
 

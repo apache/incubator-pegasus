@@ -112,10 +112,10 @@ INSTANTIATE_TEST_CASE_P(EnumHelperTest,
                         testing::ValuesIn(command_type_enum_to_string_tests));
 
 #define ENUM_FOREACH_STATUS_CODE(DEF)                                                              \
-    DEF(Ok)                                                                                        \
-    DEF(NotFound)                                                                                  \
-    DEF(Corruption)                                                                                \
-    DEF(IOError)
+    DEF(Ok, 100, status_code)                                                                      \
+    DEF(NotFound, 101, status_code)                                                                \
+    DEF(Corruption, 102, status_code)                                                              \
+    DEF(IOError, 103, status_code)
 
 enum class status_code
 {
@@ -123,11 +123,14 @@ enum class status_code
     kInvalidCode,
 };
 
-#define ENUM_CONST_REG_STR_STATUS_CODE(str) ENUM_CONST_REG_STR(status_code, str)
+#define ENUM_CONST_REG_STR_STATUS_CODE(str, ...) ENUM_CONST_REG_STR(status_code, str)
 
 ENUM_BEGIN(status_code, status_code::kInvalidCode)
 ENUM_FOREACH_STATUS_CODE(ENUM_CONST_REG_STR_STATUS_CODE)
 ENUM_END(status_code)
+
+ENUM_CONST_DEF_FROM_VAL_FUNC(long, status_code, ENUM_FOREACH_STATUS_CODE)
+ENUM_CONST_DEF_TO_VAL_FUNC(long, status_code, ENUM_FOREACH_STATUS_CODE)
 
 using status_code_enum_from_string_case = std::tuple<std::string, status_code>;
 
@@ -207,5 +210,69 @@ const std::vector<status_code_enum_to_string_case> status_code_enum_to_string_te
 INSTANTIATE_TEST_CASE_P(EnumHelperTest,
                         StatusCodeEnumToStringTest,
                         testing::ValuesIn(status_code_enum_to_string_tests));
+
+using status_code_enum_from_long_case = std::tuple<long, status_code>;
+
+class StatusCodeEnumFromLongTest : public testing::TestWithParam<status_code_enum_from_long_case>
+{
+};
+
+TEST_P(StatusCodeEnumFromLongTest, EnumFromLong)
+{
+    long val;
+    status_code expected_code;
+    std::tie(val, expected_code) = GetParam();
+
+    auto actual_code = enum_from_val(val, status_code::kInvalidCode);
+    EXPECT_EQ(expected_code, actual_code);
+}
+
+const std::vector<status_code_enum_from_long_case> status_code_enum_from_long_tests = {
+    {-1, status_code::kInvalidCode},
+    {99, status_code::kInvalidCode},
+    {100, status_code::kOk},
+    {101, status_code::kNotFound},
+    {102, status_code::kCorruption},
+    {103, status_code::kIOError},
+    {104, status_code::kInvalidCode},
+    {105, status_code::kInvalidCode},
+    {106, status_code::kInvalidCode},
+    {10000, status_code::kInvalidCode},
+};
+
+INSTANTIATE_TEST_CASE_P(EnumHelperTest,
+                        StatusCodeEnumFromLongTest,
+                        testing::ValuesIn(status_code_enum_from_long_tests));
+
+using status_code_enum_to_long_case = std::tuple<status_code, long>;
+
+class StatusCodeEnumToLongTest : public testing::TestWithParam<status_code_enum_to_long_case>
+{
+};
+
+const long kInvalidStatus = -1;
+
+TEST_P(StatusCodeEnumToLongTest, EnumToLong)
+{
+    status_code code;
+    long expected_val;
+    std::tie(code, expected_val) = GetParam();
+
+    long actual_val(enum_to_val(code, kInvalidStatus));
+    EXPECT_EQ(expected_val, actual_val);
+}
+
+const std::vector<status_code_enum_to_long_case> status_code_enum_to_long_tests = {
+    {status_code::kOk, 100},
+    {status_code::kNotFound, 101},
+    {status_code::kCorruption, 102},
+    {status_code::kIOError, 103},
+    {status_code::kCount, kInvalidStatus},
+    {status_code::kInvalidCode, kInvalidStatus},
+};
+
+INSTANTIATE_TEST_CASE_P(EnumHelperTest,
+                        StatusCodeEnumToLongTest,
+                        testing::ValuesIn(status_code_enum_to_long_tests));
 
 } // namespace dsn

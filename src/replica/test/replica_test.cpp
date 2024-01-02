@@ -40,6 +40,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "metadata_types.h"
 #include "replica/disk_cleaner.h"
 #include "replica/replica.h"
@@ -308,12 +309,12 @@ TEST_P(replica_test, query_data_version_test)
         std::string app_id;
         http_status_code expected_code;
         std::string expected_response_json;
-    } tests[] = {{"", http_status_code::bad_request, "app_id should not be empty"},
-                 {"wrong", http_status_code::bad_request, "invalid app_id=wrong"},
+    } tests[] = {{"", http_status_code::kBadRequest, "app_id should not be empty"},
+                 {"wrong", http_status_code::kBadRequest, "invalid app_id=wrong"},
                  {"2",
-                  http_status_code::ok,
+                  http_status_code::kOk,
                   R"({"1":{"data_version":"1"}})"},
-                 {"4", http_status_code::not_found, "app_id=4 not found"}};
+                 {"4", http_status_code::kNotFound, "app_id=4 not found"}};
     for (const auto &test : tests) {
         http_request req;
         http_response resp;
@@ -335,13 +336,13 @@ TEST_P(replica_test, query_compaction_test)
         std::string app_id;
         http_status_code expected_code;
         std::string expected_response_json;
-    } tests[] = {{"", http_status_code::bad_request, "app_id should not be empty"},
-                 {"xxx", http_status_code::bad_request, "invalid app_id=xxx"},
+    } tests[] = {{"", http_status_code::kBadRequest, "app_id should not be empty"},
+                 {"xxx", http_status_code::kBadRequest, "invalid app_id=xxx"},
                  {"2",
-                  http_status_code::ok,
+                  http_status_code::kOk,
                   R"({"status":{"finished":0,"idle":1,"queuing":0,"running":0}})"},
                  {"4",
-                  http_status_code::ok,
+                  http_status_code::kOk,
                   R"({"status":{"finished":0,"idle":0,"queuing":0,"running":0}})"}};
     for (const auto &test : tests) {
         http_request req;

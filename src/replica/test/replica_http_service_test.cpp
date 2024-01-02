@@ -26,6 +26,7 @@
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "replica/replica_http_service.h"
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
@@ -73,7 +74,7 @@ public:
 
         http_response resp;
         _http_svc->update_config_handler(req, resp);
-        ASSERT_EQ(resp.status_code, http_status_code::ok);
+        ASSERT_EQ(resp.status_code, http_status_code::kOk);
         ASSERT_EQ(expect_resp, resp.body);
     }
 
@@ -83,7 +84,7 @@ public:
         http_response resp;
         req.query_args["name"] = config;
         get_config(req, resp);
-        ASSERT_EQ(resp.status_code, http_status_code::ok);
+        ASSERT_EQ(resp.status_code, http_status_code::kOk);
         const string unfilled_resp =
             R"({{"name":"config_sync_interval_ms","section":"replication","type":"FV_UINT32","tags":"flag_tag::FT_MUTABLE","description":"The interval milliseconds of replica server to syncs replica configuration with meta server","value":"{}"}})"
             "\n";

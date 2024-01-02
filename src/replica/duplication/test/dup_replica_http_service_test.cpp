@@ -26,6 +26,7 @@
 #include "duplication_types.h"
 #include "gtest/gtest.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/replica_http_service.h"
 #include "replica/test/mock_utils.h"
@@ -55,22 +56,22 @@ TEST_P(dup_replica_http_service_test, query_duplication_handler)
     http_request req;
     http_response resp;
     http_svc.query_duplication_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::bad_request); // no appid
+    ASSERT_EQ(resp.status_code, http_status_code::kBadRequest); // no appid
 
     req.query_args["appid"] = "2";
     http_svc.query_duplication_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::not_found);
+    ASSERT_EQ(resp.status_code, http_status_code::kNotFound);
 
     req.query_args["appid"] = "2xx";
     http_svc.query_duplication_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::bad_request);
+    ASSERT_EQ(resp.status_code, http_status_code::kBadRequest);
 
     auto dup = find_dup(pri, ent.dupid);
     dup->update_progress(duplication_progress().set_last_decree(1050).set_confirmed_decree(1000));
     pri->set_last_committed_decree(1100);
     req.query_args["appid"] = "1";
     http_svc.query_duplication_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
     ASSERT_EQ(
         R"({"1583306653":{"1.1":{"duplicating":false,"fail_mode":"FAIL_SLOW","not_confirmed_mutations_num":100,"not_duplicated_mutations_num":50}}})",
         resp.body);

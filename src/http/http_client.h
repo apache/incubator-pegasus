@@ -24,6 +24,7 @@
 #include <unordered_map>
 
 #include "http/http_method.h"
+#include "http/http_status_code.h"
 #include "utils/errors.h"
 #include "utils/ports.h"
 #include "absl/strings/string_view.h"
@@ -44,7 +45,7 @@ namespace dsn {
 // auto err = client.init();
 //
 // Specify the target url that you would request for:
-// err = client.set_url(method);
+// err = client.set_url("http://<ip>:<port>/your/path");
 //
 // If you would use GET method, call `with_get_method`:
 // err = client.with_get_method();
@@ -67,8 +68,8 @@ namespace dsn {
 // err = client.exec_method(&response);
 //
 // Get the http status code after requesting:
-// long http_status;
-// err = client.get_http_status(http_status);
+// http_status_code status_code;
+// err = client.get_http_status(status_code);
 class http_client
 {
 public:
@@ -118,7 +119,7 @@ public:
     dsn::error_s exec_method(std::string *response);
 
     // Get the last http status code after requesting.
-    dsn::error_s get_http_status(long &http_status) const;
+    dsn::error_s get_http_status(http_status_code &status_code) const;
 
 private:
     using header_field_map = std::unordered_map<std::string, std::string>;

@@ -25,6 +25,7 @@
 
 #include "http/http_method.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
 #include "utils/blob.h"
@@ -66,7 +67,7 @@ private:
     {
         if (req.method != target_method) {
             resp.body = fmt::format("please use {} method", enum_to_string(target_method));
-            resp.status_code = dsn::http_status_code::bad_request;
+            resp.status_code = dsn::http_status_code::kBadRequest;
             return;
         }
 
@@ -78,7 +79,7 @@ private:
 
         resp.body =
             fmt::format("you are using {} method{}", enum_to_string(target_method), postfix);
-        resp.status_code = dsn::http_status_code::ok;
+        resp.status_code = dsn::http_status_code::kOk;
     }
 
     DISALLOW_COPY_AND_ASSIGN(test_http_service);
