@@ -30,14 +30,7 @@ runs:
             - 'thirdparty/**'
     - name: Unpack prebuilt third-parties
       if: steps.changes.outputs.thirdparty == 'false'
-      run: |
-        rm -f /root/thirdparties-src.zip
-        unzip /root/thirdparties-bin.zip -d ./thirdparty
-        rm -f /root/thirdparties-bin.zip
-        find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-        rm -rf ./thirdparty/hadoop-bin/share/doc
-        rm -rf ./thirdparty/zookeeper-bin/docs
-      shell: bash
+      uses: "./.github/actions/unpack_prebuilt_thirdparties"
     - name: Rebuild third-parties
       if: steps.changes.outputs.thirdparty == 'true'
       working-directory: thirdparty

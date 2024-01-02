@@ -15,19 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Download artifact
+name: Unpack prebuilt third-parties
 runs:
   using: composite
   steps:
-    - name: Unpack prebuilt third-parties
-      uses: "./.github/actions/unpack_prebuilt_thirdparties"
-    - name: Download tarball
-      uses: actions/download-artifact@v3
-      with:
-        name: ${{ env.ARTIFACT_NAME }}_artifact_${{ github.sha }}
-        path: .
-    - name: Unpack tarball
+    - name: Unpack
       run: |
-        tar -zxvf ${ARTIFACT_NAME}_builder.tar
-        rm -f ${ARTIFACT_NAME}_builder.tar
+        rm -f /root/thirdparties-src.zip
+        unzip /root/thirdparties-bin.zip -d ./thirdparty
+        rm -f /root/thirdparties-bin.zip
+        find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+        rm -rf ./thirdparty/hadoop-bin/share/doc
+        rm -rf ./thirdparty/zookeeper-bin/docs
       shell: bash
