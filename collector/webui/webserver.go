@@ -20,7 +20,10 @@ package webui
 import (
 	"context"
 	"time"
+	"net/http"
 
+	"github.com/limowang/incubator-pegasus/collector/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/kataras/iris/v12"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -53,9 +56,22 @@ func StartWebServer() {
 	app.RegisterView(tmpl)
 
 	go func() {
-		err := app.Listen(":8080")
+		err := app.Listen(":8081")
 		if err != nil {
 			return
 		}
 	}()
+
+	//Provide metrics for prometheus
+	registry := prometheus.NewRegistry()
+	for _, cV := range metrics.CounterMetricsMap {
+		registry.MustRegister(cV)
+	}
+	for _, gV := range metrics.GaugeMetricsMap {
+		registry.MustRegister(gV)
+	}
+	
+	http.Handle("/metrics",promhttp.Handler())
+
+	http.ListenAndServe(":8080",nil)
 }

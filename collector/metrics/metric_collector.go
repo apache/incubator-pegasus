@@ -67,22 +67,13 @@ func NewMetricCollector(
 	dataSource int,
 	detectInterval time.Duration,
 	detectTimeout time.Duration) MetricCollector {
-	DataSource = dataSource
-	GaugeMetricsMap = make(map[string]prometheus.GaugeVec, 128)
-	CounterMetricsMap = make(map[string]prometheus.CounterVec, 128)
-	SummaryMetricsMap = make(map[string]prometheus.Summary, 128)
-	RoleByDataSource = make(map[int]string, 128)
-	TableNameByID = make(map[string]string, 128)
-	RoleByDataSource[0] = "meta_server"
-	RoleByDataSource[1] = "replica_server"
-	initMetrics()
-
-	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout}
+	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout,dataSource: dataSource}
 }
 
 type Collector struct {
 	detectInterval time.Duration
 	detectTimeout  time.Duration
+	dataSource int
 }
 
 func (collector *Collector) Start(tom *tomb.Tomb) error {
@@ -123,19 +114,8 @@ func getReplicaAddrs() ([]string, error) {
 	return rserverAddrs, nil
 }
 
-// Register all metrics.
-func initMetrics() {
-	var addrs []string
-	var err error
-	if DataSource == MetaServer {
-		addrs = viper.GetStringSlice("meta_servers")
-	} else {
-		addrs, err = getReplicaAddrs()
-		if err != nil {
-			log.Errorf("Get replica server address failed, err: %s", err)
-			return
-		}
-	}
+//Get all metrics of meta-server and replica-server by their addrs
+func getAllMetricsByAddrs(addrs []string) {
 	for _, addr := range addrs {
 		data, err := getOneServerMetrics(addr)
 		if err != nil {
@@ -167,17 +147,15 @@ func initMetrics() {
 						Help: desc,
 					}, []string{"endpoint", "role", "level", "title"})
 					GaugeMetricsMap[name] = *gaugeMetric
-				case "Percentile":
-					if _, ok := SummaryMetricsMap[name]; ok {
+				case "Percentile":				//这个需要改动不能用这个表示,用gauge来表示分位数  --level(p50,p99),title(task_name)来替代区分
+					if _, ok := GaugeMetricsMap[name]; ok {
 						continue
 					}
-					summaryMetric := promauto.NewSummary(prometheus.SummaryOpts{
+					gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
 						Name: name,
 						Help: desc,
-						Objectives: map[float64]float64{
-							0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001, 0.999: 0.0001},
-					})
-					SummaryMetricsMap[name] = summaryMetric
+					}, []string{"endpoint", "role", "level", "title"})
+					GaugeMetricsMap[name] = *gaugeMetric
 				case "Histogram":
 				default:
 					log.Errorf("Unsupport metric type %s", mtype)
@@ -185,6 +163,28 @@ func initMetrics() {
 			}
 		}
 	}
+}
+
+// Register all metrics.
+func InitMetrics() {
+	GaugeMetricsMap = make(map[string]prometheus.GaugeVec, 256)
+	CounterMetricsMap = make(map[string]prometheus.CounterVec, 256)
+	SummaryMetricsMap = make(map[string]prometheus.Summary, 256)
+	RoleByDataSource = make(map[int]string, 128)
+	TableNameByID = make(map[string]string, 256)
+	RoleByDataSource[0] = "meta_server"
+	RoleByDataSource[1] = "replica_server"
+
+
+	var addrs []string
+	addrs = viper.GetStringSlice("meta_servers")
+	replicAddrs,err := getReplicaAddrs()
+	if(err != nil) {
+		log.Errorf("Get raw metrics from %s failed, err: %s", replicAddrs, err)
+ 		return
+	}
+	addrs = append(addrs,replicAddrs...)
+	getAllMetricsByAddrs(addrs)
 }
 
 // Parse metric data and update metrics.

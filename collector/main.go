@@ -26,9 +26,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pegasus-kv/collector/avail"
-	"github.com/pegasus-kv/collector/metrics"
-	"github.com/pegasus-kv/collector/webui"
+	// "github.com/pegasus-kv/collector/avail"
+	// "github.com/pegasus-kv/collector/metrics"
+	// "github.com/pegasus-kv/collector/webui"
+	"github.com/limowang/incubator-pegasus/collector/avail"
+	"github.com/limowang/incubator-pegasus/collector/metrics"
+	"github.com/limowang/incubator-pegasus/collector/webui"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -81,7 +84,8 @@ func main() {
 		return
 	}
 
-	webui.StartWebServer()
+	metrics.InitMetrics()
+	//webui.StartWebServer()
 
 	tom := &tomb.Tomb{}
 	setupSignalHandler(func() {
@@ -97,5 +101,8 @@ func main() {
 	tom.Go(func() error {
 		return metrics.NewReplicaServerMetricCollector().Start(tom)
 	})
+
+
+	webui.StartWebServer()
 	<-tom.Dead() // gracefully wait until all goroutines dead
 }
