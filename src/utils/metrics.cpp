@@ -478,18 +478,19 @@ void encode_port(dsn::metric_json_writer &writer)
 
 } // anonymous namespace
 
-void metric_registry::encode_entities(metric_json_writer &writer, const metric_filters &filters) const
+void metric_registry::encode_entities(metric_json_writer &writer,
+                                      const metric_filters &filters) const
 {
     writer.Key(dsn::kMetricEntitiesField.c_str());
 
     writer.StartArray();
 
-    { 
-    utils::auto_read_lock l(_lock);
+    {
+        utils::auto_read_lock l(_lock);
 
-    for (const auto &entity : _entities) {
-        entity.second->take_snapshot(writer, filters);
-    }
+        for (const auto &entity : _entities) {
+            entity.second->take_snapshot(writer, filters);
+        }
     }
 
     writer.EndArray();

@@ -692,6 +692,8 @@ private:
                                             const std::string &id,
                                             const metric_entity::attr_map &attrs);
 
+    void encode_entities(metric_json_writer &writer, const metric_filters &filters) const;
+
     // These functions are used to retire stale entities.
     //
     // Since retirement is infrequent, there tend to be no entity that should be retired.
