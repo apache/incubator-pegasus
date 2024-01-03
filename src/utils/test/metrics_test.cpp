@@ -2267,22 +2267,35 @@ TEST(metrics_test, take_snapshot_entity)
     }
 }
 
+const std::unordered_set<std::string> kAllMetricQueryFields = {kMetricClusterField,
+                                                               kMetricRoleField,
+                                                               kMetricHostField,
+                                                               kMetricPortField,
+                                                               kMetricEntitiesField};
+
 void check_entity_ids_from_json_string(const std::string &json_string,
                                        const std::unordered_set<std::string> &expected_entity_ids)
 {
-    // Even if there is not any entity selected, `json_string` should be "[]".
+    // Even if there is not any entity selected, `json_string` should not be empty.
     ASSERT_FALSE(json_string.empty());
 
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
 
+    // The root struct should be an object.
+    ASSERT_TRUE(doc.IsObject());
+    for (const auto &field : kAllMetricQueryFields) {
+        ASSERT_TRUE(doc.HasMember(field.c_str()));
+    }
+
     // Actual entity ids parsed from json string.
     std::unordered_set<std::string> actual_entity_ids;
 
     // The json format for entities should be an array.
-    ASSERT_TRUE(doc.IsArray());
-    for (const auto &entity : doc.GetArray()) {
+    const auto &entities = doc.FindMember(kMetricEntitiesField.c_str())->value;
+    ASSERT_TRUE(entities.IsArray());
+    for (const auto &entity : entities.GetArray()) {
         // The json format for each entity should be an object.
         ASSERT_TRUE(entity.IsObject());
 
@@ -2429,12 +2442,19 @@ void check_entities_from_json_string(const std::string &json_string,
         return;
     }
 
+    // The successful response should be an object.
+    ASSERT_TRUE(doc.IsObject());
+    for (const auto &field : kAllMetricQueryFields) {
+        ASSERT_TRUE(doc.HasMember(field.c_str()));
+    }
+
     // Actual entities parsed from json string.
     entity_container actual_entities;
 
     // The json format for entities should be an array.
-    ASSERT_TRUE(doc.IsArray());
-    for (const auto &entity : doc.GetArray()) {
+    const auto &entities = doc.FindMember(kMetricEntitiesField.c_str())->value;
+    ASSERT_TRUE(entities.IsArray());
+    for (const auto &entity : entities.GetArray()) {
         // The json format for each entity should be an object.
         ASSERT_TRUE(entity.IsObject());
 

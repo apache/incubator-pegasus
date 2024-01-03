@@ -46,6 +46,7 @@ if (APPLE)
     target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_http)
 else()
     dsn_add_shared_library()
+    target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_replication_common)
 endif()
 
 add_subdirectory(long_adder_bench)

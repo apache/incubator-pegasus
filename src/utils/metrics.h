@@ -347,11 +347,12 @@ const std::string kMetricEntityTypeField = "type";
 const std::string kMetricEntityIdField = "id";
 const std::string kMetricEntityAttrsField = "attributes";
 const std::string kMetricEntityMetricsField = "metrics";
-const std::string kMetricEntitiesField = "entities";
+
 const std::string kMetricClusterField = "cluster";
 const std::string kMetricRoleField = "role";
 const std::string kMetricHostField = "host";
 const std::string kMetricPortField = "port";
+const std::string kMetricEntitiesField = "entities";
 
 class metric_entity : public ref_counter
 {

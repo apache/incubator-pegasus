@@ -29,7 +29,9 @@
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "runtime/api_layer1.h"
-#include "runtime/service_app.h"
+#include "runtime/rpc/rpc_engine.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
 #include "utils/flags.h"
 #include "utils/rand.h"
 #include "utils/shared_io_service.h"
@@ -441,18 +443,35 @@ metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_pro
     return entity;
 }
 
+DSN_DECLARE_string(cluster_name);
+
 namespace {
+
+#define ENCODE_UNKNOWN_IF(expr)                                                                    \
+    do {                                                                                           \
+        if (dsn_unlikely(expr)) {                                                                  \
+            dsn::json::json_encode(writer, "unknown");                                             \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
 
 void encode_cluster(dsn::metric_json_writer &writer)
 {
     writer.Key(dsn::kMetricClusterField.c_str());
-    dsn::json::json_encode(writer, dsn::get_current_cluster_name());
+
+    ENCODE_UNKNOWN_IF(utils::is_empty(dsn::FLAGS_cluster_name));
+
+    dsn::json::json_encode(writer, dsn::FLAGS_cluster_name);
 }
 
 void encode_role(dsn::metric_json_writer &writer)
 {
     writer.Key(dsn::kMetricRoleField.c_str());
-    dsn::json::json_encode(writer, dsn::service_app::current_service_app_info().full_name);
+
+    const auto *const node = dsn::task::get_current_node2();
+    ENCODE_UNKNOWN_IF(node == nullptr);
+
+    dsn::json::json_encode(writer, node->get_service_app_info().full_name);
 }
 
 void encode_host(dsn::metric_json_writer &writer)
@@ -460,10 +479,7 @@ void encode_host(dsn::metric_json_writer &writer)
     writer.Key(dsn::kMetricHostField.c_str());
 
     char hostname[1024];
-    if (::gethostname(hostname, sizeof(hostname)) != 0) {
-        dsn::json::json_encode(writer, "unknown");
-        return;
-    }
+    ENCODE_UNKNOWN_IF(gethostname(hostname, sizeof(hostname)) != 0);
 
     dsn::json::json_encode(writer, hostname);
 }
@@ -472,7 +488,10 @@ void encode_port(dsn::metric_json_writer &writer)
 {
     writer.Key(dsn::kMetricPortField.c_str());
 
-    dsn::rpc_address addr(dsn_primary_address());
+    const auto *const rpc = dsn::task::get_current_rpc2();
+    ENCODE_UNKNOWN_IF(rpc == nullptr);
+
+    dsn::rpc_address addr(rpc->primary_address());
     dsn::json::json_encode(writer, addr.port());
 }
 
