@@ -114,6 +114,9 @@ func getReplicaAddrs() ([]string, error) {
 	return rserverAddrs, nil
 }
 
+//Get metrics with new labels
+
+
 //Get all metrics of meta-server and replica-server by their addrs
 func getAllMetricsByAddrs(addrs []string) {
 	for _, addr := range addrs {
