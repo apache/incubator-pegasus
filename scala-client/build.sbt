@@ -17,7 +17,7 @@
  * under the License.
  */
 
-version := "2.5.0-SNAPSHOT"
+version := "2.6.0-SNAPSHOT"
 
 organization := "org.apache"
 
@@ -54,6 +54,6 @@ credentials += Credentials(
 
 libraryDependencies ++= Seq(
   "com.google.guava" % "guava" % "21.0",
-  "org.apache.pegasus" % "pegasus-client" % "2.5.0-SNAPSHOT",
+  "org.apache.pegasus" % "pegasus-client" % "2.6.0-SNAPSHOT",
   "org.scalatest" %% "scalatest" % "3.0.3" % Test
 )

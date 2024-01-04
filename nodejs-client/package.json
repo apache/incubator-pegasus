@@ -1,6 +1,6 @@
 {
   "name": "pegasus-nodejs-client",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "offical pegasus nodejs client",
   "main": "index.js",
   "scripts": {
