@@ -448,11 +448,12 @@ DSN_DECLARE_string(cluster_name);
 
 namespace {
 
-#define ENCODE_UNKNOWN_IF(expr)                                                                    \
+#define ENCODE_OBJ_VAL(cond, val)                                                                  \
     do {                                                                                           \
-        if (dsn_unlikely(expr)) {                                                                  \
+        if (dsn_likely(cond)) {                                                                    \
+            dsn::json::json_encode(writer, val);                                                   \
+        } else {                                                                                   \
             dsn::json::json_encode(writer, "unknown");                                             \
-            return;                                                                                \
         }                                                                                          \
     } while (0)
 
@@ -460,9 +461,7 @@ void encode_cluster(dsn::metric_json_writer &writer)
 {
     writer.Key(dsn::kMetricClusterField.c_str());
 
-    ENCODE_UNKNOWN_IF(utils::is_empty(dsn::FLAGS_cluster_name));
-
-    dsn::json::json_encode(writer, dsn::FLAGS_cluster_name);
+    ENCODE_OBJ_VAL(!utils::is_empty(dsn::FLAGS_cluster_name), dsn::FLAGS_cluster_name);
 }
 
 void encode_role(dsn::metric_json_writer &writer)
@@ -470,9 +469,7 @@ void encode_role(dsn::metric_json_writer &writer)
     writer.Key(dsn::kMetricRoleField.c_str());
 
     const auto *const node = dsn::task::get_current_node2();
-    ENCODE_UNKNOWN_IF(node == nullptr);
-
-    dsn::json::json_encode(writer, node->get_service_app_info().full_name);
+    ENCODE_OBJ_VAL(node != nullptr, node->get_service_app_info().full_name);
 }
 
 void encode_host(dsn::metric_json_writer &writer)
@@ -480,9 +477,7 @@ void encode_host(dsn::metric_json_writer &writer)
     writer.Key(dsn::kMetricHostField.c_str());
 
     char hostname[1024];
-    ENCODE_UNKNOWN_IF(gethostname(hostname, sizeof(hostname)) != 0);
-
-    dsn::json::json_encode(writer, hostname);
+    ENCODE_OBJ_VAL(gethostname(hostname, sizeof(hostname)) == 0, hostname);
 }
 
 void encode_port(dsn::metric_json_writer &writer)
@@ -490,11 +485,10 @@ void encode_port(dsn::metric_json_writer &writer)
     writer.Key(dsn::kMetricPortField.c_str());
 
     const auto *const rpc = dsn::task::get_current_rpc2();
-    ENCODE_UNKNOWN_IF(rpc == nullptr);
-
-    dsn::rpc_address addr(rpc->primary_address());
-    dsn::json::json_encode(writer, addr.port());
+    ENCODE_OBJ_VAL(rpc != nullptr, rpc->primary_address().port());
 }
+
+#undef ENCODE_OBJ_VAL
 
 } // anonymous namespace
 
