@@ -288,7 +288,7 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 // Return the given 'err' code if 'exp' is not OK.
 #define LOG_AND_RETURN_CODE_NOT_RDB_OK(level, exp, err, ...)                                       \
     do {                                                                                           \
-        const auto _s = (exp);                                                                     \
+        const auto &_s = (exp);                                                                    \
         if (dsn_unlikely(!_s.ok())) {                                                              \
             LOG_##level("{}: {}", _s.ToString(), fmt::format(__VA_ARGS__));                        \
             return err;                                                                            \
