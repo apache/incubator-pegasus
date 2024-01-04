@@ -20,7 +20,7 @@ package sink
 import (
 	"sync"
 
-	"github.com/pegasus-kv/collector/aggregate"
+	"github.com/limowang/incubator-pegasus/collector/aggregate"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
