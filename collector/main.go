@@ -102,7 +102,6 @@ func main() {
 		return metrics.NewReplicaServerMetricCollector().Start(tom)
 	})
 
-
 	webui.StartWebServer()
 	<-tom.Dead() // gracefully wait until all goroutines dead
 }

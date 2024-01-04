@@ -67,13 +67,13 @@ func NewMetricCollector(
 	dataSource int,
 	detectInterval time.Duration,
 	detectTimeout time.Duration) MetricCollector {
-	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout,dataSource: dataSource}
+	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout, dataSource: dataSource}
 }
 
 type Collector struct {
 	detectInterval time.Duration
 	detectTimeout  time.Duration
-	dataSource int
+	dataSource     int
 }
 
 func (collector *Collector) Start(tom *tomb.Tomb) error {
@@ -116,8 +116,7 @@ func getReplicaAddrs() ([]string, error) {
 
 //Get metrics with new labels
 
-
-//Get all metrics of meta-server and replica-server by their addrs
+// Get all metrics of meta-server and replica-server by their addrs
 func getAllMetricsByAddrs(addrs []string) {
 	for _, addr := range addrs {
 		data, err := getOneServerMetrics(addr)
@@ -150,7 +149,7 @@ func getAllMetricsByAddrs(addrs []string) {
 						Help: desc,
 					}, []string{"endpoint", "role", "level", "title"})
 					GaugeMetricsMap[name] = *gaugeMetric
-				case "Percentile":				//这个需要改动不能用这个表示,用gauge来表示分位数  --level(p50,p99),title(task_name)来替代区分
+				case "Percentile": //这个需要改动不能用这个表示,用gauge来表示分位数  --level(p50,p99),title(task_name)来替代区分
 					if _, ok := GaugeMetricsMap[name]; ok {
 						continue
 					}
@@ -178,15 +177,14 @@ func InitMetrics() {
 	RoleByDataSource[0] = "meta_server"
 	RoleByDataSource[1] = "replica_server"
 
-
 	var addrs []string
 	addrs = viper.GetStringSlice("meta_servers")
-	replicAddrs,err := getReplicaAddrs()
-	if(err != nil) {
+	replicAddrs, err := getReplicaAddrs()
+	if err != nil {
 		log.Errorf("Get raw metrics from %s failed, err: %s", replicAddrs, err)
- 		return
+		return
 	}
-	addrs = append(addrs,replicAddrs...)
+	addrs = append(addrs, replicAddrs...)
 	getAllMetricsByAddrs(addrs)
 }
 
