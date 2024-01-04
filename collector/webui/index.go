@@ -18,8 +18,8 @@
 package webui
 
 import (
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 	"github.com/kataras/iris/v12"
-	"github.com/pegasus-kv/collector/aggregate"
 )
 
 var indexPageClusterStats = []string{

@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
-	"github.com/pegasus-kv/collector/aggregate"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/tomb.v2"

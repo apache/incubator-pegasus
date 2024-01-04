@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-module github.com/pegasus-kv/collector
+module github.com/apache/incubator-pegasus/collector
 
 go 1.18
 
