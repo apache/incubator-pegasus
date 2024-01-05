@@ -114,7 +114,69 @@ func getReplicaAddrs() ([]string, error) {
 	return rserverAddrs, nil
 }
 
-//Get metrics with new labels
+func addPartitionMetrics(metrics []gjson.Result) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String()
+		mtype := metric.Get("type").String()
+		desc := metric.Get("desc").String()
+		switch mtype {
+		case "Counter":
+			if _, ok := CounterMetricsMap[name+"test"]; ok {
+				continue
+			}
+			counterMetric := promauto.NewCounterVec(prometheus.CounterOpts{
+				Name: name + "test",
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "table", "partition"})
+			CounterMetricsMap[name+"test"] = *counterMetric
+		case "Gauge":
+			if _, ok := GaugeMetricsMap[name+"test"]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name + "test",
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "table", "partition"})
+			GaugeMetricsMap[name+"test"] = *gaugeMetric
+		case "Percentile":
+			log.Warnf("Partition Unsupport metric type %s", mtype)
+		default:
+			log.Errorf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+//Get metircs with new labels
+func getAllNewMetricsbyAddrs(addrs []string) {
+	for _, addr := range addrs {
+		data, err := getOneServerMetrics(addr)
+		if err != nil {
+			log.Errorf("Get raw metrics from %s failed, err: %s", addr, err)
+			return
+		}
+		jsonData := gjson.Parse(data)
+		for _, entity := range jsonData.Array() {
+			etype := entity.Get("type").String()
+			switch etype {
+			case "partition":
+				addPartitionMetrics(entity.Get("metrics").Array())
+			case "table":
+			case "server":
+			case "replica":
+			case "profiler":
+			case "queue":
+			case "disk":
+				//todo
+			case "backup_policy":
+				//todo
+			case "latency_tracer":
+				//todo
+			default:
+				log.Errorf("Unsupport entity type %s", etype)
+			}
+		}
+	}
+}
 
 // Get all metrics of meta-server and replica-server by their addrs
 func getAllMetricsByAddrs(addrs []string) {
@@ -149,7 +211,7 @@ func getAllMetricsByAddrs(addrs []string) {
 						Help: desc,
 					}, []string{"endpoint", "role", "level", "title"})
 					GaugeMetricsMap[name] = *gaugeMetric
-				case "Percentile": //这个需要改动不能用这个表示,用gauge来表示分位数  --level(p50,p99),title(task_name)来替代区分
+				case "Percentile":
 					if _, ok := GaugeMetricsMap[name]; ok {
 						continue
 					}
@@ -186,6 +248,9 @@ func InitMetrics() {
 	}
 	addrs = append(addrs, replicAddrs...)
 	getAllMetricsByAddrs(addrs)
+
+	//collect metrics with new labels
+	getAllNewMetricsbyAddrs(addrs)
 }
 
 // Parse metric data and update metrics.
@@ -218,6 +283,8 @@ func processAllServerMetrics() {
 			case "replica":
 			case "partition":
 				tableID := entity.Get("attributes").Get("table_id").String()
+				updatePartitionMetrics(entity.Get("metrics").Array(), "", "", "", entity.Get("type").String(),
+					entity.Get("attributes").Get("partition_id").String(), tableID, 0)
 				mergeIntoClusterLevelTableMetric(entity.Get("metrics").Array(),
 					tableID, &metricsByTableID)
 			case "table":
@@ -241,6 +308,49 @@ func processAllServerMetrics() {
 	updateClusterLevelTableMetrics(metricsByTableID)
 	updateServerLevelServerMetrics(metricsByAddr)
 	updateClusterLevelMetrics(metricsOfCluster)
+}
+
+//update metrics self
+func updatePartitionMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, partitionID string, tableID string, dsource int) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String()
+		mtype := metric.Get("type").String()
+		switch mtype {
+		case "Counter":
+			value := metric.Get("value").Float()
+			if counter, ok := CounterMetricsMap[name+"test"]; ok {
+				counter.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":      RoleByDataSource[dsource],
+						"host":      host,
+						"port":      port,
+						"entity":    entity,
+						"table":     tableID,
+						"partition": partitionID}).Add(float64(value)) //Consider the way indicators are updated？
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Gauge":
+			value := metric.Get("value").Float()
+			if gauge, ok := GaugeMetricsMap[name+"test"]; ok {
+				gauge.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":      RoleByDataSource[dsource],
+						"host":      host,
+						"port":      port,
+						"entity":    entity,
+						"table":     tableID,
+						"partition": partitionID}).Set(float64(value))
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Percentile":
+			log.Warnf("Unknown metric type %s", mtype)
+		case "Histogram":
+		default:
+			log.Warnf("Unsupport metric type %s", mtype)
+		}
+	}
 }
 
 // Update table metrics. They belong to a specified server.

@@ -26,9 +26,6 @@ import (
 	"strings"
 	"syscall"
 
-	// "github.com/pegasus-kv/collector/avail"
-	// "github.com/pegasus-kv/collector/metrics"
-	// "github.com/pegasus-kv/collector/webui"
 	"github.com/limowang/incubator-pegasus/collector/avail"
 	"github.com/limowang/incubator-pegasus/collector/metrics"
 	"github.com/limowang/incubator-pegasus/collector/webui"
@@ -85,7 +82,6 @@ func main() {
 	}
 
 	metrics.InitMetrics()
-	//webui.StartWebServer()
 
 	tom := &tomb.Tomb{}
 	setupSignalHandler(func() {

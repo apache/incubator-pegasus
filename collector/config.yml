@@ -25,7 +25,7 @@ meta_servers:
   - 127.0.0.1:34603
 
 # local server port
-port : 34101
+port : 8081
 
 metrics:
   # use falcon as monitoring system.
@@ -34,7 +34,7 @@ metrics:
 
 prometheus:
   # the exposed port for prometheus exposer
-  exposer_port : 1111 
+  exposer_port : 8080 
 
 falcon_agent:
   # the host IP of falcon agent

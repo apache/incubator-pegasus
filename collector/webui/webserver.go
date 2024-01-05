@@ -26,6 +26,7 @@ import (
 	"github.com/limowang/incubator-pegasus/collector/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/viper"
 )
 
 // StartWebServer starts an iris-powered HTTP server.
@@ -56,7 +57,8 @@ func StartWebServer() {
 	app.RegisterView(tmpl)
 
 	go func() {
-		err := app.Listen(":8081")
+		localPort := ":" + viper.GetString("port")
+		err := app.Listen(localPort)
 		if err != nil {
 			return
 		}
@@ -73,5 +75,7 @@ func StartWebServer() {
 
 	http.Handle("/metrics", promhttp.Handler())
 
-	_ = http.ListenAndServe(":8080", nil)
+	prometheusPort := ":" + viper.GetString("prometheus.exposer_port")
+
+	_ = http.ListenAndServe(prometheusPort, nil)
 }
