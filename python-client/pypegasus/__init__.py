@@ -18,4 +18,4 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
-__version__ = '2.5.0'
+__version__ = '2.6.0'
