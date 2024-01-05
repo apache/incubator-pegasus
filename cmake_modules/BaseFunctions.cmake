@@ -222,6 +222,13 @@ function(dsn_setup_compiler_flags)
   add_compile_options(-Wno-deprecated-declarations)
   add_compile_options(-Wno-inconsistent-missing-override)
   add_compile_options(-Wno-attributes)
+
+  # Mute errors like the follows, the Pegasus codebase will be checked by clang-format, so it's safe to mute it.
+  # /__w/incubator-pegasus/incubator-pegasus/thirdparty/output/include/boost/lexical_cast/detail/lcast_unsigned_converters.hpp:149:17: error: this 'while' clause does not guard... [-Werror=misleading-indentation]
+  # 149 |             inline CharT* main_convert_loop() BOOST_NOEXCEPT {
+  #     |                 ^~~~~
+  add_compile_options(-Wno-misleading-indentation)
+
   # -fno-omit-frame-pointer
   #   use frame pointers to allow simple stack frame walking for backtraces.
   #   This has a small perf hit but worth it for the ability to profile in production
