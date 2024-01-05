@@ -146,7 +146,7 @@ func addPartitionMetrics(metrics []gjson.Result) {
 	}
 }
 
-//Get metircs with new labels
+// Get metircs with new labels
 func getAllNewMetricsbyAddrs(addrs []string) {
 	for _, addr := range addrs {
 		data, err := getOneServerMetrics(addr)
