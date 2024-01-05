@@ -22,11 +22,17 @@
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <boost/system/error_code.hpp>
 #include <fmt/core.h>
+#include <unistd.h>
 #include <new>
 
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "runtime/api_layer1.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_engine.h"
+#include "runtime/service_app.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task.h"
 #include "utils/flags.h"
 #include "utils/rand.h"
 #include "utils/shared_io_service.h"
@@ -410,17 +416,6 @@ metric_registry::entity_map metric_registry::entities() const
     return _entities;
 }
 
-void metric_registry::take_snapshot(metric_json_writer &writer, const metric_filters &filters) const
-{
-    utils::auto_read_lock l(_lock);
-
-    writer.StartArray();
-    for (const auto &entity : _entities) {
-        entity.second->take_snapshot(writer, filters);
-    }
-    writer.EndArray();
-}
-
 metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_prototype *prototype,
                                                          const std::string &id,
                                                          const metric_entity::attr_map &attrs)
@@ -447,6 +442,83 @@ metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_pro
     }
 
     return entity;
+}
+
+DSN_DECLARE_string(cluster_name);
+
+namespace {
+
+#define ENCODE_OBJ_VAL(cond, val)                                                                  \
+    do {                                                                                           \
+        if (dsn_likely(cond)) {                                                                    \
+            dsn::json::json_encode(writer, val);                                                   \
+        } else {                                                                                   \
+            dsn::json::json_encode(writer, "unknown");                                             \
+        }                                                                                          \
+    } while (0)
+
+void encode_cluster(dsn::metric_json_writer &writer)
+{
+    writer.Key(dsn::kMetricClusterField.c_str());
+
+    ENCODE_OBJ_VAL(!utils::is_empty(dsn::FLAGS_cluster_name), dsn::FLAGS_cluster_name);
+}
+
+void encode_role(dsn::metric_json_writer &writer)
+{
+    writer.Key(dsn::kMetricRoleField.c_str());
+
+    const auto *const node = dsn::task::get_current_node2();
+    ENCODE_OBJ_VAL(node != nullptr, node->get_service_app_info().full_name);
+}
+
+void encode_host(dsn::metric_json_writer &writer)
+{
+    writer.Key(dsn::kMetricHostField.c_str());
+
+    char hostname[1024];
+    ENCODE_OBJ_VAL(gethostname(hostname, sizeof(hostname)) == 0, hostname);
+}
+
+void encode_port(dsn::metric_json_writer &writer)
+{
+    writer.Key(dsn::kMetricPortField.c_str());
+
+    const auto *const rpc = dsn::task::get_current_rpc2();
+    ENCODE_OBJ_VAL(rpc != nullptr, rpc->primary_address().port());
+}
+
+#undef ENCODE_OBJ_VAL
+
+} // anonymous namespace
+
+void metric_registry::encode_entities(metric_json_writer &writer,
+                                      const metric_filters &filters) const
+{
+    writer.Key(dsn::kMetricEntitiesField.c_str());
+
+    writer.StartArray();
+
+    {
+        utils::auto_read_lock l(_lock);
+
+        for (const auto &entity : _entities) {
+            entity.second->take_snapshot(writer, filters);
+        }
+    }
+
+    writer.EndArray();
+}
+
+void metric_registry::take_snapshot(metric_json_writer &writer, const metric_filters &filters) const
+{
+    writer.StartObject();
+    encode_cluster(writer);
+    encode_role(writer);
+    encode_host(writer);
+    encode_port(writer);
+    encode_entities(writer, filters);
+    writer.EndObject();
 }
 
 metric_registry::collected_entities_info metric_registry::collect_stale_entities() const

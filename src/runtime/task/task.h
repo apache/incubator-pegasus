@@ -243,6 +243,7 @@ public:
     static int get_current_worker_index();
     static const char *get_current_node_name();
     static rpc_engine *get_current_rpc();
+    static rpc_engine *get_current_rpc2();
     static env_provider *get_current_env();
 
     static void set_tls_dsn_context(
@@ -592,6 +593,11 @@ __inline /*static*/ rpc_engine *task::get_current_rpc()
 {
     check_tls_dsn();
     return tls_dsn.rpc;
+}
+
+__inline /*static*/ rpc_engine *task::get_current_rpc2()
+{
+    return tls_dsn.magic == 0xdeadbeef ? tls_dsn.rpc : nullptr;
 }
 
 __inline /*static*/ env_provider *task::get_current_env()
