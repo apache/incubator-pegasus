@@ -17,17 +17,12 @@
 
 #include "replica/bulk_load/replica_bulk_loader.h"
 
-#include <fmt/core.h>
-#include <rocksdb/env.h>
-#include <rocksdb/slice.h>
-#include <rocksdb/status.h>
 #include <fstream> // IWYU pragma: keep
 #include <memory>
 #include <vector>
 
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
 #include "replica/test/mock_utils.h"
@@ -35,10 +30,9 @@
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task_tracker.h"
 #include "test_util/test_util.h"
-#include "utils/blob.h"
-#include "utils/env.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
+#include "utils/load_dump_object.h"
 #include "utils/test_macros.h"
 
 namespace dsn {
@@ -258,14 +252,7 @@ public:
         _metadata.files.emplace_back(_file_meta);
         _metadata.file_total_size = _file_meta.size;
         std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-        blob bb = json::json_forwarder<bulk_load_metadata>::encode(_metadata);
-        auto s =
-            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                       rocksdb::Slice(bb.data(), bb.length()),
-                                       whole_name,
-                                       /* should_sync */ true);
-        ASSERT_TRUE(s.ok()) << fmt::format(
-            "write file {} failed, err = {}", whole_name, s.ToString());
+        ASSERT_EQ(ERR_OK, utils::dump_rjobj_to_file(_metadata, whole_name));
     }
 
     bool validate_metadata()
@@ -525,7 +512,7 @@ TEST_P(replica_bulk_loader_test, rollback_to_downloading_test)
 // parse_bulk_load_metadata unit tests
 TEST_P(replica_bulk_loader_test, bulk_load_metadata_not_exist)
 {
-    ASSERT_EQ(test_parse_bulk_load_metadata("path_not_exist"), ERR_FILE_OPERATION_FAILED);
+    ASSERT_EQ(ERR_PATH_NOT_FOUND, test_parse_bulk_load_metadata("path_not_exist"));
 }
 
 TEST_P(replica_bulk_loader_test, bulk_load_metadata_corrupt)
@@ -535,8 +522,7 @@ TEST_P(replica_bulk_loader_test, bulk_load_metadata_corrupt)
     NO_FATALS(pegasus::create_local_test_file(utils::filesystem::path_combine(LOCAL_DIR, METADATA),
                                               &_file_meta));
     std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-    error_code ec = test_parse_bulk_load_metadata(metadata_file_name);
-    ASSERT_EQ(ERR_CORRUPTION, ec);
+    ASSERT_EQ(ERR_CORRUPTION, test_parse_bulk_load_metadata(metadata_file_name));
     utils::filesystem::remove_path(LOCAL_DIR);
 }
 
@@ -546,8 +532,7 @@ TEST_P(replica_bulk_loader_test, bulk_load_metadata_parse_succeed)
     NO_FATALS(create_local_metadata_file());
 
     std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-    auto ec = test_parse_bulk_load_metadata(metadata_file_name);
-    ASSERT_EQ(ec, ERR_OK);
+    ASSERT_EQ(ERR_OK, test_parse_bulk_load_metadata(metadata_file_name));
     ASSERT_TRUE(validate_metadata());
     utils::filesystem::remove_path(LOCAL_DIR);
 }

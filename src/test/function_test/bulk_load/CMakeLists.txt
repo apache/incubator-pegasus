@@ -39,6 +39,7 @@ set(MY_PROJ_LIBS
         krb5
         function_test_utils
         test_utils
+        dsn_utils
         rocksdb
         lz4
         zstd

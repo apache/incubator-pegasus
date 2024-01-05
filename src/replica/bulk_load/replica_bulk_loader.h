@@ -92,7 +92,8 @@ private:
                            int32_t file_index,
                            dist::block_service::block_filesystem *fs);
 
-    // \return ERR_FILE_OPERATION_FAILED: file not exist, get size failed, open file failed
+    // \return ERR_PATH_NOT_FOUND: file not exist
+    // \return ERR_FILE_OPERATION_FAILED: get size failed, open file failed
     // \return ERR_CORRUPTION: parse failed
     // need to acquire write lock while calling it
     error_code parse_bulk_load_metadata(const std::string &fname);
