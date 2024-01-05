@@ -26,9 +26,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pegasus-kv/collector/avail"
-	"github.com/pegasus-kv/collector/metrics"
-	"github.com/pegasus-kv/collector/webui"
+	"github.com/apache/incubator-pegasus/collector/avail"
+	"github.com/apache/incubator-pegasus/collector/metrics"
+	"github.com/apache/incubator-pegasus/collector/webui"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
