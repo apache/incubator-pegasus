@@ -310,7 +310,7 @@ func processAllServerMetrics() {
 	updateClusterLevelMetrics(metricsOfCluster)
 }
 
-//update metrics self
+// update metrics self
 func updatePartitionMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, partitionID string, tableID string, dsource int) {
 	for _, metric := range metrics {
 		name := metric.Get("name").String()
