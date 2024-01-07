@@ -16,18 +16,16 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <rocksdb/env.h>
-#include <rocksdb/status.h>
 #include <functional>
 #include <memory>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "block_service/block_service_manager.h"
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
@@ -42,14 +40,12 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
-#include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/env.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/ports.h"
-#include "absl/strings/string_view.h"
+#include "utils/load_dump_object.h"
 #include "utils/thread_access_checker.h"
 
 METRIC_DEFINE_counter(replica,
@@ -606,18 +602,10 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
 // need to acquire write lock while calling it
 error_code replica_bulk_loader::parse_bulk_load_metadata(const std::string &fname)
 {
-    std::string buf;
-    auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &buf);
-    if (dsn_unlikely(!s.ok())) {
-        LOG_ERROR_PREFIX("read file {} failed, error = {}", fname, s.ToString());
-        return ERR_FILE_OPERATION_FAILED;
-    }
-
-    blob bb = blob::create_from_bytes(std::move(buf));
-    if (!json::json_forwarder<bulk_load_metadata>::decode(bb, _metadata)) {
-        LOG_ERROR_PREFIX("file({}) is damaged", fname);
-        return ERR_CORRUPTION;
+    auto ec = dsn::utils::load_rjobj_from_file(fname, &_metadata);
+    if (ec != ERR_OK) {
+        LOG_ERROR_PREFIX("load bulk_load_metadata from file {} failed", fname);
+        return ec;
     }
 
     if (_metadata.file_total_size <= 0) {

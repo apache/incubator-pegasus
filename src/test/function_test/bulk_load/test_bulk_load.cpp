@@ -39,7 +39,6 @@
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/bulk_load_common.h"
-#include "common/json_helper.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h" // IWYU pragma: keep
 #include "meta/meta_bulk_load_service.h"
@@ -52,6 +51,7 @@
 #include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
+#include "utils/load_dump_object.h"
 #include "utils/test_macros.h"
 #include "utils/utils.h"
 
@@ -89,18 +89,6 @@ protected:
         NO_FATALS(run_cmd_from_project_root("rm -rf " + bulk_load_local_app_root_));
     }
 
-    // Generate the 'bulk_load_info' file according to 'bli' to path 'bulk_load_info_path'.
-    void generate_bulk_load_info(const bulk_load_info &bli, const std::string &bulk_load_info_path)
-    {
-        auto value = dsn::json::json_forwarder<bulk_load_info>::encode(bli);
-        auto s =
-            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                       rocksdb::Slice(value.data(), value.length()),
-                                       bulk_load_info_path,
-                                       /* should_sync */ true);
-        ASSERT_TRUE(s.ok()) << s.ToString();
-    }
-
     // Generate the '.xxx.meta' file according to the 'xxx' file
     // in path 'file_path'.
     void generate_metadata_file(const std::string &file_path)
@@ -110,7 +98,7 @@ protected:
             file_path, dsn::utils::FileDataType::kSensitive, fm.size));
         ASSERT_EQ(ERR_OK, dsn::utils::filesystem::md5sum(file_path, fm.md5));
         auto metadata_file_path = dist::block_service::local_service::get_metafile(file_path);
-        ASSERT_EQ(ERR_OK, fm.dump_to_file(metadata_file_path));
+        ASSERT_EQ(ERR_OK, dsn::utils::dump_njobj_to_file(fm, metadata_file_path));
     }
 
     void generate_bulk_load_files()
@@ -192,15 +180,9 @@ protected:
             }
 
             // Generate 'bulk_load_metadata' file for each partition.
-            blob bb = json::json_forwarder<bulk_load_metadata>::encode(blm);
             std::string blm_path = dsn::utils::filesystem::path_combine(
                 partition_path, bulk_load_constant::BULK_LOAD_METADATA);
-            auto s = rocksdb::WriteStringToFile(
-                dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                rocksdb::Slice(bb.data(), bb.length()),
-                blm_path,
-                /* should_sync */ true);
-            ASSERT_TRUE(s.ok()) << s.ToString();
+            ASSERT_EQ(ERR_OK, dsn::utils::dump_rjobj_to_file(blm, blm_path));
 
             // Generate '.bulk_load_metadata.meta' file of 'bulk_load_metadata'.
             NO_FATALS(generate_metadata_file(blm_path));
@@ -208,8 +190,10 @@ protected:
 
         // Generate 'bulk_load_info' file for this table.
         auto bulk_load_info_path = fmt::format("{}/bulk_load_info", bulk_load_local_app_root_);
-        NO_FATALS(generate_bulk_load_info(bulk_load_info(table_id_, table_name_, partition_count_),
-                                          bulk_load_info_path));
+        ASSERT_EQ(
+            ERR_OK,
+            dsn::utils::dump_rjobj_to_file(bulk_load_info(table_id_, table_name_, partition_count_),
+                                           bulk_load_info_path));
 
         // Generate '.bulk_load_info.meta' file of 'bulk_load_info'.
         NO_FATALS(generate_metadata_file(bulk_load_info_path));
@@ -334,10 +318,10 @@ TEST_F(bulk_load_test, inconsistent_bulk_load_info)
     // kind of inconsistencies.
     bulk_load_info tests[] = {{table_id_ + 1, table_name_, partition_count_},
                               {table_id_, table_name_, partition_count_ * 2}};
+    auto bulk_load_info_path = fmt::format("{}/bulk_load_info", bulk_load_local_app_root_);
     for (const auto &test : tests) {
         // Generate inconsistent 'bulk_load_info'.
-        auto bulk_load_info_path = fmt::format("{}/bulk_load_info", bulk_load_local_app_root_);
-        NO_FATALS(generate_bulk_load_info(test, bulk_load_info_path));
+        ASSERT_EQ(ERR_OK, dsn::utils::dump_rjobj_to_file(test, bulk_load_info_path));
 
         // Generate '.bulk_load_info.meta'.
         NO_FATALS(generate_metadata_file(bulk_load_info_path));

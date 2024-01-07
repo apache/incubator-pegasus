@@ -31,14 +31,32 @@ on:
     paths:
       - .github/workflows/lint_and_test_collector.yml
       - collector/**
+      - go-client/**
 
   # for manually triggering workflow
   workflow_dispatch:
 
 # workflow tasks
 jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - name: Format
+        working-directory: ./go-client
+        run: |
+          gofmt -d .
+          test -z "$(gofmt -d .)"
+
   lint:
     name: Lint
+    needs: format
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -58,6 +76,7 @@ jobs:
 
   build:
     name: Build
+    needs: lint
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout

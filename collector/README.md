@@ -26,3 +26,19 @@ Collector is a part of the Pegasus ecosystem that serves as:
 1. the service availability detector
 2. the hotkey detector
 3. the capacity units recorder
+
+## Requirement
+
+- Go1.18+
+
+## Development
+
+Build the collector:
+```bash
+make build
+```
+
+Format the code:
+```bash
+make fmt
+```

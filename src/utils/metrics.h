@@ -348,6 +348,12 @@ const std::string kMetricEntityIdField = "id";
 const std::string kMetricEntityAttrsField = "attributes";
 const std::string kMetricEntityMetricsField = "metrics";
 
+const std::string kMetricClusterField = "cluster";
+const std::string kMetricRoleField = "role";
+const std::string kMetricHostField = "host";
+const std::string kMetricPortField = "port";
+const std::string kMetricEntitiesField = "entities";
+
 class metric_entity : public ref_counter
 {
 public:
@@ -686,6 +692,8 @@ private:
     metric_entity_ptr find_or_create_entity(const metric_entity_prototype *prototype,
                                             const std::string &id,
                                             const metric_entity::attr_map &attrs);
+
+    void encode_entities(metric_json_writer &writer, const metric_filters &filters) const;
 
     // These functions are used to retire stale entities.
     //
