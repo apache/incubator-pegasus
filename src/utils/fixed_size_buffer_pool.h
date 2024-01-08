@@ -28,8 +28,8 @@
 
 ///
 /// A simple buffer pool designed for efficiently formatting
-/// frequently used types (like gpid, rpc_address) into string,
-/// without dynamic memory allocation.
+/// frequently used types (like gpid, rpc_address, host_port)
+/// into string, without dynamic memory allocation.
 ///
 /// It's not suitable to be used in multi-threaded environment,
 /// unless when it's declared as thread local.

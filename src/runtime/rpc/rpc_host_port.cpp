@@ -20,8 +20,8 @@
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <sys/socket.h>
+#include <cstring>
 #include <memory>
 #include <unordered_set>
 #include <utility>
@@ -79,7 +79,7 @@ host_port::host_port(rpc_address addr)
         _port = addr.port();
     } break;
     case HOST_TYPE_GROUP: {
-        _group_host_port = new rpc_group_host_port(addr.group_address());
+        _group_host_port = std::make_shared<rpc_group_host_port>(addr.group_address());
     } break;
     default:
         break;
@@ -120,7 +120,7 @@ void host_port::reset()
         _port = 0;
         break;
     case HOST_TYPE_GROUP:
-        group_host_port()->release_ref();
+        _group_host_port = nullptr;
         break;
     default:
         break;
@@ -142,7 +142,6 @@ host_port &host_port::operator=(const host_port &other)
         break;
     case HOST_TYPE_GROUP:
         _group_host_port = other._group_host_port;
-        group_host_port()->add_ref();
         break;
     default:
         break;
@@ -157,9 +156,9 @@ std::string host_port::to_string() const
     case HOST_TYPE_IPV4:
         return fmt::format("{}:{}", _host, _port);
     case HOST_TYPE_GROUP:
-        return fmt::format("address group {}", group_host_port()->name());
+        return fmt::format("host_port group {}", group_host_port()->name());
     default:
-        return "invalid address";
+        return "invalid host_port";
     }
 }
 
@@ -167,9 +166,7 @@ void host_port::assign_group(const char *name)
 {
     reset();
     _type = HOST_TYPE_GROUP;
-    _group_host_port = new rpc_group_host_port(name);
-    // take the lifetime of rpc_uri_address, release_ref when change value or call destructor
-    _group_host_port->add_ref();
+    _group_host_port = std::make_shared<rpc_group_host_port>(name);
 }
 
 error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
