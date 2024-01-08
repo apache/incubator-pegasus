@@ -27,7 +27,7 @@
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/security/replica_access_controller.h"
+#include "security/replica_access_controller.h"
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 

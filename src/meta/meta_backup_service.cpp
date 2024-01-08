@@ -41,7 +41,7 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/security/access_controller.h"
+#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "server_state.h"

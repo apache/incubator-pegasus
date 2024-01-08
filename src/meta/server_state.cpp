@@ -63,7 +63,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/security/access_controller.h"
+#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"

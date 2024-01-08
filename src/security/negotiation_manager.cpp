@@ -71,7 +71,7 @@ void negotiation_manager::on_negotiation_request(negotiation_rpc rpc)
           "only server session receives negotiation request");
 
     // reply SASL_AUTH_DISABLE if auth is not enable
-    if (!security::FLAGS_enable_auth) {
+    if (!FLAGS_enable_auth) {
         rpc.response().status = negotiation_status::type::SASL_AUTH_DISABLE;
         return;
     }

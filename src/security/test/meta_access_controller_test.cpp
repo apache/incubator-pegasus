@@ -25,7 +25,7 @@
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/security/access_controller.h"
+#include "security/access_controller.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/security/negotiation_manager.h"
+#include "security/negotiation_manager.h"
 
 #include "failure_detector/fd.code.definition.h"
 #include "gtest/gtest.h"
@@ -26,7 +26,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/security/negotiation_utils.h"
+#include "security/negotiation_utils.h"
 #include "runtime/task/task_code.h"
 #include "security_types.h"
 #include "utils/autoref_ptr.h"

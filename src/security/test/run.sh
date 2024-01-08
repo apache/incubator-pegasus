@@ -1,3 +1,4 @@
+#!/bin/sh
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,28 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME dsn.security)
+if [ -z "${REPORT_DIR}" ]; then
+    REPORT_DIR="."
+fi
 
-thrift_generate_cpp(
-    SECURITY_THRIFT_SRCS
-    SECURITY_THRIFT_HDRS
-        ${PROJECT_ROOT}/idl/security.thrift
-)
-
-set(MY_PROJ_SRC ${SECURITY_THRIFT_SRCS})
-
-# Search mode for source files under CURRENT project directory?
-# "GLOB_RECURSE" for recursive search
-# "GLOB" for non-recursive search
-set(MY_SRC_SEARCH_MODE "GLOB")
-
-set(MY_PROJ_INC_PATH "")
-
-set(MY_PROJ_LIBS "")
-
-set(MY_PROJ_LIB_PATH "")
-
-# Extra files that will be installed
-set(MY_BINPLACES "")
-
-dsn_add_object()
+rm -rf data dsn_security_tests.xml
+output_xml="${REPORT_DIR}/dsn_security_tests.xml"
+GTEST_OUTPUT="xml:${output_xml}" ./dsn_security_tests config.ini

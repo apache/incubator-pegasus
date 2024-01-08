@@ -51,7 +51,7 @@
 #include "replica_disk_migrator.h"
 #include "replica_stub.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/security/access_controller.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
