@@ -62,12 +62,12 @@ using std::vector;
 
 namespace pegasus {
 
-test_util::test_util(map<string, string> create_envs)
+test_util::test_util(map<string, string> create_envs, std::string cluster_name)
     : kOpNames({{test_util::OperateDataType::kSet, "set"},
                 {test_util::OperateDataType::kGet, "get"},
                 {test_util::OperateDataType::kDelete, "delete"},
                 {test_util::OperateDataType::kCheckNotFound, "check not found"}}),
-      kClusterName("onebox"),
+      kClusterName(cluster_name),
       kHashkeyPrefix("hashkey_"),
       kSortkey("sortkey"),
       kValuePrefix("value_"),
