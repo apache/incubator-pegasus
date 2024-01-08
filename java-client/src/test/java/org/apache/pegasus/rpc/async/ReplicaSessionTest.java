@@ -45,7 +45,6 @@ import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
 import org.apache.pegasus.tools.Toollet;
 import org.apache.pegasus.tools.Tools;
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,7 +70,7 @@ public class ReplicaSessionTest {
   /** Method: connect() */
   @Test
   public void testConnect() throws Exception {
-    // test1: connect to a invalid address
+    // test1: connect to an invalid address.
     rpc_address addr = new rpc_address();
     addr.fromString("127.0.0.1:12345");
     ReplicaSession rs = manager.getReplicaSession(addr);
@@ -82,12 +81,9 @@ public class ReplicaSessionTest {
       final client_operator op = new rrdb_put_operator(new gpid(-1, -1), "", null, 0);
       final FutureTask<Void> cb =
           new FutureTask<Void>(
-              new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                  assertEquals(error_code.error_types.ERR_SESSION_RESET, op.rpc_error.errno);
-                  return null;
-                }
+              () -> {
+                assertEquals(error_code.error_types.ERR_SESSION_RESET, op.rpc_error.errno);
+                return null;
               });
 
       callbacks.add(cb);
@@ -103,29 +99,16 @@ public class ReplicaSessionTest {
     }
 
     final ReplicaSession cp_rs = rs;
-    Toollet.waitCondition(
-        new Toollet.BoolCallable() {
-          @Override
-          public boolean call() {
-            return ReplicaSession.ConnState.DISCONNECTED == cp_rs.getState();
-          }
-        },
-        5);
+    Toollet.waitCondition(() -> ReplicaSession.ConnState.DISCONNECTED == cp_rs.getState(), 5);
 
-    // test2: connect to an valid address, and then close the server
+    // test2: connect to a valid address, and then close the server.
     addr.fromString("127.0.0.1:34801");
     callbacks.clear();
 
     rs = manager.getReplicaSession(addr);
-    rs.setMessageResponseFilter(
-        new ReplicaSession.MessageResponseFilter() {
-          @Override
-          public boolean abandonIt(error_code.error_types err, TMessage header) {
-            return true;
-          }
-        });
+    rs.setMessageResponseFilter((err, header) -> true);
     for (int i = 0; i < 20; ++i) {
-      // we send query request to replica server. We expect it to discard it.
+      // Send query request to replica server, expect it to be timeout.
       final int index = i;
       update_request req =
           new update_request(new blob("hello".getBytes()), new blob("world".getBytes()), 0);
@@ -134,16 +117,13 @@ public class ReplicaSessionTest {
       final rpc_address cp_addr = addr;
       final FutureTask<Void> cb =
           new FutureTask<Void>(
-              new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                  assertEquals(error_code.error_types.ERR_TIMEOUT, op.rpc_error.errno);
-                  // for the last request, we kill the server
-                  if (index == 19) {
-                    Toollet.closeServer(cp_addr);
-                  }
-                  return null;
+              () -> {
+                assertEquals(error_code.error_types.ERR_TIMEOUT, op.rpc_error.errno);
+                // for the last request, we kill the server
+                if (index == 19) {
+                  Toollet.closeServer(cp_addr);
                 }
+                return null;
               });
 
       callbacks.add(cb);
@@ -151,23 +131,20 @@ public class ReplicaSessionTest {
     }
 
     for (int i = 0; i < 80; ++i) {
-      // then we still send query request to replica server. But the timeout is longer.
+      // Re-send query request to replica server, but the timeout is longer.
       update_request req =
           new update_request(new blob("hello".getBytes()), new blob("world".getBytes()), 0);
       final client_operator op = new Toollet.test_operator(new gpid(-1, -1), req);
       final FutureTask<Void> cb =
           new FutureTask<Void>(
-              new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                  assertEquals(error_code.error_types.ERR_SESSION_RESET, op.rpc_error.errno);
-                  return null;
-                }
+              () -> {
+                assertEquals(error_code.error_types.ERR_SESSION_RESET, op.rpc_error.errno);
+                return null;
               });
 
       callbacks.add(cb);
-      // these requests have longer timeout, so they should be responsed later than the server is
-      // killed
+      // The request has longer timeout, so it should be responsed later than the server been
+      // killed.
       rs.asyncSend(op, cb, 2000, false);
     }
 
