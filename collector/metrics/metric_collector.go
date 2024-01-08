@@ -49,12 +49,12 @@ type Metric struct {
 
 type Metrics []Metric
 
+// TaskLevel 0 -> p50,1 -> p90
+var TaskLevel = [5]string{"p50", "p90", "p95", "p99", "p999"}
 var GaugeMetricsMap map[string]prometheus.GaugeVec
 var CounterMetricsMap map[string]prometheus.CounterVec
 var SummaryMetricsMap map[string]prometheus.Summary
 
-// DataSource 0 meta server, 1 replica server.
-var DataSource int
 var RoleByDataSource map[int]string
 
 var TableNameByID map[string]string
@@ -73,7 +73,8 @@ func NewMetricCollector(
 type Collector struct {
 	detectInterval time.Duration
 	detectTimeout  time.Duration
-	dataSource     int
+	// dataSource 0 meta server, 1 replica server.
+	dataSource int
 }
 
 func (collector *Collector) Start(tom *tomb.Tomb) error {
@@ -84,7 +85,7 @@ func (collector *Collector) Start(tom *tomb.Tomb) error {
 			return nil
 		case <-ticker.C:
 			updateClusterTableInfo()
-			processAllServerMetrics()
+			processAllServerMetrics(collector.dataSource)
 		}
 	}
 }
@@ -116,30 +117,229 @@ func getReplicaAddrs() ([]string, error) {
 
 func addPartitionMetrics(metrics []gjson.Result) {
 	for _, metric := range metrics {
-		name := metric.Get("name").String()
+		name := metric.Get("name").String() + "test"
 		mtype := metric.Get("type").String()
 		desc := metric.Get("desc").String()
 		switch mtype {
 		case "Counter":
-			if _, ok := CounterMetricsMap[name+"test"]; ok {
+			if _, ok := CounterMetricsMap[name]; ok {
 				continue
 			}
 			counterMetric := promauto.NewCounterVec(prometheus.CounterOpts{
-				Name: name + "test",
+				Name: name,
 				Help: desc,
 			}, []string{"cluster", "role", "host", "port", "entity", "table", "partition"})
-			CounterMetricsMap[name+"test"] = *counterMetric
+			CounterMetricsMap[name] = *counterMetric
 		case "Gauge":
-			if _, ok := GaugeMetricsMap[name+"test"]; ok {
+			if _, ok := GaugeMetricsMap[name]; ok {
 				continue
 			}
 			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
-				Name: name + "test",
+				Name: name,
 				Help: desc,
 			}, []string{"cluster", "role", "host", "port", "entity", "table", "partition"})
-			GaugeMetricsMap[name+"test"] = *gaugeMetric
+			GaugeMetricsMap[name] = *gaugeMetric
 		case "Percentile":
 			log.Warnf("Partition Unsupport metric type %s", mtype)
+		default:
+			log.Errorf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func addTableMetrics(metrics []gjson.Result) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		desc := metric.Get("desc").String()
+		switch mtype {
+		case "Counter":
+			log.Warnf("Table Unsupport metric type %s", mtype)
+		case "Gauge":
+			if _, ok := GaugeMetricsMap[name]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "table"})
+			GaugeMetricsMap[name] = *gaugeMetric
+		case "Percentile":
+			log.Warnf("Partition Unsupport metric type %s", mtype)
+		default:
+			log.Errorf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func addServerMetrics(metrics []gjson.Result) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		desc := metric.Get("desc").String()
+		switch mtype {
+		case "Counter":
+			if _, ok := CounterMetricsMap[name]; ok {
+				continue
+			}
+			counterMetric := promauto.NewCounterVec(prometheus.CounterOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity"})
+			CounterMetricsMap[name] = *counterMetric
+		case "Gauge":
+			if _, ok := GaugeMetricsMap[name]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity"})
+			GaugeMetricsMap[name] = *gaugeMetric
+		case "Percentile":
+			log.Warnf("Server Unsupport metric type %s", mtype)
+		default:
+			log.Errorf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func addReplicaMetrics(metrics []gjson.Result) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		desc := metric.Get("desc").String()
+		switch mtype {
+		case "Counter":
+			if _, ok := CounterMetricsMap[name]; ok {
+				continue
+			}
+			counterMetric := promauto.NewCounterVec(prometheus.CounterOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "table", "partition"})
+			CounterMetricsMap[name] = *counterMetric
+		case "Gauge":
+			if _, ok := GaugeMetricsMap[name]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "table", "partition"})
+			GaugeMetricsMap[name] = *gaugeMetric
+		case "Percentile":
+			if _, ok := GaugeMetricsMap[name]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "table", "partition", "p"})
+			GaugeMetricsMap[name] = *gaugeMetric
+		default:
+			log.Errorf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func addProfilerMetrics(metrics []gjson.Result) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		desc := metric.Get("desc").String()
+		switch mtype {
+		case "Counter":
+			if _, ok := CounterMetricsMap[name]; ok {
+				continue
+			}
+			counterMetric := promauto.NewCounterVec(prometheus.CounterOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "task"})
+			CounterMetricsMap[name] = *counterMetric
+		case "Gauge":
+			if _, ok := GaugeMetricsMap[name]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "task"})
+			GaugeMetricsMap[name] = *gaugeMetric
+		case "Percentile":
+			if _, ok := GaugeMetricsMap[name]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "task", "p"})
+			GaugeMetricsMap[name] = *gaugeMetric
+		default:
+			log.Errorf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func addQueueMetrics(metrics []gjson.Result) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		desc := metric.Get("desc").String()
+		switch mtype {
+		case "Counter":
+			if _, ok := CounterMetricsMap[name]; ok {
+				continue
+			}
+			counterMetric := promauto.NewCounterVec(prometheus.CounterOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "queue"})
+			CounterMetricsMap[name] = *counterMetric
+		case "Gauge":
+			if _, ok := GaugeMetricsMap[name]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "queue"})
+			GaugeMetricsMap[name] = *gaugeMetric
+		case "Percentile":
+			log.Warnf("Queue Unsupport metric type %s", mtype)
+		default:
+			log.Errorf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func addDiskMetrics(metrics []gjson.Result) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		desc := metric.Get("desc").String()
+		switch mtype {
+		case "Counter":
+			if _, ok := CounterMetricsMap[name]; ok {
+				continue
+			}
+			counterMetric := promauto.NewCounterVec(prometheus.CounterOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "dir"})
+			CounterMetricsMap[name] = *counterMetric
+		case "Gauge":
+			if _, ok := GaugeMetricsMap[name]; ok {
+				continue
+			}
+			gaugeMetric := promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: name,
+				Help: desc,
+			}, []string{"cluster", "role", "host", "port", "entity", "dir"})
+			GaugeMetricsMap[name] = *gaugeMetric
+		case "Percentile":
+			log.Warnf("Queue Unsupport metric type %s", mtype)
 		default:
 			log.Errorf("Unsupport metric type %s", mtype)
 		}
@@ -155,18 +355,23 @@ func getAllNewMetricsbyAddrs(addrs []string) {
 			return
 		}
 		jsonData := gjson.Parse(data)
-		for _, entity := range jsonData.Array() {
+		for _, entity := range jsonData.Get("entities").Array() {
 			etype := entity.Get("type").String()
 			switch etype {
 			case "partition":
 				addPartitionMetrics(entity.Get("metrics").Array())
 			case "table":
+				addTableMetrics(entity.Get("metrics").Array())
 			case "server":
+				addServerMetrics(entity.Get("metrics").Array())
 			case "replica":
+				addReplicaMetrics(entity.Get("metrics").Array())
 			case "profiler":
+				addProfilerMetrics(entity.Get("metrics").Array())
 			case "queue":
+				addQueueMetrics(entity.Get("metrics").Array())
 			case "disk":
-				//todo
+				addDiskMetrics(entity.Get("metrics").Array())
 			case "backup_policy":
 				//todo
 			case "latency_tracer":
@@ -187,7 +392,7 @@ func getAllMetricsByAddrs(addrs []string) {
 			return
 		}
 		jsonData := gjson.Parse(data)
-		for _, entity := range jsonData.Array() {
+		for _, entity := range jsonData.Get("entities").Array() {
 			for _, metric := range entity.Get("metrics").Array() {
 				var name string = metric.Get("name").String()
 				var mtype string = metric.Get("type").String()
@@ -254,10 +459,10 @@ func InitMetrics() {
 }
 
 // Parse metric data and update metrics.
-func processAllServerMetrics() {
+func processAllServerMetrics(dataSource int) {
 	var addrs []string
 	var err error
-	if DataSource == MetaServer {
+	if dataSource == MetaServer {
 		addrs = viper.GetStringSlice("meta_servers")
 	} else {
 		addrs, err = getReplicaAddrs()
@@ -277,48 +482,65 @@ func processAllServerMetrics() {
 			return
 		}
 		jsonData := gjson.Parse(data)
-		for _, entity := range jsonData.Array() {
+		cluster := jsonData.Get("cluster").String()
+		host := jsonData.Get("host").String()
+		port := jsonData.Get("port").String()
+		for _, entity := range jsonData.Get("entities").Array() {
 			etype := entity.Get("type").String()
 			switch etype {
 			case "replica":
+				tableID := entity.Get("attributes").Get("table_id").String()
+				updateReplicaMetrics(entity.Get("metrics").Array(), cluster, host, port, etype,
+					entity.Get("attributes").Get("partition_id").String(), tableID, dataSource)
 			case "partition":
 				tableID := entity.Get("attributes").Get("table_id").String()
-				updatePartitionMetrics(entity.Get("metrics").Array(), "", "", "", entity.Get("type").String(),
-					entity.Get("attributes").Get("partition_id").String(), tableID, 0)
+				updatePartitionMetrics(entity.Get("metrics").Array(), cluster, host, port, etype,
+					entity.Get("attributes").Get("partition_id").String(), tableID, dataSource)
 				mergeIntoClusterLevelTableMetric(entity.Get("metrics").Array(),
 					tableID, &metricsByTableID)
 			case "table":
 				tableID := entity.Get("attributes").Get("table_id").String()
+				updateTableMetrics(entity.Get("metrics").Array(), cluster, host, port, etype, tableID, dataSource)
 				mergeIntoClusterLevelTableMetric(entity.Get("metrics").Array(),
 					tableID, &metricsByTableID)
 				collectServerLevelTableMetric(entity.Get("metrics").Array(), tableID,
 					&metricsByServerTableID)
-				updateServerLevelTableMetrics(addr, metricsByServerTableID)
+				updateServerLevelTableMetrics(addr, metricsByServerTableID, dataSource)
 			case "server":
+				updateServerMetrics(entity.Get("metrics").Array(), cluster, host, port, etype, dataSource)
 				mergeIntoClusterLevelServerMetric(entity.Get("metrics").Array(),
 					metricsOfCluster)
 				collectServerLevelServerMetrics(entity.Get("metrics").Array(),
 					addr, &metricsByAddr)
+			case "profiler":
+				taskName := entity.Get("task").String()
+				updateProfilerMetrics(entity.Get("metrics").Array(), cluster, host, port, etype, taskName, dataSource)
+			case "queue":
+				queueName := entity.Get("attributes").Get("queue_name").String()
+				updateQueueMetrics(entity.Get("metrics").Array(), cluster, host, port, etype, queueName, dataSource)
+			case "disk":
+				dir := entity.Get("attributes").Get("data_dir").String()
+				updateDiskMetrics(entity.Get("metrics").Array(), cluster, host, port, etype, dir, dataSource)
 			default:
 				log.Errorf("Unsupport entity type %s", etype)
 			}
 		}
 	}
 
-	updateClusterLevelTableMetrics(metricsByTableID)
-	updateServerLevelServerMetrics(metricsByAddr)
-	updateClusterLevelMetrics(metricsOfCluster)
+	updateClusterLevelTableMetrics(metricsByTableID, dataSource)
+	updateServerLevelServerMetrics(metricsByAddr, dataSource)
+	updateClusterLevelMetrics(metricsOfCluster, dataSource)
 }
 
 // update metrics self
 func updatePartitionMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, partitionID string, tableID string, dsource int) {
 	for _, metric := range metrics {
-		name := metric.Get("name").String()
+		name := metric.Get("name").String() + "test"
 		mtype := metric.Get("type").String()
 		switch mtype {
 		case "Counter":
 			value := metric.Get("value").Float()
-			if counter, ok := CounterMetricsMap[name+"test"]; ok {
+			if counter, ok := CounterMetricsMap[name]; ok {
 				counter.With(
 					prometheus.Labels{"cluster": cluster,
 						"role":      RoleByDataSource[dsource],
@@ -326,13 +548,13 @@ func updatePartitionMetrics(metrics []gjson.Result, cluster string, host string,
 						"port":      port,
 						"entity":    entity,
 						"table":     tableID,
-						"partition": partitionID}).Add(float64(value)) //Consider the way indicators are updated？
+						"partition": partitionID}).Add(float64(value))
 			} else {
 				log.Warnf("Unknown metric name %s", name)
 			}
 		case "Gauge":
 			value := metric.Get("value").Float()
-			if gauge, ok := GaugeMetricsMap[name+"test"]; ok {
+			if gauge, ok := GaugeMetricsMap[name]; ok {
 				gauge.With(
 					prometheus.Labels{"cluster": cluster,
 						"role":      RoleByDataSource[dsource],
@@ -353,8 +575,265 @@ func updatePartitionMetrics(metrics []gjson.Result, cluster string, host string,
 	}
 }
 
+func updateTableMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, tableID string, dsource int) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		switch mtype {
+		case "Counter":
+			value := metric.Get("value").Float()
+			if counter, ok := CounterMetricsMap[name]; ok {
+				counter.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity,
+						"table":  tableID}).Add(float64(value)) // Consider the way indicators are updated？
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Gauge":
+			value := metric.Get("value").Float()
+			if gauge, ok := GaugeMetricsMap[name]; ok {
+				gauge.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity,
+						"table":  tableID}).Set(float64(value))
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Percentile":
+			log.Warnf("Unknown metric type %s", mtype)
+		case "Histogram":
+		default:
+			log.Warnf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func updateServerMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, dsource int) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		switch mtype {
+		case "Counter":
+			value := metric.Get("value").Float()
+			if counter, ok := CounterMetricsMap[name]; ok {
+				counter.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity}).Add(float64(value)) // Consider the way indicators are updated？
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Gauge":
+			value := metric.Get("value").Float()
+			if gauge, ok := GaugeMetricsMap[name]; ok {
+				gauge.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity}).Set(float64(value))
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Percentile":
+			log.Warnf("Unknown metric type %s", mtype)
+		case "Histogram":
+		default:
+			log.Warnf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func updateReplicaMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, partitionID string, tableID string, dsource int) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		switch mtype {
+		case "Counter":
+			value := metric.Get("value").Float()
+			if counter, ok := CounterMetricsMap[name]; ok {
+				counter.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":      RoleByDataSource[dsource],
+						"host":      host,
+						"port":      port,
+						"entity":    entity,
+						"table":     tableID,
+						"partition": partitionID}).Add(float64(value)) //Consider the way indicators are updated？
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Gauge":
+			value := metric.Get("value").Float()
+			if gauge, ok := GaugeMetricsMap[name]; ok {
+				gauge.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":      RoleByDataSource[dsource],
+						"host":      host,
+						"port":      port,
+						"entity":    entity,
+						"table":     tableID,
+						"partition": partitionID}).Set(float64(value))
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Percentile":
+			if gauge, ok := GaugeMetricsMap[name]; ok {
+				for i := 0; i < 5; i++ {
+					gauge.With(
+						prometheus.Labels{"cluster": cluster,
+							"role":      RoleByDataSource[dsource],
+							"host":      host,
+							"port":      port,
+							"entity":    entity,
+							"table":     tableID,
+							"partition": partitionID,
+							"p":         TaskLevel[i]}).Set(float64(metric.Get(TaskLevel[i]).Float()))
+				}
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Histogram":
+		default:
+			log.Warnf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func updateProfilerMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, task string, dsource int) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		switch mtype {
+		case "Counter":
+			value := metric.Get("value").Float()
+			if counter, ok := CounterMetricsMap[name]; ok {
+				counter.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity,
+						"task":   task}).Add(float64(value)) //Consider the way indicators are updated？
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Gauge":
+			value := metric.Get("value").Float()
+			if gauge, ok := GaugeMetricsMap[name]; ok {
+				gauge.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity,
+						"task":   task}).Set(float64(value))
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Percentile":
+			if gauge, ok := GaugeMetricsMap[name]; ok {
+				//各个级别的数据依次更新
+				for i := 0; i < 5; i++ {
+					gauge.With(
+						prometheus.Labels{"cluster": cluster,
+							"role":   RoleByDataSource[dsource],
+							"host":   host,
+							"port":   port,
+							"entity": entity,
+							"task":   task,
+							"p":      TaskLevel[i]}).Set(float64(metric.Get(TaskLevel[i]).Float()))
+				}
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Histogram":
+		default:
+			log.Warnf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func updateQueueMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, queue string, dsource int) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		switch mtype {
+		case "Counter":
+			value := metric.Get("value").Float()
+			if counter, ok := CounterMetricsMap[name]; ok {
+				counter.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity,
+						"queue":  queue}).Add(float64(value)) //Consider the way indicators are updated？
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Gauge":
+			value := metric.Get("value").Float()
+			if gauge, ok := GaugeMetricsMap[name]; ok {
+				gauge.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity,
+						"queue":  queue}).Set(float64(value))
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Percentile":
+			log.Warnf("Unknown metric type %s", mtype)
+		case "Histogram":
+		default:
+			log.Warnf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
+func updateDiskMetrics(metrics []gjson.Result, cluster string, host string, port string, entity string, dir string, dsource int) {
+	for _, metric := range metrics {
+		name := metric.Get("name").String() + "test"
+		mtype := metric.Get("type").String()
+		switch mtype {
+		case "Counter":
+			log.Warnf("Unknown metric type %s", mtype)
+		case "Gauge":
+			value := metric.Get("value").Float()
+			if gauge, ok := GaugeMetricsMap[name]; ok {
+				gauge.With(
+					prometheus.Labels{"cluster": cluster,
+						"role":   RoleByDataSource[dsource],
+						"host":   host,
+						"port":   port,
+						"entity": entity,
+						"dir":    dir}).Set(float64(value))
+			} else {
+				log.Warnf("Unknown metric name %s", name)
+			}
+		case "Percentile":
+			log.Warnf("Unknown metric type %s", mtype)
+		case "Histogram":
+		default:
+			log.Warnf("Unsupport metric type %s", mtype)
+		}
+	}
+}
+
 // Update table metrics. They belong to a specified server.
-func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[string]Metrics) {
+func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[string]Metrics, dataSource int) {
 	for tableID, metrics := range metricsByServerTableID {
 		var tableName string
 		if name, ok := TableNameByID[tableID]; !ok {
@@ -363,29 +842,29 @@ func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[strin
 			tableName = name
 		}
 		for _, metric := range metrics {
-			updateMetric(metric, addr, "server", tableName)
+			updateMetric(metric, addr, "server", tableName, dataSource)
 		}
 	}
 }
 
 // Update server metrics. They belong to a specified server.
-func updateServerLevelServerMetrics(metricsByAddr map[string]Metrics) {
+func updateServerLevelServerMetrics(metricsByAddr map[string]Metrics, dataSource int) {
 	for addr, metrics := range metricsByAddr {
 		for _, metric := range metrics {
-			updateMetric(metric, addr, "server", "server")
+			updateMetric(metric, addr, "server", "server", dataSource)
 		}
 	}
 }
 
 // Update cluster level metrics. They belong to a cluster.
-func updateClusterLevelMetrics(metricsOfCluster []Metric) {
+func updateClusterLevelMetrics(metricsOfCluster []Metric, dataSource int) {
 	for _, metric := range metricsOfCluster {
-		updateMetric(metric, "cluster", "server", metric.name)
+		updateMetric(metric, "cluster", "server", metric.name, dataSource)
 	}
 }
 
 // Update table metrics. They belong to a cluster.
-func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics) {
+func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics, dataSource int) {
 	for tableID, metrics := range metricsByTableID {
 		var tableName string
 		if name, ok := TableNameByID[tableID]; !ok {
@@ -394,13 +873,13 @@ func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics) {
 			tableName = name
 		}
 		for _, metric := range metrics {
-			updateMetric(metric, "cluster", "table", tableName)
+			updateMetric(metric, "cluster", "table", tableName, dataSource)
 		}
 	}
 }
 
-func updateMetric(metric Metric, endpoint string, level string, title string) {
-	role := RoleByDataSource[DataSource]
+func updateMetric(metric Metric, endpoint string, level string, title string, dataSource int) {
+	role := RoleByDataSource[dataSource]
 	switch metric.mtype {
 	case "Counter":
 		if counter, ok := CounterMetricsMap[metric.name]; ok {
