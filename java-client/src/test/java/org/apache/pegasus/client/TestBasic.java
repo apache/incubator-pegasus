@@ -2817,14 +2817,17 @@ public class TestBasic {
   }
 
   @Test
-  public void testRequestDetail() throws PException {
+  public void testOperationTimeout() throws PException {
+    String tableName = "temp";
+
+    // Create a PegasusClientInterface object 'client' which causes exceptions throw out.
     Duration caseTimeout = Duration.ofMillis(1);
     ClientOptions client_opt = ClientOptions.builder().operationTimeout(caseTimeout).build();
-
-    PegasusClientFactory.createClient(client_opt);
     PegasusClientInterface client = PegasusClientFactory.createClient(client_opt);
-    String tableName = "temp";
-    PegasusTableInterface tb = client.openTable(tableName);
+
+    // Create a PegasusTableInterface object 'tb' which doesn't cause exceptions throw out.
+    PegasusClientInterface client2 = PegasusClientFactory.createClient(ClientOptions.create());
+    PegasusTableInterface tb = client2.openTable(tableName);
 
     String HashPrefix = "TestHash";
     String SortPrefix = "TestSort";
