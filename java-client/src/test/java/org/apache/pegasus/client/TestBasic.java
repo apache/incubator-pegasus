@@ -38,9 +38,12 @@ import java.util.Map;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
 
 /** Created by mi on 16-3-22. */
 public class TestBasic {
+  private static final Logger logger = org.slf4j.LoggerFactory.getLogger(TestBasic.class);
+
   private static final String basicSetGetDelHashKey = "TestBasic_testSetGetDel_hash_key_1";
   private static final String multiSetGetDelHashKey = "TestBasic_testMultiSetGetDel_hash_key_1";
   private static final String multiGetHashKey = "TestBasic_testMultiGet_hash_key_1";
@@ -2829,92 +2832,91 @@ public class TestBasic {
     PegasusClientInterface client2 = PegasusClientFactory.createClient(ClientOptions.create());
     PegasusTableInterface tb = client2.openTable(tableName);
 
-    String HashPrefix = "TestHash";
-    String SortPrefix = "TestSort";
-    String hashKey = HashPrefix + "_0";
-    String sortKey = SortPrefix + "_0";
+    String hashKey = "TestHash_0";
+    String sortKey = "TestSort_0";
 
     try {
-      // multiSet timeout
-      System.out.println("Test multiSet PException request");
+      logger.info("Test multiSet PException request");
+      {
+        String value = RandomStringUtils.random(5, true, true);
+        List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+        int count = 500;
+        while (count-- > 0) {
+          values.add(Pair.of(sortKey.getBytes(), value.getBytes()));
+        }
 
-      String multiValue2 = RandomStringUtils.random(5, true, true);
-      List<Pair<byte[], byte[]>> multiValues2 = new ArrayList<Pair<byte[], byte[]>>();
-      int count2 = 500;
-      while (count2-- > 0) {
-        multiValues2.add(Pair.of(sortKey.getBytes(), multiValue2.getBytes()));
+        Throwable exception =
+            assertThrows(
+                PException.class,
+                () -> {
+                  client.multiSet(tableName, hashKey.getBytes(), values);
+                });
+        assertTrue(
+            exception
+                .getMessage()
+                .contains(
+                    "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=500,valueLength=2500]"));
       }
 
-      Throwable exception =
-          assertThrows(
-              PException.class,
-              () -> {
-                client.multiSet(tableName, hashKey.getBytes(), multiValues2);
-              });
-      assertTrue(
-          exception
-              .getMessage()
-              .contains(
-                  "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=500,valueLength=2500]"));
+      logger.info("Test checkAndMutate PException request");
+      {
+        Mutations mutations = new Mutations();
+        mutations.set(sortKey.getBytes(), "2".getBytes());
 
-      // checkAndMutate timeout
-      System.out.println("Test checkAndMutate PException request");
-      Mutations mutations = new Mutations();
-      mutations.set(sortKey.getBytes(), "2".getBytes());
+        CheckAndMutateOptions options = new CheckAndMutateOptions();
+        options.returnCheckValue = true;
+        Throwable exception =
+            assertThrows(
+                PException.class,
+                () -> {
+                  client.checkAndMutate(
+                      tableName,
+                      hashKey.getBytes(),
+                      "k5".getBytes(),
+                      CheckType.CT_VALUE_INT_LESS,
+                      "2".getBytes(),
+                      mutations,
+                      options);
+                });
+        assertTrue(
+            exception
+                .getMessage()
+                .contains(
+                    "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"k5\",sortKeyCount=1,valueLength=1]"));
+      }
 
-      CheckAndMutateOptions options = new CheckAndMutateOptions();
-      options.returnCheckValue = true;
-      Throwable exception2 =
-          assertThrows(
-              PException.class,
-              () -> {
-                client.checkAndMutate(
-                    tableName,
-                    hashKey.getBytes(),
-                    "k5".getBytes(),
-                    CheckType.CT_VALUE_INT_LESS,
-                    "2".getBytes(),
-                    mutations,
-                    options);
-              });
-      assertTrue(
-          exception2
-              .getMessage()
-              .contains(
-                  "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"k5\",sortKeyCount=1,valueLength=1]"));
+      logger.info("Test multiDel PException request");
+      {
+        List<byte[]> sortKeys = new ArrayList<byte[]>();
+        sortKeys.add("basic_test_sort_key_0".getBytes());
+        sortKeys.add("basic_test_sort_key_1".getBytes());
+        sortKeys.add("basic_test_sort_key_2".getBytes());
 
-      // multiDel timeout
-      System.out.println("Test multiDel PException request");
-      List<Pair<byte[], byte[]>> multiValues3 = new ArrayList<Pair<byte[], byte[]>>();
-      List<byte[]> sortKeys = new ArrayList<byte[]>();
-      multiValues3.add(
-          Pair.of("basic_test_sort_key_0".getBytes(), "basic_test_value_0".getBytes()));
-      multiValues3.add(
-          Pair.of("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes()));
-      multiValues3.add(
-          Pair.of("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes()));
-      sortKeys.add("basic_test_sort_key_0".getBytes());
-      sortKeys.add("basic_test_sort_key_1".getBytes());
-      sortKeys.add("basic_test_sort_key_2".getBytes());
+        List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+        values.add(Pair.of("basic_test_sort_key_0".getBytes(), "basic_test_value_0".getBytes()));
+        values.add(Pair.of("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes()));
+        values.add(Pair.of("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes()));
 
-      tb.multiSet(hashKey.getBytes(), multiValues3, 5000);
-      assertDoesNotThrow(
-          () -> {
-            tb.multiSet(hashKey.getBytes(), multiValues3, 5000);
-          });
+        tb.multiSet(hashKey.getBytes(), values, 5000);
+        assertDoesNotThrow(
+            () -> {
+              tb.multiSet(hashKey.getBytes(), values, 5000);
+            });
 
-      Throwable exception3 =
-          assertThrows(
-              PException.class,
-              () -> {
-                client.multiDel(tableName, hashKey.getBytes(), sortKeys);
-              });
-      assertTrue(
-          exception3
-              .getMessage()
-              .contains(
-                  "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=3,valueLength=-1]"));
+        Throwable exception =
+            assertThrows(
+                PException.class,
+                () -> {
+                  client.multiDel(tableName, hashKey.getBytes(), sortKeys);
+                });
+        assertTrue(
+            exception
+                .getMessage()
+                .contains(
+                    "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=3,valueLength=-1]"));
+      }
     } catch (Throwable e) {
+      e.printStackTrace();
       fail();
     }
   }
