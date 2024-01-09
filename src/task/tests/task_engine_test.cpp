@@ -24,14 +24,14 @@
  * THE SOFTWARE.
  */
 
-#include "runtime/task/task_engine.h"
+#include "task/task_engine.h"
 
 #include <stdio.h>
 
 #include "gtest/gtest.h"
 #include "runtime/global_config.h"
 #include "runtime/service_engine.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "runtime/test_utils.h"
 #include "utils/enum_helper.h"
 #include "utils/threadpool_code.h"
@@ -45,7 +45,7 @@ using namespace ::dsn;
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST_1)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST_2)
 
-TEST(core, task_engine)
+TEST(task_engine_test, basic)
 {
     if (dsn::service_engine::instance().spec().tool == "simulator")
         return;

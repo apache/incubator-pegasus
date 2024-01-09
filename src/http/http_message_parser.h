@@ -34,7 +34,7 @@
 
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/customizable_id.h"
 
 namespace dsn {

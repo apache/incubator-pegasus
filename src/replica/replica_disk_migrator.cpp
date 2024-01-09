@@ -30,7 +30,7 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"

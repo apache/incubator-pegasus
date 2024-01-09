@@ -29,7 +29,7 @@
 #include "meta_service_test_app.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

@@ -32,7 +32,7 @@
 #include "utils/api_utilities.h"
 #include "utils/function_traits.h"
 #include "aio/file_io.h"
-#include "runtime/task/task_tracker.h"
+#include "task_tracker.h"
 #include "runtime/rpc/serialization.h"
 
 namespace dsn {

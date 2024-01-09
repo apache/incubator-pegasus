@@ -42,7 +42,7 @@
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"

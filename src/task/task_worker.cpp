@@ -39,10 +39,10 @@
 #include <list>
 
 #include "runtime/service_engine.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_engine.h"
-#include "runtime/task/task_queue.h"
-#include "runtime/task/task_worker.h"
+#include "task.h"
+#include "task_engine.h"
+#include "task_queue.h"
+#include "task_worker.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
 #include "utils/ports.h"

@@ -30,8 +30,8 @@
 
 #include "env.sim.h"
 #include "runtime/global_config.h"
-#include "runtime/task/task_engine.sim.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_engine.sim.h"
+#include "task/task_spec.h"
 #include "scheduler.h"
 #include "service_engine.h"
 #include "sim_clock.h"

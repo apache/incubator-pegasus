@@ -27,7 +27,7 @@
 #include "meta_admin_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"

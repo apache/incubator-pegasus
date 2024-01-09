@@ -32,8 +32,8 @@
 #include <vector>
 
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/blob.h"
 #include "utils/crc.h"
 #include "utils/fmt_logging.h"

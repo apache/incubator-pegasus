@@ -38,7 +38,7 @@
 #include "bulk_load_types.h"
 #include "client/replication_ddl_client.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "shell/command_executor.h"
 #include "shell/commands.h"
 #include "utils/error_code.h"

@@ -23,7 +23,7 @@
 #include "proxy_layer.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 

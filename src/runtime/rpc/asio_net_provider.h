@@ -38,7 +38,7 @@
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/error_code.h"
 #include "utils/synchronize.h"
 

@@ -38,7 +38,7 @@
 #include "aio/aio_task.h"
 #include "aio/file_io.h"
 #include "gtest/gtest.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "runtime/tool_api.h"
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"

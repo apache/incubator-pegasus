@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-#include "runtime/task/task_code.h"
+#include "task_code.h"
 #include "utils/config_api.h"
 #include "utils/config_helper.h"
 #include "utils/customizable_id.h"

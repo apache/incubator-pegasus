@@ -37,7 +37,7 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "runtime/api_task.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"

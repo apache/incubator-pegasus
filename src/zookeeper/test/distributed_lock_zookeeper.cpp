@@ -35,8 +35,8 @@
 
 #include "gtest/gtest.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
 #include "utils/error_code.h"

@@ -28,7 +28,7 @@
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "test_util/test_util.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"

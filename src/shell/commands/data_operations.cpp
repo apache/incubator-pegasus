@@ -50,7 +50,7 @@
 #include "pegasus_utils.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "shell/args.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"

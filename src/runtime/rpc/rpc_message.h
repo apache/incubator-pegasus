@@ -33,8 +33,8 @@
 
 #include "common/gpid.h"
 #include "rpc_address.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"

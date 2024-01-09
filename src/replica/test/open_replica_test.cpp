@@ -30,7 +30,7 @@
 #include "replica/replica_stub.h"
 #include "replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/filesystem.h"
 
 namespace dsn {

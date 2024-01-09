@@ -28,7 +28,7 @@
 #define RAW_MESSAGE_PARSER_H
 
 #include "runtime/rpc/message_parser.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/customizable_id.h"
 
 namespace dsn {

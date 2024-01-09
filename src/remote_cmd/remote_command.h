@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "runtime/task/task.h"
+#include "task/task.h"
 
 namespace dsn {
 class error_code;

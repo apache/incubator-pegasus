@@ -34,7 +34,7 @@
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 
 namespace dsn {
 namespace replication {
