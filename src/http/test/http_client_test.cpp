@@ -54,8 +54,8 @@ public:
         ASSERT_TRUE(_url.set_scheme(scheme));
         ASSERT_TRUE(_url.set_host(host));
         ASSERT_TRUE(_url.set_port(port));
-        ASSERT_TRUE(_url.set_port(path));
-        ASSERT_TRUE(_url.set_port(query));
+        ASSERT_TRUE(_url.set_path(path));
+        ASSERT_TRUE(_url.set_query(query));
 
         std::string actual_url;
         ASSERT_TRUE(_url.to_string(actual_url));
@@ -85,7 +85,7 @@ const std::vector<http_url_case> http_url_tests = {
      34801,
      "/api",
      "key1=abc&key2=123456",
-     "http://10.10.1.2:34801/api?key1=abc&key2=-123456"},
+     "http://10.10.1.2:34801/api?key1=abc&key2=123456"},
 };
 
 INSTANTIATE_TEST_CASE_P(HttpClientTest, HttpUrlTest, testing::ValuesIn(http_url_tests));
