@@ -2888,21 +2888,21 @@ public class TestBasic {
       logger.info("Test multiDel PException request");
       {
         List<byte[]> sortKeys = new ArrayList<byte[]>();
-        sortKeys.add("basic_test_sort_key_0".getBytes());
-        sortKeys.add("basic_test_sort_key_1".getBytes());
-        sortKeys.add("basic_test_sort_key_2".getBytes());
-
         List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
-        values.add(Pair.of("basic_test_sort_key_0".getBytes(), "basic_test_value_0".getBytes()));
-        values.add(Pair.of("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes()));
-        values.add(Pair.of("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes()));
+        int count = 500;
+        while (count-- > 0) {
+          String tempSortKey = "basic_test_sort_key_0";
+          sortKeys.add(tempSortKey.getBytes());
+          values.add(Pair.of(tempSortKey.getBytes(), "basic_test_value_0".getBytes()));
+        }
 
-        tb.multiSet(hashKey.getBytes(), values, 5000);
+        // Expect multiSet with a higher timeout will not throw exception.
         assertDoesNotThrow(
             () -> {
               tb.multiSet(hashKey.getBytes(), values, 5000);
             });
 
+        // Expect multiSet with a lower timeout will throw exception.
         Throwable exception =
             assertThrows(
                 PException.class,
@@ -2913,7 +2913,7 @@ public class TestBasic {
             exception
                 .getMessage()
                 .contains(
-                    "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=3,valueLength=-1]"));
+                    "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=500,valueLength=-1]"));
       }
     } catch (Throwable e) {
       e.printStackTrace();
