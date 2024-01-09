@@ -91,6 +91,13 @@ private:
 
     METRIC_VAR_DECLARE_counter(dup_shipped_successful_requests);
     METRIC_VAR_DECLARE_counter(dup_shipped_failed_requests);
+
+    uint64_t _dup_max_allowed_write_size = dsn_config_get_value_uint64("replication",
+                                                          "max_allowed_write_size",
+                                                          1 << 20,
+                                                          "write operation exceed this "
+                                                          "threshold will be logged and reject, "
+                                                          "default is 1MB, 0 means no check");
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and
