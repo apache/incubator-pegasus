@@ -31,6 +31,28 @@
 
 namespace dsn {
 
+class http_url
+{
+public:
+    http_url();
+    ~http_url();
+
+    dsn::error_s init();
+    dsn::error_s set_scheme(const char *scheme);
+    dsn::error_s set_host(const char *host);
+    dsn::error_s set_port(const char *port);
+    dsn::error_s set_port(uint16_t port);
+    dsn::error_s set_path(const char *path);
+    dsn::error_s set_query(const char *query);
+
+    dsn::error_s to_string(std::string &url) const;
+
+private:
+    friend class http_client;
+
+    CURLU *_url;
+};
+
 // A library for http client that provides convenient APIs to access http services, implemented
 // based on libcurl (https://curl.se/libcurl/c/).
 //
@@ -84,6 +106,9 @@ public:
 
     // Specify the target url that the request would be sent for.
     dsn::error_s set_url(const std::string &url);
+
+    // Specify the target url by `http_url` class.
+    dsn::error_s set_url(const http_url &url);
 
     // Using post method, with `data` as the payload for post body.
     dsn::error_s with_post_method(const std::string &data);
