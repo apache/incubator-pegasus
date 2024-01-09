@@ -88,33 +88,13 @@ const std::vector<http_url_case> http_url_tests = {
     // Test default scheme, specified ip, empty path and query.
     {nullptr, "10.10.1.2", 34801, "", "", "http://10.10.1.2:34801/"},
     // Test default scheme, specified host, empty path and query.
-    {nullptr,
-     "www.example.com",
-     8080,
-     "",
-     "",
-     "http://www.example.com:8080/"},
+    {nullptr, "www.example.com", 8080, "", "", "http://www.example.com:8080/"},
     // Test default scheme, specified ip and path, empty query.
-    {nullptr,
-     "10.10.1.2",
-     34801,
-     "/api",
-     "",
-     "http://10.10.1.2:34801/api"},
+    {nullptr, "10.10.1.2", 34801, "/api", "", "http://10.10.1.2:34801/api"},
     // Test default scheme, specified host and path, empty query.
-    {nullptr,
-     "www.example.com",
-     8080,
-     "/api",
-     "",
-     "http://www.example.com:8080/api"},
+    {nullptr, "www.example.com", 8080, "/api", "", "http://www.example.com:8080/api"},
     // Test default scheme, specified ip, path and query.
-    {nullptr,
-     "10.10.1.2",
-     34801,
-     "/api",
-     "foo=bar",
-     "http://10.10.1.2:34801/api?foo=bar"},
+    {nullptr, "10.10.1.2", 34801, "/api", "foo=bar", "http://10.10.1.2:34801/api?foo=bar"},
     // Test default scheme, specified ip, path and query.
     {nullptr,
      "www.example.com",
