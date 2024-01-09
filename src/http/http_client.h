@@ -19,15 +19,16 @@
 
 #include <curl/curl.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <functional>
 #include <string>
 #include <unordered_map>
 
+#include "absl/strings/string_view.h"
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "utils/errors.h"
 #include "utils/ports.h"
-#include "absl/strings/string_view.h"
 
 namespace dsn {
 
