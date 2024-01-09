@@ -34,7 +34,7 @@ DSN_DEFINE_uint32(http,
                   "The maximum time in milliseconds that you allow the libcurl transfer operation "
                   "to complete");
 
-#define RETURN_IF_CURL_NOT(expr, expected, ...)                                                           \
+#define RETURN_IF_CURL_NOT(expr, expected, ...)                                                    \
     do {                                                                                           \
         const auto code = (expr);                                                                  \
         if (dsn_unlikely(code != expected)) {                                                      \
@@ -43,30 +43,37 @@ DSN_DEFINE_uint32(http,
         }                                                                                          \
     } while (0)
 
-http_url::http_url()
-    : _url(nullptr)
-{}
+http_url::http_url() : _url(nullptr) {}
 
-http_url::~http_url()
-{
-    if (_url != nullptr) {
-        curl_url_cleanup(_url);
-        _url = nullptr;
-    }
-}
+http_url::~http_url() { free_curlu_object(); }
 
 dsn::error_s http_url::init()
 {
     if (_url != nullptr) {
-        return dsn::error_s::ok();
+        free_curlu_object();
     }
 
     _url = curl_url();
-    if (_curl == nullptr) {
+    if (_url == nullptr) {
         return dsn::error_s::make(dsn::ERR_CURL_FAILED, "fail to initialize curl url");
     }
 
     return dsn::error_s::ok();
+}
+
+void http_url::free_curlu_object()
+{
+    if (_url == nullptr) {
+        return;
+    }
+
+    curl_url_cleanup(_url);
+    _url = nullptr;
+}
+
+std::string http_url::to_error_msg(CURLUcode code) const
+{
+    return fmt::format("code={}, desc=\"{}\"", static_cast<int>(code), curl_url_strerror(code));
 }
 
 namespace {
@@ -83,25 +90,27 @@ inline dsn::error_code to_error_code(CURLUcode code)
 
 } // anonymous namespace
 
-#define RETURN_IF_CURL_URL_NOT_OK(expr, ...)                                                           \
-    RETURN_IF_CURL_NOT(expr, CURLUE_OK, ##__VA_ARGS__) 
+#define RETURN_IF_CURL_URL_NOT_OK(expr, ...)                                                       \
+    do {                                                                                           \
+        CHECK_NOTNULL(_url, "CURLU object has not been initialized");                              \
+        RETURN_IF_CURL_NOT(expr, CURLUE_OK, ##__VA_ARGS__);                                        \
+    } while (0)
 
-#define RETURN_IF_URL_SET_NOT_OK(part, content, flags)                                                        \
-    RETURN_IF_CURL_URL_NOT_OK(curl_url_set(_url, part, content, flags),                                     \
-                          "failed to set " #part " to {}",                                              \
-                          content)
+#define RETURN_IF_URL_SET_NOT_OK(part, content, flags)                                             \
+    RETURN_IF_CURL_URL_NOT_OK(                                                                     \
+        curl_url_set(_url, part, content, flags), "failed to set " #part " to {}", content)
 
-#define RETURN_IF_URL_GET_NOT_OK(part, content_pointer, flags)                                                        \
-    RETURN_IF_CURL_URL_NOT_OK(curl_url_get(_url, part, content_pointer, flags),                                     \
-                          "failed to get " #part)
+#define RETURN_IF_URL_GET_NOT_OK(part, content_pointer, flags)                                     \
+    RETURN_IF_CURL_URL_NOT_OK(curl_url_get(_url, part, content_pointer, flags),                    \
+                              "failed to get " #part)
 
-#define DEF_URL_SET_FUNC(name, part) \
-dsn::error_s http_url::set_##name(const char *content) \
-{ \
-    RETURN_IF_URL_SET_NOT_OK(CURLUPART_##part, content, 0); \
-\
-    return dsn::error_s::ok(); \
-}
+#define DEF_URL_SET_FUNC(name, part)                                                               \
+    dsn::error_s http_url::set_##name(const char *content)                                         \
+    {                                                                                              \
+        RETURN_IF_URL_SET_NOT_OK(CURLUPART_##part, content, 0);                                    \
+                                                                                                   \
+        return dsn::error_s::ok();                                                                 \
+    }
 
 DEF_URL_SET_FUNC(scheme, SCHEME)
 
@@ -109,10 +118,7 @@ DEF_URL_SET_FUNC(host, HOST)
 
 DEF_URL_SET_FUNC(port, PORT)
 
-dsn::error_s http_url::set_port(uint16_t port) 
-{ 
-    set_port(CURLUPART_PORT, std::to_string(port).c_str(), 0);
-}
+dsn::error_s http_url::set_port(uint16_t port) { return set_port(std::to_string(port).c_str()); }
 
 DEF_URL_SET_FUNC(path, PATH)
 
@@ -125,9 +131,9 @@ dsn::error_s http_url::to_string(std::string &url) const
     char *content;
     RETURN_IF_URL_GET_NOT_OK(CURLUPART_URL, &content, 0);
 
-    url = content; 
+    url = content;
 
-    // Free the returned string. 
+    // Free the returned string.
     curl_free(content);
 
     return dsn::error_s::ok();
@@ -136,6 +142,12 @@ dsn::error_s http_url::to_string(std::string &url) const
 #undef RETURN_IF_URL_GET_NOT_OK
 #undef RETURN_IF_URL_SET_NOT_OK
 #undef RETURN_IF_CURL_URL_NOT_OK
+
+CURLU *http_url::get_curlu_object() const
+{
+    CHECK_NOTNULL(_url, "CURLU object has not been initialized");
+    return _url;
+}
 
 http_client::http_client()
     : _curl(nullptr),
@@ -177,22 +189,25 @@ inline dsn::error_code to_error_code(CURLcode code)
 
 } // anonymous namespace
 
-#define RETURN_IF_CURL_API_NOT_OK(expr, ...)                                                           \
-    RETURN_IF_CURL_NOT(expr, CURLE_OK, ##__VA_ARGS__) 
+#define RETURN_IF_CURL_API_NOT_OK(expr, ...)                                                       \
+    do {                                                                                           \
+        CHECK_NOTNULL(_curl, "CURL object has not been initialized");                              \
+        RETURN_IF_CURL_NOT(expr, CURLE_OK, ##__VA_ARGS__);                                         \
+    } while (0)
 
 #define RETURN_IF_SETOPT_NOT_OK(opt, input)                                                        \
-    RETURN_IF_CURL_API_NOT_OK(curl_easy_setopt(_curl, opt, input),                                     \
-                          "failed to set " #opt " to"                                              \
-                          " " #input)
+    RETURN_IF_CURL_API_NOT_OK(curl_easy_setopt(_curl, opt, input),                                 \
+                              "failed to set " #opt " to"                                          \
+                              " " #input)
 
 #define RETURN_IF_GETINFO_NOT_OK(info, output)                                                     \
     RETURN_IF_CURL_API_NOT_OK(curl_easy_getinfo(_curl, info, output), "failed to get from " #info)
 
 #define RETURN_IF_EXEC_METHOD_NOT_OK()                                                             \
-    RETURN_IF_CURL_API_NOT_OK(curl_easy_perform(_curl),                                                \
-                          "failed to perform http request(method={}, url={})",                     \
-                          enum_to_string(_method),                                                 \
-                          _url)
+    RETURN_IF_CURL_API_NOT_OK(curl_easy_perform(_curl),                                            \
+                              "failed to perform http request(method={}, url={})",                 \
+                              enum_to_string(_method),                                             \
+                              _url)
 
 dsn::error_s http_client::init()
 {
@@ -289,9 +304,10 @@ dsn::error_s http_client::set_url(const std::string &url)
 
 dsn::error_s http_client::set_url(const http_url &url)
 {
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_CURLU, url._url);
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_CURLU, url.get_curlu_object());
 
-    _url = url_obj.to_string();
+    RETURN_NOT_OK(url.to_string(_url));
+
     return dsn::error_s::ok();
 }
 

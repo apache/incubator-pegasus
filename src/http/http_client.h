@@ -50,6 +50,12 @@ public:
 private:
     friend class http_client;
 
+    void free_curlu_object();
+
+    CURLU *get_curlu_object() const;
+
+    std::string to_error_msg(CURLUcode code) const;
+
     CURLU *_url;
 };
 

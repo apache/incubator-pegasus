@@ -36,6 +36,60 @@
 
 namespace dsn {
 
+using http_url_case =
+    std::tuple<const char *, const char *, uint16_t, const char *, const char *, const char *>;
+
+class HttpUrlTest : public testing::TestWithParam<http_url_case>
+{
+public:
+    void SetUp() override { ASSERT_TRUE(_url.init()); }
+
+    void test_build_url(const char *scheme,
+                        const char *host,
+                        uint16_t port,
+                        const char *path,
+                        const char *query,
+                        const char *expected_url)
+    {
+        ASSERT_TRUE(_url.set_scheme(scheme));
+        ASSERT_TRUE(_url.set_host(host));
+        ASSERT_TRUE(_url.set_port(port));
+        ASSERT_TRUE(_url.set_port(path));
+        ASSERT_TRUE(_url.set_port(query));
+
+        std::string actual_url;
+        ASSERT_TRUE(_url.to_string(actual_url));
+        EXPECT_STREQ(expected_url, actual_url.c_str());
+    }
+
+private:
+    http_url _url;
+};
+
+TEST_P(HttpUrlTest, BuildUrl)
+{
+    const char *scheme;
+    const char *host;
+    uint16_t port;
+    const char *path;
+    const char *query;
+    const char *expected_url;
+    std::tie(scheme, host, port, path, query, expected_url) = GetParam();
+
+    test_build_url(scheme, host, port, path, query, expected_url);
+}
+
+const std::vector<http_url_case> http_url_tests = {
+    {"http",
+     "10.10.1.2",
+     34801,
+     "/api",
+     "key1=abc&key2=123456",
+     "http://10.10.1.2:34801/api?key1=abc&key2=-123456"},
+};
+
+INSTANTIATE_TEST_CASE_P(HttpClientTest, HttpUrlTest, testing::ValuesIn(http_url_tests));
+
 void check_expected_description_prefix(const std::string &expected_description_prefix,
                                        const dsn::error_s &err)
 {
@@ -189,7 +243,6 @@ TEST_P(HttpClientMethodTest, ExecMethod)
     const char *expected_response;
     std::tie(url, method, post_data, expected_http_status, expected_response) = GetParam();
 
-    http_client _client;
     test_mothod(url, method, post_data, expected_http_status, expected_response);
 }
 
