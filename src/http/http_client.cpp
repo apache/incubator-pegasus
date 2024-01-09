@@ -58,6 +58,9 @@ dsn::error_s http_url::init()
         return dsn::error_s::make(dsn::ERR_CURL_FAILED, "fail to initialize curl url");
     }
 
+    // Set "http" as the default scheme.
+    set_scheme("http");
+
     return dsn::error_s::ok();
 }
 

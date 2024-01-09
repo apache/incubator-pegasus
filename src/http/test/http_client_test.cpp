@@ -32,6 +32,7 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
+#include "utils/strings.h"
 #include "utils/test_macros.h"
 
 namespace dsn {
@@ -51,7 +52,11 @@ public:
                         const char *query,
                         const char *expected_url)
     {
-        ASSERT_TRUE(_url.set_scheme(scheme));
+        if (!utils::is_empty(scheme)) {
+            // Empty scheme will lead to error.
+            ASSERT_TRUE(_url.set_scheme(scheme));
+        }
+
         ASSERT_TRUE(_url.set_host(host));
         ASSERT_TRUE(_url.set_port(port));
         ASSERT_TRUE(_url.set_path(path));
@@ -80,12 +85,71 @@ TEST_P(HttpUrlTest, BuildUrl)
 }
 
 const std::vector<http_url_case> http_url_tests = {
+    // Test default scheme, specified ip, empty path and query.
+    {nullptr, "10.10.1.2", 34801, "", "", "http://10.10.1.2:34801/"},
+    // Test default scheme, specified host, empty path and query.
+    {nullptr,
+     "www.example.com",
+     8080,
+     "",
+     "",
+     "http://www.example.com:8080/"},
+    // Test default scheme, specified ip and path, empty query.
+    {nullptr,
+     "10.10.1.2",
+     34801,
+     "/api",
+     "",
+     "http://10.10.1.2:34801/api"},
+    // Test default scheme, specified host and path, empty query.
+    {nullptr,
+     "www.example.com",
+     8080,
+     "/api",
+     "",
+     "http://www.example.com:8080/api"},
+    // Test default scheme, specified ip, path and query.
+    {nullptr,
+     "10.10.1.2",
+     34801,
+     "/api",
+     "foo=bar",
+     "http://10.10.1.2:34801/api?foo=bar"},
+    // Test default scheme, specified ip, path and query.
+    {nullptr,
+     "www.example.com",
+     8080,
+     "/api",
+     "foo=bar",
+     "http://www.example.com:8080/api?foo=bar"},
+    // Test default scheme, specified ip, path and query with multiple keys.
+    {nullptr,
+     "10.10.1.2",
+     34801,
+     "/api",
+     "key1=abc&key2=123456",
+     "http://10.10.1.2:34801/api?key1=abc&key2=123456"},
+    // Test default scheme, specified ip, multi-level path and query with multiple keys.
+    {nullptr,
+     "10.10.1.2",
+     34801,
+     "/api/multi/level/path",
+     "key1=abc&key2=123456",
+     "http://10.10.1.2:34801/api/multi/level/path?key1=abc&key2=123456"},
+    // Test specified scheme, ip, path and query with multiple keys.
     {"http",
      "10.10.1.2",
      34801,
      "/api",
      "key1=abc&key2=123456",
      "http://10.10.1.2:34801/api?key1=abc&key2=123456"},
+    // Test specified scheme, ip, multi-level path and query with multiple keys.
+    {"http",
+     "10.10.1.2",
+     34801,
+     "/api/multi/level/path",
+     "key1=abc&key2=123456",
+     "http://10.10.1.2:34801/api/multi/level/path?key1=abc&key2=123456"},
 };
 
 INSTANTIATE_TEST_CASE_P(HttpClientTest, HttpUrlTest, testing::ValuesIn(http_url_tests));
