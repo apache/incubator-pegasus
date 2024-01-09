@@ -65,11 +65,18 @@ error_code write_data_to_file(const std::string &file_path, const T &data, const
     return ERR_OK;
 }
 
-// Load a object from the file in 'file_path' to 'obj', the file content must be in JSON format.
+// Load a object from the file in 'file_path' to 'obj', while 'type' decide whether the data is
+// encrypted, the file content must be in JSON format.
 // The object T must use the marco DEFINE_JSON_SERIALIZATION(...) when defining, which implement
 // the RapidJson APIs.
 template <class T>
 error_code load_rjobj_from_file(const std::string &file_path, T *obj)
+{
+    return load_rjobj_from_file(file_path, FileDataType::kSensitive, obj);
+}
+
+template <class T>
+error_code load_rjobj_from_file(const std::string &file_path, FileDataType type, T *obj)
 {
     LOG_AND_RETURN_NOT_TRUE(ERROR,
                             filesystem::path_exists(file_path),
@@ -77,12 +84,11 @@ error_code load_rjobj_from_file(const std::string &file_path, T *obj)
                             "file '{}' not exist",
                             file_path);
     std::string data;
-    LOG_AND_RETURN_CODE_NOT_RDB_OK(
-        ERROR,
-        rocksdb::ReadFileToString(PegasusEnv(FileDataType::kSensitive), file_path, &data),
-        ERR_FILE_OPERATION_FAILED,
-        "read file '{}' failed",
-        file_path);
+    LOG_AND_RETURN_CODE_NOT_RDB_OK(ERROR,
+                                   rocksdb::ReadFileToString(PegasusEnv(type), file_path, &data),
+                                   ERR_FILE_OPERATION_FAILED,
+                                   "read file '{}' failed",
+                                   file_path);
     LOG_AND_RETURN_NOT_TRUE(
         ERROR,
         json::json_forwarder<T>::decode(blob::create_from_bytes(std::move(data)), *obj),
@@ -92,18 +98,23 @@ error_code load_rjobj_from_file(const std::string &file_path, T *obj)
     return ERR_OK;
 }
 
-// Dump the object to the file in 'file_path' according to 'obj', the file content will be in JSON
+// Dump the object to the file in 'file_path' according to 'obj', while 'type' decide whether the
+// data is encrypted, the file content will be in JSON
 // format.
 // The object T must use the marco DEFINE_JSON_SERIALIZATION(...) when defining, which implement
 // the RapidJson APIs.
 template <class T>
 error_code dump_rjobj_to_file(const T &obj, const std::string &file_path)
 {
+    return dump_rjobj_to_file(obj, FileDataType::kSensitive, file_path);
+}
+
+template <class T>
+error_code dump_rjobj_to_file(const T &obj, FileDataType type, const std::string &file_path)
+{
     const auto data = json::json_forwarder<T>::encode(obj);
-    LOG_AND_RETURN_NOT_OK(ERROR,
-                          write_data_to_file(file_path, data, FileDataType::kSensitive),
-                          "dump content to '{}' failed",
-                          file_path);
+    LOG_AND_RETURN_NOT_OK(
+        ERROR, write_data_to_file(file_path, data, type), "dump content to '{}' failed", file_path);
     return ERR_OK;
 }
 
@@ -113,18 +124,23 @@ error_code dump_rjobj_to_file(const T &obj, const std::string &file_path)
 template <class T>
 error_code load_njobj_from_file(const std::string &file_path, T *obj)
 {
+    return load_njobj_from_file(file_path, FileDataType::kSensitive, obj);
+}
+
+template <class T>
+error_code load_njobj_from_file(const std::string &file_path, FileDataType type, T *obj)
+{
     LOG_AND_RETURN_NOT_TRUE(ERROR,
                             filesystem::path_exists(file_path),
                             ERR_PATH_NOT_FOUND,
                             "file '{}' not exist",
                             file_path);
     std::string data;
-    LOG_AND_RETURN_CODE_NOT_RDB_OK(
-        ERROR,
-        rocksdb::ReadFileToString(PegasusEnv(FileDataType::kSensitive), file_path, &data),
-        ERR_FILE_OPERATION_FAILED,
-        "read file '{}' failed",
-        file_path);
+    LOG_AND_RETURN_CODE_NOT_RDB_OK(ERROR,
+                                   rocksdb::ReadFileToString(PegasusEnv(type), file_path, &data),
+                                   ERR_FILE_OPERATION_FAILED,
+                                   "read file '{}' failed",
+                                   file_path);
     try {
         nlohmann::json::parse(data).get_to(*obj);
     } catch (nlohmann::json::exception &exp) {
@@ -143,11 +159,15 @@ error_code load_njobj_from_file(const std::string &file_path, T *obj)
 template <class T>
 error_code dump_njobj_to_file(const T &obj, const std::string &file_path)
 {
+    return dump_njobj_to_file(obj, FileDataType::kSensitive, file_path);
+}
+
+template <class T>
+error_code dump_njobj_to_file(const T &obj, FileDataType type, const std::string &file_path)
+{
     const auto data = nlohmann::json(obj).dump();
-    LOG_AND_RETURN_NOT_OK(ERROR,
-                          write_data_to_file(file_path, data, FileDataType::kSensitive),
-                          "dump content to '{}' failed",
-                          file_path);
+    LOG_AND_RETURN_NOT_OK(
+        ERROR, write_data_to_file(file_path, data, type), "dump content to '{}' failed", file_path);
     return ERR_OK;
 }
 
