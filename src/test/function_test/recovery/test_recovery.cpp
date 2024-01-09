@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <chrono>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 #include <thread>
