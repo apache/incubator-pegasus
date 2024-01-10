@@ -208,8 +208,13 @@ TEST(HttpClientTest, Callback)
     NO_FATALS(check_expected_description_prefix(expected_description_prefix, err));
 }
 
-using http_client_method_case =
-    std::tuple<const char *, http_method, const char *, http_status_code, const char *>;
+using http_client_method_case = std::tuple<const char *,
+                                           uint16_t,
+                                           const char *,
+                                           http_method,
+                                           const char *,
+                                           http_status_code,
+                                           const char *>;
 
 class HttpClientMethodTest : public testing::TestWithParam<http_client_method_case>
 {
@@ -252,12 +257,14 @@ public:
         EXPECT_EQ(expected_http_status, actual_http_status);
     }
 
-    void test_mothod(const std::string &url,
+    template <typename TUrl>
+    void test_mothod(const TUrl &url,
                      const http_method method,
                      const std::string &post_data,
                      const http_status_code expected_http_status,
                      const std::string &expected_response)
     {
+        ASSERT_TRUE(_client.init());
         ASSERT_TRUE(_client.set_url(url));
 
         switch (method) {
@@ -281,33 +288,58 @@ private:
 
 TEST_P(HttpClientMethodTest, ExecMethod)
 {
-    const char *url;
+    const char *host;
+    uint16_t port;
+    const char *path;
     http_method method;
     const char *post_data;
     http_status_code expected_http_status;
     const char *expected_response;
-    std::tie(url, method, post_data, expected_http_status, expected_response) = GetParam();
+    std::tie(host, port, path, method, post_data, expected_http_status, expected_response) =
+        GetParam();
 
-    test_mothod(url, method, post_data, expected_http_status, expected_response);
+    {
+        // Test with url string.
+        const auto &url = fmt::format("http://{}:{}{}", host, port, path);
+        test_mothod(url, method, post_data, expected_http_status, expected_response);
+    }
+
+    {
+        // Test with url class.
+        http_url url;
+        ASSERT_TRUE(url.init());
+        ASSERT_TRUE(url.set_host(host));
+        ASSERT_TRUE(url.set_port(port));
+        ASSERT_TRUE(url.set_path(path));
+        test_mothod(url, method, post_data, expected_http_status, expected_response);
+    }
 }
 
 const std::vector<http_client_method_case> http_client_method_tests = {
-    {"http://127.0.0.1:20001/test/get",
+    {"127.0.0.1",
+     20001,
+     "/test/get",
      http_method::POST,
      "with POST DATA",
      http_status_code::kBadRequest,
      "please use GET method"},
-    {"http://127.0.0.1:20001/test/get",
+    {"127.0.0.1",
+     20001,
+     "/test/get",
      http_method::GET,
      "",
      http_status_code::kOk,
      "you are using GET method"},
-    {"http://127.0.0.1:20001/test/post",
+    {"127.0.0.1",
+     20001,
+     "/test/post",
      http_method::POST,
      "with POST DATA",
      http_status_code::kOk,
      "you are using POST method with POST DATA"},
-    {"http://127.0.0.1:20001/test/post",
+    {"127.0.0.1",
+     20001,
+     "/test/post",
      http_method::GET,
      "",
      http_status_code::kBadRequest,

@@ -47,6 +47,15 @@ http_url::http_url() : _url(nullptr) {}
 
 http_url::~http_url() { free_curlu_object(); }
 
+http_url::http_url(http_url &&rhs) : _url(rhs._url) { rhs._url = nullptr; }
+
+http_url &http_url::operator=(http_url &&rhs)
+{
+    _url = rhs._url;
+    rhs._url = nullptr;
+    return *this;
+}
+
 dsn::error_s http_url::init()
 {
     if (_url != nullptr) {
@@ -114,6 +123,8 @@ inline dsn::error_code to_error_code(CURLUcode code)
                                                                                                    \
         return dsn::error_s::ok();                                                                 \
     }
+
+DEF_URL_SET_FUNC(url, URL)
 
 DEF_URL_SET_FUNC(scheme, SCHEME)
 
@@ -210,7 +221,7 @@ inline dsn::error_code to_error_code(CURLcode code)
     RETURN_IF_CURL_API_NOT_OK(curl_easy_perform(_curl),                                            \
                               "failed to perform http request(method={}, url={})",                 \
                               enum_to_string(_method),                                             \
-                              _url)
+                              _url);
 
 dsn::error_s http_client::init()
 {
@@ -222,6 +233,8 @@ dsn::error_s http_client::init()
     } else {
         curl_easy_reset(_curl);
     }
+
+    _url.init();
 
     clear_header_fields();
     free_header_list();
@@ -297,20 +310,32 @@ size_t http_client::on_response_data(const void *data, size_t length)
     return (*_recv_callback)(data, length) ? length : std::numeric_limits<size_t>::max();
 }
 
-dsn::error_s http_client::set_url(const std::string &url)
+dsn::error_s http_client::set_url(const std::string &new_url)
 {
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_URL, url.c_str());
+    // DO NOT call curl_easy_setopt() on CURLOPT_URL, since The CURLOPT_URL string is ignored
+    // if CURLOPT_CURLU is set. See following docs for details:
+    // * https://curl.se/libcurl/c/CURLOPT_CURLU.html
+    // * https://curl.se/libcurl/c/CURLOPT_URL.html
+    http_url tmp;
+    RETURN_NOT_OK(tmp.init());
+    RETURN_NOT_OK(tmp.set_url(new_url.c_str()));
 
-    _url = url;
-    return dsn::error_s::ok();
+    return set_url(std::move(tmp));
 }
 
-dsn::error_s http_client::set_url(const http_url &url)
+dsn::error_s http_client::set_url(const http_url &new_url)
 {
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_CURLU, url.get_curlu_object());
+    std::string str;
+    RETURN_NOT_OK(new_url.to_string(str));
 
-    RETURN_NOT_OK(url.to_string(_url));
+    return set_url(str);
+}
 
+dsn::error_s http_client::set_url(http_url &&new_url)
+{
+    RETURN_IF_SETOPT_NOT_OK(CURLOPT_CURLU, new_url.get_curlu_object());
+
+    _url = std::move(new_url);
     return dsn::error_s::ok();
 }
 

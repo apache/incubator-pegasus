@@ -28,17 +28,23 @@
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "utils/errors.h"
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
 
 namespace dsn {
 
+// A class that help CURLU object
+// https://curl.se/libcurl/c/libcurl-url.html
 class http_url
 {
 public:
     http_url();
     ~http_url();
+    http_url(http_url &&);
+    http_url &operator=(http_url &&);
 
     dsn::error_s init();
+    dsn::error_s set_url(const char *url);
     dsn::error_s set_scheme(const char *scheme);
     dsn::error_s set_host(const char *host);
     dsn::error_s set_port(const char *port);
@@ -47,6 +53,16 @@ public:
     dsn::error_s set_query(const char *query);
 
     dsn::error_s to_string(std::string &url) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const http_url &url)
+    {
+        std::string str;
+        const auto &err = url.to_string(str);
+        if (dsn_unlikely(!err)) {
+            return os << err;
+        }
+        return os << str;
+    }
 
 private:
     friend class http_client;
@@ -58,6 +74,8 @@ private:
     std::string to_error_msg(CURLUcode code) const;
 
     CURLU *_url;
+
+    DISALLOW_COPY_AND_ASSIGN(http_url);
 };
 
 // A library for http client that provides convenient APIs to access http services, implemented
@@ -112,10 +130,11 @@ public:
     dsn::error_s init();
 
     // Specify the target url that the request would be sent for.
-    dsn::error_s set_url(const std::string &url);
+    dsn::error_s set_url(const std::string &new_url);
 
     // Specify the target url by `http_url` class.
-    dsn::error_s set_url(const http_url &url);
+    dsn::error_s set_url(const http_url &new_url);
+    dsn::error_s set_url(http_url &&new_url);
 
     // Using post method, with `data` as the payload for post body.
     dsn::error_s with_post_method(const std::string &data);
@@ -176,7 +195,7 @@ private:
 
     CURL *_curl;
     http_method _method;
-    std::string _url;
+    http_url _url;
     const recv_callback *_recv_callback;
     char _error_buf[kErrorBufferBytes];
 
@@ -188,3 +207,5 @@ private:
 };
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::http_url);
