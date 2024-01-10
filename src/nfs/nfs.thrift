@@ -40,6 +40,7 @@ struct copy_request
     8: bool overwrite;
     9: optional string source_disk_tag;
     10: optional dsn.gpid pid;
+    11: optional dsn.host_port hp_source;
 }
 
 struct copy_response
@@ -60,6 +61,7 @@ struct get_file_size_request
     6: optional string source_disk_tag;
     7: optional string dest_disk_tag;
     8: optional dsn.gpid pid;
+    9: optional dsn.host_port hp_source;
 }
 
 struct get_file_size_response

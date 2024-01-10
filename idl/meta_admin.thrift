@@ -76,6 +76,7 @@ struct configuration_update_request
     // the `meta_split_status` will be set
     // only used when on_config_sync
     6:optional metadata.split_status    meta_split_status;
+    7:optional dsn.host_port  hp_node;
 }
 
 // meta server (config mgr) => primary | secondary (downgrade) (w/ new config)
@@ -103,6 +104,7 @@ struct configuration_query_by_node_request
     1:dsn.rpc_address  node;
     2:optional list<metadata.replica_info> stored_replicas;
     3:optional replica_server_info info;
+    4:optional dsn.host_port  hp_node;
 }
 
 struct configuration_query_by_node_response
@@ -117,6 +119,7 @@ struct configuration_recovery_request
     1:list<dsn.rpc_address> recovery_set;
     2:bool skip_bad_nodes;
     3:bool skip_lost_partitions;
+    4:optional list<dsn.host_port> hp_recovery_set;
 }
 
 struct configuration_recovery_response
@@ -205,6 +208,7 @@ struct configuration_list_apps_response
 struct query_app_info_request
 {
     1:dsn.rpc_address meta_server;
+    2:optional dsn.host_port hp_meta_server;
 }
 
 struct query_app_info_response
@@ -280,6 +284,7 @@ struct node_info
 {
     1:node_status      status = node_status.NS_INVALID;
     2:dsn.rpc_address  address;
+    3:optional dsn.host_port  hp_address;
 }
 
 struct configuration_list_nodes_request
@@ -349,6 +354,8 @@ struct configuration_proposal_action
     // depricated now
     // new fields of this struct should start with 5
     // 4:i64 period_ts;
+    5:optional dsn.host_port hp_target;
+    6:optional dsn.host_port hp_node;
 }
 
 struct configuration_balancer_request
@@ -381,6 +388,7 @@ struct ddd_node_info
     5:i64             ballot; // collected && ballot == -1 means replica not exist on this node
     6:i64             last_committed_decree;
     7:i64             last_prepared_decree;
+    8:optional dsn.host_port hp_node;
 }
 
 struct ddd_partition_info

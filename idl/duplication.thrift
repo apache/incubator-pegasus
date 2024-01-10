@@ -150,6 +150,7 @@ struct duplication_sync_request
     1:dsn.rpc_address                                   node;
 
     2:map<dsn.gpid, list<duplication_confirm_entry>>    confirm_list;
+    3:dsn.host_port                                     hp_node;
 }
 
 struct duplication_sync_response

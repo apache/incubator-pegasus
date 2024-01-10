@@ -99,6 +99,7 @@ struct notify_catch_up_request
     2:dsn.gpid          child_gpid;
     3:i64               child_ballot;
     4:dsn.rpc_address   child_address;
+    5:optional dsn.host_port   hp_child_address;
 }
 
 struct notify_cacth_up_response
@@ -116,6 +117,7 @@ struct update_child_group_partition_count_request
     2:i32               new_partition_count;
     3:dsn.gpid          child_pid;
     4:i64               ballot;
+    5:optional dsn.host_port   hp_target_address;
 }
 
 struct update_child_group_partition_count_response
@@ -133,6 +135,7 @@ struct register_child_request
     2:dsn.layer2.partition_configuration    parent_config;
     3:dsn.layer2.partition_configuration    child_config;
     4:dsn.rpc_address                       primary_address;
+    5:optional dsn.host_port   hp_primary_address;
 }
 
 struct register_child_response

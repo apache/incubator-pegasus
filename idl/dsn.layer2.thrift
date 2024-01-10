@@ -41,6 +41,9 @@ struct partition_configuration
     6:list<dsn.rpc_address>  last_drops;
     7:i64                    last_committed_decree;
     8:i32                    partition_flags;
+    9:optional dsn.host_port          hp_primary;
+    10:optional list<dsn.host_port>   hp_secondaries;
+    11:optional list<dsn.host_port>   hp_last_drops;
 }
 
 struct query_cfg_request
