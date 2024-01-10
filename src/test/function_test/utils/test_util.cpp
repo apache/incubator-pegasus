@@ -62,7 +62,7 @@ using std::vector;
 
 namespace pegasus {
 
-test_util::test_util(map<string, string> create_envs, std::string cluster_name)
+test_util::test_util(map<string, string> create_envs, const std::string &cluster_name)
     : kOpNames({{test_util::OperateDataType::kSet, "set"},
                 {test_util::OperateDataType::kGet, "get"},
                 {test_util::OperateDataType::kDelete, "delete"},
