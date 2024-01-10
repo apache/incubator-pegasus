@@ -21,6 +21,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <functional>
+#include <iosfwd>
 #include <string>
 #include <unordered_map>
 
@@ -33,17 +34,26 @@
 
 namespace dsn {
 
-// A class that help CURLU object
-// https://curl.se/libcurl/c/libcurl-url.html
+// A class that helps http client build URLs, based on CURLU object of libcurl.
+// About CURLU object, please see: https://curl.se/libcurl/c/libcurl-url.html.
+// About the usage, please see the comments for `http_client`.
 class http_url
 {
 public:
     http_url();
     ~http_url();
+
+    // Only move operations are allowed.
     http_url(http_url &&);
     http_url &operator=(http_url &&);
 
+    // Before coming into use, init() must be called to initialize http url. It could also be
+    // called to reset the http url that have been initialized previously.
+    //
+    // `http` is the default scheme for the URL.
     dsn::error_s init();
+
+    // Operations that update the components of a URL.
     dsn::error_s set_url(const char *url);
     dsn::error_s set_scheme(const char *scheme);
     dsn::error_s set_host(const char *host);
@@ -52,6 +62,7 @@ public:
     dsn::error_s set_path(const char *path);
     dsn::error_s set_query(const char *query);
 
+    // Extract the URL string.
     dsn::error_s to_string(std::string &url) const;
 
     friend std::ostream &operator<<(std::ostream &os, const http_url &url)
@@ -69,6 +80,7 @@ private:
 
     void free_curlu_object();
 
+    // Only used by `http_client` to get the underlying CURLU object.
     CURLU *get_curlu_object() const;
 
     std::string to_error_msg(CURLUcode code) const;
@@ -93,6 +105,14 @@ private:
 //
 // Specify the target url that you would request for:
 // err = client.set_url("http://<ip>:<port>/your/path");
+//
+// Or, you could use `http_url` to manage your URLs, and attach it to http client:
+// http_url url;
+// auto url_err = url.init();
+// url_err = url.set_host(host);
+// url_err = url.set_port(port);
+// url_err = url.set_path(path);
+// client.set_url(std::move(url)); // Or client.set_url(url);
 //
 // If you would use GET method, call `with_get_method`:
 // err = client.with_get_method();

@@ -312,10 +312,13 @@ size_t http_client::on_response_data(const void *data, size_t length)
 
 dsn::error_s http_client::set_url(const std::string &new_url)
 {
-    // DO NOT call curl_easy_setopt() on CURLOPT_URL, since The CURLOPT_URL string is ignored
+    // DO NOT call curl_easy_setopt() on CURLOPT_URL, since the CURLOPT_URL string is ignored
     // if CURLOPT_CURLU is set. See following docs for details:
     // * https://curl.se/libcurl/c/CURLOPT_CURLU.html
     // * https://curl.se/libcurl/c/CURLOPT_URL.html
+    //
+    // Use a temporary object for the reason that once the error occurred, `_url` would not
+    // be dirty.
     http_url tmp;
     RETURN_NOT_OK(tmp.init());
     RETURN_NOT_OK(tmp.set_url(new_url.c_str()));
@@ -325,6 +328,7 @@ dsn::error_s http_client::set_url(const std::string &new_url)
 
 dsn::error_s http_client::set_url(const http_url &new_url)
 {
+    // Extract the URL string from new_url and attach it to the client.
     std::string str;
     RETURN_NOT_OK(new_url.to_string(str));
 
