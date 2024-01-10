@@ -112,7 +112,7 @@ private:
 // url_err = url.set_host(host);
 // url_err = url.set_port(port);
 // url_err = url.set_path(path);
-// client.set_url(std::move(url)); // Or client.set_url(url);
+// err = client.set_url(std::move(url)); // Or err = client.set_url(url);
 //
 // If you would use GET method, call `with_get_method`:
 // err = client.with_get_method();
