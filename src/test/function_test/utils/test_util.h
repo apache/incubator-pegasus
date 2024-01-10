@@ -50,7 +50,7 @@ class test_util : public ::testing::Test
 {
 public:
     test_util(std::map<std::string, std::string> create_envs = {},
-              std::string cluster_name = "onebox");
+              const std::string &cluster_name = "onebox");
     virtual ~test_util();
 
     static void SetUpTestCase();
