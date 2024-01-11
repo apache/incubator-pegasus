@@ -238,3 +238,10 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
         const ::dsn::error_s &_s = (s);                                                            \
         CHECK(_s.is_ok(), fmt::format(__VA_ARGS__));                                               \
     } while (false);
+
+#define RETURN_ERRS_NOT_TRUE(exp, code, ...)                                                       \
+    do {                                                                                           \
+        if (dsn_unlikely(!exp)) {                                                                  \
+            return dsn::error_s::make(code, fmt::format(__VA_ARGS__));                             \
+        }                                                                                          \
+    } while (false);
