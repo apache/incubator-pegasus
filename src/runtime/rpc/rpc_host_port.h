@@ -24,6 +24,7 @@
 // IWYU pragma: no_include <experimental/string_view>
 #include <functional>
 #include <iosfwd>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -72,7 +73,7 @@ public:
         return os << hp.to_string();
     }
 
-    rpc_group_host_port *group_host_port() const
+    std::shared_ptr<rpc_group_host_port> group_host_port() const
     {
         CHECK_NOTNULL(_group_host_port, "group_host_port cannot be null!");
         return _group_host_port;
@@ -93,7 +94,7 @@ private:
     std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;
-    rpc_group_host_port *_group_host_port = nullptr;
+    std::shared_ptr<rpc_group_host_port> _group_host_port;
 };
 
 inline bool operator==(const host_port &hp1, const host_port &hp2)
@@ -118,6 +119,21 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
 
 inline bool operator!=(const host_port &hp1, const host_port &hp2) { return !(hp1 == hp2); }
 
+inline bool operator<(const host_port &hp1, const host_port &hp2)
+{
+    if (hp1.type() != hp2.type()) {
+        return hp1.type() < hp2.type();
+    }
+
+    switch (hp1.type()) {
+    case HOST_TYPE_IPV4:
+        return hp1.host() < hp2.host() || (hp1.host() == hp2.host() && hp1.port() < hp2.port());
+    case HOST_TYPE_GROUP:
+        return hp1.group_host_port().get() < hp2.group_host_port().get();
+    default:
+        return true;
+    }
+}
 } // namespace dsn
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::host_port);
@@ -132,7 +148,7 @@ struct hash<::dsn::host_port>
         case HOST_TYPE_IPV4:
             return std::hash<std::string>()(hp.host()) ^ std::hash<uint16_t>()(hp.port());
         case HOST_TYPE_GROUP:
-            return std::hash<void *>()(hp.group_host_port());
+            return std::hash<void *>()(hp.group_host_port().get());
         default:
             return 0;
         }
