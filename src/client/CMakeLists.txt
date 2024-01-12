@@ -40,4 +40,6 @@ set(MY_BINPLACES "")
 
 dsn_add_static_library()
 
+target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_replication_common)
+
 add_subdirectory(test)
