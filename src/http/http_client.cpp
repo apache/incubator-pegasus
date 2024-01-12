@@ -34,24 +34,31 @@ DSN_DEFINE_uint32(http,
                   "The maximum time in milliseconds that you allow the libcurl transfer operation "
                   "to complete");
 
-#define RETURN_IF_CURL_NOT(expr, expected, ...)                                                    \
+#define RETURN_IF_CURL_NOT_OK(expr, ok, ...)                                                       \
     do {                                                                                           \
         const auto &code = (expr);                                                                 \
-        if (dsn_unlikely(code != (expected))) {                                                    \
+        if (dsn_unlikely(code != (ok))) {                                                          \
             std::string msg(fmt::format("{}: {}", fmt::format(__VA_ARGS__), to_error_msg(code)));  \
             return dsn::error_s::make(to_error_code(code), msg);                                   \
         }                                                                                          \
     } while (0)
 
+#define CHECK_IF_CURL_OK(expr, ok, ...)                                                            \
+    do {                                                                                           \
+        const auto &code = (expr);                                                                 \
+        CHECK_EXPRESSION(                                                                          \
+            #expr == #ok, code == (ok), "{}: {}", fmt::format(__VA_ARGS__), to_error_msg(code));   \
+    } while (0)
+
 #define CHECK_IF_CURL_URL_SET_OK(url, part, content, ...)                                          \
-    CHECK_EQ_MSG(curl_url_set(url, CURLUPART_##part, content, 0), CURLUE_OK, __VA_ARGS__)
+    CHECK_IF_CURL_OK(curl_url_set(url, CURLUPART_##part, content, 0), CURLUE_OK, __VA_ARGS__)
 
 #define CHECK_IF_CURL_URL_SET_NULL_OK(url, part, ...)                                              \
-    CHECK_IF_CURL_URL_SET_OK(                                                                      \
-        url,                                                                                       \
-        part,                                                                                      \
-        nullptr,                                                                                   \
-        "curl_url_set should always return CURLUE_OK for setting nullptr: part = " #part)
+    CHECK_IF_CURL_URL_SET_OK(url,                                                                  \
+                             part,                                                                 \
+                             nullptr,                                                              \
+                             "curl_url_set(part = " #part                                          \
+                             ", content = nullptr) should always return CURLUE_OK")
 
 namespace {
 
@@ -137,7 +144,7 @@ void http_url::clear()
     CHECK_IF_CURL_URL_SET_NULL_OK(_url.get(), URL);
 }
 
-#define RETURN_IF_CURL_URL_NOT_OK(expr, ...) RETURN_IF_CURL_NOT(expr, CURLUE_OK, __VA_ARGS__)
+#define RETURN_IF_CURL_URL_NOT_OK(expr, ...) RETURN_IF_CURL_NOT_OK(expr, CURLUE_OK, __VA_ARGS__)
 
 #define RETURN_IF_CURL_URL_SET_NOT_OK(part, content, flags)                                        \
     RETURN_IF_CURL_URL_NOT_OK(                                                                     \
@@ -231,7 +238,7 @@ inline dsn::error_code to_error_code(CURLcode code)
 #define RETURN_IF_CURL_EASY_NOT_OK(expr, ...)                                                      \
     do {                                                                                           \
         CHECK_NOTNULL(_curl, "CURL object has not been initialized");                              \
-        RETURN_IF_CURL_NOT(expr, CURLE_OK, __VA_ARGS__);                                           \
+        RETURN_IF_CURL_NOT_OK(expr, CURLE_OK, __VA_ARGS__);                                        \
     } while (0)
 
 #define RETURN_IF_CURL_EASY_SETOPT_NOT_OK(opt, input)                                              \
@@ -239,10 +246,10 @@ inline dsn::error_code to_error_code(CURLcode code)
                                "failed to set " #opt " with " #input)
 
 #define CHECK_IF_CURL_EASY_SETOPT_OK(opt, input, ...)                                              \
-    CHECK_EQ_MSG(curl_easy_setopt(_curl, CURLOPT_##opt, input),                                    \
-                 CURLE_OK,                                                                         \
-                 "failed to set " #opt " with " #input ": {}",                                     \
-                 fmt::format(__VA_ARGS__))
+    CHECK_IF_CURL_OK(curl_easy_setopt(_curl, CURLOPT_##opt, input),                                \
+                     CURLE_OK,                                                                     \
+                     "failed to set " #opt " with " #input ": {}",                                 \
+                     fmt::format(__VA_ARGS__))
 
 #define RETURN_IF_CURL_EASY_GETINFO_NOT_OK(info, output)                                           \
     RETURN_IF_CURL_EASY_NOT_OK(curl_easy_getinfo(_curl, CURLINFO_##info, output),                  \
@@ -532,6 +539,6 @@ dsn::error_s http_client::get_http_status(http_status_code &status_code) const
 #undef RETURN_IF_CURL_EASY_SETOPT_NOT_OK
 #undef RETURN_IF_CURL_EASY_NOT_OK
 
-#undef RETURN_IF_CURL_NOT
+#undef RETURN_IF_CURL_NOT_OK
 
 } // namespace dsn
