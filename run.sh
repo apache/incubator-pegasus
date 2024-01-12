@@ -484,16 +484,16 @@ function run_test()
             # Update options if needed, this should be done before starting onebox to make new options take effect.
             if [ "${module}" == "recovery_test" ]; then
                 master_count=1
-                opts="meta_state_service_type=meta_state_service_simple,distributed_lock_service_type=distributed_lock_service_simple"
+                opts="meta_state_service_type=meta_state_service_simple;distributed_lock_service_type=distributed_lock_service_simple"
             fi
             if [ "${module}" == "backup_restore_test" ]; then
-                opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=onebox"
+                opts="cold_backup_disabled=false;cold_backup_checkpoint_reserve_minutes=0;cold_backup_root=onebox"
             fi
             if [ "${module}" == "restore_test" ]; then
-                opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=onebox"
+                opts="cold_backup_disabled=false;cold_backup_checkpoint_reserve_minutes=0;cold_backup_root=onebox"
             fi
             # Append onebox_opts if needed.
-            [ -z ${onebox_opts} ] || opts="${opts},${onebox_opts}"
+            [ -z ${onebox_opts} ] || opts="${opts};${onebox_opts}"
             # Start onebox.
             if ! run_start_onebox -m ${master_count} -w -c --opts ${opts}; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
@@ -844,7 +844,7 @@ function run_start_onebox()
     fi
 
     OPTS=`echo $OPTS | xargs`
-    config_kvs=(${OPTS//,/ })
+    config_kvs=(${OPTS//;/ })
     for config_kv in ${config_kvs[@]}; do
         config_kv=`echo $config_kv | xargs`
         kv=(${config_kv//=/ })
