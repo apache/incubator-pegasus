@@ -125,8 +125,8 @@ void redis_parser::prepare_current_buffer()
         CHECK_PREFIX_MSG(
             first_msg->read_next(&msg_buffer, &_current_buffer_length),
             "read dsn::message_ex* failed, msg from_address = {}, to_address = {}, rpc_name = {}",
-            first_msg->header->from_address.to_string(),
-            first_msg->to_address.to_string(),
+            first_msg->header->from_address,
+            first_msg->to_address,
             first_msg->header->rpc_name);
         _current_buffer = static_cast<char *>(msg_buffer);
         _current_cursor = 0;
@@ -177,14 +177,14 @@ char redis_parser::peek()
 
 bool redis_parser::eat(char c)
 {
-    if (dsn_likely(peek() == c)) {
-        ++_current_cursor;
-        --_total_length;
-        return true;
+    if (dsn_unlikely(peek() != c)) {
+        LOG_ERROR_PREFIX("expect token: {}, but got {}", c, peek());
+        return false;
     }
 
-    LOG_ERROR_PREFIX("expect token: {}, but got {}", c, peek());
-    return false;
+    ++_current_cursor;
+    --_total_length;
+    return true;
 }
 
 void redis_parser::eat_all(char *dest, size_t length)
