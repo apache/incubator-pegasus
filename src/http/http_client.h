@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <functional>
 #include <iosfwd>
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -32,6 +33,10 @@
 #include "utils/fmt_utils.h"
 #include "utils/ports.h"
 
+USER_DEFINED_ENUM_FORMATTER(CURLUcode)
+
+USER_DEFINED_ENUM_FORMATTER(CURLcode)
+
 namespace dsn {
 
 // A class that helps http client build URLs, based on CURLU object of libcurl.
@@ -40,18 +45,19 @@ namespace dsn {
 class http_url
 {
 public:
-    http_url();
-    ~http_url();
-
-    // Only move operations are allowed.
-    http_url(http_url &&);
-    http_url &operator=(http_url &&);
-
-    // Before coming into use, init() must be called to initialize http url. It could also be
-    // called to reset the http url that have been initialized previously.
-    //
     // `http` is the default scheme for the URL.
-    dsn::error_s init();
+    http_url() noexcept;
+
+    ~http_url() = default;
+
+    http_url(const http_url &) noexcept;
+    http_url &operator=(const http_url &) noexcept;
+
+    http_url(http_url &&) noexcept;
+    http_url &operator=(http_url &&) noexcept;
+
+    // Clear the URL.
+    void clear();
 
     // Operations that update the components of a URL.
     dsn::error_s set_url(const char *url);
@@ -78,16 +84,15 @@ public:
 private:
     friend class http_client;
 
-    void free_curlu_object();
-
     // Only used by `http_client` to get the underlying CURLU object.
-    CURLU *get_curlu_object() const;
+    CURLU *curlu() const { return _url.get(); }
 
-    std::string to_error_msg(CURLUcode code) const;
+    struct curlu_deleter
+    {
+        void operator()(CURLU *url) const;
+    };
 
-    CURLU *_url;
-
-    DISALLOW_COPY_AND_ASSIGN(http_url);
+    std::unique_ptr<CURLU, curlu_deleter> _url;
 };
 
 // A library for http client that provides convenient APIs to access http services, implemented
@@ -108,11 +113,10 @@ private:
 //
 // Or, you could use `http_url` to manage your URLs, and attach it to http client:
 // http_url url;
-// auto url_err = url.init();
 // url_err = url.set_host(host);
 // url_err = url.set_port(port);
 // url_err = url.set_path(path);
-// err = client.set_url(std::move(url)); // Or err = client.set_url(url);
+// err = client.set_url(url); Or err = client.set_url(std::move(url));
 //
 // If you would use GET method, call `with_get_method`:
 // err = client.with_get_method();
@@ -153,8 +157,8 @@ public:
     dsn::error_s set_url(const std::string &new_url);
 
     // Specify the target url by `http_url` class.
-    dsn::error_s set_url(const http_url &new_url);
-    dsn::error_s set_url(http_url &&new_url);
+    void set_url(const http_url &new_url);
+    void set_url(http_url &&new_url);
 
     // Using post method, with `data` as the payload for post body.
     dsn::error_s with_post_method(const std::string &data);

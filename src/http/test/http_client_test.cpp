@@ -44,8 +44,6 @@ using http_url_case =
 class HttpUrlTest : public testing::TestWithParam<http_url_case>
 {
 public:
-    void SetUp() override { ASSERT_TRUE(_url.init()); }
-
     void test_build_url(const char *scheme,
                         const char *host,
                         uint16_t port,
@@ -258,14 +256,15 @@ public:
     }
 
     template <typename TUrl>
-    void test_mothod(const TUrl &url,
+    void test_mothod(TUrl &&url,
                      const http_method method,
                      const std::string &post_data,
                      const http_status_code expected_http_status,
                      const std::string &expected_response)
     {
         ASSERT_TRUE(_client.init());
-        ASSERT_TRUE(_client.set_url(url));
+        // ASSERT_TRUE(_client.set_url(url));
+        _client.set_url(url);
 
         switch (method) {
         case http_method::GET:
@@ -307,7 +306,6 @@ TEST_P(HttpClientMethodTest, ExecMethod)
     {
         // Test with url class.
         http_url url;
-        ASSERT_TRUE(url.init());
         ASSERT_TRUE(url.set_host(host));
         ASSERT_TRUE(url.set_port(port));
         ASSERT_TRUE(url.set_path(path));
