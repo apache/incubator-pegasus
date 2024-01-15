@@ -127,39 +127,7 @@ TEST(HttpUrlTest, CallMoveAssignmentOperator)
     test_after_move(url_1, url_2);
 }
 
-using http_url_build_case =
-    std::tuple<const char *, const char *, uint16_t, const char *, const char *, const char *>;
-
-class HttpUrlBuildTest : public testing::TestWithParam<http_url_build_case>
-{
-public:
-    void test_build_url(const char *scheme,
-                        const char *host,
-                        uint16_t port,
-                        const char *path,
-                        const char *query,
-                        const char *expected_url)
-    {
-        if (!utils::is_empty(scheme)) {
-            // Empty scheme will lead to error.
-            ASSERT_TRUE(_url.set_scheme(scheme));
-        }
-
-        ASSERT_TRUE(_url.set_host(host));
-        ASSERT_TRUE(_url.set_port(port));
-        ASSERT_TRUE(_url.set_path(path));
-        ASSERT_TRUE(_url.set_query(query));
-
-        std::string actual_url;
-        ASSERT_TRUE(_url.to_string(actual_url));
-        EXPECT_STREQ(expected_url, actual_url.c_str());
-    }
-
-private:
-    http_url _url;
-};
-
-TEST_P(HttpUrlBuildTest, BuildUrl)
+struct http_url_build_case
 {
     const char *scheme;
     const char *host;
@@ -167,10 +135,33 @@ TEST_P(HttpUrlBuildTest, BuildUrl)
     const char *path;
     const char *query;
     const char *expected_url;
-    std::tie(scheme, host, port, path, query, expected_url) = GetParam();
+};
 
-    test_build_url(scheme, host, port, path, query, expected_url);
-}
+class HttpUrlBuildTest : public testing::TestWithParam<http_url_build_case>
+{
+public:
+    void test_build_url(const http_url_build_case &build_case)
+    {
+        if (!utils::is_empty(build_case.scheme)) {
+            // Empty scheme will lead to error.
+            ASSERT_TRUE(_url.set_scheme(build_case.scheme));
+        }
+
+        ASSERT_TRUE(_url.set_host(build_case.host));
+        ASSERT_TRUE(_url.set_port(build_case.port));
+        ASSERT_TRUE(_url.set_path(build_case.path));
+        ASSERT_TRUE(_url.set_query(build_case.query));
+
+        std::string actual_url;
+        ASSERT_TRUE(_url.to_string(actual_url));
+        EXPECT_STREQ(build_case.expected_url, actual_url.c_str());
+    }
+
+private:
+    http_url _url;
+};
+
+TEST_P(HttpUrlBuildTest, BuildUrl) { test_build_url(GetParam()); }
 
 const std::vector<http_url_build_case> http_url_tests = {
     // Test default scheme, specified ip, empty path and query.
