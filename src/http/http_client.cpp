@@ -51,7 +51,10 @@ DSN_DEFINE_uint32(http,
     } while (0)
 
 #define CHECK_IF_CURL_URL_SET_OK(url, part, content, ...)                                          \
-    CHECK_IF_CURL_OK(curl_url_set(url, CURLUPART_##part, content, 0), CURLUE_OK, __VA_ARGS__)
+    do {                                                                                           \
+        CHECK_NOTNULL(url, "CURLU object has not been allocated");                                 \
+        CHECK_IF_CURL_OK(curl_url_set(url, CURLUPART_##part, content, 0), CURLUE_OK, __VA_ARGS__); \
+    } while (0)
 
 #define CHECK_IF_CURL_URL_SET_NULL_OK(url, part, ...)                                              \
     CHECK_IF_CURL_URL_SET_OK(url,                                                                  \
@@ -237,7 +240,7 @@ inline dsn::error_code to_error_code(CURLcode code)
 
 #define RETURN_IF_CURL_EASY_NOT_OK(expr, ...)                                                      \
     do {                                                                                           \
-        CHECK_NOTNULL(_curl, "CURL object has not been initialized");                              \
+        CHECK_NOTNULL(_curl, "CURL object has not been allocated");                                \
         RETURN_IF_CURL_NOT_OK(expr, CURLE_OK, __VA_ARGS__);                                        \
     } while (0)
 
@@ -246,10 +249,13 @@ inline dsn::error_code to_error_code(CURLcode code)
                                "failed to set " #opt " with " #input)
 
 #define CHECK_IF_CURL_EASY_SETOPT_OK(opt, input, ...)                                              \
-    CHECK_IF_CURL_OK(curl_easy_setopt(_curl, CURLOPT_##opt, input),                                \
-                     CURLE_OK,                                                                     \
-                     "failed to set " #opt " with " #input ": {}",                                 \
-                     fmt::format(__VA_ARGS__))
+    do {                                                                                           \
+        CHECK_NOTNULL(_curl, "CURL object has not been allocated");                                \
+        CHECK_IF_CURL_OK(curl_easy_setopt(_curl, CURLOPT_##opt, input),                            \
+                         CURLE_OK,                                                                 \
+                         "failed to set " #opt " with " #input ": {}",                             \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (0)
 
 #define RETURN_IF_CURL_EASY_GETINFO_NOT_OK(info, output)                                           \
     RETURN_IF_CURL_EASY_NOT_OK(curl_easy_getinfo(_curl, CURLINFO_##info, output),                  \
@@ -266,7 +272,7 @@ dsn::error_s http_client::init()
     if (_curl == nullptr) {
         _curl = curl_easy_init();
         if (_curl == nullptr) {
-            return dsn::error_s::make(dsn::ERR_CURL_FAILED, "fail to initialize curl");
+            return dsn::error_s::make(dsn::ERR_CURL_FAILED, "fail to allocate CURL object");
         }
     } else {
         curl_easy_reset(_curl);
@@ -412,9 +418,9 @@ dsn::error_s http_client::set_method(http_method method)
     return dsn::error_s::ok();
 }
 
-dsn::error_s http_client::set_auth(http_auth_type authType)
+dsn::error_s http_client::set_auth(http_auth_type auth_type)
 {
-    switch (authType) {
+    switch (auth_type) {
     case http_auth_type::SPNEGO:
         RETURN_IF_CURL_EASY_SETOPT_NOT_OK(HTTPAUTH, CURLAUTH_NEGOTIATE);
         break;

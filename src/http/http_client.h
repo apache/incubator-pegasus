@@ -83,6 +83,7 @@ public:
 
 private:
     friend class http_client;
+    friend void test_after_move(http_url &, http_url &);
 
     // Only used by `http_client` to get the underlying CURLU object.
     CURLU *curlu() const { return _url.get(); }
@@ -170,7 +171,7 @@ public:
     dsn::error_s set_timeout(long timeout_ms);
 
     // Specify the http auth type which include NONE BASIC DIGEST SPNEGO
-    dsn::error_s set_auth(http_auth_type authType);
+    dsn::error_s set_auth(http_auth_type auth_type);
 
     // Operations for the header fields.
     void clear_header_fields();

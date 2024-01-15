@@ -38,10 +38,99 @@
 
 namespace dsn {
 
-using http_url_case =
+const std::string kTestUrlA("http://192.168.1.2/test/api0?key0=val0");
+const std::string kTestUrlB("http://10.10.1.2/test/api1?key1=val1");
+const std::string kTestUrlC("http://172.16.1.2/test/api2?key2=val2");
+
+void set_url_string(http_url &url, const std::string &str)
+{
+    ASSERT_TRUE(url.set_url(str.c_str()));
+}
+
+void check_url_eq(const http_url &url, const std::string &expected_str)
+{
+    std::string actual_str;
+    ASSERT_TRUE(url.to_string(actual_str));
+    EXPECT_EQ(expected_str, actual_str);
+}
+
+void init_test_url(http_url &url)
+{
+    // Set original url with kTestUrlA before copy.
+    set_url_string(url, kTestUrlA);
+    check_url_eq(url, kTestUrlA);
+}
+
+void test_after_copy(http_url &url_1, http_url &url_2)
+{
+    // Check if both urls are expected immediately after copy.
+    check_url_eq(url_1, kTestUrlA);
+    check_url_eq(url_2, kTestUrlA);
+
+    // Set both urls with values other than kTestUrlA.
+    set_url_string(url_2, kTestUrlB);
+    check_url_eq(url_1, kTestUrlA);
+    check_url_eq(url_2, kTestUrlB);
+
+    set_url_string(url_1, kTestUrlC);
+    check_url_eq(url_1, kTestUrlC);
+    check_url_eq(url_2, kTestUrlB);
+}
+
+TEST(HttpUrlTest, CallCopyConstructor)
+{
+    http_url url_1;
+    init_test_url(url_1);
+
+    http_url url_2(url_1);
+    test_after_copy(url_1, url_2);
+}
+
+TEST(HttpUrlTest, CallCopyAssignmentOperator)
+{
+    http_url url_1;
+    init_test_url(url_1);
+
+    http_url url_2;
+    url_2 = url_1;
+    test_after_copy(url_1, url_2);
+}
+
+void test_after_move(http_url &url_1, http_url &url_2)
+{
+    // Check if both urls are expected immediately after move.
+    EXPECT_THAT(url_1._url, testing::IsNull());
+    check_url_eq(url_2, kTestUrlA);
+
+    // Set another url with value other than kTestUrlA.
+    set_url_string(url_2, kTestUrlB);
+    EXPECT_THAT(url_1._url, testing::IsNull());
+    check_url_eq(url_2, kTestUrlB);
+}
+
+TEST(HttpUrlTest, CallMoveConstructor)
+{
+    http_url url_1;
+    init_test_url(url_1);
+
+    http_url url_2(std::move(url_1));
+    test_after_move(url_1, url_2);
+}
+
+TEST(HttpUrlTest, CallMoveAssignmentOperator)
+{
+    http_url url_1;
+    init_test_url(url_1);
+
+    http_url url_2;
+    url_2 = std::move(url_1);
+    test_after_move(url_1, url_2);
+}
+
+using http_url_build_case =
     std::tuple<const char *, const char *, uint16_t, const char *, const char *, const char *>;
 
-class HttpUrlTest : public testing::TestWithParam<http_url_case>
+class HttpUrlBuildTest : public testing::TestWithParam<http_url_build_case>
 {
 public:
     void test_build_url(const char *scheme,
@@ -70,7 +159,7 @@ private:
     http_url _url;
 };
 
-TEST_P(HttpUrlTest, BuildUrl)
+TEST_P(HttpUrlBuildTest, BuildUrl)
 {
     const char *scheme;
     const char *host;
@@ -83,7 +172,7 @@ TEST_P(HttpUrlTest, BuildUrl)
     test_build_url(scheme, host, port, path, query, expected_url);
 }
 
-const std::vector<http_url_case> http_url_tests = {
+const std::vector<http_url_build_case> http_url_tests = {
     // Test default scheme, specified ip, empty path and query.
     {nullptr, "10.10.1.2", 34801, "", "", "http://10.10.1.2:34801/"},
     // Test default scheme, specified host, empty path and query.
@@ -131,7 +220,7 @@ const std::vector<http_url_case> http_url_tests = {
      "http://10.10.1.2:34801/api/multi/level/path?key1=abc&key2=123456"},
 };
 
-INSTANTIATE_TEST_CASE_P(HttpClientTest, HttpUrlTest, testing::ValuesIn(http_url_tests));
+INSTANTIATE_TEST_CASE_P(HttpUrlTest, HttpUrlBuildTest, testing::ValuesIn(http_url_tests));
 
 void check_expected_description_prefix(const std::string &expected_description_prefix,
                                        const dsn::error_s &err)
