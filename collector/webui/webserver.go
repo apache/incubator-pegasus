@@ -19,18 +19,24 @@ package webui
 
 import (
 	"context"
-	"net/http"
 	"time"
 
+	"github.com/apache/incubator-pegasus/collector/metrics"
 	"github.com/kataras/iris/v12"
-	"github.com/limowang/incubator-pegasus/collector/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/spf13/viper"
 )
 
 // StartWebServer starts an iris-powered HTTP server.
 func StartWebServer() {
+	registry := prometheus.NewRegistry()
+	for _, cV := range metrics.CounterMetricsMap {
+		registry.MustRegister(cV)
+	}
+	for _, gV := range metrics.GaugeMetricsMap {
+		registry.MustRegister(gV)
+	}
+
 	app := iris.New()
 	app.Get("/", indexHandler)
 	app.Get("/tables", tablesHandler)
@@ -57,25 +63,9 @@ func StartWebServer() {
 	app.RegisterView(tmpl)
 
 	go func() {
-		localPort := ":" + viper.GetString("port")
-		err := app.Listen(localPort)
+		err := app.Listen(":8080")
 		if err != nil {
 			return
 		}
 	}()
-
-	//Provide metrics for prometheus
-	registry := prometheus.NewRegistry()
-	for _, cV := range metrics.CounterMetricsMap {
-		registry.MustRegister(cV)
-	}
-	for _, gV := range metrics.GaugeMetricsMap {
-		registry.MustRegister(gV)
-	}
-
-	http.Handle("/metrics", promhttp.Handler())
-
-	prometheusPort := ":" + viper.GetString("prometheus.exposer_port")
-
-	_ = http.ListenAndServe(prometheusPort, nil)
 }

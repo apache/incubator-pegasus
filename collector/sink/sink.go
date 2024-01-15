@@ -18,7 +18,7 @@
 package sink
 
 import (
-	"github.com/limowang/incubator-pegasus/collector/aggregate"
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
