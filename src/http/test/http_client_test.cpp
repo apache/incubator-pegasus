@@ -24,8 +24,10 @@
 #include <iostream>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "http/http_client.h"
 #include "http/http_method.h"
