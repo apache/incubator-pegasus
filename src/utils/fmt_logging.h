@@ -56,6 +56,11 @@
         }                                                                                          \
     } while (false)
 
+#define LOG_WARNING_IF_PREFIX(x, ...)                                                              \
+    LOG_WARNING_IF(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_ERROR_IF_PREFIX(x, ...)                                                                \
+    LOG_ERROR_IF(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+
 #define CHECK_EXPRESSION(expression, evaluation, ...)                                              \
     do {                                                                                           \
         if (dsn_unlikely(!(evaluation))) {                                                         \
