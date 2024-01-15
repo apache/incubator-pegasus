@@ -55,7 +55,6 @@ var SummaryMetricsMap map[string]prometheus.Summary
 
 // DataSource 0 meta server, 1 replica server.
 var DataSource int
-var RoleByDataSource map[int]string
 
 var TableNameByID map[string]string
 
@@ -71,10 +70,7 @@ func NewMetricCollector(
 	GaugeMetricsMap = make(map[string]prometheus.GaugeVec, 128)
 	CounterMetricsMap = make(map[string]prometheus.CounterVec, 128)
 	SummaryMetricsMap = make(map[string]prometheus.Summary, 128)
-	RoleByDataSource = make(map[int]string, 128)
 	TableNameByID = make(map[string]string, 128)
-	RoleByDataSource[0] = "meta_server"
-	RoleByDataSource[1] = "replica_server"
 	initMetrics()
 
 	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout}
@@ -143,7 +139,7 @@ func initMetrics() {
 			return
 		}
 		jsonData := gjson.Parse(data)
-		for _, entity := range jsonData.Array() {
+		for _, entity := range jsonData.Get("entities").Array() {
 			for _, metric := range entity.Get("metrics").Array() {
 				var name string = metric.Get("name").String()
 				var mtype string = metric.Get("type").String()
@@ -203,6 +199,7 @@ func processAllServerMetrics() {
 	metricsByTableID := make(map[string]Metrics, 128)
 	metricsByServerTableID := make(map[string]Metrics, 128)
 	var metricsOfCluster []Metric
+	var role string
 	metricsByAddr := make(map[string]Metrics, 128)
 	for _, addr := range addrs {
 		data, err := getOneServerMetrics(addr)
@@ -211,7 +208,8 @@ func processAllServerMetrics() {
 			return
 		}
 		jsonData := gjson.Parse(data)
-		for _, entity := range jsonData.Array() {
+		role = jsonData.Get("role").String()
+		for _, entity := range jsonData.Get("entities").Array() {
 			etype := entity.Get("type").String()
 			switch etype {
 			case "replica":
@@ -225,7 +223,7 @@ func processAllServerMetrics() {
 					tableID, &metricsByTableID)
 				collectServerLevelTableMetric(entity.Get("metrics").Array(), tableID,
 					&metricsByServerTableID)
-				updateServerLevelTableMetrics(addr, metricsByServerTableID)
+				updateServerLevelTableMetrics(addr, metricsByServerTableID, role)
 			case "server":
 				mergeIntoClusterLevelServerMetric(entity.Get("metrics").Array(),
 					metricsOfCluster)
@@ -237,13 +235,13 @@ func processAllServerMetrics() {
 		}
 	}
 
-	updateClusterLevelTableMetrics(metricsByTableID)
-	updateServerLevelServerMetrics(metricsByAddr)
-	updateClusterLevelMetrics(metricsOfCluster)
+	updateClusterLevelTableMetrics(metricsByTableID, role)
+	updateServerLevelServerMetrics(metricsByAddr, role)
+	updateClusterLevelMetrics(metricsOfCluster, role)
 }
 
 // Update table metrics. They belong to a specified server.
-func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[string]Metrics) {
+func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[string]Metrics, role string) {
 	for tableID, metrics := range metricsByServerTableID {
 		var tableName string
 		if name, ok := TableNameByID[tableID]; !ok {
@@ -252,29 +250,29 @@ func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[strin
 			tableName = name
 		}
 		for _, metric := range metrics {
-			updateMetric(metric, addr, "server", tableName)
+			updateMetric(metric, addr, "server", tableName, role)
 		}
 	}
 }
 
 // Update server metrics. They belong to a specified server.
-func updateServerLevelServerMetrics(metricsByAddr map[string]Metrics) {
+func updateServerLevelServerMetrics(metricsByAddr map[string]Metrics, role string) {
 	for addr, metrics := range metricsByAddr {
 		for _, metric := range metrics {
-			updateMetric(metric, addr, "server", "server")
+			updateMetric(metric, addr, "server", "server", role)
 		}
 	}
 }
 
 // Update cluster level metrics. They belong to a cluster.
-func updateClusterLevelMetrics(metricsOfCluster []Metric) {
+func updateClusterLevelMetrics(metricsOfCluster []Metric, role string) {
 	for _, metric := range metricsOfCluster {
-		updateMetric(metric, "cluster", "server", metric.name)
+		updateMetric(metric, "cluster", "server", metric.name, role)
 	}
 }
 
 // Update table metrics. They belong to a cluster.
-func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics) {
+func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics, role string) {
 	for tableID, metrics := range metricsByTableID {
 		var tableName string
 		if name, ok := TableNameByID[tableID]; !ok {
@@ -283,13 +281,12 @@ func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics) {
 			tableName = name
 		}
 		for _, metric := range metrics {
-			updateMetric(metric, "cluster", "table", tableName)
+			updateMetric(metric, "cluster", "table", tableName, role)
 		}
 	}
 }
 
-func updateMetric(metric Metric, endpoint string, level string, title string) {
-	role := RoleByDataSource[DataSource]
+func updateMetric(metric Metric, endpoint string, level string, title string, role string) {
 	switch metric.mtype {
 	case "Counter":
 		if counter, ok := CounterMetricsMap[metric.name]; ok {
