@@ -122,11 +122,12 @@ void redis_parser::prepare_current_buffer()
     void *msg_buffer;
     if (_current_buffer == nullptr) {
         dsn::message_ex *first_msg = _recv_buffers.front();
-        CHECK(first_msg->read_next(&msg_buffer, &_current_buffer_length),
-              "read dsn::message_ex* failed, msg from_address = {}, to_address = {}, rpc_name = {}",
-              first_msg->header->from_address.to_string(),
-              first_msg->to_address.to_string(),
-              first_msg->header->rpc_name);
+        CHECK_PREFIX_MSG(
+            first_msg->read_next(&msg_buffer, &_current_buffer_length),
+            "read dsn::message_ex* failed, msg from_address = {}, to_address = {}, rpc_name = {}",
+            first_msg->header->from_address,
+            first_msg->to_address,
+            first_msg->header->rpc_name);
         _current_buffer = static_cast<char *>(msg_buffer);
         _current_cursor = 0;
     } else if (_current_cursor >= _current_buffer_length) {
@@ -176,14 +177,14 @@ char redis_parser::peek()
 
 bool redis_parser::eat(char c)
 {
-    if (dsn_likely(peek() == c)) {
-        ++_current_cursor;
-        --_total_length;
-        return true;
-    } else {
-        LOG_ERROR("{}: expect token: {}, got {}", _remote_address.to_string(), c, peek());
+    if (dsn_unlikely(peek() != c)) {
+        LOG_ERROR_PREFIX("expect token: {}, but got {}", c, peek());
         return false;
     }
+
+    ++_current_cursor;
+    --_total_length;
+    return true;
 }
 
 void redis_parser::eat_all(char *dest, size_t length)
@@ -207,14 +208,11 @@ bool redis_parser::end_array_size()
 {
     int32_t count = 0;
     if (dsn_unlikely(!dsn::buf2int32(absl::string_view(_current_size), count))) {
-        LOG_ERROR(
-            "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
+        LOG_ERROR_PREFIX("invalid size string \"{}\"", _current_size);
         return false;
     }
     if (dsn_unlikely(count <= 0)) {
-        LOG_ERROR("{}: array size should be positive in redis request, but got {}",
-                  _remote_address.to_string(),
-                  count);
+        LOG_ERROR_PREFIX("array size should be positive in redis request, but got {}", count);
         return false;
     }
 
@@ -245,8 +243,7 @@ bool redis_parser::end_bulk_string_size()
 {
     int32_t length = 0;
     if (dsn_unlikely(!dsn::buf2int32(absl::string_view(_current_size), length))) {
-        LOG_ERROR(
-            "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
+        LOG_ERROR_PREFIX("invalid size string \"{}\"", _current_size);
         return false;
     }
 
@@ -264,8 +261,7 @@ bool redis_parser::end_bulk_string_size()
         return true;
     }
 
-    LOG_ERROR(
-        "{}: invalid bulk string length: {}", _remote_address.to_string(), _current_str.length);
+    LOG_ERROR_PREFIX("invalid bulk string length: {}", _current_str.length);
     return false;
 }
 
@@ -385,7 +381,7 @@ void redis_parser::reply_all_ready()
     std::vector<dsn::message_ex *> ready_responses;
     fetch_and_dequeue_messages(ready_responses, true);
     for (dsn::message_ex *m : ready_responses) {
-        CHECK(m, "");
+        CHECK_NOTNULL_PREFIX(m);
         dsn_rpc_reply(m, ::dsn::ERR_OK);
         // added when message is created
         m->release_ref();
@@ -805,16 +801,16 @@ void redis_parser::geo_radius(message_entry &entry)
     // longitude latitude
     double lng_degrees = 0.0;
     const std::string &str_lng_degrees = redis_request.sub_requests[2].data.to_string();
-    LOG_WARNING_IF(!dsn::buf2double(str_lng_degrees, lng_degrees),
-                   "longitude parameter '{}' is error, use {}",
-                   str_lng_degrees,
-                   lng_degrees);
+    LOG_WARNING_IF_PREFIX(!dsn::buf2double(str_lng_degrees, lng_degrees),
+                          "longitude parameter '{}' is error, use {}",
+                          str_lng_degrees,
+                          lng_degrees);
     double lat_degrees = 0.0;
     const std::string &str_lat_degrees = redis_request.sub_requests[3].data.to_string();
-    LOG_WARNING_IF(!dsn::buf2double(str_lat_degrees, lat_degrees),
-                   "latitude parameter '{}' is error, use {}",
-                   str_lat_degrees,
-                   lat_degrees);
+    LOG_WARNING_IF_PREFIX(!dsn::buf2double(str_lat_degrees, lat_degrees),
+                          "latitude parameter '{}' is error, use {}",
+                          str_lat_degrees,
+                          lat_degrees);
 
     // radius m|km|ft|mi [WITHCOORD] [WITHDIST] [COUNT count] [ASC|DESC]
     double radius_m = 100.0;
@@ -909,42 +905,39 @@ void redis_parser::decr_by(message_entry &entry) { counter_internal(entry); }
 
 void redis_parser::counter_internal(message_entry &entry)
 {
-    CHECK(!entry.request.sub_requests.empty(), "");
-    CHECK_GT(entry.request.sub_requests[0].length, 0);
+    CHECK_PREFIX(!entry.request.sub_requests.empty());
+    CHECK_GT_PREFIX(entry.request.sub_requests[0].length, 0);
     const char *command = entry.request.sub_requests[0].data.data();
     int64_t increment = 1;
     if (dsn::utils::iequals(command, "INCR") || dsn::utils::iequals(command, "DECR")) {
         if (entry.request.sub_requests.size() != 2) {
-            LOG_WARNING("{}: command {} seqid({}) with invalid arguments count: {}",
-                        _remote_address,
-                        command,
-                        entry.sequence_id,
-                        entry.request.sub_requests.size());
+            LOG_WARNING_PREFIX("command {} seqid({}) with invalid arguments count: {}",
+                               command,
+                               entry.sequence_id,
+                               entry.request.sub_requests.size());
             simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
     } else if (dsn::utils::iequals(command, "INCRBY") || dsn::utils::iequals(command, "DECRBY")) {
         if (entry.request.sub_requests.size() != 3) {
-            LOG_WARNING("{}: command {} seqid({}) with invalid arguments count: {}",
-                        _remote_address,
-                        command,
-                        entry.sequence_id,
-                        entry.request.sub_requests.size());
+            LOG_WARNING_PREFIX("command {} seqid({}) with invalid arguments count: {}",
+                               command,
+                               entry.sequence_id,
+                               entry.request.sub_requests.size());
             simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
         if (!dsn::buf2int64(entry.request.sub_requests[2].data.to_string_view(), increment)) {
-            LOG_WARNING("{}: command {} seqid({}) with invalid 'increment': {}",
-                        _remote_address,
-                        command,
-                        entry.sequence_id,
-                        entry.request.sub_requests[2].data.to_string());
+            LOG_WARNING_PREFIX("command {} seqid({}) with invalid 'increment': {}",
+                               command,
+                               entry.sequence_id,
+                               entry.request.sub_requests[2].data.to_string());
             simple_error_reply(entry,
                                fmt::format("wrong type of argument 'increment 'for '{}'", command));
             return;
         }
     } else {
-        LOG_FATAL("command not support: {}", command);
+        LOG_FATAL_PREFIX("command not support: {}", command);
     }
     if (dsn::utils::iequals(command, "DECR", 4)) {
         increment = -increment;
@@ -954,19 +947,15 @@ void redis_parser::counter_internal(message_entry &entry)
     auto on_incr_reply = [ref_this, this, command, &entry](
         ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
         if (_is_session_reset.load(std::memory_order_acquire)) {
-            LOG_WARNING("{}: command {} seqid({}) got reply, but session has reset",
-                        _remote_address,
-                        command,
-                        entry.sequence_id);
+            LOG_WARNING_PREFIX("command {} seqid({}) got reply, but session has reset",
+                               command,
+                               entry.sequence_id);
             return;
         }
 
         if (::dsn::ERR_OK != ec) {
-            LOG_WARNING("{}: command {} seqid({}) got reply with error = {}",
-                        _remote_address,
-                        command,
-                        entry.sequence_id,
-                        ec);
+            LOG_WARNING_PREFIX(
+                "command {} seqid({}) got reply with error = {}", command, entry.sequence_id, ec);
             simple_error_reply(entry, ec.to_string());
         } else {
             ::dsn::apps::incr_response incr_resp;
@@ -1298,7 +1287,7 @@ void redis_parser::handle_command(std::unique_ptr<message_entry> &&entry)
     LOG_DEBUG_PREFIX("new command parsed with new seqid {}", e.sequence_id);
     enqueue_pending_response(std::move(entry));
 
-    CHECK_GT_MSG(request.sub_request_count, 0, "invalid request");
+    CHECK_GT_PREFIX_MSG(request.sub_request_count, 0, "invalid request");
     ::dsn::blob &command = request.sub_requests[0].data;
     redis_call_handler handler = redis_parser::get_handler(command.data(), command.length());
     handler(this, e);

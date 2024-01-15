@@ -43,35 +43,47 @@ struct nlohmann_json_struct
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(nlohmann_json_struct, a, b, c);
 
-TEST(load_dump_object, nlohmann_json_struct_normal_test)
+class load_dump_object : public testing::TestWithParam<FileDataType>
+{
+public:
+    load_dump_object() : type_(GetParam()) {}
+
+protected:
+    FileDataType type_;
+};
+
+INSTANTIATE_TEST_CASE_P(,
+                        load_dump_object,
+                        ::testing::Values(FileDataType::kNonSensitive, FileDataType::kSensitive));
+
+TEST_P(load_dump_object, nlohmann_json_struct_normal_test)
 {
     const std::string path("nlohmann_json_struct_test");
     nlohmann_json_struct obj;
     obj.a = 123;
     obj.b = "hello world";
     obj.c = std::vector<int64_t>({1, 3, 5, 2, 4});
-    ASSERT_EQ(ERR_OK, dump_njobj_to_file(obj, path));
+    ASSERT_EQ(ERR_OK, dump_njobj_to_file(obj, type_, path));
     nlohmann_json_struct obj2;
-    ASSERT_EQ(ERR_OK, load_njobj_from_file(path, &obj2));
+    ASSERT_EQ(ERR_OK, load_njobj_from_file(path, type_, &obj2));
     ASSERT_EQ(obj, obj2);
 }
 
-TEST(load_dump_object, nlohmann_json_struct_load_failed_test)
+TEST_P(load_dump_object, nlohmann_json_struct_load_failed_test)
 {
     const std::string path("nlohmann_json_struct_test_bad");
     ASSERT_TRUE(filesystem::remove_path(path));
 
     nlohmann_json_struct obj;
-    ASSERT_EQ(ERR_PATH_NOT_FOUND, load_njobj_from_file(path, &obj));
+    ASSERT_EQ(ERR_PATH_NOT_FOUND, load_njobj_from_file(path, type_, &obj));
 
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice("invalid data"),
-                                   path,
-                                   /* should_sync */ true);
+    auto s = rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(type_),
+                                        rocksdb::Slice("invalid data"),
+                                        path,
+                                        /* should_sync */ true);
     ASSERT_TRUE(s.ok()) << s.ToString();
 
-    ASSERT_EQ(ERR_CORRUPTION, load_njobj_from_file(path, &obj));
+    ASSERT_EQ(ERR_CORRUPTION, load_njobj_from_file(path, type_, &obj));
 }
 
 struct rapid_json_struct
@@ -80,35 +92,34 @@ struct rapid_json_struct
     DEFINE_JSON_SERIALIZATION(a, b, c);
 };
 
-TEST(load_dump_object, rapid_json_struct_test)
+TEST_P(load_dump_object, rapid_json_struct_test)
 {
     const std::string path("rapid_json_struct_test");
     rapid_json_struct obj;
     obj.a = 123;
     obj.b = "hello world";
     obj.c = std::vector<int64_t>({1, 3, 5, 2, 4});
-    ASSERT_EQ(ERR_OK, dump_rjobj_to_file(obj, path));
+    ASSERT_EQ(ERR_OK, dump_rjobj_to_file(obj, type_, path));
     rapid_json_struct obj2;
-    ASSERT_EQ(ERR_OK, load_rjobj_from_file(path, &obj2));
+    ASSERT_EQ(ERR_OK, load_rjobj_from_file(path, type_, &obj2));
     ASSERT_EQ(obj, obj2);
 }
 
-TEST(load_dump_object, rapid_json_struct_load_failed_test)
+TEST_P(load_dump_object, rapid_json_struct_load_failed_test)
 {
     const std::string path("rapid_json_struct_test_bad");
     ASSERT_TRUE(filesystem::remove_path(path));
 
     rapid_json_struct obj;
-    ASSERT_EQ(ERR_PATH_NOT_FOUND, load_rjobj_from_file(path, &obj));
+    ASSERT_EQ(ERR_PATH_NOT_FOUND, load_rjobj_from_file(path, type_, &obj));
 
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice("invalid data"),
-                                   path,
-                                   /* should_sync */ true);
+    auto s = rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(type_),
+                                        rocksdb::Slice("invalid data"),
+                                        path,
+                                        /* should_sync */ true);
     ASSERT_TRUE(s.ok()) << s.ToString();
 
-    ASSERT_EQ(ERR_CORRUPTION, load_rjobj_from_file(path, &obj));
+    ASSERT_EQ(ERR_CORRUPTION, load_rjobj_from_file(path, type_, &obj));
 }
 
 } // namespace utils

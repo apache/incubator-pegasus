@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <chrono>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 #include <thread>
@@ -65,6 +66,10 @@ protected:
     }
 
 public:
+    // The cluster name "single_master_cluster" (see src/test/function_test/config.ini) means the
+    // cluster has only one meta server, while "onebox" means the cluster has 3 meta servers.
+    recovery_test() : test_util(std::map<std::string, std::string>(), "single_master_cluster") {}
+
     std::vector<dsn::rpc_address> get_rpc_address_list(const std::vector<int> ports)
     {
         std::vector<dsn::rpc_address> result;

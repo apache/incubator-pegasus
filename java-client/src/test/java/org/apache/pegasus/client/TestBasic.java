@@ -38,9 +38,12 @@ import java.util.Map;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
 
 /** Created by mi on 16-3-22. */
 public class TestBasic {
+  private static final Logger logger = org.slf4j.LoggerFactory.getLogger(TestBasic.class);
+
   private static final String basicSetGetDelHashKey = "TestBasic_testSetGetDel_hash_key_1";
   private static final String multiSetGetDelHashKey = "TestBasic_testMultiSetGetDel_hash_key_1";
   private static final String multiGetHashKey = "TestBasic_testMultiGet_hash_key_1";
@@ -2640,7 +2643,7 @@ public class TestBasic {
   @Test // test for making sure return "maxFetchCount" if has "maxFetchCount" valid record
   public void testScanRangeWithValueExpired() throws PException, InterruptedException {
     String tableName = "temp";
-    String hashKey = "hashKey";
+    String hashKey = "hashKey_testScanRangeWithValueExpired";
     // generate records: sortKeys=[expired_0....expired_999,persistent_0...persistent_9]
     generateRecordsWithExpired(tableName, hashKey, 1000, 10);
 
@@ -2649,73 +2652,119 @@ public class TestBasic {
     // case A: scan all record
     // case A1: scan all record: if persistent record count >= maxFetchCount, it must return
     // maxFetchCount records
+    int maxFetchCount = 5;
     PegasusTable.ScanRangeResult caseA1 =
-        table.scanRange(hashKey.getBytes(), null, null, new ScanOptions(), 5, 0);
-    assertScanResult(0, 4, false, caseA1);
+        table.scanRange(hashKey.getBytes(), null, null, new ScanOptions(), maxFetchCount, 0);
+    assertScanResult(hashKey, 0, 4, false, caseA1);
     // case A2: scan all record: if persistent record count < maxFetchCount, it only return
     // persistent count records
+    maxFetchCount = 100;
     PegasusTable.ScanRangeResult caseA2 =
-        table.scanRange(hashKey.getBytes(), null, null, new ScanOptions(), 100, 0);
-    assertScanResult(0, 9, true, caseA2);
+        table.scanRange(hashKey.getBytes(), null, null, new ScanOptions(), maxFetchCount, 0);
+    assertScanResult(hashKey, 0, 9, true, caseA2);
 
     // case B: scan limit record by "startSortKey" and "":
     // case B1: scan limit record by "expired_0" and "", if persistent record count >=
     // maxFetchCount, it must return maxFetchCount records
+    maxFetchCount = 5;
     PegasusTable.ScanRangeResult caseB1 =
         table.scanRange(
-            hashKey.getBytes(), "expired_0".getBytes(), "".getBytes(), new ScanOptions(), 5, 0);
-    assertScanResult(0, 4, false, caseB1);
+            hashKey.getBytes(),
+            "expired_0".getBytes(),
+            "".getBytes(),
+            new ScanOptions(),
+            maxFetchCount,
+            0);
+    assertScanResult(hashKey, 0, 4, false, caseB1);
     // case B2: scan limit record by "expired_0" and "", if persistent record count < maxFetchCount,
     // it only return valid records
+    maxFetchCount = 50;
     PegasusTable.ScanRangeResult caseB2 =
         table.scanRange(
-            hashKey.getBytes(), "expired_0".getBytes(), "".getBytes(), new ScanOptions(), 50, 0);
-    assertScanResult(0, 9, true, caseB2);
+            hashKey.getBytes(),
+            "expired_0".getBytes(),
+            "".getBytes(),
+            new ScanOptions(),
+            maxFetchCount,
+            0);
+    assertScanResult(hashKey, 0, 9, true, caseB2);
     // case B3: scan limit record by "persistent_5" and "", if following persistent record count <
     // maxFetchCount, it only return valid records
+    maxFetchCount = 50;
     PegasusTable.ScanRangeResult caseB3 =
         table.scanRange(
-            hashKey.getBytes(), "persistent_5".getBytes(), "".getBytes(), new ScanOptions(), 50, 0);
-    assertScanResult(5, 9, true, caseB3);
+            hashKey.getBytes(),
+            "persistent_5".getBytes(),
+            "".getBytes(),
+            new ScanOptions(),
+            maxFetchCount,
+            0);
+    assertScanResult(hashKey, 5, 9, true, caseB3);
     // case B4: scan limit record by "persistent_5" and "", if following persistent record count >
     // maxFetchCount, it only return valid records
+    maxFetchCount = 3;
     PegasusTable.ScanRangeResult caseB4 =
         table.scanRange(
-            hashKey.getBytes(), "persistent_5".getBytes(), "".getBytes(), new ScanOptions(), 3, 0);
-    assertScanResult(5, 7, false, caseB4);
+            hashKey.getBytes(),
+            "persistent_5".getBytes(),
+            "".getBytes(),
+            new ScanOptions(),
+            maxFetchCount,
+            0);
+    assertScanResult(hashKey, 5, 7, false, caseB4);
 
     // case C: scan limit record by "" and "stopSortKey":
     // case C1: scan limit record by "" and "expired_7", if will return 0 record
+    maxFetchCount = 3;
     PegasusTable.ScanRangeResult caseC1 =
         table.scanRange(
-            hashKey.getBytes(), "".getBytes(), "expired_7".getBytes(), new ScanOptions(), 3, 0);
+            hashKey.getBytes(),
+            "".getBytes(),
+            "expired_7".getBytes(),
+            new ScanOptions(),
+            maxFetchCount,
+            0);
     assertTrue(caseC1.allFetched);
     assertEquals(0, caseC1.results.size()); // among "" and "expired_7" has 0 valid record
     // case C2: scan limit record by "" and "persistent_7", if valid record count < maxFetchCount,
     // it only return valid record
+    maxFetchCount = 10;
     PegasusTable.ScanRangeResult caseC2 =
         table.scanRange(
-            hashKey.getBytes(), "".getBytes(), "persistent_7".getBytes(), new ScanOptions(), 10, 0);
-    assertScanResult(0, 6, true, caseC2);
+            hashKey.getBytes(),
+            "".getBytes(),
+            "persistent_7".getBytes(),
+            new ScanOptions(),
+            maxFetchCount,
+            0);
+    assertScanResult(hashKey, 0, 6, true, caseC2);
     // case C3: scan limit record by "" and "persistent_7", if valid record count > maxFetchCount,
     // it only return valid record
+    maxFetchCount = 2;
     PegasusTable.ScanRangeResult caseC3 =
         table.scanRange(
-            hashKey.getBytes(), "".getBytes(), "persistent_7".getBytes(), new ScanOptions(), 2, 0);
-    assertScanResult(0, 1, false, caseC3);
+            hashKey.getBytes(),
+            "".getBytes(),
+            "persistent_7".getBytes(),
+            new ScanOptions(),
+            maxFetchCount,
+            0);
+    assertScanResult(hashKey, 0, 1, false, caseC3);
 
     // case D: use multiGetSortKeys, which actually equal with case A but no value
     // case D1: maxFetchCount > 0, return maxFetchCount valid record
+    maxFetchCount = -1;
     PegasusTableInterface.MultiGetSortKeysResult caseD1 =
-        table.multiGetSortKeys(hashKey.getBytes(), 5, -1, 0);
+        table.multiGetSortKeys(hashKey.getBytes(), 5, maxFetchCount, 0);
     assertFalse(caseD1.allFetched);
     assertEquals(5, caseD1.keys.size());
     for (int i = 0; i <= 4; i++) {
       assertEquals("persistent_" + i, new String(caseD1.keys.get(i)));
     }
     // case D1: maxFetchCount < 0, return all valid record
+    maxFetchCount = -1;
     PegasusTableInterface.MultiGetSortKeysResult caseD2 =
-        table.multiGetSortKeys(hashKey.getBytes(), 10, -1, 0);
+        table.multiGetSortKeys(hashKey.getBytes(), 10, maxFetchCount, 0);
     assertTrue(caseD2.allFetched);
     assertEquals(10, caseD2.keys.size());
     for (int i = 0; i <= 9; i++) {
@@ -2727,7 +2776,8 @@ public class TestBasic {
       String tableName, String hashKey, int expiredCount, int persistentCount)
       throws PException, InterruptedException {
     PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
-    // assign prefix to make sure the expire record is stored front of persistent
+    // Specify the prefixes to make sure the expired records are stored in front of the persistent
+    // ones.
     String expiredSortKeyPrefix = "expired_";
     String persistentSortKeyPrefix = "persistent_";
     while (expiredCount-- > 0) {
@@ -2738,7 +2788,7 @@ public class TestBasic {
           (expiredSortKeyPrefix + expiredCount + "_value").getBytes(),
           1);
     }
-    // sleep to make sure the record is expired
+    // Sleep a while to make sure the records are expired.
     Thread.sleep(1000);
     while (persistentCount-- > 0) {
       client.set(
@@ -2751,6 +2801,7 @@ public class TestBasic {
   }
 
   private void assertScanResult(
+      String hashKey,
       int startIndex,
       int stopIndex,
       boolean expectAllFetched,
@@ -2758,8 +2809,7 @@ public class TestBasic {
     assertEquals(expectAllFetched, actuallyRes.allFetched);
     assertEquals(stopIndex - startIndex + 1, actuallyRes.results.size());
     for (int i = startIndex; i <= stopIndex; i++) {
-      assertEquals(
-          "hashKey", new String(actuallyRes.results.get(i - startIndex).getLeft().getKey()));
+      assertEquals(hashKey, new String(actuallyRes.results.get(i - startIndex).getLeft().getKey()));
       assertEquals(
           "persistent_" + i,
           new String(actuallyRes.results.get(i - startIndex).getLeft().getValue()));
@@ -2770,101 +2820,103 @@ public class TestBasic {
   }
 
   @Test
-  public void testRequestDetail() throws PException {
+  public void testOperationTimeout() throws PException {
+    String tableName = "temp";
+
+    // Create a PegasusClientInterface object 'client' which causes exceptions throw out.
     Duration caseTimeout = Duration.ofMillis(1);
     ClientOptions client_opt = ClientOptions.builder().operationTimeout(caseTimeout).build();
-
-    PegasusClientFactory.createClient(client_opt);
     PegasusClientInterface client = PegasusClientFactory.createClient(client_opt);
-    String tableName = "temp";
-    PegasusTableInterface tb = client.openTable(tableName);
 
-    String HashPrefix = "TestHash";
-    String SortPrefix = "TestSort";
-    String hashKey = HashPrefix + "_0";
-    String sortKey = SortPrefix + "_0";
+    // Create a PegasusTableInterface object 'tb' which doesn't cause exceptions throw out.
+    PegasusClientInterface client2 = PegasusClientFactory.createClient(ClientOptions.create());
+    PegasusTableInterface tb = client2.openTable(tableName);
+
+    String hashKey = "TestHash_0";
+    String sortKey = "TestSort_0";
 
     try {
-      // multiSet timeout
-      System.out.println("Test multiSet PException request");
+      logger.info("Test multiSet PException request");
+      {
+        String value = RandomStringUtils.random(5, true, true);
+        List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+        int count = 500;
+        while (count-- > 0) {
+          values.add(Pair.of(sortKey.getBytes(), value.getBytes()));
+        }
 
-      String multiValue2 = RandomStringUtils.random(5, true, true);
-      List<Pair<byte[], byte[]>> multiValues2 = new ArrayList<Pair<byte[], byte[]>>();
-      int count2 = 500;
-      while (count2-- > 0) {
-        multiValues2.add(Pair.of(sortKey.getBytes(), multiValue2.getBytes()));
+        Throwable exception =
+            assertThrows(
+                PException.class,
+                () -> {
+                  client.multiSet(tableName, hashKey.getBytes(), values);
+                });
+        assertTrue(
+            exception
+                .getMessage()
+                .contains(
+                    "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=500,valueLength=2500]"));
       }
 
-      Throwable exception =
-          assertThrows(
-              PException.class,
-              () -> {
-                client.multiSet(tableName, hashKey.getBytes(), multiValues2);
-              });
-      assertTrue(
-          exception
-              .getMessage()
-              .contains(
-                  "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=500,valueLength=2500]"));
+      logger.info("Test checkAndMutate PException request");
+      {
+        Mutations mutations = new Mutations();
+        mutations.set(sortKey.getBytes(), "2".getBytes());
 
-      // checkAndMutate timeout
-      System.out.println("Test checkAndMutate PException request");
-      Mutations mutations = new Mutations();
-      mutations.set(sortKey.getBytes(), "2".getBytes());
+        CheckAndMutateOptions options = new CheckAndMutateOptions();
+        options.returnCheckValue = true;
+        Throwable exception =
+            assertThrows(
+                PException.class,
+                () -> {
+                  client.checkAndMutate(
+                      tableName,
+                      hashKey.getBytes(),
+                      "k5".getBytes(),
+                      CheckType.CT_VALUE_INT_LESS,
+                      "2".getBytes(),
+                      mutations,
+                      options);
+                });
+        assertTrue(
+            exception
+                .getMessage()
+                .contains(
+                    "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"k5\",sortKeyCount=1,valueLength=1]"));
+      }
 
-      CheckAndMutateOptions options = new CheckAndMutateOptions();
-      options.returnCheckValue = true;
-      Throwable exception2 =
-          assertThrows(
-              PException.class,
-              () -> {
-                client.checkAndMutate(
-                    tableName,
-                    hashKey.getBytes(),
-                    "k5".getBytes(),
-                    CheckType.CT_VALUE_INT_LESS,
-                    "2".getBytes(),
-                    mutations,
-                    options);
-              });
-      assertTrue(
-          exception2
-              .getMessage()
-              .contains(
-                  "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"k5\",sortKeyCount=1,valueLength=1]"));
+      logger.info("Test multiDel PException request");
+      {
+        List<byte[]> sortKeys = new ArrayList<byte[]>();
+        List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
+        int count = 500;
+        while (count-- > 0) {
+          String tempSortKey = "basic_test_sort_key_0";
+          sortKeys.add(tempSortKey.getBytes());
+          values.add(Pair.of(tempSortKey.getBytes(), "basic_test_value_0".getBytes()));
+        }
 
-      // multiDel timeout
-      System.out.println("Test multiDel PException request");
-      List<Pair<byte[], byte[]>> multiValues3 = new ArrayList<Pair<byte[], byte[]>>();
-      List<byte[]> sortKeys = new ArrayList<byte[]>();
-      multiValues3.add(
-          Pair.of("basic_test_sort_key_0".getBytes(), "basic_test_value_0".getBytes()));
-      multiValues3.add(
-          Pair.of("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes()));
-      multiValues3.add(
-          Pair.of("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes()));
-      sortKeys.add("basic_test_sort_key_0".getBytes());
-      sortKeys.add("basic_test_sort_key_1".getBytes());
-      sortKeys.add("basic_test_sort_key_2".getBytes());
+        // Expect multiSet with a higher timeout will not throw exception.
+        assertDoesNotThrow(
+            () -> {
+              tb.multiSet(hashKey.getBytes(), values, 5000);
+            });
 
-      tb.multiSet(hashKey.getBytes(), multiValues3, 5000);
-      assertDoesNotThrow(
-          () -> {
-            tb.multiSet(hashKey.getBytes(), multiValues3, 5000);
-          });
-
-      Throwable exception3 =
-          assertThrows(
-              PException.class,
-              () -> {
-                client.multiDel(tableName, hashKey.getBytes(), sortKeys);
-              });
-      assertTrue(
-          exception3
-              .getMessage()
-              .contains(
-                  "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=3,valueLength=-1]"));
+        // Expect multiSet with a lower timeout will throw exception.
+        Throwable exception =
+            assertThrows(
+                PException.class,
+                () -> {
+                  client.multiDel(tableName, hashKey.getBytes(), sortKeys);
+                });
+        assertTrue(
+            exception
+                .getMessage()
+                .contains(
+                    "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=500,valueLength=-1]"));
+      }
     } catch (Throwable e) {
+      e.printStackTrace();
       fail();
     }
   }
