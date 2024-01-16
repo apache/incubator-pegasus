@@ -29,6 +29,7 @@
 #include "absl/strings/string_view.h"
 #include "http/http_method.h"
 #include "http/http_status_code.h"
+#include "utils/enum_helper.h"
 #include "utils/errors.h"
 #include "utils/fmt_utils.h"
 #include "utils/ports.h"
@@ -38,6 +39,22 @@ USER_DEFINED_ENUM_FORMATTER(CURLUcode)
 USER_DEFINED_ENUM_FORMATTER(CURLcode)
 
 namespace dsn {
+
+// Now https and ftp have not been supported. To support them, build curl by
+// "./configure --with-ssl=... --enable-ftp ...".
+#define ENUM_FOREACH_HTTP_SCHEME(DEF)                                                              \
+    DEF(Http, "http", http_scheme)                                                                 \
+    DEF(Https, "https", http_scheme)                                                               \
+    DEF(Ftp, "ftp", http_scheme)
+
+enum class http_scheme : size_t
+{
+    ENUM_FOREACH_HTTP_SCHEME(ENUM_CONST_DEF) kCount,
+    kInvalidScheme,
+};
+
+ENUM_CONST_DEF_FROM_VAL_FUNC(std::string, http_scheme, ENUM_FOREACH_HTTP_SCHEME)
+ENUM_CONST_DEF_TO_VAL_FUNC(std::string, http_scheme, ENUM_FOREACH_HTTP_SCHEME)
 
 // A class that helps http client build URLs, based on CURLU object of libcurl.
 // About CURLU object, please see: https://curl.se/libcurl/c/libcurl-url.html.
@@ -62,6 +79,7 @@ public:
     // Operations that update the components of a URL.
     dsn::error_s set_url(const char *url);
     dsn::error_s set_scheme(const char *scheme);
+    dsn::error_s set_scheme(http_scheme scheme);
     dsn::error_s set_host(const char *host);
     dsn::error_s set_port(const char *port);
     dsn::error_s set_port(uint16_t port);

@@ -179,7 +179,8 @@ class enum_helper_xxx;
     helper->register_enum(#str, enum_class::ENUM_CONST(str));
 
 #define ENUM_CONST_DEF_MAPPER(direction, from_type, to_type, enum_foreach, enum_def)               \
-    inline to_type enum_##direction##_val(from_type from_val, to_type invalid_to_val)              \
+    inline to_type enum_##direction##_val(const from_type &from_val,                               \
+                                          const to_type &invalid_to_val)                           \
     {                                                                                              \
         static const std::unordered_map<from_type, to_type> kMap = {enum_foreach(enum_def)};       \
                                                                                                    \

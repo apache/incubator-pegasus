@@ -40,6 +40,17 @@
 
 namespace dsn {
 
+void check_expected_description_prefix(const std::string &expected_description_prefix,
+                                       const dsn::error_s &err)
+{
+    const std::string actual_description(err.description());
+    std::cout << actual_description << std::endl;
+
+    ASSERT_LE(expected_description_prefix.size(), actual_description.size());
+    EXPECT_EQ(expected_description_prefix,
+              actual_description.substr(0, expected_description_prefix.size()));
+}
+
 const std::string kTestUrlA("http://192.168.1.2/test/api0?key0=val0");
 const std::string kTestUrlB("http://10.10.1.2/test/api1?key1=val1");
 const std::string kTestUrlC("http://172.16.1.2/test/api2?key2=val2");
@@ -129,6 +140,80 @@ TEST(HttpUrlTest, CallMoveAssignmentOperator)
     test_after_move(url_1, url_2);
 }
 
+const std::string kTestHost("192.168.1.2");
+const std::string kTestHttpUrl(fmt::format("http://{}/", kTestHost));
+
+struct http_scheme_case
+{
+    http_scheme scheme;
+    error_code expected_err_code;
+    std::string expected_description_prefix;
+    std::string expected_str;
+};
+
+class HttpSchemeTest : public testing::TestWithParam<http_scheme_case>
+{
+public:
+    void test_scheme(const http_scheme_case &scheme_case)
+    {
+        const auto &actual_err = _url.set_scheme(scheme_case.scheme);
+        ASSERT_EQ(scheme_case.expected_err_code, actual_err.code());
+        if (!actual_err) {
+            NO_FATALS(check_expected_description_prefix(scheme_case.expected_description_prefix,
+                                                        actual_err));
+            return;
+        }
+
+        ASSERT_TRUE(_url.set_host(kTestHost.c_str()));
+
+        std::string actual_str;
+        ASSERT_TRUE(_url.to_string(actual_str));
+        EXPECT_EQ(scheme_case.expected_str, actual_str);
+    }
+
+private:
+    http_url _url;
+};
+
+TEST_P(HttpSchemeTest, SetScheme) { test_scheme(GetParam()); }
+
+const std::vector<http_scheme_case> http_scheme_tests = {
+    {http_scheme::kHttp, ERR_OK, "", kTestHttpUrl},
+    {http_scheme::kHttps,
+     ERR_CURL_FAILED,
+     "ERR_CURL_FAILED: failed to set CURLUPART_SCHEME to https: code=5, desc=\"Unsupported URL "
+     "scheme\"",
+     ""},
+    {http_scheme::kFtp,
+     ERR_CURL_FAILED,
+     "ERR_CURL_FAILED: failed to set CURLUPART_SCHEME to ftp: code=5, desc=\"Unsupported URL "
+     "scheme\"",
+     ""},
+};
+
+INSTANTIATE_TEST_CASE_P(HttpClientTest, HttpSchemeTest, testing::ValuesIn(http_scheme_tests));
+
+TEST(HttpUrlTest, Clear)
+{
+    http_url url;
+    url.set_url(kTestUrlA.c_str());
+
+    std::string str;
+    ASSERT_TRUE(url.to_string(str));
+    ASSERT_EQ(kTestUrlA, str);
+
+    url.clear();
+    const auto &err = url.to_string(str);
+    ASSERT_FALSE(err);
+    const std::string expected_description_prefix(
+        "ERR_CURL_FAILED: failed to get CURLUPART_URL: code=14, desc=\"No host part in the URL\"");
+    NO_FATALS(check_expected_description_prefix(expected_description_prefix, err));
+
+    ASSERT_TRUE(url.set_host(kTestHost.c_str()));
+    ASSERT_TRUE(url.to_string(str));
+    ASSERT_EQ(kTestHttpUrl, str);
+}
+
 struct http_url_build_case
 {
     const char *scheme;
@@ -214,17 +299,6 @@ const std::vector<http_url_build_case> http_url_tests = {
 };
 
 INSTANTIATE_TEST_CASE_P(HttpUrlTest, HttpUrlBuildTest, testing::ValuesIn(http_url_tests));
-
-void check_expected_description_prefix(const std::string &expected_description_prefix,
-                                       const dsn::error_s &err)
-{
-    const std::string actual_description(err.description());
-    std::cout << actual_description << std::endl;
-
-    ASSERT_LT(expected_description_prefix.size(), actual_description.size());
-    EXPECT_EQ(expected_description_prefix,
-              actual_description.substr(0, expected_description_prefix.size()));
-}
 
 TEST(HttpClientTest, Connect)
 {

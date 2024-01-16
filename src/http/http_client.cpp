@@ -66,6 +66,13 @@ DSN_DEFINE_uint32(http,
                              "curl_url_set(part = " #part                                          \
                              ", content = nullptr) should always return CURLUE_OK")
 
+// Set "http" as the default scheme.
+#define SET_DEFAULT_HTTP_SCHEME(url)                                                               \
+    CHECK_IF_CURL_URL_SET_OK(url,                                                                  \
+                             SCHEME,                                                               \
+                             enum_to_val(http_scheme::kHttp, std::string()).c_str(),               \
+                             "failed to set CURLUPART_SCHEME with 'http'")
+
 namespace {
 
 inline dsn::error_code to_error_code(CURLUcode code)
@@ -88,8 +95,7 @@ CURLU *new_curlu()
     CURLU *url = curl_url();
     CHECK_NOTNULL(url, "fail to allocate a CURLU object due to out of memory");
 
-    // Set "http" as the default scheme.
-    CHECK_IF_CURL_URL_SET_OK(url, SCHEME, "http", "failed to set CURLUPART_SCHEME with 'http'");
+    SET_DEFAULT_HTTP_SCHEME(url);
 
     return url;
 }
@@ -148,6 +154,8 @@ void http_url::clear()
     // Setting the url with nullptr would lead to the release of memory for each part of the url,
     // thus clearing the url.
     CHECK_IF_CURL_URL_SET_NULL_OK(_url.get(), URL);
+
+    SET_DEFAULT_HTTP_SCHEME(_url.get());
 }
 
 #define RETURN_IF_CURL_URL_NOT_OK(expr, ...) RETURN_IF_CURL_NOT_OK(expr, CURLUE_OK, __VA_ARGS__)
@@ -171,6 +179,11 @@ void http_url::clear()
 DEF_HTTP_URL_SET_FUNC(url, URL)
 
 DEF_HTTP_URL_SET_FUNC(scheme, SCHEME)
+
+dsn::error_s http_url::set_scheme(http_scheme scheme)
+{
+    return set_scheme(enum_to_val(scheme, std::string()).c_str());
+}
 
 DEF_HTTP_URL_SET_FUNC(host, HOST)
 
