@@ -153,7 +153,7 @@ struct http_scheme_case
 
 class HttpSchemeTest : public testing::TestWithParam<http_scheme_case>
 {
-public:
+protected:
     void test_scheme(const http_scheme_case &scheme_case)
     {
         const auto &actual_err = _url.set_scheme(scheme_case.scheme);
@@ -226,7 +226,7 @@ struct http_url_build_case
 
 class HttpUrlBuildTest : public testing::TestWithParam<http_url_build_case>
 {
-public:
+protected:
     void test_build_url(const http_url_build_case &build_case)
     {
         if (!utils::is_empty(build_case.scheme)) {
@@ -362,17 +362,20 @@ TEST(HttpClientTest, Callback)
     NO_FATALS(check_expected_description_prefix(expected_description_prefix, err));
 }
 
-using http_client_method_case = std::tuple<const char *,
-                                           uint16_t,
-                                           const char *,
-                                           http_method,
-                                           const char *,
-                                           http_status_code,
-                                           const char *>;
+struct http_client_method_case
+{
+    const char *host;
+    uint16_t port;
+    const char *path;
+    http_method method;
+    const char *post_data;
+    http_status_code expected_http_status;
+    const char *expected_response;
+};
 
 class HttpClientMethodTest : public testing::TestWithParam<http_client_method_case>
 {
-public:
+protected:
     void SetUp() override { ASSERT_TRUE(_client.init()); }
 
     void test_method_with_response_string(const http_status_code expected_http_status,
@@ -411,17 +414,11 @@ public:
         EXPECT_EQ(expected_http_status, actual_http_status);
     }
 
-    template <typename TUrl>
-    void test_mothod(TUrl &&url,
-                     const http_method method,
+    void test_mothod(const http_method method,
                      const std::string &post_data,
                      const http_status_code expected_http_status,
                      const std::string &expected_response)
     {
-        ASSERT_TRUE(_client.init());
-        // ASSERT_TRUE(_client.set_url(url));
-        _client.set_url(url);
-
         switch (method) {
         case http_method::GET:
             ASSERT_TRUE(_client.with_get_method());
@@ -437,36 +434,43 @@ public:
         test_method_with_response_callback(expected_http_status, expected_response);
     }
 
-private:
     http_client _client;
 };
 
-TEST_P(HttpClientMethodTest, ExecMethod)
+TEST_P(HttpClientMethodTest, ExecMethodByUrlString)
 {
-    const char *host;
-    uint16_t port;
-    const char *path;
-    http_method method;
-    const char *post_data;
-    http_status_code expected_http_status;
-    const char *expected_response;
-    std::tie(host, port, path, method, post_data, expected_http_status, expected_response) =
-        GetParam();
+    const auto &method_case = GetParam();
 
-    {
-        // Test with url string.
-        const auto &url = fmt::format("http://{}:{}{}", host, port, path);
-        test_mothod(url, method, post_data, expected_http_status, expected_response);
-    }
+    // Test with url string.
+    const auto &url =
+        fmt::format("http://{}:{}{}", method_case.host, method_case.port, method_case.path);
 
-    {
-        // Test with url class.
-        http_url url;
-        ASSERT_TRUE(url.set_host(host));
-        ASSERT_TRUE(url.set_port(port));
-        ASSERT_TRUE(url.set_path(path));
-        test_mothod(url, method, post_data, expected_http_status, expected_response);
-    }
+    // set_url with url string returns an error_s which should be checked.
+    ASSERT_TRUE(_client.set_url(url));
+
+    test_mothod(method_case.method,
+                method_case.post_data,
+                method_case.expected_http_status,
+                method_case.expected_response);
+}
+
+TEST_P(HttpClientMethodTest, ExecMethodByUrlClass)
+{
+    const auto &method_case = GetParam();
+
+    // Test with url class.
+    http_url url;
+    ASSERT_TRUE(url.set_host(method_case.host));
+    ASSERT_TRUE(url.set_port(method_case.port));
+    ASSERT_TRUE(url.set_path(method_case.path));
+
+    // set_url with url class return nothing.
+    _client.set_url(url);
+
+    test_mothod(method_case.method,
+                method_case.post_data,
+                method_case.expected_http_status,
+                method_case.expected_response);
 }
 
 const std::vector<http_client_method_case> http_client_method_tests = {
