@@ -73,8 +73,8 @@ func NewMetricCollector(
 	SummaryMetricsMap = make(map[string]prometheus.Summary, 128)
 	RoleByDataSource = make(map[int]string, 128)
 	TableNameByID = make(map[string]string, 128)
-	RoleByDataSource[0] = "meta_server"
-	RoleByDataSource[1] = "replica_server"
+	RoleByDataSource[0] = "meta"
+	RoleByDataSource[1] = "replica"
 	initMetrics()
 
 	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout}
@@ -143,7 +143,7 @@ func initMetrics() {
 			return
 		}
 		jsonData := gjson.Parse(data)
-		for _, entity := range jsonData.Array() {
+		for _, entity := range jsonData.Get("entities").Array() {
 			for _, metric := range entity.Get("metrics").Array() {
 				var name string = metric.Get("name").String()
 				var mtype string = metric.Get("type").String()
@@ -211,7 +211,7 @@ func processAllServerMetrics() {
 			return
 		}
 		jsonData := gjson.Parse(data)
-		for _, entity := range jsonData.Array() {
+		for _, entity := range jsonData.Get("entities").Array() {
 			etype := entity.Get("type").String()
 			switch etype {
 			case "replica":
