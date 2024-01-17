@@ -112,7 +112,7 @@ else
 fi
 
 if [ ! -z "${cases}" ]; then
-    OLD_TEST_OPTS=${TEST_OPTS//;/ }
+    OLD_TEST_OPTS=${TEST_OPTS}
     TEST_OPTS="${OLD_TEST_OPTS};encrypt_data_at_rest=false"
     for id in ${cases}; do
         run_case ${id}
