@@ -439,40 +439,56 @@ protected:
     http_client _client;
 };
 
+#define TEST_HTTP_CLIENT_EXEC_METHOD(url_setter)                                                   \
+    do {                                                                                           \
+        const auto &method_case = GetParam();                                                      \
+        url_setter(method_case.host, method_case.port, method_case.path);                          \
+        test_mothod(method_case.method,                                                            \
+                    method_case.post_data,                                                         \
+                    method_case.expected_http_status,                                              \
+                    method_case.expected_response);                                                \
+    } while (0)
+
+// Test setting url by string, where set_url returns an error_s which should be checked.
+#define SET_HTTP_CLIENT_BY_URL_STRING(host, port, path)                                            \
+    do {                                                                                           \
+        const auto &url = fmt::format("http://{}:{}{}", host, port, path);                         \
+        ASSERT_TRUE(_client.set_url(url));                                                         \
+    } while (0)
+
 TEST_P(HttpClientMethodTest, ExecMethodByUrlString)
 {
-    const auto &method_case = GetParam();
-
-    // Test with url string.
-    const auto &url =
-        fmt::format("http://{}:{}{}", method_case.host, method_case.port, method_case.path);
-
-    // set_url with url string returns an error_s which should be checked.
-    ASSERT_TRUE(_client.set_url(url));
-
-    test_mothod(method_case.method,
-                method_case.post_data,
-                method_case.expected_http_status,
-                method_case.expected_response);
+    TEST_HTTP_CLIENT_EXEC_METHOD(SET_HTTP_CLIENT_BY_URL_STRING);
 }
 
-TEST_P(HttpClientMethodTest, ExecMethodByUrlClass)
+// Test setting url by copying url object, where set_url returns nothing.
+#define SET_HTTP_CLIENT_BY_COPY_URL_OBJECT(host, port, path)                                       \
+    do {                                                                                           \
+        http_url url;                                                                              \
+        ASSERT_TRUE(url.set_host(host));                                                           \
+        ASSERT_TRUE(url.set_port(port));                                                           \
+        ASSERT_TRUE(url.set_path(path));                                                           \
+        _client.set_url(url);                                                                      \
+    } while (0)
+
+TEST_P(HttpClientMethodTest, ExecMethodByCopyUrlClass)
 {
-    const auto &method_case = GetParam();
+    TEST_HTTP_CLIENT_EXEC_METHOD(SET_HTTP_CLIENT_BY_COPY_URL_OBJECT);
+}
 
-    // Test with url class.
-    http_url url;
-    ASSERT_TRUE(url.set_host(method_case.host));
-    ASSERT_TRUE(url.set_port(method_case.port));
-    ASSERT_TRUE(url.set_path(method_case.path));
+// Test setting url by moving url object, where set_url returns nothing.
+#define SET_HTTP_CLIENT_BY_MOVE_URL_OBJECT(host, port, path)                                       \
+    do {                                                                                           \
+        http_url url;                                                                              \
+        ASSERT_TRUE(url.set_host(host));                                                           \
+        ASSERT_TRUE(url.set_port(port));                                                           \
+        ASSERT_TRUE(url.set_path(path));                                                           \
+        _client.set_url(std::move(url));                                                           \
+    } while (0)
 
-    // set_url with url class return nothing.
-    _client.set_url(url);
-
-    test_mothod(method_case.method,
-                method_case.post_data,
-                method_case.expected_http_status,
-                method_case.expected_response);
+TEST_P(HttpClientMethodTest, ExecMethodByMoveUrlClass)
+{
+    TEST_HTTP_CLIENT_EXEC_METHOD(SET_HTTP_CLIENT_BY_MOVE_URL_OBJECT);
 }
 
 const std::vector<http_client_method_case> http_client_method_tests = {
