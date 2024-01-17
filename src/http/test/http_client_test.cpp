@@ -23,7 +23,6 @@
 #include <cstring>
 #include <iostream>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -203,6 +202,9 @@ TEST(HttpUrlTest, Clear)
     ASSERT_EQ(kTestUrlA, str);
 
     url.clear();
+
+    // After cleared, at least it should be set with some host; otherwise, extracting the URL
+    // string would lead to error.
     const auto &err = url.to_string(str);
     ASSERT_FALSE(err);
     const std::string expected_description_prefix(

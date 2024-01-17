@@ -35,7 +35,6 @@
 #include "utils/ports.h"
 
 USER_DEFINED_ENUM_FORMATTER(CURLUcode)
-
 USER_DEFINED_ENUM_FORMATTER(CURLcode)
 
 namespace dsn {
@@ -62,7 +61,7 @@ ENUM_CONST_DEF_TO_VAL_FUNC(std::string, http_scheme, ENUM_FOREACH_HTTP_SCHEME)
 class http_url
 {
 public:
-    // `http` is the default scheme for the URL.
+    // The scheme is set to `http` as default for the URL.
     http_url() noexcept;
 
     ~http_url() = default;
@@ -73,7 +72,7 @@ public:
     http_url(http_url &&) noexcept;
     http_url &operator=(http_url &&) noexcept;
 
-    // Clear the URL.
+    // Clear the URL. And the scheme is reset to `http`.
     void clear();
 
     // Operations that update the components of a URL.
@@ -89,6 +88,7 @@ public:
     // Extract the URL string.
     dsn::error_s to_string(std::string &url) const;
 
+    // Formatter for fmt::format.
     friend std::ostream &operator<<(std::ostream &os, const http_url &url)
     {
         std::string str;
