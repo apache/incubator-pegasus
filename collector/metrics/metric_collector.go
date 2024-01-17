@@ -53,8 +53,7 @@ var GaugeMetricsMap map[string]prometheus.GaugeVec
 var CounterMetricsMap map[string]prometheus.CounterVec
 var SummaryMetricsMap map[string]prometheus.Summary
 
-// DataSource 0 meta server, 1 replica server.
-var DataSource int
+// RoleByDataSource 0 meta server, 1 replica server.
 var RoleByDataSource map[int]string
 
 var TableNameByID map[string]string
@@ -67,7 +66,6 @@ func NewMetricCollector(
 	dataSource int,
 	detectInterval time.Duration,
 	detectTimeout time.Duration) MetricCollector {
-	DataSource = dataSource
 	GaugeMetricsMap = make(map[string]prometheus.GaugeVec, 128)
 	CounterMetricsMap = make(map[string]prometheus.CounterVec, 128)
 	SummaryMetricsMap = make(map[string]prometheus.Summary, 128)
@@ -75,12 +73,13 @@ func NewMetricCollector(
 	TableNameByID = make(map[string]string, 128)
 	RoleByDataSource[0] = "meta"
 	RoleByDataSource[1] = "replica"
-	initMetrics()
+	initMetrics(dataSource)
 
-	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout}
+	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout, dataSource: dataSource}
 }
 
 type Collector struct {
+	dataSource     int
 	detectInterval time.Duration
 	detectTimeout  time.Duration
 }
@@ -93,7 +92,7 @@ func (collector *Collector) Start(tom *tomb.Tomb) error {
 			return nil
 		case <-ticker.C:
 			updateClusterTableInfo()
-			processAllServerMetrics()
+			processAllServerMetrics(collector.dataSource)
 		}
 	}
 }
@@ -124,10 +123,10 @@ func getReplicaAddrs() ([]string, error) {
 }
 
 // Register all metrics.
-func initMetrics() {
+func initMetrics(dataSource int) {
 	var addrs []string
 	var err error
-	if DataSource == MetaServer {
+	if dataSource == MetaServer {
 		addrs = viper.GetStringSlice("meta_servers")
 	} else {
 		addrs, err = getReplicaAddrs()
@@ -188,10 +187,10 @@ func initMetrics() {
 }
 
 // Parse metric data and update metrics.
-func processAllServerMetrics() {
+func processAllServerMetrics(dataSource int) {
 	var addrs []string
 	var err error
-	if DataSource == MetaServer {
+	if dataSource == MetaServer {
 		addrs = viper.GetStringSlice("meta_servers")
 	} else {
 		addrs, err = getReplicaAddrs()
@@ -225,7 +224,7 @@ func processAllServerMetrics() {
 					tableID, &metricsByTableID)
 				collectServerLevelTableMetric(entity.Get("metrics").Array(), tableID,
 					&metricsByServerTableID)
-				updateServerLevelTableMetrics(addr, metricsByServerTableID)
+				updateServerLevelTableMetrics(addr, metricsByServerTableID, dataSource)
 			case "server":
 				mergeIntoClusterLevelServerMetric(entity.Get("metrics").Array(),
 					metricsOfCluster)
@@ -237,13 +236,13 @@ func processAllServerMetrics() {
 		}
 	}
 
-	updateClusterLevelTableMetrics(metricsByTableID)
-	updateServerLevelServerMetrics(metricsByAddr)
-	updateClusterLevelMetrics(metricsOfCluster)
+	updateClusterLevelTableMetrics(metricsByTableID, dataSource)
+	updateServerLevelServerMetrics(metricsByAddr, dataSource)
+	updateClusterLevelMetrics(metricsOfCluster, dataSource)
 }
 
 // Update table metrics. They belong to a specified server.
-func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[string]Metrics) {
+func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[string]Metrics, dataSource int) {
 	for tableID, metrics := range metricsByServerTableID {
 		var tableName string
 		if name, ok := TableNameByID[tableID]; !ok {
@@ -252,29 +251,29 @@ func updateServerLevelTableMetrics(addr string, metricsByServerTableID map[strin
 			tableName = name
 		}
 		for _, metric := range metrics {
-			updateMetric(metric, addr, "server", tableName)
+			updateMetric(metric, addr, "server", tableName, dataSource)
 		}
 	}
 }
 
 // Update server metrics. They belong to a specified server.
-func updateServerLevelServerMetrics(metricsByAddr map[string]Metrics) {
+func updateServerLevelServerMetrics(metricsByAddr map[string]Metrics, dataSource int) {
 	for addr, metrics := range metricsByAddr {
 		for _, metric := range metrics {
-			updateMetric(metric, addr, "server", "server")
+			updateMetric(metric, addr, "server", "server", dataSource)
 		}
 	}
 }
 
 // Update cluster level metrics. They belong to a cluster.
-func updateClusterLevelMetrics(metricsOfCluster []Metric) {
+func updateClusterLevelMetrics(metricsOfCluster []Metric, dataSource int) {
 	for _, metric := range metricsOfCluster {
-		updateMetric(metric, "cluster", "server", metric.name)
+		updateMetric(metric, "cluster", "server", metric.name, dataSource)
 	}
 }
 
 // Update table metrics. They belong to a cluster.
-func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics) {
+func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics, dataSource int) {
 	for tableID, metrics := range metricsByTableID {
 		var tableName string
 		if name, ok := TableNameByID[tableID]; !ok {
@@ -283,13 +282,13 @@ func updateClusterLevelTableMetrics(metricsByTableID map[string]Metrics) {
 			tableName = name
 		}
 		for _, metric := range metrics {
-			updateMetric(metric, "cluster", "table", tableName)
+			updateMetric(metric, "cluster", "table", tableName, dataSource)
 		}
 	}
 }
 
-func updateMetric(metric Metric, endpoint string, level string, title string) {
-	role := RoleByDataSource[DataSource]
+func updateMetric(metric Metric, endpoint string, level string, title string, dataSource int) {
+	role := RoleByDataSource[dataSource]
 	switch metric.mtype {
 	case "Counter":
 		if counter, ok := CounterMetricsMap[metric.name]; ok {
