@@ -64,7 +64,7 @@ namespace replication {
 struct replica_base;
 
 DSN_DEFINE_uint64(replication,
-                  max_allowed_write_size,
+                  dup_max_allowed_write_size,
                   1 << 20,
                   "the send operation of duplication exceed this "
                   "threshold will not be combine, "
