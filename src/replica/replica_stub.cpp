@@ -2347,31 +2347,31 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
     gpid id = r->get_gpid();
 
     zauto_write_lock l(_replicas_lock);
-    if (_replicas.erase(id) > 0) {
-        _counter_replicas_count->decrement();
-
-        int delay_ms = 0;
-        if (r->status() == partition_status::PS_INACTIVE) {
-            delay_ms = FLAGS_gc_memory_replica_interval_ms;
-            LOG_INFO("{}: delay {} milliseconds to close replica, status = PS_INACTIVE",
-                     r->name(),
-                     delay_ms);
-        }
-
-        app_info a_info = *(r->get_app_info());
-        replica_info r_info;
-        get_replica_info(r_info, r);
-        task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA,
-                                         &_tracker,
-                                         [=]() { close_replica(r); },
-                                         0,
-                                         std::chrono::milliseconds(delay_ms));
-        _closing_replicas[id] = std::make_tuple(task, r, std::move(a_info), std::move(r_info));
-        _counter_replicas_closing_count->increment();
-        return task;
-    } else {
+    if (_replicas.erase(id) == 0) {
         return nullptr;
     }
+
+    _counter_replicas_count->decrement();
+
+    int delay_ms = 0;
+    if (r->status() == partition_status::PS_INACTIVE) {
+        delay_ms = FLAGS_gc_memory_replica_interval_ms;
+        LOG_INFO("{}: delay {} milliseconds to close replica, status = PS_INACTIVE",
+                 r->name(),
+                 delay_ms);
+    }
+
+    app_info a_info = *(r->get_app_info());
+    replica_info r_info;
+    get_replica_info(r_info, r);
+    task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA,
+        &_tracker,
+        [=]() { close_replica(r); },
+        0,
+        std::chrono::milliseconds(delay_ms));
+    _closing_replicas[id] = std::make_tuple(task, r, std::move(a_info), std::move(r_info));
+    _counter_replicas_closing_count->increment();
+    return task;
 }
 
 void replica_stub::close_replica(replica_ptr r)
