@@ -121,7 +121,7 @@ func getReplicaAddrs() ([]string, error) {
 func (collector *Collector) initMetrics() {
 	var addrs []string
 	var err error
-	if collector.role == "meta" {
+	if collector.role == MetaServer {
 		addrs = viper.GetStringSlice("meta_servers")
 	} else {
 		addrs, err = getReplicaAddrs()
@@ -185,7 +185,7 @@ func (collector *Collector) initMetrics() {
 func (collector *Collector) processAllServerMetrics() {
 	var addrs []string
 	var err error
-	if collector.role == "meta" {
+	if collector.role == MetaServer {
 		addrs = viper.GetStringSlice("meta_servers")
 	} else {
 		addrs, err = getReplicaAddrs()
@@ -283,13 +283,12 @@ func (collector *Collector) updateClusterLevelTableMetrics(metricsByTableID map[
 }
 
 func (collector *Collector) updateMetric(metric Metric, endpoint string, level string, title string) {
-	role := collector.role
 	switch metric.mtype {
 	case "Counter":
 		if counter, ok := CounterMetricsMap[metric.name]; ok {
 			counter.With(
 				prometheus.Labels{"endpoint": endpoint,
-					"role": role, "level": level,
+					"role": collector.role, "level": level,
 					"title": title}).Add(float64(metric.value))
 		} else {
 			log.Warnf("Unknown metric name %s", metric.name)
@@ -298,7 +297,7 @@ func (collector *Collector) updateMetric(metric Metric, endpoint string, level s
 		if gauge, ok := GaugeMetricsMap[metric.name]; ok {
 			gauge.With(
 				prometheus.Labels{"endpoint": endpoint,
-					"role": role, "level": level,
+					"role": collector.role, "level": level,
 					"title": title}).Set(float64(metric.value))
 		} else {
 			log.Warnf("Unknown metric name %s", metric.name)
