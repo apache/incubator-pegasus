@@ -30,6 +30,7 @@
 #include <utility>
 
 #include "runtime/app_model.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "zookeeper/proto.h"
@@ -43,6 +44,10 @@ DSN_DEFINE_string(security,
                   zookeeper_kerberos_service_name,
                   "zookeeper",
                   "zookeeper kerberos service name");
+DSN_DEFINE_string(security,
+                  zookeeper_sasl_service_fqdn,
+                  "",
+                  "The FQDN of a Zookeeper server, used in Kerberos Principal");
 } // namespace security
 } // namespace dsn
 
@@ -161,6 +166,11 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
             zoo_sasl_params_t sasl_params = {0};
             sasl_params.service = dsn::security::FLAGS_zookeeper_kerberos_service_name;
             sasl_params.mechlist = "GSSAPI";
+            rpc_address addr;
+            CHECK(addr.from_string_ipv4(dsn::security::FLAGS_zookeeper_sasl_service_fqdn),
+                  "zookeeper_sasl_service_fqdn {} is invalid",
+                  dsn::security::FLAGS_zookeeper_sasl_service_fqdn);
+            sasl_params.host = dsn::security::FLAGS_zookeeper_sasl_service_fqdn;
             _handle = zookeeper_init_sasl(FLAGS_hosts_list,
                                           global_watcher,
                                           FLAGS_timeout_ms,
