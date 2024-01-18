@@ -88,6 +88,7 @@
 #include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
+#include "duplication/replica_duplicator_manager.h"
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
 #elif defined(DSN_USE_JEMALLOC)
@@ -2346,15 +2347,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
     gpid id = r->get_gpid();
 
     zauto_write_lock l(_replicas_lock);
-    if (_replicas.size() > 1) {
-        if (_closed_replicas.find(id) != _closed_replicas.end() ||
-            _closing_replicas.find(id) != _closing_replicas.end()) {
-            LOG_INFO("{} gpid {} has been closed or is closing,do not join task queue again",
-                     r->name(),
-                     id);
-            return nullptr;
-        }
-
+    if (_replicas.erase(id) > 0) {
         _counter_replicas_count->decrement();
 
         int delay_ms = 0;
@@ -2388,24 +2381,8 @@ void replica_stub::close_replica(replica_ptr r)
     gpid id = r->get_gpid();
     std::string name = r->name();
 
-    // this replica still have some dup mission in loading stage,try it later
-    if (r->having_dup_loading()) {
-        LOG_INFO(
-            "{} gpid {} has conflict between duplication load stage with close replica", name, id);
-
-        task_ptr task = tasking::enqueue(LPC_CLOSE_REPLICA,
-                                         &_tracker,
-                                         [=]() { close_replica(r); },
-                                         0,
-                                         // todo: time may be configurable
-                                         std::chrono::milliseconds(60000)); // try 60s later
-        return;
-    }
-
-    if (!_replicas.empty()) {
-        _replicas.erase(id);
-    }
-
+    // deal with duplication conflict with balance
+    r->get_duplication_manager()->remove_all_duplications();
     r->close();
 
     {
