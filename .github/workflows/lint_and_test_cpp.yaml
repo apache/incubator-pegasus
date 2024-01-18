@@ -46,7 +46,7 @@ on:
 env:
   # Update the options to reduce the consumption of the disk space
   ONEBOX_OPTS: disk_min_available_space_ratio=5
-  TEST_OPTS: disk_min_available_space_ratio=5,throttle_test_medium_value_kb=10,throttle_test_large_value_kb=25
+  TEST_OPTS: disk_min_available_space_ratio=5;throttle_test_medium_value_kb=10;throttle_test_large_value_kb=25
 
 jobs:
   cpp_clang_format_linter:
