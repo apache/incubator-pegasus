@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	MetaServer    int = 0
-	ReplicaServer int = 1
+	MetaServer    string = "meta"
+	ReplicaServer string = "replica"
 )
 
 type Metric struct {
@@ -60,7 +60,7 @@ type MetricCollector interface {
 }
 
 func NewMetricCollector(
-	dataSource int,
+	role string,
 	detectInterval time.Duration,
 	detectTimeout time.Duration) MetricCollector {
 	GaugeMetricsMap = make(map[string]prometheus.GaugeVec, 128)
@@ -68,12 +68,6 @@ func NewMetricCollector(
 	SummaryMetricsMap = make(map[string]prometheus.Summary, 128)
 	TableNameByID = make(map[string]string, 128)
 
-	var role string
-	if dataSource == 0 {
-		role = "meta"
-	} else {
-		role = "replica"
-	}
 	var collector = Collector{detectInterval: detectInterval, detectTimeout: detectTimeout, role: role}
 	collector.initMetrics()
 	return &collector
