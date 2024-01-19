@@ -27,14 +27,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+var Registry = prometheus.NewRegistry()
+
 // StartWebServer starts an iris-powered HTTP server.
 func StartWebServer() {
-	registry := prometheus.NewRegistry()
 	for _, cV := range metrics.CounterMetricsMap {
-		registry.MustRegister(cV)
+		Registry.MustRegister(cV)
 	}
 	for _, gV := range metrics.GaugeMetricsMap {
-		registry.MustRegister(gV)
+		Registry.MustRegister(gV)
 	}
 
 	app := iris.New()
