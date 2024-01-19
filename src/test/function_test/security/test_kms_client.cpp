@@ -50,7 +50,7 @@ protected:
         dsn::FLAGS_cluster_name = "kudu_cluster_key";
         dsn::security::FLAGS_enable_acl = "true";
         dsn::security::FLAGS_super_users = "pegasus";
-        dsn::replication::FLAGS_hadoop_kms_url = "kms01-throne01.sensorsdata.cn:9292/kms";
+        dsn::replication::FLAGS_hadoop_kms_url = "";
     }
 };
 
