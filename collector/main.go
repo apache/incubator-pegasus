@@ -29,6 +29,7 @@ import (
 	"github.com/apache/incubator-pegasus/collector/avail"
 	"github.com/apache/incubator-pegasus/collector/metrics"
 	"github.com/apache/incubator-pegasus/collector/webui"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -59,6 +60,8 @@ func setupSignalHandler(shutdownFunc func()) {
 }
 
 func main() {
+	registry := prometheus.NewRegistry()
+
 	// initialize logging
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors:    true,
@@ -81,8 +84,6 @@ func main() {
 		return
 	}
 
-	webui.StartWebServer()
-
 	tom := &tomb.Tomb{}
 	setupSignalHandler(func() {
 		tom.Kill(errors.New("collector terminates")) // kill other goroutines
@@ -98,4 +99,6 @@ func main() {
 		return metrics.NewReplicaServerMetricCollector().Start(tom)
 	})
 	<-tom.Dead() // gracefully wait until all goroutines dead
+
+	webui.StartWebServer(registry)
 }
