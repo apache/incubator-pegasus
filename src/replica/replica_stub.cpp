@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <absl/strings/str_split.h>
 #include <boost/algorithm/string/replace.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
@@ -54,23 +55,26 @@
 #include "mutation_log.h"
 #include "nfs/nfs_node.h"
 #include "nfs_types.h"
+#include "ranger/access_type.h"
 #include "replica.h"
 #include "replica/duplication/replica_follower.h"
+#include "replica/kms_key_provider.h"
 #include "replica/replica_context.h"
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
-#include "replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/command_manager.h"
+#include "utils/env.h"
+#include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/load_dump_object.h"
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"
@@ -214,7 +218,15 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kBytes,
                           "The max size of copied files among all splitting replicas");
 
+DSN_DECLARE_bool(encrypt_data_at_rest);
+DSN_DECLARE_string(server_key);
+
 namespace dsn {
+DSN_DECLARE_string(cluster_name);
+
+namespace security {
+DSN_DECLARE_bool(enable_acl);
+}
 namespace replication {
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
@@ -283,12 +295,60 @@ DSN_DEFINE_int32(
     "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
     "memory, replica server will release the exceeding memory back to operating system");
 
+DSN_DEFINE_string(
+    pegasus.server,
+    hadoop_kms_url,
+    "",
+    "Provide the comma-separated list of URLs from which to retrieve the "
+    "file system's server key. Example format: 'hostname1:1234/kms,hostname2:1234/kms'.");
+
 DSN_DECLARE_bool(duplication_enabled);
 DSN_DECLARE_int32(fd_beacon_interval_seconds);
 DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
 DSN_DECLARE_int32(fd_lease_seconds);
 DSN_DECLARE_int32(gc_interval_ms);
+DSN_DECLARE_string(data_dirs);
+DSN_DEFINE_group_validator(encrypt_data_at_rest_pre_check, [](std::string &message) -> bool {
+    if (!dsn::security::FLAGS_enable_acl && FLAGS_encrypt_data_at_rest) {
+        message = fmt::format("[pegasus.server] encrypt_data_at_rest should be enabled only if "
+                              "[security] enable_acl is enabled.");
+        return false;
+    }
+    return true;
+});
+
+DSN_DEFINE_group_validator(encrypt_data_is_irreversible, [](std::string &message) -> bool {
+// In some unit test FLAGS_data_dirs may not set.
+#ifdef MOCK_TEST
+    return true;
+#endif
+    std::string data_dirs;
+    data_dirs = FLAGS_data_dirs;
+    std::vector<std::string> dirs;
+    ::absl::StrSplit(data_dirs.c_str(), dirs, ',');
+    std::string kms_path = utils::filesystem::path_combine(dirs[0], kms_info::kKmsInfo);
+    if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
+        message = fmt::format("The kms_info file exists at ({}), but [pegasus.server] "
+                              "encrypt_data_at_rest is set to ({})."
+                              "Encryption in Pegasus is irreversible after its initial activation.",
+                              kms_path,
+                              FLAGS_encrypt_data_at_rest);
+        return false;
+    }
+    return true;
+});
+
+DSN_DEFINE_group_validator(encrypt_data_at_rest_with_kms_url, [](std::string &message) -> bool {
+#ifndef MOCK_TEST
+    if (FLAGS_encrypt_data_at_rest && utils::is_empty(FLAGS_hadoop_kms_url)) {
+        message = fmt::format("[security] hadoop_kms_url should not be empty when [pegasus.server] "
+                              "encrypt_data_at_rest is enabled.");
+        return false;
+    }
+#endif
+    return true;
+});
 
 bool replica_stub::s_not_exit_on_log_failure = false;
 
@@ -380,8 +440,43 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
     }
 
+    std::string server_key;
+    dsn::replication::kms_info kms_info;
+    std::string kms_path =
+        utils::filesystem::path_combine(_options.data_dirs[0], kms_info::kKmsInfo);
+    if (FLAGS_encrypt_data_at_rest && !utils::is_empty(FLAGS_hadoop_kms_url)) {
+        key_provider.reset(new dsn::security::KMSKeyProvider(
+            ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_cluster_name));
+        auto ec = dsn::utils::load_rjobj_from_file(
+            kms_path, dsn::utils::FileDataType::kNonSensitive, &kms_info);
+        if (ec != dsn::ERR_PATH_NOT_FOUND && ec != dsn::ERR_OK) {
+            CHECK_EQ_MSG(dsn::ERR_OK, ec, "Can't load kms key from kms-info file, err = {}", ec);
+        }
+        // Upon the first launch, the encryption key should be empty. The process will then retrieve
+        // EEK, IV, and KV from KMS.
+        // After the first launch, the encryption key, obtained from the kms-info file, should not
+        // be empty. The process will then acquire the DEK from KMS.
+        if (ec == dsn::ERR_PATH_NOT_FOUND) {
+            LOG_WARNING("It's normal to encounter a temporary inability to open the kms-info file "
+                        "during the first process launch. error_code = {}",
+                        ec);
+            CHECK_OK(key_provider->GenerateEncryptionKey(&kms_info),
+                     "Generate encryption key from kms failed");
+        }
+        CHECK_OK(key_provider->DecryptEncryptionKey(kms_info, &server_key),
+                 "Get decryption key failed from {}",
+                 kms_path);
+        FLAGS_server_key = server_key.c_str();
+    }
+
     // Initialize the file system manager.
     _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags);
+
+    if (key_provider && !utils::filesystem::path_exists(kms_path)) {
+        auto err = dsn::utils::dump_rjobj_to_file(
+            kms_info, dsn::utils::FileDataType::kNonSensitive, kms_path);
+        CHECK_EQ_MSG(dsn::ERR_OK, err, "Can't store kms key to kms-info file, err = {}", err);
+    }
 
     // Check slog is not exist.
     auto full_slog_path = fmt::format("{}/replica/slog/", _options.slog_dir);

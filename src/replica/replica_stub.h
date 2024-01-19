@@ -72,6 +72,9 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+namespace security {
+class KMSKeyProvider;
+} // namespace security
 
 namespace service {
 class copy_request;
@@ -459,6 +462,7 @@ private:
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
     std::unique_ptr<replica_backup_server> _backup_server;
+    std::unique_ptr<dsn::security::KMSKeyProvider> key_provider;
 
     // command_handlers
     std::vector<std::unique_ptr<command_deregister>> _cmds;

@@ -15,22 +15,37 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME dsn_security)
-thrift_generate_cpp(
-    SECURITY_THRIFT_SRCS
-    SECURITY_THRIFT_HDRS
-        ${PROJECT_ROOT}/idl/security.thrift)
-set(MY_PROJ_SRC ${SECURITY_THRIFT_SRCS})
+set(MY_PROJ_NAME "security_test")
+project(${MY_PROJ_NAME} C CXX)
+
+# Source files under CURRENT project directory will be automatically included.
+# You can manually set MY_PROJ_SRC to include source files under other directories.
+set(MY_PROJ_SRC "")
+
+# Search mode for source files under CURRENT project directory?
+# "GLOB_RECURSE" for recursive search
+# "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
+
 set(MY_PROJ_LIBS
         absl::strings
-        curl
         dsn_http
+        curl
         dsn_meta_server
-        dsn_replication_common
-        dsn_runtime
         dsn_utils
-        gssapi_krb5)
+        dsn_security
+        dsn_ranger
+        dsn_replica_server
+        sasl2
+        gssapi_krb5
+        krb5
+        gtest
+        function_test_utils
+        rocksdb
+        test_utils)
 
-dsn_add_object()
-add_subdirectory(test)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+
+set(MY_BINPLACES "../config.ini" "../run.sh")
+
+dsn_add_test()
