@@ -31,7 +31,7 @@
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -58,7 +58,7 @@ public:
                      int32_t partition_count,
                      uint64_t create_now_ms,
                      std::string follower_cluster_name,
-                     std::vector<rpc_address> &&follower_cluster_metas,
+                     std::vector<host_port> &&follower_cluster_metas,
                      std::string meta_store_path)
         : id(dupid),
           app_id(appid),
@@ -247,7 +247,7 @@ public:
     const int32_t partition_count{0};
 
     const std::string follower_cluster_name;
-    const std::vector<rpc_address> follower_cluster_metas;
+    const std::vector<host_port> follower_cluster_metas;
     const std::string store_path; // store path on meta service = get_duplication_path(app, dupid)
     const uint64_t create_timestamp_ms{0}; // the time when this dup is created.
     const std::string prefix_for_log;

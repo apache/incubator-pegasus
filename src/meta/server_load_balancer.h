@@ -35,7 +35,7 @@
 #include <vector>
 
 #include "meta_data.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/extensible_object.h"
 
 namespace dsn {
@@ -83,7 +83,7 @@ public:
     static void s_delete(void *_this);
 };
 typedef dsn::object_extension_helper<newly_partitions, node_state> newly_partitions_ext;
-newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::rpc_address &addr);
+newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::host_port &addr);
 
 // The interface of the server load balancer which defines the scheduling policy of how to
 // place the partition replica to the nodes.
@@ -165,10 +165,10 @@ public:
     virtual std::string get_balance_operation_count(const std::vector<std::string> &args) = 0;
 
 public:
-    typedef std::function<bool(const rpc_address &addr1, const rpc_address &addr2)> node_comparator;
+    typedef std::function<bool(const host_port &addr1, const host_port &addr2)> node_comparator;
     static node_comparator primary_comparator(const node_mapper &nodes)
     {
-        return [&nodes](const rpc_address &r1, const rpc_address &r2) {
+        return [&nodes](const host_port &r1, const host_port &r2) {
             int p1 = nodes.find(r1)->second.primary_count();
             int p2 = nodes.find(r2)->second.primary_count();
             if (p1 != p2)
@@ -179,7 +179,7 @@ public:
 
     static node_comparator partition_comparator(const node_mapper &nodes)
     {
-        return [&nodes](const rpc_address &r1, const rpc_address &r2) {
+        return [&nodes](const host_port &r1, const host_port &r2) {
             int p1 = nodes.find(r1)->second.partition_count();
             int p2 = nodes.find(r2)->second.partition_count();
             if (p1 != p2)

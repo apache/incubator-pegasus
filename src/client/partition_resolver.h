@@ -34,7 +34,7 @@
 #include <vector>
 
 #include "common/gpid.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -53,7 +53,7 @@ class partition_resolver : public ref_counter
 public:
     static dsn::ref_ptr<partition_resolver>
     get_resolver(const char *cluster_name,
-                 const std::vector<dsn::rpc_address> &meta_list,
+                 const std::vector<dsn::host_port> &meta_list,
                  const char *app_name);
 
     /**
@@ -93,12 +93,12 @@ public:
 
     std::string get_app_name() const { return _app_name; }
 
-    dsn::rpc_address get_meta_server() const { return _meta_server; }
+    dsn::host_port get_meta_server() const { return _meta_server; }
 
     const char *log_prefix() const { return _app_name.c_str(); }
 
 protected:
-    partition_resolver(rpc_address meta_server, const char *app_name)
+    partition_resolver(host_port meta_server, const char *app_name)
         : _app_name(app_name), _meta_server(meta_server)
     {
     }
@@ -113,13 +113,13 @@ protected:
         ///< should call resolve_async in this case
         error_code err;
         ///< IPv4 of the target to send request to
-        rpc_address address;
+        host_port hp;
         ///< global partition indentity
         dsn::gpid pid;
     };
 
     /**
-     * resolve partition_hash into IP or group addresses to know what to connect next
+     * resolve partition_hash into IP or group host_port to know what to connect next
      *
      * \param partition_hash the partition hash
      * \param callback       callback invoked on completion or timeout
@@ -137,13 +137,13 @@ protected:
      \param partition_index zero-based index of the partition.
      \param err             error code
 
-     this is usually to trigger new round of address resolve
+     this is usually to trigger new round of host_port resolve
      */
     virtual void on_access_failure(int partition_index, error_code err) = 0;
 
     std::string _cluster_name;
     std::string _app_name;
-    rpc_address _meta_server;
+    host_port _meta_server;
 };
 
 typedef ref_ptr<partition_resolver> partition_resolver_ptr;

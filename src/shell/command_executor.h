@@ -22,8 +22,9 @@
 #include <map>
 #include <memory>
 #include <string>
-#include "client/replication_ddl_client.h"
 #include <pegasus/client.h>
+
+#include "client/replication_ddl_client.h"
 
 #include "sds/sds.h"
 
@@ -32,7 +33,7 @@ struct shell_context
 {
     std::string current_cluster_name;
     std::string current_app_name;
-    std::vector<dsn::rpc_address> meta_list;
+    std::vector<dsn::host_port> meta_list;
     std::unique_ptr<dsn::replication::replication_ddl_client> ddl_client;
     pegasus::pegasus_client *pg_client;
     bool escape_all;

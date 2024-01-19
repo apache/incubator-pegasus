@@ -22,21 +22,21 @@
 #include "client/replication_ddl_client.h"
 #include "command_executor.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 
 bool validate_ip(shell_context *sc,
                  const std::string &ip_str,
-                 dsn::rpc_address &target_address,
+                 dsn::host_port &target_hp,
                  std::string &err_info)
 {
-    target_address = dsn::rpc_address::from_ip_port(ip_str);
-    if (!target_address) {
-        err_info = fmt::format("invalid ip:port={}, can't transform it into rpc_address", ip_str);
+    target_hp = dsn::host_port::from_string(ip_str);
+    if (!target_hp) {
+        err_info = fmt::format("invalid ip:port={}, can't transform it into host_port", ip_str);
         return false;
     }
 
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
+    std::map<dsn::host_port, dsn::replication::node_status::type> nodes;
     auto error = sc->ddl_client->list_nodes(dsn::replication::node_status::NS_INVALID, nodes);
     if (error != dsn::ERR_OK) {
         err_info = fmt::format("list nodes failed, error={}", error.to_string());
@@ -44,7 +44,7 @@ bool validate_ip(shell_context *sc,
     }
 
     for (const auto &node : nodes) {
-        if (target_address == node.first) {
+        if (target_hp == node.first) {
             return true;
         }
     }

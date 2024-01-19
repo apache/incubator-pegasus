@@ -273,7 +273,7 @@ replica::replica(replica_stub *stub,
                  bool need_restore,
                  bool is_duplication_follower)
     : serverlet<replica>(replication_options::kReplicaAppType.c_str()),
-      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str), app.app_name),
+      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_host_port_cache), app.app_name),
       _app_info(app),
       _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),

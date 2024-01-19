@@ -39,6 +39,7 @@
 #include "meta/meta_backup_service.h"
 #include "meta_service_test_app.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 
 namespace dsn {
@@ -86,14 +87,18 @@ void meta_service_test_app::json_compacity()
     // 4. old pc version
     const char *json3 = "{\"pid\":\"1.1\",\"ballot\":234,\"max_replica_count\":3,"
                         "\"primary\":\"invalid address\",\"secondaries\":[\"127.0.0.1:6\"],"
+                        "\"hp_primary\":\"invalid host_port\",\"hp_secondaries\":[\"localhost:6\"],"
                         "\"last_drops\":[],\"last_committed_decree\":157}";
     dsn::partition_configuration pc;
     dsn::json::json_forwarder<dsn::partition_configuration>::decode(
         dsn::blob(json3, 0, strlen(json3)), pc);
     ASSERT_EQ(234, pc.ballot);
+    ASSERT_TRUE(pc.hp_primary.is_invalid());
     ASSERT_TRUE(pc.primary.is_invalid());
+    ASSERT_EQ(1, pc.hp_secondaries.size());
     ASSERT_EQ(1, pc.secondaries.size());
     ASSERT_STREQ("127.0.0.1:6", pc.secondaries[0].to_string());
+    ASSERT_EQ("localhost:6", pc.hp_secondaries[0].to_string());
     ASSERT_EQ(157, pc.last_committed_decree);
     ASSERT_EQ(0, pc.partition_flags);
 

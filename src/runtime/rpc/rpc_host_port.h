@@ -44,6 +44,16 @@ class TProtocol;
 } // namespace thrift
 } // namespace apache
 
+#define GET_HOST_PORT(obj, field, target)                                                          \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        if (_obj.__isset.hp_##field) {                                                             \
+            target = _obj.hp_##field;                                                              \
+        } else {                                                                                   \
+            target = std::move(dsn::host_port::from_address(_obj.field));                          \
+        }                                                                                          \
+    } while (0)
+
 namespace dsn {
 
 class rpc_group_host_port;
@@ -66,6 +76,8 @@ public:
     uint16_t port() const { return _port; }
 
     [[nodiscard]] bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
+
+    operator bool() const { return !is_invalid(); }
 
     std::string to_string() const;
 
@@ -93,6 +105,9 @@ public:
     // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    static void fill_host_ports_from_addresses(const std::vector<rpc_address> &addr_v,
+                                               /*output*/ std::vector<host_port> &hp_v);
 
 private:
     friend class dns_resolver;

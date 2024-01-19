@@ -30,23 +30,28 @@ namespace cpp dsn.fd
 
 struct beacon_msg
 {
-    1: i64 time;
-    2: dsn.rpc_address from_addr;
-    3: dsn.rpc_address to_addr;
-    4: optional i64 start_time;
+    1: i64                      time;
+    2: dsn.rpc_address          from_node;
+    3: dsn.rpc_address          to_node;
+    4: optional i64             start_time;
+    5: optional dsn.host_port   hp_from_node;
+    6: optional dsn.host_port   hp_to_node;
 }
 
 struct beacon_ack
 {
-    1: i64 time;
-    2: dsn.rpc_address this_node;
-    3: dsn.rpc_address primary_node;
-    4: bool is_master;
-    5: bool allowed;
+    1: i64                      time;
+    2: dsn.rpc_address          this_node;
+    3: dsn.rpc_address          primary_node;
+    4: bool                     is_master;
+    5: bool                     allowed;
+    6: optional dsn.host_port   hp_this_node;
+    7: optional dsn.host_port   hp_primary_node;
 }
 
 struct config_master_message
 {
-    1: dsn.rpc_address master;
-    2: bool is_register;
+    1: dsn.rpc_address          master;
+    2: bool                     is_register;
+    3: optional dsn.host_port   hp_master;
 }
