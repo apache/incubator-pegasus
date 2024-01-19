@@ -98,7 +98,7 @@ func main() {
 	tom.Go(func() error {
 		return metrics.NewReplicaServerMetricCollector().Start(tom)
 	})
-	<-tom.Dead() // gracefully wait until all goroutines dead
 
 	webui.StartWebServer(registry)
+	<-tom.Dead() // gracefully wait until all goroutines dead
 }
