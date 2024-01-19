@@ -28,8 +28,7 @@ import (
 )
 
 // StartWebServer starts an iris-powered HTTP server.
-func StartWebServer() {
-	registry := prometheus.NewRegistry()
+func StartWebServer(registry prometheus.Registerer) {
 	for _, cV := range metrics.CounterMetricsMap {
 		registry.MustRegister(cV)
 	}
