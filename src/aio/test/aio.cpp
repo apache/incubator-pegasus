@@ -78,7 +78,7 @@ public:
     const std::string kTestFileName = "aio_test.txt";
 };
 
-INSTANTIATE_TEST_CASE_P(, aio_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, aio_test, ::testing::Values(false, true));
 
 TEST_P(aio_test, basic)
 {

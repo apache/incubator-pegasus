@@ -159,9 +159,9 @@ const std::vector<c_string_equality> c_string_equality_tests = {
     {"Abc", "a", false, false},
 };
 
-INSTANTIATE_TEST_CASE_P(StringTest,
-                        CStringEqualityTest,
-                        testing::ValuesIn(c_string_equality_tests));
+INSTANTIATE_TEST_SUITE_P(StringTest,
+                         CStringEqualityTest,
+                         testing::ValuesIn(c_string_equality_tests));
 
 using c_string_n_bytes_equality = std::tuple<const char *, const char *, size_t, bool, bool, bool>;
 
@@ -243,9 +243,9 @@ const std::vector<c_string_n_bytes_equality> c_string_n_bytes_equality_tests = {
     {"abc\0xyz", "abc\0xyz", 7, true, true, true},
 };
 
-INSTANTIATE_TEST_CASE_P(StringTest,
-                        CStringNBytesEqualityTest,
-                        testing::ValuesIn(c_string_n_bytes_equality_tests));
+INSTANTIATE_TEST_SUITE_P(StringTest,
+                         CStringNBytesEqualityTest,
+                         testing::ValuesIn(c_string_n_bytes_equality_tests));
 
 // For containers such as std::unordered_set, the expected result will be deduplicated
 // at initialization. Therefore, it can be used to compare with actual result safely.

@@ -547,7 +547,7 @@ public:
     learn_state _mock_learn_state;
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_split_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_split_test, ::testing::Values(false, true));
 
 // parent_start_split tests
 TEST_P(replica_split_test, parent_start_split_tests)

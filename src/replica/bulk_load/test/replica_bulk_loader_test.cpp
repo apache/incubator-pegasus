@@ -419,7 +419,7 @@ public:
     std::string FILE_NAME = "test_sst_file";
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_bulk_loader_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_bulk_loader_test, ::testing::Values(false, true));
 
 // on_bulk_load unit tests
 TEST_P(replica_bulk_loader_test, on_bulk_load_not_primary)

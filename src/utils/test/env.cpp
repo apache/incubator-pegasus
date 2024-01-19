@@ -76,7 +76,7 @@ class env_file_test : public pegasus::encrypt_data_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, env_file_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, env_file_test, ::testing::Values(false, true));
 
 TEST_P(env_file_test, encrypt_file_2_files)
 {

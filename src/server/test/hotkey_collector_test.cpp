@@ -122,7 +122,7 @@ public:
     dsn::task_tracker _tracker;
 };
 
-INSTANTIATE_TEST_CASE_P(, coarse_collector_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, coarse_collector_test, ::testing::Values(false, true));
 
 TEST_P(coarse_collector_test, coarse_collector)
 {
@@ -179,7 +179,7 @@ public:
     dsn::task_tracker _tracker;
 };
 
-INSTANTIATE_TEST_CASE_P(, fine_collector_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, fine_collector_test, ::testing::Values(false, true));
 
 TEST_P(fine_collector_test, fine_collector)
 {
@@ -289,7 +289,7 @@ public:
     dsn::task_tracker _tracker;
 };
 
-INSTANTIATE_TEST_CASE_P(, hotkey_collector_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, hotkey_collector_test, ::testing::Values(false, true));
 
 TEST_P(hotkey_collector_test, hotkey_type)
 {

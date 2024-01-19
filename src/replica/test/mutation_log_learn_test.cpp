@@ -57,7 +57,7 @@ class mutation_log_learn_test : public replica_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, mutation_log_learn_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, mutation_log_learn_test, ::testing::Values(false, true));
 
 TEST_P(mutation_log_learn_test, learn)
 {

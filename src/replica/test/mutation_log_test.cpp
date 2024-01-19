@@ -80,7 +80,7 @@ class replication_test : public pegasus::encrypt_data_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, replication_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replication_test, ::testing::Values(false, true));
 
 TEST_P(replication_test, log_file)
 {
@@ -441,7 +441,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, mutation_log_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, mutation_log_test, ::testing::Values(false, true));
 
 TEST_P(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
 

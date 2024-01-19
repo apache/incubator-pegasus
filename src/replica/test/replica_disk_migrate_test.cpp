@@ -147,7 +147,7 @@ private:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_disk_migrate_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_disk_migrate_test, ::testing::Values(false, true));
 
 TEST_P(replica_disk_migrate_test, on_migrate_replica)
 {

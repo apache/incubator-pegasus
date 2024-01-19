@@ -3095,9 +3095,9 @@ const std::vector<surviving_metrics_case> metrics_retirement_tests = {
     {std::string("server_121"), false, false, false, false},
 };
 
-INSTANTIATE_TEST_CASE_P(MetricsTest,
-                        MetricsRetirementTest,
-                        testing::ValuesIn(metrics_retirement_tests));
+INSTANTIATE_TEST_SUITE_P(MetricsTest,
+                         MetricsRetirementTest,
+                         testing::ValuesIn(metrics_retirement_tests));
 
 class MetricVarTest : public testing::Test
 {

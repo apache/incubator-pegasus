@@ -259,7 +259,7 @@ private:
     const std::string _policy_name;
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_test, ::testing::Values(false, true));
 
 TEST_P(replica_test, write_size_limited)
 {
