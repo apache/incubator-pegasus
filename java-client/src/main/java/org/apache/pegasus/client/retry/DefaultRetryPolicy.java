@@ -24,7 +24,7 @@ import org.apache.pegasus.client.ClientOptions;
 
 /**
  * The default retry policy, which is the only policy before we introduce the retry policy
- * mechanism. It only considers the timeout value to calculate the retry delay, that's why\ we need
+ * mechanism. It only considers the timeout value to calculate the retry delay, that's why we need
  * to pass the {@code timeout} value in the {@link #shouldRetry(int, long, Duration)} method.
  */
 public class DefaultRetryPolicy implements RetryPolicy {
