@@ -124,7 +124,7 @@ void HDFSClientTest::write_test_files_async(const std::string &local_test_path,
     }
 }
 
-INSTANTIATE_TEST_CASE_P(, HDFSClientTest, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, HDFSClientTest, ::testing::Values(false, true));
 
 TEST_P(HDFSClientTest, test_hdfs_read_write)
 {

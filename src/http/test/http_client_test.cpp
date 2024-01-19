@@ -193,7 +193,7 @@ const std::vector<http_scheme_case> http_scheme_tests = {
      ""},
 };
 
-INSTANTIATE_TEST_CASE_P(HttpClientTest, HttpSchemeTest, testing::ValuesIn(http_scheme_tests));
+INSTANTIATE_TEST_SUITE_P(HttpClientTest, HttpSchemeTest, testing::ValuesIn(http_scheme_tests));
 
 TEST(HttpUrlTest, Clear)
 {
@@ -303,7 +303,7 @@ const std::vector<http_url_build_case> http_url_tests = {
      "http://10.10.1.2:34801/api/multi/level/path?key1=abc&key2=123456"},
 };
 
-INSTANTIATE_TEST_CASE_P(HttpUrlTest, HttpUrlBuildTest, testing::ValuesIn(http_url_tests));
+INSTANTIATE_TEST_SUITE_P(HttpUrlTest, HttpUrlBuildTest, testing::ValuesIn(http_url_tests));
 
 TEST(HttpClientTest, Connect)
 {
@@ -525,8 +525,8 @@ const std::vector<http_client_method_case> http_client_method_tests = {
      "please use POST method"},
 };
 
-INSTANTIATE_TEST_CASE_P(HttpClientTest,
-                        HttpClientMethodTest,
-                        testing::ValuesIn(http_client_method_tests));
+INSTANTIATE_TEST_SUITE_P(HttpClientTest,
+                         HttpClientMethodTest,
+                         testing::ValuesIn(http_client_method_tests));
 
 } // namespace dsn

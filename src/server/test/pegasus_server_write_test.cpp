@@ -137,7 +137,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, pegasus_server_write_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, pegasus_server_write_test, ::testing::Values(false, true));
 
 TEST_P(pegasus_server_write_test, batch_writes) { test_batch_writes(); }
 

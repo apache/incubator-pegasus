@@ -177,7 +177,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_learn_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_learn_test, ::testing::Values(false, true));
 
 TEST_P(replica_learn_test, get_learn_start_decree) { test_get_learn_start_decree(); }
 

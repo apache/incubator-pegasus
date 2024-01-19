@@ -272,7 +272,7 @@ public:
     std::unique_ptr<replica_duplicator> duplicator;
 };
 
-INSTANTIATE_TEST_CASE_P(, load_from_private_log_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, load_from_private_log_test, ::testing::Values(false, true));
 
 TEST_P(load_from_private_log_test, find_log_file_to_start) { test_find_log_file_to_start(); }
 
@@ -421,7 +421,7 @@ public:
     std::unique_ptr<end_stage_t> end_stage;
 };
 
-INSTANTIATE_TEST_CASE_P(, load_fail_mode_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, load_fail_mode_test, ::testing::Values(false, true));
 
 TEST_P(load_fail_mode_test, fail_skip)
 {

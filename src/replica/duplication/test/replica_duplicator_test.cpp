@@ -136,7 +136,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_duplicator_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_duplicator_test, ::testing::Values(false, true));
 
 TEST_P(replica_duplicator_test, new_duplicator) { test_new_duplicator(); }
 

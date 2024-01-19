@@ -37,7 +37,7 @@ class log_block_test : public replica_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, log_block_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, log_block_test, ::testing::Values(false, true));
 
 TEST_P(log_block_test, constructor)
 {
@@ -60,7 +60,7 @@ class log_appender_test : public replica_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, log_appender_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, log_appender_test, ::testing::Values(false, true));
 
 TEST_P(log_appender_test, constructor)
 {

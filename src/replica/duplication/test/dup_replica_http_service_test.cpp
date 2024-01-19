@@ -38,7 +38,7 @@ class dup_replica_http_service_test : public duplication_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, dup_replica_http_service_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, dup_replica_http_service_test, ::testing::Values(false, true));
 
 TEST_P(dup_replica_http_service_test, query_duplication_handler)
 {

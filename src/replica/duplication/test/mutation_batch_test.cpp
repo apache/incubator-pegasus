@@ -54,7 +54,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, mutation_batch_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, mutation_batch_test, ::testing::Values(false, true));
 
 TEST_P(mutation_batch_test, add_mutation_if_valid)
 {

@@ -64,7 +64,7 @@ class nfs_test : public pegasus::encrypt_data_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, nfs_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, nfs_test, ::testing::Values(false, true));
 
 TEST_P(nfs_test, basic)
 {

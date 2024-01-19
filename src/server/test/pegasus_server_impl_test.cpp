@@ -140,7 +140,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, pegasus_server_impl_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, pegasus_server_impl_test, ::testing::Values(false, true));
 
 TEST_P(pegasus_server_impl_test, test_table_level_slow_query)
 {

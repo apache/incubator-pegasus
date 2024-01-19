@@ -339,7 +339,7 @@ public:
     void file_utils_test_cleanup() {}
 };
 
-INSTANTIATE_TEST_CASE_P(, file_utils, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, file_utils, ::testing::Values(false, true));
 
 TEST_P(file_utils, basic)
 {
