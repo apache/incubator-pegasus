@@ -19,17 +19,100 @@
 
 #include <curl/curl.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <functional>
+#include <iosfwd>
+#include <memory>
 #include <string>
 #include <unordered_map>
 
+#include "absl/strings/string_view.h"
 #include "http/http_method.h"
 #include "http/http_status_code.h"
+#include "utils/enum_helper.h"
 #include "utils/errors.h"
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
-#include "absl/strings/string_view.h"
+
+USER_DEFINED_ENUM_FORMATTER(CURLUcode)
+USER_DEFINED_ENUM_FORMATTER(CURLcode)
 
 namespace dsn {
+
+// Now https and ftp have not been supported. To support them, build curl by
+// "./configure --with-ssl=... --enable-ftp ...".
+#define ENUM_FOREACH_HTTP_SCHEME(DEF)                                                              \
+    DEF(Http, "http", http_scheme)                                                                 \
+    DEF(Https, "https", http_scheme)                                                               \
+    DEF(Ftp, "ftp", http_scheme)
+
+enum class http_scheme : size_t
+{
+    ENUM_FOREACH_HTTP_SCHEME(ENUM_CONST_DEF) kCount,
+    kInvalidScheme,
+};
+
+ENUM_CONST_DEF_FROM_VAL_FUNC(std::string, http_scheme, ENUM_FOREACH_HTTP_SCHEME)
+ENUM_CONST_DEF_TO_VAL_FUNC(std::string, http_scheme, ENUM_FOREACH_HTTP_SCHEME)
+
+// A class that helps http client build URLs, based on CURLU object of libcurl.
+// About CURLU object, please see: https://curl.se/libcurl/c/libcurl-url.html.
+// About the usage, please see the comments for `http_client`.
+class http_url
+{
+public:
+    // The scheme is set to `http` as default for the URL.
+    http_url() noexcept;
+
+    ~http_url() = default;
+
+    http_url(const http_url &) noexcept;
+    http_url &operator=(const http_url &) noexcept;
+
+    http_url(http_url &&) noexcept;
+    http_url &operator=(http_url &&) noexcept;
+
+    // Clear the URL. And the scheme is reset to `http`.
+    void clear();
+
+    // Operations that update the components of a URL.
+    dsn::error_s set_url(const char *url);
+    dsn::error_s set_scheme(const char *scheme);
+    dsn::error_s set_scheme(http_scheme scheme);
+    dsn::error_s set_host(const char *host);
+    dsn::error_s set_port(const char *port);
+    dsn::error_s set_port(uint16_t port);
+    dsn::error_s set_path(const char *path);
+    dsn::error_s set_query(const char *query);
+
+    // Extract the URL string.
+    dsn::error_s to_string(std::string &url) const;
+
+    // Formatter for fmt::format.
+    friend std::ostream &operator<<(std::ostream &os, const http_url &url)
+    {
+        std::string str;
+        const auto &err = url.to_string(str);
+        if (dsn_unlikely(!err)) {
+            return os << err;
+        }
+        return os << str;
+    }
+
+private:
+    friend class http_client;
+    friend void test_after_move(http_url &, http_url &);
+
+    // Only used by `http_client` to get the underlying CURLU object.
+    CURLU *curlu() const { return _url.get(); }
+
+    struct curlu_deleter
+    {
+        void operator()(CURLU *url) const;
+    };
+
+    std::unique_ptr<CURLU, curlu_deleter> _url;
+};
 
 // A library for http client that provides convenient APIs to access http services, implemented
 // based on libcurl (https://curl.se/libcurl/c/).
@@ -46,6 +129,13 @@ namespace dsn {
 //
 // Specify the target url that you would request for:
 // err = client.set_url("http://<ip>:<port>/your/path");
+//
+// Or, you could use `http_url` to manage your URLs, and attach it to http client:
+// http_url url;
+// url_err = url.set_host(host);
+// url_err = url.set_port(port);
+// url_err = url.set_path(path);
+// err = client.set_url(url); // Or err = client.set_url(std::move(url));
 //
 // If you would use GET method, call `with_get_method`:
 // err = client.with_get_method();
@@ -83,7 +173,11 @@ public:
     dsn::error_s init();
 
     // Specify the target url that the request would be sent for.
-    dsn::error_s set_url(const std::string &url);
+    dsn::error_s set_url(const std::string &new_url);
+
+    // Specify the target url by `http_url` class.
+    void set_url(const http_url &new_url);
+    void set_url(http_url &&new_url);
 
     // Using post method, with `data` as the payload for post body.
     dsn::error_s with_post_method(const std::string &data);
@@ -95,7 +189,7 @@ public:
     dsn::error_s set_timeout(long timeout_ms);
 
     // Specify the http auth type which include NONE BASIC DIGEST SPNEGO
-    dsn::error_s set_auth(http_auth_type authType);
+    dsn::error_s set_auth(http_auth_type auth_type);
 
     // Operations for the header fields.
     void clear_header_fields();
@@ -144,7 +238,7 @@ private:
 
     CURL *_curl;
     http_method _method;
-    std::string _url;
+    http_url _url;
     const recv_callback *_recv_callback;
     char _error_buf[kErrorBufferBytes];
 
@@ -156,3 +250,5 @@ private:
 };
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::http_url);
