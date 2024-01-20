@@ -31,7 +31,7 @@
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"

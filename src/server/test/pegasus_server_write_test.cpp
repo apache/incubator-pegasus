@@ -31,7 +31,7 @@
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_test_base.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service.h"
 #include "server/pegasus_write_service_impl.h"

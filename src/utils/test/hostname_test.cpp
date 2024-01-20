@@ -19,7 +19,7 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/utils.h"
 
 namespace dsn {

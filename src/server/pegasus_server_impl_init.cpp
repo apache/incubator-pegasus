@@ -45,7 +45,7 @@
 #include "pegasus_value_schema.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "server/capacity_unit_calculator.h" // IWYU pragma: keep
 #include "server/key_ttl_compaction_filter.h"
 #include "server/meta_store.h" // IWYU pragma: keep

@@ -41,7 +41,7 @@
 #include "metadata_types.h"
 #include "mutation.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"

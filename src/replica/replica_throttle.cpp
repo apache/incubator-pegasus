@@ -26,7 +26,7 @@
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
 #include "replica.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"

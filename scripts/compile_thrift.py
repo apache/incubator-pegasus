@@ -39,7 +39,7 @@ thrift_description = [
         "path": "idl",
         "include_fix": {
             "_types.h": {
-                "add": ["\"runtime/rpc/serialization.h\""],
+                "add": ["\"rpc/serialization.h\""],
                 "remove": ["dsn_types.h"]
             },
             "_types.cpp": {

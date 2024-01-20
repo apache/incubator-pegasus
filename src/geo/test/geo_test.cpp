@@ -40,7 +40,7 @@
 #include "geo/lib/geo_client.h"
 #include "gtest/gtest.h"
 #include "pegasus/client.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"

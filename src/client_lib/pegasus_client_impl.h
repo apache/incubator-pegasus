@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/blob.h"
 #include "utils/zlocks.h"
 

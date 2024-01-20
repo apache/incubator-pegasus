@@ -18,7 +18,7 @@
 #pragma once
 
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 
 namespace dsn {
 namespace replication {

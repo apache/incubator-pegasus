@@ -47,7 +47,7 @@
 #include "meta_http_service.h"
 #include "meta_server_failure_detector.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "server_load_balancer.h"
 #include "server_state.h"
 #include "utils/error_code.h"

@@ -21,8 +21,8 @@
 
 #include "ranger/ranger_resource_policy_manager.h"
 #include "ranger/ranger_resource_policy.h"
-#include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/network.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"

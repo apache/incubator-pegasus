@@ -35,7 +35,7 @@
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/defer.h"
 #include "utils/fail_point.h"
 

@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_stream.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_stream.h"
 
 #include <thrift/Thrift.h>
 #include <thrift/protocol/TBinaryProtocol.h>

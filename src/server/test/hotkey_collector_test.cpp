@@ -29,7 +29,7 @@
 #include "pegasus_server_test_base.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_tracker.h"
 #include "server/hotkey_collector_state.h"

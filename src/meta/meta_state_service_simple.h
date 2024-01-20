@@ -36,7 +36,7 @@
 #include <vector>
 
 #include "meta/meta_state_service.h"
-#include "runtime/rpc/serialization.h"
+#include "rpc/serialization.h"
 #include "runtime/task/future_types.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"

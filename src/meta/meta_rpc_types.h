@@ -24,7 +24,7 @@
 #include "backup_types.h"
 #include "consensus_types.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 
 namespace dsn {
 namespace replication {

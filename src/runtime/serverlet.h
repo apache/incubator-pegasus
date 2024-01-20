@@ -27,8 +27,8 @@
 #pragma once
 
 #include "runtime/service_app.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/serialization.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/serialization.h"
 
 namespace dsn {
 /*!

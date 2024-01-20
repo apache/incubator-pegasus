@@ -26,7 +26,7 @@
 #include "replica/replica_stub.h"
 #include "replica_backup_manager.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/serialization.h"
+#include "rpc/serialization.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"

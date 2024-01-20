@@ -19,7 +19,7 @@
 
 #include "common/gpid.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 
 namespace dsn {
 namespace replication {

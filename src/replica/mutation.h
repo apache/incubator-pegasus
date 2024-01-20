@@ -36,7 +36,7 @@
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"

@@ -42,7 +42,7 @@
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "runtime/app_model.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/fmt_logging.h"
 
 using namespace dsn::replication;

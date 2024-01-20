@@ -35,7 +35,7 @@
 
 #include "failure_detector/fd.client.h"
 #include "failure_detector/fd.server.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"

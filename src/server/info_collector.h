@@ -29,7 +29,7 @@
 
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "shell/command_helper.h"

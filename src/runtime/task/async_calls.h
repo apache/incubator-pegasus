@@ -33,7 +33,7 @@
 #include "utils/function_traits.h"
 #include "aio/file_io.h"
 #include "runtime/task/task_tracker.h"
-#include "runtime/rpc/serialization.h"
+#include "rpc/serialization.h"
 
 namespace dsn {
 

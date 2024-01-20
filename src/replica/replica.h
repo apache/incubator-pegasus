@@ -47,7 +47,7 @@
 #include "replica_context.h"
 #include "runtime/api_layer1.h"
 #include "ranger/access_type.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"

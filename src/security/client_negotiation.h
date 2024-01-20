@@ -20,7 +20,7 @@
 #include <string>
 
 #include "negotiation.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "security_types.h"
 #include "utils/blob.h"
 

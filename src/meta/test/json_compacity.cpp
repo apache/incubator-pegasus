@@ -38,7 +38,7 @@
 #include "gtest/gtest.h"
 #include "meta/meta_backup_service.h"
 #include "meta_service_test_app.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/blob.h"
 
 namespace dsn {

@@ -25,7 +25,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task_code.h"
 #include "utils/threadpool_code.h"

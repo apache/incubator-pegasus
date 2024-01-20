@@ -25,7 +25,7 @@
 #include "duplication_internal_types.h"
 #include "rrdb.code.definition.h"
 #include "rrdb_types.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/optional.h"
 

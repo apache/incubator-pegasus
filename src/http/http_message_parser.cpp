@@ -34,7 +34,7 @@
 
 #include "http/http_method.h"
 #include "nodejs/http_parser.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "utils/blob.h"
 #include "utils/crc.h"
 #include "utils/fmt_logging.h"
