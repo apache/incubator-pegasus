@@ -180,7 +180,7 @@ public:
     // Currently implementations for both following set_url functions would never lead to errors.
     // However, they could return ERR_OK to allow all of the overloaded set_url functions to be
     // called in the same way, for example, by the function templates, where url is specified as
-    // template parameters.
+    // a template parameter.
     dsn::error_s set_url(const http_url &new_url);
     dsn::error_s set_url(http_url &&new_url);
 
