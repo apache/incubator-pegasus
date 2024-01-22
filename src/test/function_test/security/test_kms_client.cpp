@@ -32,10 +32,10 @@
 namespace dsn {
 DSN_DECLARE_string(cluster_name);
 
-namespace security {
-DSN_DECLARE_bool(enable_acl);
-DSN_DECLARE_string(super_users);
-} // namespace security
+// namespace security {
+// DSN_DECLARE_bool(enable_acl);
+// DSN_DECLARE_string(super_users);
+// } // namespace security
 
 namespace replication {
 DSN_DECLARE_string(hadoop_kms_url);
@@ -47,10 +47,6 @@ class KmsClientTest : public pegasus::encrypt_data_test_base
 protected:
     KmsClientTest() : pegasus::encrypt_data_test_base()
     {
-        dsn::FLAGS_cluster_name = "pegasus_cluster_key";
-        dsn::security::FLAGS_enable_acl = true;
-        dsn::security::FLAGS_super_users = "pegasus";
-        // dsn::replication::FLAGS_hadoop_kms_url = set_to_valid_kms_url(s);
     }
 };
 
