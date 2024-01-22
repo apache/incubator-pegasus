@@ -421,7 +421,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     std::string kms_path =
         utils::filesystem::path_combine(_options.data_dirs[0], kms_info::kKmsInfo);
-    // FLAGS_data_dirs may be empty at the process begin, use CHECK_FALSE instead of group validator
+    // FLAGS_data_dirs may be empty when load configuration, use CHECK_EQ_MSG instead of group validator
     if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
         CHECK_EQ_MSG(FLAGS_encrypt_data_at_rest,
                      true,

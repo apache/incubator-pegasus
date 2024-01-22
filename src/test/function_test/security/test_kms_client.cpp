@@ -67,7 +67,6 @@ TEST_P(KmsClientTest, test_generate_and_decrypt_encryption_key)
     auto key_provider = std::make_unique<dsn::security::KMSKeyProvider>(
         ::absl::StrSplit(dsn::replication::FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()),
         dsn::FLAGS_cluster_name);
-
     dsn::replication::kms_info kms_info;
 
     // 1. generate encryption key.
