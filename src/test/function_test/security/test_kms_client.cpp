@@ -16,7 +16,6 @@
 // under the License.
 
 #include <absl/strings/str_split.h>
-#include <stdio.h>
 #include <string.h>
 #include <memory>
 #include <string>
@@ -31,12 +30,6 @@
 
 namespace dsn {
 DSN_DECLARE_string(cluster_name);
-
-// namespace security {
-// DSN_DECLARE_bool(enable_acl);
-// DSN_DECLARE_string(super_users);
-// } // namespace security
-
 namespace replication {
 DSN_DECLARE_string(hadoop_kms_url);
 } // namespace replication
