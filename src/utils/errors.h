@@ -231,13 +231,13 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
         if (dsn_unlikely(!_s)) {                                                                   \
             return _s;                                                                             \
         }                                                                                          \
-    } while (false);
+    } while (false)
 
 #define CHECK_OK(s, ...)                                                                           \
     do {                                                                                           \
         const ::dsn::error_s &_s = (s);                                                            \
         CHECK(_s.is_ok(), fmt::format(__VA_ARGS__));                                               \
-    } while (false);
+    } while (false)
 
 #define RETURN_ERRS_NOT_TRUE(exp, code, ...)                                                       \
     do {                                                                                           \
