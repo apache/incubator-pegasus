@@ -318,27 +318,6 @@ DSN_DEFINE_group_validator(encrypt_data_at_rest_pre_check, [](std::string &messa
     return true;
 });
 
-DSN_DEFINE_group_validator(encrypt_data_is_irreversible, [](std::string &message) -> bool {
-// In some unit test FLAGS_data_dirs may not set.
-#ifdef MOCK_TEST
-    return true;
-#endif
-    // std::string data_dirs;
-    // data_dirs = FLAGS_data_dirs;data_dirs.c_str()
-    std::vector<std::string> dirs;
-    ::absl::StrSplit(FLAGS_data_dirs, dirs, ',');
-    std::string kms_path = utils::filesystem::path_combine(dirs[0], kms_info::kKmsInfo);
-    if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
-        message = fmt::format("The kms_info file exists at ({}), but [pegasus.server] "
-                              "encrypt_data_at_rest is set to ({})."
-                              "Encryption in Pegasus is irreversible after its initial activation.",
-                              kms_path,
-                              FLAGS_encrypt_data_at_rest);
-        return false;
-    }
-    return true;
-});
-
 DSN_DEFINE_group_validator(encrypt_data_at_rest_with_kms_url, [](std::string &message) -> bool {
 #ifndef MOCK_TEST
     if (FLAGS_encrypt_data_at_rest && utils::is_empty(FLAGS_hadoop_kms_url)) {
@@ -440,17 +419,26 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
     }
 
-    std::string server_key;
-    dsn::replication::kms_info kms_info;
     std::string kms_path =
         utils::filesystem::path_combine(_options.data_dirs[0], kms_info::kKmsInfo);
+    // FLAGS_data_dirs may be empty at the process begin, use CHECK_FALSE instead of group validator
+    if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
+        CHECK_EQ_MSG(FLAGS_encrypt_data_at_rest, true, "The kms_info file exists at ({}), but [pegasus.server] "
+                              "encrypt_data_at_rest is set to ({})."
+                              "Encryption in Pegasus is irreversible after its initial activation.",
+                              kms_path,
+                              FLAGS_encrypt_data_at_rest );
+    }
+
+    std::string server_key;
+    dsn::replication::kms_info kms_info;
     if (FLAGS_encrypt_data_at_rest && !utils::is_empty(FLAGS_hadoop_kms_url)) {
         key_provider.reset(new dsn::security::KMSKeyProvider(
             ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_cluster_name));
         auto ec = dsn::utils::load_rjobj_from_file(
             kms_path, dsn::utils::FileDataType::kNonSensitive, &kms_info);
         if (ec != dsn::ERR_PATH_NOT_FOUND && ec != dsn::ERR_OK) {
-            CHECK_EQ_MSG(dsn::ERR_OK, ec, "Can't load kms key from kms-info file, err = {}", ec);
+            CHECK_EQ_MSG(dsn::ERR_OK, ec, "Can't load kms key from kms-info file");
         }
         // Upon the first launch, the encryption key should be empty. The process will then retrieve
         // EEK, IV, and KV from KMS.

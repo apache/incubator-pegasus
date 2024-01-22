@@ -33,7 +33,7 @@ namespace dsn {
 DSN_DECLARE_string(cluster_name);
 
 namespace security {
-DSN_DECLARE_string(enable_acl);
+DSN_DECLARE_bool(enable_acl);
 DSN_DECLARE_string(super_users);
 } // namespace security
 
@@ -50,7 +50,7 @@ protected:
         dsn::FLAGS_cluster_name = "pegasus_cluster_key";
         dsn::security::FLAGS_enable_acl = true;
         dsn::security::FLAGS_super_users = "pegasus";
-        dsn::replication::FLAGS_hadoop_kms_url = "";
+        // dsn::replication::FLAGS_hadoop_kms_url = set_to_valid_kms_url(s);
     }
 };
 
@@ -64,10 +64,9 @@ TEST_P(KmsClientTest, test_generate_and_decrypt_encryption_key)
             << "Set kms_client_test.* configs in config-test.ini to enable kms_client_test.";
     }
 
-    std::unique_ptr<dsn::security::KMSKeyProvider> key_provider;
-    key_provider.reset(new dsn::security::KMSKeyProvider(
+    auto key_provider = std::make_unique<dsn::security::KMSKeyProvider>(
         ::absl::StrSplit(dsn::replication::FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()),
-        dsn::FLAGS_cluster_name));
+        dsn::FLAGS_cluster_name);
 
     dsn::replication::kms_info kms_info;
 
