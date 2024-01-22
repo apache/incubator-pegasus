@@ -25,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "absl/strings/string_view.h"
 #include "http/http_method.h"
@@ -268,6 +269,8 @@ public:
     {
     }
 
+    ~http_result() = default;
+
     http_result(const http_result &) noexcept = default;
     http_result &operator=(const http_result &) noexcept = default;
 
@@ -301,10 +304,10 @@ http_result http_get(TUrl &&url)
     http_client client;
     RETURN_HTTP_RESULT_IF_NOT_OK(client.init());
 
-    // Forward url to corresponding overloaded function.
+    // Forward url to the corresponding overloaded function.
     RETURN_HTTP_RESULT_IF_NOT_OK(client.set_url(std::forward<TUrl>(url)));
 
-    // Use http get as request method.
+    // Use http get as the request method.
     RETURN_HTTP_RESULT_IF_NOT_OK(client.with_get_method());
 
     std::string response;

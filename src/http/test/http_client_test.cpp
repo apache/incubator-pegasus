@@ -37,9 +37,9 @@
 #include "utils/strings.h"
 #include "utils/test_macros.h"
 
-// IWYU pragma: no_forward_declare dsn::HttpClientMethodTest_ExecMethodByCopyUrlClass_Test
-// IWYU pragma: no_forward_declare dsn::HttpClientMethodTest_ExecMethodByMoveUrlClass_Test
 // IWYU pragma: no_forward_declare dsn::HttpClientMethodTest_ExecMethodByUrlString_Test
+// IWYU pragma: no_forward_declare dsn::HttpClientMethodTest_ExecMethodByCopyUrlObject_Test
+// IWYU pragma: no_forward_declare dsn::HttpClientMethodTest_ExecMethodByMoveUrlObject_Test
 namespace dsn {
 
 void check_expected_description_prefix(const std::string &expected_description_prefix,
@@ -469,7 +469,7 @@ TEST_P(HttpClientMethodTest, ExecMethodByUrlString)
     TEST_HTTP_CLIENT_EXEC_METHOD(BUILD_URL_STRING);
 }
 
-TEST_P(HttpClientMethodTest, ExecMethodByCopyUrlObjct)
+TEST_P(HttpClientMethodTest, ExecMethodByCopyUrlObject)
 {
     TEST_HTTP_CLIENT_EXEC_METHOD(BUILD_URL_OBJECT);
 }
