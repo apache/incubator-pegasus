@@ -283,12 +283,9 @@ inline dsn::error_code to_error_code(CURLcode code)
     } while (0)
 
 #define CHECK_IF_CURL_EASY_SETOPT_OK(opt, input, ...)                                              \
-    do {                                                                                           \
-        CHECK_NOTNULL(_curl, "CURL object has not been allocated");                                \
-        CHECK_IF_CURL_EASY_OK(curl_easy_setopt(_curl, CURLOPT_##opt, input),                       \
-                              "failed to set " #opt " with " #input ": {}",                        \
-                              fmt::format(__VA_ARGS__));                                           \
-    } while (0)
+    CHECK_IF_CURL_EASY_OK(curl_easy_setopt(_curl, CURLOPT_##opt, input),                           \
+                          "failed to set " #opt " with " #input ": {}",                            \
+                          fmt::format(__VA_ARGS__))
 
 dsn::error_s http_client::init()
 {
@@ -375,12 +372,11 @@ size_t http_client::on_response_data(const void *data, size_t length)
     return (*_recv_callback)(data, length) ? length : std::numeric_limits<size_t>::max();
 }
 
-#define CHECK_IF_CURL_EASY_SETOPT_CURLU_OK()                                                       \
-    CHECK_IF_CURL_EASY_SETOPT_OK(                                                                  \
-        CURLU,                                                                                     \
-        _url.curlu(),                                                                              \
-        "once CURLOPT_CURLU is supported, curl_easy_setopt should always "                         \
-        "return CURLE_OK, see https://curl.se/libcurl/c/CURLOPT_CURLU.html")
+// Once CURLOPT_CURLU is supported, actually curl_easy_setopt would always return CURLE_OK,
+// see https://curl.se/libcurl/c/CURLOPT_CURLU.html"). For the reason why we still return
+// ERR_OK, please see the comments for set_url.
+#define RETURN_IF_CURL_EASY_SETOPT_CURLU_NOT_OK()                                                  \
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(CURLU, _url.curlu())
 
 dsn::error_s http_client::set_url(const std::string &new_url)
 {
@@ -394,20 +390,22 @@ dsn::error_s http_client::set_url(const std::string &new_url)
     http_url tmp;
     RETURN_NOT_OK(tmp.set_url(new_url.c_str()));
 
-    set_url(std::move(tmp));
+    RETURN_NOT_OK(set_url(std::move(tmp)));
     return dsn::error_s::ok();
 }
 
-void http_client::set_url(const http_url &new_url)
+dsn::error_s http_client::set_url(const http_url &new_url)
 {
     _url = new_url;
-    CHECK_IF_CURL_EASY_SETOPT_CURLU_OK();
+    RETURN_IF_CURL_EASY_SETOPT_CURLU_NOT_OK();
+    return dsn::error_s::ok();
 }
 
-void http_client::set_url(http_url &&new_url)
+dsn::error_s http_client::set_url(http_url &&new_url)
 {
     _url = std::move(new_url);
-    CHECK_IF_CURL_EASY_SETOPT_CURLU_OK();
+    RETURN_IF_CURL_EASY_SETOPT_CURLU_NOT_OK();
+    return dsn::error_s::ok();
 }
 
 dsn::error_s http_client::with_post_method(const std::string &data)

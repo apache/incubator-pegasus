@@ -176,8 +176,13 @@ public:
     dsn::error_s set_url(const std::string &new_url);
 
     // Specify the target url by `http_url` class.
-    void set_url(const http_url &new_url);
-    void set_url(http_url &&new_url);
+    //
+    // Currently implementations for both following set_url functions would never lead to errors.
+    // However, they could return ERR_OK to allow all of the overloaded set_url functions to be
+    // called in the same way, for example, by the function templates, where url is specified as
+    // template parameters.
+    dsn::error_s set_url(const http_url &new_url);
+    dsn::error_s set_url(http_url &&new_url);
 
     // Using post method, with `data` as the payload for post body.
     dsn::error_s with_post_method(const std::string &data);
@@ -248,6 +253,70 @@ private:
 
     DISALLOW_COPY_AND_ASSIGN(http_client);
 };
+
+// The class that holds the result for an http request.
+class http_result
+{
+public:
+    http_result(dsn::error_s &&err) noexcept
+        : _err(std::move(err)), _status(http_status_code::kInvalidCode)
+    {
+    }
+
+    http_result(http_status_code status, std::string &&response) noexcept
+        : _err(dsn::error_s::ok()), _status(status), _body(std::move(response))
+    {
+    }
+
+    http_result(const http_result &) noexcept = default;
+    http_result &operator=(const http_result &) noexcept = default;
+
+    http_result(http_result &&) noexcept = default;
+    http_result &operator=(http_result &&) noexcept = default;
+
+    explicit operator bool() const noexcept { return _err.is_ok(); }
+
+    const dsn::error_s &error() const { return _err; }
+    http_status_code status() const { return _status; }
+    const std::string &body() const { return _body; }
+
+private:
+    dsn::error_s _err;
+    http_status_code _status;
+    std::string _body;
+};
+
+#define RETURN_HTTP_RESULT_IF_NOT_OK(expr)                                                         \
+    do {                                                                                           \
+        dsn::error_s r(expr);                                                                      \
+        if (dsn_unlikely(!r)) {                                                                    \
+            return http_result(std::move(r));                                                      \
+        }                                                                                          \
+    } while (0)
+
+// A convenient API that performs an http get request on the specified URL.
+template <typename TUrl>
+http_result http_get(TUrl &&url)
+{
+    http_client client;
+    RETURN_HTTP_RESULT_IF_NOT_OK(client.init());
+
+    // Forward url to corresponding overloaded function.
+    RETURN_HTTP_RESULT_IF_NOT_OK(client.set_url(std::forward<TUrl>(url)));
+
+    // Use http get as request method.
+    RETURN_HTTP_RESULT_IF_NOT_OK(client.with_get_method());
+
+    std::string response;
+    RETURN_HTTP_RESULT_IF_NOT_OK(client.exec_method(&response));
+
+    http_status_code status;
+    RETURN_HTTP_RESULT_IF_NOT_OK(client.get_http_status(status));
+
+    return http_result(status, std::move(response));
+}
+
+#undef RETURN_HTTP_RESULT_IF_NOT_OK
 
 } // namespace dsn
 

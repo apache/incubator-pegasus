@@ -198,7 +198,7 @@ INSTANTIATE_TEST_SUITE_P(HttpClientTest, HttpSchemeTest, testing::ValuesIn(http_
 TEST(HttpUrlTest, Clear)
 {
     http_url url;
-    url.set_url(kTestUrlA.c_str());
+    ASSERT_TRUE(url.set_url(kTestUrlA.c_str()));
 
     std::string str;
     ASSERT_TRUE(url.to_string(str));
@@ -442,20 +442,23 @@ protected:
     http_client _client;
 };
 
-#define TEST_HTTP_CLIENT_EXEC_METHOD(url_setter)                                                   \
+#define TEST_HTTP_CLIENT_EXEC_METHOD(url_builder)                                                  \
     do {                                                                                           \
         const auto &method_case = GetParam();                                                      \
-        url_setter(method_case.host, method_case.port, method_case.path);                          \
+        url_builder(method_case.host, method_case.port, method_case.path);                         \
         test_mothod(method_case.method,                                                            \
                     method_case.post_data,                                                         \
                     method_case.expected_http_status,                                              \
                     method_case.expected_response);                                                \
     } while (0)
 
+#define BUILD_URL_STRING(host, port, path)                                                         \
+    const auto &url = fmt::format("http://{}:{}{}", host, port, path)
+//
 // Test setting url by string, where set_url returns an error_s which should be checked.
 #define SET_HTTP_CLIENT_BY_URL_STRING(host, port, path)                                            \
     do {                                                                                           \
-        const auto &url = fmt::format("http://{}:{}{}", host, port, path);                         \
+        BUILD_URL_STRING(host, port, path);                                                        \
         ASSERT_TRUE(_client.set_url(url));                                                         \
     } while (0)
 
@@ -464,17 +467,22 @@ TEST_P(HttpClientMethodTest, ExecMethodByUrlString)
     TEST_HTTP_CLIENT_EXEC_METHOD(SET_HTTP_CLIENT_BY_URL_STRING);
 }
 
-// Test setting url by copying url object, where set_url returns nothing.
-#define SET_HTTP_CLIENT_BY_COPY_URL_OBJECT(host, port, path)                                       \
+#define BUILD_URL_OBJECT(host, port, path)                                                         \
+    http_url url;                                                                                  \
     do {                                                                                           \
-        http_url url;                                                                              \
         ASSERT_TRUE(url.set_host(host));                                                           \
         ASSERT_TRUE(url.set_port(port));                                                           \
         ASSERT_TRUE(url.set_path(path));                                                           \
-        _client.set_url(url);                                                                      \
     } while (0)
 
-TEST_P(HttpClientMethodTest, ExecMethodByCopyUrlClass)
+// Test setting url by copying url object, where set_url returns nothing.
+#define SET_HTTP_CLIENT_BY_COPY_URL_OBJECT(host, port, path)                                       \
+    do {                                                                                           \
+        BUILD_URL_OBJECT(host, port, path);                                                        \
+        ASSERT_TRUE(_client.set_url(url));                                                         \
+    } while (0)
+
+TEST_P(HttpClientMethodTest, ExecMethodByCopyUrlObjct)
 {
     TEST_HTTP_CLIENT_EXEC_METHOD(SET_HTTP_CLIENT_BY_COPY_URL_OBJECT);
 }
@@ -482,14 +490,11 @@ TEST_P(HttpClientMethodTest, ExecMethodByCopyUrlClass)
 // Test setting url by moving url object, where set_url returns nothing.
 #define SET_HTTP_CLIENT_BY_MOVE_URL_OBJECT(host, port, path)                                       \
     do {                                                                                           \
-        http_url url;                                                                              \
-        ASSERT_TRUE(url.set_host(host));                                                           \
-        ASSERT_TRUE(url.set_port(port));                                                           \
-        ASSERT_TRUE(url.set_path(path));                                                           \
-        _client.set_url(std::move(url));                                                           \
+        BUILD_URL_OBJECT(host, port, path);                                                        \
+        ASSERT_TRUE(_client.set_url(std::move(url)));                                              \
     } while (0)
 
-TEST_P(HttpClientMethodTest, ExecMethodByMoveUrlClass)
+TEST_P(HttpClientMethodTest, ExecMethodByMoveUrlObject)
 {
     TEST_HTTP_CLIENT_EXEC_METHOD(SET_HTTP_CLIENT_BY_MOVE_URL_OBJECT);
 }
@@ -528,5 +533,87 @@ const std::vector<http_client_method_case> http_client_method_tests = {
 INSTANTIATE_TEST_SUITE_P(HttpClientTest,
                          HttpClientMethodTest,
                          testing::ValuesIn(http_client_method_tests));
+
+struct http_get_case
+{
+    const char *host;
+    uint16_t port;
+    const char *path;
+    error_code expected_err_code;
+    std::string expected_description_prefix;
+    http_status_code expected_status;
+    const char *expected_body;
+};
+
+class HttpGetTest : public testing::TestWithParam<http_get_case>
+{
+};
+
+template <typename TUrl>
+void test_http_get(TUrl &&url,
+                   const error_code &expected_err_code,
+                   const std::string &expected_description_prefix,
+                   const http_status_code expected_status,
+                   const char *expected_body)
+{
+    const auto &result = http_get(std::forward<TUrl>(url));
+    EXPECT_EQ(expected_err_code, result.error().code());
+    EXPECT_EQ(expected_status, result.status());
+    EXPECT_STREQ(expected_body, result.body().c_str());
+
+    if (result) {
+        EXPECT_EQ(dsn::ERR_OK, result.error().code());
+    } else {
+        EXPECT_NE(dsn::ERR_OK, result.error().code());
+        NO_FATALS(check_expected_description_prefix(expected_description_prefix, result.error()));
+    }
+}
+
+#define TEST_HTTP_GET(url_builder, ...)                                                            \
+    do {                                                                                           \
+        const auto &get_case = GetParam();                                                         \
+        url_builder(get_case.host, get_case.port, get_case.path);                                  \
+        test_http_get(__VA_ARGS__(url),                                                            \
+                      get_case.expected_err_code,                                                  \
+                      get_case.expected_description_prefix,                                        \
+                      get_case.expected_status,                                                    \
+                      get_case.expected_body);                                                     \
+    } while (0)
+
+TEST_P(HttpGetTest, GetByUrlString) { TEST_HTTP_GET(BUILD_URL_STRING); }
+
+TEST_P(HttpGetTest, GetByCopyUrlObject) { TEST_HTTP_GET(BUILD_URL_OBJECT); }
+
+TEST_P(HttpGetTest, GetByMoveUrlObject) { TEST_HTTP_GET(BUILD_URL_OBJECT, std::move); }
+
+const std::vector<http_get_case> http_get_tests = {
+    {
+        "127.0.0.1",
+        20000,
+        "/test/get",
+        dsn::ERR_CURL_FAILED,
+        "ERR_CURL_FAILED: failed to perform http request("
+        "method=GET, url=http://127.0.0.1:20000/test/get): code=7, "
+        "desc=\"Couldn't connect to server\"",
+        http_status_code::kInvalidCode,
+        "",
+    },
+    {"127.0.0.1",
+     20001,
+     "/test/get",
+     dsn::ERR_OK,
+     "",
+     http_status_code::kOk,
+     "you are using GET method"},
+    {"127.0.0.1",
+     20001,
+     "/test/post",
+     dsn::ERR_OK,
+     "",
+     http_status_code::kBadRequest,
+     "please use POST method"},
+};
+
+INSTANTIATE_TEST_SUITE_P(HttpClientTest, HttpGetTest, testing::ValuesIn(http_get_tests));
 
 } // namespace dsn
