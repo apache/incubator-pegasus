@@ -30,6 +30,9 @@
 
 namespace dsn {
 DSN_DECLARE_string(cluster_name);
+namespace security{
+DSN_DECLARE_bool(enable_acl);
+} // namespace security
 namespace replication {
 DSN_DECLARE_string(hadoop_kms_url);
 } // namespace replication
@@ -38,7 +41,12 @@ DSN_DECLARE_string(hadoop_kms_url);
 class KmsClientTest : public pegasus::encrypt_data_test_base
 {
 protected:
-    KmsClientTest() : pegasus::encrypt_data_test_base() {}
+    KmsClientTest() : pegasus::encrypt_data_test_base()
+    {
+        if (FLAGS_encrypt_data_at_rest == true){
+            dsn::security::FLAGS_enable_acl = true;
+        }
+    }
 };
 
 INSTANTIATE_TEST_CASE_P(, KmsClientTest, ::testing::Values(false, true));
