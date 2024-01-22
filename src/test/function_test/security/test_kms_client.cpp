@@ -45,9 +45,7 @@ DSN_DECLARE_string(hadoop_kms_url);
 class KmsClientTest : public pegasus::encrypt_data_test_base
 {
 protected:
-    KmsClientTest() : pegasus::encrypt_data_test_base()
-    {
-    }
+    KmsClientTest() : pegasus::encrypt_data_test_base() {}
 };
 
 INSTANTIATE_TEST_CASE_P(, KmsClientTest, ::testing::Values(false, true));
