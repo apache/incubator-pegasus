@@ -30,7 +30,7 @@
 
 namespace dsn {
 DSN_DECLARE_string(cluster_name);
-namespace security{
+namespace security {
 DSN_DECLARE_bool(enable_acl);
 } // namespace security
 namespace replication {
@@ -43,7 +43,7 @@ class KmsClientTest : public pegasus::encrypt_data_test_base
 protected:
     KmsClientTest() : pegasus::encrypt_data_test_base()
     {
-        if (FLAGS_encrypt_data_at_rest == true){
+        if (FLAGS_encrypt_data_at_rest == true) {
             dsn::security::FLAGS_enable_acl = true;
         }
     }
