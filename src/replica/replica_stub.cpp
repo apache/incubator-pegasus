@@ -423,11 +423,13 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         utils::filesystem::path_combine(_options.data_dirs[0], kms_info::kKmsInfo);
     // FLAGS_data_dirs may be empty at the process begin, use CHECK_FALSE instead of group validator
     if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
-        CHECK_EQ_MSG(FLAGS_encrypt_data_at_rest, true, "The kms_info file exists at ({}), but [pegasus.server] "
-                              "encrypt_data_at_rest is set to ({})."
-                              "Encryption in Pegasus is irreversible after its initial activation.",
-                              kms_path,
-                              FLAGS_encrypt_data_at_rest );
+        CHECK_EQ_MSG(FLAGS_encrypt_data_at_rest,
+                     true,
+                     "The kms_info file exists at ({}), but [pegasus.server] "
+                     "encrypt_data_at_rest is set to ({})."
+                     "Encryption in Pegasus is irreversible after its initial activation.",
+                     kms_path,
+                     FLAGS_encrypt_data_at_rest);
     }
 
     std::string server_key;
