@@ -47,8 +47,8 @@ class KmsClientTest : public pegasus::encrypt_data_test_base
 protected:
     KmsClientTest() : pegasus::encrypt_data_test_base()
     {
-        dsn::FLAGS_cluster_name = "kudu_cluster_key";
-        dsn::security::FLAGS_enable_acl = "true";
+        dsn::FLAGS_cluster_name = "pegasus_cluster_key";
+        dsn::security::FLAGS_enable_acl = true;
         dsn::security::FLAGS_super_users = "pegasus";
         dsn::replication::FLAGS_hadoop_kms_url = "";
     }
@@ -68,14 +68,13 @@ TEST_P(KmsClientTest, test_generate_and_decrypt_encryption_key)
     key_provider.reset(new dsn::security::KMSKeyProvider(
         ::absl::StrSplit(dsn::replication::FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()),
         dsn::FLAGS_cluster_name));
+
     dsn::replication::kms_info kms_info;
 
     // 1. generate encryption key.
-    printf("generate encryption key.\n");
     ASSERT_EQ(dsn::ERR_OK, key_provider->GenerateEncryptionKey(&kms_info).code());
 
     // 2. decrypt encryption key.
-    printf("decrypt encryption key.\n");
     std::string server_key;
     ASSERT_EQ(dsn::ERR_OK, key_provider->DecryptEncryptionKey(kms_info, &server_key).code());
     ASSERT_EQ(server_key.size(), kms_info.eek.length());

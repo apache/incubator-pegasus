@@ -321,6 +321,7 @@ jobs:
 #          - pegasus_unit_test
 #          - recovery_test
 #          - restore_test
+#          - security_test
 #          - throttle_test
 #    needs: build_UBSAN
 #    runs-on: ubuntu-latest

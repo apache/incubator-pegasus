@@ -323,10 +323,10 @@ DSN_DEFINE_group_validator(encrypt_data_is_irreversible, [](std::string &message
 #ifdef MOCK_TEST
     return true;
 #endif
-    std::string data_dirs;
-    data_dirs = FLAGS_data_dirs;
+    // std::string data_dirs;
+    // data_dirs = FLAGS_data_dirs;data_dirs.c_str()
     std::vector<std::string> dirs;
-    ::absl::StrSplit(data_dirs.c_str(), dirs, ',');
+    ::absl::StrSplit(FLAGS_data_dirs, dirs, ',');
     std::string kms_path = utils::filesystem::path_combine(dirs[0], kms_info::kKmsInfo);
     if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
         message = fmt::format("The kms_info file exists at ({}), but [pegasus.server] "

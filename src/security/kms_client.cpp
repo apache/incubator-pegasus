@@ -84,10 +84,10 @@ dsn::error_s KMSClient::DecryptEncryptionKey(const dsn::replication::kms_info &k
         }
         try {
             j = nlohmann::json::parse(resp);
+            break;
         } catch (nlohmann::json::exception &exp) {
             LOG_ERROR("encode kms_info to json failed: {}, data = [{}]", exp.what(), resp);
         }
-        break;
     }
 
     std::string dek_b64;
@@ -140,10 +140,10 @@ dsn::error_s KMSClient::GenerateEncryptionKeyFromKMS(const std::string &key_name
         }
         try {
             j = nlohmann::json::parse(resp).at(0);
+            break;
         } catch (nlohmann::json::exception &exp) {
             LOG_ERROR("encode kms_info to json failed: {}, data = [{}]", exp.what(), resp);
         }
-        break;
     }
 
     RETURN_ERRS_NOT_TRUE(
