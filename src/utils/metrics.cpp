@@ -18,6 +18,7 @@
 #include "utils/metrics.h"
 
 #include <absl/strings/string_view.h>
+#include <boost/algorithm/string/join.hpp>
 #include <boost/asio/basic_deadline_timer.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <boost/system/error_code.hpp>
@@ -230,6 +231,39 @@ void metric_filters::extract_entity_metrics(const metric_entity::metric_map &can
     }
 }
 
+namespace {
+
+const std::string kMetricFiltersWithMetricFieldsField = "with_metric_fields";
+const std::string kMetricFiltersTypesField = "types";
+const std::string kMetricFiltersIdsField = "ids";
+const std::string kMetricFiltersAttributesField = "attributes";
+const std::string kMetricFiltersMetricsField = "metrics";
+const std::string kMetricFiltersDetailField = "detail";
+
+} // anonymous namespace
+
+std::string metric_filters::to_query_string() const
+{
+#define COMBINE_FIELD_PAIR(name, value) \
+    do {\
+        std::string pair(#name);\
+        pair+='=';\
+        pair+=boost::join(values, ",");\
+        fields.push_back(std::move(pair));\
+    }while (0)
+
+    std::vector<std::string> fields;
+    COMBINE_FIELD_PAIR(with_metric_fields, with_metric_fields);
+    COMBINE_FIELD_PAIR(types, entity_types);
+    COMBINE_FIELD_PAIR(ids, entity_ids);
+    COMBINE_FIELD_PAIR(attributes, entity_attrs);
+    COMBINE_FIELD_PAIR(metrics, entity_metrics);
+
+#undef COMBINE_FIELD_PAIR
+
+    return boost::join(fields, "&");
+}
+
 metric_entity_ptr metric_entity_prototype::instantiate(const std::string &id,
                                                        const metric_entity::attr_map &attrs) const
 {
@@ -247,7 +281,7 @@ metric_entity_prototype::~metric_entity_prototype() {}
 
 const std::string metrics_http_service::kMetricsRootPath("");
 const std::string metrics_http_service::kMetricsQuerySubPath("metrics");
-const std::string metrics_http_service::kMetricsQueryPath("/" + metrics_http_service::kMetricsQuerySubPath);
+const std::string metrics_http_service::kMetricsQueryPath(http_service::get_full_path(metrics_http_service::kMetricsRootPath,metrics_http_service::kMetricsQuerySubPath));
 
 metrics_http_service::metrics_http_service(metric_registry *registry) : _registry(registry)
 {
