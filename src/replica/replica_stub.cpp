@@ -421,16 +421,14 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     std::string kms_path =
         utils::filesystem::path_combine(_options.data_dirs[0], kms_info::kKmsInfo);
-    // FLAGS_data_dirs may be empty when load configuration, use CHECK_EQ_MSG instead of group
-    // validator
+    // FLAGS_data_dirs may be empty when load configuration, use LOG_FATAL instead of group
+    // validator.
     if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
-        CHECK_EQ_MSG(FLAGS_encrypt_data_at_rest,
-                     true,
-                     "The kms_info file exists at ({}), but [pegasus.server] "
-                     "encrypt_data_at_rest is set to ({})."
-                     "Encryption in Pegasus is irreversible after its initial activation.",
-                     kms_path,
-                     FLAGS_encrypt_data_at_rest);
+        LOG_FATAL("The kms_info file exists at ({}), but [pegasus.server] "
+                  "encrypt_data_at_rest is set to ({})."
+                  "Encryption in Pegasus is irreversible after its initial activation.",
+                  kms_path,
+                  FLAGS_encrypt_data_at_rest);
     }
 
     std::string server_key;
@@ -449,8 +447,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         // be empty. The process will then acquire the DEK from KMS.
         if (ec == dsn::ERR_PATH_NOT_FOUND) {
             LOG_WARNING("It's normal to encounter a temporary inability to open the kms-info file "
-                        "during the first process launch. error_code = {}",
-                        ec);
+                        "during the first process launch.");
             CHECK_OK(key_provider->GenerateEncryptionKey(&kms_info),
                      "Generate encryption key from kms failed");
         }
@@ -466,7 +463,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     if (key_provider && !utils::filesystem::path_exists(kms_path)) {
         auto err = dsn::utils::dump_rjobj_to_file(
             kms_info, dsn::utils::FileDataType::kNonSensitive, kms_path);
-        CHECK_EQ_MSG(dsn::ERR_OK, err, "Can't store kms key to kms-info file, err = {}", err);
+        CHECK_EQ_MSG(dsn::ERR_OK, err, "Can't store kms key to kms-info file");
     }
 
     // Check slog is not exist.
