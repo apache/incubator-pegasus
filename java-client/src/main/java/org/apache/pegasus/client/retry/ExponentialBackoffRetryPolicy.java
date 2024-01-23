@@ -33,7 +33,13 @@ public class ExponentialBackoffRetryPolicy implements RetryPolicy {
   private final int retryMaxTimes;
 
   public ExponentialBackoffRetryPolicy(ClientOptions opts) {
-    this.retryBaseIntervalMs = opts.getRetryBaseInterval().toMillis();
+    // The minimum unit of retry interval time is milliseconds.
+    // When the user sets the interval time unit to nano, it will change to default interval ms.
+    if (opts.getRetryBaseInterval().toMillis() < 1) {
+      this.retryBaseIntervalMs = ClientOptions.DEFAULT_RETRY_BASE_INTERVAL_MS;
+    } else {
+      this.retryBaseIntervalMs = opts.getRetryBaseInterval().toMillis();
+    }
     this.retryMaxTimes = opts.getRetryMaxTimes();
   }
 
