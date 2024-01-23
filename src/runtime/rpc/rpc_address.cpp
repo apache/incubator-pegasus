@@ -27,18 +27,20 @@
 #include "runtime/rpc/rpc_address.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <ifaddrs.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/socket.h>
 
+#include "absl/strings/string_view.h"
 #include "runtime/rpc/group_address.h"
 #include "utils/fixed_size_buffer_pool.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -48,23 +50,27 @@ const rpc_address rpc_address::s_invalid_address;
 /*static*/
 uint32_t rpc_address::ipv4_from_host(const char *name)
 {
-    sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    addrinfo *res = nullptr;
 
-    addr.sin_family = AF_INET;
-    if ((addr.sin_addr.s_addr = inet_addr(name)) == (unsigned int)(-1)) {
-        // TODO(yingchun): use getaddrinfo instead
-        hostent *hp = ::gethostbyname(name);
-        if (dsn_unlikely(hp == nullptr)) {
-            LOG_ERROR("gethostbyname failed, name = {}, err = {}", name, hstrerror(h_errno));
-            return 0;
+    const int rc = getaddrinfo(name, nullptr, &hints, &res);
+    const int err = errno; // preserving the errno from the getaddrinfo() call
+
+    if (rc != 0) {
+        if (rc == EAI_SYSTEM) {
+            LOG_ERROR("getaddrinfo failed, name = {}, err = {}", name, utils::safe_strerror(err));
         }
-
-        memcpy((void *)&(addr.sin_addr.s_addr), (const void *)hp->h_addr, (size_t)hp->h_length);
+        LOG_ERROR("getaddrinfo failed, name = {}, err = {}", name, gai_strerror(err));
+        return 0;
     }
 
+    CHECK(res->ai_family == AF_INET, "");
+    struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
     // converts from network byte order to host byte order
-    return (uint32_t)ntohl(addr.sin_addr.s_addr);
+    return (uint32_t)ntohl(ipv4->sin_addr.s_addr);
 }
 
 /*static*/
