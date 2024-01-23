@@ -509,6 +509,8 @@ struct metric_filters
     void extract_entity_metrics(const metric_entity::metric_map &candidates,
                                 metric_entity::metric_map &target_metrics) const;
 
+    std::string to_query_string() const;
+
     // `with_metric_fields` includes all the metric fields that are wanted by client. If it
     // is empty, there will be no restriction: in other words, all fields owned by the metric
     // will be put in the response.
@@ -563,12 +565,16 @@ class metric_registry; // IWYU pragma: keep
 class metrics_http_service : public http_server_base
 {
 public:
+    static const std::string kMetricsRootPath;
+    static const std::string kMetricsQuerySubPath;
+    static const std::string kMetricsQueryPath;
+
     explicit metrics_http_service(metric_registry *registry);
     ~metrics_http_service() = default;
 
     // There is only one API now whose URI is "/metrics", thus just make
     // this URI as sub path while leaving the root path empty.
-    std::string path() const override { return ""; }
+    std::string path() const override { return kMetricsRootPath; }
 
 private:
     friend void test_get_metrics_handler(const http_request &req, http_response &resp);
