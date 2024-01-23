@@ -93,7 +93,12 @@ public:
 
     virtual std::string path() const = 0;
 
-    void register_handler(std::string sub_path, http_callback cb, std::string help);
+    void register_handler(std::string sub_path, http_callback cb, std::string help) const;
+
+private:
+    // If sub_path is 'app/duplication', the built path would be '<root_path>/app/duplication',
+    // where path() would be called as root_path.
+    std::string add_sub_path(const std::string &sub_path) const;
 };
 
 class http_server_base : public http_service

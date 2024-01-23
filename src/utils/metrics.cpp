@@ -245,14 +245,18 @@ metric_entity_prototype::metric_entity_prototype(const char *name) : _name(name)
 
 metric_entity_prototype::~metric_entity_prototype() {}
 
+const std::string metrics_http_service::kMetricsRootPath("");
+const std::string metrics_http_service::kMetricsQuerySubPath("metrics");
+const std::string metrics_http_service::kMetricsQueryPath("/" + metrics_http_service::kMetricsQuerySubPath);
+
 metrics_http_service::metrics_http_service(metric_registry *registry) : _registry(registry)
 {
-    register_handler("metrics",
+    register_handler(kMetricsQuerySubPath,
                      std::bind(&metrics_http_service::get_metrics_handler,
                                this,
                                std::placeholders::_1,
                                std::placeholders::_2),
-                     "ip:port/metrics");
+                     fmt::format("ip:port{}", kMetricsQueryPath));
 }
 
 namespace {
