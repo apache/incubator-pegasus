@@ -244,13 +244,13 @@ const std::string kMetricFiltersDetailField = "detail";
 
 std::string metric_filters::to_query_string() const
 {
-#define COMBINE_FIELD_PAIR(name, value) \
-    do {\
-        std::string pair(#name);\
-        pair+='=';\
-        pair+=boost::join(values, ",");\
-        fields.push_back(std::move(pair));\
-    }while (0)
+#define COMBINE_FIELD_PAIR(name, container)                                                        \
+    do {                                                                                           \
+        std::string pair(#name);                                                                   \
+        pair += '=';                                                                               \
+        pair += boost::join(container, ",");                                                       \
+        fields.push_back(std::move(pair));                                                         \
+    } while (0)
 
     std::vector<std::string> fields;
     COMBINE_FIELD_PAIR(with_metric_fields, with_metric_fields);
@@ -281,7 +281,8 @@ metric_entity_prototype::~metric_entity_prototype() {}
 
 const std::string metrics_http_service::kMetricsRootPath("");
 const std::string metrics_http_service::kMetricsQuerySubPath("metrics");
-const std::string metrics_http_service::kMetricsQueryPath(http_service::get_full_path(metrics_http_service::kMetricsRootPath,metrics_http_service::kMetricsQuerySubPath));
+const std::string metrics_http_service::kMetricsQueryPath(http_service::get_full_path(
+    metrics_http_service::kMetricsRootPath, metrics_http_service::kMetricsQuerySubPath));
 
 metrics_http_service::metrics_http_service(metric_registry *registry) : _registry(registry)
 {
