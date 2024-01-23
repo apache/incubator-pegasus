@@ -425,10 +425,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     // validator.
     if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
         LOG_FATAL("The kms_info file exists at ({}), but [pegasus.server] "
-                  "encrypt_data_at_rest is set to ({})."
+                  "encrypt_data_at_rest is enbale."
                   "Encryption in Pegasus is irreversible after its initial activation.",
-                  kms_path,
-                  FLAGS_encrypt_data_at_rest);
+                  kms_path);
     }
 
     std::string server_key;

@@ -38,20 +38,11 @@ DSN_DECLARE_string(hadoop_kms_url);
 } // namespace replication
 } // namespace dsn
 
-class KmsClientTest : public pegasus::encrypt_data_test_base
+class KmsClientTest : public testing::Test
 {
-protected:
-    KmsClientTest() : pegasus::encrypt_data_test_base()
-    {
-        if (FLAGS_encrypt_data_at_rest == true) {
-            dsn::security::FLAGS_enable_acl = true;
-        }
-    }
 };
 
-INSTANTIATE_TEST_CASE_P(, KmsClientTest, ::testing::Values(false, true));
-
-TEST_P(KmsClientTest, test_generate_and_decrypt_encryption_key)
+TEST_F(KmsClientTest, test_generate_and_decrypt_encryption_key)
 {
     if (strlen(dsn::replication::FLAGS_hadoop_kms_url) == 0 ||
         FLAGS_encrypt_data_at_rest == false) {
