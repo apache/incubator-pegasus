@@ -36,7 +36,8 @@ set(MY_PROJ_LIBS
         rocksdb
         lz4
         zstd
-        snappy)
+        snappy
+        absl::strings)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")
