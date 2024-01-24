@@ -2923,6 +2923,7 @@ TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
 
 #define COPY_CONTAINER(field) filters.field = query_string_case.field
 
+    // Copy the data of the case to the tested metric filters.
     COPY_CONTAINER(with_metric_fields);
     COPY_CONTAINER(entity_types);
     COPY_CONTAINER(entity_ids);
@@ -2931,10 +2932,15 @@ TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
 
 #undef COPY_CONTAINER
 
+    // Build the http query string based on the tested metric filters.
     const auto &query_string = filters.to_query_string();
-    ASSERT_FALSE(utils::has_space(query_string));
     std::cout << "query string: " << query_string << std::endl;
 
+    // There should not be any space character in the query string.
+    ASSERT_FALSE(utils::has_space(query_string));
+
+    // Extract each field name/value pair from the query string and check the number of
+    // the fields.
     std::vector<std::string> fields;
     utils::split_args(query_string.c_str(), fields, '&');
     ASSERT_EQ(query_string_case.expected_fields, fields.size());
@@ -2960,6 +2966,8 @@ TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
         ++i;                                                                                       \
     } while (0)
 
+    // Check each field name/value extracted from the query string is exactly equal to the
+    // original metric filters.
     CHECK_FIELD(with_metric_fields, metric_filters::metric_fields_type, with_metric_fields);
     CHECK_FIELD(types, metric_filters::entity_types_type, entity_types);
     CHECK_FIELD(ids, metric_filters::entity_ids_type, entity_ids);
@@ -2968,6 +2976,7 @@ TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
 
 #undef CHECK_FIELD
 
+    // All of the fields should have been checked.
     ASSERT_EQ(query_string_case.expected_fields, i);
 }
 

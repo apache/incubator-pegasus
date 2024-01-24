@@ -509,6 +509,9 @@ struct metric_filters
     void extract_entity_metrics(const metric_entity::metric_map &candidates,
                                 metric_entity::metric_map &target_metrics) const;
 
+    // Build the http query string based on metric filters. This is useful when an http request
+    // is performed for metrics query: firstly, set metric filters with what you want; then,
+    // get query string by this function conveniently and put it into the http request.
     std::string to_query_string() const;
 
     // `with_metric_fields` includes all the metric fields that are wanted by client. If it
