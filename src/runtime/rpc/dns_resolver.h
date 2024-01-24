@@ -25,17 +25,22 @@
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/errors.h"
+#include "utils/metrics.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
 
 // This class provide a way to resolve host_port to rpc_address.
+// Now each host_post will be resolved just once, and then cached the first rpc_address result in
+// the resolved result list.
+// If some host_port's rpc_address changes, you need to restart the Pegasus process to make it take
+// effect.
+// TODO(yingchun): Now the cache is unlimited, the cache size may be huge. Implement an expiration
+// mechanism to limit the cache size and make it possible to update the resolve result.
 class dns_resolver
 {
 public:
-    explicit dns_resolver() = default;
-
-    void add_item(const host_port &hp, const rpc_address &addr);
+    explicit dns_resolver();
 
     // Resolve this host_port to an unique rpc_address.
     rpc_address resolve_address(const host_port &hp);
@@ -45,10 +50,14 @@ private:
 
     error_s resolve_addresses(const host_port &hp, std::vector<rpc_address> &addresses);
 
-    error_s do_resolution(const host_port &hp, std::vector<rpc_address> &addresses);
-
     mutable utils::rw_lock_nr _lock;
-    std::unordered_map<host_port, rpc_address> _dsn_cache;
+    // Cache the host_port resolve results, the cached rpc_address is the first one in the resolved
+    // list.
+    std::unordered_map<host_port, rpc_address> _dns_cache;
+
+    METRIC_VAR_DECLARE_gauge_int64(dns_resolver_cache_size);
+    METRIC_VAR_DECLARE_percentile_int64(dns_resolver_resolve_duration_ns);
+    METRIC_VAR_DECLARE_percentile_int64(dns_resolver_resolve_by_dns_duration_ns);
 };
 
 } // namespace dsn
