@@ -28,10 +28,6 @@ export THIRDPARTY_ROOT=$ROOT/thirdparty
 export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 # Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
 export ASAN_OPTIONS=detect_odr_violation=0
-# See https://github.com/gperftools/gperftools/wiki/gperftools'-stacktrace-capturing-methods-and-their-issues.
-# Now we choose libgcc, because of https://github.com/apache/incubator-pegasus/issues/1685.
-export TCMALLOC_STACKTRACE_METHOD=libgcc  # Can be generic_fp, generic_fp_unsafe, libunwind or libgcc
-export TCMALLOC_STACKTRACE_METHOD_VERBOSE=1
 
 function usage()
 {
