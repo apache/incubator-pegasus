@@ -45,8 +45,8 @@
 #include "utils/strings.h"
 #include "utils/utils.h"
 
-using namespace ::dsn;
-using namespace ::dsn::utils;
+namespace dsn {
+namespace utils {
 
 TEST(core, get_last_component)
 {
@@ -568,3 +568,37 @@ TEST(core, get_intersection)
     ASSERT_EQ(intersection.size(), 1);
     ASSERT_EQ(*intersection.begin(), 3);
 }
+
+struct has_space_case
+{
+    std::string str;
+    bool expected_has_space;
+};
+
+class HasSpaceTest : public testing::TestWithParam<has_space_case>
+{
+};
+
+TEST_P(HasSpaceTest, HasSpace)
+{
+    const auto &space_case = GetParam();
+    EXPECT_EQ(space_case.expected_has_space, has_space(space_case.str));
+}
+
+const std::vector<has_space_case> has_space_tests = {
+    {"abc xyz", true},
+    {" abcxyz", true},
+    {"abcxyz ", true},
+    {"abc  xyz", true},
+    {"abc\r\nxyz", true},
+    {"abc\r\nxyz", true},
+    {"abc\txyz", true},
+    {"abc\txyz", true},
+    {"abcxyz", false},
+    {"abc_xyz", false},
+};
+
+INSTANTIATE_TEST_SUITE_P(StringTest, HasSpaceTest, testing::ValuesIn(has_space_tests));
+
+} // namespace utils
+} // namespace dsn
