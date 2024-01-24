@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <strings.h>
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <sstream> // IWYU pragma: keep
 #include <utility>
@@ -424,5 +425,11 @@ std::string find_string_prefix(const std::string &input, char separator)
     }
     return input.substr(0, current);
 }
+
+bool has_space(const std::string &str)
+{
+    return std::any_of(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); });
+}
+
 } // namespace utils
 } // namespace dsn

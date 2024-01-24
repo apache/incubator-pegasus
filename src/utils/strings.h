@@ -121,5 +121,8 @@ std::string string_md5(const char *buffer, unsigned int length);
 // splits the "input" string by the only character "separator" to get the string prefix.
 // if there is no prefix or the first character is "separator", it will return "".
 std::string find_string_prefix(const std::string &input, char separator);
+
+bool has_space(const std::string &str);
+
 } // namespace utils
 } // namespace dsn

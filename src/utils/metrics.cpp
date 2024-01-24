@@ -235,6 +235,10 @@ std::string metric_filters::to_query_string() const
 {
 #define COMBINE_FIELD_PAIR(name, container)                                                        \
     do {                                                                                           \
+        if (container.empty()) {                                                                   \
+            break;                                                                                 \
+        }                                                                                          \
+                                                                                                   \
         std::string pair(#name);                                                                   \
         pair += '=';                                                                               \
         pair += boost::join(container, ",");                                                       \
