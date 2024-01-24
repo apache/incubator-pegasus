@@ -83,11 +83,6 @@ std::string build_rel_path(const std::string &root_path, const std::string &sub_
     http_call_registry::instance().remove(full_path);
 }
 
-/* static */ std::string get_full_path(const std::string &root_path, const std::string &sub_path)
-{
-    return '/' + build_rel_path(root_path, sub_path);
-}
-
 std::string http_service::get_rel_path(const std::string &sub_path) const
 {
     return build_rel_path(path(), sub_path);

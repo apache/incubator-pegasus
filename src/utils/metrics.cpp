@@ -231,17 +231,6 @@ void metric_filters::extract_entity_metrics(const metric_entity::metric_map &can
     }
 }
 
-namespace {
-
-const std::string kMetricFiltersWithMetricFieldsField = "with_metric_fields";
-const std::string kMetricFiltersTypesField = "types";
-const std::string kMetricFiltersIdsField = "ids";
-const std::string kMetricFiltersAttributesField = "attributes";
-const std::string kMetricFiltersMetricsField = "metrics";
-const std::string kMetricFiltersDetailField = "detail";
-
-} // anonymous namespace
-
 std::string metric_filters::to_query_string() const
 {
 #define COMBINE_FIELD_PAIR(name, container)                                                        \
@@ -281,8 +270,8 @@ metric_entity_prototype::~metric_entity_prototype() {}
 
 const std::string metrics_http_service::kMetricsRootPath("");
 const std::string metrics_http_service::kMetricsQuerySubPath("metrics");
-const std::string metrics_http_service::kMetricsQueryPath(http_service::get_full_path(
-    metrics_http_service::kMetricsRootPath, metrics_http_service::kMetricsQuerySubPath));
+const std::string
+    metrics_http_service::kMetricsQueryPath('/' + metrics_http_service::kMetricsQuerySubPath);
 
 metrics_http_service::metrics_http_service(metric_registry *registry) : _registry(registry)
 {

@@ -89,9 +89,6 @@ struct http_call
 class http_service
 {
 public:
-    // If sub_path is 'app/duplication', the built path would be '/<root_path>/app/duplication',
-    static std::string get_full_path(const std::string &root_path, const std::string &sub_path);
-
     http_service() noexcept = default;
     virtual ~http_service() = default;
 
