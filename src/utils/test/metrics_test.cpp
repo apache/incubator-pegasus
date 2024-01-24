@@ -2902,7 +2902,17 @@ class MetricFiltersQueryStringTest : public testing::TestWithParam<metric_filter
 };
 
 const std::vector<metric_filters_query_string_case> metric_filters_query_string_tests = {
+    // Empty query string.
+    {{}, {}, {}, {}, {}, 0},
+    // Some fields were missing in the query string.
     {{"name", "value"}, {"replica"}, {}, {}, {"rdb_total_sst_files", "rdb_total_sst_size_mb"}, 3},
+    // All fields were present.
+    {{"name", "value"},
+     {"replica"},
+     {"replica5.2"},
+     {"table_id", "partition_id"},
+     {"rdb_total_sst_files", "rdb_total_sst_size_mb"},
+     5},
 };
 
 TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
