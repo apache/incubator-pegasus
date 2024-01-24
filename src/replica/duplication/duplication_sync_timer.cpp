@@ -181,12 +181,13 @@ void duplication_sync_timer::start()
 {
     LOG_INFO("run duplication sync periodically in {}s", DUPLICATION_SYNC_PERIOD_SECOND);
 
-    _timer_task = tasking::enqueue_timer(LPC_DUPLICATION_SYNC_TIMER,
-                                         &_stub->_tracker,
-                                         [this]() { run(); },
-                                         DUPLICATION_SYNC_PERIOD_SECOND * 1_s,
-                                         0,
-                                         DUPLICATION_SYNC_PERIOD_SECOND * 1_s);
+    _timer_task = tasking::enqueue_timer(
+        LPC_DUPLICATION_SYNC_TIMER,
+        &_stub->_tracker,
+        [this]() { run(); },
+        DUPLICATION_SYNC_PERIOD_SECOND * 1_s,
+        0,
+        DUPLICATION_SYNC_PERIOD_SECOND * 1_s);
 }
 
 std::multimap<dupid_t, duplication_sync_timer::replica_dup_state>
@@ -223,7 +224,6 @@ bool duplication_sync_timer::replica_is_cloing_or_closed(gpid id)
     }
     return false;
 }
-
 
 } // namespace replication
 } // namespace dsn
