@@ -23,7 +23,6 @@
 #include "gtest/gtest.h"
 #include "replica/kms_key_provider.h"
 #include "replica/replication_app_base.h"
-#include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
@@ -44,10 +43,8 @@ class KmsClientTest : public testing::Test
 
 TEST_F(KmsClientTest, test_generate_and_decrypt_encryption_key)
 {
-    if (strlen(dsn::replication::FLAGS_hadoop_kms_url) == 0 ||
-        FLAGS_encrypt_data_at_rest == false) {
-        GTEST_SKIP()
-            << "Set kms_client_test.* configs in config-test.ini to enable kms_client_test.";
+    if (strlen(dsn::replication::FLAGS_hadoop_kms_url) == 0) {
+        GTEST_SKIP() << "Set a proper 'hadoop_kms_url' in config.ini to enable this test.";
     }
 
     auto key_provider = std::make_unique<dsn::security::KMSKeyProvider>(
