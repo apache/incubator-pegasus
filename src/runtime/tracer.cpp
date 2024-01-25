@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
+#include "fmt/core.h"
 #include "fmt/format.h"
 #include "runtime/global_config.h"
 #include "runtime/rpc/rpc_message.h"

@@ -22,18 +22,17 @@
 #include <algorithm>
 #include <cmath>
 
+#include "absl/strings/string_view.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "perf_counter/perf_counter.h"
-#include "runtime/rpc/rpc_address.h"
 #include "server/hotspot_partition_stat.h"
 #include "shell/command_executor.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
 
 struct row_data;
 

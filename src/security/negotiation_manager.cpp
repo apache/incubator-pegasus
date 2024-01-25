@@ -24,7 +24,6 @@
 #include "http/http_server.h"
 #include "negotiation_utils.h"
 #include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_code.h"
 #include "security_types.h"

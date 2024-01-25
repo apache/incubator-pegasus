@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
@@ -34,6 +35,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {

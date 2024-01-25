@@ -33,7 +33,6 @@
 #include "pegasus_server_write.h"
 #include "pegasus_utils.h"
 #include "rrdb/rrdb.code.definition.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "server/pegasus_write_service.h"

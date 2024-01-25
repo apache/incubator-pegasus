@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
+#include "fmt/core.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"

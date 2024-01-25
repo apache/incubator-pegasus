@@ -44,6 +44,7 @@
 #include <ostream>
 #include <set>
 
+#include "absl/strings/string_view.h"
 #include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
@@ -62,7 +63,6 @@
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
@@ -81,7 +81,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 #include "utils/token_bucket_throttling_controller.h"
