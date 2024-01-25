@@ -2887,6 +2887,103 @@ TEST(metrics_test, http_get_metrics)
     }
 }
 
+struct metric_filters_query_string_case
+{
+    metric_filters::metric_fields_type with_metric_fields;
+    metric_filters::entity_types_type entity_types;
+    metric_filters::entity_ids_type entity_ids;
+    metric_filters::entity_attrs_type entity_attrs;
+    metric_filters::entity_metrics_type entity_metrics;
+    size_t expected_fields;
+};
+
+class MetricFiltersQueryStringTest : public testing::TestWithParam<metric_filters_query_string_case>
+{
+};
+
+const std::vector<metric_filters_query_string_case> metric_filters_query_string_tests = {
+    // Empty query string.
+    {{}, {}, {}, {}, {}, 0},
+    // Some fields were missing in the query string.
+    {{"name", "value"}, {"replica"}, {}, {}, {"rdb_total_sst_files", "rdb_total_sst_size_mb"}, 3},
+    // All fields were present.
+    {{"name", "value"},
+     {"replica"},
+     {"replica5.2"},
+     {"table_id", "partition_id"},
+     {"rdb_total_sst_files", "rdb_total_sst_size_mb"},
+     5},
+};
+
+TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
+{
+    const auto &query_string_case = GetParam();
+
+    metric_filters filters;
+
+#define COPY_CONTAINER(field) filters.field = query_string_case.field
+
+    // Copy the data of the case to the tested metric filters.
+    COPY_CONTAINER(with_metric_fields);
+    COPY_CONTAINER(entity_types);
+    COPY_CONTAINER(entity_ids);
+    COPY_CONTAINER(entity_attrs);
+    COPY_CONTAINER(entity_metrics);
+
+#undef COPY_CONTAINER
+
+    // Build the http query string based on the tested metric filters.
+    const auto &query_string = filters.to_query_string();
+    std::cout << "query string: " << query_string << std::endl;
+
+    // There should not be any space character in the query string.
+    ASSERT_FALSE(utils::has_space(query_string));
+
+    // Extract each field name/value pair from the query string and check the number of
+    // the fields.
+    std::vector<std::string> fields;
+    utils::split_args(query_string.c_str(), fields, '&');
+    ASSERT_EQ(query_string_case.expected_fields, fields.size());
+
+    size_t i = 0;
+
+#define CHECK_FIELD(name, type, field)                                                             \
+    do {                                                                                           \
+        if (query_string_case.field.empty()) {                                                     \
+            break;                                                                                 \
+        }                                                                                          \
+                                                                                                   \
+        ASSERT_LT(i, query_string_case.expected_fields);                                           \
+                                                                                                   \
+        std::vector<std::string> kvs;                                                              \
+        utils::split_args(fields[i].c_str(), kvs, '=');                                            \
+        ASSERT_EQ(2, kvs.size());                                                                  \
+        ASSERT_STREQ(#name, kvs[0].c_str());                                                       \
+                                                                                                   \
+        type actual_field;                                                                         \
+        utils::split_args(kvs[1].c_str(), actual_field, ',');                                      \
+        ASSERT_EQ(query_string_case.field, actual_field);                                          \
+        ++i;                                                                                       \
+    } while (0)
+
+    // Check each field name/value extracted from the query string is exactly equal to the
+    // original metric filters.
+    CHECK_FIELD(with_metric_fields, metric_filters::metric_fields_type, with_metric_fields);
+    CHECK_FIELD(types, metric_filters::entity_types_type, entity_types);
+    CHECK_FIELD(ids, metric_filters::entity_ids_type, entity_ids);
+    CHECK_FIELD(attributes, metric_filters::entity_attrs_type, entity_attrs);
+    CHECK_FIELD(metrics, metric_filters::entity_metrics_type, entity_metrics);
+
+#undef CHECK_FIELD
+
+    // All of the fields should have been checked.
+    ASSERT_EQ(query_string_case.expected_fields, i);
+}
+
+INSTANTIATE_TEST_SUITE_P(MetricsTest,
+                         MetricFiltersQueryStringTest,
+                         testing::ValuesIn(metric_filters_query_string_tests));
+
 using surviving_metrics_case = std::tuple<std::string, bool, bool, bool, bool>;
 
 class MetricsRetirementTest : public testing::TestWithParam<surviving_metrics_case>

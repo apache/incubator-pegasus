@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <absl/strings/ascii.h>
 #include <openssl/md5.h>
 #include <stdio.h>
 #include <strings.h>
@@ -424,5 +425,15 @@ std::string find_string_prefix(const std::string &input, char separator)
     }
     return input.substr(0, current);
 }
+
+bool has_space(const std::string &str)
+{
+    // Use absl::ascii_isspace() instead of std::isspace(), which could not be used as
+    // the predicate directly, since it might be implemented as a macro, and its parameter
+    // must be declared as unsigned. Thus, to use std::isspace(), we have to wrap it into
+    // a lambda expression.
+    return std::any_of(str.begin(), str.end(), absl::ascii_isspace);
+}
+
 } // namespace utils
 } // namespace dsn
