@@ -254,8 +254,7 @@ public:
                 auto &dup = kv.second;
 
                 ASSERT_TRUE(after.find(dupid) != after.end());
-                ASSERT_TRUE(dup->equals_to(*after[dupid])) << dup->to_string() << std::endl
-                                                           << after[dupid]->to_string();
+                ASSERT_TRUE(dup->equals_to(*after[dupid])) << *dup << std::endl << *after[dupid];
             }
         }
     }

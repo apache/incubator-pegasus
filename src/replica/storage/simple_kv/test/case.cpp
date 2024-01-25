@@ -263,12 +263,7 @@ std::string exit_case_line::to_string() const
 
 bool exit_case_line::parse(const std::string &params) { return true; }
 
-std::string state_case_line::to_string() const
-{
-    std::ostringstream oss;
-    oss << name() << ":" << _state.to_string();
-    return oss.str();
-}
+std::string state_case_line::to_string() const { return fmt::format("{}:{}", name(), _state); }
 
 bool state_case_line::parse(const std::string &params) { return _state.from_string(params); }
 
@@ -285,12 +280,7 @@ bool state_case_line::check_state(const state_snapshot &cur_state, bool &forward
     return false;
 }
 
-std::string config_case_line::to_string() const
-{
-    std::ostringstream oss;
-    oss << name() << ":" << _config.to_string();
-    return oss.str();
-}
+std::string config_case_line::to_string() const { return fmt::format("{}:{}", name(), _config); }
 
 bool config_case_line::parse(const std::string &params) { return _config.from_string(params); }
 
@@ -678,7 +668,10 @@ void event_on_aio_enqueue::init(aio_task *tsk)
     _transferred_size = boost::lexical_cast<std::string>(tsk->get_transferred_size());
 }
 
-std::string event_case_line::to_string() const { return name() + ":" + _event_cond->to_string(); }
+std::string event_case_line::to_string() const
+{
+    return fmt::format("{}:{}", name(), *_event_cond);
+}
 
 bool event_case_line::parse(const std::string &params)
 {
@@ -749,11 +742,11 @@ std::string client_case_line::to_string() const
         break;
     }
     case end_write: {
-        oss << "id=" << _id << ",err=" << _err.to_string() << ",resp=" << _write_resp;
+        oss << "id=" << _id << ",err=" << _err << ",resp=" << _write_resp;
         break;
     }
     case end_read: {
-        oss << "id=" << _id << ",err=" << _err.to_string() << ",resp=" << _read_resp;
+        oss << "id=" << _id << ",err=" << _err << ",resp=" << _read_resp;
         break;
     }
     case replica_config: {
@@ -1050,7 +1043,7 @@ void test_case::forward()
                 output(cl->to_string());
                 print(cl, "");
             }
-            LOG_INFO("=== on_case_forward:[{}]{}", cl->line_no(), cl->to_string());
+            LOG_INFO("=== on_case_forward:[{}]{}", cl->line_no(), *cl);
         }
         _next++;
         if (_next >= _case_lines.size()) {
@@ -1331,7 +1324,7 @@ void test_case::on_config_change(const parti_config &last, const parti_config &c
 
     _null_loop_count = 0; // reset null loop count
 
-    std::string buf = std::string(config_case_line::NAME()) + ":" + cur.to_string();
+    std::string buf = fmt::format("{}:{}", config_case_line::NAME(), cur);
     LOG_INFO("=== on_config_change: {}", cur);
 
     if (check_skip(true)) {
@@ -1367,7 +1360,7 @@ void test_case::on_state_change(const state_snapshot &last, const state_snapshot
 
     _null_loop_count = 0; // reset null loop count
 
-    std::string buf = std::string(state_case_line::NAME()) + ":" + cur.to_string();
+    std::string buf = fmt::format("{}:{}", state_case_line::NAME(), cur);
     LOG_INFO("=== on_state_change: {}\n{}", cur, cur.diff_string(last));
 
     if (check_skip(true)) {

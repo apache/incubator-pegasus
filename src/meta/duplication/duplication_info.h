@@ -189,6 +189,11 @@ public:
     // To json encoded string.
     std::string to_string() const;
 
+    friend std::ostream &operator<<(std::ostream &os, const duplication_info &di)
+    {
+        return os << di.to_string();
+    }
+
     const char *log_prefix() const { return prefix_for_log.c_str(); }
 
 private:
@@ -256,3 +261,5 @@ extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::
 
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::duplication_info);

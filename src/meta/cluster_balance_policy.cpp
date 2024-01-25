@@ -370,7 +370,7 @@ bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_
     auto index = rand() % max_load_disk_set.size();
     auto max_load_disk = *select_random(max_load_disk_set, index);
     LOG_INFO("most load disk({}) on node({}) is picked, has {} partition",
-             max_load_disk.node.to_string(),
+             max_load_disk.node,
              max_load_disk.disk_tag,
              max_load_disk.partitions.size());
     for (const auto &node_addr : min_nodes) {
@@ -384,14 +384,14 @@ bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_
             move_info.type = cluster_info.type;
             LOG_INFO("partition[{}] will migrate from {} to {}",
                      picked_pid,
-                     max_load_disk.node.to_string(),
-                     node_addr.to_string());
+                     max_load_disk.node,
+                     node_addr);
             return true;
         }
     }
     LOG_INFO("can not find a partition(app_id={}) from random max load disk(node={}, disk={})",
              app_id,
-             max_load_disk.node.to_string(),
+             max_load_disk.node,
              max_load_disk.disk_tag);
     return false;
 }

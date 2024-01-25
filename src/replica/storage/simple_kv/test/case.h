@@ -74,6 +74,11 @@ public:
     virtual std::string to_string() const = 0;
     virtual bool parse(const std::string &params) = 0;
 
+    friend std::ostream &operator<<(std::ostream &os, const case_line &cl)
+    {
+        return os << cl.to_string();
+    }
+
 private:
     int _line_no;
 };
@@ -499,4 +504,5 @@ private:
 }
 }
 
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::case_line);
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::event);

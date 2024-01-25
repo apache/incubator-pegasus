@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <fmt/printf.h>
 
 #include "block_service/block_service.h"
 #include "block_service/hdfs/hdfs_service.h"
@@ -232,7 +233,7 @@ TEST_P(HDFSClientTest, test_upload_and_download)
     ASSERT_TRUE(dsn::ERR_OK == rem_resp.err || dsn::ERR_OBJECT_NOT_FOUND == rem_resp.err);
 
     // 2. create file.
-    printf("create and upload: %s.\n", kRemoteTestFile.c_str());
+    fmt::printf("create and upload: {}.\n", kRemoteTestFile);
     create_file_response cf_resp;
     s->create_file(create_file_request{kRemoteTestFile, true},
                    LPC_TEST_HDFS,
@@ -266,7 +267,7 @@ TEST_P(HDFSClientTest, test_upload_and_download)
 
     // 5. download file.
     download_response d_resp;
-    printf("test download %s.\n", kRemoteTestFile.c_str());
+    fmt::printf("test download {}.\n", kRemoteTestFile);
     s->create_file(create_file_request{kRemoteTestFile, false},
                    LPC_TEST_HDFS,
                    [&cf_resp](const create_file_response &resp) { cf_resp = resp; },
@@ -370,7 +371,7 @@ TEST_P(HDFSClientTest, test_concurrent_upload_download)
                 p->upload(upload_request{local_file_names[i]},
                           LPC_TEST_HDFS,
                           [p, &local_file_names, &files_size, i](const upload_response &resp) {
-                              printf("file %s upload finished.\n", local_file_names[i].c_str());
+                              fmt::printf("file {} upload finished.\n", local_file_names[i]);
                               ASSERT_EQ(dsn::ERR_OK, resp.err);
                               ASSERT_EQ(files_size[i], resp.uploaded_size);
                               ASSERT_EQ(files_size[i], p->get_size());
@@ -406,7 +407,7 @@ TEST_P(HDFSClientTest, test_concurrent_upload_download)
                 LPC_TEST_HDFS,
                 [&files_md5sum, &downloaded_file_names, &files_size, i, p](
                     const download_response &dr) {
-                    printf("file %s download finished\n", downloaded_file_names[i].c_str());
+                    fmt::printf("file {} download finished\n", downloaded_file_names[i]);
                     ASSERT_EQ(dsn::ERR_OK, dr.err);
                     ASSERT_EQ(files_size[i], dr.downloaded_size);
                     ASSERT_EQ(files_size[i], p->get_size());

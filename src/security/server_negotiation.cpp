@@ -41,7 +41,7 @@ DSN_DECLARE_string(service_name);
 
 server_negotiation::server_negotiation(rpc_session_ptr session) : negotiation(session)
 {
-    _name = fmt::format("SERVER_NEGOTIATION(CLIENT={})", _session->remote_address().to_string());
+    _name = fmt::format("SERVER_NEGOTIATION(CLIENT={})", _session->remote_address());
 }
 
 void server_negotiation::start()
@@ -143,7 +143,7 @@ void server_negotiation::do_challenge(negotiation_rpc rpc, error_s err_s, const 
     if (!err_s.is_ok() && err_s.code() != ERR_SASL_INCOMPLETE) {
         LOG_WARNING("{}: negotiation failed, with err = {}, msg = {}",
                     _name,
-                    err_s.code().to_string(),
+                    err_s.code(),
                     err_s.description());
         fail_negotiation();
         return;

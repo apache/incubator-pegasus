@@ -232,13 +232,13 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
              (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index,
-             target_address.to_string());
+             target_address);
 
     if (error != dsn::ERR_OK) {
         LOG_ERROR("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
                   app_name,
                   partition_index,
-                  error.to_string());
+                  error);
     }
 
     if (resp.err != dsn::ERR_OK) {

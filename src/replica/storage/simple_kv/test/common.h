@@ -128,6 +128,10 @@ struct replica_state
     bool operator!=(const replica_state &o) const { return !(*this == o); }
     std::string to_string() const;
     bool from_string(const std::string &str);
+    friend std::ostream &operator<<(std::ostream &os, const replica_state &rs)
+    {
+        return os << rs.to_string();
+    }
 };
 
 struct state_snapshot

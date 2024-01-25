@@ -116,7 +116,7 @@ error_s mutation_batch::add(mutation_ptr mu)
         return FMT_ERR(
             ERR_INVALID_DATA,
             "failed to add mutation [err:{}, logged:{}, decree:{}, committed:{}, start_decree:{}]",
-            ec.to_string(),
+            ec,
             mu->is_logged(),
             mu->get_decree(),
             mu->data.header.last_committed_decree,

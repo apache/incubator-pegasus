@@ -1698,9 +1698,9 @@ void replica_stub::open_replica(
                       configuration_update->config.last_committed_decree == 0,
                   "{}@{}: cannot load replica({}.{}), ballot = {}, "
                   "last_committed_decree = {}, but it does not existed!",
-                  id.to_string(),
+                  id,
                   _primary_address_str,
-                  id.to_string(),
+                  id,
                   app.app_type.c_str(),
                   configuration_update->config.ballot,
                   configuration_update->config.last_committed_decree);
@@ -1740,25 +1740,17 @@ void replica_stub::open_replica(
         LOG_WARNING(
             "{}@{}: open replica failed, erase from opening replicas", id, _primary_address_str);
         zauto_write_lock l(_replicas_lock);
-        CHECK_GT_MSG(_opening_replicas.erase(id),
-                     0,
-                     "replica {} is not in _opening_replicas",
-                     id.to_string());
+        CHECK_GT_MSG(_opening_replicas.erase(id), 0, "replica {} is not in _opening_replicas", id);
         METRIC_VAR_DECREMENT(opening_replicas);
         return;
     }
 
     {
         zauto_write_lock l(_replicas_lock);
-        CHECK_GT_MSG(_opening_replicas.erase(id),
-                     0,
-                     "replica {} is not in _opening_replicas",
-                     id.to_string());
+        CHECK_GT_MSG(_opening_replicas.erase(id), 0, "replica {} is not in _opening_replicas", id);
         METRIC_VAR_DECREMENT(opening_replicas);
 
-        CHECK(_replicas.find(id) == _replicas.end(),
-              "replica {} is already in _replicas",
-              id.to_string());
+        CHECK(_replicas.find(id) == _replicas.end(), "replica {} is already in _replicas", id);
         _replicas.insert(replicas::value_type(rep->get_gpid(), rep));
         METRIC_VAR_INCREMENT(total_replicas);
 
@@ -2364,7 +2356,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
     std::stringstream query_state;
     query_state << processed << " processed, " << not_found << " not found";
     for (auto &kv : results) {
-        query_state << "\n    " << kv.first.to_string() << "@" << _primary_address_str;
+        query_state << "\n    " << kv.first << "@" << _primary_address_str;
         if (kv.second.first != partition_status::PS_INVALID)
             query_state << "@" << (kv.second.first == partition_status::PS_PRIMARY ? "P" : "S");
         query_state << " : " << kv.second.second;
@@ -2672,7 +2664,7 @@ void replica_stub::on_group_bulk_load(group_bulk_load_rpc rpc)
              "meta_bulk_load_status = {}",
              request.config.pid,
              _primary_address_str,
-             request.config.primary.to_string(),
+             request.config.primary,
              request.config.ballot,
              enum_to_string(request.meta_bulk_load_status));
 

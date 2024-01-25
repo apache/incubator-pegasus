@@ -73,8 +73,7 @@ private:
 
         std::string postfix;
         if (target_method == dsn::http_method::POST) {
-            postfix = " ";
-            postfix += req.body.to_string();
+            postfix = fmt::format(" {}", req.body);
         }
 
         resp.body =
