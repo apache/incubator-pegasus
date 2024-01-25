@@ -49,6 +49,11 @@ dns_resolver::dns_resolver()
       METRIC_VAR_INIT_server(dns_resolver_resolve_duration_ns),
       METRIC_VAR_INIT_server(dns_resolver_resolve_by_dns_duration_ns)
 {
+#ifndef MOCK_TEST
+    static int only_one_instance = 0;
+    only_one_instance++;
+    CHECK_EQ_MSG(1, only_one_instance, "dns_resolver should only created once!");
+#endif
 }
 
 bool dns_resolver::get_cached_addresses(const host_port &hp, std::vector<rpc_address> &addresses)
