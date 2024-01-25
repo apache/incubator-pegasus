@@ -36,6 +36,7 @@
 
 #include "absl/strings/string_view.h"
 #include "runtime/rpc/group_address.h"
+#include "utils/error_code.h"
 #include "utils/fixed_size_buffer_pool.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -44,6 +45,28 @@
 #include "utils/strings.h"
 
 namespace dsn {
+/*static*/
+error_s rpc_address::GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo *info)
+{
+    addrinfo *res = nullptr;
+    const int rc = getaddrinfo(hostname.c_str(), nullptr, &hints, &res);
+    const int err = errno; // preserving the errno from the getaddrinfo() call
+    AddrInfo result(res, ::freeaddrinfo);
+    if (rc != 0) {
+        if (rc == EAI_SYSTEM) {
+            LOG_ERROR(
+                "getaddrinfo failed, name = {}, err = {}", hostname, utils::safe_strerror(rc));
+            return error_s::make(ERR_NETWORK_FAILURE, utils::safe_strerror(err));
+        }
+        LOG_ERROR("getaddrinfo failed, name = {}, err = {}", hostname, gai_strerror(rc));
+        return error_s::make(ERR_NETWORK_FAILURE, gai_strerror(rc));
+    }
+
+    if (info != nullptr) {
+        info->swap(result);
+    }
+    return error_s::ok();
+}
 
 const rpc_address rpc_address::s_invalid_address;
 
@@ -54,23 +77,14 @@ uint32_t rpc_address::ipv4_from_host(const char *name)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    addrinfo *res = nullptr;
-
-    const int rc = getaddrinfo(name, nullptr, &hints, &res);
-    const int err = errno; // preserving the errno from the getaddrinfo() call
-
-    if (rc != 0) {
-        if (rc == EAI_SYSTEM) {
-            LOG_ERROR("getaddrinfo failed, name = {}, err = {}", name, utils::safe_strerror(err));
-        }
-        LOG_ERROR("getaddrinfo failed, name = {}, err = {}", name, gai_strerror(err));
+    AddrInfo result;
+    if (dsn_unlikely(!GetAddrInfo(name, hints, &result).is_ok())) {
         return 0;
     }
-
-    CHECK(res->ai_family == AF_INET, "");
-    struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
+    CHECK_EQ(result.get()->ai_family, AF_INET);
+    auto *ipv4 = reinterpret_cast<struct sockaddr_in *>(result.get()->ai_addr);
     // converts from network byte order to host byte order
-    return (uint32_t)ntohl(ipv4->sin_addr.s_addr);
+    return ntohl(ipv4->sin_addr.s_addr);
 }
 
 /*static*/

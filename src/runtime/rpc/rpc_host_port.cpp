@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -31,37 +30,12 @@
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/ports.h"
-#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 #include "utils/utils.h"
 
 namespace dsn {
 
 const host_port host_port::s_invalid_host_port;
-
-namespace {
-
-using AddrInfo = std::unique_ptr<addrinfo, std::function<void(addrinfo *)>>;
-
-error_s GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo *info)
-{
-    addrinfo *res = nullptr;
-    const int rc = getaddrinfo(hostname.c_str(), nullptr, &hints, &res);
-    const int err = errno; // preserving the errno from the getaddrinfo() call
-    AddrInfo result(res, ::freeaddrinfo);
-    if (rc != 0) {
-        if (rc == EAI_SYSTEM) {
-            return error_s::make(ERR_NETWORK_FAILURE, utils::safe_strerror(err));
-        }
-        return error_s::make(ERR_NETWORK_FAILURE, gai_strerror(rc));
-    }
-
-    if (info != nullptr) {
-        info->swap(result);
-    }
-    return error_s::ok();
-}
-}
 
 host_port::host_port(std::string host, uint16_t port)
     : _host(std::move(host)), _port(port), _type(HOST_TYPE_IPV4)
@@ -100,11 +74,7 @@ bool host_port::from_string(const std::string &s)
         return false;
     }
 
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    if (dsn_unlikely(!GetAddrInfo(_host, hints, nullptr))) {
+    if (dsn_unlikely(rpc_address::ipv4_from_host(_host.c_str()) == 0)) {
         return false;
     }
 
@@ -194,7 +164,7 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     AddrInfo result;
-    RETURN_NOT_OK(GetAddrInfo(_host, hints, &result));
+    RETURN_NOT_OK(rpc_address::GetAddrInfo(_host, hints, &result));
 
     // DNS may return the same host multiple times. We want to return only the unique
     // addresses, but in the same order as DNS returned them. To do so, we keep track
