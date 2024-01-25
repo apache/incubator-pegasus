@@ -48,10 +48,6 @@ namespace dsn {
 namespace replication {
 
 DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled");
-DSN_DEFINE_int32(replication,
-                 max_concurrent_bulk_load_downloading_count,
-                 5,
-                 "concurrent bulk load downloading replica count");
 
 DSN_DEFINE_int32(replication,
                  mutation_2pc_min_replica_count,
@@ -143,8 +139,6 @@ void replication_options::initialize()
     }
 
     CHECK(!data_dirs.empty(), "no replica data dir found, maybe not set or excluded by black list");
-
-    max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
 
     CHECK(replica_helper::load_meta_servers(meta_servers), "invalid meta server config");
 }

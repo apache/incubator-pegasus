@@ -64,8 +64,6 @@ public:
     std::vector<std::string> data_dirs;
     std::vector<std::string> data_dir_tags;
 
-    int32_t max_concurrent_bulk_load_downloading_count;
-
 public:
     replication_options() = default;
     ~replication_options();

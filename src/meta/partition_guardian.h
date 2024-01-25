@@ -74,7 +74,6 @@ private:
     void finish_cure_proposal(meta_view &view,
                               const dsn::gpid &gpid,
                               const configuration_proposal_action &action);
-    std::string ctrl_assign_delay_ms(const std::vector<std::string> &args);
     std::string ctrl_assign_secondary_black_list(const std::vector<std::string> &args);
 
     void set_ddd_partition(ddd_partition_info &&partition)
@@ -103,7 +102,7 @@ private:
     // ]
 
     std::vector<std::unique_ptr<command_deregister>> _cmds;
-    uint64_t _replica_assign_delay_ms_for_dropouts;
+    int64_t _replica_assign_delay_ms_for_dropouts;
 
     friend class meta_partition_guardian_test;
 };

@@ -20,7 +20,6 @@
 #include <iterator>
 #include <map>
 #include <set>
-#include <string>
 
 #include "app_balance_policy.h"
 #include "common/gpid.h"
@@ -50,30 +49,18 @@ app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(
         _only_primary_balancer = false;
         _only_move_primary = false;
     }
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"meta.lb.balancer_in_turn"},
-        "meta.lb.balancer_in_turn <true|false>",
-        "control whether do app balancer in turn",
-        [this](const std::vector<std::string> &args) {
-            return remote_command_set_bool_flag(_balancer_in_turn, "lb.balancer_in_turn", args);
-        }));
+    _cmds.emplace_back(dsn::command_manager::instance().register_bool_command(
+        _balancer_in_turn, "meta.lb.balancer_in_turn", "control whether do app balancer in turn"));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"meta.lb.only_primary_balancer"},
-        "meta.lb.only_primary_balancer <true|false>",
-        "control whether do only primary balancer",
-        [this](const std::vector<std::string> &args) {
-            return remote_command_set_bool_flag(
-                _only_primary_balancer, "lb.only_primary_balancer", args);
-        }));
+    _cmds.emplace_back(dsn::command_manager::instance().register_bool_command(
+        _only_primary_balancer,
+        "meta.lb.only_primary_balancer",
+        "control whether do only primary balancer"));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"meta.lb.only_move_primary"},
-        "meta.lb.only_move_primary <true|false>",
-        "control whether only move primary in balancer",
-        [this](const std::vector<std::string> &args) {
-            return remote_command_set_bool_flag(_only_move_primary, "lb.only_move_primary", args);
-        }));
+    _cmds.emplace_back(dsn::command_manager::instance().register_bool_command(
+        _only_move_primary,
+        "meta.lb.only_move_primary",
+        "control whether only move primary in balancer"));
 }
 
 void app_balance_policy::balance(bool checker, const meta_view *global_view, migration_list *list)

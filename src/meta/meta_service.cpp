@@ -55,8 +55,8 @@
 #include "meta_service.h"
 #include "meta_split_service.h"
 #include "partition_split_types.h"
-#include "remote_cmd/remote_command.h"
 #include "ranger/ranger_resource_policy_manager.h"
+#include "remote_cmd/remote_command.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "server_load_balancer.h"
@@ -67,7 +67,6 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 METRIC_DEFINE_counter(server,
@@ -112,11 +111,13 @@ DSN_DEFINE_int32(replication,
                  lb_interval_ms,
                  10000,
                  "every this period(ms) the meta server will do load balance");
-DSN_DEFINE_uint64(meta_server,
-                  node_live_percentage_threshold_for_update,
-                  65,
-                  "If live_node_count * 100 < total_node_count * "
-                  "node_live_percentage_threshold_for_update, then freeze the cluster.");
+DSN_DEFINE_int32(meta_server,
+                 node_live_percentage_threshold_for_update,
+                 65,
+                 "If live_node_count * 100 < total_node_count * "
+                 "node_live_percentage_threshold_for_update, then freeze the cluster.");
+DSN_DEFINE_validator(node_live_percentage_threshold_for_update,
+                     [](int32_t value) -> bool { return value >= 0 && value <= 100; });
 DSN_DEFINE_string(meta_server,
                   meta_state_service_type,
                   "meta_state_service_simple",
@@ -303,29 +304,12 @@ void meta_service::unlock_meta_op_status()
 void meta_service::register_ctrl_commands()
 {
     _ctrl_node_live_percentage_threshold_for_update =
-        dsn::command_manager::instance().register_command(
-            {"meta.live_percentage"},
-            "meta.live_percentage [num | DEFAULT]",
+        dsn::command_manager::instance().register_int_command(
+            _node_live_percentage_threshold_for_update,
+            FLAGS_node_live_percentage_threshold_for_update,
+            "meta.live_percentage",
             "node live percentage threshold for update",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    result = std::to_string(_node_live_percentage_threshold_for_update);
-                } else {
-                    if (args[0] == "DEFAULT") {
-                        _node_live_percentage_threshold_for_update =
-                            FLAGS_node_live_percentage_threshold_for_update;
-                    } else {
-                        int32_t v = 0;
-                        if (!dsn::buf2int32(args[0], v) || v < 0) {
-                            result = std::string("ERR: invalid arguments");
-                        } else {
-                            _node_live_percentage_threshold_for_update = v;
-                        }
-                    }
-                }
-                return result;
-            });
+            [](int32_t new_value) -> bool { return new_value >= 0 && new_value <= 100; });
 }
 
 void meta_service::start_service()

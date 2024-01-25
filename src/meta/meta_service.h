@@ -338,7 +338,7 @@ private:
 
     replication_options _opts;
     meta_options _meta_opts;
-    uint64_t _node_live_percentage_threshold_for_update;
+    int32_t _node_live_percentage_threshold_for_update;
     std::unique_ptr<command_deregister> _ctrl_node_live_percentage_threshold_for_update;
 
     std::shared_ptr<server_state> _state;

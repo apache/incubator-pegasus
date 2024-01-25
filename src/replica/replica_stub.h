@@ -472,7 +472,6 @@ private:
     bool _verbose_commit_log;
     bool _release_tcmalloc_memory;
     int32_t _mem_release_max_reserved_mem_percentage;
-    int32_t _max_concurrent_bulk_load_downloading_count;
 
     // we limit LT_APP max concurrent count, because nfs service implementation is
     // too simple, it do not support priority.

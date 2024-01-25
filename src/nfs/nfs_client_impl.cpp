@@ -30,6 +30,7 @@
 #include <mutex>
 
 #include "absl/strings/string_view.h"
+#include "fmt/core.h"
 #include "nfs/nfs_code_definition.h"
 #include "nfs/nfs_node.h"
 #include "utils/blob.h"
@@ -37,7 +38,6 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/token_buckets.h"
 
 METRIC_DEFINE_counter(server,
@@ -69,14 +69,11 @@ DSN_DEFINE_uint32(nfs,
                   nfs_copy_block_bytes,
                   4 * 1024 * 1024,
                   "max block size (bytes) for each network copy");
-DSN_DEFINE_uint32(
-    nfs,
-    max_copy_rate_megabytes_per_disk,
-    0,
-    "max rate per disk of copying from remote node(MB/s), zero means disable rate limiter");
+static const char *max_copy_rate_megabytes_per_disk_desc =
+    "The maximum bandwidth (MB/s) of writing data per local disk when copying from remote node, 0 "
+    "means no limit";
+DSN_DEFINE_int64(nfs, max_copy_rate_megabytes_per_disk, 0, max_copy_rate_megabytes_per_disk_desc);
 DSN_TAG_VARIABLE(max_copy_rate_megabytes_per_disk, FT_MUTABLE);
-// max_copy_rate_bytes should be zero or greater than nfs_copy_block_bytes which is the max
-// batch copy size once
 DSN_DEFINE_group_validator(max_copy_rate_megabytes_per_disk, [](std::string &message) -> bool {
     return FLAGS_max_copy_rate_megabytes_per_disk == 0 ||
            (FLAGS_max_copy_rate_megabytes_per_disk << 20) > FLAGS_nfs_copy_block_bytes;
@@ -582,32 +579,16 @@ void nfs_client_impl::register_cli_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _nfs_max_copy_rate_megabytes_cmd = dsn::command_manager::instance().register_command(
-            {"nfs.max_copy_rate_megabytes_per_disk"},
-            "nfs.max_copy_rate_megabytes_per_disk [num]",
-            "control the max rate(MB/s) for one disk to copy file from remote node",
-            [](const std::vector<std::string> &args) {
-                std::string result("OK");
-
-                if (args.empty()) {
-                    return std::to_string(FLAGS_max_copy_rate_megabytes_per_disk);
-                }
-
-                int32_t max_copy_rate_megabytes = 0;
-                if (!dsn::buf2int32(args[0], max_copy_rate_megabytes) ||
-                    max_copy_rate_megabytes <= 0) {
-                    return std::string("ERR: invalid arguments");
-                }
-
-                uint32_t max_copy_rate_bytes = max_copy_rate_megabytes << 20;
-                if (max_copy_rate_bytes <= FLAGS_nfs_copy_block_bytes) {
-                    result = std::string("ERR: max_copy_rate_bytes(max_copy_rate_megabytes << 20) "
-                                         "should be greater than nfs_copy_block_bytes:")
-                                 .append(std::to_string(FLAGS_nfs_copy_block_bytes));
-                    return result;
-                }
-                FLAGS_max_copy_rate_megabytes_per_disk = max_copy_rate_megabytes;
-                return result;
+        _nfs_max_copy_rate_megabytes_cmd = dsn::command_manager::instance().register_int_command(
+            FLAGS_max_copy_rate_megabytes_per_disk,
+            FLAGS_max_copy_rate_megabytes_per_disk,
+            "nfs.max_copy_rate_megabytes_per_disk",
+            fmt::format("{}, "
+                        "should be less than 'nfs_copy_block_bytes' which is {}",
+                        max_copy_rate_megabytes_per_disk_desc,
+                        FLAGS_nfs_copy_block_bytes),
+            [](int64_t new_value) -> bool {
+                return new_value == 0 || (new_value << 20) > FLAGS_nfs_copy_block_bytes;
             });
     });
 }
