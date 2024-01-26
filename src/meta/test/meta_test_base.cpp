@@ -48,12 +48,12 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 DSN_DECLARE_string(partition_guardian_type);
 DSN_DECLARE_string(server_load_balancer_type);
+
+namespace dsn {
+namespace replication {
 
 meta_test_base::~meta_test_base() {}
 

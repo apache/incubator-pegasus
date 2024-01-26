@@ -56,10 +56,9 @@
 #include "utils/output_utils.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
-namespace dist {
 DSN_DECLARE_string(hosts_list);
-} // namespace dist
+
+namespace dsn {
 namespace replication {
 
 struct list_nodes_helper
@@ -477,7 +476,7 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
     }
     tp.add_row_name_and_data("meta_servers", meta_servers_str);
     tp.add_row_name_and_data("primary_meta_server", dsn_primary_address().to_std_string());
-    tp.add_row_name_and_data("zookeeper_hosts", dsn::dist::FLAGS_hosts_list);
+    tp.add_row_name_and_data("zookeeper_hosts", FLAGS_hosts_list);
     tp.add_row_name_and_data("zookeeper_root", _service->_cluster_root);
     tp.add_row_name_and_data(
         "meta_function_level",

@@ -23,8 +23,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace security {
 DSN_DEFINE_bool(security, enable_acl, false, "whether enable access controller or not");
 DSN_DEFINE_bool(security,
                 enable_ranger_acl,
@@ -34,6 +32,9 @@ DSN_DEFINE_string(security,
                   super_users,
                   "",
                   "super users for access controller, comma-separated list of user names");
+
+namespace dsn {
+namespace security {
 
 access_controller::access_controller()
 {

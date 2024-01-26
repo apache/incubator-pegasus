@@ -68,6 +68,8 @@
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
 
+DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
+
 namespace dsn {
 class command_deregister;
 class message_ex;
@@ -87,8 +89,6 @@ namespace replication {
 class configuration_query_by_node_response;
 class configuration_update_request;
 class potential_secondary_context;
-
-DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
 
 typedef rpc_holder<group_check_response, learn_notify_response> learn_completion_notification_rpc;
 typedef rpc_holder<group_check_request, group_check_response> group_check_rpc;

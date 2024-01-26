@@ -54,12 +54,13 @@
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 
-namespace dsn {
-namespace replication {
 DSN_DEFINE_bool(replication,
                 plog_force_flush,
                 false,
                 "when write private log, whether to flush file after write done");
+
+namespace dsn {
+namespace replication {
 
 mutation_log_private::mutation_log_private(const std::string &dir,
                                            int32_t max_log_file_mb,
@@ -256,7 +257,7 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
                                                     std::shared_ptr<log_appender> &pending,
                                                     decree max_commit)
 {
-    if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
+    if (dsn_unlikely(FLAGS_enable_latency_tracer)) {
         for (const auto &mu : pending->mutations()) {
             ADD_POINT(mu->_tracer);
         }
@@ -273,7 +274,7 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
                                   CHECK_EQ(hdr->magic, 0xdeadbeef);
                               }
 
-                              if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
+                              if (dsn_unlikely(FLAGS_enable_latency_tracer)) {
                                   for (const auto &mu : pending->mutations()) {
                                       ADD_CUSTOM_POINT(mu->_tracer, "commit_pending_completed");
                                   }

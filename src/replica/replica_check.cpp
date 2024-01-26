@@ -60,10 +60,7 @@
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
-namespace replication {
-
-// The replica membership state periodical checking part of replica.
+/// The replica membership state periodical checking part of replica.
 
 DSN_DEFINE_bool(replication, group_check_disabled, false, "whether group check is disabled");
 DSN_DEFINE_int32(replication,
@@ -72,6 +69,9 @@ DSN_DEFINE_int32(replication,
                  "every what period (ms) we check the replica healthness");
 
 DSN_DECLARE_bool(empty_write_disabled);
+
+namespace dsn {
+namespace replication {
 
 void replica::init_group_check()
 {

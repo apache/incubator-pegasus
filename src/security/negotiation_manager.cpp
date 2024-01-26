@@ -36,10 +36,11 @@
 #include "utils/ports.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(mandatory_auth);
+
+namespace dsn {
+namespace security {
 
 inline bool is_negotiation_message(dsn::task_code code)
 {

@@ -79,11 +79,11 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kPartitionSplittings,
                       "The number of successful splittings");
 
-namespace dsn {
-namespace replication {
-
 DSN_DECLARE_bool(empty_write_disabled);
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
+
+namespace dsn {
+namespace replication {
 
 replica_split_manager::replica_split_manager(replica *r)
     : replica_base(r),

@@ -42,10 +42,10 @@
 #include "zookeeper_error.h"
 #include "zookeeper_session.h"
 
+DSN_DECLARE_int32(timeout_ms);
+
 namespace dsn {
 namespace dist {
-
-DSN_DECLARE_int32(timeout_ms);
 
 std::string distributed_lock_service_zookeeper::LOCK_NODE_PREFIX = "LOCKNODE";
 

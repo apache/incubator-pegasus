@@ -31,9 +31,10 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 
+DSN_DECLARE_bool(enable_acl);
+
 namespace dsn {
 namespace security {
-DSN_DECLARE_bool(enable_acl);
 
 class replica_access_controller_test : public testing::Test
 {

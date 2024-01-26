@@ -59,11 +59,11 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kBytes,
                           "The max size of uploaded files among backups");
 
-namespace dsn {
-namespace replication {
-
 DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
 DSN_DECLARE_int32(gc_interval_ms);
+
+namespace dsn {
+namespace replication {
 
 // returns true if this checkpoint dir belongs to the policy
 static bool is_policy_checkpoint(const std::string &chkpt_dirname, const std::string &policy_name)

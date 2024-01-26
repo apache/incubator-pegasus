@@ -56,11 +56,6 @@ METRIC_DEFINE_counter(
     dsn::metric_unit::kRequests,
     "The number of nfs copy requests (received by server) that fail to read local file in server");
 
-namespace dsn {
-class disk_file;
-
-namespace service {
-
 static const char *kMaxSendRateMegaBytesPerDiskDesc =
     "The maximum bandwidth (MB/s) of reading data per local disk "
     "when transferring data to remote node, 0 means no limit";
@@ -69,6 +64,11 @@ DSN_TAG_VARIABLE(max_send_rate_megabytes_per_disk, FT_MUTABLE);
 
 DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
 DSN_DECLARE_int32(file_close_expire_time_ms);
+
+namespace dsn {
+class disk_file;
+
+namespace service {
 
 nfs_service_impl::nfs_service_impl()
     : ::dsn::serverlet<nfs_service_impl>("nfs"),

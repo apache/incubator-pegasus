@@ -43,9 +43,6 @@
 #include "utils/strings.h"
 #include "utils/utils.h"
 
-using namespace dsn::utils;
-
-namespace dsn {
 // init common for all per-node providers
 DSN_DEFINE_uint32(core,
                   local_hash,
@@ -53,6 +50,10 @@ DSN_DEFINE_uint32(core,
                   "a same hash value from two processes indicate the rpc codes are registered in "
                   "the same order, and therefore the mapping between rpc code string and integer "
                   "is the same, which we leverage for fast rpc handler lookup optimization");
+
+using namespace dsn::utils;
+
+namespace dsn {
 
 std::atomic<uint64_t> message_ex::_id(0);
 

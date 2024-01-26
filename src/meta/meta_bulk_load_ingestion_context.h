@@ -25,14 +25,14 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/flags.h"
 
+DSN_DECLARE_uint32(bulk_load_node_max_ingesting_count);
+DSN_DECLARE_uint32(bulk_load_node_min_disk_count);
+
 namespace dsn {
 class partition_configuration;
 
 namespace replication {
 class config_context;
-
-DSN_DECLARE_uint32(bulk_load_node_max_ingesting_count);
-DSN_DECLARE_uint32(bulk_load_node_min_disk_count);
 
 // Meta bulk load helper class, used to manage ingesting partitions
 class ingestion_context

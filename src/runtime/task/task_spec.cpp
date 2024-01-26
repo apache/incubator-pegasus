@@ -36,10 +36,9 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
-namespace tools {
 DSN_DECLARE_bool(enable_udp);
-}
+
+namespace dsn {
 
 constexpr int TASK_SPEC_STORE_CAPACITY = 512;
 
@@ -231,7 +230,7 @@ bool task_spec::init()
             }
         }
 
-        if (spec->rpc_call_channel == RPC_CHANNEL_UDP && !dsn::tools::FLAGS_enable_udp) {
+        if (spec->rpc_call_channel == RPC_CHANNEL_UDP && !FLAGS_enable_udp) {
             LOG_ERROR("task rpc_call_channel RPC_CHANNEL_UCP need udp service, make sure "
                       "[network].enable_udp");
             return false;

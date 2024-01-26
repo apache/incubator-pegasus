@@ -42,13 +42,6 @@
 #include "utils/rand.h"
 #include "utils/test_macros.h"
 
-using namespace dsn;
-using namespace dsn::replication;
-using namespace pegasus;
-using std::string;
-
-static const uint64_t kLimitDurationMs = 10 * 1000;
-
 DSN_DEFINE_int32(function_test.throttle_test,
                  throttle_test_medium_value_kb,
                  20,
@@ -58,6 +51,13 @@ DSN_DEFINE_int32(function_test.throttle_test,
                  throttle_test_large_value_kb,
                  50,
                  "The size of generated large value for test");
+
+using namespace dsn;
+using namespace dsn::replication;
+using namespace pegasus;
+using std::string;
+
+static const uint64_t kLimitDurationMs = 10 * 1000;
 
 enum class throttle_type
 {

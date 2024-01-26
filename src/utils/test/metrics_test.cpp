@@ -43,9 +43,9 @@
 #include "utils/strings.h"
 #include "utils/test/nth_element_utils.h"
 
-namespace dsn {
-
 DSN_DECLARE_uint64(entity_retirement_delay_ms);
+
+namespace dsn {
 
 class my_gauge : public metric
 {

@@ -43,10 +43,10 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/simple_logger.h"
 
+DSN_DECLARE_uint64(max_number_of_log_files_on_disk);
+
 namespace dsn {
 namespace tools {
-
-DSN_DECLARE_uint64(max_number_of_log_files_on_disk);
 
 namespace {
 

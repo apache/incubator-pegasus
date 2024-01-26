@@ -54,10 +54,36 @@
 #include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 #include "utils/rand.h"
+
+DSN_DEFINE_bool(replication,
+                batch_write_disabled,
+                false,
+                "whether to disable auto-batch of replicated write requests");
+DSN_DEFINE_int32(replication,
+                 staleness_for_commit,
+                 10,
+                 "how many concurrent two phase commit rounds are allowed");
+DSN_DEFINE_int32(replication,
+                 max_mutation_count_in_prepare_list,
+                 110,
+                 "maximum number of mutations in prepare list");
+DSN_DEFINE_group_validator(max_mutation_count_in_prepare_list, [](std::string &message) -> bool {
+    if (FLAGS_max_mutation_count_in_prepare_list < FLAGS_staleness_for_commit) {
+        message = fmt::format("replication.max_mutation_count_in_prepare_list({}) should be >= "
+                              "replication.staleness_for_commit({})",
+                              FLAGS_max_mutation_count_in_prepare_list,
+                              FLAGS_staleness_for_commit);
+        return false;
+    }
+    return true;
+});
+
+DSN_DECLARE_int32(checkpoint_max_interval_hours);
 
 METRIC_DEFINE_gauge_int64(replica,
                           private_log_size_mb,
@@ -238,31 +264,6 @@ METRIC_DEFINE_counter(replica,
 
 namespace dsn {
 namespace replication {
-
-DSN_DEFINE_bool(replication,
-                batch_write_disabled,
-                false,
-                "whether to disable auto-batch of replicated write requests");
-DSN_DEFINE_int32(replication,
-                 staleness_for_commit,
-                 10,
-                 "how many concurrent two phase commit rounds are allowed");
-DSN_DEFINE_int32(replication,
-                 max_mutation_count_in_prepare_list,
-                 110,
-                 "maximum number of mutations in prepare list");
-DSN_DEFINE_group_validator(max_mutation_count_in_prepare_list, [](std::string &message) -> bool {
-    if (FLAGS_max_mutation_count_in_prepare_list < FLAGS_staleness_for_commit) {
-        message = fmt::format("replication.max_mutation_count_in_prepare_list({}) should be >= "
-                              "replication.staleness_for_commit({})",
-                              FLAGS_max_mutation_count_in_prepare_list,
-                              FLAGS_staleness_for_commit);
-        return false;
-    }
-    return true;
-});
-
-DSN_DECLARE_int32(checkpoint_max_interval_hours);
 
 const std::string replica::kAppInfo = ".app-info";
 

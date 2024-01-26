@@ -81,15 +81,15 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
-namespace dsn {
-class rpc_engine;
-
-namespace tools {
-
 DSN_DEFINE_uint32(network,
                   io_service_worker_count,
                   1,
                   "thread number for io service (timer and boost network)");
+
+namespace dsn {
+class rpc_engine;
+
+namespace tools {
 
 const int threads_per_event_loop = 1;
 

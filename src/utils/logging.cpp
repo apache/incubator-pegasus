@@ -39,13 +39,14 @@
 #include "utils/logging_provider.h"
 #include "utils/sys_exit_hook.h"
 
-log_level_t log_start_level = LOG_LEVEL_INFO;
 DSN_DEFINE_string(core,
                   logging_start_level,
                   "LOG_LEVEL_INFO",
                   "logs with level below this will not be logged");
 
 DSN_DEFINE_bool(core, logging_flush_on_exit, true, "flush log when exit system");
+
+log_level_t log_start_level = LOG_LEVEL_INFO;
 
 namespace dsn {
 

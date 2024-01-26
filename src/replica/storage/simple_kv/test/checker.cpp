@@ -58,12 +58,12 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
+DSN_DECLARE_string(partition_guardian_type);
+
 namespace dsn {
 class gpid;
 
 namespace replication {
-DSN_DECLARE_string(partition_guardian_type);
-
 namespace test {
 
 class checker_partition_guardian : public partition_guardian

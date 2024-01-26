@@ -42,6 +42,9 @@
 #include "utils/flags.h"
 #include "utils/zlocks.h"
 
+DSN_DECLARE_uint32(bulk_load_max_rollback_times);
+DSN_DECLARE_bool(enable_concurrent_bulk_load);
+
 namespace dsn {
 class partition_configuration;
 
@@ -49,9 +52,6 @@ namespace replication {
 class app_state;
 class config_context;
 class meta_service;
-
-DSN_DECLARE_uint32(bulk_load_max_rollback_times);
-DSN_DECLARE_bool(enable_concurrent_bulk_load);
 
 ///
 /// bulk load path on remote storage:

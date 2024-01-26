@@ -34,9 +34,10 @@
 #include "utils/blob.h"
 #include "utils/flags.h"
 
+DSN_DECLARE_string(legacy_table_database_mapping_policy_name);
+
 namespace dsn {
 namespace ranger {
-DSN_DECLARE_string(legacy_table_database_mapping_policy_name);
 
 TEST(ranger_resource_policy_manager_test, parse_policies_from_json_for_test)
 {

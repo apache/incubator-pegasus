@@ -35,10 +35,10 @@
 #include "replica/replica_stub.h"
 #include "replica/backup/cold_backup_context.h"
 
+DSN_DECLARE_int32(log_private_file_size_mb);
+
 namespace dsn {
 namespace replication {
-
-DSN_DECLARE_int32(log_private_file_size_mb);
 
 class mock_replication_app_base : public replication_app_base
 {

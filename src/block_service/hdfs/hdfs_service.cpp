@@ -39,18 +39,6 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
 
-DSN_DECLARE_bool(enable_direct_io);
-
-struct hdfsBuilder;
-
-namespace dsn {
-class task_tracker;
-
-namespace dist {
-namespace block_service {
-
-DEFINE_TASK_CODE(LPC_HDFS_SERVICE_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_BLOCK_SERVICE)
-
 DSN_DEFINE_uint64(replication,
                   hdfs_read_batch_size_bytes,
                   64 << 20,
@@ -68,6 +56,18 @@ DSN_DEFINE_uint64(replication,
                   64 << 20,
                   "hdfs write batch size, the default value is 64MB");
 DSN_TAG_VARIABLE(hdfs_write_batch_size_bytes, FT_MUTABLE);
+
+DSN_DECLARE_bool(enable_direct_io);
+
+struct hdfsBuilder;
+
+namespace dsn {
+class task_tracker;
+
+namespace dist {
+namespace block_service {
+
+DEFINE_TASK_CODE(LPC_HDFS_SERVICE_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_BLOCK_SERVICE)
 
 hdfs_service::hdfs_service()
 {

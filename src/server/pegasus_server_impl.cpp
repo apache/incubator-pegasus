@@ -86,23 +86,6 @@
 #include "utils/token_bucket_throttling_controller.h"
 #include "utils/utils.h"
 
-namespace rocksdb {
-class WriteBufferManager;
-} // namespace rocksdb
-
-using namespace dsn::literals::chrono_literals;
-
-namespace pegasus {
-namespace server {
-
-DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
-DSN_DECLARE_int32(read_amp_bytes_per_bit);
-DSN_DECLARE_uint32(checkpoint_reserve_min_count);
-DSN_DECLARE_uint32(checkpoint_reserve_time_seconds);
-DSN_DECLARE_uint64(rocksdb_iteration_threshold_time_ms);
-DSN_DECLARE_uint64(rocksdb_slow_query_threshold_ns);
-
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_verbose_log,
                 false,
@@ -120,6 +103,23 @@ DSN_DEFINE_int32(pegasus.server,
                  0,
                  "Which error code to inject in read path, 0 means no error. Only for test.");
 DSN_TAG_VARIABLE(inject_read_error_for_test, FT_MUTABLE);
+
+DSN_DECLARE_int32(read_amp_bytes_per_bit);
+DSN_DECLARE_uint32(checkpoint_reserve_min_count);
+DSN_DECLARE_uint32(checkpoint_reserve_time_seconds);
+DSN_DECLARE_uint64(rocksdb_iteration_threshold_time_ms);
+DSN_DECLARE_uint64(rocksdb_slow_query_threshold_ns);
+
+namespace rocksdb {
+class WriteBufferManager;
+} // namespace rocksdb
+
+using namespace dsn::literals::chrono_literals;
+
+namespace pegasus {
+namespace server {
+
+DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 static std::string chkpt_get_dir_name(int64_t decree)
 {

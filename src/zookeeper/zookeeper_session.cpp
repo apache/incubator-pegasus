@@ -37,8 +37,6 @@
 #include "zookeeper/zookeeper.jute.h"
 #include "zookeeper_session.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
 DSN_DEFINE_string(security,
                   zookeeper_kerberos_service_name,
@@ -48,11 +46,6 @@ DSN_DEFINE_string(security,
                   zookeeper_sasl_service_fqdn,
                   "",
                   "The FQDN of a Zookeeper server, used in Kerberos Principal");
-} // namespace security
-} // namespace dsn
-
-namespace dsn {
-namespace dist {
 // TODO(yingchun): to keep compatibility, the global name is FLAGS_timeout_ms. The name is not very
 //  suitable, maybe improve the macro to us another global name.
 DSN_DEFINE_int32(zookeeper,
@@ -60,6 +53,9 @@ DSN_DEFINE_int32(zookeeper,
                  30000,
                  "The timeout of accessing ZooKeeper, in milliseconds");
 DSN_DEFINE_string(zookeeper, hosts_list, "", "Zookeeper hosts list");
+
+namespace dsn {
+namespace dist {
 
 zookeeper_session::zoo_atomic_packet::zoo_atomic_packet(unsigned int size)
 {
@@ -162,15 +158,15 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
 {
     utils::auto_write_lock l(_watcher_lock);
     if (nullptr == _handle) {
-        if (dsn::security::FLAGS_enable_zookeeper_kerberos) {
+        if (FLAGS_enable_zookeeper_kerberos) {
             zoo_sasl_params_t sasl_params = {0};
-            sasl_params.service = dsn::security::FLAGS_zookeeper_kerberos_service_name;
+            sasl_params.service = FLAGS_zookeeper_kerberos_service_name;
             sasl_params.mechlist = "GSSAPI";
             rpc_address addr;
-            CHECK(addr.from_string_ipv4(dsn::security::FLAGS_zookeeper_sasl_service_fqdn),
+            CHECK(addr.from_string_ipv4(FLAGS_zookeeper_sasl_service_fqdn),
                   "zookeeper_sasl_service_fqdn {} is invalid",
-                  dsn::security::FLAGS_zookeeper_sasl_service_fqdn);
-            sasl_params.host = dsn::security::FLAGS_zookeeper_sasl_service_fqdn;
+                  FLAGS_zookeeper_sasl_service_fqdn);
+            sasl_params.host = FLAGS_zookeeper_sasl_service_fqdn;
             _handle = zookeeper_init_sasl(FLAGS_hosts_list,
                                           global_watcher,
                                           FLAGS_timeout_ms,

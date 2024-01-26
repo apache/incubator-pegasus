@@ -52,8 +52,9 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
 DSN_DECLARE_uint32(conn_threshold_per_ip);
+
+namespace dsn {
 
 class asio_network_provider_test : public tools::asio_network_provider
 {

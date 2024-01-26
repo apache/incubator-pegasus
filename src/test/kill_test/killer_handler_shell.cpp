@@ -30,12 +30,12 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace test {
-
 DSN_DEFINE_string(killer.handler.shell, onebox_run_path, "~/pegasus/run.sh", "onebox run path");
 DSN_DEFINE_validator(onebox_run_path,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
+namespace pegasus {
+namespace test {
 
 bool killer_handler_shell::has_meta_dumped_core(int index)
 {

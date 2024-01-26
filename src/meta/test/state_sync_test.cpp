@@ -54,12 +54,12 @@
 #include "utils/strings.h"
 #include "utils/utils.h"
 
+DSN_DECLARE_string(cluster_root);
+DSN_DECLARE_string(meta_state_service_type);
+
 namespace dsn {
 namespace replication {
 class meta_options;
-
-DSN_DECLARE_string(cluster_root);
-DSN_DECLARE_string(meta_state_service_type);
 
 static void random_assign_partition_config(std::shared_ptr<app_state> &app,
                                            const std::vector<dsn::rpc_address> &server_list,

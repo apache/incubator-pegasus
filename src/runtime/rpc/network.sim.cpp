@@ -42,16 +42,16 @@
 #include "utils/singleton_store.h"
 #include "utils/utils.h"
 
-namespace dsn {
-class rpc_engine;
-
-namespace tools {
-
 DSN_DEFINE_uint32(tools.simulator, min_message_delay_microseconds, 1, "min message delay (us)");
 DSN_DEFINE_uint32(tools.simulator,
                   max_message_delay_microseconds,
                   100000,
                   "max message delay (us)");
+
+namespace dsn {
+class rpc_engine;
+
+namespace tools {
 
 // switch[channel][header_format]
 // multiple machines connect to the same switch
