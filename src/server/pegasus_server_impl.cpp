@@ -89,7 +89,7 @@
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_verbose_log,
                 false,
-                "whether to print verbose log for debugging");
+                "Whether to print RocksDB related verbose log for debugging");
 DSN_DEFINE_int32(pegasus.server,
                  hotkey_analyse_time_interval_s,
                  10,

@@ -35,7 +35,7 @@
 #include "utils/singleton_store.h"
 #include "zookeeper_session.h"
 
-DSN_DEFINE_string(zookeeper, logfile, "", "The Zookeeper logfile");
+DSN_DEFINE_string(zookeeper, logfile, "zoo.log", "The Zookeeper logfile");
 
 namespace dsn {
 namespace dist {

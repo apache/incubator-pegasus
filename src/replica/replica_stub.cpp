@@ -241,7 +241,7 @@ DSN_DECLARE_string(server_key);
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
                 false,
-                "whether to deny client read and write requests when starting the server");
+                "Whether to deny client read and write requests when starting the server");
 DSN_DEFINE_bool(replication,
                 verbose_client_log_on_start,
                 false,
@@ -251,10 +251,11 @@ DSN_DEFINE_bool(replication,
                 mem_release_enabled,
                 true,
                 "whether to enable periodic memory release");
-DSN_DEFINE_bool(replication,
-                gc_disabled,
-                false,
-                "whether to disable replica stat. The name contains 'gc' is for legacy reason.");
+DSN_DEFINE_bool(
+    replication,
+    gc_disabled,
+    false,
+    "Whether to disable replica statistics. The name contains 'gc' is for legacy reason");
 DSN_DEFINE_bool(replication, disk_stat_disabled, false, "whether to disable disk stat");
 DSN_DEFINE_bool(replication,
                 delay_for_fd_timeout_on_start,
@@ -264,8 +265,9 @@ DSN_DEFINE_bool(replication,
 DSN_DEFINE_bool(replication,
                 config_sync_disabled,
                 false,
-                "whether to disable replica configuration periodical sync with the meta server");
-DSN_DEFINE_bool(replication, fd_disabled, false, "whether to disable failure detection");
+                "The interval milliseconds of replica server to send replica config-sync "
+                "requests to meta server");
+DSN_DEFINE_bool(replication, fd_disabled, false, "Whether to disable failure detection");
 DSN_DEFINE_bool(replication,
                 verbose_commit_log_on_start,
                 false,
@@ -291,8 +293,12 @@ DSN_DEFINE_int32(replication,
 DSN_DEFINE_int32(replication,
                  gc_memory_replica_interval_ms,
                  10 * 60 * 1000,
-                 "after closing a healthy replica (due to LB), the replica will remain in memory "
-                 "for this long (ms) for quick recover");
+                 "The milliseconds of a replica remain in memory for quick recover aim after it's "
+                 "closed in healthy state (due to LB)");
+DSN_DEFINE_int32(replication,
+                 log_shared_file_size_mb,
+                 32,
+                 "shared log maximum segment file size (MB)");
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,

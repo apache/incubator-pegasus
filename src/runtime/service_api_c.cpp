@@ -78,10 +78,11 @@
 #include "utils/sys_exit_hook.h"
 #include "utils/threadpool_spec.h"
 
-DSN_DEFINE_bool(core,
-                pause_on_start,
-                false,
-                "whether to pause at startup time for easier debugging");
+DSN_DEFINE_bool(
+    core,
+    pause_on_start,
+    false,
+    "Whether to pause during startup to wait for interactive input, often for debugging perpose");
 #ifdef DSN_ENABLE_GPERF
 DSN_DEFINE_double(core,
                   tcmalloc_release_rate,

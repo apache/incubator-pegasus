@@ -73,7 +73,8 @@ DSN_DECLARE_string(hosts_list);
 DSN_DEFINE_bool(meta_server,
                 recover_from_replica_server,
                 false,
-                "whether to recover from replica server when no apps in remote storage");
+                "Whether to recover tables from replica servers when there is no "
+                "data of the tables in remote storage");
 DSN_DEFINE_bool(meta_server, cold_backup_disabled, true, "whether to disable cold backup");
 DSN_DEFINE_bool(meta_server,
                 enable_white_list,
@@ -82,7 +83,8 @@ DSN_DEFINE_bool(meta_server,
 DSN_DEFINE_uint64(meta_server,
                   min_live_node_count_for_unfreeze,
                   3,
-                  "minimum live node count without which the state is freezed");
+                  "If the number of ALIVE nodes is less than this threshold, MetaServer will "
+                  "also enter the 'freezed' protection state");
 DSN_TAG_VARIABLE(min_live_node_count_for_unfreeze, FT_MUTABLE);
 DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
                      [](uint64_t min_live_node_count) -> bool { return min_live_node_count > 0; });
@@ -90,26 +92,33 @@ DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
 DSN_DEFINE_int32(replication,
                  lb_interval_ms,
                  10000,
-                 "every this period(ms) the meta server will do load balance");
+                 "The interval milliseconds of meta server to execute load balance");
 DSN_DEFINE_int32(meta_server,
                  node_live_percentage_threshold_for_update,
                  65,
-                 "If live_node_count * 100 < total_node_count * "
-                 "node_live_percentage_threshold_for_update, then freeze the cluster.");
+                 "If the proportion of ALIVE nodes is less than this threshold, MetaServer will "
+                 "enter the 'freezed' protection state");
 DSN_DEFINE_validator(node_live_percentage_threshold_for_update,
                      [](int32_t value) -> bool { return value >= 0 && value <= 100; });
 DSN_DEFINE_string(meta_server,
                   meta_state_service_type,
+#ifdef MOCK_TEST
                   "meta_state_service_simple",
-                  "meta_state_service provider type");
+#else
+                  "meta_state_service_zookeeper",
+#endif
+                  "The implementation class of metadata storage service");
 DSN_DEFINE_string(meta_server,
                   cluster_root,
                   "/",
-                  "The root of the cluster meta state service to be stored on remote storage");
+                  "The root of the cluster meta state service to be stored on remote storage. "
+                  "Different meta servers in the same cluster need to be configured with the "
+                  "same value, while different clusters using different values if they share "
+                  "the same remote storage");
 DSN_DEFINE_string(meta_server,
                   server_load_balancer_type,
                   "greedy_load_balancer",
-                  "server load balancer provider");
+                  "The implementation class of load balancer");
 DSN_DEFINE_string(meta_server,
                   partition_guardian_type,
                   "partition_guardian",

@@ -52,16 +52,21 @@
 #include "utils/fmt_logging.h"
 #include "utils/uniq_timestamp_us.h"
 
-DSN_DEFINE_bool(replication, checkpoint_disabled, false, "whether checkpoint is disabled");
+DSN_DEFINE_bool(replication,
+                checkpoint_disabled,
+                false,
+                "Whether to disable to generate replica checkpoints periodically");
+
 DSN_DEFINE_int32(replication,
                  checkpoint_interval_seconds,
                  100,
-                 "every what period (seconds) we do checkpoints for replicated apps");
+                 "The interval in seconds to generate replica checkpoints. Note that "
+                 "the checkpoint may not be generated when attempt");
 
 DSN_DEFINE_int32(replication,
                  log_private_file_size_mb,
                  32,
-                 "private log maximum segment file size (MB)");
+                 "The maximum size (MB) of private log segment file");
 
 namespace dsn {
 namespace replication {

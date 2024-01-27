@@ -38,15 +38,16 @@
 DSN_DEFINE_string(meta_server,
                   meta_state_service_parameters,
                   "",
-                  "meta_state_service provider parameters");
+                  "Initialization parameters for metadata storage services");
 DSN_DEFINE_string(meta_server,
                   meta_function_level_on_start,
                   "steady",
-                  "meta function level on start");
+                  "The default function_level state when MetaServer starts. "
+                  "The 'steady' represents a stable state without load balancing");
 DSN_DEFINE_string(meta_server,
                   distributed_lock_service_parameters,
                   "",
-                  "distributed_lock_service provider parameters");
+                  "Initialization parameters for distributed lock services");
 DSN_DEFINE_string(meta_server,
                   replica_white_list,
                   "",
