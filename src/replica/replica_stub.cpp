@@ -295,10 +295,6 @@ DSN_DEFINE_int32(replication,
                  10 * 60 * 1000,
                  "The milliseconds of a replica remain in memory for quick recover aim after it's "
                  "closed in healthy state (due to LB)");
-DSN_DEFINE_int32(replication,
-                 log_shared_file_size_mb,
-                 32,
-                 "shared log maximum segment file size (MB)");
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,
