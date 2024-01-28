@@ -689,6 +689,7 @@ void replica_stub::initialize_start()
             [this]() { this->on_meta_server_disconnected(); },
             [this]() { this->on_meta_server_connected(); });
 
+        CHECK_GT_MSG(FLAGS_fd_grace_seconds, FLAGS_fd_lease_seconds, "");
         CHECK_EQ_MSG(_failure_detector->start(FLAGS_fd_check_interval_seconds,
                                               FLAGS_fd_beacon_interval_seconds,
                                               FLAGS_fd_lease_seconds,

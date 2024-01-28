@@ -396,6 +396,7 @@ error_code meta_service::start()
         _failure_detector->set_allow_list(_meta_opts.replica_white_list);
     _failure_detector->register_ctrl_commands();
 
+    CHECK_GT_MSG(FLAGS_fd_grace_seconds, FLAGS_fd_lease_seconds, "");
     err = _failure_detector->start(FLAGS_fd_check_interval_seconds,
                                    FLAGS_fd_beacon_interval_seconds,
                                    FLAGS_fd_lease_seconds,

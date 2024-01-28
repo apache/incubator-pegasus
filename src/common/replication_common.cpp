@@ -72,17 +72,6 @@ DSN_DEFINE_int32(replication,
                  fd_grace_seconds,
                  10,
                  "The grace in seconds assigned to remote FD slaves");
-DSN_DEFINE_group_validator(fd_lease_and_grace_seconds, [](std::string &message) -> bool {
-    if (FLAGS_fd_grace_seconds <= FLAGS_fd_lease_seconds) {
-        message = fmt::format(
-            "replication.fd_grace_seconds({}) should be > replication.fd_lease_seconds({})",
-            FLAGS_fd_grace_seconds,
-            FLAGS_fd_lease_seconds);
-        return false;
-    }
-    return true;
-});
-
 DSN_DEFINE_int32(replication,
                  cold_backup_checkpoint_reserve_minutes,
                  10,
