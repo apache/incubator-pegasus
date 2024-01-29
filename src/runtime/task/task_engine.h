@@ -26,12 +26,12 @@
 
 #pragma once
 
-#include <iosfwd>
 #include <list>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "nlohmann/json_fwd.hpp"
 #include "runtime/task/task_code.h"
 #include "utils/command_manager.h"
 #include "utils/threadpool_spec.h"
@@ -72,10 +72,8 @@ public:
     bool shared_same_worker_with_current_task(task *task) const;
     task_engine *engine() const { return _owner; }
     service_node *node() const { return _node; }
-    void get_runtime_info(const std::string &indent,
-                          const std::vector<std::string> &args,
-                          /*out*/ std::stringstream &ss);
-    void get_queue_info(/*out*/ std::stringstream &ss);
+    nlohmann::json get_runtime_info(const std::vector<std::string> &args) const;
+    nlohmann::json get_queue_info() const;
     std::vector<task_queue *> &queues() { return _queues; }
     std::vector<task_worker *> &workers() { return _workers; }
 
@@ -118,10 +116,8 @@ public:
     volatile int *get_task_queue_virtual_length_ptr(dsn::task_code code, int hash);
 
     service_node *node() const { return _node; }
-    void get_runtime_info(const std::string &indent,
-                          const std::vector<std::string> &args,
-                          /*out*/ std::stringstream &ss);
-    void get_queue_info(/*out*/ std::stringstream &ss);
+    nlohmann::json get_runtime_info(const std::vector<std::string> &args) const;
+    nlohmann::json get_queue_info() const;
 
 private:
     void register_cli_commands();

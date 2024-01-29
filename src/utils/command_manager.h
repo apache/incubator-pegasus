@@ -52,12 +52,6 @@ class command_manager : public ::dsn::utils::singleton<command_manager>
 public:
     using command_handler = std::function<std::string(const std::vector<std::string> &)>;
 
-    std::unique_ptr<command_deregister>
-    register_command(const std::vector<std::string> &commands,
-                     const std::string &help_one_line,
-                     const std::string &help_long,
-                     command_handler handler) WARN_UNUSED_RESULT;
-
     // Register command which query or update a boolean configuration.
     // The 'value' will be queried or updated by the command named 'command' with the 'help'
     // description.
@@ -78,14 +72,30 @@ public:
                          std::function<bool(int64_t new_value)> validator =
                              [](int64_t new_value) -> bool { return new_value >= 0; })
     {
-        return register_command(
-            {command},
-            fmt::format("{} [num | DEFAULT]", command),
+        return register_single_command(
+            command,
             help,
+            fmt::format("[num | DEFAULT]"),
             [&value, default_value, command, validator](const std::vector<std::string> &args) {
                 return set_int(value, default_value, command, args, validator);
             });
     }
+
+    // Register a single 'command' with the 'help' description, its arguments are describe in
+    // 'args'.
+    std::unique_ptr<command_deregister>
+    register_single_command(const std::string &command,
+                            const std::string &help,
+                            const std::string &args,
+                            command_handler handler) WARN_UNUSED_RESULT;
+
+    // Register multiple 'commands' with the 'help' description, their arguments are describe in
+    // 'args'.
+    std::unique_ptr<command_deregister>
+    register_multiple_commands(const std::vector<std::string> &commands,
+                               const std::string &help,
+                               const std::string &args,
+                               command_handler handler) WARN_UNUSED_RESULT;
 
     bool run_command(const std::string &cmd,
                      const std::vector<std::string> &args,
@@ -101,10 +111,16 @@ private:
     struct command_instance : public ref_counter
     {
         std::vector<std::string> commands;
-        std::string help_short;
-        std::string help_long;
+        std::string help;
+        std::string args;
         command_handler handler;
     };
+
+    std::unique_ptr<command_deregister>
+    register_command(const std::vector<std::string> &commands,
+                     const std::string &help,
+                     const std::string &args,
+                     command_handler handler) WARN_UNUSED_RESULT;
 
     void deregister_command(uintptr_t handle);
 

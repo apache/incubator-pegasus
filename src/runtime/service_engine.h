@@ -28,10 +28,10 @@
 
 #include <map>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
+#include "nlohmann/json_fwd.hpp"
 #include "runtime/api_task.h"
 #include "runtime/global_config.h"
 #include "runtime/service_app.h"
@@ -60,10 +60,8 @@ public:
     rpc_engine *rpc() const { return _rpc.get(); }
     task_engine *computation() const { return _computation.get(); }
 
-    void get_runtime_info(const std::string &indent,
-                          const std::vector<std::string> &args,
-                          /*out*/ std::stringstream &ss);
-    void get_queue_info(/*out*/ std::stringstream &ss);
+    std::string get_runtime_info(const std::vector<std::string> &args) const;
+    nlohmann::json get_queue_info() const;
 
     dsn::error_code start();
     dsn::error_code start_app();
