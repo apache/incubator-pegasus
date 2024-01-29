@@ -462,10 +462,12 @@ DSN_DEFINE_uint32(pegasus.server,
                   checkpoint_reserve_min_count,
                   2,
                   "Minimum count of checkpoint to reserve.");
+DSN_TAG_VARIABLE(checkpoint_reserve_min_count, FT_MUTABLE);
 DSN_DEFINE_uint32(pegasus.server,
                   checkpoint_reserve_time_seconds,
                   1800,
                   "Minimum seconds of checkpoint to reserve, 0 means no check.");
+DSN_TAG_VARIABLE(checkpoint_reserve_time_seconds, FT_MUTABLE);
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_open_files,
                  -1,

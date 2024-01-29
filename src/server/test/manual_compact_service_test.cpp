@@ -108,7 +108,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, manual_compact_service_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, manual_compact_service_test, ::testing::Values(false, true));
 
 TEST_P(manual_compact_service_test, check_compact_disabled)
 {

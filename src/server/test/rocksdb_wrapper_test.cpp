@@ -101,7 +101,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, rocksdb_wrapper_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, rocksdb_wrapper_test, ::testing::Values(false, true));
 
 TEST_P(rocksdb_wrapper_test, get)
 {

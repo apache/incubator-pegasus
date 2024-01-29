@@ -52,9 +52,9 @@ protected:
     FileDataType type_;
 };
 
-INSTANTIATE_TEST_CASE_P(,
-                        load_dump_object,
-                        ::testing::Values(FileDataType::kNonSensitive, FileDataType::kSensitive));
+INSTANTIATE_TEST_SUITE_P(,
+                         load_dump_object,
+                         ::testing::Values(FileDataType::kNonSensitive, FileDataType::kSensitive));
 
 TEST_P(load_dump_object, nlohmann_json_struct_normal_test)
 {

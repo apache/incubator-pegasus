@@ -373,7 +373,7 @@ protected:
     std::unique_ptr<duplication_sync_timer> dup_sync;
 };
 
-INSTANTIATE_TEST_CASE_P(, duplication_sync_timer_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, duplication_sync_timer_test, ::testing::Values(false, true));
 
 TEST_P(duplication_sync_timer_test, duplication_sync) { test_duplication_sync(); }
 

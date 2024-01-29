@@ -36,14 +36,15 @@ set(MY_PROJ_LIBS
         rocksdb
         lz4
         zstd
-        snappy)
+        snappy
+        absl::strings)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
 if (APPLE)
     dsn_add_static_library()
-    target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_http dsn_replication_common)
+    target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_http dsn_replication_common absl::strings)
 else()
     dsn_add_shared_library()
     target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_replication_common)

@@ -86,7 +86,7 @@ public:
     dsn::apps::incr_response resp;
 };
 
-INSTANTIATE_TEST_CASE_P(, incr_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, incr_test, ::testing::Values(false, true));
 
 TEST_P(incr_test, incr_on_absent_record)
 {

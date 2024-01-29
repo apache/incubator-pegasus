@@ -98,7 +98,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, pegasus_compression_options_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, pegasus_compression_options_test, ::testing::Values(false, true));
 
 TEST_P(pegasus_compression_options_test, compression_type_convert_ok)
 {

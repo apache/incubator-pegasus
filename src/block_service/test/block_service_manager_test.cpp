@@ -70,7 +70,7 @@ public:
     std::string FILE_NAME = "test_file";
 };
 
-INSTANTIATE_TEST_CASE_P(, block_service_manager_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, block_service_manager_test, ::testing::Values(false, true));
 
 TEST_P(block_service_manager_test, remote_file_not_exist)
 {

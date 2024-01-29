@@ -79,12 +79,6 @@ DSN_DEFINE_int32(replication,
                  10,
                  "grace (seconds) assigned to remote FD slaves (grace > lease)");
 
-// TODO(yingchun): useless any more, remove it from all config files later.
-// DSN_DEFINE_int32(replication,
-//                     log_shared_batch_buffer_kb,
-//                     0,
-//                     "shared log buffer size (KB) for batching incoming logs");
-
 DSN_DEFINE_int32(replication,
                  cold_backup_checkpoint_reserve_minutes,
                  10,

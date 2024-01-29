@@ -57,6 +57,16 @@ error_s update_config(const http_request &req)
     return update_flag(iter->first, iter->second);
 }
 
+// If sub_path is 'app/duplication', the built path would be '<root_path>/app/duplication'.
+std::string build_rel_path(const std::string &root_path, const std::string &sub_path)
+{
+    std::string rel_path(root_path);
+    if (!rel_path.empty()) {
+        rel_path += '/';
+    }
+    return rel_path += sub_path;
+}
+
 } // anonymous namespace
 
 /*extern*/ http_call &register_http_call(std::string full_path)
@@ -73,18 +83,20 @@ error_s update_config(const http_request &req)
     http_call_registry::instance().remove(full_path);
 }
 
-void http_service::register_handler(std::string sub_path, http_callback cb, std::string help)
+std::string http_service::get_rel_path(const std::string &sub_path) const
 {
-    CHECK(!sub_path.empty(), "");
+    return build_rel_path(path(), sub_path);
+}
+
+void http_service::register_handler(std::string sub_path, http_callback cb, std::string help) const
+{
+    CHECK_FALSE(sub_path.empty());
     if (!FLAGS_enable_http_server) {
         return;
     }
+
     auto call = std::make_unique<http_call>();
-    call->path = this->path();
-    if (!call->path.empty()) {
-        call->path += '/';
-    }
-    call->path += sub_path;
+    call->path = get_rel_path(sub_path);
     call->callback = std::move(cb);
     call->help = std::move(help);
     http_call_registry::instance().add(std::move(call));

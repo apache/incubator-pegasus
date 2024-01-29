@@ -49,7 +49,7 @@ class fs_manager_test : public pegasus::encrypt_data_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, fs_manager_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, fs_manager_test, ::testing::Values(false, true));
 
 TEST_P(fs_manager_test, initialize)
 {

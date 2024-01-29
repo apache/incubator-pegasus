@@ -79,9 +79,9 @@ const std::vector<command_type_enum_from_string_case> command_type_enum_from_str
     {"UNDEFINE_TYPE", command_type::INVALID_TYPE},
 };
 
-INSTANTIATE_TEST_CASE_P(EnumHelperTest,
-                        CommandTypeEnumFromStringTest,
-                        testing::ValuesIn(command_type_enum_from_string_tests));
+INSTANTIATE_TEST_SUITE_P(EnumHelperTest,
+                         CommandTypeEnumFromStringTest,
+                         testing::ValuesIn(command_type_enum_from_string_tests));
 
 using command_type_enum_to_string_case = std::tuple<command_type, std::string>;
 
@@ -107,9 +107,9 @@ const std::vector<command_type_enum_to_string_case> command_type_enum_to_string_
     {command_type::INVALID_TYPE, "Unknown"},
 };
 
-INSTANTIATE_TEST_CASE_P(EnumHelperTest,
-                        CommandTypeEnumToStringTest,
-                        testing::ValuesIn(command_type_enum_to_string_tests));
+INSTANTIATE_TEST_SUITE_P(EnumHelperTest,
+                         CommandTypeEnumToStringTest,
+                         testing::ValuesIn(command_type_enum_to_string_tests));
 
 #define ENUM_FOREACH_STATUS_CODE(DEF)                                                              \
     DEF(Ok, 100, status_code)                                                                      \
@@ -178,9 +178,9 @@ const std::vector<status_code_enum_from_string_case> status_code_enum_from_strin
     {"UndefinedCode", status_code::kInvalidCode},
 };
 
-INSTANTIATE_TEST_CASE_P(EnumHelperTest,
-                        StatusCodeEnumFromStringTest,
-                        testing::ValuesIn(status_code_enum_from_string_tests));
+INSTANTIATE_TEST_SUITE_P(EnumHelperTest,
+                         StatusCodeEnumFromStringTest,
+                         testing::ValuesIn(status_code_enum_from_string_tests));
 
 using status_code_enum_to_string_case = std::tuple<status_code, std::string>;
 
@@ -207,9 +207,9 @@ const std::vector<status_code_enum_to_string_case> status_code_enum_to_string_te
     {status_code::kInvalidCode, "Unknown"},
 };
 
-INSTANTIATE_TEST_CASE_P(EnumHelperTest,
-                        StatusCodeEnumToStringTest,
-                        testing::ValuesIn(status_code_enum_to_string_tests));
+INSTANTIATE_TEST_SUITE_P(EnumHelperTest,
+                         StatusCodeEnumToStringTest,
+                         testing::ValuesIn(status_code_enum_to_string_tests));
 
 using status_code_enum_from_long_case = std::tuple<long, status_code>;
 
@@ -240,9 +240,9 @@ const std::vector<status_code_enum_from_long_case> status_code_enum_from_long_te
     {10000, status_code::kInvalidCode},
 };
 
-INSTANTIATE_TEST_CASE_P(EnumHelperTest,
-                        StatusCodeEnumFromLongTest,
-                        testing::ValuesIn(status_code_enum_from_long_tests));
+INSTANTIATE_TEST_SUITE_P(EnumHelperTest,
+                         StatusCodeEnumFromLongTest,
+                         testing::ValuesIn(status_code_enum_from_long_tests));
 
 using status_code_enum_to_long_case = std::tuple<status_code, long>;
 
@@ -271,8 +271,8 @@ const std::vector<status_code_enum_to_long_case> status_code_enum_to_long_tests 
     {status_code::kInvalidCode, kInvalidStatus},
 };
 
-INSTANTIATE_TEST_CASE_P(EnumHelperTest,
-                        StatusCodeEnumToLongTest,
-                        testing::ValuesIn(status_code_enum_to_long_tests));
+INSTANTIATE_TEST_SUITE_P(EnumHelperTest,
+                         StatusCodeEnumToLongTest,
+                         testing::ValuesIn(status_code_enum_to_long_tests));
 
 } // namespace dsn

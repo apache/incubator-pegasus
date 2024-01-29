@@ -61,8 +61,8 @@ const std::vector<http_status_message_case> http_status_message_tests = {
     {http_status_code::kInvalidCode, kInvalidHttpStatus},
 };
 
-INSTANTIATE_TEST_CASE_P(HttpStatusCodeTest,
-                        HttpStatusMessageTest,
-                        testing::ValuesIn(http_status_message_tests));
+INSTANTIATE_TEST_SUITE_P(HttpStatusCodeTest,
+                         HttpStatusMessageTest,
+                         testing::ValuesIn(http_status_message_tests));
 
 } // namespace dsn

@@ -289,7 +289,7 @@ private:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, pegasus_mutation_duplicator_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, pegasus_mutation_duplicator_test, ::testing::Values(false, true));
 
 TEST_P(pegasus_mutation_duplicator_test, get_hash_from_request)
 {

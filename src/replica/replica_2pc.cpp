@@ -49,23 +49,22 @@
 #include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
+#include "ranger/access_type.h"
 #include "replica.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "ranger/access_type.h"
-#include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/rpc/serialization.h"
-#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
@@ -99,14 +98,6 @@ DSN_DEFINE_int32(replication,
                  prepare_decree_gap_for_debug_logging,
                  10000,
                  "if greater than 0, then print debug log every decree gap of preparing");
-DSN_DEFINE_int32(replication,
-                 log_shared_pending_size_throttling_threshold_kb,
-                 0,
-                 "log_shared_pending_size_throttling_threshold_kb");
-DSN_DEFINE_int32(replication,
-                 log_shared_pending_size_throttling_delay_ms,
-                 0,
-                 "log_shared_pending_size_throttling_delay_ms");
 DSN_DEFINE_uint64(
     replication,
     max_allowed_write_size,
@@ -353,20 +344,6 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
                                               get_gpid().thread_hash(),
                                               &pending_size);
         CHECK_NOTNULL(mu->log_task(), "");
-        if (FLAGS_log_shared_pending_size_throttling_threshold_kb > 0 &&
-            FLAGS_log_shared_pending_size_throttling_delay_ms > 0 &&
-            pending_size >= FLAGS_log_shared_pending_size_throttling_threshold_kb * 1024) {
-            int delay_ms = FLAGS_log_shared_pending_size_throttling_delay_ms;
-            for (dsn::message_ex *r : mu->client_requests) {
-                if (r && r->io_session->delay_recv(delay_ms)) {
-                    LOG_WARNING("too large pending shared log ({}), delay traffic from {} for {} "
-                                "milliseconds",
-                                pending_size,
-                                r->header->from_address,
-                                delay_ms);
-                }
-            }
-        }
     }
 
     _primary_states.last_prepare_ts_ms = mu->prepare_ts_ms();

@@ -37,7 +37,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_backup_manager_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_backup_manager_test, ::testing::Values(false, true));
 
 TEST_P(replica_backup_manager_test, clear_cold_backup)
 {

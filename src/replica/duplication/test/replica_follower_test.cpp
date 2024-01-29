@@ -113,7 +113,7 @@ public:
     mock_replica_ptr _mock_replica;
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_follower_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_follower_test, ::testing::Values(false, true));
 
 TEST_P(replica_follower_test, test_init_master_info)
 {

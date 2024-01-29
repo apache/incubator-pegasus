@@ -230,10 +230,6 @@ DSN_DEFINE_bool(replication,
                 true,
                 "whether to enable periodic memory release");
 DSN_DEFINE_bool(replication,
-                log_shared_force_flush,
-                false,
-                "when write shared log, whether to flush file after write done");
-DSN_DEFINE_bool(replication,
                 gc_disabled,
                 false,
                 "whether to disable replica stat. The name contains 'gc' is for legacy reason.");
@@ -275,11 +271,6 @@ DSN_DEFINE_int32(replication,
                  10 * 60 * 1000,
                  "after closing a healthy replica (due to LB), the replica will remain in memory "
                  "for this long (ms) for quick recover");
-DSN_DEFINE_int32(replication,
-                 log_shared_file_size_mb,
-                 32,
-                 "shared log maximum segment file size (MB)");
-
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,

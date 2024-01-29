@@ -182,7 +182,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_duplicator_manager_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_duplicator_manager_test, ::testing::Values(false, true));
 
 TEST_P(replica_duplicator_manager_test, get_duplication_confirms)
 {

@@ -54,7 +54,7 @@ protected:
     size_t _start_offset{10};
 };
 
-INSTANTIATE_TEST_CASE_P(, log_file_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, log_file_test, ::testing::Values(false, true));
 
 TEST_P(log_file_test, commit_log_blocks)
 {

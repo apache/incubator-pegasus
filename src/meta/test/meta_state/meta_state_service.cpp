@@ -289,7 +289,7 @@ class meta_state_service_test : public pegasus::encrypt_data_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, meta_state_service_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, meta_state_service_test, ::testing::Values(false, true));
 
 TEST_P(meta_state_service_test, simple)
 {
