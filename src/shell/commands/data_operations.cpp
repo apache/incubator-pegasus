@@ -21,14 +21,12 @@
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
-#include <fmt/format.h>
 #include <fmt/printf.h>
 #include <getopt.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <pegasus/error.h>
 #include <rocksdb/statistics.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdio.h>
 #include <algorithm>
 #include <atomic>

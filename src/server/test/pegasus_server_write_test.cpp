@@ -17,18 +17,16 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <fmt/core.h>
 #include <rocksdb/write_batch.h>
 #include <stdint.h>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <vector>
 
 #include "base/pegasus_key_schema.h"
 #include "common/gpid.h"
+#include "gtest/gtest.h"
 #include "message_utils.h"
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_test_base.h"
@@ -108,8 +106,8 @@ public:
                 // make sure everything is cleanup after batch write.
                 ASSERT_TRUE(_server_write->_put_rpc_batch.empty());
                 ASSERT_TRUE(_server_write->_remove_rpc_batch.empty());
-                ASSERT_TRUE(_server_write->_write_svc->_batch_qps_perfcounters.empty());
-                ASSERT_TRUE(_server_write->_write_svc->_batch_latency_perfcounters.empty());
+                ASSERT_EQ(_server_write->_write_svc->_put_batch_size, 0);
+                ASSERT_EQ(_server_write->_write_svc->_remove_batch_size, 0);
                 ASSERT_EQ(_server_write->_write_svc->_batch_start_time, 0);
                 ASSERT_EQ(_server_write->_write_svc->_impl->_rocksdb_wrapper->_write_batch->Count(),
                           0);
@@ -139,7 +137,9 @@ public:
     }
 };
 
-TEST_F(pegasus_server_write_test, batch_writes) { test_batch_writes(); }
+INSTANTIATE_TEST_SUITE_P(, pegasus_server_write_test, ::testing::Values(false, true));
+
+TEST_P(pegasus_server_write_test, batch_writes) { test_batch_writes(); }
 
 } // namespace server
 } // namespace pegasus

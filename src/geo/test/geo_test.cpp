@@ -18,9 +18,6 @@
  */
 
 #include <base/pegasus_key_schema.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <math.h>
 #include <pegasus/error.h>
 #include <s2/s1angle.h>
@@ -30,7 +27,6 @@
 #include <s2/s2earth.h>
 #include <s2/s2latlng.h>
 #include <s2/s2testing.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdint.h>
 #include <list>
 #include <memory>
@@ -42,6 +38,7 @@
 #include "client/replication_ddl_client.h"
 #include "common/replication_other_types.h"
 #include "geo/lib/geo_client.h"
+#include "gtest/gtest.h"
 #include "pegasus/client.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/blob.h"
@@ -55,6 +52,10 @@ namespace geo {
 
 DSN_DECLARE_int32(min_level);
 
+// TODO(yingchun): it doesn't make sense to derive from pegasus::encrypt_data_test_base to test
+//  encryption or non-encryption senarios, because the Pegasus cluster has been started with a
+//  fixed value of FLAGS_encrypt_data_at_rest.
+//  We can test the senarios after clearing and restarting the cluster.
 class geo_client_test : public ::testing::Test
 {
 public:

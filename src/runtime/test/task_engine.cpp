@@ -24,26 +24,15 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for task engine.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "runtime/task/task_engine.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdio.h>
 
+#include "gtest/gtest.h"
 #include "runtime/global_config.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/enum_helper.h"
 #include "utils/threadpool_code.h"
 

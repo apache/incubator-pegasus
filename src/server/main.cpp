@@ -19,7 +19,6 @@
 
 #include <pegasus/git_commit.h>
 #include <pegasus/version.h>
-#include <s2/third_party/absl/base/port.h>
 #include <unistd.h>
 #include <cstdio>
 #include <memory>

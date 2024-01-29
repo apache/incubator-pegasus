@@ -32,7 +32,6 @@
 #include <sstream>
 #include <utility>
 
-#include "builtin_counters.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_atomic.h"
 #include "perf_counter/perf_counter_utils.h"
@@ -68,7 +67,6 @@ std::map<std::string, std::string> s_brief_stat_map = {
     {"replica*app.pegasus*manual.compact.running.count", "manual_compact_running_count"},
     {"replica*app.pegasus*manual.compact.enqueue.count", "manual_compact_enqueue_count"},
     {"replica*app.pegasus*rdb.block_cache.memory_usage", "rdb_block_cache_memory_usage"},
-    {"replica*eon.replica_stub*shared.log.size(MB)", "shared_log_size(MB)"},
     {"replica*server*memused.virt(MB)", "memused_virt(MB)"},
     {"replica*server*memused.res(MB)", "memused_res(MB)"},
     {"replica*eon.replica_stub*disk.capacity.total(MB)", "disk_capacity_total(MB)"},
@@ -243,16 +241,6 @@ bool perf_counters::remove_counter(const std::string &full_name)
     return true;
 }
 
-perf_counter_ptr perf_counters::get_counter(const std::string &full_name)
-{
-    utils::auto_read_lock l(_lock);
-    auto it = _counters.find(full_name);
-    if (it != _counters.end())
-        return it->second.counter;
-
-    return nullptr;
-}
-
 perf_counter *perf_counters::new_counter(const char *app,
                                          const char *section,
                                          const char *name,
@@ -367,8 +355,6 @@ std::string perf_counters::list_snapshot_by_literal(
 
 void perf_counters::take_snapshot()
 {
-    builtin_counters::instance().update_counters();
-
     std::vector<perf_counter_ptr> all_counters;
     get_all_counters(&all_counters);
 

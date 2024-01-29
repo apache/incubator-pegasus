@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <fmt/core.h>
 #include <pegasus/error.h>
 #include <algorithm>
 #include <chrono>
@@ -39,7 +40,7 @@
 #include "runtime/task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/synchronize.h"
 #include "utils/threadpool_code.h"
 #include "utils/utils.h"
@@ -1180,12 +1181,12 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
         pegasus_generate_key(prefix_start, hash_key, o.sort_key_filter_pattern);
         pegasus_generate_next_blob(prefix_stop, hash_key, o.sort_key_filter_pattern);
 
-        if (::dsn::string_view(prefix_start).compare(start) > 0) {
+        if (prefix_start.to_string_view() > start.to_string_view()) {
             start = std::move(prefix_start);
             o.start_inclusive = true;
         }
 
-        if (::dsn::string_view(prefix_stop).compare(stop) <= 0) {
+        if (prefix_stop.to_string_view() <= stop.to_string_view()) {
             stop = std::move(prefix_stop);
             o.stop_inclusive = false;
         }
@@ -1193,7 +1194,7 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
 
     // check if range is empty
     std::vector<uint64_t> v;
-    int c = ::dsn::string_view(start).compare(stop);
+    int c = start.to_string_view().compare(stop.to_string_view());
     if (c < 0 || (c == 0 && o.start_inclusive && o.stop_inclusive)) {
         v.push_back(pegasus_key_hash(start));
     }

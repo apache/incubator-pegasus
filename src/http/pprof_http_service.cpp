@@ -38,7 +38,9 @@
 #include <utility>
 #include <vector>
 
+#include "http/http_method.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "runtime/api_layer1.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
@@ -50,6 +52,23 @@
 #include "utils/timer.h"
 
 namespace dsn {
+
+bool check_TCMALLOC_SAMPLE_PARAMETER()
+{
+    char *str = getenv("TCMALLOC_SAMPLE_PARAMETER");
+    if (str == nullptr) {
+        return false;
+    }
+    char *endptr;
+    int val = strtol(str, &endptr, 10);
+    return (*endptr == '\0' && val > 0);
+}
+
+bool has_TCMALLOC_SAMPLE_PARAMETER()
+{
+    static bool val = check_TCMALLOC_SAMPLE_PARAMETER();
+    return val;
+}
 
 //                            //
 // == ip:port/pprof/symbol == //
@@ -308,7 +327,7 @@ void pprof_http_service::symbol_handler(const http_request &req, http_response &
     // Load /proc/self/maps
     pthread_once(&s_load_symbolmap_once, load_symbols);
 
-    if (req.method != http_method::HTTP_METHOD_POST) {
+    if (req.method != http_method::POST) {
         char buf[64];
         snprintf(buf, sizeof(buf), "num_symbols: %lu\n", symbol_map.size());
         resp.body = buf;
@@ -341,34 +360,56 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
         LOG_WARNING("node is already exectuting pprof action, please wait and retry");
-        resp.status_code = http_status_code::internal_server_error;
+        resp.status_code = http_status_code::kInternalServerError;
         return;
     }
+    auto cleanup = dsn::defer([this]() { _in_pprof_action.store(false); });
 
-    const std::string SECOND = "seconds";
-    const uint32_t kDefaultSecond = 10;
+    // If "seconds" parameter is specified with a valid value, use heap profiling,
+    // otherwise, use heap sampling.
+    bool use_heap_profile = false;
+    uint32_t seconds = 0;
+    const auto &iter = req.query_args.find("seconds");
+    if (iter != req.query_args.end() && buf2uint32(iter->second, seconds)) {
+        // This is true between calls to HeapProfilerStart() and HeapProfilerStop(), and
+        // also if the program has been run with HEAPPROFILER, or some other
+        // way to turn on whole-program profiling.
+        if (IsHeapProfilerRunning()) {
+            LOG_WARNING("heap profiling is running, dump the full profile directly");
+            char *profile = GetHeapProfile();
+            resp.status_code = http_status_code::kOk;
+            resp.body = profile;
+            free(profile);
+            return;
+        }
 
-    // get seconds from query params, default value is `kDefaultSecond`
-    uint32_t seconds = kDefaultSecond;
-    const auto iter = req.query_args.find(SECOND);
-    if (iter != req.query_args.end()) {
-        const auto seconds_str = iter->second;
-        dsn::internal::buf2unsigned(seconds_str, seconds);
+        std::stringstream profile_name_prefix;
+        profile_name_prefix << "heap_profile." << getpid() << "." << dsn_now_ns();
+
+        HeapProfilerStart(profile_name_prefix.str().c_str());
+        sleep(seconds);
+        char *profile = GetHeapProfile();
+        HeapProfilerStop();
+
+        resp.status_code = http_status_code::kOk;
+        resp.body = profile;
+        free(profile);
+    } else {
+        if (!has_TCMALLOC_SAMPLE_PARAMETER()) {
+            static const std::string kNoEnvMsg = "The environment variable "
+                                                 "TCMALLOC_SAMPLE_PARAMETER should set to a "
+                                                 "positive value, such as 524288, before running.";
+            LOG_WARNING(kNoEnvMsg);
+            resp.status_code = http_status_code::kInternalServerError;
+            resp.body = kNoEnvMsg;
+            return;
+        }
+
+        std::string buf;
+        MallocExtension::instance()->GetHeapSample(&buf);
+        resp.status_code = http_status_code::kOk;
+        resp.body = std::move(buf);
     }
-
-    std::stringstream profile_name_prefix;
-    profile_name_prefix << "heap_profile." << getpid() << "." << dsn_now_ns();
-
-    HeapProfilerStart(profile_name_prefix.str().c_str());
-    sleep(seconds);
-    const char *profile = GetHeapProfile();
-    HeapProfilerStop();
-
-    resp.status_code = http_status_code::ok;
-    resp.body = profile;
-    delete profile;
-
-    _in_pprof_action.store(false);
 }
 
 //                             //
@@ -438,7 +479,7 @@ void pprof_http_service::growth_handler(const http_request &req, http_response &
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
         LOG_WARNING("node is already exectuting pprof action, please wait and retry");
-        resp.status_code = http_status_code::internal_server_error;
+        resp.status_code = http_status_code::kInternalServerError;
         return;
     }
 
@@ -481,7 +522,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
         LOG_WARNING("node is already exectuting pprof action, please wait and retry");
-        resp.status_code = http_status_code::internal_server_error;
+        resp.status_code = http_status_code::kInternalServerError;
         return;
     }
 
@@ -504,7 +545,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
         }
     }
 
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 
     get_cpu_profile(resp.body, seconds);
 

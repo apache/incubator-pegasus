@@ -37,7 +37,6 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 dsn_add_static_library()
 
-add_subdirectory(fds)
 add_subdirectory(hdfs)
 add_subdirectory(local)
 add_subdirectory(test)

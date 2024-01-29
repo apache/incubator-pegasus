@@ -63,6 +63,8 @@ struct block_header
     uint32_t crc32;
 };
 
+// TODO(yingchun): use rocksdb APIs to unify the file operations.
+// A tool to dump app_states of meta server to local file, used by remote command "meta.dump".
 class dump_file
 {
 public:

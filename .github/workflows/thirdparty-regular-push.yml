@@ -25,8 +25,10 @@ on:
       - ci-test # testing branch for github action
       - '*dev' # developing branch
     paths:
+      - 'docker/pegasus-build-env/**'
       - 'docker/thirdparties-src/**'
       - 'docker/thirdparties-bin/**'
+      - '.github/workflows/build-push-env-docker.yml'
       - '.github/workflows/thirdparty-regular-push.yml'
       - 'thirdparty/**'
 
@@ -167,7 +169,7 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
-            ROCKSDB_PORTABLE=ON
+            ROCKSDB_PORTABLE=1
             HADOOP_BIN_PATH=hadoop-bin
             ZOOKEEPER_BIN_PATH=zookeeper-bin
       - name: Image digest
@@ -203,7 +205,7 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
-            ROCKSDB_PORTABLE=ON
+            ROCKSDB_PORTABLE=1
             USE_JEMALLOC=ON
             HADOOP_BIN_PATH=hadoop-bin
             ZOOKEEPER_BIN_PATH=zookeeper-bin

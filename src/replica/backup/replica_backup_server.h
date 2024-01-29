@@ -30,6 +30,7 @@ class replica_backup_server
 {
 public:
     explicit replica_backup_server(const replica_stub *rs);
+    ~replica_backup_server();
 
 private:
     void on_cold_backup(backup_rpc rpc);

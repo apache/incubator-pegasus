@@ -24,34 +24,36 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     fs_manager's implement: used to track the disk position for all the allocated replicas
- *
- * Revision history:
- *     2017-08-08: sunweijie@xiaomi.com, first draft
- */
-
 #include "fs_manager.h"
 
+#include <fmt/std.h> // IWYU pragma: keep
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <iosfwd>
 #include <utility>
 
+#include "absl/strings/string_view.h"
 #include "common/gpid.h"
 #include "common/replication_enums.h"
 #include "fmt/core.h"
-#include "fmt/ostream.h"
-#include "perf_counter/perf_counter.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/string_view.h"
+
+METRIC_DEFINE_entity(disk);
+
+METRIC_DEFINE_gauge_int64(disk,
+                          disk_capacity_total_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The total disk capacity");
+
+METRIC_DEFINE_gauge_int64(disk,
+                          disk_capacity_avail_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The available disk capacity");
 
 namespace dsn {
 namespace replication {
@@ -83,6 +85,37 @@ error_code disk_status_to_error_code(disk_status::type ds)
     }
 }
 
+namespace {
+
+metric_entity_ptr instantiate_disk_metric_entity(const std::string &tag,
+                                                 const std::string &data_dir)
+{
+    auto entity_id = fmt::format("disk@{}", tag);
+
+    return METRIC_ENTITY_disk.instantiate(entity_id, {{"tag", tag}, {"data_dir", data_dir}});
+}
+
+} // anonymous namespace
+
+disk_capacity_metrics::disk_capacity_metrics(const std::string &tag, const std::string &data_dir)
+    : _tag(tag),
+      _data_dir(data_dir),
+      _disk_metric_entity(instantiate_disk_metric_entity(tag, data_dir)),
+      METRIC_VAR_INIT_disk(disk_capacity_total_mb),
+      METRIC_VAR_INIT_disk(disk_capacity_avail_mb)
+{
+}
+
+const metric_entity_ptr &disk_capacity_metrics::disk_metric_entity() const
+{
+    CHECK_NOTNULL(_disk_metric_entity,
+                  "disk metric entity (tag={}, data_dir={}) should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate metric",
+                  _tag,
+                  _data_dir);
+    return _disk_metric_entity;
+}
+
 uint64_t dir_node::replicas_count() const
 {
     uint64_t sum = 0;
@@ -101,7 +134,7 @@ uint64_t dir_node::replicas_count(app_id id) const
     return iter->second.size();
 }
 
-std::string dir_node::replica_dir(dsn::string_view app_type, const dsn::gpid &pid) const
+std::string dir_node::replica_dir(absl::string_view app_type, const dsn::gpid &pid) const
 {
     return utils::filesystem::path_combine(full_dir, fmt::format("{}.{}", pid, app_type));
 }
@@ -126,7 +159,7 @@ uint64_t dir_node::remove(const gpid &pid)
 
 void dir_node::update_disk_stat()
 {
-    FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) { return; });
+    FAIL_POINT_INJECT_F("update_disk_stat", [](absl::string_view) { return; });
 
     dsn::utils::filesystem::disk_space_info dsi;
     if (!dsn::utils::filesystem::get_disk_space_info(full_dir, dsi)) {
@@ -140,6 +173,9 @@ void dir_node::update_disk_stat()
     disk_available_mb = dsi.available >> 20;
     disk_available_ratio = static_cast<int>(
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
+
+    METRIC_SET(disk_capacity, disk_capacity_total_mb, disk_capacity_mb);
+    METRIC_SET(disk_capacity, disk_capacity_avail_mb, disk_available_mb);
 
     // It's able to change status from NORMAL to SPACE_INSUFFICIENT, and vice versa.
     disk_status::type old_status = status;
@@ -156,30 +192,6 @@ void dir_node::update_disk_stat()
              disk_available_mb,
              disk_available_ratio,
              enum_to_string(status));
-}
-
-fs_manager::fs_manager()
-{
-    _counter_total_capacity_mb.init_app_counter("eon.replica_stub",
-                                                "disk.capacity.total(MB)",
-                                                COUNTER_TYPE_NUMBER,
-                                                "total disk capacity in MB");
-    _counter_total_available_mb.init_app_counter("eon.replica_stub",
-                                                 "disk.available.total(MB)",
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "total disk available in MB");
-    _counter_total_available_ratio.init_app_counter("eon.replica_stub",
-                                                    "disk.available.total.ratio",
-                                                    COUNTER_TYPE_NUMBER,
-                                                    "total disk available ratio");
-    _counter_min_available_ratio.init_app_counter("eon.replica_stub",
-                                                  "disk.available.min.ratio",
-                                                  COUNTER_TYPE_NUMBER,
-                                                  "minimal disk available ratio in all disks");
-    _counter_max_available_ratio.init_app_counter("eon.replica_stub",
-                                                  "disk.available.max.ratio",
-                                                  COUNTER_TYPE_NUMBER,
-                                                  "maximal disk available ratio in all disks");
 }
 
 dir_node *fs_manager::get_dir_node(const std::string &subdir) const
@@ -317,7 +329,7 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
 }
 
 void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
-                                                      dsn::string_view app_type,
+                                                      absl::string_view app_type,
                                                       const dsn::gpid &pid) const
 {
     bool dn_found = false;
@@ -355,8 +367,14 @@ void fs_manager::remove_replica(const gpid &pid)
 
 void fs_manager::update_disk_stat()
 {
+    int64_t total_capacity_mb = 0;
+    int64_t total_available_mb = 0;
+    int total_available_ratio = 0;
+    int min_available_ratio = 100;
+    int max_available_ratio = 0;
+
     zauto_write_lock l(_lock);
-    reset_disk_stat();
+
     for (auto &dn : _dir_nodes) {
         // If the disk is already in IO_ERROR status, it will not change to other status, just skip
         // it.
@@ -366,28 +384,26 @@ void fs_manager::update_disk_stat()
             continue;
         }
         dn->update_disk_stat();
-        _total_capacity_mb += dn->disk_capacity_mb;
-        _total_available_mb += dn->disk_available_mb;
-        _min_available_ratio = std::min(dn->disk_available_ratio, _min_available_ratio);
-        _max_available_ratio = std::max(dn->disk_available_ratio, _max_available_ratio);
+        total_capacity_mb += dn->disk_capacity_mb;
+        total_available_mb += dn->disk_available_mb;
+        min_available_ratio = std::min(dn->disk_available_ratio, min_available_ratio);
+        max_available_ratio = std::max(dn->disk_available_ratio, max_available_ratio);
     }
-    _total_available_ratio = static_cast<int>(
-        _total_capacity_mb == 0 ? 0 : std::round(_total_available_mb * 100.0 / _total_capacity_mb));
+    total_available_ratio = static_cast<int>(
+        total_capacity_mb == 0 ? 0 : std::round(total_available_mb * 100.0 / total_capacity_mb));
 
     LOG_INFO("update disk space succeed: disk_count = {}, total_capacity_mb = {}, "
              "total_available_mb = {}, total_available_ratio = {}%, min_available_ratio = {}%, "
              "max_available_ratio = {}%",
              _dir_nodes.size(),
-             _total_capacity_mb,
-             _total_available_mb,
-             _total_available_ratio,
-             _min_available_ratio,
-             _max_available_ratio);
-    _counter_total_capacity_mb->set(_total_capacity_mb);
-    _counter_total_available_mb->set(_total_available_mb);
-    _counter_total_available_ratio->set(_total_available_ratio);
-    _counter_min_available_ratio->set(_min_available_ratio);
-    _counter_max_available_ratio->set(_max_available_ratio);
+             total_capacity_mb,
+             total_available_mb,
+             total_available_ratio,
+             min_available_ratio,
+             max_available_ratio);
+
+    _total_capacity_mb.store(total_capacity_mb, std::memory_order_relaxed);
+    _total_available_mb.store(total_available_mb, std::memory_order_relaxed);
 }
 
 void fs_manager::add_new_dir_node(const std::string &data_dir, const std::string &tag)
@@ -417,7 +433,7 @@ bool fs_manager::is_dir_node_exist(const std::string &data_dir, const std::strin
     return false;
 }
 
-dir_node *fs_manager::find_replica_dir(dsn::string_view app_type, gpid pid)
+dir_node *fs_manager::find_replica_dir(absl::string_view app_type, gpid pid)
 {
     std::string replica_dir;
     dir_node *replica_dn = nullptr;
@@ -441,7 +457,7 @@ dir_node *fs_manager::find_replica_dir(dsn::string_view app_type, gpid pid)
     return replica_dn;
 }
 
-dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type, gpid pid)
+dir_node *fs_manager::create_replica_dir_if_necessary(absl::string_view app_type, gpid pid)
 {
     // Try to find the replica directory.
     auto replica_dn = find_replica_dir(app_type, pid);
@@ -473,7 +489,7 @@ dir_node *fs_manager::create_replica_dir_if_necessary(dsn::string_view app_type,
     return replica_dn;
 }
 
-dir_node *fs_manager::create_child_replica_dir(dsn::string_view app_type,
+dir_node *fs_manager::create_child_replica_dir(absl::string_view app_type,
                                                gpid child_pid,
                                                const std::string &parent_dir)
 {

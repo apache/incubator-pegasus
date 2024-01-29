@@ -29,6 +29,7 @@
 #include "runtime/pipeline.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/errors.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -176,6 +177,11 @@ private:
     std::unique_ptr<load_mutation> _load;
     std::unique_ptr<ship_mutation> _ship;
     std::unique_ptr<load_from_private_log> _load_private;
+
+    // <- Duplication Metrics ->
+    // TODO(wutao1): calculate the counters independently for each remote cluster
+    //               if we need to duplicate to multiple clusters someday.
+    METRIC_VAR_DECLARE_counter(dup_confirmed_mutations);
 };
 
 typedef std::unique_ptr<replica_duplicator> replica_duplicator_u_ptr;

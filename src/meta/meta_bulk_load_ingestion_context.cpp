@@ -26,7 +26,7 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -72,11 +72,12 @@ void ingestion_context::node_context::init_disk(const std::string &disk_tag)
 uint32_t ingestion_context::node_context::get_max_disk_ingestion_count(
     const uint32_t max_node_ingestion_count) const
 {
-    FAIL_POINT_INJECT_F("ingestion_node_context_disk_count", [](string_view count_str) -> uint32_t {
-        uint32_t count = 0;
-        buf2uint32(count_str, count);
-        return count;
-    });
+    FAIL_POINT_INJECT_F("ingestion_node_context_disk_count",
+                        [](absl::string_view count_str) -> uint32_t {
+                            uint32_t count = 0;
+                            buf2uint32(count_str, count);
+                            return count;
+                        });
 
     const auto node_disk_count = disk_ingesting_counts.size() > FLAGS_bulk_load_node_min_disk_count
                                      ? disk_ingesting_counts.size()
@@ -122,7 +123,7 @@ void ingestion_context::node_context::decrease(const std::string &disk_tag)
 bool ingestion_context::try_partition_ingestion(const partition_configuration &config,
                                                 const config_context &cc)
 {
-    FAIL_POINT_INJECT_F("ingestion_try_partition_ingestion", [=](string_view) -> bool {
+    FAIL_POINT_INJECT_F("ingestion_try_partition_ingestion", [=](absl::string_view) -> bool {
         auto info = partition_node_info();
         info.pid = config.pid;
         _running_partitions[config.pid] = info;
@@ -157,7 +158,7 @@ void ingestion_context::add_partition(const partition_node_info &info)
 void ingestion_context::remove_partition(const gpid &pid)
 {
     FAIL_POINT_INJECT_F("ingestion_context_remove_partition",
-                        [=](string_view) { _running_partitions.erase(pid); });
+                        [=](absl::string_view) { _running_partitions.erase(pid); });
 
     if (_running_partitions.find(pid) == _running_partitions.end()) {
         return;

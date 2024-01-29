@@ -32,15 +32,16 @@
 #include <unordered_map>
 #include <vector>
 
-#include "perf_counter/perf_counter_wrapper.h"
 #include "rpc_address.h"
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
 #include "utils/join_point.h"
 #include "utils/link.h"
+#include "utils/metrics.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
@@ -191,7 +192,8 @@ protected:
     ip_connection_count _ip_conn_count; // from_ip => connection count
     utils::rw_lock_nr _servers_lock;
 
-    perf_counter_wrapper _client_session_count;
+    METRIC_VAR_DECLARE_gauge_int64(network_client_sessions);
+    METRIC_VAR_DECLARE_gauge_int64(network_server_sessions);
 };
 
 /*!
@@ -282,6 +284,8 @@ protected:
         SS_CONNECTED,
         SS_DISCONNECTED
     };
+    friend USER_DEFINED_ENUM_FORMATTER(rpc_session::session_state);
+
     mutable utils::ex_lock_nr _lock; // [
     volatile session_state _connect_state;
 

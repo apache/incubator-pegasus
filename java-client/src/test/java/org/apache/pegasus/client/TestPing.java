@@ -18,11 +18,17 @@
  */
 package org.apache.pegasus.client;
 
-import java.util.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Created by mi on 16-3-22. */
 public class TestPing {
@@ -59,12 +65,12 @@ public class TestPing {
 
       System.out.println("get value ...");
       byte[] result = client.get(tableName, hashKey, sortKey);
-      Assert.assertTrue(Arrays.equals(value, result));
+      assertTrue(Arrays.equals(value, result));
       System.out.println("get value ok");
 
       System.out.println("get ttl ...");
       int ttl = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertEquals(-1, ttl);
+      assertEquals(-1, ttl);
       System.out.println("get ttl ok");
 
       System.out.println("multi get ...");
@@ -75,14 +81,14 @@ public class TestPing {
       sortKeys.add(sortKey);
       List<Pair<byte[], byte[]>> values = new ArrayList<Pair<byte[], byte[]>>();
       boolean getAll = client.multiGet(tableName, hashKey, sortKeys, values);
-      Assert.assertTrue(getAll);
-      Assert.assertEquals(2, values.size());
-      Assert.assertEquals(sortKey, values.get(0).getKey());
-      Assert.assertArrayEquals(sortKey, values.get(0).getKey());
-      Assert.assertArrayEquals(value, values.get(0).getValue());
-      Assert.assertEquals(sortKey1, values.get(1).getKey());
-      Assert.assertArrayEquals(sortKey1, values.get(1).getKey());
-      Assert.assertArrayEquals(value1, values.get(1).getValue());
+      assertTrue(getAll);
+      assertEquals(2, values.size());
+      assertEquals(sortKey, values.get(0).getKey());
+      assertArrayEquals(sortKey, values.get(0).getKey());
+      assertArrayEquals(value, values.get(0).getValue());
+      assertEquals(sortKey1, values.get(1).getKey());
+      assertArrayEquals(sortKey1, values.get(1).getKey());
+      assertArrayEquals(value1, values.get(1).getValue());
       System.out.println("multi get ok");
 
       System.out.println("multi get partial ...");
@@ -94,18 +100,18 @@ public class TestPing {
         sortKeys.add(p.getKey());
       }
       getAll = client.multiGet(tableName, hashKey, sortKeys, 5, 1000000, values);
-      Assert.assertFalse(getAll);
-      Assert.assertEquals(5, values.size());
-      Assert.assertEquals(sortKey, values.get(0).getKey());
-      Assert.assertArrayEquals(sortKey, values.get(0).getKey());
-      Assert.assertArrayEquals(value, values.get(0).getValue());
-      Assert.assertEquals(sortKey1, values.get(1).getKey());
-      Assert.assertArrayEquals(sortKey1, values.get(1).getKey());
-      Assert.assertArrayEquals(value1, values.get(1).getValue());
+      assertFalse(getAll);
+      assertEquals(5, values.size());
+      assertEquals(sortKey, values.get(0).getKey());
+      assertArrayEquals(sortKey, values.get(0).getKey());
+      assertArrayEquals(value, values.get(0).getValue());
+      assertEquals(sortKey1, values.get(1).getKey());
+      assertArrayEquals(sortKey1, values.get(1).getKey());
+      assertArrayEquals(value1, values.get(1).getValue());
       for (int i = 2; i < 5; ++i) {
-        Assert.assertEquals(setValues.get(i - 2).getKey(), values.get(i).getKey());
-        Assert.assertArrayEquals(setValues.get(i - 2).getKey(), values.get(i).getKey());
-        Assert.assertArrayEquals(setValues.get(i - 2).getValue(), values.get(i).getValue());
+        assertEquals(setValues.get(i - 2).getKey(), values.get(i).getKey());
+        assertArrayEquals(setValues.get(i - 2).getKey(), values.get(i).getKey());
+        assertArrayEquals(setValues.get(i - 2).getValue(), values.get(i).getValue());
       }
       System.out.println("multi get partial ok");
 
@@ -115,11 +121,11 @@ public class TestPing {
 
       System.out.println("get deleted value ...");
       result = client.get(tableName, hashKey, sortKey);
-      Assert.assertEquals(result, null);
+      assertEquals(result, null);
       System.out.println("get deleted value ok");
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     client.close();

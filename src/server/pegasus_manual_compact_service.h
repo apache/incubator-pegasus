@@ -25,8 +25,8 @@
 #include <string>
 
 #include "metadata_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica_base.h"
+#include "utils/metrics.h"
 
 namespace rocksdb {
 struct CompactRangeOptions;
@@ -97,8 +97,8 @@ private:
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
     std::atomic<uint64_t> _manual_compact_last_time_used_ms;
 
-    ::dsn::perf_counter_wrapper _pfc_manual_compact_enqueue_count;
-    ::dsn::perf_counter_wrapper _pfc_manual_compact_running_count;
+    METRIC_VAR_DECLARE_gauge_int64(rdb_manual_compact_queued_tasks);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_manual_compact_running_tasks);
 };
 
 } // namespace server

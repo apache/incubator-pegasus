@@ -26,7 +26,6 @@
 #include "duplication_types.h"
 #include "replica/replica.h"
 #include "runtime/task/task.h"
-#include "utils/chrono_literals.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -34,10 +33,6 @@ class error_code;
 
 namespace replication {
 class replica_stub;
-
-using namespace literals::chrono_literals;
-
-constexpr int DUPLICATION_SYNC_PERIOD_SECOND = 10;
 
 // Per-server(replica_stub)-instance.
 class duplication_sync_timer

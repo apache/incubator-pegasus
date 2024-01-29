@@ -15,47 +15,43 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <fmt/core.h>
+#include <rocksdb/env.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/status.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <algorithm>
 #include <cstdint>
-#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "block_service/block_service.h"
 #include "block_service/hdfs/hdfs_service.h"
+#include "gtest/gtest.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
+#include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
-#include "utils/strings.h"
+#include "utils/fmt_logging.h"
+#include "utils/test_macros.h"
 #include "utils/threadpool_code.h"
 
 using namespace dsn;
 using namespace dsn::dist::block_service;
 
-static std::string example_name_node = "<hdfs_name_none>";
-static std::string example_backup_path = "<hdfs_path>";
-// Please modify following paras in 'config-test.ini' to enable hdfs_service_test,
-// or hdfs_service_test will be skipped and return true.
-DSN_DEFINE_string(hdfs_test, test_name_node, "<hdfs_name_none>", "hdfs name node");
-DSN_DEFINE_string(hdfs_test,
-                  test_backup_path,
-                  "<hdfs_path>",
-                  "path for uploading and downloading test files");
+DSN_DEFINE_string(hdfs_test, test_name_node, "", "hdfs name node");
+DSN_DEFINE_string(hdfs_test, test_backup_path, "", "path for uploading and downloading test files");
 
 DSN_DEFINE_uint32(hdfs_test, num_test_file_lines, 4096, "number of lines in test file");
 DSN_DEFINE_uint32(hdfs_test,
@@ -65,159 +61,107 @@ DSN_DEFINE_uint32(hdfs_test,
 
 DEFINE_TASK_CODE(LPC_TEST_HDFS, TASK_PRIORITY_HIGH, dsn::THREAD_POOL_DEFAULT)
 
-class HDFSClientTest : public testing::Test
+class HDFSClientTest : public pegasus::encrypt_data_test_base
 {
 protected:
-    virtual void SetUp() override;
-    virtual void TearDown() override;
-    void generate_test_file(const char *filename);
-    void write_test_files_async(task_tracker *tracker);
-    std::string name_node;
-    std::string backup_path;
-    std::string local_test_dir;
-    std::string test_data_str;
+    HDFSClientTest() : pegasus::encrypt_data_test_base()
+    {
+        for (int i = 0; i < FLAGS_num_test_file_lines; ++i) {
+            _local_test_data += "test";
+        }
+    }
+
+    void generate_test_file(const std::string &filename);
+    void write_test_files_async(const std::string &local_test_path,
+                                int total_files,
+                                int *success_count,
+                                task_tracker *tracker);
+
+private:
+    std::string _local_test_data;
 };
 
-void HDFSClientTest::SetUp()
+void HDFSClientTest::generate_test_file(const std::string &filename)
 {
-    name_node = FLAGS_test_name_node;
-    backup_path = FLAGS_test_backup_path;
-    local_test_dir = "test_dir";
-    test_data_str = "";
-    for (int i = 0; i < FLAGS_num_test_file_lines; ++i) {
-        test_data_str += "test";
-    }
-}
-
-void HDFSClientTest::TearDown() {}
-
-void HDFSClientTest::generate_test_file(const char *filename)
-{
-    // generate a local test file.
     int lines = FLAGS_num_test_file_lines;
-    FILE *fp = fopen(filename, "wb");
+    std::unique_ptr<rocksdb::WritableFile> wfile;
+    auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                 ->NewWritableFile(filename, &wfile, rocksdb::EnvOptions());
+    ASSERT_TRUE(s.ok()) << s.ToString();
     for (int i = 0; i < lines; ++i) {
-        fprintf(fp, "%04d_this_is_a_simple_test_file\n", i);
+        rocksdb::Slice data(fmt::format("{:04}d_this_is_a_simple_test_file\n", i));
+        s = wfile->Append(data);
+        ASSERT_TRUE(s.ok()) << s.ToString();
     }
-    fclose(fp);
+    s = wfile->Fsync();
+    ASSERT_TRUE(s.ok()) << s.ToString();
 }
 
-void HDFSClientTest::write_test_files_async(task_tracker *tracker)
+void HDFSClientTest::write_test_files_async(const std::string &local_test_path,
+                                            int total_files,
+                                            int *success_count,
+                                            task_tracker *tracker)
 {
-    dsn::utils::filesystem::create_directory(local_test_dir);
-    for (int i = 0; i < 100; ++i) {
-        tasking::enqueue(LPC_TEST_HDFS, tracker, [this, i]() {
+    dsn::utils::filesystem::create_directory(local_test_path);
+    for (int i = 0; i < total_files; ++i) {
+        tasking::enqueue(LPC_TEST_HDFS, tracker, [this, &local_test_path, i, success_count]() {
             // mock the writing process in hdfs_file_object::download().
-            std::string test_file_name = local_test_dir + "/test_file_" + std::to_string(i);
-            std::ofstream out(test_file_name, std::ios::binary | std::ios::out | std::ios::trunc);
-            if (out.is_open()) {
-                out.write(test_data_str.c_str(), test_data_str.length());
+            std::string test_file_name = local_test_path + "/test_file_" + std::to_string(i);
+            auto s = rocksdb::WriteStringToFile(rocksdb::Env::Default(),
+                                                rocksdb::Slice(_local_test_data),
+                                                test_file_name,
+                                                /* should_sync */ true);
+            if (s.ok()) {
+                ++(*success_count);
+            } else {
+                CHECK(s.IsIOError(), "{}", s.ToString());
+                auto pos1 = s.ToString().find(
+                    "IO error: No such file or directory: While open a file for appending: ");
+                auto pos2 = s.ToString().find("IO error: While appending to file: ");
+                CHECK(pos1 == 0 || pos2 == 0, "{}", s.ToString());
             }
-            out.close();
         });
     }
 }
 
-TEST_F(HDFSClientTest, test_basic_operation)
+INSTANTIATE_TEST_SUITE_P(, HDFSClientTest, ::testing::Values(false, true));
+
+TEST_P(HDFSClientTest, test_hdfs_read_write)
 {
-    if (name_node == example_name_node || backup_path == example_backup_path) {
-        return;
+    if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
     }
 
-    std::vector<std::string> args = {name_node, backup_path};
-    std::shared_ptr<hdfs_service> s = std::make_shared<hdfs_service>();
-    ASSERT_EQ(dsn::ERR_OK, s->initialize(args));
+    auto s = std::make_shared<hdfs_service>();
+    ASSERT_EQ(dsn::ERR_OK, s->initialize({FLAGS_test_name_node, FLAGS_test_backup_path}));
 
-    std::string local_test_file = "test_file";
-    std::string remote_test_file = "hdfs_client_test/test_file";
-    int64_t test_file_size = 0;
+    const std::string kRemoteTestPath = "hdfs_client_test";
+    const std::string kRemoteTestRWFile = kRemoteTestPath + "/test_write_file";
+    const std::string kTestBuffer = "write_hello_world_for_test";
+    const int kTestBufferLength = kTestBuffer.size();
 
-    generate_test_file(local_test_file.c_str());
-    dsn::utils::filesystem::file_size(local_test_file, test_file_size);
-
-    // fisrt clean up all old file in test directory.
+    // 1. clean up all old file in remote test directory.
     printf("clean up all old files.\n");
     remove_path_response rem_resp;
-    s->remove_path(remove_path_request{"hdfs_client_test", true},
+    s->remove_path(remove_path_request{kRemoteTestPath, true},
                    LPC_TEST_HDFS,
                    [&rem_resp](const remove_path_response &resp) { rem_resp = resp; },
                    nullptr)
         ->wait();
     ASSERT_TRUE(dsn::ERR_OK == rem_resp.err || dsn::ERR_OBJECT_NOT_FOUND == rem_resp.err);
 
-    // test upload file.
-    printf("create and upload: %s.\n", remote_test_file.c_str());
+    // 2. create file.
+    printf("test write operation.\n");
     create_file_response cf_resp;
-    s->create_file(create_file_request{remote_test_file, true},
-                   LPC_TEST_HDFS,
-                   [&cf_resp](const create_file_response &r) { cf_resp = r; },
-                   nullptr)
-        ->wait();
-    ASSERT_EQ(cf_resp.err, dsn::ERR_OK);
-    upload_response u_resp;
-    cf_resp.file_handle
-        ->upload(upload_request{local_test_file},
-                 LPC_TEST_HDFS,
-                 [&u_resp](const upload_response &r) { u_resp = r; },
-                 nullptr)
-        ->wait();
-    ASSERT_EQ(dsn::ERR_OK, u_resp.err);
-    ASSERT_EQ(test_file_size, cf_resp.file_handle->get_size());
-
-    // test list directory.
-    ls_response l_resp;
-    s->list_dir(ls_request{"hdfs_client_test"},
-                LPC_TEST_HDFS,
-                [&l_resp](const ls_response &resp) { l_resp = resp; },
-                nullptr)
-        ->wait();
-    ASSERT_EQ(dsn::ERR_OK, l_resp.err);
-    ASSERT_EQ(1, l_resp.entries->size());
-    ASSERT_EQ("test_file", l_resp.entries->at(0).entry_name);
-    ASSERT_EQ(false, l_resp.entries->at(0).is_directory);
-
-    // test download file.
-    download_response d_resp;
-    printf("test download %s.\n", remote_test_file.c_str());
-    s->create_file(create_file_request{remote_test_file, false},
-                   LPC_TEST_HDFS,
-                   [&cf_resp](const create_file_response &resp) { cf_resp = resp; },
-                   nullptr)
-        ->wait();
-    ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
-    ASSERT_EQ(test_file_size, cf_resp.file_handle->get_size());
-    std::string local_file_for_download = "test_file_d";
-    cf_resp.file_handle
-        ->download(download_request{local_file_for_download, 0, -1},
-                   LPC_TEST_HDFS,
-                   [&d_resp](const download_response &resp) { d_resp = resp; },
-                   nullptr)
-        ->wait();
-    ASSERT_EQ(dsn::ERR_OK, d_resp.err);
-    ASSERT_EQ(test_file_size, d_resp.downloaded_size);
-
-    // compare local_test_file and local_file_for_download.
-    int64_t file_size = 0;
-    dsn::utils::filesystem::file_size(local_file_for_download, file_size);
-    ASSERT_EQ(test_file_size, file_size);
-    std::string test_file_md5sum;
-    dsn::utils::filesystem::md5sum(local_test_file, test_file_md5sum);
-    std::string downloaded_file_md5sum;
-    dsn::utils::filesystem::md5sum(local_file_for_download, downloaded_file_md5sum);
-    ASSERT_EQ(test_file_md5sum, downloaded_file_md5sum);
-
-    // test read and write.
-    printf("test read write operation.\n");
-    std::string test_write_file = "hdfs_client_test/test_write_file";
-    s->create_file(create_file_request{test_write_file, false},
+    s->create_file(create_file_request{kRemoteTestRWFile, false},
                    LPC_TEST_HDFS,
                    [&cf_resp](const create_file_response &r) { cf_resp = r; },
                    nullptr)
         ->wait();
     ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
-    const char *test_buffer = "write_hello_world_for_test";
-    int length = strlen(test_buffer);
-    dsn::blob bb(test_buffer, 0, length);
+
+    // 3. write file.
+    dsn::blob bb(kTestBuffer.c_str(), 0, kTestBufferLength);
     write_response w_resp;
     cf_resp.file_handle
         ->write(write_request{bb},
@@ -226,8 +170,10 @@ TEST_F(HDFSClientTest, test_basic_operation)
                 nullptr)
         ->wait();
     ASSERT_EQ(dsn::ERR_OK, w_resp.err);
-    ASSERT_EQ(length, w_resp.written_size);
-    ASSERT_EQ(length, cf_resp.file_handle->get_size());
+    ASSERT_EQ(kTestBufferLength, w_resp.written_size);
+    ASSERT_EQ(kTestBufferLength, cf_resp.file_handle->get_size());
+
+    // 4. read file.
     printf("test read just written contents.\n");
     read_response r_resp;
     cf_resp.file_handle
@@ -237,34 +183,131 @@ TEST_F(HDFSClientTest, test_basic_operation)
                nullptr)
         ->wait();
     ASSERT_EQ(dsn::ERR_OK, r_resp.err);
-    ASSERT_EQ(length, r_resp.buffer.length());
-    ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer, length));
+    ASSERT_EQ(kTestBufferLength, r_resp.buffer.length());
+    ASSERT_EQ(kTestBuffer, r_resp.buffer.to_string());
 
-    // test partitial read.
+    // 5. partial read.
+    const uint64_t kOffset = 5;
+    const int64_t kSize = 10;
     cf_resp.file_handle
-        ->read(read_request{5, 10},
+        ->read(read_request{kOffset, kSize},
                LPC_TEST_HDFS,
                [&r_resp](const read_response &r) { r_resp = r; },
                nullptr)
         ->wait();
     ASSERT_EQ(dsn::ERR_OK, r_resp.err);
-    ASSERT_EQ(10, r_resp.buffer.length());
-    ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer + 5, 10));
-
-    // clean up local test files.
-    utils::filesystem::remove_path(local_test_file);
-    utils::filesystem::remove_path(local_file_for_download);
+    ASSERT_EQ(kSize, r_resp.buffer.length());
+    ASSERT_EQ(kTestBuffer.substr(kOffset, kSize), r_resp.buffer.to_string());
 }
 
-TEST_F(HDFSClientTest, test_concurrent_upload_download)
+TEST_P(HDFSClientTest, test_upload_and_download)
 {
-    if (name_node == example_name_node || backup_path == example_backup_path) {
-        return;
+    if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
     }
 
-    std::vector<std::string> args = {name_node, backup_path};
-    std::shared_ptr<hdfs_service> s = std::make_shared<hdfs_service>();
-    ASSERT_EQ(dsn::ERR_OK, s->initialize(args));
+    auto s = std::make_shared<hdfs_service>();
+    ASSERT_EQ(dsn::ERR_OK, s->initialize({FLAGS_test_name_node, FLAGS_test_backup_path}));
+
+    const std::string kLocalFile = "test_file";
+    const std::string kRemoteTestPath = "hdfs_client_test";
+    const std::string kRemoteTestFile = kRemoteTestPath + "/test_file";
+
+    // 0. generate test file.
+    NO_FATALS(generate_test_file(kLocalFile));
+    int64_t local_file_size = 0;
+    ASSERT_TRUE(dsn::utils::filesystem::file_size(
+        kLocalFile, dsn::utils::FileDataType::kSensitive, local_file_size));
+    std::string local_file_md5sum;
+    dsn::utils::filesystem::md5sum(kLocalFile, local_file_md5sum);
+
+    // 1. clean up all old file in remote test directory.
+    printf("clean up all old files.\n");
+    remove_path_response rem_resp;
+    s->remove_path(remove_path_request{kRemoteTestPath, true},
+                   LPC_TEST_HDFS,
+                   [&rem_resp](const remove_path_response &resp) { rem_resp = resp; },
+                   nullptr)
+        ->wait();
+    ASSERT_TRUE(dsn::ERR_OK == rem_resp.err || dsn::ERR_OBJECT_NOT_FOUND == rem_resp.err);
+
+    // 2. create file.
+    printf("create and upload: %s.\n", kRemoteTestFile.c_str());
+    create_file_response cf_resp;
+    s->create_file(create_file_request{kRemoteTestFile, true},
+                   LPC_TEST_HDFS,
+                   [&cf_resp](const create_file_response &r) { cf_resp = r; },
+                   nullptr)
+        ->wait();
+    ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+
+    // 3. upload file.
+    upload_response u_resp;
+    cf_resp.file_handle
+        ->upload(upload_request{kLocalFile},
+                 LPC_TEST_HDFS,
+                 [&u_resp](const upload_response &r) { u_resp = r; },
+                 nullptr)
+        ->wait();
+    ASSERT_EQ(dsn::ERR_OK, u_resp.err);
+    ASSERT_EQ(local_file_size, cf_resp.file_handle->get_size());
+
+    // 4. list directory.
+    ls_response l_resp;
+    s->list_dir(ls_request{kRemoteTestPath},
+                LPC_TEST_HDFS,
+                [&l_resp](const ls_response &resp) { l_resp = resp; },
+                nullptr)
+        ->wait();
+    ASSERT_EQ(dsn::ERR_OK, l_resp.err);
+    ASSERT_EQ(1, l_resp.entries->size());
+    ASSERT_EQ(kLocalFile, l_resp.entries->at(0).entry_name);
+    ASSERT_EQ(false, l_resp.entries->at(0).is_directory);
+
+    // 5. download file.
+    download_response d_resp;
+    printf("test download %s.\n", kRemoteTestFile.c_str());
+    s->create_file(create_file_request{kRemoteTestFile, false},
+                   LPC_TEST_HDFS,
+                   [&cf_resp](const create_file_response &resp) { cf_resp = resp; },
+                   nullptr)
+        ->wait();
+    ASSERT_EQ(dsn::ERR_OK, cf_resp.err);
+    ASSERT_EQ(local_file_size, cf_resp.file_handle->get_size());
+    std::string kLocalDownloadFile = "test_file_d";
+    cf_resp.file_handle
+        ->download(download_request{kLocalDownloadFile, 0, -1},
+                   LPC_TEST_HDFS,
+                   [&d_resp](const download_response &resp) { d_resp = resp; },
+                   nullptr)
+        ->wait();
+    ASSERT_EQ(dsn::ERR_OK, d_resp.err);
+    ASSERT_EQ(local_file_size, d_resp.downloaded_size);
+
+    // 6. compare kLocalFile and kLocalDownloadFile.
+    // 6.1 check file size.
+    int64_t local_download_file_size = 0;
+    ASSERT_TRUE(dsn::utils::filesystem::file_size(
+        kLocalDownloadFile, dsn::utils::FileDataType::kSensitive, local_download_file_size));
+    ASSERT_EQ(local_file_size, local_download_file_size);
+    // 6.2 check file md5sum.
+    std::string local_download_file_md5sum;
+    dsn::utils::filesystem::md5sum(kLocalDownloadFile, local_download_file_md5sum);
+    ASSERT_EQ(local_file_md5sum, local_download_file_md5sum);
+
+    // 7. clean up local test files.
+    utils::filesystem::remove_path(kLocalFile);
+    utils::filesystem::remove_path(kLocalDownloadFile);
+}
+
+TEST_P(HDFSClientTest, test_concurrent_upload_download)
+{
+    if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
+    }
+
+    auto s = std::make_shared<hdfs_service>();
+    ASSERT_EQ(dsn::ERR_OK, s->initialize({FLAGS_test_name_node, FLAGS_test_backup_path}));
 
     int total_files = FLAGS_num_total_files_for_hdfs_concurrent_test;
     std::vector<std::string> local_file_names;
@@ -282,11 +325,12 @@ TEST_F(HDFSClientTest, test_concurrent_upload_download)
     // generate test files.
     for (int i = 0; i < total_files; ++i) {
         std::string file_name = "randomfile" + std::to_string(i);
-        generate_test_file(file_name.c_str());
+        NO_FATALS(generate_test_file(file_name));
         int64_t file_size = 0;
-        dsn::utils::filesystem::file_size(file_name, file_size);
+        ASSERT_TRUE(dsn::utils::filesystem::file_size(
+            file_name, dsn::utils::FileDataType::kSensitive, file_size));
         std::string md5sum;
-        dsn::utils::filesystem::md5sum(file_name, md5sum);
+        ASSERT_EQ(ERR_OK, dsn::utils::filesystem::md5sum(file_name, md5sum));
 
         local_file_names.emplace_back(file_name);
         remote_file_names.emplace_back("hdfs_concurrent_test/" + file_name);
@@ -385,13 +429,26 @@ TEST_F(HDFSClientTest, test_concurrent_upload_download)
     }
 }
 
-TEST_F(HDFSClientTest, test_rename_path_while_writing)
+TEST_P(HDFSClientTest, test_rename_path_while_writing)
 {
-    task_tracker tracker;
-    write_test_files_async(&tracker);
-    usleep(100);
-    std::string rename_dir = "rename_dir." + std::to_string(dsn_now_ms());
-    // rename succeed but writing failed.
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path(local_test_dir, rename_dir));
-    tracker.cancel_outstanding_tasks();
+    std::string kLocalTestPath = "test_dir";
+    const int kTotalFiles = 100;
+
+    // The test is flaky, retry if it failed in 300 seconds.
+    ASSERT_IN_TIME_WITH_FIXED_INTERVAL(
+        [&] {
+            task_tracker tracker;
+            int success_count = 0;
+            write_test_files_async(kLocalTestPath, kTotalFiles, &success_count, &tracker);
+            usleep(100);
+
+            std::string kLocalRenamedTestPath = "rename_dir." + std::to_string(dsn_now_ms());
+            // Rename succeed but some files write failed.
+            ASSERT_TRUE(dsn::utils::filesystem::rename_path(kLocalTestPath, kLocalRenamedTestPath));
+            tracker.cancel_outstanding_tasks();
+            // Generally, we can assume partial files are written failed.
+            ASSERT_GT(success_count, 0) << success_count;
+            ASSERT_LT(success_count, kTotalFiles) << success_count;
+        },
+        300);
 }

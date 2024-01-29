@@ -17,12 +17,10 @@
 
 #include "utils/nth_element.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <fmt/core.h>
 #include <cstdint>
-#include <iomanip>
 
+#include "gtest/gtest.h"
 #include "nth_element_utils.h"
 
 namespace dsn {

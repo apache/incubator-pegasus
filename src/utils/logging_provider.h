@@ -26,8 +26,6 @@
 
 #pragma once
 
-#include <stdarg.h>
-
 #include "utils/api_utilities.h"
 #include "utils/command_manager.h"
 #include "utils/factory_store.h"
@@ -58,18 +56,11 @@ public:
     // not thread-safe
     static void set_logger(logging_provider *logger);
 
-    virtual void dsn_logv(const char *file,
-                          const char *function,
-                          const int line,
-                          dsn_log_level_t log_level,
-                          const char *fmt,
-                          va_list args) = 0;
-
-    virtual void dsn_log(const char *file,
-                         const char *function,
-                         const int line,
-                         dsn_log_level_t log_level,
-                         const char *str) = 0;
+    virtual void log(const char *file,
+                     const char *function,
+                     const int line,
+                     log_level_t log_level,
+                     const char *str) = 0;
 
     virtual void flush() = 0;
 

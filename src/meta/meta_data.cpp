@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the meta server's date structure, impl file
- *
- * Revision history:
- *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #include <boost/lexical_cast.hpp>
 #include <cstdint>
 

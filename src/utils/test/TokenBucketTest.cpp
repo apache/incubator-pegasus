@@ -17,14 +17,12 @@
 #include "TokenBucketTest.h"
 
 #include <boost/optional/optional.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-#include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stddef.h>
 #include <algorithm>
+#include <string>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "utils/TokenBucket.h"
 
 using namespace folly;
@@ -77,7 +75,7 @@ static std::vector<std::pair<double, double>> rateToConsumeSize = {
     {100, 1}, {1000, 1}, {10000, 1}, {10000, 5},
 };
 
-INSTANTIATE_TEST_CASE_P(TokenBucket, TokenBucketTest, ::testing::ValuesIn(rateToConsumeSize));
+INSTANTIATE_TEST_SUITE_P(TokenBucket, TokenBucketTest, ::testing::ValuesIn(rateToConsumeSize));
 
 TEST(TokenBucket, drainOnFail)
 {

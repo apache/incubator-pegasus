@@ -17,10 +17,6 @@
 
 #include <fmt/core.h>
 #include <gmock/gmock.h> // IWYU pragma: keep
-// IWYU pragma: no_include <gmock/gmock-matchers.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <cstdint>
 #include <iterator>
 #include <map>
@@ -29,6 +25,8 @@
 #include <utility>
 
 #include "common/replication.codes.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "utils/latency_tracer.h"
 
 namespace dsn {

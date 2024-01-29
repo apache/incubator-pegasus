@@ -51,6 +51,12 @@ replica_backup_server::replica_backup_server(const replica_stub *rs) : _stub(rs)
     });
 }
 
+replica_backup_server::~replica_backup_server()
+{
+    dsn_rpc_unregiser_handler(RPC_COLD_BACKUP);
+    dsn_rpc_unregiser_handler(RPC_CLEAR_COLD_BACKUP);
+}
+
 void replica_backup_server::on_cold_backup(backup_rpc rpc)
 {
     const backup_request &request = rpc.request();

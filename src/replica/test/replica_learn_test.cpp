@@ -15,11 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <utility>
 
@@ -28,6 +24,7 @@
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "mock_utils.h"
 #include "replica/duplication/test/duplication_test_base.h"
 #include "replica/prepare_list.h"
@@ -180,9 +177,11 @@ public:
     }
 };
 
-TEST_F(replica_learn_test, get_learn_start_decree) { test_get_learn_start_decree(); }
+INSTANTIATE_TEST_SUITE_P(, replica_learn_test, ::testing::Values(false, true));
 
-TEST_F(replica_learn_test, get_max_gced_decree_for_learn) { test_get_max_gced_decree_for_learn(); }
+TEST_P(replica_learn_test, get_learn_start_decree) { test_get_learn_start_decree(); }
+
+TEST_P(replica_learn_test, get_max_gced_decree_for_learn) { test_get_max_gced_decree_for_learn(); }
 
 } // namespace replication
 } // namespace dsn

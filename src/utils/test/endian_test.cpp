@@ -15,15 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <limits>
 #include <string>
 
+#include "gtest/gtest.h"
 #include "utils/endians.h"
-#include "utils/string_view.h"
+#include "utils/enum_helper.h"
 
 using namespace dsn;
 

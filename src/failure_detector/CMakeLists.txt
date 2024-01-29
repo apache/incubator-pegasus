@@ -38,9 +38,7 @@ seT(MY_PROJ_SRC ${FD_THRIFT_SRCS})
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS
-        PocoFoundation
-        PocoJSON)
+set(MY_PROJ_LIBS "")
 
 # Extra files that will be installed
 set(MY_BINPLACES "")

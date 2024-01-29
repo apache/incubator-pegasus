@@ -24,20 +24,7 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for clientlet.
- *
- * Revision history:
- *     Nov., 2015, @shengofsun (Weijie Sun), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <fmt/format.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -47,6 +34,7 @@
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "runtime/api_task.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
@@ -54,7 +42,7 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -149,8 +137,9 @@ TEST(async_call, rpc_call)
                        *str_command,
                        &tc->_tracker,
                        [str_command](error_code ec, std::string &&resp) {
-                           if (ERR_OK == ec)
+                           if (ERR_OK == ec) {
                                EXPECT_TRUE(str_command->substr(5) == resp);
+                           }
                        });
     task_vec.push_back(t);
     t = rpc::call(addr2,

@@ -24,9 +24,6 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string.h>
 #include <cstdint>
 #include <iostream>
@@ -38,6 +35,7 @@
 
 #include "common/json_helper.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_backup_service.h"
 #include "meta_service_test_app.h"
 #include "runtime/rpc/rpc_address.h"

@@ -26,14 +26,13 @@
 
 #pragma once
 
+#include <absl/utility/utility.h>
 #include <functional>
 #include <list>
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
-
-#include "utils/absl/utility/utility.h"
 
 namespace dsn {
 

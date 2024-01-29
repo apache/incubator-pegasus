@@ -44,7 +44,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 DSN_DEFINE_int32(meta_server,
                  max_succssive_unstable_restart,
@@ -101,7 +101,7 @@ void meta_server_failure_detector::on_worker_connected(rpc_address node)
 
 bool meta_server_failure_detector::get_leader(rpc_address *leader)
 {
-    FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](dsn::string_view str) {
+    FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](absl::string_view str) {
         /// the format of str is : true#{ip}:{port} or false#{ip}:{port}
         auto pos = str.find("#");
         // get leader addr

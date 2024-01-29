@@ -75,7 +75,7 @@ const char *je_stats_type_to_opts(je_stats_type type)
 size_t je_stats_type_to_default_buf_sz(je_stats_type type)
 {
     static const size_t buf_sz_map[] = {
-        2 * 1024, 4 * 1024, 1024 * 1024, 2 * 1024 * 1024,
+        2 * 1024, 4 * 1024, 8 * 1024 * 1024, 8 * 1024 * 1024,
     };
 
     RETURN_ARRAY_ELEM_BY_ENUM_TYPE(type, buf_sz_map);

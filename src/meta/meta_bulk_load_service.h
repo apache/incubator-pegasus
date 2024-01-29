@@ -97,6 +97,10 @@ struct bulk_load_info
     int32_t app_id;
     std::string app_name;
     int32_t partition_count;
+    bulk_load_info(int32_t id = 0, const std::string &name = "", int32_t pcount = 0)
+        : app_id(id), app_name(name), partition_count(pcount)
+    {
+    }
     DEFINE_JSON_SERIALIZATION(app_id, app_name, partition_count)
 };
 

@@ -22,6 +22,7 @@
 #include <string>
 
 #include "rrdb/rrdb_types.h"
+#include "utils/fmt_utils.h"
 
 namespace pegasus {
 
@@ -40,3 +41,11 @@ inline bool cas_is_check_operand_needed(dsn::apps::cas_check_type::type type)
 }
 
 } // namespace pegasus
+
+namespace dsn {
+namespace apps {
+USER_DEFINED_ENUM_FORMATTER(cas_check_type::type)
+USER_DEFINED_ENUM_FORMATTER(filter_type::type)
+USER_DEFINED_ENUM_FORMATTER(mutate_operation::type)
+} // namespace apps
+} // namespace dsn

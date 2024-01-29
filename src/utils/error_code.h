@@ -30,6 +30,7 @@
 #include <ostream>
 #include <string>
 
+#include "utils/fmt_utils.h"
 #include "utils/ports.h"
 
 namespace apache {
@@ -53,9 +54,12 @@ public:
 
     const char *to_string() const;
 
-    constexpr bool operator==(const error_code &r) { return _internal_code == r._internal_code; }
+    constexpr bool operator==(const error_code &r) const
+    {
+        return _internal_code == r._internal_code;
+    }
 
-    constexpr bool operator!=(const error_code &r) { return !(*this == r); }
+    constexpr bool operator!=(const error_code &r) const { return !(*this == r); }
 
     constexpr operator int() const { return _internal_code; }
 
@@ -176,4 +180,8 @@ DEFINE_ERR_CODE(ERR_RANGER_POLICIES_NO_NEED_UPDATE)
 DEFINE_ERR_CODE(ERR_RDB_CORRUPTION)
 
 DEFINE_ERR_CODE(ERR_DISK_IO_ERROR)
+
+DEFINE_ERR_CODE(ERR_CURL_FAILED)
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_code);

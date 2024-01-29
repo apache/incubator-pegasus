@@ -17,19 +17,16 @@
 
 #include "replica/duplication/duplication_sync_timer.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <cstdint>
 #include <initializer_list>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <utility>
 
 #include "common/duplication_common.h"
 #include "common/replication.codes.h"
 #include "duplication_test_base.h"
+#include "gtest/gtest.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/test/mock_utils.h"
@@ -376,19 +373,21 @@ protected:
     std::unique_ptr<duplication_sync_timer> dup_sync;
 };
 
-TEST_F(duplication_sync_timer_test, duplication_sync) { test_duplication_sync(); }
+INSTANTIATE_TEST_SUITE_P(, duplication_sync_timer_test, ::testing::Values(false, true));
 
-TEST_F(duplication_sync_timer_test, update_duplication_map) { test_update_duplication_map(); }
+TEST_P(duplication_sync_timer_test, duplication_sync) { test_duplication_sync(); }
 
-TEST_F(duplication_sync_timer_test, update_on_non_primary) { test_update_on_non_primary(); }
+TEST_P(duplication_sync_timer_test, update_duplication_map) { test_update_duplication_map(); }
 
-TEST_F(duplication_sync_timer_test, update_confirmed_points) { test_update_confirmed_points(); }
+TEST_P(duplication_sync_timer_test, update_on_non_primary) { test_update_on_non_primary(); }
 
-TEST_F(duplication_sync_timer_test, on_duplication_sync_reply) { test_on_duplication_sync_reply(); }
+TEST_P(duplication_sync_timer_test, update_confirmed_points) { test_update_confirmed_points(); }
 
-TEST_F(duplication_sync_timer_test, replica_status_transition) { test_replica_status_transition(); }
+TEST_P(duplication_sync_timer_test, on_duplication_sync_reply) { test_on_duplication_sync_reply(); }
 
-TEST_F(duplication_sync_timer_test, receive_illegal_duplication_status)
+TEST_P(duplication_sync_timer_test, replica_status_transition) { test_replica_status_transition(); }
+
+TEST_P(duplication_sync_timer_test, receive_illegal_duplication_status)
 {
     test_receive_illegal_duplication_status();
 }

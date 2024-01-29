@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     checkpoint the replicated app
- *
- * Revision history:
- *     Nov., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <fmt/core.h>
 #include <stdint.h>
 #include <atomic>
@@ -50,8 +41,6 @@
 #include "duplication/replica_duplicator_manager.h"
 #include "metadata_types.h"
 #include "mutation_log.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
@@ -70,10 +59,13 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
+
+// The checkpoint of the replicated app part of replica.
 
 DSN_DEFINE_int32(replication,
                  checkpoint_max_interval_hours,
@@ -168,9 +160,10 @@ void replica::on_checkpoint_timer()
                                  valid_start_offset,
                                  (int64_t)FLAGS_log_private_reserve_max_size_mb * 1024 * 1024,
                                  (int64_t)FLAGS_log_private_reserve_max_time_seconds);
-                             if (status() == partition_status::PS_PRIMARY)
-                                 _counter_private_log_size->set(_private_log->total_size() /
-                                                                1000000);
+                             if (status() == partition_status::PS_PRIMARY) {
+                                 METRIC_VAR_SET(private_log_size_mb,
+                                                _private_log->total_size() >> 20);
+                             }
                          });
     }
 }
@@ -238,8 +231,9 @@ void replica::init_checkpoint(bool is_emergency)
                      0,
                      10_ms);
 
-    if (is_emergency)
-        _stub->_counter_recent_trigger_emergency_checkpoint_count->increment();
+    if (is_emergency) {
+        METRIC_VAR_INCREMENT(emergency_checkpoints);
+    }
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

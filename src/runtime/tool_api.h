@@ -24,18 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     define the interface for implementing and plug-in the tools &
- *     runtime components into rDSN.
- *     In rDSN, both developement tools and runtime libraries
- *     (e.g., high performance components) are considered tools.
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 /*!
 @defgroup tool-api-hooks Join Points
 @ingroup tool-api
@@ -71,6 +59,10 @@ class service_node;
 struct service_spec;
 
 namespace tools {
+
+// Define the interface for implementing and plug-in the tools & runtime components into rDSN.
+// In rDSN, both developement tools and runtime libraries (e.g., high performance components) are
+// considered tools.
 
 /*!
 @addtogroup tool-api-providers

@@ -19,11 +19,6 @@
 
 #include <base/pegasus_key_schema.h>
 #include <fmt/core.h>
-#include <gmock/gmock-actions.h>
-#include <gmock/gmock-spec-builders.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <stdint.h>
@@ -33,17 +28,19 @@
 #include <string>
 #include <utility>
 
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/serverlet.h"
 #include "server/pegasus_read_service.h"
+#include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/metrics.h"
 
 namespace pegasus {
 namespace server {
@@ -79,7 +76,7 @@ public:
             _server->update_app_envs(envs);
 
             // do on_get/on_multi_get operation,
-            long before_count = _server->_pfc_recent_abnormal_count->get_integer_value();
+            auto before_count = _server->METRIC_VAR_VALUE(abnormal_read_requests);
             if (!test.is_multi_get) {
                 get_rpc rpc(std::make_unique<dsn::blob>(test_key), dsn::apps::RPC_RRDB_RRDB_GET);
                 _server->on_get(rpc);
@@ -92,7 +89,7 @@ public:
                                   dsn::apps::RPC_RRDB_RRDB_MULTI_GET);
                 _server->on_multi_get(rpc);
             }
-            long after_count = _server->_pfc_recent_abnormal_count->get_integer_value();
+            auto after_count = _server->METRIC_VAR_VALUE(abnormal_read_requests);
 
             ASSERT_EQ(before_count + test.expect_perf_counter_incr, after_count);
         }
@@ -124,10 +121,10 @@ public:
             }
         }
 
-        start(all_test_envs);
+        ASSERT_EQ(dsn::ERR_OK, start(all_test_envs));
         if (is_restart) {
-            _server->stop(false);
-            start();
+            ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
+            ASSERT_EQ(dsn::ERR_OK, start());
         }
 
         std::map<std::string, std::string> query_envs;
@@ -143,22 +140,24 @@ public:
     }
 };
 
-TEST_F(pegasus_server_impl_test, test_table_level_slow_query)
+INSTANTIATE_TEST_SUITE_P(, pegasus_server_impl_test, ::testing::Values(false, true));
+
+TEST_P(pegasus_server_impl_test, test_table_level_slow_query)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     test_table_level_slow_query();
 }
 
-TEST_F(pegasus_server_impl_test, default_data_version)
+TEST_P(pegasus_server_impl_test, default_data_version)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(_server->_pegasus_data_version, 1);
 }
 
-TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
+TEST_P(pegasus_server_impl_test, test_open_db_with_latest_options)
 {
     // open a new db with no app env.
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL, _server->_usage_scenario);
     // set bulk_load scenario for the db.
     ASSERT_TRUE(_server->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD));
@@ -167,51 +166,51 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
     ASSERT_EQ(1000000000, opts.level0_file_num_compaction_trigger);
     ASSERT_EQ(true, opts.disable_auto_compactions);
     // reopen the db.
-    _server->stop(false);
-    start();
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
     ASSERT_EQ(opts.level0_file_num_compaction_trigger,
               _server->_db->GetOptions().level0_file_num_compaction_trigger);
     ASSERT_EQ(opts.disable_auto_compactions, _server->_db->GetOptions().disable_auto_compactions);
 }
 
-TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
+TEST_P(pegasus_server_impl_test, test_open_db_with_app_envs)
 {
     std::map<std::string, std::string> envs;
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
-    start(envs);
+    ASSERT_EQ(dsn::ERR_OK, start(envs));
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
 }
 
-TEST_F(pegasus_server_impl_test, test_open_db_with_rocksdb_envs)
+TEST_P(pegasus_server_impl_test, test_open_db_with_rocksdb_envs)
 {
     // Hint: Verify the set_rocksdb_options_before_creating function by boolean is_restart=false.
     test_open_db_with_rocksdb_envs(false);
 }
 
-TEST_F(pegasus_server_impl_test, test_restart_db_with_rocksdb_envs)
+TEST_P(pegasus_server_impl_test, test_restart_db_with_rocksdb_envs)
 {
     // Hint: Verify the reset_rocksdb_options function by boolean is_restart=true.
     test_open_db_with_rocksdb_envs(true);
 }
 
-TEST_F(pegasus_server_impl_test, test_stop_db_twice)
+TEST_P(pegasus_server_impl_test, test_stop_db_twice)
 {
-    start();
+    ASSERT_EQ(dsn::ERR_OK, start());
     ASSERT_TRUE(_server->_is_open);
     ASSERT_TRUE(_server->_db != nullptr);
 
-    _server->stop(false);
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
     ASSERT_FALSE(_server->_is_open);
     ASSERT_TRUE(_server->_db == nullptr);
 
     // stop again
-    _server->stop(false);
+    ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
     ASSERT_FALSE(_server->_is_open);
     ASSERT_TRUE(_server->_db == nullptr);
 }
 
-TEST_F(pegasus_server_impl_test, test_update_user_specified_compaction)
+TEST_P(pegasus_server_impl_test, test_update_user_specified_compaction)
 {
     _server->_user_specified_compaction = "";
     std::map<std::string, std::string> envs;
@@ -225,7 +224,7 @@ TEST_F(pegasus_server_impl_test, test_update_user_specified_compaction)
     ASSERT_EQ(user_specified_compaction, _server->_user_specified_compaction);
 }
 
-TEST_F(pegasus_server_impl_test, test_load_from_duplication_data)
+TEST_P(pegasus_server_impl_test, test_load_from_duplication_data)
 {
     auto origin_file = fmt::format("{}/{}", _server->duplication_dir(), "checkpoint");
     dsn::utils::filesystem::create_directory(_server->duplication_dir());

@@ -25,6 +25,9 @@
  */
 
 #include "utils/config_api.h"
+
+#include <algorithm>
+
 #include "utils/configuration.h"
 
 dsn::configuration g_config;

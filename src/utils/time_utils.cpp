@@ -23,9 +23,6 @@
 #include <fmt/chrono.h> // IWYU pragma: keep
 // IWYU pragma: no_include <fmt/core.h>
 // IWYU pragma: no_include <fmt/format.h>
-#if FMT_VERSION < 60000
-#include <fmt/time.h> // IWYU pragma: keep
-#endif
 #include <fmt/printf.h> // IWYU pragma: keep
 // IWYU pragma: no_include <algorithm>
 // IWYU pragma: no_include <iterator>

@@ -17,6 +17,7 @@
 
 #include "throttling_controller.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
 #include <memory>
 #include <vector>

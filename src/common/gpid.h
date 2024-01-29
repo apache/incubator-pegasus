@@ -23,11 +23,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 #pragma once
 
 #include <cstdint>
 #include <ostream>
 #include <thrift/protocol/TProtocol.h>
+
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 
@@ -90,6 +93,8 @@ private:
 };
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::gpid);
 
 namespace std {
 template <>

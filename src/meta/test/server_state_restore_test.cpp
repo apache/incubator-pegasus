@@ -15,9 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <map>
@@ -29,6 +26,7 @@
 #include "common/backup_common.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"

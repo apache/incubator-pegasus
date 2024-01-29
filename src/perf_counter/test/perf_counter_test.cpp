@@ -24,26 +24,16 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for perf counter.
- *
- * Revision history:
- *     Nov., 2015, @shengofsun (Weijie Sun), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdlib.h>
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <thread>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_atomic.h"
 #include "utils/autoref_ptr.h"

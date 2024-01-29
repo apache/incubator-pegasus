@@ -38,7 +38,7 @@
 #include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace replication {
@@ -77,7 +77,7 @@ namespace replication {
                                               size_t start_offset,
                                               int64_t &end_offset)
 {
-    FAIL_POINT_INJECT_F("mutation_log_replay_block", [](string_view) -> error_s {
+    FAIL_POINT_INJECT_F("mutation_log_replay_block", [](absl::string_view) -> error_s {
         return error_s::make(ERR_INCOMPLETE_DATA, "mutation_log_replay_block");
     });
 
@@ -133,14 +133,14 @@ namespace replication {
                                            replay_callback callback,
                                            /*out*/ int64_t &end_offset)
 {
-    std::map<int, log_file_ptr> logs;
+    log_file_map_by_index logs;
     for (auto &fpath : log_files) {
         error_code err;
         log_file_ptr log = log_file::open_read(fpath.c_str(), err);
         if (log == nullptr) {
             if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA ||
                 err == ERR_INVALID_PARAMETERS) {
-                LOG_DEBUG("skip file {} during log replay", fpath);
+                LOG_INFO("skip file {} during log replay", fpath);
                 continue;
             } else {
                 return err;
@@ -154,7 +154,7 @@ namespace replication {
     return replay(logs, callback, end_offset);
 }
 
-/*static*/ error_code mutation_log::replay(std::map<int, log_file_ptr> &logs,
+/*static*/ error_code mutation_log::replay(log_file_map_by_index &logs,
                                            replay_callback callback,
                                            /*out*/ int64_t &end_offset)
 {

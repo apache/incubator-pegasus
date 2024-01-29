@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <s2/third_party/absl/base/port.h>
 #include <string>
 #include <vector>
 
@@ -43,7 +42,6 @@ public:
 private:
     info_collector _collector;
     available_detector _detector;
-    bool _updater_started;
 };
 }
 } // namespace

@@ -82,7 +82,7 @@ public class Toollet {
       Process process = Runtime.getRuntime().exec(new String[] {"bash", "-c", command});
       int result = process.waitFor();
       if (0 != result) {
-        logger.warn("exec command {} failed, error code {}", command, result);
+        logger.warn("exec command '{}' failed, error code {}", command, result);
         return false;
       }
       return true;

@@ -25,14 +25,12 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <queue>
 #include <string>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "meta/meta_state_service.h"
 #include "meta/meta_state_service_utils.h"
 #include "runtime/task/task_tracker.h"
