@@ -21,17 +21,17 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <chrono>
-#include <map>
 
 #include "common/replication_other_types.h"
 #include "mutation_batch.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "replica/log_file.h"
 #include "replica/mutation_log.h"
 #include "replica/replica_base.h"
 #include "runtime/pipeline.h"
+#include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 namespace replication {
@@ -61,7 +61,7 @@ public:
 
     /// Find the log file that contains `_start_decree`.
     void find_log_file_to_start();
-    void find_log_file_to_start(std::map<int, log_file_ptr> log_files);
+    void find_log_file_to_start(const mutation_log::log_file_map_by_index &log_files);
 
     void replay_log_block();
 
@@ -75,6 +75,9 @@ public:
     bool will_fail_fast() const;
 
     void TEST_set_repeat_delay(std::chrono::milliseconds delay) { _repeat_delay = delay; }
+
+    METRIC_DEFINE_VALUE(dup_log_file_load_failed_count, int64_t)
+    METRIC_DEFINE_VALUE(dup_log_file_load_skipped_bytes, int64_t)
 
     static constexpr int MAX_ALLOWED_BLOCK_REPEATS{3};
     static constexpr int MAX_ALLOWED_FILE_REPEATS{10};
@@ -103,10 +106,10 @@ private:
 
     decree _start_decree{0};
 
-    perf_counter_wrapper _counter_dup_load_file_failed_count;
-    perf_counter_wrapper _counter_dup_load_skipped_bytes_count;
-    perf_counter_wrapper _counter_dup_log_read_bytes_rate;
-    perf_counter_wrapper _counter_dup_log_read_mutations_rate;
+    METRIC_VAR_DECLARE_counter(dup_log_file_load_failed_count);
+    METRIC_VAR_DECLARE_counter(dup_log_file_load_skipped_bytes);
+    METRIC_VAR_DECLARE_counter(dup_log_read_bytes);
+    METRIC_VAR_DECLARE_counter(dup_log_read_mutations);
 
     std::chrono::milliseconds _repeat_delay{10_s};
 };

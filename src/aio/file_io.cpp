@@ -26,32 +26,51 @@
 
 #include "aio/file_io.h"
 
+#include <memory>
 // IWYU pragma: no_include <algorithm>
 #include <vector>
 
 #include "aio/aio_provider.h"
 #include "disk_engine.h"
+#include "rocksdb/env.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 class task_tracker;
 
 namespace file {
 
-/*extern*/ disk_file *open(const char *file_name, int flag, int pmode)
+/*extern*/ disk_file *open(const std::string &fname, FileOpenType type)
 {
-    auto fd = disk_engine::provider().open(file_name, flag, pmode);
-    if (fd.is_invalid()) {
-        return nullptr;
+    switch (type) {
+    case FileOpenType::kReadOnly: {
+        auto sf = disk_engine::provider().open_read_file(fname);
+        if (!sf) {
+            return nullptr;
+        }
+        return new disk_file(std::move(sf));
     }
-
-    return new disk_file(fd);
+    case FileOpenType::kWriteOnly: {
+        auto wf = disk_engine::provider().open_write_file(fname);
+        if (!wf) {
+            return nullptr;
+        }
+        return new disk_file(std::move(wf));
+    }
+    default:
+        CHECK(false, "");
+    }
+    return nullptr;
 }
 
 /*extern*/ error_code close(disk_file *file)
 {
-    error_code result = ERR_INVALID_HANDLE;
+    error_code result = ERR_OK;
     if (file != nullptr) {
-        result = disk_engine::provider().close(file->native_handle());
+        // A read file is not needed to close.
+        if (file->wfile()) {
+            result = disk_engine::provider().close(file->wfile());
+        }
         delete file;
         file = nullptr;
     }
@@ -60,11 +79,11 @@ namespace file {
 
 /*extern*/ error_code flush(disk_file *file)
 {
-    if (nullptr != file) {
-        return disk_engine::provider().flush(file->native_handle());
-    } else {
+    if (file == nullptr || file->wfile() == nullptr) {
         return ERR_INVALID_HANDLE;
     }
+
+    return disk_engine::provider().flush(file->wfile());
 }
 
 /*extern*/ aio_task_ptr read(disk_file *file,
@@ -84,7 +103,8 @@ namespace file {
     cb->get_aio_context()->engine = &disk_engine::instance();
     cb->get_aio_context()->dfile = file;
 
-    if (!cb->spec().on_aio_call.execute(task::get_current_task(), cb, true)) {
+    if (!cb->spec().on_aio_call.execute(task::get_current_task(), cb, true) ||
+        file->rfile() == nullptr) {
         cb->enqueue(ERR_FILE_OPERATION_FAILED, 0);
         return cb;
     }
@@ -110,6 +130,10 @@ namespace file {
     cb->get_aio_context()->file_offset = offset;
     cb->get_aio_context()->type = AIO_Write;
     cb->get_aio_context()->dfile = file;
+    if (file->wfile() == nullptr) {
+        cb->enqueue(ERR_FILE_OPERATION_FAILED, 0);
+        return cb;
+    }
 
     disk_engine::instance().write(cb);
     return cb;

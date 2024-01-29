@@ -26,8 +26,12 @@
 
 #pragma once
 
+#include <string>
+
 #include "common/gpid.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
+#include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 namespace replication {
@@ -35,10 +39,7 @@ namespace replication {
 /// Base class for types that are one-instance-per-replica.
 struct replica_base
 {
-    replica_base(gpid id, string_view name, string_view app_name)
-        : _gpid(id), _name(name), _app_name(app_name)
-    {
-    }
+    replica_base(gpid id, absl::string_view name, absl::string_view app_name);
 
     explicit replica_base(replica_base *rhs)
         : replica_base(rhs->get_gpid(), rhs->replica_name(), rhs->_app_name)
@@ -53,10 +54,22 @@ struct replica_base
 
     const char *log_prefix() const { return _name.c_str(); }
 
+    const metric_entity_ptr &replica_metric_entity() const
+    {
+        CHECK_NOTNULL(_replica_metric_entity,
+                      "replica metric entity (table_id={}, partition_id={}) should has been "
+                      "instantiated: uninitialized entity cannot be used to instantiate metric",
+                      _gpid.get_app_id(),
+                      _gpid.get_partition_index());
+        return _replica_metric_entity;
+    }
+
 private:
     const gpid _gpid;
     const std::string _name;
+    // TODO(wangdan): drop `_app_name` or make it changeable, since a table could be renamed.
     const std::string _app_name;
+    const metric_entity_ptr _replica_metric_entity;
 };
 
 } // namespace replication

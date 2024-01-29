@@ -26,11 +26,9 @@
 
 #include "utils/join_point.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <vector>
+
+#include "gtest/gtest.h"
 
 namespace dsn {
 

@@ -15,21 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <stdint.h>
 #include <string.h>
-#include <algorithm>
 #include <memory>
 #include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_message_parser.h"
+#include "http/http_method.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
@@ -79,15 +79,20 @@ TEST(bultin_http_calls_test, meta_query)
     http_request req;
     http_response resp;
     get_recent_start_time_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
 
     get_version_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
 }
 
 TEST(bultin_http_calls_test, get_help)
 {
+    // Used to save current http calls as backup.
+    std::vector<std::shared_ptr<http_call>> backup_calls;
+
+    // Remove all http calls.
     for (const auto &call : http_call_registry::instance().list_all_calls()) {
+        backup_calls.push_back(call);
         http_call_registry::instance().remove(call->path);
     }
 
@@ -99,7 +104,7 @@ TEST(bultin_http_calls_test, get_help)
     http_request req;
     http_response resp;
     get_help_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
     ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\"}\n");
 
     register_http_call("recentStartTime")
@@ -111,8 +116,14 @@ TEST(bultin_http_calls_test, get_help)
     get_help_handler(req, resp);
     ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\",\"/recentStartTime\":\"ip:port/recentStartTime\"}\n");
 
+    // Remove all http calls, especially `recentStartTime`.
     for (const auto &call : http_call_registry::instance().list_all_calls()) {
         http_call_registry::instance().remove(call->path);
+    }
+
+    // Recover http calls from backup.
+    for (const auto &call : backup_calls) {
+        http_call_registry::instance().add(call);
     }
 }
 
@@ -174,7 +185,7 @@ public:
             message_ptr msg = parser.get_message_on_receive(&reader, read_next);
             ASSERT_NE(msg, nullptr);
             ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
-            ASSERT_EQ(msg->header->hdr_type, http_method::HTTP_METHOD_GET);
+            ASSERT_EQ(msg->header->hdr_type, static_cast<uint32_t>(http_method::GET));
             ASSERT_EQ(msg->header->context.u.is_request, 1);
             ASSERT_EQ(msg->buffers.size(), HTTP_MSG_BUFFERS_NUM);
             ASSERT_EQ(msg->buffers[2].size(), 1); // url
@@ -215,7 +226,7 @@ TEST_F(http_message_parser_test, parse_request)
     ASSERT_NE(msg, nullptr);
 
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
-    ASSERT_EQ(msg->header->hdr_type, http_method::HTTP_METHOD_POST);
+    ASSERT_EQ(msg->header->hdr_type, static_cast<uint32_t>(http_method::POST));
     ASSERT_EQ(msg->header->context.u.is_request, 1);
     ASSERT_EQ(msg->buffers.size(), HTTP_MSG_BUFFERS_NUM);
     ASSERT_EQ(msg->buffers[1].to_string(), "Message Body sdfsdf"); // body
@@ -266,7 +277,7 @@ TEST_F(http_message_parser_test, eof)
     ASSERT_NE(msg, nullptr);
 
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
-    ASSERT_EQ(msg->header->hdr_type, http_method::HTTP_METHOD_GET);
+    ASSERT_EQ(msg->header->hdr_type, static_cast<uint32_t>(http_method::GET));
     ASSERT_EQ(msg->header->context.u.is_request, 1);
     ASSERT_EQ(msg->buffers.size(), HTTP_MSG_BUFFERS_NUM);
     ASSERT_EQ(msg->buffers[1].to_string(), ""); // body
@@ -297,7 +308,7 @@ TEST_F(http_message_parser_test, parse_long_url)
     message_ptr msg = parser.get_message_on_receive(&reader, read_next);
     ASSERT_NE(msg, nullptr);
     ASSERT_EQ(msg->hdr_format, NET_HDR_HTTP);
-    ASSERT_EQ(msg->header->hdr_type, http_method::HTTP_METHOD_GET);
+    ASSERT_EQ(msg->header->hdr_type, static_cast<uint32_t>(http_method::GET));
     ASSERT_EQ(msg->header->context.u.is_request, 1);
     ASSERT_EQ(msg->buffers.size(), HTTP_MSG_BUFFERS_NUM);
     ASSERT_EQ(msg->buffers[2].size(), 4097); // url

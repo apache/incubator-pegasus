@@ -17,24 +17,23 @@
  * under the License.
  */
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <rocksdb/status.h>
-#include <algorithm>
-#include <iosfwd>
-#include <string>
+#include <stddef.h>
+#include <functional>
+#include <set>
+#include <vector>
 
 #include "base/pegasus_rpc_types.h"
 #include "bulk_load_types.h"
 #include "capacity_unit_calculator.h"
 #include "common/duplication_common.h"
-#include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "duplication_internal_types.h"
 #include "pegasus_value_schema.h"
 #include "pegasus_write_service.h"
 #include "pegasus_write_service_impl.h"
-#include "perf_counter/perf_counter.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
@@ -42,7 +41,7 @@
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "server/pegasus_server_impl.h"
-#include "utils/defer.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -51,6 +50,92 @@ namespace dsn {
 class blob;
 class message_ex;
 } // namespace dsn
+
+METRIC_DEFINE_counter(replica,
+                      put_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of PUT requests");
+
+METRIC_DEFINE_counter(replica,
+                      multi_put_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of MULTI_PUT requests");
+
+METRIC_DEFINE_counter(replica,
+                      remove_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of REMOVE requests");
+
+METRIC_DEFINE_counter(replica,
+                      multi_remove_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of MULTI_REMOVE requests");
+
+METRIC_DEFINE_counter(replica,
+                      incr_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of INCR requests");
+
+METRIC_DEFINE_counter(replica,
+                      check_and_set_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of CHECK_AND_SET requests");
+
+METRIC_DEFINE_counter(replica,
+                      check_and_mutate_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of CHECK_AND_MUTATE requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               put_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of PUT requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               multi_put_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of MULTI_PUT requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               remove_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of REMOVE requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               multi_remove_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of MULTI_REMOVE requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               incr_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of INCR requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               check_and_set_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of CHECK_AND_SET requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               check_and_mutate_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of CHECK_AND_MUTATE requests");
+
+METRIC_DEFINE_counter(replica,
+                      dup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of DUPLICATE requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               dup_time_lag_ms,
+                               dsn::metric_unit::kMilliSeconds,
+                               "the time lag (in ms) between master and slave in the duplication");
+
+METRIC_DEFINE_counter(
+    replica,
+    dup_lagging_writes,
+    dsn::metric_unit::kRequests,
+    "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
 
 namespace pegasus {
 namespace server {
@@ -68,105 +153,27 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       _server(server),
       _impl(new impl(server)),
       _batch_start_time(0),
-      _cu_calculator(server->_cu_calculator.get())
+      _cu_calculator(server->_cu_calculator.get()),
+      METRIC_VAR_INIT_replica(put_requests),
+      METRIC_VAR_INIT_replica(multi_put_requests),
+      METRIC_VAR_INIT_replica(remove_requests),
+      METRIC_VAR_INIT_replica(multi_remove_requests),
+      METRIC_VAR_INIT_replica(incr_requests),
+      METRIC_VAR_INIT_replica(check_and_set_requests),
+      METRIC_VAR_INIT_replica(check_and_mutate_requests),
+      METRIC_VAR_INIT_replica(put_latency_ns),
+      METRIC_VAR_INIT_replica(multi_put_latency_ns),
+      METRIC_VAR_INIT_replica(remove_latency_ns),
+      METRIC_VAR_INIT_replica(multi_remove_latency_ns),
+      METRIC_VAR_INIT_replica(incr_latency_ns),
+      METRIC_VAR_INIT_replica(check_and_set_latency_ns),
+      METRIC_VAR_INIT_replica(check_and_mutate_latency_ns),
+      METRIC_VAR_INIT_replica(dup_requests),
+      METRIC_VAR_INIT_replica(dup_time_lag_ms),
+      METRIC_VAR_INIT_replica(dup_lagging_writes),
+      _put_batch_size(0),
+      _remove_batch_size(0)
 {
-    std::string str_gpid = fmt::format("{}", server->get_gpid());
-
-    std::string name;
-
-    name = fmt::format("put_qps@{}", str_gpid);
-    _pfc_put_qps.init_app_counter(
-        "app.pegasus", name.c_str(), COUNTER_TYPE_RATE, "statistic the qps of PUT request");
-
-    name = fmt::format("multi_put_qps@{}", str_gpid);
-    _pfc_multi_put_qps.init_app_counter(
-        "app.pegasus", name.c_str(), COUNTER_TYPE_RATE, "statistic the qps of MULTI_PUT request");
-
-    name = fmt::format("remove_qps@{}", str_gpid);
-    _pfc_remove_qps.init_app_counter(
-        "app.pegasus", name.c_str(), COUNTER_TYPE_RATE, "statistic the qps of REMOVE request");
-
-    name = fmt::format("multi_remove_qps@{}", str_gpid);
-    _pfc_multi_remove_qps.init_app_counter("app.pegasus",
-                                           name.c_str(),
-                                           COUNTER_TYPE_RATE,
-                                           "statistic the qps of MULTI_REMOVE request");
-
-    name = fmt::format("incr_qps@{}", str_gpid);
-    _pfc_incr_qps.init_app_counter(
-        "app.pegasus", name.c_str(), COUNTER_TYPE_RATE, "statistic the qps of INCR request");
-
-    name = fmt::format("check_and_set_qps@{}", str_gpid);
-    _pfc_check_and_set_qps.init_app_counter("app.pegasus",
-                                            name.c_str(),
-                                            COUNTER_TYPE_RATE,
-                                            "statistic the qps of CHECK_AND_SET request");
-
-    name = fmt::format("check_and_mutate_qps@{}", str_gpid);
-    _pfc_check_and_mutate_qps.init_app_counter("app.pegasus",
-                                               name.c_str(),
-                                               COUNTER_TYPE_RATE,
-                                               "statistic the qps of CHECK_AND_MUTATE request");
-
-    name = fmt::format("put_latency@{}", str_gpid);
-    _pfc_put_latency.init_app_counter("app.pegasus",
-                                      name.c_str(),
-                                      COUNTER_TYPE_NUMBER_PERCENTILES,
-                                      "statistic the latency of PUT request");
-
-    name = fmt::format("multi_put_latency@{}", str_gpid);
-    _pfc_multi_put_latency.init_app_counter("app.pegasus",
-                                            name.c_str(),
-                                            COUNTER_TYPE_NUMBER_PERCENTILES,
-                                            "statistic the latency of MULTI_PUT request");
-
-    name = fmt::format("remove_latency@{}", str_gpid);
-    _pfc_remove_latency.init_app_counter("app.pegasus",
-                                         name.c_str(),
-                                         COUNTER_TYPE_NUMBER_PERCENTILES,
-                                         "statistic the latency of REMOVE request");
-
-    name = fmt::format("multi_remove_latency@{}", str_gpid);
-    _pfc_multi_remove_latency.init_app_counter("app.pegasus",
-                                               name.c_str(),
-                                               COUNTER_TYPE_NUMBER_PERCENTILES,
-                                               "statistic the latency of MULTI_REMOVE request");
-
-    name = fmt::format("incr_latency@{}", str_gpid);
-    _pfc_incr_latency.init_app_counter("app.pegasus",
-                                       name.c_str(),
-                                       COUNTER_TYPE_NUMBER_PERCENTILES,
-                                       "statistic the latency of INCR request");
-
-    name = fmt::format("check_and_set_latency@{}", str_gpid);
-    _pfc_check_and_set_latency.init_app_counter("app.pegasus",
-                                                name.c_str(),
-                                                COUNTER_TYPE_NUMBER_PERCENTILES,
-                                                "statistic the latency of CHECK_AND_SET request");
-
-    name = fmt::format("check_and_mutate_latency@{}", str_gpid);
-    _pfc_check_and_mutate_latency.init_app_counter(
-        "app.pegasus",
-        name.c_str(),
-        COUNTER_TYPE_NUMBER_PERCENTILES,
-        "statistic the latency of CHECK_AND_MUTATE request");
-
-    _pfc_duplicate_qps.init_app_counter("app.pegasus",
-                                        fmt::format("duplicate_qps@{}", str_gpid).c_str(),
-                                        COUNTER_TYPE_RATE,
-                                        "statistic the qps of DUPLICATE requests");
-
-    _pfc_dup_time_lag.init_app_counter(
-        "app.pegasus",
-        fmt::format("dup.time_lag_ms@{}", app_name()).c_str(),
-        COUNTER_TYPE_NUMBER_PERCENTILES,
-        "the time (in ms) lag between master and slave in the duplication");
-
-    _pfc_dup_lagging_writes.init_app_counter(
-        "app.pegasus",
-        fmt::format("dup.lagging_writes@{}", app_name()).c_str(),
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
 }
 
 pegasus_write_service::~pegasus_write_service() {}
@@ -177,15 +184,15 @@ int pegasus_write_service::multi_put(const db_write_context &ctx,
                                      const dsn::apps::multi_put_request &update,
                                      dsn::apps::update_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
-    _pfc_multi_put_qps->increment();
+    METRIC_VAR_AUTO_LATENCY(multi_put_latency_ns);
+    METRIC_VAR_INCREMENT(multi_put_requests);
+
     int err = _impl->multi_put(ctx, update, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_multi_put_cu(resp.error, update.hash_key, update.kvs);
     }
 
-    _pfc_multi_put_latency->set(dsn_now_ns() - start_time);
     return err;
 }
 
@@ -193,15 +200,15 @@ int pegasus_write_service::multi_remove(int64_t decree,
                                         const dsn::apps::multi_remove_request &update,
                                         dsn::apps::multi_remove_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
-    _pfc_multi_remove_qps->increment();
+    METRIC_VAR_AUTO_LATENCY(multi_remove_latency_ns);
+    METRIC_VAR_INCREMENT(multi_remove_requests);
+
     int err = _impl->multi_remove(decree, update, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_multi_remove_cu(resp.error, update.hash_key, update.sort_keys);
     }
 
-    _pfc_multi_remove_latency->set(dsn_now_ns() - start_time);
     return err;
 }
 
@@ -209,15 +216,15 @@ int pegasus_write_service::incr(int64_t decree,
                                 const dsn::apps::incr_request &update,
                                 dsn::apps::incr_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
-    _pfc_incr_qps->increment();
+    METRIC_VAR_AUTO_LATENCY(incr_latency_ns);
+    METRIC_VAR_INCREMENT(incr_requests);
+
     int err = _impl->incr(decree, update, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_incr_cu(resp.error, update.key);
     }
 
-    _pfc_incr_latency->set(dsn_now_ns() - start_time);
     return err;
 }
 
@@ -225,8 +232,9 @@ int pegasus_write_service::check_and_set(int64_t decree,
                                          const dsn::apps::check_and_set_request &update,
                                          dsn::apps::check_and_set_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
-    _pfc_check_and_set_qps->increment();
+    METRIC_VAR_AUTO_LATENCY(check_and_set_latency_ns);
+    METRIC_VAR_INCREMENT(check_and_set_requests);
+
     int err = _impl->check_and_set(decree, update, resp);
 
     if (_server->is_primary()) {
@@ -237,7 +245,6 @@ int pegasus_write_service::check_and_set(int64_t decree,
                                              update.set_value);
     }
 
-    _pfc_check_and_set_latency->set(dsn_now_ns() - start_time);
     return err;
 }
 
@@ -245,8 +252,9 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
                                             const dsn::apps::check_and_mutate_request &update,
                                             dsn::apps::check_and_mutate_response &resp)
 {
-    uint64_t start_time = dsn_now_ns();
-    _pfc_check_and_mutate_qps->increment();
+    METRIC_VAR_AUTO_LATENCY(check_and_mutate_latency_ns);
+    METRIC_VAR_INCREMENT(check_and_mutate_requests);
+
     int err = _impl->check_and_mutate(decree, update, resp);
 
     if (_server->is_primary()) {
@@ -254,7 +262,6 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
             resp.error, update.hash_key, update.check_sort_key, update.mutate_list);
     }
 
-    _pfc_check_and_mutate_latency->set(dsn_now_ns() - start_time);
     return err;
 }
 
@@ -272,8 +279,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
 {
     CHECK_GT_MSG(_batch_start_time, 0, "batch_put must be called after batch_prepare");
 
-    _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
-    _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
+    ++_put_batch_size;
     int err = _impl->batch_put(ctx, update, resp);
 
     if (_server->is_primary()) {
@@ -289,8 +295,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
 {
     CHECK_GT_MSG(_batch_start_time, 0, "batch_remove must be called after batch_prepare");
 
-    _batch_qps_perfcounters.push_back(_pfc_remove_qps.get());
-    _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());
+    ++_remove_batch_size;
     int err = _impl->batch_remove(decree, key, resp);
 
     if (_server->is_primary()) {
@@ -322,15 +327,21 @@ void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_t
 
 void pegasus_write_service::clear_up_batch_states()
 {
-    uint64_t latency = dsn_now_ns() - _batch_start_time;
-    for (dsn::perf_counter *pfc : _batch_qps_perfcounters)
-        pfc->increment();
-    for (dsn::perf_counter *pfc : _batch_latency_perfcounters)
-        pfc->set(latency);
+#define PROCESS_WRITE_BATCH(op)                                                                    \
+    do {                                                                                           \
+        METRIC_VAR_INCREMENT_BY(op##_requests, static_cast<int64_t>(_##op##_batch_size));          \
+        METRIC_VAR_SET(op##_latency_ns, static_cast<size_t>(_##op##_batch_size), latency_ns);      \
+        _##op##_batch_size = 0;                                                                    \
+    } while (0)
 
-    _batch_qps_perfcounters.clear();
-    _batch_latency_perfcounters.clear();
+    auto latency_ns = static_cast<int64_t>(dsn_now_ns() - _batch_start_time);
+
+    PROCESS_WRITE_BATCH(put);
+    PROCESS_WRITE_BATCH(remove);
+
     _batch_start_time = 0;
+
+#undef PROCESS_WRITE_BATCH
 }
 
 int pegasus_write_service::duplicate(int64_t decree,
@@ -350,14 +361,13 @@ int pegasus_write_service::duplicate(int64_t decree,
             return empty_put(decree);
         }
 
-        _pfc_duplicate_qps->increment();
-        auto cleanup = dsn::defer([this, &request]() {
-            uint64_t latency_ms = (dsn_now_us() - request.timestamp) / 1000;
-            if (latency_ms > FLAGS_dup_lagging_write_threshold_ms) {
-                _pfc_dup_lagging_writes->increment();
-            }
-            _pfc_dup_time_lag->set(latency_ms);
-        });
+        METRIC_VAR_INCREMENT(dup_requests);
+        METRIC_VAR_AUTO_LATENCY(
+            dup_time_lag_ms, request.timestamp * 1000, [this](uint64_t latency) {
+                if (latency > FLAGS_dup_lagging_write_threshold_ms) {
+                    METRIC_VAR_INCREMENT(dup_lagging_writes);
+                }
+            });
         dsn::message_ex *write =
             dsn::from_blob_to_received_msg(request.task_code, request.raw_message);
         bool is_delete = request.task_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE ||

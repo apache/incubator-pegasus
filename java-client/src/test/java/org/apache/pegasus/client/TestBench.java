@@ -18,13 +18,17 @@
  */
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 /** Created by mi on 16-3-23. */
 public class TestBench {
@@ -34,8 +38,8 @@ public class TestBench {
 
     ScanOptions options = new ScanOptions();
     List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 1, options);
-    Assert.assertEquals(1, scanners.size());
-    Assert.assertNotNull(scanners.get(0));
+    assertEquals(1, scanners.size());
+    assertNotNull(scanners.get(0));
 
     Pair<Pair<byte[], byte[]>, byte[]> item;
     while ((item = scanners.get(0).next()) != null) {
@@ -44,22 +48,22 @@ public class TestBench {
     scanners.get(0).close();
 
     scanners = client.getUnorderedScanners(tableName, 1, options);
-    Assert.assertEquals(1, scanners.size());
-    Assert.assertNotNull(scanners.get(0));
+    assertEquals(1, scanners.size());
+    assertNotNull(scanners.get(0));
     item = scanners.get(0).next();
     scanners.get(0).close();
-    Assert.assertNull(
+    assertNull(
+        item,
         item == null
             ? null
             : String.format(
                 "Database is cleared but not empty, hashKey=%s, sortKey=%s",
-                new String(item.getLeft().getLeft()), new String(item.getLeft().getRight())),
-        item);
+                new String(item.getLeft().getLeft()), new String(item.getLeft().getRight())));
 
     PegasusClientFactory.closeSingletonClient();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownTestCase() throws PException {
     clearDatabase();
   }
@@ -152,8 +156,8 @@ public class TestBench {
         long begin_time = System.nanoTime();
         byte[] value = client.get(tableName, keys.get(i), null);
         long end_time = System.nanoTime();
-        Assert.assertTrue(value != null);
-        Assert.assertTrue(Arrays.equals(values.get(i), value));
+        assertTrue(value != null);
+        assertTrue(Arrays.equals(values.get(i), value));
         long dur_time = end_time - begin_time;
         if (dur_time < min_time) {
           min_time = dur_time;

@@ -19,8 +19,10 @@
 package org.apache.pegasus.client;
 
 /** @author qinzuoyan */
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
 
 /** Created by mi on 18-7-10. */
 public class TestIncr {
@@ -41,23 +43,23 @@ public class TestIncr {
 
       System.out.println("incr to empty value ...");
       long result = client.incr(tableName, hashKey, sortKey, 100);
-      Assert.assertEquals(100, result);
+      assertEquals(100, result);
       ttlSeconds = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertEquals(-1, ttlSeconds);
+      assertEquals(-1, ttlSeconds);
       System.out.println("incr to empty value ok");
 
       System.out.println("incr zero ...");
       result = client.incr(tableName, hashKey, sortKey, 0);
-      Assert.assertEquals(100, result);
+      assertEquals(100, result);
       ttlSeconds = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertEquals(-1, ttlSeconds);
+      assertEquals(-1, ttlSeconds);
       System.out.println("incr zero ok");
 
       System.out.println("incr negative ...");
       result = client.incr(tableName, hashKey, sortKey, -1);
-      Assert.assertEquals(99, result);
+      assertEquals(99, result);
       ttlSeconds = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertEquals(-1, ttlSeconds);
+      assertEquals(-1, ttlSeconds);
       System.out.println("incr negative ok");
 
       System.out.println("del value ...");
@@ -66,40 +68,40 @@ public class TestIncr {
 
       System.out.println("incr to un-exist value ...");
       result = client.incr(tableName, hashKey, sortKey, 200);
-      Assert.assertEquals(200, result);
+      assertEquals(200, result);
       ttlSeconds = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertEquals(-1, ttlSeconds);
+      assertEquals(-1, ttlSeconds);
       System.out.println("incr to un-exist value ok");
 
       System.out.println("incr with ttlSeconds > 0 ...");
       result = client.incr(tableName, hashKey, sortKey, 1, 10);
-      Assert.assertEquals(201, result);
+      assertEquals(201, result);
       ttlSeconds = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertTrue(ttlSeconds > 0);
-      Assert.assertTrue(ttlSeconds <= 10);
+      assertTrue(ttlSeconds > 0);
+      assertTrue(ttlSeconds <= 10);
       System.out.println("incr with ttlSeconds > 0 ok");
 
       System.out.println("incr with ttlSeconds == 0 ...");
       result = client.incr(tableName, hashKey, sortKey, 1);
-      Assert.assertEquals(202, result);
+      assertEquals(202, result);
       ttlSeconds = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertTrue(ttlSeconds > 0);
-      Assert.assertTrue(ttlSeconds <= 10);
+      assertTrue(ttlSeconds > 0);
+      assertTrue(ttlSeconds <= 10);
       System.out.println("incr with ttlSeconds == 0 ok");
 
       System.out.println("incr with ttlSeconds > 0 ...");
       result = client.incr(tableName, hashKey, sortKey, 1, 20);
-      Assert.assertEquals(203, result);
+      assertEquals(203, result);
       ttlSeconds = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertTrue(ttlSeconds > 10);
-      Assert.assertTrue(ttlSeconds <= 20);
+      assertTrue(ttlSeconds > 10);
+      assertTrue(ttlSeconds <= 20);
       System.out.println("incr with ttlSeconds > 0 ok");
 
       System.out.println("incr with ttlSeconds == -1 ...");
       result = client.incr(tableName, hashKey, sortKey, 1, -1);
-      Assert.assertEquals(204, result);
+      assertEquals(204, result);
       ttlSeconds = client.ttl(tableName, hashKey, sortKey);
-      Assert.assertEquals(-1, ttlSeconds);
+      assertEquals(-1, ttlSeconds);
       System.out.println("incr with ttlSeconds == -1 ok");
 
       System.out.println("del value ...");
@@ -107,7 +109,7 @@ public class TestIncr {
       System.out.println("del value ok");
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      assertTrue(false);
     }
 
     PegasusClientFactory.closeSingletonClient();

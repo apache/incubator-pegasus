@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Replication testing framework.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <stdint.h>
@@ -47,6 +38,7 @@
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 class partition_configuration;
@@ -213,3 +205,7 @@ struct parti_config
 }
 }
 }
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::parti_config);
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::replica_id);
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::state_snapshot);

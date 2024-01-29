@@ -27,7 +27,6 @@
 #include "utils/command_manager.h"
 
 #include <stdlib.h>
-#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <sstream> // IWYU pragma: keep
@@ -180,7 +179,7 @@ command_manager::~command_manager()
 {
     _cmds.clear();
     CHECK(_handlers.empty(),
-          "All commands must be deregistered before command_manager is destroyed, however {} is "
+          "All commands must be deregistered before command_manager is destroyed, however '{}' is "
           "still registered",
           _handlers.begin()->first);
 }

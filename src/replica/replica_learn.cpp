@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replication learning process
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <algorithm>
@@ -46,7 +37,8 @@
 #include <utility>
 #include <vector>
 
-#include "aio/aio_task.h"
+#include <fmt/std.h> // IWYU pragma: keep
+
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
@@ -58,8 +50,6 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "nfs/nfs_node.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/prepare_list.h"
@@ -80,10 +70,13 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
+
+// The replication learning process part of replica.
 
 DSN_DEFINE_int32(replication,
                  learn_app_max_concurrent_count,
@@ -137,7 +130,7 @@ void replica::init_learn(uint64_t signature)
             return;
         }
 
-        _stub->_counter_replicas_learning_recent_start_count->increment();
+        METRIC_VAR_INCREMENT(learn_count);
 
         _potential_secondary_states.learning_version = signature;
         _potential_secondary_states.learning_start_ts_ns = dsn_now_ns();
@@ -177,7 +170,7 @@ void replica::init_learn(uint64_t signature)
 
                     // missed ones need to be loaded via private logs
                     else {
-                        _stub->_counter_replicas_learning_recent_round_start_count->increment();
+                        METRIC_VAR_INCREMENT(learn_rounds);
                         _potential_secondary_states.learning_round_is_running = true;
                         _potential_secondary_states.catchup_with_private_log_task =
                             tasking::create_task(LPC_CATCHUP_WITH_PRIVATE_LOGS,
@@ -231,7 +224,7 @@ void replica::init_learn(uint64_t signature)
         return;
     }
 
-    _stub->_counter_replicas_learning_recent_round_start_count->increment();
+    METRIC_VAR_INCREMENT(learn_rounds);
     _potential_secondary_states.learning_round_is_running = true;
 
     learn_request request;
@@ -602,7 +595,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         enum_to_string(_potential_secondary_states.learning_status));
 
     _potential_secondary_states.learning_copy_buffer_size += resp.state.meta.length();
-    _stub->_counter_replicas_learning_recent_copy_buffer_size->add(resp.state.meta.length());
+    METRIC_VAR_INCREMENT_BY(learn_copy_buffer_bytes, resp.state.meta.length());
 
     if (resp.err != ERR_OK) {
         if (resp.err == ERR_INACTIVE_STATE || resp.err == ERR_INCONSISTENT_STATE) {
@@ -650,7 +643,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                            _app->last_committed_decree(),
                            resp.last_committed_decree);
 
-        _stub->_counter_replicas_learning_recent_learn_reset_count->increment();
+        METRIC_VAR_INCREMENT(learn_resets);
 
         // close app
         auto err = _app->close(true);
@@ -681,9 +674,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         }
 
         if (err == ERR_OK) {
-            err = _app->open_new_internal(this,
-                                          _stub->_log->on_partition_reset(get_gpid(), 0),
-                                          _private_log->on_partition_reset(get_gpid(), 0));
+            err = _app->open_new_internal(this, _private_log->on_partition_reset(get_gpid(), 0));
 
             if (err != ERR_OK) {
                 LOG_ERROR_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, open app (with "
@@ -743,13 +734,13 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
     switch (resp.type) {
     case learn_type::LT_CACHE:
-        _stub->_counter_replicas_learning_recent_learn_cache_count->increment();
+        METRIC_VAR_INCREMENT(learn_lt_cache_responses);
         break;
     case learn_type::LT_APP:
-        _stub->_counter_replicas_learning_recent_learn_app_count->increment();
+        METRIC_VAR_INCREMENT(learn_lt_app_responses);
         break;
     case learn_type::LT_LOG:
-        _stub->_counter_replicas_learning_recent_learn_log_count->increment();
+        METRIC_VAR_INCREMENT(learn_lt_log_responses);
         break;
     default:
         // do nothing
@@ -771,7 +762,6 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         // appended by the mutations AFTER current position
         err = _app->update_init_info(
             this,
-            _stub->_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
             _private_log->on_partition_reset(get_gpid(), _app->last_committed_decree()),
             _app->last_committed_decree());
 
@@ -1044,8 +1034,8 @@ void replica::on_copy_remote_state_completed(error_code err,
     if (err == ERR_OK) {
         _potential_secondary_states.learning_copy_file_count += resp.state.files.size();
         _potential_secondary_states.learning_copy_file_size += size;
-        _stub->_counter_replicas_learning_recent_copy_file_count->add(resp.state.files.size());
-        _stub->_counter_replicas_learning_recent_copy_file_size->add(size);
+        METRIC_VAR_INCREMENT_BY(learn_copy_files, resp.state.files.size());
+        METRIC_VAR_INCREMENT_BY(learn_copy_file_bytes, size);
     }
 
     if (err != ERR_OK) {
@@ -1246,7 +1236,7 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
         }
     }
 
-    _stub->_counter_replicas_learning_recent_learn_fail_count->increment();
+    METRIC_VAR_INCREMENT(learn_failed_count);
 
     update_local_configuration_with_no_ballot_change(
         is_local_error ? partition_status::PS_ERROR : partition_status::PS_INACTIVE);
@@ -1410,7 +1400,7 @@ void replica::on_learn_completion_notification_reply(error_code err,
             handle_learning_error(resp.err, false);
         }
     } else {
-        _stub->_counter_replicas_learning_recent_learn_succ_count->increment();
+        METRIC_VAR_INCREMENT(learn_successful_count);
     }
 }
 

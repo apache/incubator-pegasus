@@ -34,7 +34,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -130,7 +130,8 @@ generate_balancer_request(const app_mapper &apps,
                           const rpc_address &from,
                           const rpc_address &to)
 {
-    FAIL_POINT_INJECT_F("generate_balancer_request", [](string_view name) { return nullptr; });
+    FAIL_POINT_INJECT_F("generate_balancer_request",
+                        [](absl::string_view name) { return nullptr; });
 
     configuration_balancer_request result;
     result.gpid = pc.pid;

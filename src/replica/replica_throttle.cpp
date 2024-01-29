@@ -25,14 +25,13 @@
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/throttling_controller.h"
 
 namespace dsn {
@@ -51,7 +50,7 @@ namespace replication {
                     [ this, req = message_ptr(request) ]() { on_client_##op_type(req, true); },    \
                     get_gpid().thread_hash(),                                                      \
                     std::chrono::milliseconds(delay_ms));                                          \
-                _counter_recent_##op_type##_throttling_delay_count->increment();                   \
+                METRIC_VAR_INCREMENT(throttling_delayed_##op_type##_requests);                     \
             } else { /** type == throttling_controller::REJECT **/                                 \
                 if (delay_ms > 0) {                                                                \
                     tasking::enqueue(LPC_##op_type##_THROTTLING_DELAY,                             \
@@ -64,7 +63,7 @@ namespace replication {
                 } else {                                                                           \
                     response_client_##op_type(request, ERR_BUSY);                                  \
                 }                                                                                  \
-                _counter_recent_##op_type##_throttling_reject_count->increment();                  \
+                METRIC_VAR_INCREMENT(throttling_rejected_##op_type##_requests);                    \
             }                                                                                      \
             return true;                                                                           \
         }                                                                                          \
@@ -95,9 +94,9 @@ bool replica::throttle_backup_request(message_ex *request)
                              [ this, req = message_ptr(request) ]() { on_client_read(req, true); },
                              get_gpid().thread_hash(),
                              std::chrono::milliseconds(delay_ms));
-            _counter_recent_backup_request_throttling_delay_count->increment();
+            METRIC_VAR_INCREMENT(throttling_delayed_backup_requests);
         } else { /** type == throttling_controller::REJECT **/
-            _counter_recent_backup_request_throttling_reject_count->increment();
+            METRIC_VAR_INCREMENT(throttling_rejected_backup_requests);
         }
         return true;
     }

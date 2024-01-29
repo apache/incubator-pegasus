@@ -34,7 +34,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <set>
 
 #include "backup_types.h"
 #include "common//duplication_common.h"
@@ -45,7 +44,8 @@
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
-#include "fmt/ostream.h"
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "meta/meta_rpc_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/group_address.h"
@@ -1048,6 +1048,7 @@ dsn::error_code replication_ddl_client::add_backup_policy(const std::string &pol
     ::dsn::unmarshall(resp_task->get_response(), resp);
 
     if (resp.err != ERR_OK) {
+        std::cout << "add backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
         std::cout << "add backup policy succeed, policy_name = " << policy_name << std::endl;
@@ -1095,6 +1096,7 @@ dsn::error_code replication_ddl_client::disable_backup_policy(const std::string 
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "disable backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
         std::cout << "disable policy result: " << resp.err.to_string() << std::endl;
@@ -1123,6 +1125,7 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "enable backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else if (resp.err == ERR_BUSY) {
         std::cout << "policy is under backup, please try disable later" << std::endl;
@@ -1138,34 +1141,13 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     }
 }
 
-// help functions
-
-// TODO (yingchun) use join
-template <typename T>
-// make sure T support cout << T;
-std::string print_set(const std::set<T> &set)
-{
-    std::stringstream ss;
-    ss << "{";
-    auto begin = set.begin();
-    auto end = set.end();
-    for (auto it = begin; it != end; it++) {
-        if (it != begin) {
-            ss << ", ";
-        }
-        ss << *it;
-    }
-    ss << "}";
-    return ss.str();
-}
-
 static void print_policy_entry(const policy_entry &entry)
 {
     dsn::utils::table_printer tp;
     tp.add_row_name_and_data("    name", entry.policy_name);
     tp.add_row_name_and_data("    backup_provider_type", entry.backup_provider_type);
     tp.add_row_name_and_data("    backup_interval", entry.backup_interval_seconds + "s");
-    tp.add_row_name_and_data("    app_ids", print_set(entry.app_ids));
+    tp.add_row_name_and_data("    app_ids", fmt::format("{{{}}}", fmt::join(entry.app_ids, ", ")));
     tp.add_row_name_and_data("    start_time", entry.start_time);
     tp.add_row_name_and_data("    status", entry.is_disable ? "disabled" : "enabled");
     tp.add_row_name_and_data("    backup_history_count", entry.backup_history_count_to_keep);
@@ -1188,7 +1170,7 @@ static void print_backup_entry(const backup_entry &bentry)
     tp.add_row_name_and_data("    id", bentry.backup_id);
     tp.add_row_name_and_data("    start_time", start_time);
     tp.add_row_name_and_data("    end_time", end_time);
-    tp.add_row_name_and_data("    app_ids", print_set(bentry.app_ids));
+    tp.add_row_name_and_data("    app_ids", fmt::format("{{{}}}", fmt::join(bentry.app_ids, ", ")));
     tp.output(std::cout);
 }
 
@@ -1295,6 +1277,7 @@ replication_ddl_client::update_backup_policy(const std::string &policy_name,
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "modify backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
         std::cout << "Modify policy result: " << resp.err.to_string() << std::endl;
@@ -1371,6 +1354,8 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
     } else if (response.err == ERR_APP_DROPPED) {
         std::cout << "restore failed, because some partition's data is damaged on cold backup media"
                   << std::endl;
+    } else {
+        return response.err;
     }
     return ERR_OK;
 }
@@ -1463,7 +1448,7 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
 
                   FAIL_POINT_INJECT_NOT_RETURN_F(
                       "ddl_client_request_meta",
-                      [&err, this](dsn::string_view str) { err = pop_mock_error(); });
+                      [&err, this](absl::string_view str) { err = pop_mock_error(); });
 
                   end_meta_request(callback, attempt_count + 1, err, request, response);
               });

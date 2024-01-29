@@ -24,23 +24,16 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#include <errno.h>
+#include <fmt/core.h>
+#include <rocksdb/env.h>
+#include <rocksdb/status.h>
 #include <algorithm>
 #include <cstring>
 #include <iostream>
 #include <utility>
 
 #include "utils/configuration.h"
-#include "utils/filesystem.h"
+#include "utils/env.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -67,33 +60,17 @@ bool configuration::load(const char *file_name, const char *arguments)
 {
     _file_name = std::string(file_name);
 
-    FILE *fd = ::fopen(file_name, "rb");
-    if (fd == nullptr) {
-        std::string cdir;
-        dsn::utils::filesystem::get_current_directory(cdir);
-        printf("ERROR: cannot open file %s in %s, err = %s\n",
-               file_name,
-               cdir.c_str(),
-               strerror(errno));
-        return false;
-    }
-    ::fseek(fd, 0, SEEK_END);
-    int len = ftell(fd);
-    if (len == -1 || len == 0) {
-        printf("ERROR: cannot get length of %s, err = %s\n", file_name, strerror(errno));
-        ::fclose(fd);
+    auto s = rocksdb::ReadFileToString(
+        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kNonSensitive), _file_name, &_file_data);
+    if (!s.ok()) {
+        fmt::print(stderr, "ERROR: read file '{}' failed, err = {}\n", _file_name, s.ToString());
         return false;
     }
 
-    _file_data.resize(len + 1);
-    ::fseek(fd, 0, SEEK_SET);
-    auto sz = ::fread((char *)_file_data.c_str(), len, 1, fd);
-    ::fclose(fd);
-    if (sz != 1) {
-        printf("ERROR: cannot read correct data of %s, err = %s\n", file_name, strerror(errno));
+    if (_file_data.empty()) {
+        fmt::print(stderr, "ERROR: file '{}' is empty\n", _file_name);
         return false;
     }
-    _file_data[len] = '\n';
 
     // replace data with arguments
     if (arguments != nullptr) {

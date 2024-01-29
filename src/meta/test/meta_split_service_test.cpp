@@ -26,9 +26,6 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string.h>
 #include <algorithm>
 #include <atomic>
@@ -48,6 +45,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_server_failure_detector.h"
@@ -55,6 +53,7 @@
 #include "meta/meta_split_service.h"
 #include "meta/meta_state_service_utils.h"
 #include "meta/server_state.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
@@ -208,6 +207,7 @@ public:
     {
         app->partition_count = NEW_PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         app->helpers->split_states.splitting_count = app->partition_count / 2;
         for (int i = 0; i < app->partition_count; ++i) {
@@ -227,6 +227,7 @@ public:
     {
         app->partition_count = PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         app->helpers->split_states.splitting_count = 0;
         app->helpers->split_states.status.clear();
@@ -236,6 +237,7 @@ public:
     {
         app->partition_count = NEW_PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         for (int i = 0; i < app->partition_count; ++i) {
             app->helpers->contexts[i].config_owner = &app->partitions[i];

@@ -32,6 +32,7 @@
 #include <ctime>
 #include <iterator>
 #include <list>
+#include <set>
 #include <unordered_map>
 
 #include "aio/aio_task.h"
@@ -39,8 +40,6 @@
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "mutation_log_utils.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/log_block.h"
 #include "replica/log_file.h"
@@ -61,163 +60,6 @@ DSN_DEFINE_bool(replication,
                 plog_force_flush,
                 false,
                 "when write private log, whether to flush file after write done");
-
-::dsn::task_ptr mutation_log_shared::append(mutation_ptr &mu,
-                                            dsn::task_code callback_code,
-                                            dsn::task_tracker *tracker,
-                                            aio_handler &&callback,
-                                            int hash,
-                                            int64_t *pending_size)
-{
-    auto d = mu->data.header.decree;
-    ::dsn::aio_task_ptr cb =
-        callback ? file::create_aio_task(
-                       callback_code, tracker, std::forward<aio_handler>(callback), hash)
-                 : nullptr;
-
-    _slock.lock();
-
-    ADD_POINT(mu->_tracer);
-    // init pending buffer
-    if (nullptr == _pending_write) {
-        _pending_write = std::make_shared<log_appender>(mark_new_offset(0, true).second);
-    }
-    _pending_write->append_mutation(mu, cb);
-
-    // update meta
-    update_max_decree(mu->data.header.pid, d);
-
-    // start to write if possible
-    if (!_is_writing.load(std::memory_order_acquire)) {
-        write_pending_mutations(true);
-        if (pending_size) {
-            *pending_size = 0;
-        }
-    } else {
-        if (pending_size) {
-            *pending_size = _pending_write->size();
-        }
-        _slock.unlock();
-    }
-    return cb;
-}
-
-void mutation_log_shared::flush() { flush_internal(-1); }
-
-void mutation_log_shared::flush_once() { flush_internal(1); }
-
-void mutation_log_shared::flush_internal(int max_count)
-{
-    int count = 0;
-    while (max_count <= 0 || count < max_count) {
-        if (_is_writing.load(std::memory_order_acquire)) {
-            _tracker.wait_outstanding_tasks();
-        } else {
-            _slock.lock();
-            if (_is_writing.load(std::memory_order_acquire)) {
-                _slock.unlock();
-                continue;
-            }
-            if (!_pending_write) {
-                // !_is_writing && !_pending_write, means flush done
-                _slock.unlock();
-                break;
-            }
-            // !_is_writing && _pending_write, start next write
-            write_pending_mutations(true);
-            count++;
-        }
-    }
-}
-
-void mutation_log_shared::write_pending_mutations(bool release_lock_required)
-{
-    CHECK(release_lock_required, "lock must be hold at this point");
-    CHECK(!_is_writing.load(std::memory_order_relaxed), "");
-    CHECK_NOTNULL(_pending_write, "");
-    CHECK_GT(_pending_write->size(), 0);
-    auto pr = mark_new_offset(_pending_write->size(), false);
-    CHECK_EQ(pr.second, _pending_write->start_offset());
-
-    _is_writing.store(true, std::memory_order_release);
-
-    // move or reset pending variables
-    auto pending = std::move(_pending_write);
-
-    // seperate commit_log_block from within the lock
-    _slock.unlock();
-    commit_pending_mutations(pr.first, pending);
-}
-
-void mutation_log_shared::commit_pending_mutations(log_file_ptr &lf,
-                                                   std::shared_ptr<log_appender> &pending)
-{
-    if (utils::FLAGS_enable_latency_tracer) {
-        for (auto &mu : pending->mutations()) {
-            ADD_POINT(mu->_tracer);
-        }
-    }
-    lf->commit_log_blocks( // forces a new line for params
-        *pending,
-        LPC_WRITE_REPLICATION_LOG_SHARED,
-        &_tracker,
-        [this, lf, pending](error_code err, size_t sz) mutable {
-            CHECK(_is_writing.load(std::memory_order_relaxed), "");
-
-            if (utils::FLAGS_enable_latency_tracer) {
-                for (auto &mu : pending->mutations()) {
-                    ADD_CUSTOM_POINT(mu->_tracer, "commit_pending_completed");
-                }
-            }
-
-            for (auto &block : pending->all_blocks()) {
-                auto hdr = (log_block_header *)block.front().data();
-                CHECK_EQ(hdr->magic, 0xdeadbeef);
-            }
-
-            if (err == ERR_OK) {
-                CHECK_EQ(sz, pending->size());
-
-                if (_force_flush) {
-                    // flush to ensure that shared log data synced to disk
-                    //
-                    // FIXME : the file could have been closed
-                    lf->flush();
-                }
-
-                if (_write_size_counter) {
-                    (*_write_size_counter)->add(sz);
-                }
-            } else {
-                LOG_ERROR("write shared log failed, err = {}", err);
-            }
-
-            // here we use _is_writing instead of _issued_write.expired() to check writing done,
-            // because the following callbacks may run before "block" released, which may cause
-            // the next init_prepare() not starting the write.
-            _is_writing.store(false, std::memory_order_relaxed);
-
-            // notify the callbacks
-            // ATTENTION: callback may be called before this code block executed done.
-            for (auto &c : pending->callbacks()) {
-                c->enqueue(err, sz);
-            }
-
-            // start to write next if possible
-            if (err == ERR_OK) {
-                _slock.lock();
-
-                if (!_is_writing.load(std::memory_order_acquire) && _pending_write) {
-                    write_pending_mutations(true);
-                } else {
-                    _slock.unlock();
-                }
-            }
-        },
-        0);
-}
-
-////////////////////////////////////////////////////
 
 mutation_log_private::mutation_log_private(const std::string &dir,
                                            int32_t max_log_file_mb,
@@ -511,7 +353,6 @@ void mutation_log::init_states()
     _global_end_offset = 0;
 
     // replica states
-    _shared_log_info_map.clear();
     _private_log_info = {0, 0};
     _private_max_commit_on_disk = 0;
 }
@@ -527,8 +368,8 @@ error_code mutation_log::open(replay_callback read_callback,
                               io_failure_callback write_error_callback,
                               const std::map<gpid, decree> &replay_condition)
 {
-    CHECK(!_is_opened, "cannot open a opened mutation_log");
-    CHECK(nullptr == _current_log_file, "");
+    CHECK(!_is_opened, "cannot open an opened mutation_log");
+    CHECK_NULL(_current_log_file, "");
 
     // create dir if necessary
     if (!dsn::utils::filesystem::path_exists(_dir)) {
@@ -562,9 +403,8 @@ error_code mutation_log::open(replay_callback read_callback,
                 err == ERR_INVALID_PARAMETERS) {
                 LOG_WARNING("skip file {} during log init, err = {}", fpath, err);
                 continue;
-            } else {
-                return err;
             }
+            return err;
         }
 
         if (_is_private) {
@@ -592,8 +432,8 @@ error_code mutation_log::open(replay_callback read_callback,
     file_list.clear();
 
     // filter useless log
-    std::map<int, log_file_ptr>::iterator replay_begin = _log_files.begin();
-    std::map<int, log_file_ptr>::iterator replay_end = _log_files.end();
+    log_file_map_by_index::iterator replay_begin = _log_files.begin();
+    log_file_map_by_index::iterator replay_end = _log_files.end();
     if (!replay_condition.empty()) {
         if (_is_private) {
             auto find = replay_condition.find(_private_gpid);
@@ -609,7 +449,7 @@ error_code mutation_log::open(replay_callback read_callback,
         } else {
             // find the largest file which can be ignored.
             // after iterate, the 'mark_it' will point to the largest file which can be ignored.
-            std::map<int, log_file_ptr>::reverse_iterator mark_it;
+            log_file_map_by_index::reverse_iterator mark_it;
             std::set<gpid> kickout_replicas;
             replica_log_info_map max_decrees; // max_decrees for log file at mark_it.
             for (mark_it = _log_files.rbegin(); mark_it != _log_files.rend(); ++mark_it) {
@@ -666,7 +506,7 @@ error_code mutation_log::open(replay_callback read_callback,
     }
 
     // replay with the found files
-    std::map<int, log_file_ptr> replay_logs(replay_begin, replay_end);
+    log_file_map_by_index replay_logs(replay_begin, replay_end);
     int64_t end_offset = 0;
     err = replay(
         replay_logs,
@@ -766,14 +606,11 @@ error_code mutation_log::create_new_log_file()
     // write file header into pending buffer
     size_t header_len = 0;
     binary_writer temp_writer;
-    if (_is_private) {
-        replica_log_info_map ds;
-        ds[_private_gpid] =
-            replica_log_info(_private_log_info.max_decree, _private_log_info.valid_start_offset);
-        header_len = logf->write_file_header(temp_writer, ds);
-    } else {
-        header_len = logf->write_file_header(temp_writer, _shared_log_info_map);
-    }
+    CHECK_TRUE(_is_private);
+    replica_log_info_map ds;
+    ds[_private_gpid] =
+        replica_log_info(_private_log_info.max_decree, _private_log_info.valid_start_offset);
+    header_len = logf->write_file_header(temp_writer, ds);
 
     log_block *blk = new log_block();
     blk->add(temp_writer.get_buffer());
@@ -859,16 +696,9 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size,
 decree mutation_log::max_decree(gpid gpid) const
 {
     zauto_lock l(_lock);
-    if (_is_private) {
-        CHECK_EQ(gpid, _private_gpid);
-        return _private_log_info.max_decree;
-    } else {
-        auto it = _shared_log_info_map.find(gpid);
-        if (it != _shared_log_info_map.end())
-            return it->second.max_decree;
-        else
-            return 0;
-    }
+    CHECK_TRUE(_is_private);
+    CHECK_EQ(gpid, _private_gpid);
+    return _private_log_info.max_decree;
 }
 
 decree mutation_log::max_commit_on_disk() const
@@ -905,14 +735,8 @@ decree mutation_log::max_gced_decree_no_lock(gpid gpid) const
 void mutation_log::check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const
 {
     zauto_lock l(_lock);
-    if (_is_private) {
-        CHECK_EQ(valid_start_offset, _private_log_info.valid_start_offset);
-    } else {
-        auto it = _shared_log_info_map.find(gpid);
-        if (it != _shared_log_info_map.end()) {
-            CHECK_EQ(valid_start_offset, it->second.valid_start_offset);
-        }
-    }
+    CHECK_TRUE(_is_private);
+    CHECK_EQ(valid_start_offset, _private_log_info.valid_start_offset);
 }
 
 int64_t mutation_log::total_size() const
@@ -923,7 +747,7 @@ int64_t mutation_log::total_size() const
 
 int64_t mutation_log::total_size_no_lock() const
 {
-    return _log_files.size() > 0 ? _global_end_offset - _global_start_offset : 0;
+    return _log_files.empty() ? 0 : _global_end_offset - _global_start_offset;
 }
 
 error_code mutation_log::reset_from(const std::string &dir,
@@ -999,51 +823,27 @@ error_code mutation_log::reset_from(const std::string &dir,
 void mutation_log::set_valid_start_offset_on_open(gpid gpid, int64_t valid_start_offset)
 {
     zauto_lock l(_lock);
-    if (_is_private) {
-        CHECK_EQ(gpid, _private_gpid);
-        _private_log_info.valid_start_offset = valid_start_offset;
-    } else {
-        _shared_log_info_map[gpid] = replica_log_info(0, valid_start_offset);
-    }
+    CHECK_TRUE(_is_private);
+    CHECK_EQ(gpid, _private_gpid);
+    _private_log_info.valid_start_offset = valid_start_offset;
 }
 
 int64_t mutation_log::on_partition_reset(gpid gpid, decree max_decree)
 {
     zauto_lock l(_lock);
-    if (_is_private) {
-        CHECK_EQ(_private_gpid, gpid);
-        replica_log_info old_info = _private_log_info;
-        _private_log_info.max_decree = max_decree;
-        _private_log_info.valid_start_offset = _global_end_offset;
-        LOG_WARNING("replica {} has changed private log max_decree from {} to {}, "
-                    "valid_start_offset from {} to {}",
-                    gpid,
-                    old_info.max_decree,
-                    _private_log_info.max_decree,
-                    old_info.valid_start_offset,
-                    _private_log_info.valid_start_offset);
-    } else {
-        replica_log_info info(max_decree, _global_end_offset);
-        auto it = _shared_log_info_map.insert(replica_log_info_map::value_type(gpid, info));
-        if (!it.second) {
-            LOG_WARNING("replica {} has changed shared log max_decree from {} to {}, "
-                        "valid_start_offset from {} to {} ",
-                        gpid,
-                        it.first->second.max_decree,
-                        info.max_decree,
-                        it.first->second.valid_start_offset,
-                        info.valid_start_offset);
-            _shared_log_info_map[gpid] = info;
-        }
-    }
+    CHECK_TRUE(_is_private);
+    CHECK_EQ(_private_gpid, gpid);
+    replica_log_info old_info = _private_log_info;
+    _private_log_info.max_decree = max_decree;
+    _private_log_info.valid_start_offset = _global_end_offset;
+    LOG_WARNING("replica {} has changed private log max_decree from {} to {}, "
+                "valid_start_offset from {} to {}",
+                gpid,
+                old_info.max_decree,
+                _private_log_info.max_decree,
+                old_info.valid_start_offset,
+                _private_log_info.valid_start_offset);
     return _global_end_offset;
-}
-
-void mutation_log::on_partition_removed(gpid gpid)
-{
-    CHECK(!_is_private, "this method is only valid for shared logs");
-    zauto_lock l(_lock);
-    _shared_log_info_map.erase(gpid);
 }
 
 void mutation_log::update_max_decree(gpid gpid, decree d)
@@ -1054,20 +854,10 @@ void mutation_log::update_max_decree(gpid gpid, decree d)
 
 void mutation_log::update_max_decree_no_lock(gpid gpid, decree d)
 {
-    if (!_is_private) {
-        auto it = _shared_log_info_map.find(gpid);
-        if (it != _shared_log_info_map.end()) {
-            if (it->second.max_decree < d) {
-                it->second.max_decree = d;
-            }
-        } else {
-            CHECK(false, "replica has not been registered in the log before");
-        }
-    } else {
-        CHECK_EQ(gpid, _private_gpid);
-        if (d > _private_log_info.max_decree) {
-            _private_log_info.max_decree = d;
-        }
+    CHECK_TRUE(_is_private);
+    CHECK_EQ(gpid, _private_gpid);
+    if (d > _private_log_info.max_decree) {
+        _private_log_info.max_decree = d;
     }
 }
 
@@ -1095,7 +885,7 @@ bool mutation_log::get_learn_state(gpid gpid, decree start, /*out*/ learn_state 
         state.meta = temp_writer.get_buffer();
     }
 
-    std::map<int, log_file_ptr> files;
+    log_file_map_by_index files;
     {
         zauto_lock l(_lock);
 
@@ -1202,13 +992,13 @@ void mutation_log::get_parent_mutations_and_logs(gpid pid,
         // no memory data and no disk data
         return;
     }
-    std::map<int, log_file_ptr> file_map = get_log_file_map();
+    const auto &file_map = get_log_file_map();
 
     bool skip_next = false;
     std::list<std::string> learn_files;
     decree last_max_decree = 0;
     for (auto itr = file_map.rbegin(); itr != file_map.rend(); ++itr) {
-        log_file_ptr &log = itr->second;
+        const log_file_ptr &log = itr->second;
         if (log->end_offset() <= _private_log_info.valid_start_offset)
             break;
 
@@ -1287,7 +1077,7 @@ int mutation_log::garbage_collection(gpid gpid,
 {
     CHECK(_is_private, "this method is only valid for private log");
 
-    std::map<int, log_file_ptr> files;
+    log_file_map_by_index files;
     decree max_decree = invalid_decree;
     int current_file_index = -1;
 
@@ -1295,23 +1085,24 @@ int mutation_log::garbage_collection(gpid gpid,
         zauto_lock l(_lock);
         files = _log_files;
         max_decree = _private_log_info.max_decree;
-        if (_current_log_file != nullptr)
+        if (_current_log_file != nullptr) {
             current_file_index = _current_log_file->index();
+        }
     }
 
     if (files.size() <= 1) {
         // nothing to do
         return 0;
-    } else {
-        // the last one should be the current log file
-        CHECK(current_file_index == -1 || files.rbegin()->first == current_file_index,
-              "invalid current_file_index, index = {}",
-              current_file_index);
     }
+
+    // the last one should be the current log file
+    CHECK(current_file_index == -1 || files.rbegin()->first == current_file_index,
+          "invalid current_file_index, index = {}",
+          current_file_index);
 
     // find the largest file which can be deleted.
     // after iterate, the 'mark_it' will point to the largest file which can be deleted.
-    std::map<int, log_file_ptr>::reverse_iterator mark_it;
+    log_file_map_by_index::reverse_iterator mark_it;
     int64_t already_reserved_size = 0;
     for (mark_it = files.rbegin(); mark_it != files.rend(); ++mark_it) {
         log_file_ptr log = mark_it->second;
@@ -1403,315 +1194,7 @@ int mutation_log::garbage_collection(gpid gpid,
     return deleted;
 }
 
-int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
-                                     int file_count_limit,
-                                     std::set<gpid> &prevent_gc_replicas)
-{
-    CHECK(!_is_private, "this method is only valid for shared log");
-
-    std::map<int, log_file_ptr> files;
-    replica_log_info_map max_decrees;
-    int current_log_index = -1;
-    int64_t total_log_size = 0;
-
-    {
-        zauto_lock l(_lock);
-        files = _log_files;
-        max_decrees = _shared_log_info_map;
-        if (_current_log_file != nullptr)
-            current_log_index = _current_log_file->index();
-        total_log_size = total_size_no_lock();
-    }
-
-    if (files.size() <= 1) {
-        // nothing to do
-        LOG_INFO("gc_shared: too few files to delete, file_count_limit = {}, reserved_log_count "
-                 "= {}, reserved_log_size = {}, current_log_index = {}",
-                 file_count_limit,
-                 files.size(),
-                 total_log_size,
-                 current_log_index);
-        return (int)files.size();
-    } else {
-        // the last one should be the current log file
-        CHECK(-1 == current_log_index || files.rbegin()->first == current_log_index,
-              "invalid current_log_index, index = {}",
-              current_log_index);
-    }
-
-    int reserved_log_count = files.size();
-    int64_t reserved_log_size = total_log_size;
-    int reserved_smallest_log = files.begin()->first;
-    int reserved_largest_log = current_log_index;
-
-    // find the largest file which can be deleted.
-    // after iterate, the 'mark_it' will point to the largest file which can be deleted.
-    std::map<int, log_file_ptr>::reverse_iterator mark_it;
-    std::set<gpid> kickout_replicas;
-    gpid stop_gc_replica;
-    int stop_gc_log_index = 0;
-    decree stop_gc_decree_gap = 0;
-    decree stop_gc_garbage_max_decree = 0;
-    decree stop_gc_log_max_decree = 0;
-    int file_count = 0;
-    for (mark_it = files.rbegin(); mark_it != files.rend(); ++mark_it) {
-        log_file_ptr log = mark_it->second;
-        CHECK_EQ(mark_it->first, log->index());
-        file_count++;
-
-        bool delete_ok = true;
-
-        // skip current file
-        if (current_log_index == log->index()) {
-            delete_ok = false;
-        }
-
-        if (delete_ok) {
-            std::set<gpid> prevent_gc_replicas_for_this_log;
-
-            for (auto &kv : gc_condition) {
-                if (kickout_replicas.find(kv.first) != kickout_replicas.end()) {
-                    // no need to consider this replica
-                    continue;
-                }
-
-                gpid gpid = kv.first;
-                decree garbage_max_decree = kv.second.max_decree;
-                int64_t valid_start_offset = kv.second.valid_start_offset;
-
-                bool delete_ok_for_this_replica = false;
-                bool kickout_this_replica = false;
-                auto it3 = max_decrees.find(gpid);
-
-                // log not found for this replica, ok to delete
-                if (it3 == max_decrees.end()) {
-                    // valid_start_offset may be reset to 0 if initialize_on_load() returns
-                    // ERR_INCOMPLETE_DATA
-                    CHECK(valid_start_offset == 0 || valid_start_offset >= log->end_offset(),
-                          "valid start offset must be 0 or greater than the end of this log file");
-
-                    LOG_DEBUG(
-                        "gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
-                        "safe to delete this and all older logs for this replica",
-                        gpid,
-                        log->path(),
-                        garbage_max_decree);
-                    delete_ok_for_this_replica = true;
-                    kickout_this_replica = true;
-                }
-
-                // log is invalid for this replica, ok to delete
-                else if (log->end_offset() <= valid_start_offset) {
-                    LOG_DEBUG(
-                        "gc @ {}: log is invalid for {}, as valid start offset vs log end offset = "
-                        "{} vs {}, it is therefore safe to delete this and all older logs for this "
-                        "replica",
-                        gpid,
-                        log->path(),
-                        valid_start_offset,
-                        log->end_offset());
-                    delete_ok_for_this_replica = true;
-                    kickout_this_replica = true;
-                }
-
-                // all decrees are no more than garbage max decree, ok to delete
-                else if (it3->second.max_decree <= garbage_max_decree) {
-                    LOG_DEBUG("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it is "
-                              "therefore safe to delete this and all older logs for this replica",
-                              gpid,
-                              log->path(),
-                              it3->second.max_decree,
-                              garbage_max_decree);
-                    delete_ok_for_this_replica = true;
-                    kickout_this_replica = true;
-                }
-
-                else // it3->second.max_decree > garbage_max_decree
-                {
-                    // should not delete this file
-                    LOG_DEBUG("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it "
-                              "is therefore not allowed to delete this and all older logs",
-                              gpid,
-                              log->path(),
-                              it3->second.max_decree,
-                              garbage_max_decree);
-                    prevent_gc_replicas_for_this_log.insert(gpid);
-                    decree gap = it3->second.max_decree - garbage_max_decree;
-                    if (log->index() < stop_gc_log_index || gap > stop_gc_decree_gap) {
-                        // record the max gap replica for the smallest log
-                        stop_gc_replica = gpid;
-                        stop_gc_log_index = log->index();
-                        stop_gc_decree_gap = gap;
-                        stop_gc_garbage_max_decree = garbage_max_decree;
-                        stop_gc_log_max_decree = it3->second.max_decree;
-                    }
-                }
-
-                if (kickout_this_replica) {
-                    // files before this file is useless for this replica,
-                    // so from now on, this replica will not be considered anymore
-                    kickout_replicas.insert(gpid);
-                }
-
-                if (!delete_ok_for_this_replica) {
-                    // can not delete this file, mark it, and continue to check other replicas
-                    delete_ok = false;
-                }
-            }
-
-            // update prevent_gc_replicas
-            if (file_count > file_count_limit && !prevent_gc_replicas_for_this_log.empty()) {
-                prevent_gc_replicas.insert(prevent_gc_replicas_for_this_log.begin(),
-                                           prevent_gc_replicas_for_this_log.end());
-            }
-        }
-
-        if (delete_ok) {
-            // found the largest file which can be deleted
-            break;
-        }
-
-        // update max_decrees for the next log file
-        max_decrees = log->previous_log_max_decrees();
-    }
-
-    if (mark_it == files.rend()) {
-        // no file to delete
-        if (stop_gc_decree_gap > 0) {
-            LOG_INFO("gc_shared: no file can be deleted, file_count_limit = {}, "
-                     "reserved_log_count = {}, reserved_log_size = {}, "
-                     "reserved_smallest_log = {}, reserved_largest_log = {}, "
-                     "stop_gc_log_index = {}, stop_gc_replica_count = {}, "
-                     "stop_gc_replica = {}, stop_gc_decree_gap = {}, "
-                     "stop_gc_garbage_max_decree = {}, stop_gc_log_max_decree = {}",
-                     file_count_limit,
-                     reserved_log_count,
-                     reserved_log_size,
-                     reserved_smallest_log,
-                     reserved_largest_log,
-                     stop_gc_log_index,
-                     prevent_gc_replicas.size(),
-                     stop_gc_replica,
-                     stop_gc_decree_gap,
-                     stop_gc_garbage_max_decree,
-                     stop_gc_log_max_decree);
-        } else {
-            LOG_INFO("gc_shared: no file can be deleted, file_count_limit = {}, "
-                     "reserved_log_count = {}, reserved_log_size = {}, "
-                     "reserved_smallest_log = {}, reserved_largest_log = {}",
-                     file_count_limit,
-                     reserved_log_count,
-                     reserved_log_size,
-                     reserved_smallest_log,
-                     reserved_largest_log);
-        }
-
-        return reserved_log_count;
-    }
-
-    // ok, let's delete files in increasing order of file index
-    // to avoid making a hole in the file list
-    int largest_log_to_delete = mark_it->second->index();
-    int to_delete_log_count = 0;
-    int64_t to_delete_log_size = 0;
-    int deleted_log_count = 0;
-    int64_t deleted_log_size = 0;
-    int deleted_smallest_log = 0;
-    int deleted_largest_log = 0;
-    for (auto it = files.begin(); it != files.end() && it->second->index() <= largest_log_to_delete;
-         ++it) {
-        log_file_ptr log = it->second;
-        CHECK_EQ(it->first, log->index());
-        to_delete_log_count++;
-        to_delete_log_size += log->end_offset() - log->start_offset();
-
-        // close first
-        log->close();
-
-        // delete file
-        auto &fpath = log->path();
-        if (!dsn::utils::filesystem::remove_path(fpath)) {
-            LOG_ERROR("gc_shared: fail to remove {}, stop current gc cycle ...", fpath);
-            break;
-        }
-
-        // delete succeed
-        LOG_INFO("gc_shared: log file {} is removed", fpath);
-        deleted_log_count++;
-        deleted_log_size += log->end_offset() - log->start_offset();
-        if (deleted_smallest_log == 0)
-            deleted_smallest_log = log->index();
-        deleted_largest_log = log->index();
-
-        // erase from _log_files
-        {
-            zauto_lock l(_lock);
-            _log_files.erase(it->first);
-            _global_start_offset =
-                _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
-            reserved_log_count = _log_files.size();
-            reserved_log_size = total_size_no_lock();
-            if (reserved_log_count > 0) {
-                reserved_smallest_log = _log_files.begin()->first;
-                reserved_largest_log = _log_files.rbegin()->first;
-            } else {
-                reserved_smallest_log = -1;
-                reserved_largest_log = -1;
-            }
-        }
-    }
-
-    if (stop_gc_decree_gap > 0) {
-        LOG_INFO("gc_shared: deleted some files, file_count_limit = {}, "
-                 "reserved_log_count = {}, reserved_log_size = {}, "
-                 "reserved_smallest_log = {}, reserved_largest_log = {}, "
-                 "to_delete_log_count = {}, to_delete_log_size = {}, "
-                 "deleted_log_count = {}, deleted_log_size = {}, "
-                 "deleted_smallest_log = {}, deleted_largest_log = {}, "
-                 "stop_gc_log_index = {}, stop_gc_replica_count = {}, "
-                 "stop_gc_replica = {}, stop_gc_decree_gap = {}, "
-                 "stop_gc_garbage_max_decree = {}, stop_gc_log_max_decree = {}",
-                 file_count_limit,
-                 reserved_log_count,
-                 reserved_log_size,
-                 reserved_smallest_log,
-                 reserved_largest_log,
-                 to_delete_log_count,
-                 to_delete_log_size,
-                 deleted_log_count,
-                 deleted_log_size,
-                 deleted_smallest_log,
-                 deleted_largest_log,
-                 stop_gc_log_index,
-                 prevent_gc_replicas.size(),
-                 stop_gc_replica,
-                 stop_gc_decree_gap,
-                 stop_gc_garbage_max_decree,
-                 stop_gc_log_max_decree);
-    } else {
-        LOG_INFO("gc_shared: deleted some files, file_count_limit = {}, "
-                 "reserved_log_count = {}, reserved_log_size = {}, "
-                 "reserved_smallest_log = {}, reserved_largest_log = {}, "
-                 "to_delete_log_count = {}, to_delete_log_size = {}, "
-                 "deleted_log_count = {}, deleted_log_size = {}, "
-                 "deleted_smallest_log = {}, deleted_largest_log = {}",
-                 file_count_limit,
-                 reserved_log_count,
-                 reserved_log_size,
-                 reserved_smallest_log,
-                 reserved_largest_log,
-                 to_delete_log_count,
-                 to_delete_log_size,
-                 deleted_log_count,
-                 deleted_log_size,
-                 deleted_smallest_log,
-                 deleted_largest_log);
-    }
-
-    return reserved_log_count;
-}
-
-std::map<int, log_file_ptr> mutation_log::get_log_file_map() const
+mutation_log::log_file_map_by_index mutation_log::get_log_file_map() const
 {
     zauto_lock l(_lock);
     return _log_files;

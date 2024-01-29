@@ -17,17 +17,15 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <rocksdb/compression_type.h>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <map>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
 
 namespace pegasus {
@@ -100,7 +98,9 @@ public:
     }
 };
 
-TEST_F(pegasus_compression_options_test, compression_type_convert_ok)
+INSTANTIATE_TEST_SUITE_P(, pegasus_compression_options_test, ::testing::Values(false, true));
+
+TEST_P(pegasus_compression_options_test, compression_type_convert_ok)
 {
     compression_type_convert("none", none);
     compression_type_convert("snappy", snappy);
@@ -108,7 +108,7 @@ TEST_F(pegasus_compression_options_test, compression_type_convert_ok)
     compression_type_convert("zstd", zstd);
 }
 
-TEST_F(pegasus_compression_options_test, compression_type_convert_not_support)
+TEST_P(pegasus_compression_options_test, compression_type_convert_not_support)
 {
     rocksdb::CompressionType tmp_type;
     ASSERT_FALSE(compression_str_to_type("not_support_zip", tmp_type));
@@ -121,7 +121,7 @@ TEST_F(pegasus_compression_options_test, compression_type_convert_not_support)
     ASSERT_EQ("<unsupported>", compression_type_to_str(rocksdb::kDisableCompressionOption));
 }
 
-TEST_F(pegasus_compression_options_test, compression_types_convert_ok)
+TEST_P(pegasus_compression_options_test, compression_types_convert_ok)
 {
     // Old style.
     compression_types_convert_ok("none", {none, none, none, none, none, none, none});
@@ -142,7 +142,7 @@ TEST_F(pegasus_compression_options_test, compression_types_convert_ok)
                                  {none, lz4, snappy, zstd, lz4, snappy, zstd});
 }
 
-TEST_F(pegasus_compression_options_test, compression_types_convert_fail)
+TEST_P(pegasus_compression_options_test, compression_types_convert_fail)
 {
     // Old style.
     compression_types_convert_fail("none1");
@@ -156,7 +156,7 @@ TEST_F(pegasus_compression_options_test, compression_types_convert_fail)
     compression_types_convert_fail("per_levelsnappy");
 }
 
-TEST_F(pegasus_compression_options_test, check_rocksdb_compression_types_default)
+TEST_P(pegasus_compression_options_test, check_rocksdb_compression_types_default)
 {
     start();
     check_db_compression_types({none, none, lz4, lz4, lz4, lz4}, "start with default");

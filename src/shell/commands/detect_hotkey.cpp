@@ -16,10 +16,7 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdio.h>
-#include <iosfwd>
 #include <memory>
 #include <set>
 #include <string>

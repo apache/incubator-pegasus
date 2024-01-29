@@ -28,7 +28,10 @@
 #include <string>
 #include <vector>
 
-#include "utils/string_view.h"
+#include "utils/flags.h"
+#include "absl/strings/string_view.h"
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
 
 namespace dsn {
 class rpc_address;
@@ -40,6 +43,7 @@ namespace utils {
 // it's seconds since 2016.01.01-00:00:00 GMT
 const uint32_t epoch_begin = 1451606400;
 inline uint32_t epoch_now() { return time(nullptr) - epoch_begin; }
+const static std::string kRedactedString = "<redacted>";
 
 // extract "host" from rpc_address
 void addr2host(const ::dsn::rpc_address &addr, char *str, int len);
@@ -97,6 +101,15 @@ std::string c_escape_string(const T &src, bool always_escape = false)
     return s;
 }
 
+template <class T>
+std::string c_escape_sensitive_string(const T &src, bool always_escape = false)
+{
+    if (FLAGS_encrypt_data_at_rest) {
+        return kRedactedString;
+    }
+    return c_escape_string(src, always_escape);
+}
+
 // ----------------------------------------------------------------------
 // c_unescape_string()
 //    Copies 'src' to 'dest', unescaping '0xFF'-style escape sequences to
@@ -106,9 +119,19 @@ std::string c_escape_string(const T &src, bool always_escape = false)
 // ----------------------------------------------------------------------
 int c_unescape_string(const std::string &src, std::string &dest);
 
-inline dsn::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
+template <class T>
+const std::string &redact_sensitive_string(const T &src)
+{
+    if (FLAGS_encrypt_data_at_rest) {
+        return kRedactedString;
+    } else {
+        return src;
+    }
+}
 
-inline rocksdb::Slice to_rocksdb_slice(dsn::string_view s) { return {s.data(), s.size()}; }
+inline absl::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
+
+inline rocksdb::Slice to_rocksdb_slice(absl::string_view s) { return {s.data(), s.size()}; }
 
 } // namespace utils
 } // namespace pegasus

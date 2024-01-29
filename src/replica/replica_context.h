@@ -85,6 +85,7 @@ typedef std::unordered_map<::dsn::rpc_address, remote_learner_state> learner_map
         }                                                                                          \
     }
 
+// Context of the primary replica.
 class primary_context
 {
 public:
@@ -189,6 +190,7 @@ public:
     std::unordered_map<rpc_address, disk_status::type> secondary_disk_status;
 };
 
+// Context of the secondary replica.
 class secondary_context
 {
 public:
@@ -203,6 +205,7 @@ public:
     ::dsn::task_ptr catchup_with_private_log_task;
 };
 
+// Context of the potential secondary replica.
 class potential_secondary_context
 {
 public:
@@ -251,6 +254,7 @@ public:
     ::dsn::task_ptr completion_notify_task;
 };
 
+// Context of the partition split replica.
 class partition_split_context
 {
 public:

@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "utils/fmt_utils.h"
+
 namespace pegasus {
 
 enum value_field_type
@@ -28,6 +30,7 @@ enum value_field_type
     USER_DATA,
     FIELD_COUNT,
 };
+USER_DEFINED_ENUM_FORMATTER(value_field_type)
 
 struct value_field
 {
@@ -53,9 +56,9 @@ struct time_tag_field : public value_field
 
 struct user_data_field : public value_field
 {
-    explicit user_data_field(dsn::string_view data) : user_data(data) {}
+    explicit user_data_field(absl::string_view data) : user_data(data) {}
     value_field_type type() { return value_field_type::USER_DATA; }
 
-    dsn::string_view user_data;
+    absl::string_view user_data;
 };
 } // namespace pegasus

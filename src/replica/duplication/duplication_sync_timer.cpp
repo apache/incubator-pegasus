@@ -26,8 +26,6 @@
 #include "common/replication.codes.h"
 #include "duplication_sync_timer.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
@@ -35,12 +33,22 @@
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
+#include "utils/chrono_literals.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/threadpool_code.h"
+
+DSN_DEFINE_uint64(
+    replication,
+    duplication_sync_period_second,
+    10,
+    "The period seconds of duplication to sync data from local cluster to remote cluster");
 
 namespace dsn {
 namespace replication {
+using namespace literals::chrono_literals;
 
 DEFINE_TASK_CODE(LPC_DUPLICATION_SYNC_TIMER, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
@@ -65,15 +73,13 @@ void duplication_sync_timer::run()
     req->node = _stub->primary_address();
 
     // collects confirm points from all primaries on this server
-    uint64_t pending_muts_cnt = 0;
     for (const replica_ptr &r : get_all_primaries()) {
         auto confirmed = r->get_duplication_manager()->get_duplication_confirms_to_update();
         if (!confirmed.empty()) {
             req->confirm_list[r->get_gpid()] = std::move(confirmed);
         }
-        pending_muts_cnt += r->get_duplication_manager()->get_pending_mutations_count();
+        METRIC_SET(*r, dup_pending_mutations);
     }
-    _stub->_counter_dup_pending_mutations_count->set(pending_muts_cnt);
 
     duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC, 3_s);
     rpc_address meta_server_address(_stub->get_meta_server_address());
@@ -169,14 +175,14 @@ void duplication_sync_timer::close()
 
 void duplication_sync_timer::start()
 {
-    LOG_INFO("run duplication sync periodically in {}s", DUPLICATION_SYNC_PERIOD_SECOND);
+    LOG_INFO("run duplication sync periodically in {}s", FLAGS_duplication_sync_period_second);
 
     _timer_task = tasking::enqueue_timer(LPC_DUPLICATION_SYNC_TIMER,
                                          &_stub->_tracker,
                                          [this]() { run(); },
-                                         DUPLICATION_SYNC_PERIOD_SECOND * 1_s,
+                                         FLAGS_duplication_sync_period_second * 1_s,
                                          0,
-                                         DUPLICATION_SYNC_PERIOD_SECOND * 1_s);
+                                         FLAGS_duplication_sync_period_second * 1_s);
 }
 
 std::multimap<dupid_t, duplication_sync_timer::replica_dup_state>

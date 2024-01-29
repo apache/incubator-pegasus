@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     state extension for cpp objects
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "utils/utils.h"
@@ -49,6 +40,7 @@ namespace dsn {
 typedef void (*extension_deletor)(void *);
 typedef void *(*extension_creator)(void *);
 
+// State extension for cpp objects.
 class extensible
 {
 public:

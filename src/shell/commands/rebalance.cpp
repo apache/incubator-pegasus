@@ -19,7 +19,6 @@
 
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <getopt.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdio.h>
 #include <algorithm>
 #include <iostream>

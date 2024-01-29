@@ -34,13 +34,6 @@
 #include "lock_struct.h"
 #include "lock_types.h"
 #include "runtime/service_app.h"
-/*
- * Description:
- *     distributed lock service implemented with zookeeper
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
 #include "runtime/task/async_calls.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

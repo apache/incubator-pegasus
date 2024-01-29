@@ -27,9 +27,15 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS dsn_runtime dsn_utils)
+set(MY_PROJ_LIBS
+        dsn_runtime
+        dsn_utils
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")

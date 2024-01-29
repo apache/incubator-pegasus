@@ -1,0 +1,80 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+-->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <!--responsive support-->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pegasus Collector</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
+</head>
+
+<nav class="navbar is-light" style="padding-left: 2rem;">
+    <div class="navbar-brand">
+        <a class="navbar-item" href="/"><strong>Pegasus Collector</strong></a>
+    </div>
+</nav>
+<main>
+    <div class="container" style="padding: 2rem;">
+        <h1 class="title" style="padding-bottom: 1rem;">Cluster Stats</h1>
+        <table class="table is-bordered is-striped is-fullwidth">
+            <thead>
+                <tr>
+                    <th>Perf-Counter</th>
+                    {{range .PerfIDs}}
+                    <th>{{.}}</th>
+                    {{end}}
+                </tr>
+            </thead>
+            <tbody>
+                {{range .PerfCounters}}
+                <tr>
+                    <td>{{.PerfCounter}}</td>
+                    {{range .Values}}
+                    <td>{{.}}</td>
+                    {{end}}
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    <div class="container" style="padding: 2rem;">
+        <h1 class="title" style="padding-bottom: 1rem;">Tables</h1>
+        <table class="table is-bordered is-striped is-fullwidth">
+            <thead>
+                <tr>
+                    <th>Table Name</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Tables}}
+                <tr>
+                    <td>{{.TableName}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</main>
+
+</html>

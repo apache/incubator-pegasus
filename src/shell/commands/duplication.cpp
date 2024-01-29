@@ -18,7 +18,6 @@
  */
 
 #include <fmt/core.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <iostream>

@@ -26,9 +26,8 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <string.h>
 #include <atomic>
+#include <cstdint>
 #include <map>
 #include <string>
 
@@ -39,6 +38,8 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"
+#include "utils/fmt_utils.h"
+#include "utils/metrics.h"
 #include "utils/ports.h"
 
 namespace dsn {
@@ -47,7 +48,6 @@ class blob;
 class message_ex;
 
 namespace replication {
-
 class learn_state;
 class mutation;
 class replica;
@@ -55,12 +55,14 @@ class replica;
 class replica_init_info
 {
 public:
-    int32_t magic;
-    int32_t crc;
-    ballot init_ballot;
-    decree init_durable_decree;
-    int64_t init_offset_in_shared_log;
-    int64_t init_offset_in_private_log;
+    int32_t magic = 0;
+    int32_t crc = 0;
+    ballot init_ballot = 0;
+    decree init_durable_decree = 0;
+    int64_t init_offset_in_shared_log = 0; // Deprecated since Pegasus 2.6.0, but leave it to keep
+                                           // compatible readability to read replica_init_info from
+                                           // older Pegasus version.
+    int64_t init_offset_in_private_log = 0;
     DEFINE_JSON_SERIALIZATION(init_ballot,
                               init_durable_decree,
                               init_offset_in_shared_log,
@@ -69,14 +71,7 @@ public:
     static const std::string kInitInfo;
 
 public:
-    replica_init_info() { memset((void *)this, 0, sizeof(*this)); }
-    error_code load(const std::string &dir) WARN_UNUSED_RESULT;
-    error_code store(const std::string &dir);
     std::string to_string();
-
-private:
-    error_code load_json(const std::string &file);
-    error_code store_json(const std::string &file);
 };
 
 class replica_app_info
@@ -86,8 +81,8 @@ private:
 
 public:
     replica_app_info(app_info *app) { _app = app; }
-    error_code load(const std::string &file);
-    error_code store(const std::string &file);
+    error_code load(const std::string &fname);
+    error_code store(const std::string &fname);
 };
 
 /// The store engine interface of Pegasus.
@@ -292,13 +287,10 @@ private:
     friend class replica_disk_migrator;
 
     error_code open_internal(replica *r);
-    error_code open_new_internal(replica *r, int64_t shared_log_start, int64_t private_log_start);
+    error_code open_new_internal(replica *r, int64_t private_log_start);
 
     const replica_init_info &init_info() const { return _info; }
-    error_code update_init_info(replica *r,
-                                int64_t shared_log_offset,
-                                int64_t private_log_offset,
-                                int64_t durable_decree);
+    error_code update_init_info(replica *r, int64_t private_log_offset, int64_t durable_decree);
     error_code update_init_info_ballot_and_decree(replica *r);
 
 protected:
@@ -312,7 +304,10 @@ protected:
     replica_init_info _info;
 
     explicit replication_app_base(replication::replica *replica);
-};
 
+private:
+    METRIC_VAR_DECLARE_counter(committed_requests);
+};
+USER_DEFINED_ENUM_FORMATTER(replication_app_base::chkpt_apply_mode)
 } // namespace replication
 } // namespace dsn

@@ -120,7 +120,7 @@ proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
 proxy_session::~proxy_session()
 {
     _backup_one_request->release_ref();
-    LOG_INFO("proxy session {} destroyed", _remote_address);
+    LOG_INFO_PREFIX("destroyed");
 }
 
 void proxy_session::on_recv_request(dsn::message_ex *msg)
@@ -134,11 +134,10 @@ void proxy_session::on_recv_request(dsn::message_ex *msg)
     // 2. as "on_recv_request" won't be called concurrently, it's not necessary to call
     //    "parse" with a lock. a subclass may implement a lock inside parse if necessary
     if (!parse(msg)) {
-        LOG_ERROR("{}: got invalid message, try to remove proxy session from proxy stub",
-                  _remote_address);
+        LOG_ERROR_PREFIX("got invalid message, try to remove the proxy session from proxy stub");
         _stub->remove_session(_remote_address);
 
-        LOG_ERROR("close the rpc session {}", _remote_address);
+        LOG_ERROR_PREFIX("close the proxy session");
         ((dsn::message_ex *)_backup_one_request)->io_session->close();
     }
 }

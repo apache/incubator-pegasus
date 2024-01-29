@@ -24,41 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     interface for a perfect failure detector
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     Dec., 2015, @shengofsun (Weijie Sun), make zlock preoteced,
- *                 give the subClasses flexibility
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-/*
- * Notes on the failure detector:
- *
- * 1. Due to the fact that we can only check the liveness inside check-all-records call,
- *    which happens every "check_interval_seconds" seconds, worker may disconnect from master
- *    in the period earlier than the lease_seconds to ensure the perfect FD.
- *    In the worst case, workers may disconnect themselves
- *    after "lease"-"check_interval_seconds" seconds;
- *
- *    Similarily, master may claim a worker dead more slowly even the workers are dead
- *    for longer than grace_seconds. In the worst case, it will be
- *    "grace"+"check_interval_seconds" seconds.
- *
- * 2. In practice, your should set check_interval_seconds a small value for a fine-grained FD.
- *    For client, you may set it as 2 second as it usually connect to a small number of masters.
- *    For master, you may set it as 5 or 10 seconds.
- *
- * 3. We should always use dedicated thread pools for THREAD_POOL_FD,
- *    and set thread priority to being highest so as to minimize the performance
- *    interference with other workloads.
- *
- * 4. The lease_periods must be less than the grace_periods, as required by prefect FD.
- *
- */
 #pragma once
 
 #include <stdint.h>
@@ -70,12 +35,12 @@
 
 #include "failure_detector/fd.client.h"
 #include "failure_detector/fd.server.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
+#include "utils/metrics.h"
 #include "utils/threadpool_code.h"
 #include "utils/zlocks.h"
 
@@ -106,6 +71,29 @@ public:
     virtual void on_worker_connected(::dsn::rpc_address node) = 0;
 };
 
+// The interface for a perfect failure detector.
+//
+// Notes on the failure detector:
+//
+// 1. Due to the fact that we can only check the liveness inside check-all-records call,
+//    which happens every "check_interval_seconds" seconds, worker may disconnect from master
+//    in the period earlier than the lease_seconds to ensure the perfect FD.
+//    In the worst case, workers may disconnect themselves
+//    after "lease"-"check_interval_seconds" seconds;
+//
+//    Similarily, master may claim a worker dead more slowly even the workers are dead
+//    for longer than grace_seconds. In the worst case, it will be
+//    "grace"+"check_interval_seconds" seconds.
+//
+// 2. In practice, your should set check_interval_seconds a small value for a fine-grained FD.
+//    For client, you may set it as 2 second as it usually connect to a small number of masters.
+//    For master, you may set it as 5 or 10 seconds.
+//
+// 3. We should always use dedicated thread pools for THREAD_POOL_FD,
+//    and set thread priority to being highest so as to minimize the performance
+//    interference with other workloads.
+//
+// 4. The lease_periods must be less than the grace_periods, as required by prefect FD.
 class failure_detector : public failure_detector_service,
                          public failure_detector_client,
                          public failure_detector_callback
@@ -238,7 +226,7 @@ private:
     bool _use_allow_list;
     allow_list _allow_list;
 
-    perf_counter_wrapper _recent_beacon_fail_count;
+    METRIC_VAR_DECLARE_counter(beacon_failed_count);
 
     std::unique_ptr<command_deregister> _get_allow_list;
 

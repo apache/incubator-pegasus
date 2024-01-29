@@ -17,21 +17,17 @@
 
 #include "meta_test_base.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <map>
-#include <ostream>
 #include <thread>
 #include <unordered_map>
 #include <utility>
 
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
-#include "meta/meta_options.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_service.h"
@@ -47,6 +43,7 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/factory_store.h"
+#include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
@@ -74,7 +71,7 @@ void meta_test_base::SetUp()
     _ms->_split_svc = std::make_unique<meta_split_service>(_ms.get());
     ASSERT_TRUE(_ms->_split_svc);
     _ms->_bulk_load_svc = std::make_unique<bulk_load_service>(
-        _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
+        _ms.get(), utils::filesystem::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
     ASSERT_TRUE(_ms->_bulk_load_svc);
     _ms->_bulk_load_svc->initialize_bulk_load_service();
 

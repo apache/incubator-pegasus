@@ -18,6 +18,9 @@
  */
 package org.apache.pegasus.rpc.async;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.pegasus.apps.update_request;
 import org.apache.pegasus.base.blob;
@@ -27,8 +30,7 @@ import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.tools.Toollet;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
 /** Created by weijiesun on 16-11-25. */
@@ -52,12 +54,12 @@ public class TimeoutBenchmark {
     for (int i = 0; i < count; ++i) {
       try {
         handle.operate(op, 0);
-        Assert.fail();
+        fail();
       } catch (ReplicationException e) {
         long t = System.currentTimeMillis();
         result[i] = t - current;
         current = t;
-        Assert.assertEquals(e.getErrorType(), error_code.error_types.ERR_TIMEOUT);
+        assertEquals(e.getErrorType(), error_code.error_types.ERR_TIMEOUT);
       }
     }
     System.out.println("finished");
@@ -85,7 +87,7 @@ public class TimeoutBenchmark {
       handle = manager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
       e.printStackTrace();
-      Assert.fail();
+      fail();
       return;
     }
 

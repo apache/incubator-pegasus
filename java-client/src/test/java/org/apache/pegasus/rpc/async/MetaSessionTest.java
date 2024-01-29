@@ -18,6 +18,10 @@
  */
 package org.apache.pegasus.rpc.async;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,10 +41,9 @@ import org.apache.pegasus.replication.query_cfg_request;
 import org.apache.pegasus.replication.query_cfg_response;
 import org.apache.pegasus.tools.Toollet;
 import org.apache.pegasus.tools.Tools;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 public class MetaSessionTest {
@@ -48,10 +51,10 @@ public class MetaSessionTest {
   // "Mockito.when(meta.resolve(("localhost:34601"))).thenReturn(addrs)" is for simulating DNS
   // resolution: <localhost:34601>-><addrs>
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {}
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     rpc_address addr = new rpc_address();
     addr.fromString("127.0.0.1:34602");
@@ -97,7 +100,7 @@ public class MetaSessionTest {
               new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
-                  Assert.assertEquals(error_code.error_types.ERR_OK, op.rpc_error.errno);
+                  assertEquals(error_code.error_types.ERR_OK, op.rpc_error.errno);
                   return null;
                 }
               });
@@ -111,7 +114,7 @@ public class MetaSessionTest {
         Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
       } catch (ExecutionException e) {
         e.printStackTrace();
-        Assert.fail();
+        fail();
       }
     }
 
@@ -140,7 +143,7 @@ public class MetaSessionTest {
     while (meta2.getState() != ReplicaSession.ConnState.CONNECTED) {
       Thread.sleep(1);
     }
-    Assert.assertEquals(meta2.getState(), ReplicaSession.ConnState.CONNECTED);
+    assertEquals(meta2.getState(), ReplicaSession.ConnState.CONNECTED);
 
     // DNS refreshed
     rpc_address[] addrs = new rpc_address[2];
@@ -148,14 +151,14 @@ public class MetaSessionTest {
     addrs[1] = rpc_address.fromIpPort("172.0.0.2:34601");
     // simulating DNS resolution:localhost:34601->{172.0.0.1:34601,172.0.0.2:34601}
     Mockito.when(meta.resolve(("localhost:34601"))).thenReturn(addrs);
-    Assert.assertArrayEquals(meta.resolve("localhost:34601"), addrs);
+    assertArrayEquals(meta.resolve("localhost:34601"), addrs);
     meta.resolveHost("localhost:34601"); // update local meta list
-    Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
+    assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
     while (meta2.getState() != ReplicaSession.ConnState.DISCONNECTED) {
       Thread.sleep(1);
     }
     // ensure MetaSession#resolveHost will close unused sessions.
-    Assert.assertEquals(meta2.getState(), ReplicaSession.ConnState.DISCONNECTED);
+    assertEquals(meta2.getState(), ReplicaSession.ConnState.DISCONNECTED);
 
     // DNS refreshed again
     addrs = new rpc_address[2];
@@ -164,7 +167,7 @@ public class MetaSessionTest {
     // simulating DNS resolution:localhost:34601->{172.0.0.1:34601,172.0.0.3:34601}
     Mockito.when(meta.resolve(("localhost:34601"))).thenReturn(addrs);
     meta.resolveHost("localhost:34601");
-    Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
+    assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
 
     manager.close();
   }
@@ -184,7 +187,7 @@ public class MetaSessionTest {
     // simulating DNS resolution:localhost:34601->{172.0.0.1:34601,172.0.0.2:34601}
     Mockito.when(meta.resolve(("localhost:34601"))).thenReturn(addrs);
     meta.resolveHost("localhost:34601");
-    Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
+    assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
 
     query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
     client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
@@ -212,20 +215,20 @@ public class MetaSessionTest {
     // meta all dead, query failed.
     meta.onFinishQueryMeta(round);
     // switch curLeader to 1, meta list unchanged.
-    Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
+    assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
     Integer curLeader = (Integer) FieldUtils.readField(meta, "curLeader", true);
-    Assert.assertEquals(curLeader.intValue(), 1);
+    assertEquals(curLeader.intValue(), 1);
 
     // failed again
     meta.onFinishQueryMeta(round);
     // switch curLeader to 0, meta list updated
-    Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs2);
+    assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs2);
     curLeader = (Integer) FieldUtils.readField(meta, "curLeader", true);
-    Assert.assertEquals(curLeader.intValue(), 0);
+    assertEquals(curLeader.intValue(), 0);
 
     // retry
     meta.onFinishQueryMeta(round);
-    Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs2);
+    assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs2);
   }
 
   @Test
@@ -245,7 +248,7 @@ public class MetaSessionTest {
     addrs[1] = rpc_address.fromIpPort("172.0.0.2:34601");
     Mockito.when(meta.resolve(("localhost:34601"))).thenReturn(addrs);
     meta.resolveHost("localhost:34601");
-    Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
+    assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
 
     query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
     query_cfg_operator op = new query_cfg_operator(new gpid(-1, -1), req);
@@ -276,9 +279,9 @@ public class MetaSessionTest {
     addrs2[2] = rpc_address.fromIpPort("172.0.0.3:34601");
 
     // forward to 172.0.0.3:34601
-    Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs2);
+    assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs2);
     Integer curLeader = (Integer) FieldUtils.readField(meta, "curLeader", true);
-    Assert.assertEquals(curLeader.intValue(), 2);
+    assertEquals(curLeader.intValue(), 2);
   }
 
   @Test
@@ -312,7 +315,7 @@ public class MetaSessionTest {
     // Even though the given maxQueryCount is given 3, the total query count is at least 6.
     metaMock.execute(op, metaList.size());
     error_code.error_types err = MetaSession.getMetaServiceError(op);
-    Assert.assertEquals(error_code.error_types.ERR_OK, err);
+    assertEquals(error_code.error_types.ERR_OK, err);
   }
 
   @Test
@@ -340,6 +343,6 @@ public class MetaSessionTest {
     query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
     client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
     metaMock.execute(op, metaList.size());
-    Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, MetaSession.getMetaServiceError(op));
+    assertEquals(error_code.error_types.ERR_TIMEOUT, MetaSession.getMetaServiceError(op));
   }
 }

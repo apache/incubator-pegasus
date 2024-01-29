@@ -18,7 +18,7 @@
  */
 package org.apache.pegasus.client;
 
-import org.junit.*;
+import org.junit.jupiter.api.Test;
 
 public class TestTimeout {
   @Test

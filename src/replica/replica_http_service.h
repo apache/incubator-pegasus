@@ -48,7 +48,14 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/replica/maual_compaction?app_id=<app_id>");
+                         "ip:port/replica/manual_compaction?app_id=<app_id>");
+    }
+
+    ~replica_http_service()
+    {
+        deregister_http_call("replica/duplication");
+        deregister_http_call("replica/data_version");
+        deregister_http_call("replica/manual_compaction");
     }
 
     std::string path() const override { return "replica"; }

@@ -15,9 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -28,6 +25,7 @@
 #include "common/replication_other_types.h"
 #include "duplication_test_base.h"
 #include "duplication_types.h"
+#include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "replica/duplication/duplication_pipeline.h"
 #include "replica/duplication/mutation_duplicator.h"
@@ -138,11 +136,13 @@ public:
     }
 };
 
-TEST_F(replica_duplicator_test, new_duplicator) { test_new_duplicator(); }
+INSTANTIATE_TEST_SUITE_P(, replica_duplicator_test, ::testing::Values(false, true));
 
-TEST_F(replica_duplicator_test, pause_start_duplication) { test_pause_start_duplication(); }
+TEST_P(replica_duplicator_test, new_duplicator) { test_new_duplicator(); }
 
-TEST_F(replica_duplicator_test, duplication_progress)
+TEST_P(replica_duplicator_test, pause_start_duplication) { test_pause_start_duplication(); }
+
+TEST_P(replica_duplicator_test, duplication_progress)
 {
     auto duplicator = create_test_duplicator();
     ASSERT_EQ(duplicator->progress().last_decree, 0); // start duplication from empty plog
@@ -171,7 +171,7 @@ TEST_F(replica_duplicator_test, duplication_progress)
     ASSERT_TRUE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
 }
 
-TEST_F(replica_duplicator_test, prapre_dup)
+TEST_P(replica_duplicator_test, prapre_dup)
 {
     auto duplicator = create_test_duplicator(invalid_decree, 100);
     replica()->update_expect_last_durable_decree(100);

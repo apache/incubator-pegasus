@@ -1,0 +1,26 @@
+From 27f34a580be4a3becf5f8c0cba13433f53c21337 Mon Sep 17 00:00:00 2001
+From: Richard O'Grady <rjogrady@google.com>
+Date: Wed, 12 Jul 2023 10:12:01 -0700
+Subject: [PATCH] Fix -Wsign-compare warning
+
+PiperOrigin-RevId: 547529709
+---
+ snappy.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/snappy.cc b/snappy.cc
+index 688065b..6473123 100644
+--- a/snappy.cc
++++ b/snappy.cc
+@@ -1289,7 +1289,7 @@ std::pair<const uint8_t*, ptrdiff_t> DecompressBranchless(
+         DeferMemCopy(&deferred_src, &deferred_length, from, len);
+       }
+     } while (ip < ip_limit_min_slop &&
+-             (op + deferred_length) < op_limit_min_slop);
++             static_cast<ptrdiff_t>(op + deferred_length) < op_limit_min_slop);
+   exit:
+     ip--;
+     assert(ip <= ip_limit);
+-- 
+2.42.1
+

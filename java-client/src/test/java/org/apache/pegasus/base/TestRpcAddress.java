@@ -19,9 +19,13 @@
 
 package org.apache.pegasus.base;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.pegasus.rpc.async.HostNameResolver;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestRpcAddress {
   @Test
@@ -29,31 +33,31 @@ public class TestRpcAddress {
     HostNameResolver hostNameResolver = new HostNameResolver();
     rpc_address[] addrs = hostNameResolver.resolve("127.0.0.1:34601");
 
-    Assert.assertNotNull(addrs);
-    Assert.assertEquals(addrs.length, 1);
-    Assert.assertEquals(addrs[0].get_ip(), "127.0.0.1");
-    Assert.assertEquals(addrs[0].get_port(), 34601);
+    assertNotNull(addrs);
+    assertEquals(addrs.length, 1);
+    assertEquals(addrs[0].get_ip(), "127.0.0.1");
+    assertEquals(addrs[0].get_port(), 34601);
 
     addrs = hostNameResolver.resolve("www.baidu.com:80");
-    Assert.assertNotNull(addrs);
-    Assert.assertTrue(addrs.length >= 1);
+    assertNotNull(addrs);
+    assertTrue(addrs.length >= 1);
 
     addrs = hostNameResolver.resolve("abcabcabcabc:34601");
-    Assert.assertNull(addrs);
+    assertNull(addrs);
 
     try {
       addrs = hostNameResolver.resolve("localhost");
     } catch (IllegalArgumentException e) {
       e.printStackTrace();
-      Assert.assertNull(addrs);
+      assertNull(addrs);
     }
   }
 
   @Test
   public void testFromString() throws Exception {
     rpc_address addr = new rpc_address();
-    Assert.assertTrue(addr.fromString("127.0.0.1:34601"));
-    Assert.assertEquals(addr.get_ip(), "127.0.0.1");
-    Assert.assertEquals(addr.get_port(), 34601);
+    assertTrue(addr.fromString("127.0.0.1:34601"));
+    assertEquals(addr.get_ip(), "127.0.0.1");
+    assertEquals(addr.get_port(), 34601);
   }
 }

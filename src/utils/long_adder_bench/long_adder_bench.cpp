@@ -20,12 +20,11 @@
 #include <stdio.h>
 #include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <cstdlib>
 #include <thread>
 #include <vector>
 
-#include "runtime/api_layer1.h"
+#include "test_util/test_util.h"
 #include "utils/long_adder.h"
 #include "utils/ports.h"
 #include "utils/process_utils.h"
@@ -133,7 +132,7 @@ void run_bench(int64_t num_operations, int64_t num_threads, const char *name)
 
     std::vector<std::thread> threads;
 
-    uint64_t start = dsn_now_ns();
+    pegasus::stop_watch sw;
     for (int64_t i = 0; i < num_threads; i++) {
         threads.emplace_back([num_operations, &adder]() {
             for (int64_t i = 0; i < num_operations; ++i) {
@@ -144,19 +143,11 @@ void run_bench(int64_t num_operations, int64_t num_threads, const char *name)
     for (auto &t : threads) {
         t.join();
     }
-    uint64_t end = dsn_now_ns();
-
-    auto duration_ns = static_cast<int64_t>(end - start);
-    std::chrono::nanoseconds nano(duration_ns);
-    auto duration_s = std::chrono::duration_cast<std::chrono::duration<double>>(nano).count();
-
-    fmt::print(stdout,
-               "Running {} operations of {} with {} threads took {} seconds, result = {}.\n",
-               num_operations,
-               name,
-               num_threads,
-               duration_s,
-               adder.value());
+    sw.stop_and_output(fmt::format("Running {} operations of {} with {} threads, result = {}",
+                                   num_operations,
+                                   name,
+                                   num_threads,
+                                   adder.value()));
 }
 
 int main(int argc, char **argv)

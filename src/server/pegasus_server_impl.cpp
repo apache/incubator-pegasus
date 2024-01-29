@@ -22,10 +22,9 @@
 #include <fmt/core.h>
 #include <inttypes.h>
 #include <limits.h>
-#include <rocksdb/cache.h>
+#include <rocksdb/advanced_cache.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/db.h>
-#include <rocksdb/env.h>
 #include <rocksdb/iterator.h>
 #include <rocksdb/rate_limiter.h>
 #include <rocksdb/statistics.h>
@@ -45,6 +44,7 @@
 #include <ostream>
 #include <set>
 
+#include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
@@ -58,7 +58,6 @@
 #include "pegasus_const.h"
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
-#include "perf_counter/perf_counter.h"
 #include "replica_admin_types.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
@@ -76,12 +75,13 @@
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/defer.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 #include "utils/token_bucket_throttling_controller.h"
@@ -140,8 +140,8 @@ int64_t pegasus_server_impl::_rocksdb_limiter_last_total_through;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_s_block_cache;
 std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffer_manager;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
+METRIC_VAR_DEFINE_gauge_int64(rdb_block_cache_mem_usage_bytes, pegasus_server_impl);
+METRIC_VAR_DEFINE_gauge_int64(rdb_write_rate_limiter_through_bytes_per_sec, pegasus_server_impl);
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
 const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
@@ -324,13 +324,59 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
 }
 
+// Since LOG_ERROR_PREFIX depends on log_prefix(), this method could not be declared as static or
+// with anonymous namespace.
+void pegasus_server_impl::log_expired_data(const char *op,
+                                           const dsn::rpc_address &addr,
+                                           const dsn::blob &hash_key,
+                                           const dsn::blob &sort_key) const
+{
+    LOG_ERROR_PREFIX("rocksdb data expired for {} from {}: hash_key = \"{}\", sort_key = \"{}\"",
+                     op,
+                     addr,
+                     pegasus::utils::c_escape_string(hash_key),
+                     pegasus::utils::c_escape_string(sort_key));
+}
+
+void pegasus_server_impl::log_expired_data(const char *op,
+                                           const dsn::rpc_address &addr,
+                                           const dsn::blob &key) const
+{
+    dsn::blob hash_key, sort_key;
+    pegasus_restore_key(key, hash_key, sort_key);
+    log_expired_data(op, addr, hash_key, sort_key);
+}
+
+void pegasus_server_impl::log_expired_data(const char *op,
+                                           const dsn::rpc_address &addr,
+                                           const rocksdb::Slice &key) const
+{
+    dsn::blob raw_key(key.data(), 0, key.size());
+    log_expired_data(op, addr, raw_key);
+}
+
+#define LOG_EXPIRED_DATA_IF_VERBOSE(...)                                                           \
+    do {                                                                                           \
+        if (dsn_unlikely(FLAGS_rocksdb_verbose_log)) {                                             \
+            log_expired_data(__FUNCTION__, rpc.remote_address(), ##__VA_ARGS__);                   \
+        }                                                                                          \
+    } while (0)
+
+#define CHECK_READ_THROTTLING()                                                                    \
+    do {                                                                                           \
+        if (dsn_unlikely(!_read_size_throttling_controller->available())) {                        \
+            rpc.error() = dsn::ERR_BUSY;                                                           \
+            METRIC_VAR_INCREMENT(throttling_rejected_read_requests);                               \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
+
 void pegasus_server_impl::on_get(get_rpc rpc)
 {
-    CHECK(_is_open, "");
-    _pfc_get_qps->increment();
-    uint64_t start_time = dsn_now_ns();
+    CHECK_TRUE(_is_open);
 
-    const auto &key = rpc.request();
+    METRIC_VAR_INCREMENT(get_requests);
+
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
@@ -341,35 +387,30 @@ void pegasus_server_impl::on_get(get_rpc rpc)
         return;
     }
 
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
+    CHECK_READ_THROTTLING();
 
+    METRIC_VAR_AUTO_LATENCY(get_latency_ns);
+
+    const auto &key = rpc.request();
     rocksdb::Slice skey(key.data(), key.length());
     std::string value;
     rocksdb::Status status = _db->Get(_data_cf_rd_opts, _data_cf, skey, &value);
 
     if (status.ok()) {
         if (check_if_record_expired(utils::epoch_now(), value)) {
-            _pfc_recent_expire_count->increment();
-            if (FLAGS_rocksdb_verbose_log) {
-                LOG_ERROR_PREFIX("rocksdb data expired for get from {}", rpc.remote_address());
-            }
+            METRIC_VAR_INCREMENT(read_expired_values);
+            LOG_EXPIRED_DATA_IF_VERBOSE(key);
             status = rocksdb::Status::NotFound();
         }
-    }
-
-    if (!status.ok()) {
+    } else {
         if (FLAGS_rocksdb_verbose_log) {
             ::dsn::blob hash_key, sort_key;
             pegasus_restore_key(key, hash_key, sort_key);
             LOG_ERROR_PREFIX("rocksdb get failed for get from {}: hash_key = \"{}\", sort_key = "
                              "\"{}\", error = {}",
                              rpc.remote_address(),
-                             ::pegasus::utils::c_escape_string(hash_key),
-                             ::pegasus::utils::c_escape_string(sort_key),
+                             ::pegasus::utils::c_escape_sensitive_string(hash_key),
+                             ::pegasus::utils::c_escape_sensitive_string(sort_key),
                              status.ToString());
         } else if (!status.IsNotFound()) {
             LOG_ERROR_PREFIX("rocksdb get failed for get from {}: error = {}",
@@ -384,7 +425,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     usleep(10 * 1000);
 #endif
 
-    uint64_t time_used = dsn_now_ns() - start_time;
+    auto time_used = METRIC_VAR_AUTO_LATENCY_DURATION_NS(get_latency_ns);
     if (is_get_abnormal(time_used, value.size())) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
@@ -392,12 +433,12 @@ void pegasus_server_impl::on_get(get_rpc rpc)
                            "hash_key = {}, sort_key = {}, return = {}, "
                            "value_size = {}, time_used = {} ns",
                            rpc.remote_address(),
-                           ::pegasus::utils::c_escape_string(hash_key),
-                           ::pegasus::utils::c_escape_string(sort_key),
+                           ::pegasus::utils::c_escape_sensitive_string(hash_key),
+                           ::pegasus::utils::c_escape_sensitive_string(sort_key),
                            status.ToString(),
                            value.size(),
                            time_used);
-        _pfc_recent_abnormal_count->increment();
+        METRIC_VAR_INCREMENT(abnormal_read_requests);
     }
 
     resp.error = status.code();
@@ -406,28 +447,25 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     }
 
     _cu_calculator->add_get_cu(rpc.dsn_request(), resp.error, key, resp.value);
-    _pfc_get_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 {
-    CHECK(_is_open, "");
-    _pfc_multi_get_qps->increment();
-    uint64_t start_time = dsn_now_ns();
+    CHECK_TRUE(_is_open);
 
-    const auto &request = rpc.request();
-    dsn::message_ex *req = rpc.dsn_request();
+    METRIC_VAR_INCREMENT(multi_get_requests);
+
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
+    CHECK_READ_THROTTLING();
 
+    METRIC_VAR_AUTO_LATENCY(multi_get_latency_ns);
+
+    const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
         LOG_ERROR_PREFIX(
             "invalid argument for multi_get from {}: sort key filter type {} not supported",
@@ -435,7 +473,6 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
-        _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         return;
     }
 
@@ -507,23 +544,21 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                     "sort_key_filter_pattern = \"{}\", final_start = \"{}\" ({}), final_stop = "
                     "\"{}\" ({})",
                     rpc.remote_address(),
-                    ::pegasus::utils::c_escape_string(request.hash_key),
-                    ::pegasus::utils::c_escape_string(request.start_sortkey),
+                    ::pegasus::utils::c_escape_sensitive_string(request.hash_key),
+                    ::pegasus::utils::c_escape_sensitive_string(request.start_sortkey),
                     request.start_inclusive ? "inclusive" : "exclusive",
-                    ::pegasus::utils::c_escape_string(request.stop_sortkey),
+                    ::pegasus::utils::c_escape_sensitive_string(request.stop_sortkey),
                     request.stop_inclusive ? "inclusive" : "exclusive",
                     ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
                         ->second,
-                    ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern),
-                    ::pegasus::utils::c_escape_string(start),
+                    ::pegasus::utils::c_escape_sensitive_string(request.sort_key_filter_pattern),
+                    ::pegasus::utils::c_escape_sensitive_string(start),
                     start_inclusive ? "inclusive" : "exclusive",
-                    ::pegasus::utils::c_escape_string(stop),
+                    ::pegasus::utils::c_escape_sensitive_string(stop),
                     stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
             _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
-            _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-
             return;
         }
 
@@ -684,7 +719,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                 LOG_ERROR_PREFIX("rocksdb scan failed for multi_get from {}: hash_key = \"{}\", "
                                  "reverse = {}, error = {}",
                                  rpc.remote_address(),
-                                 ::pegasus::utils::c_escape_string(request.hash_key),
+                                 ::pegasus::utils::c_escape_sensitive_string(request.hash_key),
                                  request.reverse ? "true" : "false",
                                  it->status().ToString());
             } else {
@@ -726,55 +761,52 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         for (int i = 0; i < keys.size(); i++) {
             rocksdb::Status &status = statuses[i];
             std::string &value = values[i];
-            // print log
             if (!status.ok()) {
                 if (FLAGS_rocksdb_verbose_log) {
-                    LOG_ERROR_PREFIX("rocksdb get failed for multi_get from {}: hash_key = \"{}\", "
-                                     "sort_key = \"{}\", error = {}",
-                                     rpc.remote_address(),
-                                     ::pegasus::utils::c_escape_string(request.hash_key),
-                                     ::pegasus::utils::c_escape_string(request.sort_keys[i]),
-                                     status.ToString());
+                    LOG_ERROR_PREFIX(
+                        "rocksdb get failed for multi_get from {}: hash_key = \"{}\", "
+                        "sort_key = \"{}\", error = {}",
+                        rpc.remote_address(),
+                        ::pegasus::utils::c_escape_sensitive_string(request.hash_key),
+                        ::pegasus::utils::c_escape_sensitive_string(request.sort_keys[i]),
+                        status.ToString());
                 } else if (!status.IsNotFound()) {
                     LOG_ERROR_PREFIX("rocksdb get failed for multi_get from {}: error = {}",
                                      rpc.remote_address(),
                                      status.ToString());
                 }
-            }
-            // check ttl
-            if (status.ok()) {
-                uint32_t expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
-                if (expire_ts > 0 && expire_ts <= epoch_now) {
-                    expire_count++;
-                    if (FLAGS_rocksdb_verbose_log) {
-                        LOG_ERROR_PREFIX("rocksdb data expired for multi_get from {}",
-                                         rpc.remote_address());
-                    }
-                    status = rocksdb::Status::NotFound();
+
+                if (status.IsNotFound()) {
+                    continue;
                 }
-            }
-            // extract value
-            if (status.ok()) {
-                // check if exceed limit
-                if (count >= max_kv_count || size >= max_kv_size) {
-                    exceed_limit = true;
-                    break;
-                }
-                ::dsn::apps::key_value kv;
-                kv.key = request.sort_keys[i];
-                if (!request.no_value) {
-                    pegasus_extract_user_data(_pegasus_data_version, std::move(value), kv.value);
-                }
-                count++;
-                size += kv.key.length() + kv.value.length();
-                resp.kvs.emplace_back(std::move(kv));
-            }
-            // if error occurred
-            if (!status.ok() && !status.IsNotFound()) {
+
                 error_occurred = true;
                 final_status = status;
                 break;
             }
+
+            // check ttl
+            if (check_if_record_expired(epoch_now, value)) {
+                expire_count++;
+                LOG_EXPIRED_DATA_IF_VERBOSE(request.hash_key, request.sort_keys[i]);
+                status = rocksdb::Status::NotFound();
+                continue;
+            }
+
+            // check if exceed limit
+            if (dsn_unlikely(count >= max_kv_count || size >= max_kv_size)) {
+                exceed_limit = true;
+                break;
+            }
+
+            ::dsn::apps::key_value kv;
+            kv.key = request.sort_keys[i];
+            if (!request.no_value) {
+                pegasus_extract_user_data(_pegasus_data_version, std::move(value), kv.value);
+            }
+            count++;
+            size += kv.key.length() + kv.value.length();
+            resp.kvs.emplace_back(std::move(kv));
         }
 
         if (error_occurred) {
@@ -792,7 +824,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     usleep(10 * 1000);
 #endif
 
-    uint64_t time_used = dsn_now_ns() - start_time;
+    auto time_used = METRIC_VAR_AUTO_LATENCY_DURATION_NS(multi_get_latency_ns);
     if (is_multi_get_abnormal(time_used, size, iteration_count)) {
         LOG_WARNING_PREFIX(
             "rocksdb abnormal multi_get from {}: hash_key = {}, "
@@ -802,13 +834,13 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             "result_count = {}, result_size = {}, iteration_count = {}, "
             "expire_count = {}, filter_count = {}, time_used = {} ns",
             rpc.remote_address(),
-            ::pegasus::utils::c_escape_string(request.hash_key),
-            ::pegasus::utils::c_escape_string(request.start_sortkey),
+            ::pegasus::utils::c_escape_sensitive_string(request.hash_key),
+            ::pegasus::utils::c_escape_sensitive_string(request.start_sortkey),
             request.start_inclusive ? "inclusive" : "exclusive",
-            ::pegasus::utils::c_escape_string(request.stop_sortkey),
+            ::pegasus::utils::c_escape_sensitive_string(request.stop_sortkey),
             request.stop_inclusive ? "inclusive" : "exclusive",
             ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)->second,
-            ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern),
+            ::pegasus::utils::c_escape_sensitive_string(request.sort_key_filter_pattern),
             request.max_kv_count,
             request.max_kv_size,
             request.reverse ? "true" : "false",
@@ -818,36 +850,29 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             expire_count,
             filter_count,
             time_used);
-        _pfc_recent_abnormal_count->increment();
+        METRIC_VAR_INCREMENT(abnormal_read_requests);
     }
 
-    if (expire_count > 0) {
-        _pfc_recent_expire_count->add(expire_count);
-    }
-    if (filter_count > 0) {
-        _pfc_recent_filter_count->add(filter_count);
-    }
+    METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
+    METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
 
     _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
-    _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 {
-    CHECK(_is_open, "");
-    _pfc_batch_get_qps->increment();
-    int64_t start_time = dsn_now_ns();
+    CHECK_TRUE(_is_open);
+
+    METRIC_VAR_INCREMENT(batch_get_requests);
 
     auto &response = rpc.response();
     response.app_id = _gpid.get_app_id();
     response.partition_index = _gpid.get_partition_index();
     response.server = _primary_address;
 
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
+    CHECK_READ_THROTTLING();
+
+    METRIC_VAR_AUTO_LATENCY(batch_get_latency_ns);
 
     const auto &request = rpc.request();
     if (request.keys.empty()) {
@@ -855,7 +880,6 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         LOG_ERROR_PREFIX("Invalid argument for batch_get from {}: 'keys' field in request is empty",
                          rpc.remote_address().to_string());
         _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
-        _pfc_batch_get_latency->set(dsn_now_ns() - start_time);
         return;
     }
 
@@ -874,6 +898,8 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     bool error_occurred = false;
     int64_t total_data_size = 0;
     uint32_t epoch_now = pegasus::utils::epoch_now();
+    uint64_t expire_count = 0;
+
     std::vector<std::string> values;
     std::vector<rocksdb::Status> statuses = _db->MultiGet(_data_cf_rd_opts, keys, &values);
     response.data.reserve(request.keys.size());
@@ -889,13 +915,8 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 
         if (dsn_likely(status.ok())) {
             if (check_if_record_expired(epoch_now, value)) {
-                if (FLAGS_rocksdb_verbose_log) {
-                    LOG_ERROR_PREFIX(
-                        "rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
-                        rpc.remote_address().to_string(),
-                        pegasus::utils::c_escape_string(hash_key),
-                        pegasus::utils::c_escape_string(sort_key));
-                }
+                ++expire_count;
+                LOG_EXPIRED_DATA_IF_VERBOSE(hash_key, sort_key);
                 continue;
             }
 
@@ -933,7 +954,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         response.error = rocksdb::Status::kOk;
     }
 
-    int64_t time_used = dsn_now_ns() - start_time;
+    auto time_used = METRIC_VAR_AUTO_LATENCY_DURATION_NS(batch_get_latency_ns);
     if (is_batch_get_abnormal(time_used, total_data_size, request.keys.size())) {
         LOG_WARNING_PREFIX(
             "rocksdb abnormal batch_get from {}: total data size = {}, row count = {}, "
@@ -942,33 +963,32 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
             total_data_size,
             request.keys.size(),
             time_used / 1000);
-        _pfc_recent_abnormal_count->increment();
+        METRIC_VAR_INCREMENT(abnormal_read_requests);
     }
 
+    METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
+
     _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
-    _pfc_batch_get_latency->set(time_used);
 }
 
 void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
 
-    _pfc_scan_qps->increment();
-    uint64_t start_time = dsn_now_ns();
+    METRIC_VAR_INCREMENT(scan_requests);
 
-    const auto &hash_key = rpc.request();
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
+
+    CHECK_READ_THROTTLING();
+
+    METRIC_VAR_AUTO_LATENCY(scan_latency_ns);
 
     // scan
     ::dsn::blob start_key, stop_key;
+    const auto &hash_key = rpc.request();
     pegasus_generate_key(start_key, hash_key, ::dsn::blob());
     pegasus_generate_next_blob(stop_key, hash_key);
     rocksdb::Slice start(start_key.data(), start_key.length());
@@ -990,18 +1010,14 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 
         if (check_if_record_expired(epoch_now, it->value())) {
             expire_count++;
-            if (FLAGS_rocksdb_verbose_log) {
-                LOG_ERROR_PREFIX("rocksdb data expired for sortkey_count from {}",
-                                 rpc.remote_address());
-            }
+            LOG_EXPIRED_DATA_IF_VERBOSE(it->key());
         } else {
             resp.count++;
         }
         it->Next();
     }
-    if (expire_count > 0) {
-        _pfc_recent_expire_count->add(expire_count);
-    }
+
+    METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
 
     resp.error = it->status().code();
     if (!it->status().ok()) {
@@ -1010,7 +1026,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
             LOG_ERROR_PREFIX(
                 "rocksdb scan failed for sortkey_count from {}: hash_key = \"{}\", error = {}",
                 rpc.remote_address(),
-                ::pegasus::utils::c_escape_string(hash_key),
+                ::pegasus::utils::c_escape_sensitive_string(hash_key),
                 it->status().ToString());
         } else {
             LOG_ERROR_PREFIX("rocksdb scan failed for sortkey_count from {}: error = {}",
@@ -1027,7 +1043,6 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     }
 
     _cu_calculator->add_sortkey_count_cu(rpc.dsn_request(), resp.error, hash_key);
-    _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_ttl(ttl_rpc rpc)
@@ -1040,11 +1055,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
+    CHECK_READ_THROTTLING();
 
     rocksdb::Slice skey(key.data(), key.length());
     std::string value;
@@ -1055,7 +1066,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
     if (status.ok()) {
         expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, value);
         if (check_if_ts_expired(now_ts, expire_ts)) {
-            _pfc_recent_expire_count->increment();
+            METRIC_VAR_INCREMENT(read_expired_values);
             if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX("rocksdb data expired for ttl from {}", rpc.remote_address());
             }
@@ -1070,8 +1081,8 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
             LOG_ERROR_PREFIX("rocksdb get failed for ttl from {}: hash_key = \"{}\", sort_key = "
                              "\"{}\", error = {}",
                              rpc.remote_address(),
-                             ::pegasus::utils::c_escape_string(hash_key),
-                             ::pegasus::utils::c_escape_string(sort_key),
+                             ::pegasus::utils::c_escape_sensitive_string(hash_key),
+                             ::pegasus::utils::c_escape_sensitive_string(sort_key),
                              status.ToString());
         } else if (!status.IsNotFound()) {
             LOG_ERROR_PREFIX("rocksdb get failed for ttl from {}: error = {}",
@@ -1095,23 +1106,21 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
 
 void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 {
-    CHECK(_is_open, "");
-    _pfc_scan_qps->increment();
-    uint64_t start_time = dsn_now_ns();
+    CHECK_TRUE(_is_open);
 
-    const auto &request = rpc.request();
-    dsn::message_ex *req = rpc.dsn_request();
+    METRIC_VAR_INCREMENT(scan_requests);
+
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
+    CHECK_READ_THROTTLING();
 
+    METRIC_VAR_AUTO_LATENCY(scan_latency_ns);
+
+    const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
     if (!is_filter_type_supported(request.hash_key_filter_type)) {
         LOG_ERROR_PREFIX(
             "invalid argument for get_scanner from {}: hash key filter type {} not supported",
@@ -1119,10 +1128,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-        _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
         return;
     }
+
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
         LOG_ERROR_PREFIX(
             "invalid argument for get_scanner from {}: sort key filter type {} not supported",
@@ -1130,8 +1138,6 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-        _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
         return;
     }
 
@@ -1180,15 +1186,13 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             LOG_WARNING_PREFIX("empty key range for get_scanner from {}: start_key = \"{}\" ({}), "
                                "stop_key = \"{}\" ({})",
                                rpc.remote_address(),
-                               ::pegasus::utils::c_escape_string(request.start_key),
+                               ::pegasus::utils::c_escape_sensitive_string(request.start_key),
                                request.start_inclusive ? "inclusive" : "exclusive",
-                               ::pegasus::utils::c_escape_string(request.stop_key),
+                               ::pegasus::utils::c_escape_sensitive_string(request.stop_key),
                                request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-        _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
         return;
     }
 
@@ -1287,9 +1291,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                              "({}), stop_key = \"{}\" ({}), batch_size = {}, read_count = {}, "
                              "error = {}",
                              rpc.remote_address(),
-                             ::pegasus::utils::c_escape_string(start),
+                             ::pegasus::utils::c_escape_sensitive_string(start),
                              request.start_inclusive ? "inclusive" : "exclusive",
-                             ::pegasus::utils::c_escape_string(stop),
+                             ::pegasus::utils::c_escape_sensitive_string(stop),
                              request.stop_inclusive ? "inclusive" : "exclusive",
                              batch_count,
                              count,
@@ -1341,35 +1345,29 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
     }
 
-    if (expire_count > 0) {
-        _pfc_recent_expire_count->add(expire_count);
-    }
-    if (filter_count > 0) {
-        _pfc_recent_filter_count->add(filter_count);
-    }
+    METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
+    METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
 
     _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-    _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_scan(scan_rpc rpc)
 {
-    CHECK(_is_open, "");
-    _pfc_scan_qps->increment();
-    uint64_t start_time = dsn_now_ns();
-    const auto &request = rpc.request();
-    dsn::message_ex *req = rpc.dsn_request();
+    CHECK_TRUE(_is_open);
+
+    METRIC_VAR_INCREMENT(scan_requests);
+
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->available()) {
-        rpc.error() = dsn::ERR_BUSY;
-        _counter_recent_read_throttling_reject_count->increment();
-        return;
-    }
+    CHECK_READ_THROTTLING();
 
+    METRIC_VAR_AUTO_LATENCY(scan_latency_ns);
+
+    const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
     std::unique_ptr<pegasus_scan_context> context = _context_cache.fetch(request.context_id);
     if (context) {
         rocksdb::Iterator *it = context->iterator.get();
@@ -1458,7 +1456,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
                                  "\"{}\" ({}), batch_size = {}, read_count = {}, error = {}",
                                  rpc.remote_address(),
                                  request.context_id,
-                                 ::pegasus::utils::c_escape_string(stop),
+                                 ::pegasus::utils::c_escape_sensitive_string(stop),
                                  stop_inclusive ? "inclusive" : "exclusive",
                                  batch_count,
                                  count,
@@ -1492,18 +1490,14 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
         }
 
-        if (expire_count > 0) {
-            _pfc_recent_expire_count->add(expire_count);
-        }
-        if (filter_count > 0) {
-            _pfc_recent_filter_count->add(filter_count);
-        }
+        METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
+        METRIC_VAR_INCREMENT_BY(read_filtered_values, filter_count);
+
     } else {
         resp.error = rocksdb::Status::Code::kNotFound;
     }
 
     _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
-    _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
 void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache.fetch(args); }
@@ -1634,12 +1628,12 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         rocksdb::DBOptions loaded_db_opt;
         std::vector<rocksdb::ColumnFamilyDescriptor> loaded_cf_descs;
         rocksdb::ColumnFamilyOptions loaded_data_cf_opts;
+        rocksdb::ConfigOptions config_options;
         // Set `ignore_unknown_options` true for forward compatibility.
-        auto status = rocksdb::LoadLatestOptions(rdb_path,
-                                                 rocksdb::Env::Default(),
-                                                 &loaded_db_opt,
-                                                 &loaded_cf_descs,
-                                                 /*ignore_unknown_options=*/true);
+        config_options.ignore_unknown_options = true;
+        config_options.env = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive);
+        auto status =
+            rocksdb::LoadLatestOptions(config_options, rdb_path, &loaded_db_opt, &loaded_cf_descs);
         if (!status.ok()) {
             // Here we ignore an invalid argument error related to `pegasus_data_version` and
             // `pegasus_data` options, which were used in old version rocksdbs (before 2.1.0).
@@ -1665,8 +1659,8 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             // We don't use `loaded_data_cf_opts` directly because pointer-typed options will
             // only be initialized with default values when calling 'LoadLatestOptions', see
             // 'rocksdb/utilities/options_util.h'.
-            reset_rocksdb_options(loaded_data_cf_opts, &_table_data_cf_opts);
-            _db_opts.allow_ingest_behind = parse_allow_ingest_behind(envs);
+            reset_rocksdb_options(
+                loaded_data_cf_opts, loaded_db_opt, envs, &_table_data_cf_opts, &_db_opts);
         }
     } else {
         // When create new DB, we have to create a new column family to store meta data (meta column
@@ -1677,11 +1671,14 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
         {{DATA_COLUMN_FAMILY_NAME, _table_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
-    auto s = rocksdb::CheckOptionsCompatibility(rdb_path,
-                                                rocksdb::Env::Default(),
-                                                _db_opts,
-                                                column_families,
-                                                /*ignore_unknown_options=*/true);
+    rocksdb::ConfigOptions config_options;
+    config_options.ignore_unknown_options = true;
+    config_options.ignore_unsupported_options = true;
+    config_options.sanity_level =
+        rocksdb::ConfigOptions::SanityLevel::kSanityLevelLooselyCompatible;
+    config_options.env = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive);
+    auto s =
+        rocksdb::CheckOptionsCompatibility(config_options, rdb_path, _db_opts, column_families);
     if (!s.ok() && !s.IsNotFound() && !has_incompatible_db_options) {
         LOG_ERROR_PREFIX("rocksdb::CheckOptionsCompatibility failed, error = {}", s.ToString());
         return dsn::ERR_LOCAL_APP_FAILURE;
@@ -1867,13 +1864,12 @@ void pegasus_server_impl::cancel_background_work(bool wait)
             LOG_ERROR_PREFIX("rmdir {} failed when stop app", data_dir());
             return ::dsn::ERR_FILE_OPERATION_FAILED;
         }
-        _pfc_rdb_sst_count->set(0);
-        _pfc_rdb_sst_size->set(0);
-        _pfc_rdb_block_cache_hit_count->set(0);
-        _pfc_rdb_block_cache_total_count->set(0);
-        _pfc_rdb_block_cache_mem_usage->set(0);
-        _pfc_rdb_index_and_filter_blocks_mem_usage->set(0);
-        _pfc_rdb_memtable_mem_usage->set(0);
+        METRIC_VAR_SET(rdb_total_sst_files, 0);
+        METRIC_VAR_SET(rdb_total_sst_size_mb, 0);
+        METRIC_VAR_SET(rdb_index_and_filter_blocks_mem_usage_bytes, 0);
+        METRIC_VAR_SET(rdb_memtable_mem_usage_bytes, 0);
+        METRIC_VAR_SET(rdb_block_cache_hit_count, 0);
+        METRIC_VAR_SET(rdb_block_cache_total_count, 0);
     }
 
     LOG_INFO_PREFIX("close app succeed, clear_state = {}", clear_state ? "true" : "false");
@@ -2039,7 +2035,8 @@ private:
     }
 
     int64_t checkpoint_decree = 0;
-    ::dsn::error_code err = copy_checkpoint_to_dir_unsafe(tmp_dir.c_str(), &checkpoint_decree);
+    ::dsn::error_code err =
+        copy_checkpoint_to_dir_unsafe(tmp_dir.c_str(), &checkpoint_decree, flush_memtable);
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR_PREFIX("copy_checkpoint_to_dir_unsafe failed with err = {}", err.to_string());
         return ::dsn::ERR_LOCAL_APP_FAILURE;
@@ -2158,7 +2155,7 @@ private:
             {{DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
              {META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
         status = rocksdb::DB::OpenForReadOnly(
-            rocksdb::DBOptions(), checkpoint_dir, column_families, &handles_opened, &snapshot_db);
+            _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
         if (!status.ok()) {
             LOG_ERROR_PREFIX(
                 "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
@@ -2297,7 +2294,8 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
         if (value.length() < filter_pattern.length())
             return false;
         if (filter_type == ::dsn::apps::filter_type::FT_MATCH_ANYWHERE) {
-            return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
+            return value.to_string_view().find(filter_pattern.to_string_view()) !=
+                   absl::string_view::npos;
         } else if (filter_type == ::dsn::apps::filter_type::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());
@@ -2437,12 +2435,16 @@ range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
     return range_iteration_state::kNormal;
 }
 
+#define GET_TICKER_COUNT_AND_SET_METRIC(ticker_name, metric_name)                                  \
+    do {                                                                                           \
+        METRIC_VAR_SET(metric_name, _statistics->getTickerCount(rocksdb::ticker_name));            \
+    } while (0)
+
 void pegasus_server_impl::update_replica_rocksdb_statistics()
 {
     std::string str_val;
     uint64_t val = 0;
 
-    // Update _pfc_rdb_sst_count
     for (int i = 0; i < _data_cf_opts.num_levels; ++i) {
         int cur_level_count = 0;
         if (_db->GetProperty(rocksdb::DB::Properties::kNumFilesAtLevelPrefix + std::to_string(i),
@@ -2451,49 +2453,38 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
             val += cur_level_count;
         }
     }
-    _pfc_rdb_sst_count->set(val);
-    LOG_DEBUG_PREFIX("_pfc_rdb_sst_count: {}", val);
+    METRIC_VAR_SET(rdb_total_sst_files, val);
 
-    // Update _pfc_rdb_sst_size
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kTotalSstFilesSize, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
         static uint64_t bytes_per_mb = 1U << 20U;
-        _pfc_rdb_sst_size->set(val / bytes_per_mb);
-        LOG_DEBUG_PREFIX("_pfc_rdb_sst_size: {} bytes", val);
+        METRIC_VAR_SET(rdb_total_sst_size_mb, val / bytes_per_mb);
     }
 
-    // Update _pfc_rdb_write_amplification
     std::map<std::string, std::string> props;
     if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {
         auto write_amplification_iter = props.find("compaction.Sum.WriteAmp");
         auto write_amplification = write_amplification_iter == props.end()
                                        ? 1
                                        : std::stod(write_amplification_iter->second);
-        _pfc_rdb_write_amplification->set(write_amplification);
-        LOG_DEBUG_PREFIX("_pfc_rdb_write_amplification: {}", write_amplification);
+        METRIC_VAR_SET(rdb_write_amplification, write_amplification);
     }
 
-    // Update _pfc_rdb_index_and_filter_blocks_mem_usage
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateTableReadersMem, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
-        _pfc_rdb_index_and_filter_blocks_mem_usage->set(val);
-        LOG_DEBUG_PREFIX("_pfc_rdb_index_and_filter_blocks_mem_usage: {} bytes", val);
+        METRIC_VAR_SET(rdb_index_and_filter_blocks_mem_usage_bytes, val);
     }
 
-    // Update _pfc_rdb_memtable_mem_usage
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kCurSizeAllMemTables, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
-        _pfc_rdb_memtable_mem_usage->set(val);
-        LOG_DEBUG_PREFIX("_pfc_rdb_memtable_mem_usage: {} bytes", val);
+        METRIC_VAR_SET(rdb_memtable_mem_usage_bytes, val);
     }
 
-    // Update _pfc_rdb_estimate_num_keys
     // NOTE: for the same n kv pairs, kEstimateNumKeys will be counted n times, you need compaction
     // to remove duplicate
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateNumKeys, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
-        _pfc_rdb_estimate_num_keys->set(val);
-        LOG_DEBUG_PREFIX("_pfc_rdb_estimate_num_keys: {}", val);
+        METRIC_VAR_SET(rdb_estimated_keys, val);
     }
 
     // the follow stats is related to `read`, so only primary need update it，ignore
@@ -2502,7 +2493,6 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         return;
     }
 
-    // Update _pfc_rdb_read_amplification
     if (FLAGS_read_amp_bytes_per_bit > 0) {
         auto estimate_useful_bytes =
             _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
@@ -2510,85 +2500,56 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
             auto read_amplification =
                 _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
                 estimate_useful_bytes;
-            _pfc_rdb_read_amplification->set(read_amplification);
-            LOG_DEBUG_PREFIX("_pfc_rdb_read_amplification: {}", read_amplification);
+            METRIC_VAR_SET(rdb_read_amplification, read_amplification);
         }
     }
 
-    // Update _pfc_rdb_bf_seek_negatives
-    auto bf_seek_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_USEFUL);
-    _pfc_rdb_bf_seek_negatives->set(bf_seek_negatives);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_seek_negatives: {}", bf_seek_negatives);
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_USEFUL, rdb_bloom_filter_seek_negatives);
 
-    // Update _pfc_rdb_bf_seek_total
-    auto bf_seek_total = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_CHECKED);
-    _pfc_rdb_bf_seek_total->set(bf_seek_total);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_seek_total: {}", bf_seek_total);
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_PREFIX_CHECKED, rdb_bloom_filter_seek_total);
 
-    // Update _pfc_rdb_bf_point_positive_true
-    auto bf_point_positive_true =
-        _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_TRUE_POSITIVE);
-    _pfc_rdb_bf_point_positive_true->set(bf_point_positive_true);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_point_positive_true: {}", bf_point_positive_true);
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_USEFUL, rdb_bloom_filter_point_lookup_negatives);
 
-    // Update _pfc_rdb_bf_point_positive_total
-    auto bf_point_positive_total = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_POSITIVE);
-    _pfc_rdb_bf_point_positive_total->set(bf_point_positive_total);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_point_positive_total: {}", bf_point_positive_total);
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_POSITIVE,
+                                    rdb_bloom_filter_point_lookup_positives);
 
-    // Update _pfc_rdb_bf_point_negatives
-    auto bf_point_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_USEFUL);
-    _pfc_rdb_bf_point_negatives->set(bf_point_negatives);
-    LOG_DEBUG_PREFIX("_pfc_rdb_bf_point_negatives: {}", bf_point_negatives);
+    GET_TICKER_COUNT_AND_SET_METRIC(BLOOM_FILTER_FULL_TRUE_POSITIVE,
+                                    rdb_bloom_filter_point_lookup_true_positives);
 
-    // Update _pfc_rdb_block_cache_hit_count and _pfc_rdb_block_cache_total_count
     auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
-    _pfc_rdb_block_cache_hit_count->set(block_cache_hit);
-    LOG_DEBUG_PREFIX("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
+    METRIC_VAR_SET(rdb_block_cache_hit_count, block_cache_hit);
 
     auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
     auto block_cache_total = block_cache_hit + block_cache_miss;
-    _pfc_rdb_block_cache_total_count->set(block_cache_total);
-    LOG_DEBUG_PREFIX("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
+    METRIC_VAR_SET(rdb_block_cache_total_count, block_cache_total);
 
-    // update block memtable/l0/l1/l2andup hit rate under block cache up level
     auto memtable_hit_count = _statistics->getTickerCount(rocksdb::MEMTABLE_HIT);
-    _pfc_rdb_memtable_hit_count->set(memtable_hit_count);
-    LOG_DEBUG_PREFIX("_pfc_rdb_memtable_hit_count: {}", memtable_hit_count);
+    METRIC_VAR_SET(rdb_memtable_hit_count, memtable_hit_count);
 
     auto memtable_miss_count = _statistics->getTickerCount(rocksdb::MEMTABLE_MISS);
     auto memtable_total = memtable_hit_count + memtable_miss_count;
-    _pfc_rdb_memtable_total_count->set(memtable_total);
-    LOG_DEBUG_PREFIX("_pfc_rdb_memtable_total_count: {}", memtable_total);
+    METRIC_VAR_SET(rdb_memtable_total_count, memtable_total);
 
-    auto l0_hit_count = _statistics->getTickerCount(rocksdb::GET_HIT_L0);
-    _pfc_rdb_l0_hit_count->set(l0_hit_count);
-    LOG_DEBUG_PREFIX("_pfc_rdb_l0_hit_count: {}", l0_hit_count);
+    GET_TICKER_COUNT_AND_SET_METRIC(GET_HIT_L0, rdb_l0_hit_count);
 
-    auto l1_hit_count = _statistics->getTickerCount(rocksdb::GET_HIT_L1);
-    _pfc_rdb_l1_hit_count->set(l1_hit_count);
-    LOG_DEBUG_PREFIX("_pfc_rdb_l1_hit_count: {}", l1_hit_count);
+    GET_TICKER_COUNT_AND_SET_METRIC(GET_HIT_L1, rdb_l1_hit_count);
 
-    auto l2andup_hit_count = _statistics->getTickerCount(rocksdb::GET_HIT_L2_AND_UP);
-    _pfc_rdb_l2andup_hit_count->set(l2andup_hit_count);
-    LOG_DEBUG_PREFIX("_pfc_rdb_l2andup_hit_count: {}", l2andup_hit_count);
+    GET_TICKER_COUNT_AND_SET_METRIC(GET_HIT_L2_AND_UP, rdb_l2_and_up_hit_count);
 }
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
 {
-    // Update _pfc_rdb_block_cache_mem_usage
     if (_s_block_cache) {
         uint64_t val = _s_block_cache->GetUsage();
-        _pfc_rdb_block_cache_mem_usage->set(val);
+        METRIC_VAR_SET(rdb_block_cache_mem_usage_bytes, val);
     }
 
-    // Update _pfc_rdb_write_limiter_rate_bytes
     if (_s_rate_limiter) {
         uint64_t current_total_through = _s_rate_limiter->GetTotalBytesThrough();
         uint64_t through_bytes_per_sec =
             (current_total_through - _rocksdb_limiter_last_total_through) /
             kServerStatUpdateTimeSec.count();
-        _pfc_rdb_write_limiter_rate_bytes->set(through_bytes_per_sec);
+        METRIC_VAR_SET(rdb_write_rate_limiter_through_bytes_per_sec, through_bytes_per_sec);
         _rocksdb_limiter_last_total_through = current_total_through;
     }
 }
@@ -3051,7 +3012,7 @@ std::string pegasus_server_impl::compression_type_to_str(rocksdb::CompressionTyp
     case rocksdb::kZSTD:
         return "zstd";
     default:
-        LOG_ERROR_PREFIX("Unsupported compression type: {}.", type);
+        LOG_ERROR_PREFIX("Unsupported compression type: {}.", static_cast<int>(type));
         return "<unsupported>";
     }
 }
@@ -3127,8 +3088,11 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
     }
 }
 
-void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_opts,
-                                                rocksdb::ColumnFamilyOptions *target_opts)
+void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptions &base_cf_opts,
+                                                const rocksdb::DBOptions &base_db_opt,
+                                                const std::map<std::string, std::string> &envs,
+                                                rocksdb::ColumnFamilyOptions *target_cf_opts,
+                                                rocksdb::DBOptions *target_db_opt)
 {
     LOG_INFO_PREFIX("Reset rocksdb envs options");
     // Reset rocksdb option includes two aspects:
@@ -3137,11 +3101,13 @@ void pegasus_server_impl::reset_rocksdb_options(const rocksdb::ColumnFamilyOptio
     // ROCKSDB_STATIC_OPTIONS
 
     // aspect 1:
-    reset_usage_scenario_options(base_opts, target_opts);
+    reset_usage_scenario_options(base_cf_opts, target_cf_opts);
 
     // aspect 2:
-    target_opts->num_levels = base_opts.num_levels;
-    target_opts->write_buffer_size = base_opts.write_buffer_size;
+    target_cf_opts->num_levels = base_cf_opts.num_levels;
+    target_cf_opts->write_buffer_size = base_cf_opts.write_buffer_size;
+
+    reset_allow_ingest_behind_option(base_db_opt, envs, target_db_opt);
 }
 
 void pegasus_server_impl::reset_usage_scenario_options(
@@ -3160,6 +3126,19 @@ void pegasus_server_impl::reset_usage_scenario_options(
     target_opts->max_compaction_bytes = base_opts.max_compaction_bytes;
     target_opts->write_buffer_size = base_opts.write_buffer_size;
     target_opts->max_write_buffer_number = base_opts.max_write_buffer_number;
+}
+
+void pegasus_server_impl::reset_allow_ingest_behind_option(
+    const rocksdb::DBOptions &base_db_opt,
+    const std::map<std::string, std::string> &envs,
+    rocksdb::DBOptions *target_db_opt)
+{
+    if (envs.empty()) {
+        // for reopen db during load balance learning
+        target_db_opt->allow_ingest_behind = base_db_opt.allow_ingest_behind;
+    } else {
+        target_db_opt->allow_ingest_behind = parse_allow_ingest_behind(envs);
+    }
 }
 
 void pegasus_server_impl::recalculate_data_cf_options(
@@ -3285,7 +3264,7 @@ bool pegasus_server_impl::set_options(
     *missing_meta_cf = true;
     *missing_data_cf = true;
     std::vector<std::string> column_families;
-    auto s = rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), path, &column_families);
+    auto s = rocksdb::DB::ListColumnFamilies(_db_opts, path, &column_families);
     if (!s.ok()) {
         LOG_ERROR_PREFIX("rocksdb::DB::ListColumnFamilies failed, error = {}", s.ToString());
         if (s.IsCorruption() &&
@@ -3444,31 +3423,32 @@ std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(put.key, hash_key, sort_key);
         return fmt::format("put: hash_key={}, sort_key={}",
-                           pegasus::utils::c_escape_string(hash_key),
-                           pegasus::utils::c_escape_string(sort_key));
+                           pegasus::utils::c_escape_sensitive_string(hash_key),
+                           pegasus::utils::c_escape_sensitive_string(sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         auto multi_put = multi_put_rpc(request).request();
         return fmt::format("multi_put: hash_key={}, multi_put_count={}",
-                           pegasus::utils::c_escape_string(multi_put.hash_key),
+                           pegasus::utils::c_escape_sensitive_string(multi_put.hash_key),
                            multi_put.kvs.size());
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
         auto check_and_set = check_and_set_rpc(request).request();
         return fmt::format("check_and_set: hash_key={}, check_sort_key={}, set_sort_key={}",
-                           pegasus::utils::c_escape_string(check_and_set.hash_key),
-                           pegasus::utils::c_escape_string(check_and_set.check_sort_key),
-                           pegasus::utils::c_escape_string(check_and_set.set_sort_key));
+                           pegasus::utils::c_escape_sensitive_string(check_and_set.hash_key),
+                           pegasus::utils::c_escape_sensitive_string(check_and_set.check_sort_key),
+                           pegasus::utils::c_escape_sensitive_string(check_and_set.set_sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
         auto check_and_mutate = check_and_mutate_rpc(request).request();
-        return fmt::format("check_and_mutate: hash_key={}, check_sort_key={}, set_value_count={}",
-                           pegasus::utils::c_escape_string(check_and_mutate.hash_key),
-                           pegasus::utils::c_escape_string(check_and_mutate.check_sort_key),
-                           check_and_mutate.mutate_list.size());
+        return fmt::format(
+            "check_and_mutate: hash_key={}, check_sort_key={}, set_value_count={}",
+            pegasus::utils::c_escape_sensitive_string(check_and_mutate.hash_key),
+            pegasus::utils::c_escape_sensitive_string(check_and_mutate.check_sort_key),
+            check_and_mutate.mutate_list.size());
     }
 
     return "default";

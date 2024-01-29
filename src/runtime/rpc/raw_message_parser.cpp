@@ -24,13 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #include "raw_message_parser.h"
 
 #include <string.h>

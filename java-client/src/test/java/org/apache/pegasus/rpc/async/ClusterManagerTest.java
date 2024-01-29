@@ -18,21 +18,25 @@
  */
 package org.apache.pegasus.rpc.async;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.ReplicationException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ClusterManagerTest {
-  @Before
+  @BeforeEach
   public void before() throws Exception {}
 
-  @After
+  @AfterEach
   public void after() throws Exception {}
 
   /** Method: getReplicaSession(rpc_address address) */
@@ -46,7 +50,7 @@ public class ClusterManagerTest {
     // input an invalid rpc address
     rpc_address address = new rpc_address();
     ReplicaSession session = testManager.getReplicaSession(address);
-    Assert.assertNull(session);
+    assertNull(session);
   }
 
   /** Method: openTable(String name, KeyHasher h) */
@@ -61,9 +65,9 @@ public class ClusterManagerTest {
     try {
       result = testManager.openTable("testName", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
-      Assert.assertEquals(error_code.error_types.ERR_SESSION_RESET, e.getErrorType());
+      assertEquals(error_code.error_types.ERR_SESSION_RESET, e.getErrorType());
     } finally {
-      Assert.assertNull(result);
+      assertNull(result);
     }
     testManager.close();
 
@@ -73,20 +77,20 @@ public class ClusterManagerTest {
     try {
       result = testManager.openTable("hehe", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
-      Assert.assertEquals(error_code.error_types.ERR_OBJECT_NOT_FOUND, e.getErrorType());
+      assertEquals(error_code.error_types.ERR_OBJECT_NOT_FOUND, e.getErrorType());
     } finally {
-      Assert.assertNull(result);
+      assertNull(result);
     }
 
     // test open an valid table
     try {
       result = testManager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
-      Assert.fail();
+      fail();
     } finally {
-      Assert.assertNotNull(result);
+      assertNotNull(result);
       // in onebox, we create a table named temp with 8 partitions in default.
-      Assert.assertEquals(8, result.getPartitionCount());
+      assertEquals(8, result.getPartitionCount());
     }
     testManager.close();
   }

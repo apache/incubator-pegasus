@@ -16,10 +16,8 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <algorithm>
 #include <cstdint>
-#include <iosfwd>
 #include <queue>
 #include <type_traits>
 
@@ -49,7 +47,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -372,18 +370,19 @@ void meta_duplication_service::create_follower_app_for_duplication(
         _meta_svc->tracker(),
         [=](error_code err, configuration_create_app_response &&resp) mutable {
             FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
-                                           [&](string_view s) -> void { err = ERR_OK; });
+                                           [&](absl::string_view s) -> void { err = ERR_OK; });
             error_code create_err = err == ERR_OK ? resp.err : err;
             error_code update_err = ERR_NO_NEED_OPERATE;
 
-            FAIL_POINT_INJECT_NOT_RETURN_F("persist_dup_status_failed",
-                                           [&](string_view s) -> void { create_err = ERR_OK; });
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "persist_dup_status_failed",
+                [&](absl::string_view s) -> void { create_err = ERR_OK; });
             if (create_err == ERR_OK) {
                 update_err = dup->alter_status(duplication_status::DS_APP);
             }
 
             FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                [&](string_view s) -> void { return; });
+                                [&](absl::string_view s) -> void { return; });
             if (update_err == ERR_OK) {
                 blob value = dup->to_json_blob();
                 // Note: this function is `async`, it may not be persisted completed
@@ -420,7 +419,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
               msg,
               _meta_svc->tracker(),
               [=](error_code err, query_cfg_response &&resp) mutable {
-                  FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](string_view s) -> void {
+                  FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](absl::string_view s) -> void {
                       err = ERR_OK;
                       int count = dup->partition_count;
                       while (count-- > 0) {
@@ -466,7 +465,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                   }
 
                   FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                      [&](string_view s) -> void { return; });
+                                      [&](absl::string_view s) -> void { return; });
                   if (update_err == ERR_OK) {
                       blob value = dup->to_json_blob();
                       // Note: this function is `async`, it may not be persisted completed
@@ -614,7 +613,7 @@ void meta_duplication_service::do_restore_duplication_progress(
                 }
 
                 int64_t confirmed_decree = invalid_decree;
-                if (!buf2int64(value, confirmed_decree)) {
+                if (!buf2int64(value.to_string_view(), confirmed_decree)) {
                     LOG_ERROR("[{}] invalid confirmed_decree {} on partition_idx {}",
                               dup->log_prefix(),
                               value.to_string(),

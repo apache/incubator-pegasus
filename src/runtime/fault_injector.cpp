@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     inject failure through join points to mimic all network/disk/slow execution etc. failures
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "runtime/fault_injector.h"
 
 #include <chrono>
@@ -59,6 +50,8 @@ namespace dsn {
 struct service_spec;
 
 namespace tools {
+
+// Inject failure through join points to mimic all network/disk/slow execution etc. failures.
 
 struct fj_opt
 {

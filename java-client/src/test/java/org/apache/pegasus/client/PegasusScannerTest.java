@@ -18,6 +18,12 @@
  */
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -30,11 +36,9 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.Future;
 import org.apache.commons.lang3.tuple.Pair;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class PegasusScannerTest {
   static char[] CCH =
@@ -48,7 +52,7 @@ public class PegasusScannerTest {
   private static TreeMap<String, TreeMap<String, String>> base;
   private static String expectedHashKey;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws PException {
     client = PegasusClientFactory.getSingletonClient();
     random = new Random();
@@ -83,7 +87,7 @@ public class PegasusScannerTest {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownTestCase() throws PException {
     clearDatabase();
   }
@@ -95,10 +99,10 @@ public class PegasusScannerTest {
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), new byte[] {}, new byte[] {}, options);
-    Assert.assertNotNull(scanner);
+    assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item;
     while ((item = scanner.next()) != null) {
-      Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
+      assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
       checkAndPutSortMap(
           data,
           expectedHashKey,
@@ -116,13 +120,13 @@ public class PegasusScannerTest {
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), new byte[] {}, new byte[] {}, options);
-    Assert.assertNotNull(scanner);
+    assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item;
     int count = 0;
     while (scanner.hasNext()) {
       item = scanner.next();
       count++;
-      Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
+      assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
       checkAndPutSortMap(
           data,
           expectedHashKey,
@@ -131,14 +135,14 @@ public class PegasusScannerTest {
       if ((item = scanner.next()) != null) {
         count++;
       }
-      Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
+      assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
       checkAndPutSortMap(
           data,
           expectedHashKey,
           new String(item.getLeft().getRight()),
           new String(item.getRight()));
     }
-    Assert.assertEquals(1000, count);
+    assertEquals(1000, count);
     scanner.close();
     compareSortMap(data, base.get(expectedHashKey), expectedHashKey);
   }
@@ -158,10 +162,10 @@ public class PegasusScannerTest {
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), start.getBytes(), stop.getBytes(), options);
-    Assert.assertNotNull(scanner);
+    assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item;
     while ((item = scanner.next()) != null) {
-      Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
+      assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
       checkAndPutSortMap(
           data,
           expectedHashKey,
@@ -188,10 +192,10 @@ public class PegasusScannerTest {
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), start.getBytes(), stop.getBytes(), options);
-    Assert.assertNotNull(scanner);
+    assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item;
     while ((item = scanner.next()) != null) {
-      Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
+      assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
       checkAndPutSortMap(
           data,
           expectedHashKey,
@@ -215,11 +219,11 @@ public class PegasusScannerTest {
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), start.getBytes(), start.getBytes(), options);
-    Assert.assertNotNull(scanner);
+    assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item = scanner.next();
-    Assert.assertEquals(start, new String(item.getLeft().getRight()));
+    assertEquals(start, new String(item.getLeft().getRight()));
     item = scanner.next();
-    Assert.assertNull(item);
+    assertNull(item);
     scanner.close();
   }
 
@@ -235,9 +239,9 @@ public class PegasusScannerTest {
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), start.getBytes(), start.getBytes(), options);
-    Assert.assertNotNull(scanner);
+    assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item = scanner.next();
-    Assert.assertNull(item);
+    assertNull(item);
     scanner.close();
   }
 
@@ -255,9 +259,9 @@ public class PegasusScannerTest {
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), stop.getBytes(), start.getBytes(), options);
-    Assert.assertNotNull(scanner);
+    assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item = scanner.next();
-    Assert.assertNull(item);
+    assertNull(item);
     scanner.close();
   }
 
@@ -266,11 +270,11 @@ public class PegasusScannerTest {
     ScanOptions options = new ScanOptions();
     TreeMap<String, TreeMap<String, String>> data = new TreeMap<String, TreeMap<String, String>>();
     List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 3, options);
-    Assert.assertTrue(scanners.size() <= 3);
+    assertTrue(scanners.size() <= 3);
 
     for (int i = scanners.size() - 1; i >= 0; i--) {
       PegasusScannerInterface scanner = scanners.get(i);
-      Assert.assertNotNull(scanner);
+      assertNotNull(scanner);
       Pair<Pair<byte[], byte[]>, byte[]> item;
       while ((item = scanner.next()) != null) {
         checkAndPut(
@@ -289,11 +293,11 @@ public class PegasusScannerTest {
     ScanOptions options = new ScanOptions();
     TreeMap<String, TreeMap<String, String>> data = new TreeMap<String, TreeMap<String, String>>();
     List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 3, options);
-    Assert.assertTrue(scanners.size() <= 3);
+    assertTrue(scanners.size() <= 3);
 
     for (int i = scanners.size() - 1; i >= 0; i--) {
       PegasusScannerInterface scanner = scanners.get(i);
-      Assert.assertNotNull(scanner);
+      assertNotNull(scanner);
       Future<Pair<Pair<byte[], byte[]>, byte[]>> item;
       while (true) {
         item = scanner.asyncNext();
@@ -307,7 +311,7 @@ public class PegasusScannerTest {
               new String(pair.getRight()));
         } catch (Exception e) {
           e.printStackTrace();
-          Assert.assertTrue(false);
+          assertTrue(false);
         }
       }
     }
@@ -328,7 +332,7 @@ public class PegasusScannerTest {
       TreeMap<String, TreeMap<String, String>> data =
           new TreeMap<String, TreeMap<String, String>>();
       List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 1, options);
-      Assert.assertTrue(scanners.size() <= 1);
+      assertTrue(scanners.size() <= 1);
       System.out.println(
           "start to scan " + totalKvSize + " kv-pairs with scan batch size " + batchSize);
       start_time_ms = System.currentTimeMillis();
@@ -342,7 +346,7 @@ public class PegasusScannerTest {
         }
       } catch (Exception e) {
         e.printStackTrace();
-        Assert.assertTrue(false);
+        assertTrue(false);
       }
       end_time_ms = System.currentTimeMillis();
       System.out.println("consuing time: " + (end_time_ms - start_time_ms) + "ms");
@@ -357,10 +361,10 @@ public class PegasusScannerTest {
     TreeMap<String, String> data = new TreeMap<String, String>();
     List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 1, options);
     PegasusScannerInterface scanner = scanners.get(0);
-    Assert.assertNotNull(scanner);
+    assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item;
     while ((item = scanner.next()) != null) {
-      Assert.assertArrayEquals(expectedHashKey.getBytes(), item.getLeft().getLeft());
+      assertArrayEquals(expectedHashKey.getBytes(), item.getLeft().getLeft());
       checkAndPutSortMap(
           data,
           expectedHashKey,
@@ -402,10 +406,10 @@ public class PegasusScannerTest {
           }
         }
       } catch (PException e) {
-        Assertions.assertTrue(e.getMessage().contains("encounter unknown error"));
+        assertTrue(e.getMessage().contains("encounter unknown error"));
       }
     }
-    Assertions.assertEquals(1, items.size());
+    assertEquals(1, items.size());
     items.clear();
 
     // test encounter rpc error
@@ -426,10 +430,10 @@ public class PegasusScannerTest {
           break;
         }
       } catch (PException e) {
-        Assertions.assertTrue(e.getMessage().contains("scan failed with error rpc"));
+        assertTrue(e.getMessage().contains("scan failed with error rpc"));
       }
     }
-    Assertions.assertEquals(100, items.size());
+    assertEquals(100, items.size());
   }
 
   private void mockEncounterErrorForTest(PegasusScannerInterface scanner) {
@@ -462,8 +466,8 @@ public class PegasusScannerTest {
   private static void clearDatabase() throws PException {
     ScanOptions options = new ScanOptions();
     List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 1, options);
-    Assert.assertEquals(1, scanners.size());
-    Assert.assertNotNull(scanners.get(0));
+    assertEquals(1, scanners.size());
+    assertNotNull(scanners.get(0));
 
     Pair<Pair<byte[], byte[]>, byte[]> item;
     while ((item = scanners.get(0).next()) != null) {
@@ -472,17 +476,17 @@ public class PegasusScannerTest {
     scanners.get(0).close();
 
     scanners = client.getUnorderedScanners(tableName, 1, options);
-    Assert.assertEquals(1, scanners.size());
-    Assert.assertNotNull(scanners.get(0));
+    assertEquals(1, scanners.size());
+    assertNotNull(scanners.get(0));
     item = scanners.get(0).next();
     scanners.get(0).close();
-    Assert.assertNull(
+    assertNull(
+        item,
         item == null
             ? null
             : String.format(
                 "Database is cleared but not empty, hashKey=%s, sortKey=%s",
-                new String(item.getLeft().getLeft()), new String(item.getLeft().getRight())),
-        item);
+                new String(item.getLeft().getLeft()), new String(item.getLeft().getRight())));
   }
 
   private static String randomString() {
@@ -504,22 +508,22 @@ public class PegasusScannerTest {
       sortMap = new TreeMap<>();
       data.put(hashKey, sortMap);
     } else {
-      Assert.assertNull(
+      assertNull(
+          sortMap.get(sortKey),
           String.format(
               "Duplicate: hashKey=%s, sortKye=%s, oldValue=%s, newValue=%s",
-              hashKey, sortKey, sortMap.get(sortKey), value),
-          sortMap.get(sortKey));
+              hashKey, sortKey, sortMap.get(sortKey), value));
     }
     sortMap.put(sortKey, value);
   }
 
   private static void checkAndPutSortMap(
       TreeMap<String, String> data, String hashKey, String sortKey, String value) {
-    Assert.assertNull(
+    assertNull(
+        data.get(sortKey),
         String.format(
             "Duplicate: hashKey=%s, sortKye=%s, oldValue=%s, newValue=%s",
-            hashKey, sortKey, data.get(sortKey), value),
-        data.get(sortKey));
+            hashKey, sortKey, data.get(sortKey), value));
     data.put(sortKey, value);
   }
 
@@ -534,41 +538,41 @@ public class PegasusScannerTest {
       Map.Entry<String, TreeMap<String, String>> kv2 =
           iterator2.hasNext() ? iterator2.next() : null;
       if (kv1 == null) {
-        Assert.assertNull(
-            kv2 == null ? null : String.format("Only in base: hashKey=%s", kv2.getKey()), kv2);
+        assertNull(
+            kv2, kv2 == null ? null : String.format("Only in base: hashKey=%s", kv2.getKey()));
         break;
       }
-      Assert.assertNotNull(String.format("Only in data: hashKey=%s", kv1.getKey()), kv2);
-      Assert.assertEquals(
-          String.format("Diff: dataHashKey=%s, baseHashKey=%s", kv1.getKey(), kv2.getKey()),
+      assertNotNull(kv2, String.format("Only in data: hashKey=%s", kv1.getKey()));
+      assertEquals(
           kv1.getKey(),
-          kv2.getKey());
+          kv2.getKey(),
+          String.format("Diff: dataHashKey=%s, baseHashKey=%s", kv1.getKey(), kv2.getKey()));
       Iterator<Map.Entry<String, String>> iterator3 = kv1.getValue().entrySet().iterator();
       Iterator<Map.Entry<String, String>> iterator4 = kv2.getValue().entrySet().iterator();
       while (true) {
         Map.Entry<String, String> kv3 = iterator3.hasNext() ? iterator3.next() : null;
         Map.Entry<String, String> kv4 = iterator4.hasNext() ? iterator4.next() : null;
         if (kv3 == null) {
-          Assert.assertNull(
+          assertNull(
+              kv4,
               kv4 == null
                   ? null
                   : String.format(
                       "Only in base: hashKey=%s, sortKey=%s, value=%s",
-                      kv1.getKey(), kv4.getKey(), kv4.getValue()),
-              kv4);
+                      kv1.getKey(), kv4.getKey(), kv4.getValue()));
           break;
         }
-        Assert.assertNotNull(
+        assertNotNull(
+            kv4,
             String.format(
                 "Only in data: hashKey=%s, sortKey=%s, value=%s",
-                kv1.getKey(), kv3.getKey(), kv3.getValue()),
-            kv4);
-        Assert.assertEquals(
+                kv1.getKey(), kv3.getKey(), kv3.getValue()));
+        assertEquals(
+            kv3,
+            kv4,
             String.format(
                 "Diff: hashKey=%s, dataSortKey=%s, dataValue=%s, baseSortKey=%s, baseValue=%s",
-                kv1.getKey(), kv3.getKey(), kv3.getValue(), kv4.getKey(), kv4.getValue()),
-            kv3,
-            kv4);
+                kv1.getKey(), kv3.getKey(), kv3.getValue(), kv4.getKey(), kv4.getValue()));
       }
     }
   }
@@ -581,26 +585,26 @@ public class PegasusScannerTest {
       Map.Entry<String, String> kv1 = iterator1.hasNext() ? iterator1.next() : null;
       Map.Entry<String, String> kv2 = iterator2.hasNext() ? iterator2.next() : null;
       if (kv1 == null) {
-        Assert.assertNull(
+        assertNull(
+            kv2,
             kv2 == null
                 ? null
                 : String.format(
                     "Only in base: hashKey=%s, sortKey=%s, value=%s",
-                    hashKey, kv2.getKey(), kv2.getValue()),
-            kv2);
+                    hashKey, kv2.getKey(), kv2.getValue()));
         break;
       }
-      Assert.assertNotNull(
+      assertNotNull(
+          kv2,
           String.format(
               "Only in data: hashKey=%s, sortKey=%s, value=%s",
-              hashKey, kv1.getKey(), kv1.getValue()),
-          kv2);
-      Assert.assertEquals(
+              hashKey, kv1.getKey(), kv1.getValue()));
+      assertEquals(
+          kv1,
+          kv2,
           String.format(
               "Diff: hashKey=%s, dataSortKey=%s, dataValue=%s, baseSortKey=%s, baseValue=%s",
-              hashKey, kv1.getKey(), kv1.getValue(), kv2.getKey(), kv2.getValue()),
-          kv1,
-          kv2);
+              hashKey, kv1.getKey(), kv1.getValue(), kv2.getKey(), kv2.getValue()));
     }
   }
 }
