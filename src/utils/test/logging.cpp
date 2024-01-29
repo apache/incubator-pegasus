@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <gtest/gtest.h>
 #include <iostream>
 #include <string>
 #include <utility>
