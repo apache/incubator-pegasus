@@ -24,22 +24,12 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     application model atop zion in c++
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
 #include "utils/api_utilities.h"
-
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
 #include "runtime/task/task_code.h"
@@ -66,6 +56,7 @@ struct service_app_info
     std::string data_dir;
 };
 
+// The application model atop zion in C++.
 class service_app
 {
 public:

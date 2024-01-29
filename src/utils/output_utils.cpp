@@ -17,6 +17,7 @@
 
 #include "utils/output_utils.h"
 
+#include <stdlib.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <memory>
 

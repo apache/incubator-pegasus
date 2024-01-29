@@ -16,9 +16,6 @@
 // under the License.
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <unistd.h>
 #include <atomic>
 #include <chrono>
@@ -36,6 +33,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
@@ -271,7 +269,7 @@ protected:
         _policy.app_names[4] = "app4";
         _policy.app_names[6] = "app6";
         _mp._backup_service = _service->_backup_handler.get();
-        _mp.set_policy(policy(_policy));
+        _mp.set_policy(_policy);
 
         _service->_storage
             ->create_node(

@@ -40,7 +40,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
-#include "utils/singleton.h"
+#include "utils/strings.h"
 #include "utils/utils.h"
 
 using namespace dsn::utils;

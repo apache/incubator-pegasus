@@ -42,8 +42,6 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
@@ -51,10 +49,12 @@
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 #include "utils/time_utils.h"
@@ -175,7 +175,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 backup_context->start_check();
                 backup_context->complete_check(false);
                 if (backup_context->start_checkpoint()) {
-                    _stub->_counter_cold_backup_recent_start_count->increment();
+                    METRIC_VAR_INCREMENT(backup_started_count);
                     tasking::enqueue(
                         LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, backup_context]() {
                             generate_backup_checkpoint(backup_context);
@@ -196,7 +196,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                      backup_context->progress());
             response.err = ERR_BUSY;
         } else if (backup_status == ColdBackupInvalid && backup_context->start_check()) {
-            _stub->_counter_cold_backup_recent_start_count->increment();
+            METRIC_VAR_INCREMENT(backup_started_count);
             LOG_INFO("{}: start checking backup on remote, response ERR_BUSY",
                      backup_context->name);
             tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, nullptr, [backup_context]() {
@@ -386,10 +386,12 @@ statistic_file_infos_under_dir(const std::string &dir,
     total_size = 0;
     file_infos.clear();
 
+    // TODO(yingchun): check if there are any files that are not sensitive (not encrypted).
     for (std::string &file : sub_files) {
         std::pair<std::string, int64_t> file_info;
 
-        if (!utils::filesystem::file_size(file, file_info.second)) {
+        if (!utils::filesystem::file_size(
+                file, dsn::utils::FileDataType::kSensitive, file_info.second)) {
             LOG_ERROR("get file size of {} failed", file);
             return false;
         }

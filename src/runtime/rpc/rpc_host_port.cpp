@@ -20,8 +20,8 @@
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <sys/socket.h>
+#include <cstring>
 #include <memory>
 #include <unordered_set>
 #include <utility>
@@ -30,7 +30,9 @@
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/string_conv.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -57,7 +59,6 @@ error_s GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo
     if (info != nullptr) {
         info->swap(result);
     }
-
     return error_s::ok();
 }
 }
@@ -73,17 +74,42 @@ host_port::host_port(rpc_address addr)
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
         CHECK(utils::hostname_from_ip(htonl(addr.ip()), &_host),
-              "invalid address {}",
+              "invalid host_port {}",
               addr.ipv4_str());
         _port = addr.port();
     } break;
     case HOST_TYPE_GROUP: {
-        _group_host_port = new rpc_group_host_port(addr.group_address());
+        _group_host_port = std::make_shared<rpc_group_host_port>(addr.group_address());
     } break;
     default:
         break;
     }
     _type = addr.type();
+}
+
+bool host_port::from_string(const std::string &s)
+{
+    const auto pos = s.find_last_of(':');
+    if (dsn_unlikely(pos == std::string::npos)) {
+        return false;
+    }
+    _host = s.substr(0, pos);
+    std::string port = s.substr(pos + 1);
+
+    if (dsn_unlikely(!dsn::buf2uint16(port, _port))) {
+        return false;
+    }
+
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    if (dsn_unlikely(!GetAddrInfo(_host, hints, nullptr))) {
+        return false;
+    }
+
+    _type = HOST_TYPE_IPV4;
+    return true;
 }
 
 void host_port::reset()
@@ -94,7 +120,7 @@ void host_port::reset()
         _port = 0;
         break;
     case HOST_TYPE_GROUP:
-        group_host_port()->release_ref();
+        _group_host_port = nullptr;
         break;
     default:
         break;
@@ -116,7 +142,6 @@ host_port &host_port::operator=(const host_port &other)
         break;
     case HOST_TYPE_GROUP:
         _group_host_port = other._group_host_port;
-        group_host_port()->add_ref();
         break;
     default:
         break;
@@ -131,9 +156,9 @@ std::string host_port::to_string() const
     case HOST_TYPE_IPV4:
         return fmt::format("{}:{}", _host, _port);
     case HOST_TYPE_GROUP:
-        return fmt::format("address group {}", group_host_port()->name());
+        return fmt::format("host_port group {}", group_host_port()->name());
     default:
-        return "invalid address";
+        return "invalid host_port";
     }
 }
 
@@ -141,9 +166,7 @@ void host_port::assign_group(const char *name)
 {
     reset();
     _type = HOST_TYPE_GROUP;
-    _group_host_port = new rpc_group_host_port(name);
-    // take the lifetime of rpc_uri_address, release_ref when change value or call destructor
-    _group_host_port->add_ref();
+    _group_host_port = std::make_shared<rpc_group_host_port>(name);
 }
 
 error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const

@@ -15,10 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <gtest/gtest-death-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <memory>
 #include <string>
@@ -27,6 +23,7 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
 #include "mock_utils.h"
@@ -46,7 +43,9 @@ public:
     ~open_replica_test() { dsn::utils::filesystem::remove_path("./tmp_dir"); }
 };
 
-TEST_F(open_replica_test, open_replica_add_decree_and_ballot_check)
+INSTANTIATE_TEST_SUITE_P(, open_replica_test, ::testing::Values(false, true));
+
+TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
 {
     app_info ai;
     ai.app_type = "replica";
@@ -70,8 +69,6 @@ TEST_F(open_replica_test, open_replica_add_decree_and_ballot_check)
         node.assign_ipv4("127.0.0.11", static_cast<uint16_t>(12321 + i + 1));
 
         _replica->register_service();
-        mock_mutation_log_shared_ptr shared_log_mock = new mock_mutation_log_shared("./tmp_dir");
-        stub->set_log(shared_log_mock);
 
         partition_configuration config;
         config.pid = pid;

@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     A greedy load balancer based on Dijkstra & Ford-Fulkerson
- *
- * Revision history:
- *     2016-02-03, Weijie Sun, first version
- */
-
 #pragma once
 
 #include <memory>
@@ -40,7 +32,6 @@
 
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "server_load_balancer.h"
 
 namespace dsn {
@@ -51,6 +42,7 @@ namespace replication {
 class load_balance_policy;
 class meta_service;
 
+// A greedy load balancer based on Dijkstra & Ford-Fulkerson.
 class greedy_load_balancer : public server_load_balancer
 {
 public:
@@ -85,12 +77,6 @@ private:
     std::unique_ptr<load_balance_policy> _cluster_balance_policy;
 
     std::unique_ptr<command_deregister> _get_balance_operation_count;
-
-    // perf counters
-    perf_counter_wrapper _balance_operation_count;
-    perf_counter_wrapper _recent_balance_move_primary_count;
-    perf_counter_wrapper _recent_balance_copy_primary_count;
-    perf_counter_wrapper _recent_balance_copy_secondary_count;
 
 private:
     void greedy_balancer(bool balance_checker);

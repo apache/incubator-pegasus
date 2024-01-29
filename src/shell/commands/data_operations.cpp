@@ -27,7 +27,6 @@
 #include <limits.h>
 #include <pegasus/error.h>
 #include <rocksdb/statistics.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdio.h>
 #include <algorithm>
 #include <atomic>

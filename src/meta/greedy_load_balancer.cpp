@@ -36,21 +36,23 @@
 #include "cluster_balance_policy.h"
 #include "greedy_load_balancer.h"
 #include "meta/load_balance_policy.h"
+#include "meta/meta_service.h"
 #include "meta/server_load_balancer.h"
+#include "meta/server_state.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_data.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/command_manager.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/math.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 class gpid;
 
 namespace replication {
-class meta_service;
 
 DSN_DEFINE_bool(meta_server, balance_cluster, false, "whether to enable cluster balancer");
 DSN_TAG_VARIABLE(balance_cluster, FT_MUTABLE);
@@ -63,27 +65,6 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : server_load_bal
     _cluster_balance_policy = std::make_unique<cluster_balance_policy>(_svc);
 
     ::memset(t_operation_counters, 0, sizeof(t_operation_counters));
-
-    // init perf counters
-    _balance_operation_count.init_app_counter("eon.greedy_balancer",
-                                              "balance_operation_count",
-                                              COUNTER_TYPE_NUMBER,
-                                              "balance operation count to be done");
-    _recent_balance_move_primary_count.init_app_counter(
-        "eon.greedy_balancer",
-        "recent_balance_move_primary_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "move primary count by balancer in the recent period");
-    _recent_balance_copy_primary_count.init_app_counter(
-        "eon.greedy_balancer",
-        "recent_balance_copy_primary_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "copy primary count by balancer in the recent period");
-    _recent_balance_copy_secondary_count.init_app_counter(
-        "eon.greedy_balancer",
-        "recent_balance_copy_secondary_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "copy secondary count by balancer in the recent period");
 }
 
 greedy_load_balancer::~greedy_load_balancer() {}
@@ -228,34 +209,37 @@ bool greedy_load_balancer::check(meta_view view, migration_list &list)
 void greedy_load_balancer::report(const dsn::replication::migration_list &list,
                                   bool balance_checker)
 {
-    int counters[MAX_COUNT];
-    ::memset(counters, 0, sizeof(counters));
+#define __METRIC_INCREMENT(name)                                                                   \
+    METRIC_INCREMENT(balance_stats, name, action.first, balance_checker)
+
+    int counters[MAX_COUNT] = {0};
+    greedy_balance_stats balance_stats;
 
     counters[ALL_COUNT] = list.size();
     for (const auto &action : list) {
         switch (action.second.get()->balance_type) {
         case balancer_request_type::move_primary:
             counters[MOVE_PRI_COUNT]++;
+            __METRIC_INCREMENT(greedy_move_primary_operations);
             break;
         case balancer_request_type::copy_primary:
             counters[COPY_PRI_COUNT]++;
+            __METRIC_INCREMENT(greedy_copy_primary_operations);
             break;
         case balancer_request_type::copy_secondary:
             counters[COPY_SEC_COUNT]++;
+            __METRIC_INCREMENT(greedy_copy_secondary_operations);
             break;
         default:
             CHECK(false, "");
         }
     }
-    ::memcpy(t_operation_counters, counters, sizeof(counters));
 
-    // update perf counters
-    _balance_operation_count->set(list.size());
-    if (!balance_checker) {
-        _recent_balance_move_primary_count->add(counters[MOVE_PRI_COUNT]);
-        _recent_balance_copy_primary_count->add(counters[COPY_PRI_COUNT]);
-        _recent_balance_copy_secondary_count->add(counters[COPY_SEC_COUNT]);
-    }
+    ::memcpy(t_operation_counters, counters, sizeof(counters));
+    METRIC_SET_GREEDY_BALANCE_STATS(_svc->get_server_state()->get_table_metric_entities(),
+                                    balance_stats);
+
+#undef __METRIC_INCREMENT
 }
 } // namespace replication
 } // namespace dsn

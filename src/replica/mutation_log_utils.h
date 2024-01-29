@@ -31,20 +31,21 @@
 #include <vector>
 
 #include "replica/log_file.h"
+#include "replica/mutation_log.h"
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace replication {
 namespace log_utils {
 
-extern error_s open_read(string_view path, /*out*/ log_file_ptr &file);
+extern error_s open_read(absl::string_view path, /*out*/ log_file_ptr &file);
 
 extern error_s list_all_files(const std::string &dir, /*out*/ std::vector<std::string> &files);
 
 inline error_s open_log_file_map(const std::vector<std::string> &log_files,
-                                 /*out*/ std::map<int, log_file_ptr> &log_file_map)
+                                 /*out*/ mutation_log::log_file_map_by_index &log_file_map)
 {
     for (const std::string &fname : log_files) {
         log_file_ptr lf;
@@ -58,7 +59,7 @@ inline error_s open_log_file_map(const std::vector<std::string> &log_files,
 }
 
 inline error_s open_log_file_map(const std::string &dir,
-                                 /*out*/ std::map<int, log_file_ptr> &log_file_map)
+                                 /*out*/ mutation_log::log_file_map_by_index &log_file_map)
 {
     std::vector<std::string> log_files;
     error_s es = list_all_files(dir, log_files);
@@ -68,11 +69,11 @@ inline error_s open_log_file_map(const std::string &dir,
     return open_log_file_map(log_files, log_file_map) << "open_log_file_map(dir)";
 }
 
-extern error_s check_log_files_continuity(const std::map<int, log_file_ptr> &logs);
+extern error_s check_log_files_continuity(const mutation_log::log_file_map_by_index &logs);
 
 inline error_s check_log_files_continuity(const std::string &dir)
 {
-    std::map<int, log_file_ptr> log_file_map;
+    mutation_log::log_file_map_by_index log_file_map;
     error_s es = open_log_file_map(dir, log_file_map);
     if (!es.is_ok()) {
         return es << "check_log_files_continuity(dir)";

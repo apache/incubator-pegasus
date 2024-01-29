@@ -1,0 +1,42 @@
+From 3e3d469e81b5b8934abc4b15cd9e33065b5a489f Mon Sep 17 00:00:00 2001
+From: Yingchun Lai <laiyingchun@apache.org>
+Date: Tue, 21 Nov 2023 23:43:25 +0800
+Subject: [PATCH] Build as thirdparty of Apache Pegasus
+
+---
+ CMakeLists.txt | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f080b4b..8e3471a 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -19,7 +19,7 @@ endif()
+ # undefined symbol errors since ABSL_HAVE_STD_STRING_VIEW etc will
+ # end up defined differently.  There is probably a better way to achieve
+ # this than assuming what absl used.
+-set(CMAKE_CXX_STANDARD 11)
++set(CMAKE_CXX_STANDARD 17)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ # No compiler-specific extensions, i.e. -std=c++11, not -std=gnu++11.
+ set(CMAKE_CXX_EXTENSIONS OFF)
+@@ -40,6 +40,7 @@ add_feature_info(SHARED_LIBS BUILD_SHARED_LIBS
+                  "builds shared libraries instead of static.")
+ 
+ option(BUILD_EXAMPLES "Build s2 documentation examples." ON)
++option(BUILD_TESTS "Build s2 tests." OFF)
+ 
+ option(WITH_PYTHON "Add python interface" OFF)
+ add_feature_info(PYTHON WITH_PYTHON "provides python interface to S2")
+@@ -429,7 +430,7 @@ install(TARGETS ${S2_TARGETS}
+         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+ 
+ message("GTEST_ROOT: ${GTEST_ROOT}")
+-if (GTEST_ROOT)
++if (GTEST_ROOT AND BUILD_TESTS)
+   add_subdirectory(${GTEST_ROOT} build_gtest)
+   include_directories(${GTEST_ROOT}/include)
+ 
+-- 
+2.41.0
+

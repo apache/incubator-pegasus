@@ -16,16 +16,13 @@
 // under the License.
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
@@ -122,7 +119,9 @@ public:
     void clear_calculator_histories() { calculator._partitions_stat_histories.clear(); }
 };
 
-TEST_F(hotspot_partition_test, hotspot_partition_policy)
+INSTANTIATE_TEST_SUITE_P(, hotspot_partition_test, ::testing::Values(false, true));
+
+TEST_P(hotspot_partition_test, hotspot_partition_policy)
 {
     // Insert normal scenario data to test
     std::vector<row_data> test_rows = generate_row_data();
@@ -175,7 +174,7 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     clear_calculator_histories();
 }
 
-TEST_F(hotspot_partition_test, send_detect_hotkey_request)
+TEST_P(hotspot_partition_test, send_detect_hotkey_request)
 {
     const int READ_HOT_PARTITION = 7;
     const int WRITE_HOT_PARTITION = 0;

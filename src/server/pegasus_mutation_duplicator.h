@@ -25,14 +25,14 @@
 #include <map>
 #include <string>
 
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "rrdb/rrdb.client.h"
 #include "runtime/pipeline.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/chrono_literals.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -61,8 +61,8 @@ class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator
 
 public:
     pegasus_mutation_duplicator(dsn::replication::replica_base *r,
-                                dsn::string_view remote_cluster,
-                                dsn::string_view app);
+                                absl::string_view remote_cluster,
+                                absl::string_view app);
 
     void duplicate(mutation_tuple_set muts, callback cb) override;
 
@@ -89,8 +89,8 @@ private:
 
     size_t _total_shipped_size{0};
 
-    dsn::perf_counter_wrapper _shipped_ops;
-    dsn::perf_counter_wrapper _failed_shipping_ops;
+    METRIC_VAR_DECLARE_counter(dup_shipped_successful_requests);
+    METRIC_VAR_DECLARE_counter(dup_shipped_failed_requests);
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and

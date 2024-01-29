@@ -20,7 +20,6 @@
 #pragma once
 
 #include <pegasus/client.h>
-#include <s2/third_party/absl/base/port.h>
 #include <functional>
 #include <list>
 #include <memory>

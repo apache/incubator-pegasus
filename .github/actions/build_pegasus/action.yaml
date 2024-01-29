@@ -1,0 +1,52 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: Build Pegasus
+runs:
+  using: composite
+  steps:
+    - name: Setup cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          /github/home/.ccache
+        key: ${{ env.ARTIFACT_NAME }}_ccache
+    - name: Free Disk Space (Ubuntu)
+      run: |
+        .github/workflows/free_disk_space.sh
+      shell: bash
+    - name: Compilation
+      run: |
+        ccache -p
+        ccache -z
+        ./run.sh build -j $(nproc) --skip_thirdparty ${BUILD_OPTIONS}
+        ccache -s
+      shell: bash
+    - name: Pack Server
+      run: |
+        ./run.sh pack_server -j
+        rm -rf pegasus-server-*
+      shell: bash
+    - name: Pack Tools
+      run: |
+        ./run.sh pack_tools -j
+        rm -rf pegasus-tools-*
+      shell: bash
+    - name: Clear Build Files
+      run: |
+        find ./build/latest/src/ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
+      shell: bash

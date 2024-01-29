@@ -20,5 +20,8 @@ build:
 	go mod tidy
 	go build -o bin/admin-cli main.go
 
+fmt:
+	go fmt ./...
+
 test:
 	go test -race -v -failfast -test.timeout 5m ./...

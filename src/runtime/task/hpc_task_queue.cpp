@@ -26,6 +26,8 @@
 
 #include "hpc_task_queue.h"
 
+#include <concurrentqueue/lightweightsemaphore.h>
+
 #include "boost/iterator/function_output_iterator.hpp"
 #include "concurrentqueue/concurrentqueue.h"
 #include "runtime/task/task.h"

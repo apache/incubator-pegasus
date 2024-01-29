@@ -25,9 +25,6 @@
  */
 
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <cstdint>
 #include <fstream> // IWYU pragma: keep
@@ -41,6 +38,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "meta/meta_state_service.h"
@@ -248,6 +246,7 @@ void meta_service_test_app::state_sync_test()
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());
         }
+        ASSERT_EQ(ss1->_table_metric_entities, ss2->_table_metric_entities);
 
         // then we dump the content to local file with binary format
         std::cerr << "test dump to local file from zookeeper's storage" << std::endl;
@@ -268,6 +267,7 @@ void meta_service_test_app::state_sync_test()
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());
         }
+        ASSERT_EQ(ss1->_table_metric_entities, ss2->_table_metric_entities);
         ss2->initialize_node_state();
 
         // then let's test the query configuration calls

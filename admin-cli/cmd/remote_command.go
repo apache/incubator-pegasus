@@ -27,7 +27,7 @@ import (
 	"github.com/desertbit/grumble"
 )
 
-//TODO(jiashuo1) The command will be replaced by `server-config` in server_config.go
+// TODO(jiashuo1) The command will be replaced by `server-config` in server_config.go
 func init() {
 	rootCmd := &grumble.Command{
 		Name: "remote-command",

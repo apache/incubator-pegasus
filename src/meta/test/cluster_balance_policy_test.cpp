@@ -16,10 +16,6 @@
 // under the License.
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <cstdint>
 #include <iterator>
 #include <list>
@@ -33,6 +29,7 @@
 
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/cluster_balance_policy.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"

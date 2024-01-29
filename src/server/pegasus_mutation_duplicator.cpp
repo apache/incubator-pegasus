@@ -19,6 +19,7 @@
 
 #include "pegasus_mutation_duplicator.h"
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
@@ -32,16 +33,15 @@
 
 #include "client_lib/pegasus_client_impl.h"
 #include "common/duplication_common.h"
-#include "common/gpid.h"
 #include "duplication_internal_types.h"
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
-#include "perf_counter/perf_counter.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_message.h"
 #include "server/pegasus_write_service.h"
+#include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
@@ -49,16 +49,27 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
+METRIC_DEFINE_counter(replica,
+                      dup_shipped_successful_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of successful DUPLICATE requests sent from client");
+
+METRIC_DEFINE_counter(replica,
+                      dup_shipped_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed DUPLICATE requests sent from client");
+
 namespace dsn {
 namespace replication {
 struct replica_base;
 
 /// static definition of mutation_duplicator::creator.
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
-    replica_base *, string_view, string_view)>
-    mutation_duplicator::creator = [](replica_base *r, string_view remote, string_view app) {
-        return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
-    };
+    replica_base *, absl::string_view, absl::string_view)>
+    mutation_duplicator::creator =
+        [](replica_base *r, absl::string_view remote, absl::string_view app) {
+            return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
+        };
 
 } // namespace replication
 } // namespace dsn
@@ -95,9 +106,12 @@ using namespace dsn::literals::chrono_literals;
 }
 
 pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::replica_base *r,
-                                                         dsn::string_view remote_cluster,
-                                                         dsn::string_view app)
-    : mutation_duplicator(r), _remote_cluster(remote_cluster)
+                                                         absl::string_view remote_cluster,
+                                                         absl::string_view app)
+    : mutation_duplicator(r),
+      _remote_cluster(remote_cluster),
+      METRIC_VAR_INIT_replica(dup_shipped_successful_requests),
+      METRIC_VAR_INIT_replica(dup_shipped_failed_requests)
 {
     // initialize pegasus-client when this class is first time used.
     static __attribute__((unused)) bool _dummy = pegasus_client_factory::initialize(nullptr);
@@ -121,17 +135,6 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     // never possible to duplicate data to itself
     CHECK_NE_PREFIX_MSG(
         get_current_cluster_id(), _remote_cluster_id, "invalid remote cluster: {}", remote_cluster);
-
-    std::string str_gpid = fmt::format("{}", get_gpid());
-    _shipped_ops.init_app_counter("app.pegasus",
-                                  fmt::format("dup_shipped_ops@{}", str_gpid).c_str(),
-                                  COUNTER_TYPE_RATE,
-                                  "the total ops of DUPLICATE requests sent from this app");
-    _failed_shipping_ops.init_app_counter(
-        "app.pegasus",
-        fmt::format("dup_failed_shipping_ops@{}", str_gpid).c_str(),
-        COUNTER_TYPE_RATE,
-        "the qps of failed DUPLICATE requests sent from this app");
 }
 
 void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
@@ -162,7 +165,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
     }
 
     if (perr != PERR_OK || err != dsn::ERR_OK) {
-        _failed_shipping_ops->increment();
+        METRIC_VAR_INCREMENT(dup_shipped_failed_requests);
 
         // randomly log the 1% of the failed duplicate rpc, because minor number of
         // errors are acceptable.
@@ -175,7 +178,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
         // duplicating an illegal write to server is unacceptable, fail fast.
         CHECK_NE_PREFIX_MSG(perr, PERR_INVALID_ARGUMENT, rpc.response().error_hint);
     } else {
-        _shipped_ops->increment();
+        METRIC_VAR_INCREMENT(dup_shipped_successful_requests);
         _total_shipped_size +=
             rpc.dsn_request()->header->body_length + rpc.dsn_request()->header->hdr_length;
     }

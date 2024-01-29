@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replica configuration management
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/format.h>
@@ -70,7 +61,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/security/access_controller.h"
+#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "split/replica_split_manager.h"
@@ -79,12 +70,14 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
+
+// The configuration management part of replica.
 
 bool get_bool_envs(const std::map<std::string, std::string> &envs,
                    const std::string &name,
@@ -663,7 +656,7 @@ bool replica::is_same_ballot_status_change_allowed(partition_status::type olds,
 bool replica::update_local_configuration(const replica_configuration &config,
                                          bool same_ballot /* = false*/)
 {
-    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](dsn::string_view) -> bool {
+    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](absl::string_view) -> bool {
         auto old_status = status();
         _config = config;
         LOG_INFO_PREFIX(

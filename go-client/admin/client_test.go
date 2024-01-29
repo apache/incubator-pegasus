@@ -78,20 +78,20 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	const tableName = "admin_table_test"
 
 	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:34601"},
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := c.CreateTable(context.Background(), tableName, 1)
+	err := c.CreateTable(context.Background(), tableName, 8)
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())
 	}
 
 	// ensures the created table must be available for read and write
 	rwClient := pegasus.NewClient(pegasus.Config{
-		MetaServers: []string{"0.0.0.0:34601"},
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	})
 	defer func() {
 		err = rwClient.Close()

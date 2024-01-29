@@ -24,17 +24,8 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the meta server's options, impl file
- *
- * Revision history:
- *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #include "meta_options.h"
 
-#include <stddef.h>
 #include <map>
 #include <utility>
 
@@ -62,18 +53,6 @@ DSN_DEFINE_string(meta_server,
                   replica_white_list,
                   "",
                   "white list of replica-servers in meta-server");
-
-std::string meta_options::concat_path_unix_style(const std::string &prefix,
-                                                 const std::string &postfix)
-{
-    size_t pos1 = prefix.size(); // last_valid_pos + 1
-    while (pos1 > 0 && prefix[pos1 - 1] == '/')
-        pos1--;
-    size_t pos2 = 0; // first non '/' position
-    while (pos2 < postfix.size() && postfix[pos2] == '/')
-        pos2++;
-    return prefix.substr(0, pos1) + "/" + postfix.substr(pos2);
-}
 
 void meta_options::initialize()
 {

@@ -16,13 +16,12 @@
 // under the License.
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
 #include "meta_admin_types.h"

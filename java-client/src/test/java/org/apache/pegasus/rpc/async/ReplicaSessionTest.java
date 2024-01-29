@@ -18,6 +18,11 @@
  */
 package org.apache.pegasus.rpc.async;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import java.util.ArrayList;
@@ -40,12 +45,10 @@ import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
 import org.apache.pegasus.tools.Toollet;
 import org.apache.pegasus.tools.Tools;
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TProtocol;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 
@@ -54,12 +57,12 @@ public class ReplicaSessionTest {
   private final Logger logger = org.slf4j.LoggerFactory.getLogger(ReplicaSessionTest.class);
   private ClusterManager manager;
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     manager = new ClusterManager(ClientOptions.builder().metaServers(metaList).build());
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     manager.close();
   }
@@ -67,7 +70,7 @@ public class ReplicaSessionTest {
   /** Method: connect() */
   @Test
   public void testConnect() throws Exception {
-    // test1: connect to a invalid address
+    // test1: connect to an invalid address.
     rpc_address addr = new rpc_address();
     addr.fromString("127.0.0.1:12345");
     ReplicaSession rs = manager.getReplicaSession(addr);
@@ -78,12 +81,9 @@ public class ReplicaSessionTest {
       final client_operator op = new rrdb_put_operator(new gpid(-1, -1), "", null, 0);
       final FutureTask<Void> cb =
           new FutureTask<Void>(
-              new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                  Assert.assertEquals(error_code.error_types.ERR_SESSION_RESET, op.rpc_error.errno);
-                  return null;
-                }
+              () -> {
+                assertEquals(error_code.error_types.ERR_SESSION_RESET, op.rpc_error.errno);
+                return null;
               });
 
       callbacks.add(cb);
@@ -94,34 +94,21 @@ public class ReplicaSessionTest {
       try {
         Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
       } catch (ExecutionException e) {
-        Assert.fail();
+        fail();
       }
     }
 
     final ReplicaSession cp_rs = rs;
-    Toollet.waitCondition(
-        new Toollet.BoolCallable() {
-          @Override
-          public boolean call() {
-            return ReplicaSession.ConnState.DISCONNECTED == cp_rs.getState();
-          }
-        },
-        5);
+    Toollet.waitCondition(() -> ReplicaSession.ConnState.DISCONNECTED == cp_rs.getState(), 5);
 
-    // test2: connect to an valid address, and then close the server
+    // test2: connect to a valid address, and then close the server.
     addr.fromString("127.0.0.1:34801");
     callbacks.clear();
 
     rs = manager.getReplicaSession(addr);
-    rs.setMessageResponseFilter(
-        new ReplicaSession.MessageResponseFilter() {
-          @Override
-          public boolean abandonIt(error_code.error_types err, TMessage header) {
-            return true;
-          }
-        });
+    rs.setMessageResponseFilter((err, header) -> true);
     for (int i = 0; i < 20; ++i) {
-      // we send query request to replica server. We expect it to discard it.
+      // Send query request to replica server, expect it to be timeout.
       final int index = i;
       update_request req =
           new update_request(new blob("hello".getBytes()), new blob("world".getBytes()), 0);
@@ -130,16 +117,13 @@ public class ReplicaSessionTest {
       final rpc_address cp_addr = addr;
       final FutureTask<Void> cb =
           new FutureTask<Void>(
-              new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                  Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, op.rpc_error.errno);
-                  // for the last request, we kill the server
-                  if (index == 19) {
-                    Toollet.closeServer(cp_addr);
-                  }
-                  return null;
+              () -> {
+                assertEquals(error_code.error_types.ERR_TIMEOUT, op.rpc_error.errno);
+                // for the last request, we kill the server
+                if (index == 19) {
+                  Toollet.closeServer(cp_addr);
                 }
+                return null;
               });
 
       callbacks.add(cb);
@@ -147,23 +131,20 @@ public class ReplicaSessionTest {
     }
 
     for (int i = 0; i < 80; ++i) {
-      // then we still send query request to replica server. But the timeout is longer.
+      // Re-send query request to replica server, but the timeout is longer.
       update_request req =
           new update_request(new blob("hello".getBytes()), new blob("world".getBytes()), 0);
       final client_operator op = new Toollet.test_operator(new gpid(-1, -1), req);
       final FutureTask<Void> cb =
           new FutureTask<Void>(
-              new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                  Assert.assertEquals(error_code.error_types.ERR_SESSION_RESET, op.rpc_error.errno);
-                  return null;
-                }
+              () -> {
+                assertEquals(error_code.error_types.ERR_SESSION_RESET, op.rpc_error.errno);
+                return null;
               });
 
       callbacks.add(cb);
-      // these requests have longer timeout, so they should be responsed later than the server is
-      // killed
+      // The request has longer timeout, so it should be responsed later than the server been
+      // killed.
       rs.asyncSend(op, cb, 2000, false);
     }
 
@@ -172,7 +153,7 @@ public class ReplicaSessionTest {
         Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
       } catch (ExecutionException e) {
         e.printStackTrace();
-        Assert.fail();
+        fail();
       }
     }
     rs.setMessageResponseFilter(null);
@@ -212,8 +193,7 @@ public class ReplicaSessionTest {
                   if (op.rpc_error.errno != error_code.error_types.ERR_OBJECT_NOT_FOUND
                       && op.rpc_error.errno != error_code.error_types.ERR_INVALID_STATE
                       && op.rpc_error.errno != error_code.error_types.ERR_SESSION_RESET) {
-                    Assert.assertEquals(
-                        error_code.error_types.ERR_INVALID_DATA, op.rpc_error.errno);
+                    assertEquals(error_code.error_types.ERR_INVALID_DATA, op.rpc_error.errno);
                   }
                   return null;
                 }
@@ -230,11 +210,11 @@ public class ReplicaSessionTest {
     ReplicaSession rs = manager.getReplicaSession(addr);
 
     // no pending RequestEntry, ensure no NPE thrown
-    Assert.assertTrue(rs.pendingResponse.isEmpty());
+    assertTrue(rs.pendingResponse.isEmpty());
     try {
       rs.tryNotifyFailureWithSeqID(100, error_code.error_types.ERR_TIMEOUT, false);
     } catch (Exception e) {
-      Assert.assertNull(e);
+      assertNull(e);
     }
 
     // Edge case (this is not yet confirmed to happen)
@@ -247,7 +227,7 @@ public class ReplicaSessionTest {
     entry.op = new rrdb_put_operator(new gpid(1, 1), null, null, 0);
     rs.pendingResponse.put(100, entry);
     rs.tryNotifyFailureWithSeqID(100, error_code.error_types.ERR_TIMEOUT, false);
-    Assert.assertTrue(passed.get());
+    assertTrue(passed.get());
 
     // simulate the entry has been removed, ensure no NPE thrown
     rs.getAndRemoveEntry(entry.sequenceId);
@@ -261,7 +241,7 @@ public class ReplicaSessionTest {
         .when(mockRs)
         .tryNotifyFailureWithSeqID(entry.sequenceId, entry.op.rpc_error.errno, false);
     mockRs.markSessionDisconnect();
-    Assert.assertEquals(mockRs.getState(), ReplicaSession.ConnState.DISCONNECTED);
+    assertEquals(mockRs.getState(), ReplicaSession.ConnState.DISCONNECTED);
   }
 
   @Test
@@ -271,16 +251,16 @@ public class ReplicaSessionTest {
     ReplicaSession rs = manager.getReplicaSession(addr);
     rs.tryConnect().awaitUninterruptibly();
     Thread.sleep(200);
-    Assert.assertEquals(rs.getState(), ReplicaSession.ConnState.CONNECTED);
+    assertEquals(rs.getState(), ReplicaSession.ConnState.CONNECTED);
 
     rs.closeSession();
     Thread.sleep(100);
-    Assert.assertEquals(rs.getState(), ReplicaSession.ConnState.DISCONNECTED);
+    assertEquals(rs.getState(), ReplicaSession.ConnState.DISCONNECTED);
 
     rs.fields.state = ReplicaSession.ConnState.CONNECTING;
     rs.closeSession();
     Thread.sleep(100);
-    Assert.assertEquals(rs.getState(), ReplicaSession.ConnState.DISCONNECTED);
+    assertEquals(rs.getState(), ReplicaSession.ConnState.DISCONNECTED);
   }
 
   @Test
@@ -297,9 +277,9 @@ public class ReplicaSessionTest {
             addr, rpcGroup, timeoutTaskGroup, 1000, 30, (ReplicaSessionInterceptorManager) null);
     rs.tryConnect().awaitUninterruptibly();
     long end = System.currentTimeMillis();
-    Assert.assertEquals((end - start) / 1000, 1); // ensure connect failed within 1sec
+    assertEquals((end - start) / 1000, 1); // ensure connect failed within 1sec
     Thread.sleep(100);
-    Assert.assertEquals(rs.getState(), ReplicaSession.ConnState.DISCONNECTED);
+    assertEquals(rs.getState(), ReplicaSession.ConnState.DISCONNECTED);
   }
 
   @Test
@@ -309,7 +289,7 @@ public class ReplicaSessionTest {
     ReplicaSession rs = manager.getReplicaSession(addr);
     rs.tryConnect().awaitUninterruptibly();
     Thread.sleep(100);
-    Assert.assertEquals(rs.getState(), ReplicaSession.ConnState.CONNECTED);
-    Assert.assertNull(rs.tryConnect()); // do not connect again
+    assertEquals(rs.getState(), ReplicaSession.ConnState.CONNECTED);
+    assertNull(rs.tryConnect()); // do not connect again
   }
 }

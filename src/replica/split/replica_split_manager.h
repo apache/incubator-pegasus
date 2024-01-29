@@ -32,6 +32,7 @@
 #include "replica/replica_base.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/ports.h"
 
 namespace dsn {
@@ -251,6 +252,13 @@ private:
     // It will be updated each time when config sync from meta
     // TODO(heyuchen): clear it when primary parent clean up status
     split_status::type _meta_split_status{split_status::NOT_SPLIT};
+
+    METRIC_VAR_DECLARE_counter(splitting_started_count);
+    METRIC_VAR_DECLARE_counter(splitting_copy_file_count);
+    METRIC_VAR_DECLARE_counter(splitting_copy_file_bytes);
+    METRIC_VAR_DECLARE_counter(splitting_copy_mutation_count);
+    METRIC_VAR_DECLARE_counter(splitting_failed_count);
+    METRIC_VAR_DECLARE_counter(splitting_successful_count);
 };
 
 } // namespace replication

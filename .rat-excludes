@@ -25,5 +25,5 @@ argh.h
 linenoise/*
 sds/*
 .*patch
-DISCLAIMER-WIP
+DISCLAIMER
 .rat-excludes

@@ -24,23 +24,7 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replica interface, the base object which rdsn replicates
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
-
-//
-// a replica is a replication partition of a serivce,
-// which handles all replication related issues
-// and on_request the app messages to replication_app_base
-// which is binded to this replication partition
-//
 
 #include <gtest/gtest_prod.h>
 #include <stddef.h>
@@ -50,7 +34,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
@@ -58,13 +41,12 @@
 #include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "prepare_list.h"
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
 #include "runtime/api_layer1.h"
-#include "runtime/ranger/access_type.h"
+#include "ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
@@ -72,6 +54,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
+#include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
@@ -85,7 +68,6 @@ class rocksdb_wrapper_test;
 
 namespace dsn {
 class gpid;
-class perf_counter;
 class rpc_address;
 
 namespace dist {
@@ -110,6 +92,7 @@ class learn_notify_response;
 class learn_request;
 class learn_response;
 class learn_state;
+class mutation_log_tool;
 class replica;
 class replica_backup_manager;
 class replica_bulk_loader;
@@ -129,10 +112,13 @@ class test_checker;
 }
 
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
-    if (_validate_partition_hash) {                                                                \
+    do {                                                                                           \
+        if (!_validate_partition_hash) {                                                           \
+            break;                                                                                 \
+        }                                                                                          \
         if (_split_mgr->should_reject_request()) {                                                 \
             response_client_##op_type(request, ERR_SPLITTING);                                     \
-            _counter_recent_##op_type##_splitting_reject_count->increment();                       \
+            METRIC_VAR_INCREMENT(splitting_rejected_##op_type##_requests);                         \
             return;                                                                                \
         }                                                                                          \
         if (!_split_mgr->check_partition_hash(                                                     \
@@ -140,7 +126,7 @@ class test_checker;
             response_client_##op_type(request, ERR_PARENT_PARTITION_MISUSED);                      \
             return;                                                                                \
         }                                                                                          \
-    }
+    } while (0)
 
 DSN_DECLARE_bool(reject_write_when_disk_insufficient);
 
@@ -169,6 +155,11 @@ struct deny_client
     }
 };
 
+// The replica interface, the base object which rdsn replicates.
+//
+// A replica is a replication partition of a serivce, which handles all replication related
+// issues and on_request the app messages to replication_app_base which is binded to this
+// replication partition.
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
@@ -289,14 +280,18 @@ public:
 
     replica_follower *get_replica_follower() const { return _replica_follower.get(); };
 
-    //
-    // Statistics
-    //
-    void update_commit_qps(int count);
-
     // routine for get extra envs from replica
     const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }
     const dir_node *get_dir_node() const { return _dir_node; }
+
+    METRIC_DEFINE_VALUE(write_size_exceed_threshold_requests, int64_t)
+    void METRIC_FUNC_NAME_SET(dup_pending_mutations)();
+    METRIC_DEFINE_INCREMENT(backup_failed_count)
+    METRIC_DEFINE_INCREMENT(backup_successful_count)
+    METRIC_DEFINE_INCREMENT(backup_cancelled_count)
+    METRIC_DEFINE_INCREMENT(backup_file_upload_failed_count)
+    METRIC_DEFINE_INCREMENT(backup_file_upload_successful_count)
+    METRIC_DEFINE_INCREMENT_BY(backup_file_upload_total_bytes)
 
     static const std::string kAppInfo;
 
@@ -454,7 +449,7 @@ private:
 
     /////////////////////////////////////////////////////////////////
     // replica restore from backup
-    bool read_cold_backup_metadata(const std::string &file, cold_backup_metadata &backup_metadata);
+    bool read_cold_backup_metadata(const std::string &fname, cold_backup_metadata &backup_metadata);
     // checkpoint on cold backup media maybe contain useless file,
     // we should abandon these file base cold_backup_metadata
     bool remove_useless_file_under_chkpt(const std::string &chkpt_dir,
@@ -485,8 +480,6 @@ private:
     std::string query_manual_compact_state() const;
 
     manual_compaction_status::type get_manual_compact_status() const;
-
-    void init_table_level_latency_counters();
 
     void on_detect_hotkey(const detect_hotkey_request &req, /*out*/ detect_hotkey_response &resp);
 
@@ -532,8 +525,12 @@ private:
     // use Apache Ranger for replica access control
     bool access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const;
 
+    // Currently only used for unit test to get the count of backup requests.
+    int64_t get_backup_request_count() const;
+
 private:
     friend class ::dsn::replication::test::test_checker;
+    friend class ::dsn::replication::mutation_log_tool;
     friend class ::dsn::replication::mutation_queue;
     friend class ::dsn::replication::replica_stub;
     friend class mock_replica;
@@ -555,7 +552,7 @@ private:
     friend class ::pegasus::server::pegasus_server_test_base;
     friend class ::pegasus::server::rocksdb_wrapper_test;
     FRIEND_TEST(replica_disk_test, disk_io_error_test);
-    FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
+    FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -603,11 +600,6 @@ private:
     std::map<std::string, cold_backup_context_ptr> _cold_backup_contexts;
     partition_split_context _split_states;
 
-    // timer task that running in replication-thread
-    std::atomic<uint64_t> _cold_backup_running_count;
-    std::atomic<uint64_t> _cold_backup_max_duration_time_ms;
-    std::atomic<uint64_t> _cold_backup_max_upload_file_size;
-
     // record the progress of restore
     int64_t _chkpt_total_size;
     std::atomic<int64_t> _cur_download_size;
@@ -653,19 +645,46 @@ private:
     std::unique_ptr<replica_follower> _replica_follower;
 
     // perf counters
-    perf_counter_wrapper _counter_private_log_size;
-    perf_counter_wrapper _counter_recent_write_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_write_throttling_reject_count;
-    perf_counter_wrapper _counter_recent_read_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_read_throttling_reject_count;
-    perf_counter_wrapper _counter_recent_backup_request_throttling_delay_count;
-    perf_counter_wrapper _counter_recent_backup_request_throttling_reject_count;
-    perf_counter_wrapper _counter_recent_write_splitting_reject_count;
-    perf_counter_wrapper _counter_recent_read_splitting_reject_count;
-    perf_counter_wrapper _counter_recent_write_bulk_load_ingestion_reject_count;
-    std::vector<perf_counter *> _counters_table_level_latency;
-    perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;
-    perf_counter_wrapper _counter_backup_request_qps;
+    METRIC_VAR_DECLARE_gauge_int64(private_log_size_mb);
+    METRIC_VAR_DECLARE_counter(throttling_delayed_write_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(throttling_delayed_read_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_read_requests);
+    METRIC_VAR_DECLARE_counter(backup_requests);
+    METRIC_VAR_DECLARE_counter(throttling_delayed_backup_requests);
+    METRIC_VAR_DECLARE_counter(throttling_rejected_backup_requests);
+    METRIC_VAR_DECLARE_counter(splitting_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(splitting_rejected_read_requests);
+    METRIC_VAR_DECLARE_counter(bulk_load_ingestion_rejected_write_requests);
+    METRIC_VAR_DECLARE_counter(dup_rejected_non_idempotent_write_requests);
+
+    METRIC_VAR_DECLARE_counter(learn_count);
+    METRIC_VAR_DECLARE_counter(learn_rounds);
+    METRIC_VAR_DECLARE_counter(learn_copy_files);
+    METRIC_VAR_DECLARE_counter(learn_copy_file_bytes);
+    METRIC_VAR_DECLARE_counter(learn_copy_buffer_bytes);
+    METRIC_VAR_DECLARE_counter(learn_lt_cache_responses);
+    METRIC_VAR_DECLARE_counter(learn_lt_app_responses);
+    METRIC_VAR_DECLARE_counter(learn_lt_log_responses);
+    METRIC_VAR_DECLARE_counter(learn_resets);
+    METRIC_VAR_DECLARE_counter(learn_failed_count);
+    METRIC_VAR_DECLARE_counter(learn_successful_count);
+
+    METRIC_VAR_DECLARE_counter(prepare_failed_requests);
+
+    METRIC_VAR_DECLARE_counter(group_check_failed_requests);
+
+    METRIC_VAR_DECLARE_counter(emergency_checkpoints);
+
+    METRIC_VAR_DECLARE_counter(write_size_exceed_threshold_requests);
+
+    METRIC_VAR_DECLARE_counter(backup_started_count);
+    METRIC_VAR_DECLARE_counter(backup_failed_count);
+    METRIC_VAR_DECLARE_counter(backup_successful_count);
+    METRIC_VAR_DECLARE_counter(backup_cancelled_count);
+    METRIC_VAR_DECLARE_counter(backup_file_upload_failed_count);
+    METRIC_VAR_DECLARE_counter(backup_file_upload_successful_count);
+    METRIC_VAR_DECLARE_counter(backup_file_upload_total_bytes);
 
     dsn::task_tracker _tracker;
     // the thread access checker

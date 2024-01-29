@@ -18,6 +18,10 @@
  */
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.netty.util.concurrent.Future;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,8 +40,7 @@ import org.apache.pegasus.client.request.MultiSet;
 import org.apache.pegasus.client.request.MultiSetBatch;
 import org.apache.pegasus.client.request.Set;
 import org.apache.pegasus.client.request.SetBatch;
-import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestBatch {
 
@@ -70,18 +73,18 @@ public class TestBatch {
     GetBatch getBatch = new GetBatch(table, 1000);
     getBatch.commit(gets, getResults);
 
-    Assertions.assertNull(getResults.get(0));
-    Assertions.assertNull(getResults.get(1));
-    Assertions.assertEquals("valueSet3", new String(getResults.get(2)));
-    Assertions.assertEquals("valueSet4WithTTL", new String(getResults.get(3)));
+    assertNull(getResults.get(0));
+    assertNull(getResults.get(1));
+    assertEquals("valueSet3", new String(getResults.get(2)));
+    assertEquals("valueSet4WithTTL", new String(getResults.get(3)));
 
     Thread.sleep(11000);
 
     List<Pair<PException, byte[]>> getResultsWithExp = new ArrayList<>();
     getBatch.commitWaitAllComplete(gets, getResultsWithExp);
-    Assertions.assertNull(getResultsWithExp.get(2).getKey());
-    Assertions.assertEquals("valueSet3", new String(getResultsWithExp.get(2).getRight()));
-    Assertions.assertNull(getResultsWithExp.get(3).getRight());
+    assertNull(getResultsWithExp.get(2).getKey());
+    assertEquals("valueSet3", new String(getResultsWithExp.get(2).getRight()));
+    assertNull(getResultsWithExp.get(3).getRight());
 
     PegasusClientFactory.closeSingletonClient();
   }
@@ -124,24 +127,24 @@ public class TestBatch {
     MultiGetBatch multiGetBatch = new MultiGetBatch(table, 1000);
     multiGetBatch.commit(multiGets, multiGetResults);
 
-    Assertions.assertEquals(0, multiGetResults.get(0).getValues().size());
-    Assertions.assertEquals(0, multiGetResults.get(1).getValues().size());
-    Assertions.assertTrue(multiGetResults.get(2).isAllFetched());
+    assertEquals(0, multiGetResults.get(0).getValues().size());
+    assertEquals(0, multiGetResults.get(1).getValues().size());
+    assertTrue(multiGetResults.get(2).isAllFetched());
     for (int i = 0; i < 3; i++) {
-      Assertions.assertEquals(
+      assertEquals(
           "sortKeyMultiSet" + i, new String(multiGetResults.get(2).getValues().get(i).getKey()));
-      Assertions.assertEquals(
+      assertEquals(
           "valueMultiSet" + i, new String(multiGetResults.get(2).getValues().get(i).getRight()));
     }
 
     List<Pair<PException, MultiGetResult>> multiGetResultsWithExp = new ArrayList<>();
     multiGetBatch.commitWaitAllComplete(multiGets, multiGetResultsWithExp);
     for (int i = 0; i < 3; i++) {
-      Assertions.assertNull(multiGetResultsWithExp.get(2).getLeft());
-      Assertions.assertEquals(
+      assertNull(multiGetResultsWithExp.get(2).getLeft());
+      assertEquals(
           "sortKeyMultiSet" + i,
           new String(multiGetResultsWithExp.get(2).getRight().getValues().get(i).getKey()));
-      Assertions.assertEquals(
+      assertEquals(
           "valueMultiSet" + i,
           new String(multiGetResultsWithExp.get(2).getRight().getValues().get(i).getRight()));
     }
@@ -184,8 +187,8 @@ public class TestBatch {
 
     incrementBatch.commit(increments, incrResults);
 
-    Assertions.assertEquals(1, incrResults.get(0).longValue());
-    Assertions.assertEquals(3, incrResults.get(1).longValue());
+    assertEquals(1, incrResults.get(0).longValue());
+    assertEquals(3, incrResults.get(1).longValue());
 
     PegasusClientFactory.closeSingletonClient();
   }

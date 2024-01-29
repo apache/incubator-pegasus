@@ -238,8 +238,8 @@ struct upload_request
  */
 struct upload_response
 {
-    dsn::error_code err;
-    uint64_t uploaded_size;
+    dsn::error_code err = ERR_OK;
+    uint64_t uploaded_size = 0;
 };
 typedef std::function<void(const upload_response &)> upload_callback;
 typedef future_task<upload_response> upload_future;
@@ -378,6 +378,8 @@ public:
                                 const write_callback &cb,
                                 dsn::task_tracker *tracker = nullptr) = 0;
 
+    // TODO(yingchun): it seems every read() will read the whole file, consider to read the whole
+    //  file directly.
     /**
      * @brief read
      * @param req, ref {@link #read_request}

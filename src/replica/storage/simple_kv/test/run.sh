@@ -37,7 +37,7 @@ function run_single()
         fi
 
         OPTS=`echo ${TEST_OPTS} | xargs`
-        config_kvs=(${OPTS//,/ })
+        config_kvs=(${OPTS//;/ })
         for config_kv in ${config_kvs[@]}; do
             config_kv=`echo $config_kv | xargs`
             kv=(${config_kv//=/ })
@@ -112,6 +112,13 @@ else
 fi
 
 if [ ! -z "${cases}" ]; then
+    OLD_TEST_OPTS=${TEST_OPTS}
+    TEST_OPTS="${OLD_TEST_OPTS};encrypt_data_at_rest=false"
+    for id in ${cases}; do
+        run_case ${id}
+        echo
+    done
+    TEST_OPTS="${OLD_TEST_OPTS};encrypt_data_at_rest=true"
     for id in ${cases}; do
         run_case ${id}
         echo

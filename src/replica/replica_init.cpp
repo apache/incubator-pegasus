@@ -42,7 +42,6 @@
 #include "replica.h"
 #include "replica/prepare_list.h"
 #include "replica/replication_app_base.h"
-#include "replica_stub.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
@@ -115,12 +114,12 @@ error_code replica::init_app_and_prepare_list(bool create_new)
     CHECK(nullptr == _private_log, "");
 
     if (create_new) {
-        err = _app->open_new_internal(this, _stub->_log->on_partition_reset(get_gpid(), 0), 0);
+        err = _app->open_new_internal(this, /* private_log_start */ 0);
         // two case:
         //      1, just open a new app, in this case, the last_committed_decree and
         //      last_durable_decree
         //         and committed_decree of prepare_list are all equal, and is 0
-        //      2, open app with some data, but don't have slog and plog and also don't have
+        //      2, open app with some data, but don't have plog and also don't have
         //      app_info;
         //         in this case, last_committed_decree = last_durable_decree >= 0, but
         //         last_committed_decree
@@ -138,8 +137,6 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             LOG_INFO_PREFIX("plog_dir = {}", log_dir);
 
             // sync valid_start_offset between app and logs
-            _stub->_log->set_valid_start_offset_on_open(
-                get_gpid(), _app->init_info().init_offset_in_shared_log);
             _private_log->set_valid_start_offset_on_open(
                 get_gpid(), _app->init_info().init_offset_in_private_log);
 
@@ -195,8 +192,6 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
                     _private_log->close();
                     _private_log = nullptr;
-
-                    _stub->_log->on_partition_removed(get_gpid());
                 }
             }
         }
@@ -250,7 +245,6 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
 // return false only when the log is invalid:
 // - for private log, return false if offset < init_offset_in_private_log
-// - for shared log, return false if offset < init_offset_in_shared_log
 bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
 {
     auto d = mu->data.header.decree;
@@ -270,17 +264,6 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
                          d,
                          mu->data.header.last_committed_decree,
                          offset);
-        return false;
-    }
-
-    if (!is_private && offset < _app->init_info().init_offset_in_shared_log) {
-        LOG_DEBUG_PREFIX(
-            "replay mutation skipped2 as offset is invalid in shared log, ballot = {}, "
-            "decree = {}, last_committed_decree = {}, offset = {}",
-            mu->data.header.ballot,
-            d,
-            mu->data.header.last_committed_decree,
-            offset);
         return false;
     }
 

@@ -19,6 +19,8 @@ github:
   - .github/**/*
 admin-cli:
   - admin-cli/**/*
+collector:
+  - collector/**/*
 docker:
   - docker/**/*
 go-client:

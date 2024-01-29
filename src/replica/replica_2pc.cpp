@@ -49,25 +49,22 @@
 #include "metadata_types.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
+#include "ranger/access_type.h"
 #include "replica.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "runtime/ranger/access_type.h"
-#include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
@@ -75,6 +72,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
+#include "utils/metrics.h"
 #include "utils/ports.h"
 #include "utils/thread_access_checker.h"
 #include "utils/uniq_timestamp_us.h"
@@ -100,14 +98,6 @@ DSN_DEFINE_int32(replication,
                  prepare_decree_gap_for_debug_logging,
                  10000,
                  "if greater than 0, then print debug log every decree gap of preparing");
-DSN_DEFINE_int32(replication,
-                 log_shared_pending_size_throttling_threshold_kb,
-                 0,
-                 "log_shared_pending_size_throttling_threshold_kb");
-DSN_DEFINE_int32(replication,
-                 log_shared_pending_size_throttling_delay_ms,
-                 0,
-                 "log_shared_pending_size_throttling_delay_ms");
 DSN_DEFINE_uint64(
     replication,
     max_allowed_write_size,
@@ -138,7 +128,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    if (dsn_unlikely(FLAGS_max_allowed_write_size &&
+    if (dsn_unlikely(FLAGS_max_allowed_write_size > 0 &&
                      request->body_size() > FLAGS_max_allowed_write_size)) {
         std::string request_info = _app->dump_write_request(request);
         LOG_WARNING_PREFIX(
@@ -149,7 +139,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
             request_info,
             request->body_size(),
             FLAGS_max_allowed_write_size);
-        _stub->_counter_recent_write_size_exceed_threshold_count->increment();
+        METRIC_VAR_INCREMENT(write_size_exceed_threshold_requests);
         response_client_write(request, ERR_INVALID_DATA);
         return;
     }
@@ -167,12 +157,12 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     if (is_duplication_master() && !spec->rpc_request_is_write_idempotent) {
         // Ignore non-idempotent write, because duplication provides no guarantee of atomicity to
         // make this write produce the same result on multiple clusters.
-        _counter_dup_disabled_non_idempotent_write_count->increment();
+        METRIC_VAR_INCREMENT(dup_rejected_non_idempotent_write_requests);
         response_client_write(request, ERR_OPERATION_DISABLED);
         return;
     }
 
-    CHECK_REQUEST_IF_SPLITTING(write)
+    CHECK_REQUEST_IF_SPLITTING(write);
 
     if (partition_status::PS_PRIMARY != status()) {
         response_client_write(request, ERR_INVALID_STATE);
@@ -188,7 +178,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     if (_is_bulk_load_ingestion) {
         if (request->rpc_code() != dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
             // reject write requests during ingestion
-            _counter_recent_write_bulk_load_ingestion_reject_count->increment();
+            METRIC_VAR_INCREMENT(bulk_load_ingestion_rejected_write_requests);
             response_client_write(request, ERR_OPERATION_DISABLED);
         } else {
             response_client_write(request, ERR_NO_NEED_OPERATE);
@@ -246,7 +236,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     const auto request_count = mu->client_requests.size();
     mu->data.header.last_committed_decree = last_committed_decree();
 
-    dsn_log_level_t level = LOG_LEVEL_DEBUG;
+    log_level_t level = LOG_LEVEL_DEBUG;
     if (mu->data.header.decree == invalid_decree) {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
         // print a debug log if necessary
@@ -259,7 +249,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     }
 
     mu->_tracer->set_name(fmt::format("mutation[{}]", mu->name()));
-    dlog_f(level, "{}: mutation {} init_prepare, mutation_tid={}", name(), mu->name(), mu->tid());
+    LOG(level, "{}: mutation {} init_prepare, mutation_tid={}", name(), mu->name(), mu->tid());
 
     // child should prepare mutation synchronously
     mu->set_is_sync_to_child(_primary_states.sync_send_write_request);
@@ -354,20 +344,6 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
                                               get_gpid().thread_hash(),
                                               &pending_size);
         CHECK_NOTNULL(mu->log_task(), "");
-        if (FLAGS_log_shared_pending_size_throttling_threshold_kb > 0 &&
-            FLAGS_log_shared_pending_size_throttling_delay_ms > 0 &&
-            pending_size >= FLAGS_log_shared_pending_size_throttling_threshold_kb * 1024) {
-            int delay_ms = FLAGS_log_shared_pending_size_throttling_delay_ms;
-            for (dsn::message_ex *r : mu->client_requests) {
-                if (r && r->io_session->delay_recv(delay_ms)) {
-                    LOG_WARNING("too large pending shared log ({}), delay traffic from {} for {} "
-                                "milliseconds",
-                                pending_size,
-                                r->header->from_address,
-                                delay_ms);
-                }
-            }
-        }
     }
 
     _primary_states.last_prepare_ts_ms = mu->prepare_ts_ms();
@@ -760,7 +736,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
             }
         }
 
-        _stub->_counter_replicas_recent_prepare_fail_count->increment();
+        METRIC_VAR_INCREMENT(prepare_failed_requests);
 
         // make sure this is before any later commit ops
         // because now commit ops may lead to new prepare ops

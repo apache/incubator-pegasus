@@ -26,6 +26,12 @@ export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
 export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
+# Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
+export ASAN_OPTIONS=detect_odr_violation=0
+# See https://github.com/gperftools/gperftools/wiki/gperftools'-stacktrace-capturing-methods-and-their-issues.
+# Now we choose libgcc, because of https://github.com/apache/incubator-pegasus/issues/1685.
+export TCMALLOC_STACKTRACE_METHOD=libgcc  # Can be generic_fp, generic_fp_unsafe, libunwind or libgcc
+export TCMALLOC_STACKTRACE_METHOD_VERBOSE=1
 
 function usage()
 {
@@ -75,6 +81,9 @@ function usage_build()
 {
     echo "Options for subcommand 'build':"
     echo "   -h|--help             print the help info"
+    echo "   -m|--modules          specify modules to build, split by ',',"
+    echo "                         e.g., \"pegasus_unit_test,dsn_runtime_tests,dsn_meta_state_tests\","
+    echo "                         if not set, then build all objects"
     echo "   -t|--type             build type: debug|release, default is release"
     echo "   -c|--clear            clear pegasus before building, not clear thirdparty"
     echo "   --clear_thirdparty    clear thirdparty/pegasus before building"
@@ -122,12 +131,17 @@ function run_build()
     USE_JEMALLOC=OFF
     BUILD_TEST=OFF
     IWYU=""
+    BUILD_MODULES=""
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
             -h|--help)
                 usage_build
                 exit 0
+                ;;
+            -m|--modules)
+                BUILD_MODULES=$2
+                shift
                 ;;
             -t|--type)
                 BUILD_TYPE="$2"
@@ -207,14 +221,15 @@ function run_build()
         exit 1
     fi
 
+    # Replace all ',' to ' ' in $BUILD_MODULES.
+    if [ "$BUILD_MODULES" != "" ]; then
+        BUILD_MODULES=${BUILD_MODULES//,/ }
+    fi
+    echo "build_modules=$BUILD_MODULES"
+
     CMAKE_OPTIONS="-DCMAKE_C_COMPILER=${C_COMPILER}
                    -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
-                   -DUSE_JEMALLOC=${USE_JEMALLOC}
-                   -DENABLE_GCOV=${ENABLE_GCOV}
-                   -DENABLE_GPERF=${ENABLE_GPERF}
-                   -DBoost_NO_BOOST_CMAKE=ON
-                   -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
-                   -DBoost_NO_SYSTEM_PATHS=ON"
+                   -DUSE_JEMALLOC=${USE_JEMALLOC}"
 
     echo "BUILD_TYPE=$BUILD_TYPE"
     if [ "$BUILD_TYPE" == "debug" ]
@@ -222,10 +237,6 @@ function run_build()
         CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
     else
         CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Release"
-    fi
-
-    if [ "$(uname)" == "Darwin" ]; then
-        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
     fi
 
     if [ ! -z "${SANITIZER}" ]; then
@@ -259,6 +270,13 @@ function run_build()
         popd
         cd ..
     fi
+
+    CMAKE_OPTIONS="${CMAKE_OPTIONS}
+                   -DENABLE_GCOV=${ENABLE_GCOV}
+                   -DENABLE_GPERF=${ENABLE_GPERF}
+                   -DBoost_NO_BOOST_CMAKE=ON
+                   -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
+                   -DBoost_NO_SYSTEM_PATHS=ON"
 
     echo "INFO: start build Pegasus..."
     BUILD_DIR="${BUILD_ROOT_DIR}/${BUILD_TYPE}_${SANITIZER}"
@@ -321,6 +339,8 @@ function run_build()
     pushd $BUILD_DIR
     if [ ! -z "${IWYU}" ]; then
         make $MAKE_OPTIONS 2> iwyu.out
+    elif [ "$BUILD_MODULES" != "" ]; then
+        make $BUILD_MODULES $MAKE_OPTIONS
     else
         make install $MAKE_OPTIONS
     fi
@@ -356,7 +376,11 @@ function run_test()
       base_api_test
       base_test
       bulk_load_test
-      detect_hotspot_test
+      # TODO(wangdan): Since the hotspot detection depends on the perf-counters system which
+      # is being replaced with the new metrics system, its test will fail. Temporarily disable
+      # the test and re-enable it after the hotspot detection is migrated to the new metrics
+      # system.
+      # detect_hotspot_test
       dsn_aio_test
       dsn_block_service_test
       dsn_client_test
@@ -365,7 +389,9 @@ function run_test()
       dsn_meta_state_tests
       dsn.meta.test
       dsn_nfs_test
-      dsn_perf_counter_test
+      # TODO(wangdan): Since builtin_counters (memused.virt and memused.res) for perf-counters
+      # have been removed and dsn_perf_counter_test depends on them, disable it.
+      # dsn_perf_counter_test
       dsn_replica_backup_test
       dsn_replica_bulk_load_test
       dsn_replica_dup_test
@@ -429,23 +455,15 @@ function run_test()
         mkdir -p $REPORT_DIR
     fi
 
+    # Run all tests if none specified.
     if [ "$test_modules" == "" ]; then
         test_modules=$(IFS=,; echo "${all_tests[*]}")
     fi
     echo "test_modules=$test_modules"
 
-    # download bulk load test data
-    if [[ "$test_modules" =~ "bulk_load_test" && ! -d "$ROOT/src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files" ]]; then
-        echo "Start to download files used for bulk load function test"
-        wget "https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-bulk-load-function-test-files.zip"
-        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test/bulk_load_test"
-        rm "pegasus-bulk-load-function-test-files.zip"
-        echo "Prepare files used for bulk load function test succeed"
-    fi
-
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
-        # restart onebox when test pegasus
+        # The tests which need start onebox.
         local need_onebox_tests=(
           backup_restore_test
           base_api_test
@@ -458,37 +476,46 @@ function run_test()
           restore_test
           throttle_test
         )
+        # Restart onebox if needed.
         if [[ "${need_onebox_tests[@]}" =~ "${module}" ]]; then
+            # Clean up onebox at first.
             run_clear_onebox
-            m_count=3
+            master_count=3
+            # Update options if needed, this should be done before starting onebox to make new options take effect.
             if [ "${module}" == "recovery_test" ]; then
-                m_count=1
-                opts="meta_state_service_type=meta_state_service_simple,distributed_lock_service_type=distributed_lock_service_simple"
+                master_count=1
+                opts="meta_state_service_type=meta_state_service_simple;distributed_lock_service_type=distributed_lock_service_simple"
             fi
             if [ "${module}" == "backup_restore_test" ]; then
-                opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=onebox"
+                opts="cold_backup_disabled=false;cold_backup_checkpoint_reserve_minutes=0;cold_backup_root=onebox"
             fi
             if [ "${module}" == "restore_test" ]; then
-                opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=mycluster"
+                opts="cold_backup_disabled=false;cold_backup_checkpoint_reserve_minutes=0;cold_backup_root=onebox"
             fi
-            [ -z ${onebox_opts} ] || opts="${opts},${onebox_opts}"
-            if ! run_start_onebox -m ${m_count} -w -c --opts ${opts}; then
+            # Append onebox_opts if needed.
+            [ -z ${onebox_opts} ] || opts="${opts};${onebox_opts}"
+            # Start onebox.
+            if ! run_start_onebox -m ${master_count} -w -c --opts ${opts}; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
                 exit 1
             fi
             # TODO(yingchun): remove it?
             sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  ${BUILD_LATEST_DIR}/src/server/test/config.ini
         else
+            # Restart ZK in what ever case.
             run_stop_zk
             run_start_zk
         fi
-        pushd ${BUILD_LATEST_DIR}/bin/$module
+
+        # Run server test.
+        pushd ${BUILD_LATEST_DIR}/bin/${module}
         REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
             exit 1
         fi
-        # clear onebox if needed
+
+        # Clear onebox if needed.
         if [[ "${need_onebox_tests[@]}"  =~ "${test_modules}" ]]; then
             if [ "$clear_flags" == "1" ]; then
                 run_clear_onebox
@@ -502,6 +529,7 @@ function run_test()
     used_time=$((finish_time-start_time))
     echo "Test elapsed time: $((used_time/60))m $((used_time%60))s"
 
+    # TODO(yingchun): make sure if gcov can be ran normally.
     if [ "$enable_gcov" == "yes" ]; then
         echo "Generating gcov report..."
         cd $ROOT
@@ -686,6 +714,8 @@ function usage_start_onebox()
     echo "                                                                  ./src/server/config.ini in production env"
     echo "   --use_product_config"
     echo "                     use the product config template"
+    echo "   --hdfs_service_args"
+    echo "                     set the 'args' value of section '[block_service.hdfs_service]', it's a space separated HDFS namenode host:port and path string, for example: '127.0.0.1:8020 /pegasus'. Default is empty"
     echo "   --opts"
     echo "                     update configs before start onebox, the configs are in the form of 'key1=value1,key2=value2'"
 }
@@ -701,6 +731,7 @@ function run_start_onebox()
     SERVER_PATH=${BUILD_LATEST_DIR}/output/bin/pegasus_server
     CONFIG_FILE=""
     USE_PRODUCT_CONFIG=false
+    HDFS_SERVICE_ARGS=""
     OPTS=""
 
     while [[ $# > 0 ]]; do
@@ -743,6 +774,11 @@ function run_start_onebox()
             --use_product_config)
                 USE_PRODUCT_CONFIG=true
                 ;;
+            --hdfs_service_args)
+                HDFS_SERVICE_ARGS="$2 $3"
+                shift
+                shift
+                ;;
             --opts)
                 OPTS="$2"
                 shift
@@ -772,6 +808,7 @@ function run_start_onebox()
         exit 1
     fi
 
+    source "${ROOT}"/scripts/config_hdfs.sh
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
@@ -785,6 +822,7 @@ function run_start_onebox()
         sed -i 's/%{slog.dir}//g' ${ROOT}/config-server.ini
         sed -i 's/%{data.dirs}//g' ${ROOT}/config-server.ini
         sed -i 's@%{home.dir}@'"$HOME"'@g' ${ROOT}/config-server.ini
+        sed -i 's@%{hdfs_service_args}@'"${HDFS_SERVICE_ARGS}"'@g' ${ROOT}/config-server.ini
         for i in $(seq ${META_COUNT})
         do
             meta_port=$((34600+i))
@@ -806,7 +844,7 @@ function run_start_onebox()
     fi
 
     OPTS=`echo $OPTS | xargs`
-    config_kvs=(${OPTS//,/ })
+    config_kvs=(${OPTS//;/ })
     for config_kv in ${config_kvs[@]}; do
         config_kv=`echo $config_kv | xargs`
         kv=(${config_kv//=/ })
@@ -1014,6 +1052,7 @@ function run_start_onebox_instance()
         esac
         shift
     done
+    source "${ROOT}"/scripts/config_hdfs.sh
     if [ $META_ID = "0" -a $REPLICA_ID = "0" -a $COLLECTOR_ID = "0" ]; then
         echo "ERROR: no meta_id or replica_id or collector set"
         exit 1

@@ -27,7 +27,6 @@ on:
     paths:
       - 'docker/pegasus-build-env/**'
       - '.github/workflows/build-push-env-docker.yml'
-      - 'thirdparty/**'
 
   # for manually triggering workflow
   workflow_dispatch:
@@ -62,6 +61,6 @@ jobs:
           file: ./docker/pegasus-build-env/${{ matrix.dockertag }}/Dockerfile
           push: true
           tags: |
-            apache/pegasus:build-env-${{ matrix.dockertag }}
+            apache/pegasus:build-env-${{ matrix.dockertag }}-${{ github.ref_name }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

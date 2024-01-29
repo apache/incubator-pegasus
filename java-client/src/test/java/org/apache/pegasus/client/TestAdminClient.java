@@ -20,7 +20,11 @@
 package org.apache.pegasus.client;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,10 +32,9 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.pegasus.replication.app_info;
 import org.apache.pegasus.rpc.async.MetaHandler;
 import org.apache.pegasus.rpc.async.MetaSession;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestAdminClient {
   PegasusAdminClientInterface toolsClient;
@@ -41,7 +44,7 @@ public class TestAdminClient {
   final int tableOpTimeoutMs = 66000;
   ClientOptions clientOptions;
 
-  @Before
+  @BeforeEach
   public void Setup() throws PException {
     this.clientOptions =
         ClientOptions.builder()
@@ -53,7 +56,7 @@ public class TestAdminClient {
     toolsClient = PegasusAdminClientFactory.createClient(this.clientOptions);
   }
 
-  @After
+  @AfterEach
   public void after() {
     toolsClient.close();
   }
@@ -68,11 +71,11 @@ public class TestAdminClient {
 
     boolean isAppHealthy = toolsClient.isAppHealthy(appName, this.tableReplicaCount);
 
-    Assert.assertTrue(isAppHealthy);
+    assertTrue(isAppHealthy);
 
     int fakeReplicaCount = 5;
     isAppHealthy = toolsClient.isAppHealthy(appName, fakeReplicaCount);
-    Assert.assertFalse(isAppHealthy);
+    assertFalse(isAppHealthy);
   }
 
   @Test
@@ -107,7 +110,7 @@ public class TestAdminClient {
       return;
     }
 
-    Assert.fail();
+    fail();
   }
 
   @Test
@@ -121,7 +124,7 @@ public class TestAdminClient {
         new HashMap<>(),
         this.tableOpTimeoutMs);
     boolean isAppHealthy = toolsClient.isAppHealthy(appName, this.tableReplicaCount);
-    Assert.assertTrue(isAppHealthy);
+    assertTrue(isAppHealthy);
 
     toolsClient.dropApp(appName, tableOpTimeoutMs);
 
@@ -134,7 +137,7 @@ public class TestAdminClient {
       return;
     }
     pClient.close();
-    Assert.fail("expected PException for openTable");
+    fail("expected PException for openTable");
   }
 
   @Test
@@ -149,20 +152,20 @@ public class TestAdminClient {
         new HashMap<>(),
         this.tableOpTimeoutMs);
     boolean isAppHealthy = toolsClient.isAppHealthy(appName, this.tableReplicaCount);
-    Assert.assertTrue(isAppHealthy);
+    assertTrue(isAppHealthy);
 
     appInfoList.clear();
     appInfoList = toolsClient.listApps(ListAppInfoType.LT_AVAILABLE_APPS);
-    Assert.assertEquals(size1 + 1, appInfoList.size());
+    assertEquals(size1 + 1, appInfoList.size());
     appInfoList.clear();
     appInfoList = toolsClient.listApps(ListAppInfoType.LT_ALL_APPS);
     int size2 = appInfoList.size();
     toolsClient.dropApp(appName, this.tableOpTimeoutMs);
     appInfoList.clear();
     appInfoList = toolsClient.listApps(ListAppInfoType.LT_AVAILABLE_APPS);
-    Assert.assertEquals(size1, appInfoList.size());
+    assertEquals(size1, appInfoList.size());
     appInfoList.clear();
     appInfoList = toolsClient.listApps(ListAppInfoType.LT_ALL_APPS);
-    Assert.assertEquals(size2, appInfoList.size());
+    assertEquals(size2, appInfoList.size());
   }
 }

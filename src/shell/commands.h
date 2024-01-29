@@ -29,7 +29,7 @@
 #include "utils/filesystem.h"
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "client/replication_ddl_client.h"
 #include "tools/mutation_log_tool.h"
 

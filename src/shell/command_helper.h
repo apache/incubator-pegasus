@@ -50,7 +50,7 @@
 #include "remote_cmd/remote_command.h"
 #include "tools/mutation_log_tool.h"
 #include "utils/fmt_utils.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
@@ -253,7 +253,7 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
         if (value.length() < filter_pattern.length())
             return false;
         if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
-            return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
+            return absl::string_view(value).find(filter_pattern) != absl::string_view::npos;
         } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());

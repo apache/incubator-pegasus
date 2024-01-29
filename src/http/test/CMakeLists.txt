@@ -22,16 +22,20 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-    dsn_http
-    dsn_runtime
-    gtest
-    gtest_main
-    )
+        dsn_http
+        dsn_runtime
+        curl
+        gtest
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES
     "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
+    "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini"
 )
 
 dsn_add_test()

@@ -19,12 +19,15 @@
 
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestBatchGetByPartitions {
   volatile boolean isRunning = false;
@@ -51,23 +54,23 @@ public class TestBatchGetByPartitions {
     List<PException> result = new ArrayList<>();
     table.batchSet2(batchSetItems, result, 0);
     for (int i = 0; i < totalTestKeyNum; ++i) {
-      Assert.assertNull(result.get(i));
+      assertNull(result.get(i));
     }
 
     List<Pair<PException, byte[]>> getResult = new ArrayList<>();
     int resultCount = table.batchGetByPartitions(pairs, getResult, 0);
-    Assert.assertEquals(totalTestKeyNum, resultCount);
+    assertEquals(totalTestKeyNum, resultCount);
 
     for (int i = 0; i < totalTestKeyNum; ++i) {
-      Assert.assertNull(getResult.get(i).getLeft());
-      Assert.assertArrayEquals(getResult.get(i).getRight(), values.get(i));
+      assertNull(getResult.get(i).getLeft());
+      assertArrayEquals(getResult.get(i).getRight(), values.get(i));
     }
   }
 
   @Test
   public void testStableQpsForPegasusShellShow() throws Exception {
     // only for auxiliary test
-    Assume.assumeTrue(false);
+    assumeTrue(false);
 
     String tableName = "temp";
     PegasusTableInterface table = PegasusClientFactory.getSingletonClient().openTable(tableName);
@@ -88,7 +91,7 @@ public class TestBatchGetByPartitions {
     List<PException> result = new ArrayList<>();
     table.batchSet2(batchSetItems, result, 0);
     for (int i = 0; i < totalTestKeyNum; ++i) {
-      Assert.assertNull(result.get(i));
+      assertNull(result.get(i));
     }
 
     Runnable testRunnable =

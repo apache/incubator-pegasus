@@ -17,9 +17,10 @@
 
 #ifdef DSN_USE_JEMALLOC
 
-#include "utils/je_ctl.h"
-
 #include <gtest/gtest.h>
+
+#include "utils/je_ctl.h"
+#include "utils/test_macros.h"
 
 namespace dsn {
 
@@ -53,10 +54,10 @@ void check_configs_marks(const std::string &stats)
 void check_arena_marks(const std::string &stats)
 {
     // Marks for merged arenas.
-    ASSERT_NE(stats.find("Merged arenas stats:"), std::string::npos);
+    ASSERT_NE(stats.find("Merged arenas stats:"), std::string::npos) << stats;
 
     // Marks for each arena.
-    ASSERT_NE(stats.find("arenas[0]:"), std::string::npos);
+    ASSERT_NE(stats.find("arenas[0]:"), std::string::npos) << stats;
 }
 
 } // anonymous namespace
@@ -64,41 +65,41 @@ void check_arena_marks(const std::string &stats)
 TEST(je_ctl_test, dump_summary_stats)
 {
     std::string stats;
-    je_dump_stats(je_stats_type::SUMMARY_STATS, stats);
+    NO_FATALS(je_dump_stats(je_stats_type::SUMMARY_STATS, stats));
 
-    check_base_stats_marks_with_end(stats);
+    NO_FATALS(check_base_stats_marks_with_end(stats));
 }
 
 TEST(je_ctl_test, dump_configs)
 {
     std::string stats;
-    je_dump_stats(je_stats_type::CONFIGS, stats);
+    NO_FATALS(je_dump_stats(je_stats_type::CONFIGS, stats));
 
-    check_base_stats_marks_with_end(stats);
-    check_configs_marks(stats);
+    NO_FATALS(check_base_stats_marks_with_end(stats));
+    NO_FATALS(check_configs_marks(stats));
 }
 
 TEST(je_ctl_test, dump_brief_arena_stats)
 {
     std::string stats;
-    je_dump_stats(je_stats_type::BRIEF_ARENA_STATS, stats);
+    NO_FATALS(je_dump_stats(je_stats_type::BRIEF_ARENA_STATS, stats));
 
     // Since there may be many arenas, "End" mark is not required to be checked here.
-    check_base_stats_marks(stats);
-    check_arena_marks(stats);
+    NO_FATALS(check_base_stats_marks(stats));
+    NO_FATALS(check_arena_marks(stats));
 }
 
 TEST(je_ctl_test, dump_detailed_stats)
 {
     std::string stats;
-    je_dump_stats(je_stats_type::DETAILED_STATS, stats);
+    NO_FATALS(je_dump_stats(je_stats_type::DETAILED_STATS, stats));
 
     // Since there may be many arenas, "End" mark is not required to be checked here.
-    check_base_stats_marks(stats);
+    NO_FATALS(check_base_stats_marks(stats));
 
     // Detailed stats will contain all information, therefore everything should be checked.
-    check_configs_marks(stats);
-    check_arena_marks(stats);
+    NO_FATALS(check_configs_marks(stats));
+    NO_FATALS(check_arena_marks(stats));
     ASSERT_NE(stats.find("bins:"), std::string::npos);
     ASSERT_NE(stats.find("extents:"), std::string::npos);
 }

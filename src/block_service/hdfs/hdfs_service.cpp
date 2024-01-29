@@ -17,25 +17,29 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <rocksdb/env.h>
 #include <algorithm>
-#include <fstream>
 #include <type_traits>
 #include <utility>
 
-#include "block_service/directio_writable_file.h"
 #include "hdfs/hdfs.h"
 #include "hdfs_service.h"
+#include "rocksdb/slice.h"
+#include "rocksdb/status.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "utils/TokenBucket.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
+
+DSN_DECLARE_bool(enable_direct_io);
 
 struct hdfsBuilder;
 
@@ -64,8 +68,6 @@ DSN_DEFINE_uint64(replication,
                   64 << 20,
                   "hdfs write batch size, the default value is 64MB");
 DSN_TAG_VARIABLE(hdfs_write_batch_size_bytes, FT_MUTABLE);
-
-DSN_DECLARE_bool(enable_direct_io);
 
 hdfs_service::hdfs_service()
 {
@@ -108,12 +110,12 @@ error_code hdfs_service::create_fs()
     hdfsBuilderSetNameNode(builder, _hdfs_name_node.c_str());
     _fs = hdfsBuilderConnect(builder);
     if (!_fs) {
-        LOG_ERROR("Fail to connect hdfs name node {}, error: {}.",
+        LOG_ERROR("Fail to connect HDFS name node {}, error: {}.",
                   _hdfs_name_node,
                   utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
-    LOG_INFO("Succeed to connect hdfs name node {}.", _hdfs_name_node);
+    LOG_INFO("Succeed to connect HDFS name node {}.", _hdfs_name_node);
     return ERR_OK;
 }
 
@@ -122,10 +124,10 @@ void hdfs_service::close()
     // This method should be carefully called.
     // Calls to hdfsDisconnect() by individual threads would terminate
     // all other connections handed out via hdfsConnect() to the same URI.
-    LOG_INFO("Try to disconnect hdfs.");
+    LOG_INFO("Try to disconnect HDFS.");
     int result = hdfsDisconnect(_fs);
     if (result == -1) {
-        LOG_ERROR("Fail to disconnect from the hdfs file system, error: {}.",
+        LOG_ERROR("Fail to disconnect from the HDFS file system, error: {}.",
                   utils::safe_strerror(errno));
     }
     // Even if there is an error, the resources associated with the hdfsFS will be freed.
@@ -134,7 +136,7 @@ void hdfs_service::close()
 
 std::string hdfs_service::get_hdfs_entry_name(const std::string &hdfs_path)
 {
-    // get exact file name from an hdfs path.
+    // get exact file name from an HDFS path.
     int pos = hdfs_path.find_last_of("/");
     return hdfs_path.substr(pos + 1);
 }
@@ -305,7 +307,7 @@ error_code hdfs_file_object::write_data_in_batches(const char *data,
     hdfsFile write_file =
         hdfsOpenFile(_service->get_fs(), file_name().c_str(), O_WRONLY | O_CREAT, 0, 0, 0);
     if (!write_file) {
-        LOG_ERROR("Failed to open hdfs file {} for writting, error: {}.",
+        LOG_ERROR("Failed to open HDFS file {} for writting, error: {}.",
                   file_name(),
                   utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
@@ -323,7 +325,7 @@ error_code hdfs_file_object::write_data_in_batches(const char *data,
                                             (void *)(data + cur_pos),
                                             static_cast<tSize>(write_len));
         if (num_written_bytes == -1) {
-            LOG_ERROR("Failed to write hdfs file {}, error: {}.",
+            LOG_ERROR("Failed to write HDFS file {}, error: {}.",
                       file_name(),
                       utils::safe_strerror(errno));
             hdfsCloseFile(_service->get_fs(), write_file);
@@ -333,18 +335,18 @@ error_code hdfs_file_object::write_data_in_batches(const char *data,
     }
     if (hdfsHFlush(_service->get_fs(), write_file) != 0) {
         LOG_ERROR(
-            "Failed to flush hdfs file {}, error: {}.", file_name(), utils::safe_strerror(errno));
+            "Failed to flush HDFS file {}, error: {}.", file_name(), utils::safe_strerror(errno));
         hdfsCloseFile(_service->get_fs(), write_file);
         return ERR_FS_INTERNAL;
     }
     written_size = cur_pos;
     if (hdfsCloseFile(_service->get_fs(), write_file) != 0) {
         LOG_ERROR(
-            "Failed to close hdfs file {}, error: {}", file_name(), utils::safe_strerror(errno));
+            "Failed to close HDFS file {}, error: {}", file_name(), utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
 
-    LOG_INFO("start to synchronize meta data after successfully wrote data to hdfs");
+    LOG_INFO("start to synchronize meta data after successfully wrote data to HDFS");
     return get_file_meta();
 }
 
@@ -376,23 +378,51 @@ dsn::task_ptr hdfs_file_object::upload(const upload_request &req,
 
     add_ref();
     auto upload_background = [this, req, t]() {
+        LOG_INFO("start to upload from '{}' to '{}'", req.input_local_name, file_name());
+
         upload_response resp;
-        resp.uploaded_size = 0;
-        std::ifstream is(req.input_local_name, std::ios::binary | std::ios::in);
-        if (is.is_open()) {
-            int64_t file_sz = 0;
-            dsn::utils::filesystem::file_size(req.input_local_name, file_sz);
-            std::unique_ptr<char[]> buffer(new char[file_sz]);
-            is.read(buffer.get(), file_sz);
-            is.close();
-            resp.err = write_data_in_batches(buffer.get(), file_sz, resp.uploaded_size);
-        } else {
-            LOG_ERROR("HDFS upload failed: open local file {} failed when upload to {}, error: {}",
-                      req.input_local_name,
-                      file_name(),
-                      utils::safe_strerror(errno));
-            resp.err = dsn::ERR_FILE_OPERATION_FAILED;
-        }
+        do {
+            rocksdb::EnvOptions env_options;
+            env_options.use_direct_reads = FLAGS_enable_direct_io;
+            std::unique_ptr<rocksdb::SequentialFile> rfile;
+            auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                         ->NewSequentialFile(req.input_local_name, &rfile, env_options);
+            if (!s.ok()) {
+                LOG_ERROR(
+                    "open local file '{}' failed, err = {}", req.input_local_name, s.ToString());
+                resp.err = ERR_FILE_OPERATION_FAILED;
+                break;
+            }
+
+            int64_t file_size;
+            if (!dsn::utils::filesystem::file_size(
+                    req.input_local_name, dsn::utils::FileDataType::kSensitive, file_size)) {
+                LOG_ERROR("get size of local file '{}' failed", req.input_local_name);
+                resp.err = ERR_FILE_OPERATION_FAILED;
+                break;
+            }
+
+            rocksdb::Slice result;
+            char scratch[file_size];
+            s = rfile->Read(file_size, &result, scratch);
+            if (!s.ok()) {
+                LOG_ERROR(
+                    "read local file '{}' failed, err = {}", req.input_local_name, s.ToString());
+                resp.err = ERR_FILE_OPERATION_FAILED;
+                break;
+            }
+
+            resp.err = write_data_in_batches(result.data(), result.size(), resp.uploaded_size);
+            if (resp.err != ERR_OK) {
+                LOG_ERROR("write data to remote '{}' failed, err = {}", file_name(), resp.err);
+                break;
+            }
+
+            LOG_INFO("finish to upload from '{}' to '{}', size = {}",
+                     req.input_local_name,
+                     file_name(),
+                     resp.uploaded_size);
+        } while (false);
         t->enqueue_with(resp);
         release_ref();
     };
@@ -417,7 +447,7 @@ error_code hdfs_file_object::read_data_in_batches(uint64_t start_pos,
 
     hdfsFile read_file = hdfsOpenFile(_service->get_fs(), file_name().c_str(), O_RDONLY, 0, 0, 0);
     if (!read_file) {
-        LOG_ERROR("Failed to open hdfs file {} for reading, error: {}.",
+        LOG_ERROR("Failed to open HDFS file {} for reading, error: {}.",
                   file_name(),
                   utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
@@ -446,7 +476,7 @@ error_code hdfs_file_object::read_data_in_batches(uint64_t start_pos,
             cur_pos += num_read_bytes;
             dst_buf += num_read_bytes;
         } else if (num_read_bytes == -1) {
-            LOG_ERROR("Failed to read hdfs file {}, error: {}.",
+            LOG_ERROR("Failed to read HDFS file {}, error: {}.",
                       file_name(),
                       utils::safe_strerror(errno));
             read_success = false;
@@ -455,7 +485,7 @@ error_code hdfs_file_object::read_data_in_batches(uint64_t start_pos,
     }
     if (hdfsCloseFile(_service->get_fs(), read_file) != 0) {
         LOG_ERROR(
-            "Failed to close hdfs file {}, error: {}.", file_name(), utils::safe_strerror(errno));
+            "Failed to close HDFS file {}, error: {}.", file_name(), utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
     if (read_success) {
@@ -504,48 +534,54 @@ dsn::task_ptr hdfs_file_object::download(const download_request &req,
     auto download_background = [this, req, t]() {
         download_response resp;
         resp.downloaded_size = 0;
-        std::string read_buffer;
-        size_t read_length = 0;
-        resp.err =
-            read_data_in_batches(req.remote_pos, req.remote_length, read_buffer, read_length);
-        if (resp.err == ERR_OK) {
-            bool write_succ = false;
-            if (FLAGS_enable_direct_io) {
-                auto dio_file = std::make_unique<direct_io_writable_file>(req.output_local_name);
-                do {
-                    if (!dio_file->initialize()) {
-                        break;
-                    }
-                    bool wr_ret = dio_file->write(read_buffer.c_str(), read_length);
-                    if (!wr_ret) {
-                        break;
-                    }
-                    if (dio_file->finalize()) {
-                        resp.downloaded_size = read_length;
-                        resp.file_md5 = utils::string_md5(read_buffer.c_str(), read_length);
-                        write_succ = true;
-                    }
-                } while (0);
-            } else {
-                std::ofstream out(req.output_local_name,
-                                  std::ios::binary | std::ios::out | std::ios::trunc);
-                if (out.is_open()) {
-                    out.write(read_buffer.c_str(), read_length);
-                    out.close();
-                    resp.downloaded_size = read_length;
-                    resp.file_md5 = utils::string_md5(read_buffer.c_str(), read_length);
-                    write_succ = true;
-                }
+        resp.err = ERR_OK;
+        bool write_succ = false;
+        std::string target_file = req.output_local_name;
+        do {
+            LOG_INFO("start to download from '{}' to '{}'", file_name(), target_file);
+
+            std::string read_buffer;
+            size_t read_length = 0;
+            resp.err =
+                read_data_in_batches(req.remote_pos, req.remote_length, read_buffer, read_length);
+            if (resp.err != ERR_OK) {
+                LOG_ERROR("read data from remote '{}' failed, err = {}", file_name(), resp.err);
+                break;
             }
-            if (!write_succ) {
-                LOG_ERROR("HDFS download failed: fail to open localfile {} when download {}, "
-                          "error: {}",
-                          req.output_local_name,
-                          file_name(),
-                          utils::safe_strerror(errno));
-                resp.err = ERR_FILE_OPERATION_FAILED;
-                resp.downloaded_size = 0;
+
+            rocksdb::EnvOptions env_options;
+            env_options.use_direct_writes = FLAGS_enable_direct_io;
+            std::unique_ptr<rocksdb::WritableFile> wfile;
+            auto s = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive)
+                         ->NewWritableFile(target_file, &wfile, env_options);
+            if (!s.ok()) {
+                LOG_ERROR("create local file '{}' failed, err = {}", target_file, s.ToString());
+                break;
             }
+
+            s = wfile->Append(rocksdb::Slice(read_buffer.data(), read_length));
+            if (!s.ok()) {
+                LOG_ERROR("append local file '{}' failed, err = {}", target_file, s.ToString());
+                break;
+            }
+
+            s = wfile->Fsync();
+            if (!s.ok()) {
+                LOG_ERROR("fsync local file '{}' failed, err = {}", target_file, s.ToString());
+                break;
+            }
+
+            resp.downloaded_size = read_length;
+            resp.file_md5 = utils::string_md5(read_buffer.c_str(), read_length);
+            write_succ = true;
+        } while (false);
+
+        if (!write_succ) {
+            LOG_ERROR("HDFS download failed: fail to write local file {} when download {}",
+                      target_file,
+                      file_name());
+            resp.err = ERR_FILE_OPERATION_FAILED;
+            resp.downloaded_size = 0;
         }
         t->enqueue_with(resp);
         release_ref();

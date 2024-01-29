@@ -28,14 +28,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <memory>
+#include <string>
 
+#include "gtest/gtest.h"
 #include "utils/fail_point.h"
 #include "utils/fail_point_impl.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace dsn {
 namespace fail {
@@ -121,12 +119,12 @@ TEST(fail_point, parse)
 
 int test_func()
 {
-    FAIL_POINT_INJECT_F("test_1", [](string_view str) -> int {
+    FAIL_POINT_INJECT_F("test_1", [](absl::string_view str) -> int {
         EXPECT_EQ(str, "1");
         return 1;
     });
 
-    FAIL_POINT_INJECT_F("test_2", [](string_view str) -> int {
+    FAIL_POINT_INJECT_F("test_2", [](absl::string_view str) -> int {
         EXPECT_EQ(str, "2");
         return 2;
     });
@@ -150,7 +148,7 @@ TEST(fail_point, macro_use)
 
 void test_func_return_void(int &a)
 {
-    FAIL_POINT_INJECT_F("test_1", [](string_view str) {});
+    FAIL_POINT_INJECT_F("test_1", [](absl::string_view str) {});
     a++;
 }
 TEST(fail_point, return_void)

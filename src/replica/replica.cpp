@@ -26,10 +26,11 @@
 
 #include "replica.h"
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <functional>
-#include <set>
+#include <vector>
 
 #include "backup/replica_backup_manager.h"
 #include "bulk_load/replica_bulk_loader.h"
@@ -43,8 +44,6 @@
 #include "duplication/replica_follower.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counters.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
@@ -52,16 +51,190 @@
 #include "replica_disk_migrator.h"
 #include "replica_stub.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/security/access_controller.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 #include "utils/rand.h"
-#include "utils/string_view.h"
+
+METRIC_DEFINE_gauge_int64(replica,
+                          private_log_size_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The size of private log in MB");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed write requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected write requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed read requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected read requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      backup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of backup requests");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_delayed_backup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of delayed backup requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      throttling_rejected_backup_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected backup requests by throttling");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_rejected_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected write requests by splitting");
+
+METRIC_DEFINE_counter(replica,
+                      splitting_rejected_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected read requests by splitting");
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_ingestion_rejected_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected write requests by bulk load ingestion");
+
+METRIC_DEFINE_counter(replica,
+                      dup_rejected_non_idempotent_write_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of rejected non-idempotent write requests by duplication");
+
+METRIC_DEFINE_counter(
+    replica,
+    learn_count,
+    dsn::metric_unit::kLearns,
+    "The number of learns launched by learner (i.e. potential secondary replica)");
+
+METRIC_DEFINE_counter(replica,
+                      learn_rounds,
+                      dsn::metric_unit::kRounds,
+                      "The number of learn rounds launched by learner (during a learn there might"
+                      "be multiple rounds)");
+
+METRIC_DEFINE_counter(replica,
+                      learn_copy_files,
+                      dsn::metric_unit::kFiles,
+                      "The number of files that are copied from learnee (i.e. primary replica)");
+
+METRIC_DEFINE_counter(replica,
+                      learn_copy_file_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of file that are copied from learnee");
+
+METRIC_DEFINE_counter(replica,
+                      learn_copy_buffer_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of data that are copied from learnee's buffer");
+
+METRIC_DEFINE_counter(replica,
+                      learn_lt_cache_responses,
+                      dsn::metric_unit::kResponses,
+                      "The number of learn responses of LT_CACHE type decided by learner, with "
+                      "each learn response related to an RPC_LEARN request");
+
+METRIC_DEFINE_counter(replica,
+                      learn_lt_app_responses,
+                      dsn::metric_unit::kResponses,
+                      "The number of learn responses of LT_APP type decided by learner, with each "
+                      "learn response related to an RPC_LEARN request");
+
+METRIC_DEFINE_counter(replica,
+                      learn_lt_log_responses,
+                      dsn::metric_unit::kResponses,
+                      "The number of learn responses of LT_LOG type decided by learner, with each "
+                      "learn response related to an RPC_LEARN request");
+
+METRIC_DEFINE_counter(replica,
+                      learn_resets,
+                      dsn::metric_unit::kResets,
+                      "The number of times learner resets its local state (since its local state "
+                      "is newer than learnee's), with each reset related to an learn response of "
+                      "an RPC_LEARN request");
+
+METRIC_DEFINE_counter(replica,
+                      learn_failed_count,
+                      dsn::metric_unit::kLearns,
+                      "The number of failed learns launched by learner");
+
+METRIC_DEFINE_counter(replica,
+                      learn_successful_count,
+                      dsn::metric_unit::kLearns,
+                      "The number of successful learns launched by learner");
+
+METRIC_DEFINE_counter(replica,
+                      prepare_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed RPC_PREPARE requests");
+
+METRIC_DEFINE_counter(replica,
+                      group_check_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed RPC_GROUP_CHECK requests launched by primary replicas");
+
+METRIC_DEFINE_counter(replica,
+                      emergency_checkpoints,
+                      dsn::metric_unit::kCheckpoints,
+                      "The number of triggered emergency checkpoints");
+
+METRIC_DEFINE_counter(replica,
+                      write_size_exceed_threshold_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of write requests whose size exceeds threshold");
+
+METRIC_DEFINE_counter(replica,
+                      backup_started_count,
+                      dsn::metric_unit::kBackups,
+                      "The number of started backups");
+
+METRIC_DEFINE_counter(replica,
+                      backup_failed_count,
+                      dsn::metric_unit::kBackups,
+                      "The number of failed backups");
+
+METRIC_DEFINE_counter(replica,
+                      backup_successful_count,
+                      dsn::metric_unit::kBackups,
+                      "The number of successful backups");
+
+METRIC_DEFINE_counter(replica,
+                      backup_cancelled_count,
+                      dsn::metric_unit::kBackups,
+                      "The number of cancelled backups");
+
+METRIC_DEFINE_counter(replica,
+                      backup_file_upload_failed_count,
+                      dsn::metric_unit::kFileUploads,
+                      "The number of failed file uploads for backups");
+
+METRIC_DEFINE_counter(replica,
+                      backup_file_upload_successful_count,
+                      dsn::metric_unit::kFileUploads,
+                      "The number of successful file uploads for backups");
+
+METRIC_DEFINE_counter(replica,
+                      backup_file_upload_total_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The total size of uploaded files for backups");
 
 namespace dsn {
 namespace replication {
@@ -104,9 +277,6 @@ replica::replica(replica_stub *stub,
       _app_info(app),
       _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),
-      _cold_backup_running_count(0),
-      _cold_backup_max_duration_time_ms(0),
-      _cold_backup_max_upload_file_size(0),
       _chkpt_total_size(0),
       _cur_download_size(0),
       _restore_progress(0),
@@ -115,7 +285,41 @@ replica::replica(replica_stub *stub,
       // todo(jiashuo1): app.duplicating need rename
       _is_duplication_master(app.duplicating),
       _is_duplication_follower(is_duplication_follower),
-      _backup_mgr(new replica_backup_manager(this))
+      _backup_mgr(new replica_backup_manager(this)),
+      METRIC_VAR_INIT_replica(private_log_size_mb),
+      METRIC_VAR_INIT_replica(throttling_delayed_write_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_write_requests),
+      METRIC_VAR_INIT_replica(throttling_delayed_read_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_read_requests),
+      METRIC_VAR_INIT_replica(backup_requests),
+      METRIC_VAR_INIT_replica(throttling_delayed_backup_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_backup_requests),
+      METRIC_VAR_INIT_replica(splitting_rejected_write_requests),
+      METRIC_VAR_INIT_replica(splitting_rejected_read_requests),
+      METRIC_VAR_INIT_replica(bulk_load_ingestion_rejected_write_requests),
+      METRIC_VAR_INIT_replica(dup_rejected_non_idempotent_write_requests),
+      METRIC_VAR_INIT_replica(learn_count),
+      METRIC_VAR_INIT_replica(learn_rounds),
+      METRIC_VAR_INIT_replica(learn_copy_files),
+      METRIC_VAR_INIT_replica(learn_copy_file_bytes),
+      METRIC_VAR_INIT_replica(learn_copy_buffer_bytes),
+      METRIC_VAR_INIT_replica(learn_lt_cache_responses),
+      METRIC_VAR_INIT_replica(learn_lt_app_responses),
+      METRIC_VAR_INIT_replica(learn_lt_log_responses),
+      METRIC_VAR_INIT_replica(learn_resets),
+      METRIC_VAR_INIT_replica(learn_failed_count),
+      METRIC_VAR_INIT_replica(learn_successful_count),
+      METRIC_VAR_INIT_replica(prepare_failed_requests),
+      METRIC_VAR_INIT_replica(group_check_failed_requests),
+      METRIC_VAR_INIT_replica(emergency_checkpoints),
+      METRIC_VAR_INIT_replica(write_size_exceed_threshold_requests),
+      METRIC_VAR_INIT_replica(backup_started_count),
+      METRIC_VAR_INIT_replica(backup_failed_count),
+      METRIC_VAR_INIT_replica(backup_successful_count),
+      METRIC_VAR_INIT_replica(backup_cancelled_count),
+      METRIC_VAR_INIT_replica(backup_file_upload_failed_count),
+      METRIC_VAR_INIT_replica(backup_file_upload_successful_count),
+      METRIC_VAR_INIT_replica(backup_file_upload_total_bytes)
 {
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
@@ -130,59 +334,6 @@ replica::replica(replica_stub *stub,
     _split_mgr = std::make_unique<replica_split_manager>(this);
     _disk_migrator = std::make_unique<replica_disk_migrator>(this);
     _replica_follower = std::make_unique<replica_follower>(this);
-
-    std::string counter_str = fmt::format("private.log.size(MB)@{}", gpid);
-    _counter_private_log_size.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.throttling.delay.count@{}", gpid);
-    _counter_recent_write_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.throttling.reject.count@{}", gpid);
-    _counter_recent_write_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.throttling.delay.count@{}", gpid);
-    _counter_recent_read_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.throttling.reject.count@{}", gpid);
-    _counter_recent_read_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str =
-        fmt::format("recent.backup.request.throttling.delay.count@{}", _app_info.app_name);
-    _counter_recent_backup_request_throttling_delay_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str =
-        fmt::format("recent.backup.request.throttling.reject.count@{}", _app_info.app_name);
-    _counter_recent_backup_request_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("dup.disabled_non_idempotent_write_count@{}", _app_info.app_name);
-    _counter_dup_disabled_non_idempotent_write_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.read.splitting.reject.count@{}", gpid);
-    _counter_recent_read_splitting_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.splitting.reject.count@{}", gpid);
-    _counter_recent_write_splitting_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    counter_str = fmt::format("recent.write.bulk.load.ingestion.reject.count@{}", gpid);
-    _counter_recent_write_bulk_load_ingestion_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
-
-    // init table level latency perf counters
-    init_table_level_latency_counters();
-
-    counter_str = fmt::format("backup_request_qps@{}", _app_info.app_name);
-    _counter_backup_request_qps.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_RATE, counter_str.c_str());
 
     if (need_restore) {
         // add an extra env for restore
@@ -200,15 +351,6 @@ void replica::update_last_checkpoint_generate_time()
     // use random trigger time to avoid flush peek
     _next_checkpoint_interval_trigger_time_ms =
         _last_checkpoint_generate_time_ms + rand::next_u64(max_interval_ms / 2, max_interval_ms);
-}
-
-//            //
-// Statistics //
-//            //
-
-void replica::update_commit_qps(int count)
-{
-    _stub->_counter_replicas_commit_qps->add((uint64_t)count);
 }
 
 void replica::init_state()
@@ -259,7 +401,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    CHECK_REQUEST_IF_SPLITTING(read)
+    CHECK_REQUEST_IF_SPLITTING(read);
 
     if (status() == partition_status::PS_INACTIVE ||
         status() == partition_status::PS_POTENTIAL_SECONDARY) {
@@ -291,13 +433,15 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
         if (!ignore_throttling && throttle_backup_request(request)) {
             return;
         }
-        _counter_backup_request_qps->increment();
+        METRIC_VAR_INCREMENT(backup_requests);
     }
 
-    uint64_t start_time_ns = dsn_now_ns();
     CHECK(_app, "");
     auto storage_error = _app->on_request(request);
-    if (dsn_unlikely(storage_error != ERR_OK)) {
+    // kNotFound is normal, it indicates that the key is not found (including expired)
+    // in the storage engine, so just ignore it.
+    if (dsn_unlikely(storage_error != rocksdb::Status::kOk &&
+                     storage_error != rocksdb::Status::kNotFound)) {
         switch (storage_error) {
         // TODO(yingchun): Now only kCorruption and kIOError are dealt, consider to deal with
         //  more storage engine errors.
@@ -311,12 +455,6 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
             LOG_ERROR_PREFIX("client read encountered an unhandled error: {}", storage_error);
         }
         return;
-    }
-
-    // If the corresponding perf counter exist, count the duration of this operation.
-    // rpc code of request is already checked in message_ex::rpc_code, so it will always be legal
-    if (_counters_table_level_latency[request->rpc_code()] != nullptr) {
-        _counters_table_level_latency[request->rpc_code()]->set(dsn_now_ns() - start_time_ns);
     }
 }
 
@@ -415,26 +553,16 @@ void replica::execute_mutation(mutation_ptr &mu)
         handle_local_failure(err);
     }
 
-    if (status() == partition_status::PS_PRIMARY) {
-        ADD_CUSTOM_POINT(mu->_tracer, "completed");
-        mutation_ptr next = _primary_states.write_queue.check_possible_work(
-            static_cast<int>(_prepare_list->max_decree() - d));
-
-        if (next) {
-            init_prepare(next, false);
-        }
+    if (status() != partition_status::PS_PRIMARY) {
+        return;
     }
 
-    // update table level latency perf-counters for primary partition
-    if (partition_status::PS_PRIMARY == status()) {
-        uint64_t now_ns = dsn_now_ns();
-        for (auto update : mu->data.updates) {
-            // If the corresponding perf counter exist, count the duration of this operation.
-            // code in update will always be legal
-            if (_counters_table_level_latency[update.code] != nullptr) {
-                _counters_table_level_latency[update.code]->set(now_ns - update.start_time_ns);
-            }
-        }
+    ADD_CUSTOM_POINT(mu->_tracer, "completed");
+    auto next = _primary_states.write_queue.check_possible_work(
+        static_cast<int>(_prepare_list->max_decree() - d));
+
+    if (next != nullptr) {
+        init_prepare(next, false);
     }
 }
 
@@ -525,8 +653,6 @@ void replica::close()
         _disk_migrator.reset();
     }
 
-    _counter_private_log_size.clear();
-
     // duplication_impl may have ongoing tasks.
     // release it before release replica.
     _duplication_mgr.reset();
@@ -550,32 +676,6 @@ manual_compaction_status::type replica::get_manual_compact_status() const
 {
     CHECK_PREFIX(_app);
     return _app->query_compact_status();
-}
-
-// Replicas on the server which serves for the same table will share the same perf-counter.
-// For example counter `table.level.RPC_RRDB_RRDB_MULTI_PUT.latency(ns)@test_table` is shared by
-// all the replicas for `test_table`.
-void replica::init_table_level_latency_counters()
-{
-    int max_task_code = task_code::max();
-    _counters_table_level_latency.resize(max_task_code + 1);
-
-    for (int code = 0; code <= max_task_code; code++) {
-        _counters_table_level_latency[code] = nullptr;
-        if (get_storage_rpc_req_codes().find(task_code(code)) !=
-            get_storage_rpc_req_codes().end()) {
-            std::string counter_str = fmt::format(
-                "table.level.{}.latency(ns)@{}", task_code(code).to_string(), _app_info.app_name);
-            _counters_table_level_latency[code] =
-                dsn::perf_counters::instance()
-                    .get_app_counter("eon.replica",
-                                     counter_str.c_str(),
-                                     COUNTER_TYPE_NUMBER_PERCENTILES,
-                                     counter_str.c_str(),
-                                     true)
-                    .get();
-        }
-    }
 }
 
 void replica::on_detect_hotkey(const detect_hotkey_request &req, detect_hotkey_response &resp)
@@ -603,6 +703,13 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
 bool replica::access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const
 {
     return !_access_controller->is_enable_ranger_acl() || _access_controller->allowed(msg, ac_type);
+}
+
+int64_t replica::get_backup_request_count() const { return METRIC_VAR_VALUE(backup_requests); }
+
+void replica::METRIC_FUNC_NAME_SET(dup_pending_mutations)()
+{
+    METRIC_SET(*_duplication_mgr, dup_pending_mutations);
 }
 
 } // namespace replication

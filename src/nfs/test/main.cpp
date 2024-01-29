@@ -24,26 +24,32 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <rocksdb/status.h>
 #include <stddef.h>
-#include <stdint.h>
+#include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "aio/aio_task.h"
 #include "common/gpid.h"
+#include "gtest/gtest.h"
 #include "nfs/nfs_node.h"
 #include "runtime/app_model.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/task_code.h"
 #include "runtime/tool_api.h"
+#include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/threadpool_code.h"
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
 
 using namespace dsn;
 
@@ -54,36 +60,61 @@ struct aio_result
     size_t sz;
 };
 
-TEST(nfs, basic)
+class nfs_test : public pegasus::encrypt_data_test_base
 {
-    std::unique_ptr<dsn::nfs_node> nfs(dsn::nfs_node::create());
+};
+
+INSTANTIATE_TEST_SUITE_P(, nfs_test, ::testing::Values(false, true));
+
+TEST_P(nfs_test, basic)
+{
+    auto nfs = dsn::nfs_node::create();
     nfs->start();
     nfs->register_async_rpc_handler_for_test();
     dsn::gpid fake_pid = gpid(1, 0);
 
-    utils::filesystem::remove_path("nfs_test_dir");
-    utils::filesystem::remove_path("nfs_test_dir_copy");
+    // Prepare the destination directory.
+    const std::string kDstDir = "nfs_test_dir";
+    ASSERT_TRUE(utils::filesystem::remove_path(kDstDir));
+    ASSERT_FALSE(utils::filesystem::directory_exists(kDstDir));
+    ASSERT_TRUE(utils::filesystem::create_directory(kDstDir));
+    ASSERT_TRUE(utils::filesystem::directory_exists(kDstDir));
 
-    ASSERT_FALSE(utils::filesystem::directory_exists("nfs_test_dir"));
-    ASSERT_FALSE(utils::filesystem::directory_exists("nfs_test_dir_copy"));
+    // Prepare the source files information.
+    std::vector<std::string> kSrcFilenames({"nfs_test_file1", "nfs_test_file2"});
+    if (FLAGS_encrypt_data_at_rest) {
+        for (auto &src_filename : kSrcFilenames) {
+            auto s = dsn::utils::encrypt_file(src_filename, src_filename + ".encrypted");
+            ASSERT_TRUE(s.ok()) << s.ToString();
+            src_filename += ".encrypted";
+        }
+    }
+    std::vector<int64_t> src_file_sizes;
+    std::vector<std::string> src_file_md5s;
+    for (const auto &src_filename : kSrcFilenames) {
+        int64_t file_size;
+        ASSERT_TRUE(utils::filesystem::file_size(
+            src_filename, dsn::utils::FileDataType::kSensitive, file_size));
+        src_file_sizes.push_back(file_size);
+        std::string src_file_md5;
+        ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(src_filename, src_file_md5));
+        src_file_md5s.emplace_back(std::move(src_file_md5));
+    }
 
-    ASSERT_TRUE(utils::filesystem::create_directory("nfs_test_dir"));
-    ASSERT_TRUE(utils::filesystem::directory_exists("nfs_test_dir"));
-
+    // copy files to the destination directory.
     {
-        // copy nfs_test_file1 nfs_test_file2 nfs_test_dir
-        ASSERT_FALSE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
-        ASSERT_FALSE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file2"));
-
-        std::vector<std::string> files{"nfs_test_file1", "nfs_test_file2"};
+        // The destination directory is empty before copying.
+        std::vector<std::string> dst_filenames;
+        ASSERT_TRUE(utils::filesystem::get_subfiles(kDstDir, dst_filenames, true));
+        ASSERT_TRUE(dst_filenames.empty());
 
         aio_result r;
         dsn::aio_task_ptr t = nfs->copy_remote_files(dsn::rpc_address("localhost", 20101),
                                                      "default",
                                                      ".",
-                                                     files,
+                                                     kSrcFilenames,
                                                      "default",
-                                                     "nfs_test_dir",
+                                                     kDstDir,
                                                      fake_pid,
                                                      false,
                                                      false,
@@ -100,32 +131,32 @@ TEST(nfs, basic)
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, t->get_transferred_size());
 
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file2"));
-
-        int64_t sz1, sz2;
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_file1", sz1));
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir/nfs_test_file1", sz2));
-        ASSERT_EQ(sz1, sz2);
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_file2", sz1));
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir/nfs_test_file2", sz2));
-        ASSERT_EQ(sz1, sz2);
+        // The destination files equal to the source files after copying.
+        ASSERT_TRUE(utils::filesystem::get_subfiles(kDstDir, dst_filenames, true));
+        std::sort(dst_filenames.begin(), dst_filenames.end());
+        ASSERT_EQ(kSrcFilenames.size(), dst_filenames.size());
+        int i = 0;
+        for (const auto &dst_filename : dst_filenames) {
+            int64_t file_size;
+            ASSERT_TRUE(utils::filesystem::file_size(
+                dst_filename, dsn::utils::FileDataType::kSensitive, file_size));
+            ASSERT_EQ(src_file_sizes[i], file_size);
+            std::string file_md5;
+            ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(dst_filename, file_md5));
+            ASSERT_EQ(src_file_md5s[i], file_md5);
+            i++;
+        }
     }
 
+    // copy files to the destination directory, files will be overwritten.
     {
-        // copy files again, overwrite
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file1"));
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir/nfs_test_file2"));
-
-        std::vector<std::string> files{"nfs_test_file1", "nfs_test_file2"};
-
         aio_result r;
         dsn::aio_task_ptr t = nfs->copy_remote_files(dsn::rpc_address("localhost", 20101),
                                                      "default",
                                                      ".",
-                                                     files,
+                                                     kSrcFilenames,
                                                      "default",
-                                                     "nfs_test_dir",
+                                                     kDstDir,
                                                      fake_pid,
                                                      true,
                                                      false,
@@ -141,22 +172,42 @@ TEST(nfs, basic)
         ASSERT_EQ(r.err, t->error());
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, t->get_transferred_size());
+
         // this is only true for simulator
         if (dsn::tools::get_current_tool()->name() == "simulator") {
             ASSERT_EQ(1, t->get_count());
         }
+
+        // The destination files equal to the source files after overwrite copying.
+        std::vector<std::string> dst_filenames;
+        ASSERT_TRUE(utils::filesystem::get_subfiles(kDstDir, dst_filenames, true));
+        std::sort(dst_filenames.begin(), dst_filenames.end());
+        ASSERT_EQ(kSrcFilenames.size(), dst_filenames.size());
+        int i = 0;
+        for (const auto &dst_filename : dst_filenames) {
+            int64_t file_size;
+            ASSERT_TRUE(utils::filesystem::file_size(
+                dst_filename, dsn::utils::FileDataType::kSensitive, file_size));
+            ASSERT_EQ(src_file_sizes[i], file_size);
+            std::string file_md5;
+            ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(dst_filename, file_md5));
+            ASSERT_EQ(src_file_md5s[i], file_md5);
+            i++;
+        }
     }
 
+    // copy files from kDstDir to kNewDstDir.
     {
-        // copy nfs_test_dir nfs_test_dir_copy
-        ASSERT_FALSE(utils::filesystem::directory_exists("nfs_test_dir_copy"));
+        const std::string kNewDstDir = "nfs_test_dir_copy";
+        ASSERT_TRUE(utils::filesystem::remove_path(kNewDstDir));
+        ASSERT_FALSE(utils::filesystem::directory_exists(kNewDstDir));
 
         aio_result r;
         dsn::aio_task_ptr t = nfs->copy_remote_directory(dsn::rpc_address("localhost", 20101),
                                                          "default",
-                                                         "nfs_test_dir",
+                                                         kDstDir,
                                                          "default",
-                                                         "nfs_test_dir_copy",
+                                                         kNewDstDir,
                                                          fake_pid,
                                                          false,
                                                          false,
@@ -173,22 +224,25 @@ TEST(nfs, basic)
         ASSERT_EQ(ERR_OK, r.err);
         ASSERT_EQ(r.sz, t->get_transferred_size());
 
-        ASSERT_TRUE(utils::filesystem::directory_exists("nfs_test_dir_copy"));
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir_copy/nfs_test_file1"));
-        ASSERT_TRUE(utils::filesystem::file_exists("nfs_test_dir_copy/nfs_test_file2"));
+        // The kNewDstDir will be created automatically.
+        ASSERT_TRUE(utils::filesystem::directory_exists(kNewDstDir));
 
-        std::vector<std::string> sub1, sub2;
-        ASSERT_TRUE(utils::filesystem::get_subfiles("nfs_test_dir", sub1, true));
-        ASSERT_TRUE(utils::filesystem::get_subfiles("nfs_test_dir_copy", sub2, true));
-        ASSERT_EQ(sub1.size(), sub2.size());
+        std::vector<std::string> new_dst_filenames;
+        ASSERT_TRUE(utils::filesystem::get_subfiles(kNewDstDir, new_dst_filenames, true));
+        std::sort(new_dst_filenames.begin(), new_dst_filenames.end());
+        ASSERT_EQ(kSrcFilenames.size(), new_dst_filenames.size());
 
-        int64_t sz1, sz2;
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir/nfs_test_file1", sz1));
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir_copy/nfs_test_file1", sz2));
-        ASSERT_EQ(sz1, sz2);
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir/nfs_test_file2", sz1));
-        ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir_copy/nfs_test_file2", sz2));
-        ASSERT_EQ(sz1, sz2);
+        int i = 0;
+        for (const auto &new_dst_filename : new_dst_filenames) {
+            int64_t file_size;
+            ASSERT_TRUE(utils::filesystem::file_size(
+                new_dst_filename, dsn::utils::FileDataType::kSensitive, file_size));
+            ASSERT_EQ(src_file_sizes[i], file_size);
+            std::string file_md5;
+            ASSERT_EQ(ERR_OK, utils::filesystem::md5sum(new_dst_filename, file_md5));
+            ASSERT_EQ(src_file_md5s[i], file_md5);
+            i++;
+        }
     }
 
     nfs->stop();

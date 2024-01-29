@@ -26,12 +26,7 @@
 
 #pragma once
 
-//
-// the replica_stub is the *singleton* entry to
-// access all replica managed in the same process
-//   replica_stub(singleton) --> replica --> replication_app_base
-//
-
+#include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <atomic>
 #include <functional>
@@ -42,8 +37,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <gtest/gtest_prod.h>
 
 #include "block_service/block_service_manager.h"
 #include "bulk_load_types.h"
@@ -57,14 +50,13 @@
 #include "failure_detector/failure_detector_multimaster.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
-#include "runtime/ranger/access_type.h"
+#include "ranger/access_type.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "runtime/security/access_controller.h"
+#include "security/access_controller.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -73,6 +65,7 @@
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_utils.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -128,6 +121,8 @@ typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 class duplication_sync_timer;
 class replica_backup_server;
 
+// The replica_stub is the *singleton* entry to access all replica managed in the same process
+//   replica_stub(singleton) --> replica --> replication_app_base
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
@@ -181,13 +176,12 @@ public:
     //
     void on_meta_server_connected();
     void on_meta_server_disconnected();
-    void on_gc();
+    void on_replicas_stat();
     void on_disk_stat();
 
     //
     //  routines published for test
     //
-    void init_gc_for_test();
     void set_meta_server_disconnected_for_test() { on_meta_server_disconnected(); }
     void set_meta_server_connected_for_test(const configuration_query_by_node_response &config);
     void set_replica_state_subscriber_for_test(replica_state_subscriber subscriber,
@@ -353,13 +347,21 @@ private:
     void trigger_checkpoint(replica_ptr r, bool is_emergency);
     void handle_log_failure(error_code err);
 
-    void install_perf_counters();
     dsn::error_code on_kill_replica(gpid id);
 
     void get_replica_info(/*out*/ replica_info &info, /*in*/ replica_ptr r);
     void get_local_replicas(/*out*/ std::vector<replica_info> &replicas);
     replica_life_cycle get_replica_life_cycle(gpid id);
     void on_gc_replica(replica_stub_ptr this_, gpid id);
+
+    struct replica_stat_info
+    {
+        replica_ptr rep;
+        partition_status::type status;
+        mutation_log_ptr plog;
+        decree last_durable_decree;
+    };
+    using replica_stat_info_by_gpid = std::unordered_map<gpid, replica_stat_info>;
 
     void response_client(gpid id,
                          bool is_read,
@@ -421,7 +423,7 @@ private:
     friend class replica_follower_test;
     friend class replica_http_service_test;
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
-    FRIEND_TEST(replica_error_test, test_auto_trash_of_corruption);
+    FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
@@ -436,7 +438,6 @@ private:
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
 
-    mutation_log_ptr _log;
     ::dsn::rpc_address _primary_address;
     char _primary_address_str[64];
 
@@ -452,7 +453,7 @@ private:
     // temproal states
     ::dsn::task_ptr _config_query_task;
     ::dsn::timer_task_ptr _config_sync_timer_task;
-    ::dsn::task_ptr _gc_timer_task;
+    ::dsn::task_ptr _replicas_stat_timer_task;
     ::dsn::task_ptr _disk_stat_timer_task;
     ::dsn::task_ptr _mem_release_timer_task;
 
@@ -497,94 +498,39 @@ private:
     std::atomic_bool _is_releasing_memory{false};
 #endif
 
-    // performance counters
-    perf_counter_wrapper _counter_replicas_count;
-    perf_counter_wrapper _counter_replicas_opening_count;
-    perf_counter_wrapper _counter_replicas_closing_count;
-    perf_counter_wrapper _counter_replicas_commit_qps;
+    METRIC_VAR_DECLARE_gauge_int64(total_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(opening_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(closing_replicas);
 
-    perf_counter_wrapper _counter_replicas_learning_count;
-    perf_counter_wrapper _counter_replicas_learning_max_duration_time_ms;
-    perf_counter_wrapper _counter_replicas_learning_max_copy_file_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_start_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_round_start_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_file_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_file_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_buffer_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_cache_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_app_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_log_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_reset_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_fail_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_succ_count;
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
 
-    perf_counter_wrapper _counter_replicas_recent_prepare_fail_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_move_error_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_move_garbage_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_remove_dir_count;
-    perf_counter_wrapper _counter_replicas_error_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_garbage_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_tmp_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_origin_replica_dir_count;
-
-    perf_counter_wrapper _counter_replicas_recent_group_check_fail_count;
-
-    perf_counter_wrapper _counter_shared_log_size;
-    perf_counter_wrapper _counter_shared_log_recent_write_size;
-    perf_counter_wrapper _counter_recent_trigger_emergency_checkpoint_count;
-
-    // <- Duplication Metrics ->
-    // TODO(wutao1): calculate the counters independently for each remote cluster
-    //               if we need to duplicate to multiple clusters someday.
-    perf_counter_wrapper _counter_dup_confirmed_rate;
-    perf_counter_wrapper _counter_dup_pending_mutations_count;
-
-    perf_counter_wrapper _counter_cold_backup_running_count;
-    perf_counter_wrapper _counter_cold_backup_recent_start_count;
-    perf_counter_wrapper _counter_cold_backup_recent_succ_count;
-    perf_counter_wrapper _counter_cold_backup_recent_fail_count;
-    perf_counter_wrapper _counter_cold_backup_recent_cancel_count;
-    perf_counter_wrapper _counter_cold_backup_recent_pause_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_succ_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_fail_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_size;
-    perf_counter_wrapper _counter_cold_backup_max_duration_time_ms;
-    perf_counter_wrapper _counter_cold_backup_max_upload_file_size;
-
-    perf_counter_wrapper _counter_recent_read_fail_count;
-    perf_counter_wrapper _counter_recent_write_fail_count;
-    perf_counter_wrapper _counter_recent_read_busy_count;
-    perf_counter_wrapper _counter_recent_write_busy_count;
-
-    perf_counter_wrapper _counter_recent_write_size_exceed_threshold_count;
+    METRIC_VAR_DECLARE_counter(moved_error_replicas);
+    METRIC_VAR_DECLARE_counter(moved_garbage_replicas);
+    METRIC_VAR_DECLARE_counter(replica_removed_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_error_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_garbage_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_tmp_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_origin_dirs);
 
 #ifdef DSN_ENABLE_GPERF
-    perf_counter_wrapper _counter_tcmalloc_release_memory_size;
+    METRIC_VAR_DECLARE_counter(tcmalloc_released_bytes);
 #endif
 
-    // <- Bulk load Metrics ->
-    perf_counter_wrapper _counter_bulk_load_running_count;
-    perf_counter_wrapper _counter_bulk_load_downloading_count;
-    perf_counter_wrapper _counter_bulk_load_ingestion_count;
-    perf_counter_wrapper _counter_bulk_load_succeed_count;
-    perf_counter_wrapper _counter_bulk_load_failed_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_succ_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_fail_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_size;
-    perf_counter_wrapper _counter_bulk_load_max_ingestion_time_ms;
-    perf_counter_wrapper _counter_bulk_load_max_duration_time_ms;
+    METRIC_VAR_DECLARE_counter(read_failed_requests);
+    METRIC_VAR_DECLARE_counter(write_failed_requests);
+    METRIC_VAR_DECLARE_counter(read_busy_requests);
+    METRIC_VAR_DECLARE_counter(write_busy_requests);
 
-    // <- Partition split Metrics ->
-    perf_counter_wrapper _counter_replicas_splitting_count;
-    perf_counter_wrapper _counter_replicas_splitting_max_duration_time_ms;
-    perf_counter_wrapper _counter_replicas_splitting_max_async_learn_time_ms;
-    perf_counter_wrapper _counter_replicas_splitting_max_copy_file_size;
-    perf_counter_wrapper _counter_replicas_splitting_recent_start_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_size;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_mutation_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_split_fail_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_split_succ_count;
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_running_count);
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_ingestion_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_max_duration_ms);
+
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_async_learn_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_max_copy_file_bytes);
 
     dsn::task_tracker _tracker;
 };

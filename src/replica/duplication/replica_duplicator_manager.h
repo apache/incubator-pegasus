@@ -31,6 +31,7 @@
 #include "replica/replica_base.h"
 #include "replica_duplicator.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -43,7 +44,7 @@ namespace replication {
 class replica_duplicator_manager : public replica_base
 {
 public:
-    explicit replica_duplicator_manager(replica *r) : replica_base(r), _replica(r) {}
+    explicit replica_duplicator_manager(replica *r);
 
     // Immediately stop duplication in the following conditions:
     // - replica is not primary on replica-server perspective (status != PRIMARY)
@@ -77,9 +78,8 @@ public:
     /// \see replica_check.cpp
     void update_confirmed_decree_if_secondary(decree confirmed);
 
-    /// Sums up the number of pending mutations for all duplications
-    /// on this replica, for metric "dup.pending_mutations_count".
-    int64_t get_pending_mutations_count() const;
+    /// Sums up the number of pending mutations for all duplications on this replica.
+    void METRIC_FUNC_NAME_SET(dup_pending_mutations)();
 
     struct dup_state
     {
@@ -121,6 +121,11 @@ private:
     // avoid thread conflict between replica::on_checkpoint_timer and
     // duplication_sync_timer.
     mutable zlock _lock;
+
+    // <- Duplication Metrics ->
+    // TODO(wutao1): calculate the counters independently for each remote cluster
+    //               if we need to duplicate to multiple clusters someday.
+    METRIC_VAR_DECLARE_gauge_int64(dup_pending_mutations);
 };
 
 } // namespace replication

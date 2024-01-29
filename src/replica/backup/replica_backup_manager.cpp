@@ -17,9 +17,9 @@
 
 #include "replica_backup_manager.h"
 
+#include <absl/strings/string_view.h>
 #include <stdint.h>
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <map>
 #include <memory>
@@ -43,6 +43,21 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
+
+METRIC_DEFINE_gauge_int64(replica,
+                          backup_running_count,
+                          dsn::metric_unit::kBackups,
+                          "The number of current running backups");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          backup_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max backup duration among backups");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          backup_file_upload_max_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The max size of uploaded files among backups");
 
 namespace dsn {
 namespace replication {
@@ -83,7 +98,14 @@ static bool get_policy_checkpoint_dirs(const std::string &dir,
     return true;
 }
 
-replica_backup_manager::replica_backup_manager(replica *r) : replica_base(r), _replica(r) {}
+replica_backup_manager::replica_backup_manager(replica *r)
+    : replica_base(r),
+      _replica(r),
+      METRIC_VAR_INIT_replica(backup_running_count),
+      METRIC_VAR_INIT_replica(backup_max_duration_ms),
+      METRIC_VAR_INIT_replica(backup_file_upload_max_bytes)
+{
+}
 
 replica_backup_manager::~replica_backup_manager()
 {
@@ -160,9 +182,9 @@ void replica_backup_manager::collect_backup_info()
         }
     }
 
-    _replica->_cold_backup_running_count.store(cold_backup_running_count);
-    _replica->_cold_backup_max_duration_time_ms.store(cold_backup_max_duration_time_ms);
-    _replica->_cold_backup_max_upload_file_size.store(cold_backup_max_upload_file_size);
+    METRIC_VAR_SET(backup_running_count, cold_backup_running_count);
+    METRIC_VAR_SET(backup_max_duration_ms, cold_backup_max_duration_time_ms);
+    METRIC_VAR_SET(backup_file_upload_max_bytes, cold_backup_max_upload_file_size);
 }
 
 void replica_backup_manager::background_clear_backup_checkpoint(const std::string &policy_name)

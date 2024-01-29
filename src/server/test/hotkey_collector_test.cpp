@@ -17,16 +17,15 @@
 
 #include "server/hotkey_collector.h"
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <chrono>
 #include <thread>
 
 #include "base/pegasus_key_schema.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
@@ -71,7 +70,7 @@ TEST(hotkey_collector_public_func_test, get_bucket_id_test)
 {
     int bucket_id = -1;
     for (int i = 0; i < 1000000; i++) {
-        bucket_id = get_bucket_id(dsn::blob::create_from_bytes(generate_hash_key_by_random(false)),
+        bucket_id = get_bucket_id(absl::string_view(generate_hash_key_by_random(false)),
                                   FLAGS_hotkey_buckets_num);
         ASSERT_GE(bucket_id, 0);
         ASSERT_LT(bucket_id, FLAGS_hotkey_buckets_num);
@@ -123,7 +122,9 @@ public:
     dsn::task_tracker _tracker;
 };
 
-TEST_F(coarse_collector_test, coarse_collector)
+INSTANTIATE_TEST_SUITE_P(, coarse_collector_test, ::testing::Values(false, true));
+
+TEST_P(coarse_collector_test, coarse_collector)
 {
     detect_hotkey_result result;
 
@@ -178,7 +179,9 @@ public:
     dsn::task_tracker _tracker;
 };
 
-TEST_F(fine_collector_test, fine_collector)
+INSTANTIATE_TEST_SUITE_P(, fine_collector_test, ::testing::Values(false, true));
+
+TEST_P(fine_collector_test, fine_collector)
 {
     detect_hotkey_result result;
 
@@ -286,13 +289,15 @@ public:
     dsn::task_tracker _tracker;
 };
 
-TEST_F(hotkey_collector_test, hotkey_type)
+INSTANTIATE_TEST_SUITE_P(, hotkey_collector_test, ::testing::Values(false, true));
+
+TEST_P(hotkey_collector_test, hotkey_type)
 {
     ASSERT_EQ(get_collector_type(get_read_collector()), dsn::replication::hotkey_type::READ);
     ASSERT_EQ(get_collector_type(get_write_collector()), dsn::replication::hotkey_type::WRITE);
 }
 
-TEST_F(hotkey_collector_test, state_transform)
+TEST_P(hotkey_collector_test, state_transform)
 {
     auto collector = get_read_collector();
     ASSERT_EQ(get_collector_stat(collector), hotkey_collector_state::STOPPED);
@@ -360,7 +365,7 @@ TEST_F(hotkey_collector_test, state_transform)
     _tracker.wait_outstanding_tasks();
 }
 
-TEST_F(hotkey_collector_test, data_completeness)
+TEST_P(hotkey_collector_test, data_completeness)
 {
     dsn::replication::detect_hotkey_response resp;
     on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,

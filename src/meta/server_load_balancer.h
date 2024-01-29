@@ -24,16 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     base interface of the server load balancer which defines the scheduling
- *     policy of how to place the partition replica to the nodes
- *
- * Revision history:
- *     2015-12-29, @imzhenyu (Zhenyu Guo), first draft
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <cstdint>
@@ -95,6 +85,8 @@ public:
 typedef dsn::object_extension_helper<newly_partitions, node_state> newly_partitions_ext;
 newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::rpc_address &addr);
 
+// The interface of the server load balancer which defines the scheduling policy of how to
+// place the partition replica to the nodes.
 class server_load_balancer
 {
 public:

@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the nativerun tool which is a simple but runnable deployment runtime for zion
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "runtime/tool_api.h"
@@ -42,6 +33,7 @@ struct service_spec;
 
 namespace tools {
 
+// The nativerun tool which is a simple but runnable deployment runtime for zion.
 class nativerun : public tool_app
 {
 public:

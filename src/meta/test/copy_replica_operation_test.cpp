@@ -15,11 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
-#include <algorithm>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -30,6 +26,7 @@
 
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/app_balance_policy.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
