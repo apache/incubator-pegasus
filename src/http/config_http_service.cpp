@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "http/http_status_code.h"
 #include "http_server.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
@@ -27,12 +28,12 @@ namespace dsn {
 void list_all_configs(const http_request &req, http_response &resp)
 {
     if (!req.query_args.empty()) {
-        resp.status_code = http_status_code::bad_request;
+        resp.status_code = http_status_code::kBadRequest;
         return;
     }
 
     resp.body = list_all_flags();
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 void get_config(const http_request &req, http_response &resp)
@@ -42,7 +43,7 @@ void get_config(const http_request &req, http_response &resp)
         if ("name" == p.first) {
             config_name = p.second;
         } else {
-            resp.status_code = http_status_code::bad_request;
+            resp.status_code = http_status_code::kBadRequest;
             return;
         }
     }
@@ -53,6 +54,6 @@ void get_config(const http_request &req, http_response &resp)
     } else {
         resp.body = res.get_error().description();
     }
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 } // namespace dsn

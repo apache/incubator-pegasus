@@ -24,18 +24,10 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <stddef.h>
 #include <algorithm>
 #include <chrono>
+#include <random>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -276,10 +268,9 @@ void scheduler::schedule()
                 _time_ns = ts;
             }
 
-            // randomize the events, and see
-            std::random_shuffle(
-                events->begin(), events->end(), [](int n) { return rand::next_u32(0, n - 1); });
-
+            std::random_device rd;
+            std::mt19937 g(rd());
+            std::shuffle(events->begin(), events->end(), g);
             for (auto e : *events) {
                 if (e.app_task != nullptr) {
                     task *t = e.app_task;

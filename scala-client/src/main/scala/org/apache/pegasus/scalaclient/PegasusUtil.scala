@@ -131,7 +131,7 @@ private[scalaclient] trait PegasusUtil {
 
   def convertMultiGetResult[S](result: PegasusTableInterface.MultiGetResult)(
       implicit sSer: SER[S]) = {
-    MultiGetResult(result.allFetched, result.values.toList.map { p =>
+    MultiGetResult(result.isAllFetched(), result.getValues().toList.map { p =>
       (sSer.deserialize(p.getLeft), p.getRight)
     })
   }

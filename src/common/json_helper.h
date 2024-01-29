@@ -23,6 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 #pragma once
 
 #include <cctype>
@@ -58,7 +59,7 @@
 #include "consensus_types.h"
 #include "replica_admin_types.h"
 #include "common/replication_enums.h"
-#include "runtime/ranger/access_type.h"
+#include "ranger/access_type.h"
 
 #define JSON_ENCODE_ENTRY(out, prefix, T)                                                          \
     out.Key(#T);                                                                                   \
@@ -421,6 +422,21 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::rpc_address &addre
         return true;
     }
     return address.from_string_ipv4(rpc_address_string.c_str());
+}
+
+// json serialization for rpc host_port, we use the string representation of a host_port
+inline void json_encode(JsonWriter &out, const dsn::host_port &hp)
+{
+    json_encode(out, hp.to_string());
+}
+inline bool json_decode(const dsn::json::JsonObject &in, dsn::host_port &hp)
+{
+    std::string host_port_string;
+    dverify(json_decode(in, host_port_string));
+    if (host_port_string == "invalid host_port") {
+        return true;
+    }
+    return hp.from_string(host_port_string);
 }
 
 inline void json_encode(JsonWriter &out, const dsn::partition_configuration &config);

@@ -52,8 +52,8 @@
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/security/init.h"
-#include "runtime/security/negotiation_manager.h"
+#include "security/init.h"
+#include "security/negotiation_manager.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
@@ -82,7 +82,6 @@ DSN_DEFINE_bool(core,
                 pause_on_start,
                 false,
                 "whether to pause at startup time for easier debugging");
-
 #ifdef DSN_ENABLE_GPERF
 DSN_DEFINE_double(core,
                   tcmalloc_release_rate,

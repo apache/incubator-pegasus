@@ -15,20 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fmt/ostream.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <iosfwd>
+#include <fmt/core.h>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
 #include "meta_admin_types.h"
 #include "meta_test_base.h"
-#include "runtime/rpc/network.h"
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"

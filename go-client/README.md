@@ -22,11 +22,31 @@ under the License.
 
 ## Requirement
 
-Go1.14+.
+- Go1.18+
+- thrift 0.13
+
+## Development
+
+Build the pegasus-go-client:
+```bash
+make build
+```
+
+Format the code:
+```bash
+make fmt
+```
+
+It requires the Pegasus [onebox](https://pegasus.apache.org/overview/onebox/) has been started.
+
+Then run tests:
+```bash
+make ci
+```
 
 ## Logging
 
-By default pegasus-go-client logs to "./pegasus.log" on where your application runs.
+By default, pegasus-go-client logs to "./pegasus.log" on where your application runs.
 You can customize the logging rules as follows:
 
 ```go

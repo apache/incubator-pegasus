@@ -25,9 +25,6 @@
  */
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -45,13 +42,14 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "dummy_balancer.h"
+#include "gtest/gtest.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
-#include "meta/meta_options.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_service.h"
 #include "meta/partition_guardian.h"
 #include "meta/server_state.h"
+#include "meta/table_metrics.h"
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
@@ -64,6 +62,7 @@
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
@@ -225,7 +224,8 @@ void meta_service_test_app::update_configuration_test()
     svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *ss = svc->_state.get();
-    ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
+    ss->initialize(svc.get(),
+                   utils::filesystem::concat_path_unix_style(svc->_cluster_root, "apps"));
     dsn::app_info info;
     info.is_stateful = true;
     info.status = dsn::app_status::AS_CREATING;
@@ -304,7 +304,8 @@ void meta_service_test_app::adjust_dropped_size()
     svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *ss = svc->_state.get();
-    ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
+    ss->initialize(svc.get(),
+                   utils::filesystem::concat_path_unix_style(svc->_cluster_root, "apps"));
     dsn::app_info info;
     info.is_stateful = true;
     info.status = dsn::app_status::AS_CREATING;
@@ -495,6 +496,7 @@ void meta_service_test_app::cannot_run_balancer_test()
     std::shared_ptr<app_state> the_app = app_state::create(info);
     svc->_state->_all_apps.emplace(info.app_id, the_app);
     svc->_state->_exist_apps.emplace(info.app_name, the_app);
+    svc->_state->_table_metric_entities.create_entity(info.app_id, info.partition_count);
 
     dsn::partition_configuration &pc = the_app->partitions[0];
     pc.primary = nodes[0];

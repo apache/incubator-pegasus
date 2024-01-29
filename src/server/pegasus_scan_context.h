@@ -97,7 +97,7 @@ public:
         // 3. we should keep context id positive, as negtive value have specical meanings.
         //
         // a more detailed description on the context id confliction is here:
-        //   https://github.com/XiaoMi/pegasus/issues/156
+        //   https://github.com/apache/incubator-pegasus/issues/156
         //
         // however, currently the implementation is not 100% correct.
         //

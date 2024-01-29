@@ -17,6 +17,7 @@
 
 #include "perf_counter/perf_counter_atomic.h"
 
+#include <boost/asio/basic_deadline_timer.hpp>
 #include <stdlib.h>
 #include <functional>
 #include <new>

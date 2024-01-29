@@ -423,7 +423,9 @@ func (m *rpcBasedMeta) StartBackupApp(tableID int, providerType string, backupPa
 	req := &admin.StartBackupAppRequest{
 		BackupProviderType: providerType,
 		AppID:              int32(tableID),
-		BackupPath:         &backupPath,
+	}
+	if backupPath != "" {
+		req.BackupPath = &backupPath
 	}
 	var result *admin.StartBackupAppResponse
 	err := m.callMeta("StartBackupApp", req, func(resp interface{}) {

@@ -30,12 +30,14 @@
 
 #pragma once
 
-#include "utils/fail_point.h"
-#include "utils/api_utilities.h"
-#include "utils/ports.h"
 #include <mutex>
 #include <unordered_map>
 #include <utility>
+
+#include "utils/api_utilities.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_utils.h"
+#include "utils/ports.h"
 
 namespace dsn {
 namespace fail {
@@ -59,11 +61,11 @@ struct fail_point
         Void,
     };
 
-    void set_action(string_view action);
+    void set_action(absl::string_view action);
 
     const std::string *eval();
 
-    explicit fail_point(string_view name) : _name(name) {}
+    explicit fail_point(absl::string_view name) : _name(name) {}
 
     /// for test only
     fail_point(task_type t, std::string arg, int freq, int max_cnt)
@@ -74,7 +76,7 @@ struct fail_point
     /// for test only
     fail_point() = default;
 
-    bool parse_from_string(string_view action);
+    bool parse_from_string(absl::string_view action);
 
     friend inline bool operator==(const fail_point &p1, const fail_point &p2)
     {
@@ -97,10 +99,11 @@ private:
     int _freq{100};
     int _max_cnt{-1}; // TODO(wutao1): not thread-safe
 };
+USER_DEFINED_ENUM_FORMATTER(fail_point::task_type)
 
 struct fail_point_registry
 {
-    fail_point &create_if_not_exists(string_view name)
+    fail_point &create_if_not_exists(absl::string_view name)
     {
         std::lock_guard<std::mutex> guard(_mu);
 
@@ -108,7 +111,7 @@ struct fail_point_registry
         return it->second;
     }
 
-    fail_point *try_get(string_view name)
+    fail_point *try_get(absl::string_view name)
     {
         std::lock_guard<std::mutex> guard(_mu);
 

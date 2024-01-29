@@ -15,15 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stddef.h>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "consensus_types.h"
+#include "gtest/gtest.h"
 #include "replica/log_block.h"
 #include "replica/mutation.h"
 #include "replica_test_base.h"
@@ -39,7 +37,9 @@ class log_block_test : public replica_test_base
 {
 };
 
-TEST_F(log_block_test, constructor)
+INSTANTIATE_TEST_SUITE_P(, log_block_test, ::testing::Values(false, true));
+
+TEST_P(log_block_test, constructor)
 {
     log_block block(1);
     ASSERT_EQ(block.data().size(), 1);
@@ -47,7 +47,7 @@ TEST_F(log_block_test, constructor)
     ASSERT_EQ(block.start_offset(), 1);
 }
 
-TEST_F(log_block_test, log_block_header)
+TEST_P(log_block_test, log_block_header)
 {
     log_block block(10);
     auto hdr = (log_block_header *)block.front().data();
@@ -60,7 +60,9 @@ class log_appender_test : public replica_test_base
 {
 };
 
-TEST_F(log_appender_test, constructor)
+INSTANTIATE_TEST_SUITE_P(, log_appender_test, ::testing::Values(false, true));
+
+TEST_P(log_appender_test, constructor)
 {
     log_block block;
     binary_writer temp_writer;
@@ -75,7 +77,7 @@ TEST_F(log_appender_test, constructor)
     ASSERT_EQ(appender.callbacks().size(), 0);
 }
 
-TEST_F(log_appender_test, append_mutation)
+TEST_P(log_appender_test, append_mutation)
 {
     log_appender appender(10);
     for (int i = 0; i < 5; i++) {
@@ -88,7 +90,7 @@ TEST_F(log_appender_test, append_mutation)
     ASSERT_EQ(appender.blob_count(), 1 + 5 * 2);
 }
 
-TEST_F(log_appender_test, log_block_not_full)
+TEST_P(log_appender_test, log_block_not_full)
 {
     log_appender appender(10);
     for (int i = 0; i < 5; i++) {
@@ -106,7 +108,7 @@ TEST_F(log_appender_test, log_block_not_full)
     ASSERT_EQ(block.data().size(), 1 + 5 * 2);
 }
 
-TEST_F(log_appender_test, log_block_full)
+TEST_P(log_appender_test, log_block_full)
 {
     log_appender appender(10);
     for (int i = 0; i < 1024; i++) { // more than DEFAULT_MAX_BLOCK_BYTES
@@ -130,7 +132,7 @@ TEST_F(log_appender_test, log_block_full)
     ASSERT_EQ(sz, appender.size());
 }
 
-TEST_F(log_appender_test, read_log_block)
+TEST_P(log_appender_test, read_log_block)
 {
     log_appender appender(10);
     for (int i = 0; i < 1024; i++) { // more than DEFAULT_MAX_BLOCK_BYTES

@@ -33,7 +33,7 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 struct row_data;
 
@@ -84,7 +84,7 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
 {
     for (int data_type = 0; data_type <= 1; data_type++) {
         for (int i = 0; i < partition_count; i++) {
-            string partition_desc =
+            std::string partition_desc =
                 _app_name + '.' +
                 (data_type == partition_qps_type::WRITE_HOTSPOT_DATA ? "write." : "read.") +
                 std::to_string(i);
@@ -95,7 +95,7 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
                 "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
         }
 
-        string total_desc =
+        std::string total_desc =
             _app_name + '.' +
             (data_type == partition_qps_type::WRITE_HOTSPOT_DATA ? "write.total" : "read.total");
         std::string counter_name = fmt::format("app.stat.hotspots.{}", total_desc);
@@ -212,7 +212,7 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
     const dsn::replication::hotkey_type::type hotkey_type,
     const dsn::replication::detect_action::type action)
 {
-    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](absl::string_view) {});
 
     int app_id = -1;
     int partition_count = -1;

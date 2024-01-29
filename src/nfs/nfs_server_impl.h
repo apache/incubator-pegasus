@@ -35,7 +35,6 @@
 #include "aio/file_io.h"
 #include "nfs_code_definition.h"
 #include "nfs_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
@@ -43,6 +42,7 @@
 #include "utils/command_manager.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/token_buckets.h"
 #include "utils/zlocks.h"
 
@@ -66,7 +66,6 @@ public:
 
     void register_cli_commands();
 
-    // TODO(yingchun): seems nobody call it, can be removed?
     void close_service()
     {
         unregister_rpc_handler(RPC_NFS_COPY);
@@ -107,14 +106,9 @@ private:
 
     struct file_handle_info_on_server
     {
-        disk_file *file_handle;
-        int32_t file_access_count; // concurrent r/w count
-        uint64_t last_access_time; // last touch time
-
-        file_handle_info_on_server()
-            : file_handle(nullptr), file_access_count(0), last_access_time(0)
-        {
-        }
+        disk_file *file_handle = nullptr;
+        int32_t file_access_count = 0; // concurrent r/w count
+        uint64_t last_access_time = 0; // last touch time
 
         ~file_handle_info_on_server()
         {
@@ -137,8 +131,8 @@ private:
     std::unique_ptr<dsn::utils::token_buckets>
         _send_token_buckets; // rate limiter of send to remote
 
-    perf_counter_wrapper _recent_copy_data_size;
-    perf_counter_wrapper _recent_copy_fail_count;
+    METRIC_VAR_DECLARE_counter(nfs_server_copy_bytes);
+    METRIC_VAR_DECLARE_counter(nfs_server_copy_failed_requests);
 
     std::unique_ptr<command_deregister> _nfs_max_send_rate_megabytes_cmd;
 

@@ -25,15 +25,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the meta server's server_state, impl file
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
- */
-
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
@@ -47,6 +38,7 @@
 #include <sstream> // IWYU pragma: keep
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <unordered_map>
 
 #include "app_env_validator.h"
@@ -62,16 +54,16 @@
 #include "meta/meta_service.h"
 #include "meta/meta_state_service.h"
 #include "meta/partition_guardian.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_bulk_load_service.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/security/access_controller.h"
+#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"
@@ -85,11 +77,9 @@
 #include "utils/config_api.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/singleton.h"
+#include "utils/metrics.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
-
-using namespace dsn;
 
 namespace dsn {
 namespace replication {
@@ -214,41 +204,6 @@ void server_state::initialize(meta_service *meta_svc, const std::string &apps_ro
     _apps_root = apps_root;
     _add_secondary_enable_flow_control = FLAGS_add_secondary_enable_flow_control;
     _add_secondary_max_count_for_one_node = FLAGS_add_secondary_max_count_for_one_node;
-
-    _dead_partition_count.init_app_counter("eon.server_state",
-                                           "dead_partition_count",
-                                           COUNTER_TYPE_NUMBER,
-                                           "current dead partition count");
-    _unreadable_partition_count.init_app_counter("eon.server_state",
-                                                 "unreadable_partition_count",
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "current unreadable partition count");
-    _unwritable_partition_count.init_app_counter("eon.server_state",
-                                                 "unwritable_partition_count",
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "current unwritable partition count");
-    _writable_ill_partition_count.init_app_counter("eon.server_state",
-                                                   "writable_ill_partition_count",
-                                                   COUNTER_TYPE_NUMBER,
-                                                   "current writable ill partition count");
-    _healthy_partition_count.init_app_counter("eon.server_state",
-                                              "healthy_partition_count",
-                                              COUNTER_TYPE_NUMBER,
-                                              "current healthy partition count");
-    _recent_update_config_count.init_app_counter("eon.server_state",
-                                                 "recent_update_config_count",
-                                                 COUNTER_TYPE_VOLATILE_NUMBER,
-                                                 "update configuration count in the recent period");
-    _recent_partition_change_unwritable_count.init_app_counter(
-        "eon.server_state",
-        "recent_partition_change_unwritable_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "partition change to unwritable count in the recent period");
-    _recent_partition_change_writable_count.init_app_counter(
-        "eon.server_state",
-        "recent_partition_change_writable_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "partition change to writable count in the recent period");
 }
 
 bool server_state::spin_wait_staging(int timeout_seconds)
@@ -529,12 +484,14 @@ error_code server_state::initialize_default_apps()
 error_code server_state::sync_apps_to_remote_storage()
 {
     _exist_apps.clear();
+    _table_metric_entities.clear_entities();
     for (auto &kv_pair : _all_apps) {
         if (kv_pair.second->status == app_status::AS_CREATING) {
             CHECK(_exist_apps.find(kv_pair.second->app_name) == _exist_apps.end(),
                   "invalid app name, name = {}",
                   kv_pair.second->app_name);
             _exist_apps.emplace(kv_pair.second->app_name, kv_pair.second);
+            _table_metric_entities.create_entity(kv_pair.first, kv_pair.second->partition_count);
         }
     }
 
@@ -584,6 +541,7 @@ error_code server_state::sync_apps_to_remote_storage()
 
     if (err != ERR_OK) {
         _exist_apps.clear();
+        _table_metric_entities.clear_entities();
         return err;
     }
     for (auto &kv : _all_apps) {
@@ -699,6 +657,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                         if (app->status == app_status::AS_AVAILABLE) {
                             app->status = app_status::AS_CREATING;
                             _exist_apps.emplace(app->app_name, app);
+                            _table_metric_entities.create_entity(app->app_id, app->partition_count);
                         } else if (app->status == app_status::AS_DROPPED) {
                             app->status = app_status::AS_DROPPING;
                         } else {
@@ -726,6 +685,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
 
     _all_apps.clear();
     _exist_apps.clear();
+    _table_metric_entities.clear_entities();
 
     std::string transaction_state;
     storage
@@ -1200,6 +1160,7 @@ void server_state::create_app(dsn::message_ex *msg)
 
             _all_apps.emplace(app->app_id, app);
             _exist_apps.emplace(request.app_name, app);
+            _table_metric_entities.create_entity(app->app_id, app->partition_count);
         }
     }
 
@@ -1217,6 +1178,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state> &app)
         if (ERR_OK == ec) {
             zauto_write_lock l(_lock);
             _exist_apps.erase(app->app_name);
+            _table_metric_entities.remove_entity(app->app_id);
             for (int i = 0; i < app->partition_count; ++i) {
                 drop_partition(app, i);
             }
@@ -1428,6 +1390,8 @@ void server_state::recall_app(dsn::message_ex *msg)
                     target_app->helpers->pending_response = msg;
 
                     _exist_apps.emplace(target_app->app_name, target_app);
+                    _table_metric_entities.create_entity(target_app->app_id,
+                                                         target_app->partition_count);
                 }
             }
         }
@@ -1468,7 +1432,7 @@ void server_state::send_proposal(rpc_address target, const configuration_update_
              proposal.node);
     dsn::message_ex *msg =
         dsn::message_ex::create_request(RPC_CONFIG_PROPOSAL, 0, proposal.config.pid.thread_hash());
-    ::marshall(msg, proposal);
+    dsn::marshall(msg, proposal);
     _meta_svc->send_message(target, msg);
 }
 
@@ -1652,12 +1616,12 @@ void server_state::update_configuration_locally(
         _config_change_subscriber(_all_apps);
     }
 
-    _recent_update_config_count->increment();
+    METRIC_INCREMENT(_table_metric_entities, partition_configuration_changes, gpid);
     if (old_health_status >= HS_WRITABLE_ILL && new_health_status < HS_WRITABLE_ILL) {
-        _recent_partition_change_unwritable_count->increment();
+        METRIC_INCREMENT(_table_metric_entities, unwritable_partition_changes, gpid);
     }
     if (old_health_status < HS_WRITABLE_ILL && new_health_status >= HS_WRITABLE_ILL) {
-        _recent_partition_change_writable_count->increment();
+        METRIC_INCREMENT(_table_metric_entities, writable_partition_changes, gpid);
     }
 }
 
@@ -2449,25 +2413,30 @@ bool server_state::can_run_balancer()
     return true;
 }
 
-void server_state::update_partition_perf_counter()
+void server_state::update_partition_metrics()
 {
-    int counters[HS_MAX_VALUE];
-    ::memset(counters, 0, sizeof(counters));
     auto func = [&](const std::shared_ptr<app_state> &app) {
+        int counters[HS_MAX_VALUE] = {0};
+
         int min_2pc_count =
             _meta_svc->get_options().app_mutation_2pc_min_replica_count(app->max_replica_count);
         for (unsigned int i = 0; i != app->partition_count; ++i) {
             health_status st = partition_health_status(app->partitions[i], min_2pc_count);
             counters[st]++;
         }
+
+        METRIC_SET_TABLE_HEALTH_STATS(_table_metric_entities,
+                                      app->app_id,
+                                      counters[HS_DEAD],
+                                      counters[HS_UNREADABLE],
+                                      counters[HS_UNWRITABLE],
+                                      counters[HS_WRITABLE_ILL],
+                                      counters[HS_HEALTHY]);
+
         return true;
     };
+
     for_each_available_app(_all_apps, func);
-    _dead_partition_count->set(counters[HS_DEAD]);
-    _unreadable_partition_count->set(counters[HS_UNREADABLE]);
-    _unwritable_partition_count->set(counters[HS_UNWRITABLE]);
-    _writable_ill_partition_count->set(counters[HS_WRITABLE_ILL]);
-    _healthy_partition_count->set(counters[HS_HEALTHY]);
 }
 
 bool server_state::check_all_partitions()
@@ -2478,7 +2447,7 @@ bool server_state::check_all_partitions()
 
     zauto_write_lock l(_lock);
 
-    update_partition_perf_counter();
+    update_partition_metrics();
 
     // first the cure stage
     if (level <= meta_function_level::fl_freezed) {

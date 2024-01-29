@@ -26,11 +26,9 @@
 
 #include "common//duplication_common.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <cstdint>
 
+#include "gtest/gtest.h"
 #include "utils/error_code.h"
 
 namespace dsn {

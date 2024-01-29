@@ -26,7 +26,6 @@
 
 #include "log_file.h"
 
-#include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,6 +41,7 @@
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 #include "utils/crc.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
@@ -99,7 +99,7 @@ log_file::~log_file() { close(); }
         return nullptr;
     }
 
-    disk_file *hfile = file::open(path, O_RDONLY | O_BINARY, 0);
+    disk_file *hfile = file::open(path, file::FileOpenType::kReadOnly);
     if (!hfile) {
         err = ERR_FILE_OPERATION_FAILED;
         LOG_WARNING("open log file {} failed", path);
@@ -155,7 +155,7 @@ log_file::~log_file() { close(); }
         return nullptr;
     }
 
-    disk_file *hfile = file::open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
+    disk_file *hfile = file::open(path, file::FileOpenType::kWriteOnly);
     if (!hfile) {
         LOG_WARNING("create log {} failed", path);
         return nullptr;
@@ -166,20 +166,22 @@ log_file::~log_file() { close(); }
 
 log_file::log_file(
     const char *path, disk_file *handle, int index, int64_t start_offset, bool is_read)
-    : _is_read(is_read)
+    : _crc32(0),
+      _start_offset(start_offset),
+      _end_offset(start_offset),
+      _handle(handle),
+      _is_read(is_read),
+      _path(path),
+      _index(index),
+      _last_write_time(0)
 {
-    _start_offset = start_offset;
-    _end_offset = start_offset;
-    _handle = handle;
-    _path = path;
-    _index = index;
-    _crc32 = 0;
-    _last_write_time = 0;
     memset(&_header, 0, sizeof(_header));
 
     if (is_read) {
         int64_t sz;
-        CHECK(dsn::utils::filesystem::file_size(_path, sz), "fail to get file size of {}.", _path);
+        CHECK(dsn::utils::filesystem::file_size(_path, dsn::utils::FileDataType::kSensitive, sz),
+              "fail to get file size of {}.",
+              _path);
         _end_offset += sz;
     }
 }
@@ -268,6 +270,7 @@ aio_task_ptr log_file::commit_log_block(log_block &block,
     log_appender pending(offset, block);
     return commit_log_blocks(pending, evt, tracker, std::move(callback), hash);
 }
+
 aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
                                          dsn::task_code evt,
                                          dsn::task_tracker *tracker,
@@ -333,7 +336,7 @@ aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
                                  hash);
     }
 
-    if (utils::FLAGS_enable_latency_tracer) {
+    if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
         tsk->_tracer->set_parent_point_name("commit_pending_mutations");
         tsk->_tracer->set_description("log");
         for (const auto &mutation : pending.mutations()) {
@@ -357,7 +360,7 @@ void log_file::reset_stream(size_t offset /*default = 0*/)
     }
 }
 
-decree log_file::previous_log_max_decree(const dsn::gpid &pid)
+decree log_file::previous_log_max_decree(const dsn::gpid &pid) const
 {
     auto it = _previous_log_max_decrees.find(pid);
     return it == _previous_log_max_decrees.end() ? 0 : it->second.max_decree;

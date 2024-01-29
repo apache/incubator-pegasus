@@ -28,15 +28,19 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+        absl::flat_hash_set
+        absl::strings
         pegasus_geo_lib
         s2testing
         s2
         pegasus_client_static
-        RocksDB::rocksdb
-        dsn_utils
-        )
+        rocksdb
+        lz4
+        zstd
+        snappy
+        dsn_utils)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES "config.ini")
 

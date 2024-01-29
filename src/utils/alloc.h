@@ -17,17 +17,17 @@
 
 #pragma once
 
+#include <algorithm> // IWYU pragma: keep
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <new>
+
 #include "utils/ports.h"
 
 // The check for the definition of CACHELINE_SIZE has to be put after including "utils/ports.h",
 // where CACHELINE_SIZE is defined.
 #ifdef CACHELINE_SIZE
-
-#include <stddef.h>
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <new>
 
 #ifndef NDEBUG
 #include "utils/fmt_logging.h"

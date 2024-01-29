@@ -17,9 +17,6 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/options.h>
 #include <stdint.h>
 #include <atomic>
@@ -27,6 +24,7 @@
 #include <memory>
 #include <string>
 
+#include "gtest/gtest.h"
 #include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
 #include "runtime/api_layer1.h"
@@ -110,7 +108,9 @@ public:
     }
 };
 
-TEST_F(manual_compact_service_test, check_compact_disabled)
+INSTANTIATE_TEST_SUITE_P(, manual_compact_service_test, ::testing::Values(false, true));
+
+TEST_P(manual_compact_service_test, check_compact_disabled)
 {
     std::map<std::string, std::string> envs;
     check_compact_disabled(envs, false);
@@ -134,7 +134,7 @@ TEST_F(manual_compact_service_test, check_compact_disabled)
     check_compact_disabled(envs, false);
 }
 
-TEST_F(manual_compact_service_test, check_once_compact)
+TEST_P(manual_compact_service_test, check_once_compact)
 {
     // suppose compacted at 1500000000
     set_compact_time(compacted_ts);
@@ -167,7 +167,7 @@ TEST_F(manual_compact_service_test, check_once_compact)
     check_once_compact(envs, true);
 }
 
-TEST_F(manual_compact_service_test, check_periodic_compact)
+TEST_P(manual_compact_service_test, check_periodic_compact)
 {
     std::map<std::string, std::string> envs;
 
@@ -245,7 +245,7 @@ TEST_F(manual_compact_service_test, check_periodic_compact)
     check_periodic_compact(envs, false);
 }
 
-TEST_F(manual_compact_service_test, extract_manual_compact_opts)
+TEST_P(manual_compact_service_test, extract_manual_compact_opts)
 {
     // init _db max level
     set_num_level(7);
@@ -283,7 +283,7 @@ TEST_F(manual_compact_service_test, extract_manual_compact_opts)
     ASSERT_EQ(out.target_level, -1);
 }
 
-TEST_F(manual_compact_service_test, check_manual_compact_state_0_interval)
+TEST_P(manual_compact_service_test, check_manual_compact_state_0_interval)
 {
     FLAGS_manual_compact_min_interval_seconds = 0;
 
@@ -299,7 +299,7 @@ TEST_F(manual_compact_service_test, check_manual_compact_state_0_interval)
     check_manual_compact_state(false, "2nd start not ok");
 }
 
-TEST_F(manual_compact_service_test, check_manual_compact_state_1h_interval)
+TEST_P(manual_compact_service_test, check_manual_compact_state_1h_interval)
 {
     FLAGS_manual_compact_min_interval_seconds = 3600;
 

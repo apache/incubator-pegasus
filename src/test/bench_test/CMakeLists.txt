@@ -30,13 +30,15 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
         pegasus_client_static
         dsn_utils
-        RocksDB::rocksdb
+        rocksdb
+        lz4
+        zstd
+        snappy
         sasl2
         gssapi_krb5
-        krb5
-        )
+        krb5)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES "config.ini")
 

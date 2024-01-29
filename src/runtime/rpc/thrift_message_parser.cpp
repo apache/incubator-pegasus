@@ -27,7 +27,6 @@
 #include "thrift_message_parser.h"
 
 #include <string.h>
-#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,7 +45,8 @@
 #include "utils/crc.h"
 #include "utils/endians.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "utils/fmt_utils.h"
+#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -158,7 +158,7 @@ bool thrift_message_parser::parse_request_header(message_reader *reader, int &re
     }
 
     // The first 4 bytes is "THFT"
-    data_input input(buf);
+    data_input input(buf.to_string_view());
     if (!utils::mequals(buf.data(), "THFT", 4)) {
         LOG_ERROR("hdr_type mismatch {}", message_parser::get_debug_string(buf.data()));
         read_next = -1;
@@ -340,7 +340,7 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     // first total length, but we don't know the length, so firstly we put a placeholder
     header_proto.writeI32(0);
     // then the error_message
-    header_proto.writeString(string_view(header->server.error_name));
+    header_proto.writeString(absl::string_view(header->server.error_name));
     // then the thrift message begin
     header_proto.writeMessageBegin(
         header->rpc_name, ::apache::thrift::protocol::T_REPLY, header->id);
@@ -428,3 +428,5 @@ thrift_message_parser::thrift_message_parser()
 thrift_message_parser::~thrift_message_parser() = default;
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(apache::thrift::protocol::TMessageType);

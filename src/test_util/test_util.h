@@ -19,11 +19,77 @@
 
 #pragma once
 
+#include <fmt/core.h>
+#include <gtest/gtest.h>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <functional>
+#include <string>
 
+#include "runtime/api_layer1.h"
+#include "utils/env.h"
+// IWYU refused to include "utils/defer.h" everywhere, both in .h and .cpp files.
+// However, once "utils/defer.h" is not included, it is inevitable that compilation
+// will fail since dsn::defer is referenced. Thus force IWYU to keep it.
+#include "utils/defer.h" // IWYU pragma: keep
+#include "utils/flags.h"
 #include "utils/test_macros.h"
 
+namespace dsn {
+namespace replication {
+class file_meta;
+} // namespace replication
+} // namespace dsn
+
+DSN_DECLARE_bool(encrypt_data_at_rest);
+
+// Save the current value of a flag and restore it at the end of the function.
+#define PRESERVE_FLAG(name)                                                                        \
+    auto PRESERVED_FLAGS_##name = FLAGS_##name;                                                    \
+    auto PRESERVED_FLAGS_##name##_cleanup =                                                        \
+        dsn::defer([PRESERVED_FLAGS_##name]() { FLAGS_##name = PRESERVED_FLAGS_##name; })
+
 namespace pegasus {
+
+// A base parameterized test class for testing enable/disable encryption at rest.
+class encrypt_data_test_base : public testing::TestWithParam<bool>
+{
+public:
+    encrypt_data_test_base()
+    {
+        FLAGS_encrypt_data_at_rest = GetParam();
+        // The size of an actual encrypted file should plus kEncryptionHeaderkSize bytes if consider
+        // it as kNonSensitive.
+        if (FLAGS_encrypt_data_at_rest) {
+            _extra_encrypted_file_size = dsn::utils::kEncryptionHeaderkSize;
+        }
+    }
+
+    uint64_t extra_encrypted_file_size() const { return _extra_encrypted_file_size; }
+
+private:
+    uint64_t _extra_encrypted_file_size = 0;
+};
+
+class stop_watch
+{
+public:
+    stop_watch() { _start_ms = dsn_now_ms(); }
+    void stop_and_output(const std::string &msg)
+    {
+        auto duration_ms =
+            std::chrono::duration_cast<std::chrono::duration<double>>(
+                std::chrono::milliseconds(static_cast<int64_t>(dsn_now_ms() - _start_ms)))
+                .count();
+        fmt::print(stdout, "{}, cost {} ms\n", msg, duration_ms);
+    }
+
+private:
+    uint64_t _start_ms = 0;
+};
+
+void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm);
 
 #define ASSERT_EVENTUALLY(expr)                                                                    \
     do {                                                                                           \
@@ -39,7 +105,7 @@ namespace pegasus {
 
 #define ASSERT_IN_TIME_WITH_FIXED_INTERVAL(expr, sec)                                              \
     do {                                                                                           \
-        AssertEventually(expr, sec, WaitBackoff::NONE);                                            \
+        AssertEventually(expr, sec, ::pegasus::WaitBackoff::NONE);                                 \
         NO_PENDING_FATALS();                                                                       \
     } while (0)
 

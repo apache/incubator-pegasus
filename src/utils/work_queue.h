@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the work queue abstraction
- *
- * Revision history:
- *     Oct., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "utils/synchronize.h"
@@ -41,6 +32,7 @@
 
 namespace dsn {
 
+// The work queue abstraction class.
 template <typename T>
 class work_queue
 {

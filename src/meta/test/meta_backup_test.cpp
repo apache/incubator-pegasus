@@ -15,9 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -29,6 +26,7 @@
 #include "common/backup_common.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "meta/backup_engine.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
@@ -38,6 +36,7 @@
 #include "meta_test_base.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
@@ -108,7 +107,8 @@ public:
             cold_backup::get_app_metadata_file(backup_root, app->app_name, app_id, backup_id);
 
         int64_t metadata_file_size = 0;
-        if (!dsn::utils::filesystem::file_size(metadata_file, metadata_file_size)) {
+        if (!dsn::utils::filesystem::file_size(
+                metadata_file, dsn::utils::FileDataType::kSensitive, metadata_file_size)) {
             return false;
         }
         return metadata_file_size > 0;

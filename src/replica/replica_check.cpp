@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replica membership state periodical checking
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -50,8 +41,6 @@
 #include "duplication/replica_duplicator_manager.h"
 #include "metadata_types.h"
 #include "mutation.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
@@ -67,11 +56,15 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
+#include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
 namespace dsn {
 namespace replication {
+
+// The replica membership state periodical checking part of replica.
+
 DSN_DEFINE_bool(replication, group_check_disabled, false, "whether group check is disabled");
 DSN_DEFINE_int32(replication,
                  group_check_interval_ms,
@@ -82,7 +75,7 @@ DSN_DECLARE_bool(empty_write_disabled);
 
 void replica::init_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_init_group_check", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("replica_init_group_check", [](absl::string_view) {});
 
     _checker.only_one_thread_access();
 
@@ -102,7 +95,7 @@ void replica::init_group_check()
 
 void replica::broadcast_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](absl::string_view) {});
 
     CHECK_NOTNULL(_primary_states.group_check_task, "");
 
@@ -255,7 +248,7 @@ void replica::on_group_check_reply(error_code err,
             err = resp->err;
         }
         handle_remote_failure(req->config.status, req->node, err, "group check");
-        _stub->_counter_replicas_recent_group_check_fail_count->increment();
+        METRIC_VAR_INCREMENT(group_check_failed_requests);
     } else {
         if (resp->learner_status_ == learner_status::LearningSucceeded &&
             req->config.status == partition_status::PS_POTENTIAL_SECONDARY) {

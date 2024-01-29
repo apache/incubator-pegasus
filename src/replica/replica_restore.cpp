@@ -32,7 +32,6 @@
 #include "block_service/block_service_manager.h"
 #include "common/backup_common.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
@@ -49,10 +48,11 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/utils.h"
+#include "utils/load_dump_object.h"
 
 using namespace dsn::dist::block_service;
 
@@ -93,46 +93,6 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
     return true;
 }
 
-bool replica::read_cold_backup_metadata(const std::string &file,
-                                        cold_backup_metadata &backup_metadata)
-{
-    if (!::dsn::utils::filesystem::file_exists(file)) {
-        LOG_ERROR_PREFIX(
-            "checkpoint on remote storage media is damaged, coz file({}) doesn't exist", file);
-        return false;
-    }
-    int64_t file_sz = 0;
-    if (!::dsn::utils::filesystem::file_size(file, file_sz)) {
-        LOG_ERROR_PREFIX("get file({}) size failed", file);
-        return false;
-    }
-    std::shared_ptr<char> buf = utils::make_shared_array<char>(file_sz + 1);
-
-    std::ifstream fin(file, std::ifstream::in);
-    if (!fin.is_open()) {
-        LOG_ERROR_PREFIX("open file({}) failed", file);
-        return false;
-    }
-    fin.read(buf.get(), file_sz);
-    CHECK_EQ_MSG(file_sz,
-                 fin.gcount(),
-                 "{}: read file({}) failed, need {}, but read {}",
-                 name(),
-                 file,
-                 file_sz,
-                 fin.gcount());
-    fin.close();
-
-    buf.get()[fin.gcount()] = '\0';
-    blob bb;
-    bb.assign(std::move(buf), 0, file_sz);
-    if (!::dsn::json::json_forwarder<cold_backup_metadata>::decode(bb, backup_metadata)) {
-        LOG_ERROR_PREFIX("file({}) under checkpoint is damaged", file);
-        return false;
-    }
-    return true;
-}
-
 error_code replica::download_checkpoint(const configuration_restore_request &req,
                                         const std::string &remote_chkpt_dir,
                                         const std::string &local_chkpt_dir)
@@ -160,7 +120,8 @@ error_code replica::download_checkpoint(const configuration_restore_request &req
                 const std::string file_name =
                     utils::filesystem::path_combine(local_chkpt_dir, f_meta.name);
                 if (download_err == ERR_OK || download_err == ERR_PATH_ALREADY_EXIST) {
-                    if (!utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
+                    if (!utils::filesystem::verify_file(
+                            file_name, utils::FileDataType::kSensitive, f_meta.md5, f_meta.size)) {
                         download_err = ERR_CORRUPTION;
                     } else if (download_err == ERR_PATH_ALREADY_EXIST) {
                         download_err = ERR_OK;
@@ -218,13 +179,14 @@ error_code replica::get_backup_metadata(block_filesystem *fs,
         return err;
     }
 
-    // parse cold_backup_meta from metadata file
+    // Load cold_backup_metadata from metadata file.
     const std::string local_backup_metada_file =
         utils::filesystem::path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
-    if (!read_cold_backup_metadata(local_backup_metada_file, backup_metadata)) {
-        LOG_ERROR_PREFIX("read cold_backup_metadata from file({}) failed",
+    auto ec = dsn::utils::load_rjobj_from_file(local_backup_metada_file, &backup_metadata);
+    if (ec != ERR_OK) {
+        LOG_ERROR_PREFIX("load cold_backup_metadata from file({}) failed",
                          local_backup_metada_file);
-        return ERR_FILE_OPERATION_FAILED;
+        return ec;
     }
 
     _chkpt_total_size = backup_metadata.checkpoint_total_size;

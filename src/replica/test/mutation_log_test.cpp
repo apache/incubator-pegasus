@@ -26,25 +26,26 @@
 
 #include "replica/mutation_log.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <stdio.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <sys/types.h>
 #include <unordered_map>
 
 #include "aio/aio_task.h"
+#include "aio/file_io.h"
 #include "backup_types.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
+#include "gtest/gtest.h"
 #include "replica/log_block.h"
 #include "replica/log_file.h"
 #include "replica/mutation.h"
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
+#include "test_util/test_util.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
+#include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -56,43 +57,32 @@ class message_ex;
 using namespace ::dsn;
 using namespace ::dsn::replication;
 
-static void copy_file(const char *from_file, const char *to_file, int64_t to_size = -1)
-{
-    int64_t from_size;
-    ASSERT_TRUE(dsn::utils::filesystem::file_size(from_file, from_size));
-    ASSERT_LE(to_size, from_size);
-    FILE *from = fopen(from_file, "rb");
-    ASSERT_TRUE(from != nullptr);
-    FILE *to = fopen(to_file, "wb");
-    ASSERT_TRUE(to != nullptr);
-    if (to_size == -1)
-        to_size = from_size;
-    if (to_size > 0) {
-        std::unique_ptr<char[]> buf(new char[to_size]);
-        auto n = fread(buf.get(), 1, to_size, from);
-        ASSERT_EQ(to_size, n);
-        n = fwrite(buf.get(), 1, to_size, to);
-        ASSERT_EQ(to_size, n);
-    }
-    int r = fclose(from);
-    ASSERT_EQ(0, r);
-    r = fclose(to);
-    ASSERT_EQ(0, r);
-}
-
 static void overwrite_file(const char *file, int offset, const void *buf, int size)
 {
-    FILE *f = fopen(file, "r+b");
-    ASSERT_TRUE(f != nullptr);
-    int r = fseek(f, offset, SEEK_SET);
-    ASSERT_EQ(0, r);
-    size_t n = fwrite(buf, 1, size, f);
-    ASSERT_EQ(size, n);
-    r = fclose(f);
-    ASSERT_EQ(0, r);
+    auto wfile = file::open(file, file::FileOpenType::kWriteOnly);
+    ASSERT_NE(wfile, nullptr);
+    auto t = ::dsn::file::write(wfile,
+                                (const char *)buf,
+                                size,
+                                offset,
+                                LPC_AIO_IMMEDIATE_CALLBACK,
+                                nullptr,
+                                [=](::dsn::error_code err, size_t n) {
+                                    CHECK_EQ(ERR_OK, err);
+                                    CHECK_EQ(size, n);
+                                });
+    t->wait();
+    ASSERT_EQ(ERR_OK, file::flush(wfile));
+    ASSERT_EQ(ERR_OK, file::close(wfile));
 }
 
-TEST(replication, log_file)
+class replication_test : public pegasus::encrypt_data_test_base
+{
+};
+
+INSTANTIATE_TEST_SUITE_P(, replication_test, ::testing::Values(false, true));
+
+TEST_P(replication_test, log_file)
 {
     replica_log_info_map mdecrees;
     gpid gpid(1, 0);
@@ -121,7 +111,7 @@ TEST(replication, log_file)
             lf->write_file_header(temp_writer, mdecrees);
             writer->add(temp_writer.get_buffer());
             ASSERT_EQ(mdecrees, lf->previous_log_max_decrees());
-            log_file_header &h = lf->header();
+            const auto &h = lf->header();
             ASSERT_EQ(100, h.start_global_offset);
         }
 
@@ -188,7 +178,7 @@ TEST(replication, log_file)
 
     // bad file data: empty file
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.0"));
-    copy_file(fpath.c_str(), "log.1.0", 0);
+    dsn::utils::copy_file_by_size(fpath, "log.1.0", 0);
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.0"));
     lf = log_file::open_read("log.1.0", err);
     ASSERT_TRUE(lf == nullptr);
@@ -198,7 +188,7 @@ TEST(replication, log_file)
 
     // bad file data: incomplete log_block_header
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.1"));
-    copy_file(fpath.c_str(), "log.1.1", sizeof(log_block_header) - 1);
+    dsn::utils::copy_file_by_size(fpath, "log.1.1", sizeof(log_block_header) - 1);
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.1"));
     lf = log_file::open_read("log.1.1", err);
     ASSERT_TRUE(lf == nullptr);
@@ -208,7 +198,7 @@ TEST(replication, log_file)
 
     // bad file data: bad log_block_header (magic = 0xfeadbeef)
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.2"));
-    copy_file(fpath.c_str(), "log.1.2");
+    dsn::utils::copy_file_by_size(fpath, "log.1.2");
     int32_t bad_magic = 0xfeadbeef;
     overwrite_file("log.1.2", FIELD_OFFSET(log_block_header, magic), &bad_magic, sizeof(bad_magic));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.2"));
@@ -220,7 +210,7 @@ TEST(replication, log_file)
 
     // bad file data: bad log_block_header (crc check failed)
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.3"));
-    copy_file(fpath.c_str(), "log.1.3");
+    dsn::utils::copy_file_by_size(fpath, "log.1.3");
     int32_t bad_crc = 0;
     overwrite_file("log.1.3", FIELD_OFFSET(log_block_header, body_crc), &bad_crc, sizeof(bad_crc));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.3"));
@@ -232,14 +222,13 @@ TEST(replication, log_file)
 
     // bad file data: incomplete block body
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.4"));
-    copy_file(fpath.c_str(), "log.1.4", sizeof(log_block_header) + 1);
+    dsn::utils::copy_file_by_size(fpath, "log.1.4", sizeof(log_block_header) + 1);
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.4"));
     lf = log_file::open_read("log.1.4", err);
     ASSERT_TRUE(lf == nullptr);
     ASSERT_EQ(ERR_INCOMPLETE_DATA, err);
     ASSERT_TRUE(!dsn::utils::filesystem::file_exists("log.1.4"));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists("log.1.4.removed"));
-    ASSERT_TRUE(dsn::utils::filesystem::rename_path("log.1.4.removed", "log.1.4"));
 
     // read the file for test
     offset = 100;
@@ -249,7 +238,7 @@ TEST(replication, log_file)
     ASSERT_EQ(1, lf->index());
     ASSERT_EQ(100, lf->start_offset());
     int64_t sz;
-    ASSERT_TRUE(dsn::utils::filesystem::file_size(fpath, sz));
+    ASSERT_TRUE(dsn::utils::filesystem::file_size(fpath, dsn::utils::FileDataType::kSensitive, sz));
     ASSERT_EQ(lf->start_offset() + sz, lf->end_offset());
 
     // read data
@@ -452,20 +441,22 @@ public:
     }
 };
 
-TEST_F(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
+INSTANTIATE_TEST_SUITE_P(, mutation_log_test, ::testing::Values(false, true));
 
-TEST_F(mutation_log_test, replay_single_file_2000) { test_replay_single_file(2000); }
+TEST_P(mutation_log_test, replay_single_file_1000) { test_replay_single_file(1000); }
 
-TEST_F(mutation_log_test, replay_single_file_5000) { test_replay_single_file(5000); }
+TEST_P(mutation_log_test, replay_single_file_2000) { test_replay_single_file(2000); }
 
-TEST_F(mutation_log_test, replay_single_file_10000) { test_replay_single_file(10000); }
+TEST_P(mutation_log_test, replay_single_file_5000) { test_replay_single_file(5000); }
 
-TEST_F(mutation_log_test, replay_single_file_1) { test_replay_single_file(1); }
+TEST_P(mutation_log_test, replay_single_file_10000) { test_replay_single_file(10000); }
 
-TEST_F(mutation_log_test, replay_single_file_10) { test_replay_single_file(10); }
+TEST_P(mutation_log_test, replay_single_file_1) { test_replay_single_file(1); }
+
+TEST_P(mutation_log_test, replay_single_file_10) { test_replay_single_file(10); }
 
 // mutation_log::open
-TEST_F(mutation_log_test, open)
+TEST_P(mutation_log_test, open)
 {
     std::vector<mutation_ptr> mutations;
 
@@ -498,13 +489,13 @@ TEST_F(mutation_log_test, open)
     }
 }
 
-TEST_F(mutation_log_test, replay_multiple_files_10000_1mb) { test_replay_multiple_files(10000, 1); }
+TEST_P(mutation_log_test, replay_multiple_files_10000_1mb) { test_replay_multiple_files(10000, 1); }
 
-TEST_F(mutation_log_test, replay_multiple_files_20000_1mb) { test_replay_multiple_files(20000, 1); }
+TEST_P(mutation_log_test, replay_multiple_files_20000_1mb) { test_replay_multiple_files(20000, 1); }
 
-TEST_F(mutation_log_test, replay_multiple_files_50000_1mb) { test_replay_multiple_files(50000, 1); }
+TEST_P(mutation_log_test, replay_multiple_files_50000_1mb) { test_replay_multiple_files(50000, 1); }
 
-TEST_F(mutation_log_test, replay_start_decree)
+TEST_P(mutation_log_test, replay_start_decree)
 {
     // decree ranges from [1, 30)
     generate_multiple_log_files(3);
@@ -517,7 +508,7 @@ TEST_F(mutation_log_test, replay_start_decree)
     ASSERT_EQ(mlog->get_log_file_map().size(), 3);
 }
 
-TEST_F(mutation_log_test, reset_from)
+TEST_P(mutation_log_test, reset_from)
 {
     std::vector<mutation_ptr> expected;
     { // writing logs
@@ -565,7 +556,7 @@ TEST_F(mutation_log_test, reset_from)
 
 // multi-threaded testing. ensure reset_from will wait until
 // all previous writes complete.
-TEST_F(mutation_log_test, reset_from_while_writing)
+TEST_P(mutation_log_test, reset_from_while_writing)
 {
     std::vector<mutation_ptr> expected;
     { // writing logs
@@ -606,5 +597,6 @@ TEST_F(mutation_log_test, reset_from_while_writing)
     mlog->flush();
     ASSERT_EQ(actual.size(), expected.size());
 }
+
 } // namespace replication
 } // namespace dsn

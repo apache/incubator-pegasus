@@ -17,14 +17,12 @@
  * under the License.
  */
 
-#include <gtest/gtest-message.h>
-#include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <string.h>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
@@ -36,7 +34,7 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_spec.h"
 #include "runtime/task/task_tracker.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
@@ -47,12 +45,12 @@ TEST(host_port_test, host_port_to_string)
 {
     {
         host_port hp = host_port("localhost", 8080);
-        ASSERT_EQ(std::string("localhost:8080"), hp.to_string());
+        ASSERT_EQ("localhost:8080", hp.to_string());
     }
 
     {
         host_port hp;
-        ASSERT_EQ(std::string("invalid address"), hp.to_string());
+        ASSERT_EQ("invalid host_port", hp.to_string());
     }
 }
 
@@ -89,6 +87,22 @@ TEST(host_port_test, operators)
     ASSERT_NE(hp, hp2);
     ASSERT_FALSE(hp.is_invalid());
     ASSERT_TRUE(hp2.is_invalid());
+
+    std::string hp_str = "localhost:8080";
+    host_port hp3;
+    ASSERT_TRUE(hp3.is_invalid());
+    ASSERT_TRUE(hp3.from_string(hp_str));
+    ASSERT_EQ(hp, hp3);
+    ASSERT_FALSE(hp3.is_invalid());
+
+    host_port hp4;
+    ASSERT_TRUE(hp4.is_invalid());
+    std::string hp_str2 = "pegasus:8080";
+    ASSERT_FALSE(hp4.from_string(hp_str2));
+    ASSERT_TRUE(hp4.is_invalid());
+
+    host_port hp5("localhost", 8081);
+    ASSERT_LT(hp, hp5);
 }
 
 TEST(host_port_test, rpc_group_host_port)
@@ -100,8 +114,8 @@ TEST(host_port_test, rpc_group_host_port)
     host_port hp_grp;
     hp_grp.assign_group("test_group");
     ASSERT_EQ(HOST_TYPE_GROUP, hp_grp.type());
-    rpc_group_host_port *g = hp_grp.group_host_port();
-    ASSERT_EQ(std::string("test_group"), g->name());
+    const auto &g = hp_grp.group_host_port();
+    ASSERT_STREQ("test_group", g->name());
 
     // invalid_hp
     ASSERT_FALSE(g->remove(hp));
@@ -155,6 +169,40 @@ TEST(host_port_test, rpc_group_host_port)
     ASSERT_FALSE(g->contains(hp2));
     ASSERT_EQ(0u, g->members().size());
     ASSERT_EQ(invalid_hp, g->leader());
+
+    // operator <
+    host_port hp_grp1;
+    hp_grp1.assign_group("test_group");
+    if (hp_grp.group_host_port().get() < hp_grp1.group_host_port().get()) {
+        ASSERT_LT(hp_grp, hp_grp1);
+    } else {
+        ASSERT_FALSE(hp_grp < hp_grp1);
+    }
+
+    // address_group -> host_port_group
+    rpc_address addr("127.0.0.1", 8080);
+    rpc_address addr2("127.0.0.1", 8081);
+
+    rpc_address addr_grp;
+    addr_grp.assign_group("test_group");
+    ASSERT_EQ(HOST_TYPE_GROUP, addr_grp.type());
+
+    auto g_addr = addr_grp.group_address();
+    ASSERT_STREQ("test_group", g_addr->name());
+
+    ASSERT_TRUE(g_addr->add(addr));
+    g_addr->set_leader(addr2);
+    ASSERT_EQ(addr2, g_addr->leader());
+    ASSERT_EQ(2, g_addr->count());
+
+    host_port hp_grp2;
+    hp_grp2 = host_port(addr_grp);
+    ASSERT_EQ(HOST_TYPE_GROUP, hp_grp2.type());
+
+    auto g_hp = hp_grp2.group_host_port();
+    ASSERT_STREQ("test_group", g_hp->name());
+    ASSERT_EQ(hp2, g_hp->leader());
+    ASSERT_EQ(2, g_hp->count());
 }
 
 TEST(host_port_test, transfer_rpc_address)
@@ -193,27 +241,26 @@ TEST(host_port_test, dns_resolver)
     {
         host_port hp_grp;
         hp_grp.assign_group("test_group");
-        rpc_group_host_port *g = hp_grp.group_host_port();
+        auto g_hp = hp_grp.group_host_port();
 
         host_port hp1("localhost", 8080);
-        ASSERT_TRUE(g->add(hp1));
+        ASSERT_TRUE(g_hp->add(hp1));
         host_port hp2("localhost", 8081);
-        g->set_leader(hp2);
+        g_hp->set_leader(hp2);
 
         auto addr_grp = resolver.resolve_address(hp_grp);
+        auto g_addr = addr_grp.group_address();
 
-        ASSERT_EQ(addr_grp.group_address()->is_update_leader_automatically(),
-                  hp_grp.group_host_port()->is_update_leader_automatically());
-        ASSERT_EQ(strcmp(addr_grp.group_address()->name(), hp_grp.group_host_port()->name()), 0);
-        ASSERT_EQ(addr_grp.group_address()->count(), hp_grp.group_host_port()->count());
-        ASSERT_EQ(host_port(addr_grp.group_address()->leader()),
-                  hp_grp.group_host_port()->leader());
+        ASSERT_EQ(g_addr->is_update_leader_automatically(), g_hp->is_update_leader_automatically());
+        ASSERT_STREQ(g_addr->name(), g_hp->name());
+        ASSERT_EQ(g_addr->count(), g_hp->count());
+        ASSERT_EQ(host_port(g_addr->leader()), g_hp->leader());
     }
 }
 
 void send_and_check_host_port_by_serialize(const host_port &hp, dsn_msg_serialize_format t)
 {
-    auto hp_str = hp.to_string();
+    const auto &hp_str = hp.to_string();
     ::dsn::rpc_address server("localhost", 20101);
 
     dsn::message_ptr msg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);

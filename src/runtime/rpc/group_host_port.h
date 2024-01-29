@@ -44,7 +44,7 @@ static constexpr int kInvalidIndex = -1;
 //  group.group_host_port()->add(host_port("test_fqdn", 34602));
 //  group.group_host_port()->add(host_port("test_fqdn", 34603));
 //
-class rpc_group_host_port : public ref_counter
+class rpc_group_host_port
 {
 public:
     rpc_group_host_port(const char *name);
@@ -170,12 +170,12 @@ inline void rpc_group_host_port::leader_forward()
 
 inline void rpc_group_host_port::set_leader(const host_port &hp)
 {
-    CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
     awl_t l(_lock);
     if (hp.is_invalid()) {
         _leader_index = kInvalidIndex;
         return;
     }
+    CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
     for (int i = 0; i < _members.size(); i++) {
         if (_members[i] == hp) {
             _leader_index = i;

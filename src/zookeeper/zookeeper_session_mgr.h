@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a singleton to manager all zookeeper sessions, so that each zookeeper session
- *     can be shared by all threads in one service-node. The Header file.
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
-
 #include "utils/singleton.h"
 
 #pragma once
@@ -44,6 +35,8 @@ namespace dist {
 
 class zookeeper_session;
 
+// A singleton to manage all zookeeper sessions, so that each zookeeper session
+// can be shared by all threads in one service-node.
 class zookeeper_session_mgr : public utils::singleton<zookeeper_session_mgr>
 {
 public:

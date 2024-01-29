@@ -24,29 +24,18 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-// IWYU pragma: no_include <gtest/gtest-message.h>
-#include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stddef.h>
 #include <list>
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
@@ -56,8 +45,8 @@
 #include "utils/strings.h"
 #include "utils/utils.h"
 
-using namespace ::dsn;
-using namespace ::dsn::utils;
+namespace dsn {
+namespace utils {
 
 TEST(core, get_last_component)
 {
@@ -170,9 +159,9 @@ const std::vector<c_string_equality> c_string_equality_tests = {
     {"Abc", "a", false, false},
 };
 
-INSTANTIATE_TEST_CASE_P(StringTest,
-                        CStringEqualityTest,
-                        testing::ValuesIn(c_string_equality_tests));
+INSTANTIATE_TEST_SUITE_P(StringTest,
+                         CStringEqualityTest,
+                         testing::ValuesIn(c_string_equality_tests));
 
 using c_string_n_bytes_equality = std::tuple<const char *, const char *, size_t, bool, bool, bool>;
 
@@ -254,9 +243,9 @@ const std::vector<c_string_n_bytes_equality> c_string_n_bytes_equality_tests = {
     {"abc\0xyz", "abc\0xyz", 7, true, true, true},
 };
 
-INSTANTIATE_TEST_CASE_P(StringTest,
-                        CStringNBytesEqualityTest,
-                        testing::ValuesIn(c_string_n_bytes_equality_tests));
+INSTANTIATE_TEST_SUITE_P(StringTest,
+                         CStringNBytesEqualityTest,
+                         testing::ValuesIn(c_string_n_bytes_equality_tests));
 
 // For containers such as std::unordered_set, the expected result will be deduplicated
 // at initialization. Therefore, it can be used to compare with actual result safely.
@@ -579,3 +568,37 @@ TEST(core, get_intersection)
     ASSERT_EQ(intersection.size(), 1);
     ASSERT_EQ(*intersection.begin(), 3);
 }
+
+struct has_space_case
+{
+    std::string str;
+    bool expected_has_space;
+};
+
+class HasSpaceTest : public testing::TestWithParam<has_space_case>
+{
+};
+
+TEST_P(HasSpaceTest, HasSpace)
+{
+    const auto &space_case = GetParam();
+    EXPECT_EQ(space_case.expected_has_space, has_space(space_case.str));
+}
+
+const std::vector<has_space_case> has_space_tests = {
+    {"abc xyz", true},
+    {" abcxyz", true},
+    {"abcxyz ", true},
+    {"abc  xyz", true},
+    {"abc\r\nxyz", true},
+    {"abc\r\nxyz", true},
+    {"abc\txyz", true},
+    {"abc\txyz", true},
+    {"abcxyz", false},
+    {"abc_xyz", false},
+};
+
+INSTANTIATE_TEST_SUITE_P(StringTest, HasSpaceTest, testing::ValuesIn(has_space_tests));
+
+} // namespace utils
+} // namespace dsn

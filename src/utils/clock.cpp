@@ -17,6 +17,7 @@
 
 #include "clock.h"
 
+#include "runtime/api_layer1.h"
 #include "time_utils.h"
 
 uint64_t dsn_now_ns() { return dsn::utils::clock::instance()->now_ns(); }

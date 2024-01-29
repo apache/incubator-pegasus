@@ -20,6 +20,7 @@
 #pragma once
 
 #include <fmt/ostream.h>
+#include <rocksdb/status.h>
 
 #include "utils/api_utilities.h"
 
@@ -27,18 +28,19 @@
 // instead we use fmt::format.
 // TODO(wutao1): prevent construction of std::string for each log.
 
-#define dlog_f(level, ...)                                                                         \
+// __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.
+#define LOG(level, ...)                                                                            \
     do {                                                                                           \
-        if (level >= dsn_log_start_level)                                                          \
-            dsn_log(                                                                               \
+        if (level >= log_start_level)                                                              \
+            global_log(                                                                            \
                 __FILENAME__, __FUNCTION__, __LINE__, level, fmt::format(__VA_ARGS__).c_str());    \
     } while (false)
 
-#define LOG_DEBUG(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define LOG_INFO(...) dlog_f(LOG_LEVEL_INFO, __VA_ARGS__)
-#define LOG_WARNING(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
-#define LOG_ERROR(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
-#define LOG_FATAL(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
+#define LOG_DEBUG(...) LOG(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define LOG_INFO(...) LOG(LOG_LEVEL_INFO, __VA_ARGS__)
+#define LOG_WARNING(...) LOG(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define LOG_ERROR(...) LOG(LOG_LEVEL_ERROR, __VA_ARGS__)
+#define LOG_FATAL(...) LOG(LOG_LEVEL_FATAL, __VA_ARGS__)
 
 #define LOG_WARNING_IF(x, ...)                                                                     \
     do {                                                                                           \
@@ -54,6 +56,11 @@
         }                                                                                          \
     } while (false)
 
+#define LOG_WARNING_IF_PREFIX(x, ...)                                                              \
+    LOG_WARNING_IF(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_ERROR_IF_PREFIX(x, ...)                                                                \
+    LOG_ERROR_IF(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+
 #define CHECK_EXPRESSION(expression, evaluation, ...)                                              \
     do {                                                                                           \
         if (dsn_unlikely(!(evaluation))) {                                                         \
@@ -64,7 +71,8 @@
     } while (false)
 
 #define CHECK(x, ...) CHECK_EXPRESSION(x, x, __VA_ARGS__)
-#define CHECK_NOTNULL(p, ...) CHECK(p != nullptr, __VA_ARGS__)
+#define CHECK_NOTNULL(p, ...) CHECK((p) != nullptr, __VA_ARGS__)
+#define CHECK_NULL(p, ...) CHECK((p) == nullptr, __VA_ARGS__)
 
 // Macros for writing log message prefixed by log_prefix().
 #define LOG_DEBUG_PREFIX(...) LOG_DEBUG("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
@@ -270,6 +278,26 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
     do {                                                                                           \
         ::dsn::error_code _err = (s);                                                              \
         LOG_AND_RETURN_NOT_TRUE(level, _err == ::dsn::ERR_OK, _err, __VA_ARGS__);                  \
+    } while (0)
+
+// Return the given rocksdb::Status of 'exp' if it is not OK.
+#define LOG_AND_RETURN_NOT_RDB_OK(level, exp, ...)                                                 \
+    do {                                                                                           \
+        const auto &_s = (exp);                                                                    \
+        if (dsn_unlikely(!_s.ok())) {                                                              \
+            LOG_##level("{}: {}", _s.ToString(), fmt::format(__VA_ARGS__));                        \
+            return _s;                                                                             \
+        }                                                                                          \
+    } while (0)
+
+// Return the given 'err' code if 'exp' is not OK.
+#define LOG_AND_RETURN_CODE_NOT_RDB_OK(level, exp, err, ...)                                       \
+    do {                                                                                           \
+        const auto &_s = (exp);                                                                    \
+        if (dsn_unlikely(!_s.ok())) {                                                              \
+            LOG_##level("{}: {}", _s.ToString(), fmt::format(__VA_ARGS__));                        \
+            return err;                                                                            \
+        }                                                                                          \
     } while (0)
 
 #ifndef NDEBUG

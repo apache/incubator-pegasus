@@ -1,0 +1,38 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: Upload artifact
+runs:
+  using: composite
+  steps:
+    - name: Tar files
+      run: |
+        mv thirdparty/hadoop-bin ./
+        mv thirdparty/zookeeper-bin ./
+        rm -rf thirdparty
+        # The following operations are tricky, these directories and files don't exist if not build with '--test'.
+        # When build binaries for client tests, it's not needed to add '--test'.
+        mkdir -p build/latest/bin
+        mkdir -p build/latest/src/server/test
+        touch build/latest/src/server/test/config.ini
+        tar -zcvhf ${ARTIFACT_NAME}_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
+      shell: bash
+    - name: Upload tarball
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.ARTIFACT_NAME }}_artifact_${{ github.sha }}
+        path: ${{ env.ARTIFACT_NAME }}_builder.tar

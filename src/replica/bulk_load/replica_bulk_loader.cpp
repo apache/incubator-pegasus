@@ -22,16 +22,14 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "block_service/block_service_manager.h"
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/disk_cleaner.h"
 #include "replica/mutation.h"
 #include "replica/replica_context.h"
@@ -42,13 +40,48 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
-#include "utils/blob.h"
 #include "utils/chrono_literals.h"
+#include "utils/env.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
+#include "utils/load_dump_object.h"
 #include "utils/thread_access_checker.h"
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_downloading_count,
+                      dsn::metric_unit::kBulkLoads,
+                      "The number of downloading bulk loads");
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_ingesting_count,
+                      dsn::metric_unit::kBulkLoads,
+                      "The number of ingesting bulk loads");
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_successful_count,
+                      dsn::metric_unit::kBulkLoads,
+                      "The number of successful bulk loads");
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_failed_count,
+                      dsn::metric_unit::kBulkLoads,
+                      "The number of failed bulk loads");
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_download_file_successful_count,
+                      dsn::metric_unit::kFiles,
+                      "The number of files that have been downloaded successfully for bulk loads");
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_download_file_failed_count,
+                      dsn::metric_unit::kFiles,
+                      "The number of files that have failed to be downloaded for bulk loads");
+
+METRIC_DEFINE_counter(replica,
+                      bulk_load_download_file_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of files that have been downloaded successfully for bulk loads");
 
 namespace dsn {
 namespace dist {
@@ -60,7 +93,16 @@ class block_filesystem;
 namespace replication {
 
 replica_bulk_loader::replica_bulk_loader(replica *r)
-    : replica_base(r), _replica(r), _stub(r->get_replica_stub())
+    : replica_base(r),
+      _replica(r),
+      _stub(r->get_replica_stub()),
+      METRIC_VAR_INIT_replica(bulk_load_downloading_count),
+      METRIC_VAR_INIT_replica(bulk_load_ingesting_count),
+      METRIC_VAR_INIT_replica(bulk_load_successful_count),
+      METRIC_VAR_INIT_replica(bulk_load_failed_count),
+      METRIC_VAR_INIT_replica(bulk_load_download_file_successful_count),
+      METRIC_VAR_INIT_replica(bulk_load_download_file_failed_count),
+      METRIC_VAR_INIT_replica(bulk_load_download_file_bytes)
 {
 }
 
@@ -320,7 +362,7 @@ error_code replica_bulk_loader::do_bulk_load(const std::string &app_name,
         break;
     case bulk_load_status::BLS_FAILED:
         handle_bulk_load_finish(bulk_load_status::BLS_FAILED);
-        _stub->_counter_bulk_load_failed_count->increment();
+        METRIC_VAR_INCREMENT(bulk_load_failed_count);
         break;
     default:
         break;
@@ -408,7 +450,7 @@ error_code replica_bulk_loader::start_download(const std::string &remote_dir,
                     _stub->_primary_address_str,
                     _stub->_bulk_load_downloading_count.load());
     _bulk_load_start_time_ms = dsn_now_ms();
-    _stub->_counter_bulk_load_downloading_count->increment();
+    METRIC_VAR_INCREMENT(bulk_load_downloading_count);
 
     // create local bulk load dir
     if (!utils::filesystem::directory_exists(_replica->_dir)) {
@@ -438,7 +480,7 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
                                          const std::string &remote_dir,
                                          const std::string &local_dir)
 {
-    FAIL_POINT_INJECT_F("replica_bulk_loader_download_files", [](string_view) {});
+    FAIL_POINT_INJECT_F("replica_bulk_loader_download_files", [](absl::string_view) {});
 
     LOG_INFO_PREFIX("start to download files");
     dist::block_service::block_filesystem *fs =
@@ -497,7 +539,8 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
         // We are not sure if the file was cached by system. And we couldn't
         // afford the io overhead which is cased by reading file in verify_file(),
         // so if file exist we just verify file size
-        if (utils::filesystem::verify_file_size(file_name, f_meta.size)) {
+        if (utils::filesystem::verify_file_size(
+                file_name, utils::FileDataType::kSensitive, f_meta.size)) {
             // local file exist and is verified
             ec = ERR_OK;
             f_size = f_meta.size;
@@ -520,7 +563,8 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
     if (ec == ERR_OK && !verified) {
         if (!f_meta.md5.empty() && f_md5 != f_meta.md5) {
             ec = ERR_CORRUPTION;
-        } else if (!utils::filesystem::verify_file_size(file_name, f_meta.size)) {
+        } else if (!utils::filesystem::verify_file_size(
+                       file_name, utils::FileDataType::kSensitive, f_meta.size)) {
             ec = ERR_CORRUPTION;
         }
     }
@@ -531,13 +575,13 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
             _download_status.store(ec);
         }
         LOG_ERROR_PREFIX("failed to download file({}), error = {}", f_meta.name, ec.to_string());
-        _stub->_counter_bulk_load_download_file_fail_count->increment();
+        METRIC_VAR_INCREMENT(bulk_load_download_file_failed_count);
         return;
     }
     // download file succeed, update progress
     update_bulk_load_download_progress(f_size, f_meta.name);
-    _stub->_counter_bulk_load_download_file_succ_count->increment();
-    _stub->_counter_bulk_load_download_file_size->add(f_size);
+    METRIC_VAR_INCREMENT(bulk_load_download_file_successful_count);
+    METRIC_VAR_INCREMENT_BY(bulk_load_download_file_bytes, f_size);
 
     // download next file
     if (file_index + 1 < _metadata.files.size()) {
@@ -558,17 +602,10 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
 // need to acquire write lock while calling it
 error_code replica_bulk_loader::parse_bulk_load_metadata(const std::string &fname)
 {
-    std::string buf;
-    error_code ec = utils::filesystem::read_file(fname, buf);
+    auto ec = dsn::utils::load_rjobj_from_file(fname, &_metadata);
     if (ec != ERR_OK) {
-        LOG_ERROR_PREFIX("read file {} failed, error = {}", fname, ec);
+        LOG_ERROR_PREFIX("load bulk_load_metadata from file {} failed", fname);
         return ec;
-    }
-
-    blob bb = blob::create_from_bytes(std::move(buf));
-    if (!json::json_forwarder<bulk_load_metadata>::decode(bb, _metadata)) {
-        LOG_ERROR_PREFIX("file({}) is damaged", fname);
-        return ERR_CORRUPTION;
     }
 
     if (_metadata.file_total_size <= 0) {
@@ -646,7 +683,7 @@ void replica_bulk_loader::check_download_finish()
 void replica_bulk_loader::start_ingestion()
 {
     _status = bulk_load_status::BLS_INGESTING;
-    _stub->_counter_bulk_load_ingestion_count->increment();
+    METRIC_VAR_INCREMENT(bulk_load_ingesting_count);
     if (status() == partition_status::PS_PRIMARY) {
         _replica->_primary_states.ingestion_is_empty_prepare_sent = false;
     }
@@ -679,7 +716,7 @@ void replica_bulk_loader::handle_bulk_load_succeed()
 
     _replica->_app->set_ingestion_status(ingestion_status::IS_INVALID);
     _status = bulk_load_status::BLS_SUCCEED;
-    _stub->_counter_bulk_load_succeed_count->increment();
+    METRIC_VAR_INCREMENT(bulk_load_successful_count);
 
     // send an empty prepare again to gurantee that learner should learn from checkpoint
     if (status() == partition_status::PS_PRIMARY) {

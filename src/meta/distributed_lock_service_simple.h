@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a simple version of distributed lock service for development
- *
- * Revision history:
- *     2015-11-04, @imzhenyu (Zhenyu.Guo@microsoft.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <stdint.h>
@@ -53,6 +44,9 @@
 
 namespace dsn {
 namespace dist {
+
+// A simple version of distributed lock service.
+// NOTE: Only for test purpose.
 class distributed_lock_service_simple : public distributed_lock_service
 {
 public:

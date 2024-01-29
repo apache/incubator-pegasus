@@ -18,6 +18,7 @@
  */
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "fmt/format.h"

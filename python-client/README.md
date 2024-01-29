@@ -17,13 +17,12 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-pegasus-python-client
-=====================
+# pegasus-python-client
 
 It uses [Twisted](http://twistedmatrix.com) for the asynchronous communication with pegasus server.
 
-Installation
-------------
+## Installation
+
 Python 3.8+
 
 pypegasus can be installed via pip as follows:
@@ -36,29 +35,45 @@ thrift --gen py -out . ../idl/dsn.layer2.thrift
 python3 setup.py install
 ```
 
-Usage
------
+## Usage
+
 There are some basic guide in  [`sample.py`](sample.py).
 
-Test
-----
-Before testing, you should firstly start an onebox cluster, referring to [`how to start an onebox cluster`](https://pegasus.apache.org/overview/onebox/).
+## Test
 
-## Basic interfaces test:
+Note: Before testing, you should firstly start an [onebox](https://pegasus.apache.org/overview/onebox/).
 
-`cd tests && python3 -m unittest test_basics.TestBasics`
+### Run sample
 
-## Integration test:
+```shell
+python3 sample.py
+```
 
-`cd tests && python3 -m twisted.trial test_integration.py`
-<!-- markdown-link-check-disable -->
-ATTENTION: you should firstly set proper pegasus shell path in [`test_integration.py`](test_integration.py#L10).
-<!-- markdown-link-check-enable-->
+### Basic interfaces test
 
+```shell
+cd tests
+python3 -m unittest test_basics.TestBasics
+```
 
-## Benchmark test:
+### Integration test
 
-`cd tests && python3 -m unittest test_benchmark.TestBasics`
+> Note: You should firstly set proper Pegasus shell path in test_integration.py.
+> ```python
+> shell_path = '/your/pegasus-shell/dir'
+> ```
+
+```shell
+cd tests
+python3 -m twisted.trial test_integration.py
+```
+
+## Benchmark test
+
+```shell
+cd tests
+python3 -m unittest test_benchmark.TestBasics
+```
 
 The test result on my personal PC (CPU: Intel i7-7700 3.60GHz, mem: 8G) is:
 ```
@@ -66,10 +81,13 @@ The test result on my personal PC (CPU: Intel i7-7700 3.60GHz, mem: 8G) is:
 10000 remove cost: 7.61887693405 s, 0.000761887693405 s per op
 10000 set cost: 6.26366090775 s, 0.000626366090775 s per op
 ```
-FAQ
----
-### Q: When I run sample.py, error occured as following:
-```
+
+## FAQ
+
+### Q: Error occurred about `'module' object has no attribute 'OP_NO_TLSv1_1'`:
+
+Error details:
+```shell
 Traceback (most recent call last):
   File "./sample.py", line 3, in <module>
     from pgclient import *
@@ -80,9 +98,12 @@ Traceback (most recent call last):
     TLSVersion.TLSv1_1: SSL.OP_NO_TLSv1_1,
 AttributeError: 'module' object has no attribute 'OP_NO_TLSv1_1'
 ```
-### A: pyOpenSSL version too low
-the twisted version we used is 17.9.0, which requires pyOpenSSL>=16.0.0, you can
 
-`pip install --upgrade pyopenssl`
+#### A: pyOpenSSL version too low
+The twisted version we used is 17.9.0, which requires pyOpenSSL>=16.0.0, you can
+
+```shell
+pip install --upgrade pyopenssl
+```
 
 ref: https://github.com/scrapy/scrapy/issues/2473

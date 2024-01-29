@@ -17,12 +17,12 @@
 
 #pragma once
 
+#include "common/replication.codes.h"
+#include "meta/meta_state_service.h"
+#include "meta_state_service_utils.h"
 #include "runtime/pipeline.h"
 #include "utils/fmt_logging.h"
-
-#include "meta_state_service_utils.h"
-#include "meta/meta_state_service.h"
-#include "common/replication.codes.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 namespace replication {
@@ -61,6 +61,7 @@ struct op_type
         return op_type_to_string_map[v - 1];
     }
 };
+USER_DEFINED_ENUM_FORMATTER(op_type::type)
 
 /// Base class for all operations.
 struct operation : pipeline::environment

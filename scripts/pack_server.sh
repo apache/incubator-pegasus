@@ -114,7 +114,6 @@ copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server ${pack}/b
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_meta_server.so ${pack}/bin
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_utils.so ${pack}/bin
-copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/bin
 
 if [ "$use_jemalloc" == "on" ]; then
     copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/bin
@@ -125,8 +124,7 @@ fi
 
 copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
 copy_file ./thirdparty/output/lib/libhdfs* ${pack}/bin
-copy_file ./thirdparty/output/lib/libsasl*.so.* ${pack}/bin
-copy_file ./thirdparty/output/lib/libcom_err*.so.* ${pack}/bin
+copy_file ./thirdparty/output/lib/librocksdb.so.8 ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 copy_file ./src/server/config.min.ini ${pack}/bin
@@ -138,11 +136,8 @@ pack_server_lib() {
     pack_system_lib "${pack}/bin" server "$1"
 }
 
-pack_server_lib snappy
 pack_server_lib crypto
 pack_server_lib ssl
-pack_server_lib zstd
-pack_server_lib lz4
 
 # Pack hadoop-related files.
 # If you want to use hdfs service to backup/restore/bulkload pegasus tables,

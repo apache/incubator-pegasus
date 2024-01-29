@@ -18,18 +18,19 @@
  */
 package org.apache.pegasus.metrics;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import junit.framework.Assert;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /** Created by weijiesun on 18-3-9. */
 public class MetricsPoolTest {
-  @Before
+  @BeforeEach
   public void before() {
     r = new MetricRegistry();
   }
@@ -48,7 +49,7 @@ public class MetricsPoolTest {
     pool.genJsonsFromMeter("TestName", m, builder);
 
     JSONArray array = new JSONArray("[" + builder.toString() + "]");
-    Assert.assertEquals(1, array.length());
+    assertEquals(1, array.length());
 
     String[] metrics = {
       "TestName.cps-1sec", "TestName.cps-1min", "TestName.cps-5min", "TestName.cps-15min"
@@ -57,11 +58,11 @@ public class MetricsPoolTest {
     for (int i = 0; i < array.length(); ++i) {
       JSONObject j = array.getJSONObject(i);
 
-      Assert.assertEquals(tags, j.getString("tags"));
-      Assert.assertEquals(metrics[i], j.getString("metric"));
-      Assert.assertEquals("GAUGE", j.getString("counterType"));
-      Assert.assertEquals(20, j.getInt("step"));
-      Assert.assertEquals(host, j.getString("endpoint"));
+      assertEquals(tags, j.getString("tags"));
+      assertEquals(metrics[i], j.getString("metric"));
+      assertEquals("GAUGE", j.getString("counterType"));
+      assertEquals(20, j.getInt("step"));
+      assertEquals(host, j.getString("endpoint"));
     }
   }
 
@@ -77,18 +78,18 @@ public class MetricsPoolTest {
     pool.genJsonsFromHistogram("TestHist", h, builder);
 
     JSONArray array = new JSONArray("[" + builder.toString() + "]");
-    Assert.assertEquals(2, array.length());
+    assertEquals(2, array.length());
 
     String[] metrics = {"TestHist.p99", "TestHist.p999"};
 
     for (int i = 0; i < array.length(); ++i) {
       JSONObject j = array.getJSONObject(i);
 
-      Assert.assertEquals(tags, j.getString("tags"));
-      Assert.assertEquals(metrics[i], j.getString("metric"));
-      Assert.assertEquals("GAUGE", j.getString("counterType"));
-      Assert.assertEquals(20, j.getInt("step"));
-      Assert.assertEquals(host, j.getString("endpoint"));
+      assertEquals(tags, j.getString("tags"));
+      assertEquals(metrics[i], j.getString("metric"));
+      assertEquals("GAUGE", j.getString("counterType"));
+      assertEquals(20, j.getInt("step"));
+      assertEquals(host, j.getString("endpoint"));
     }
   }
 
@@ -107,25 +108,25 @@ public class MetricsPoolTest {
     MetricsPool.oneMetricToJson(metric, builder);
 
     JSONObject obj = new JSONObject(builder.toString());
-    Assert.assertEquals(metric.endpoint, obj.getString("endpoint"));
-    Assert.assertEquals(metric.metric, obj.getString("metric"));
-    Assert.assertEquals(metric.timestamp, obj.getLong("timestamp"));
-    Assert.assertEquals(metric.step, obj.getInt("step"));
-    Assert.assertEquals(metric.value, obj.getDouble("value"));
-    Assert.assertEquals(metric.counterType, obj.getString("counterType"));
-    Assert.assertEquals(metric.tags, obj.getString("tags"));
+    assertEquals(metric.endpoint, obj.getString("endpoint"));
+    assertEquals(metric.metric, obj.getString("metric"));
+    assertEquals(metric.timestamp, obj.getLong("timestamp"));
+    assertEquals(metric.step, obj.getInt("step"));
+    assertEquals(metric.value, obj.getDouble("value"));
+    assertEquals(metric.counterType, obj.getString("counterType"));
+    assertEquals(metric.tags, obj.getString("tags"));
 
     builder.setLength(0);
     metric.tags = "";
     MetricsPool.oneMetricToJson(metric, builder);
     obj = new JSONObject(builder.toString());
-    Assert.assertEquals(metric.endpoint, obj.getString("endpoint"));
-    Assert.assertEquals(metric.metric, obj.getString("metric"));
-    Assert.assertEquals(metric.timestamp, obj.getLong("timestamp"));
-    Assert.assertEquals(metric.step, obj.getInt("step"));
-    Assert.assertEquals(metric.value, obj.getDouble("value"));
-    Assert.assertEquals(metric.counterType, obj.getString("counterType"));
-    Assert.assertEquals(metric.tags, obj.getString("tags"));
+    assertEquals(metric.endpoint, obj.getString("endpoint"));
+    assertEquals(metric.metric, obj.getString("metric"));
+    assertEquals(metric.timestamp, obj.getLong("timestamp"));
+    assertEquals(metric.step, obj.getInt("step"));
+    assertEquals(metric.value, obj.getDouble("value"));
+    assertEquals(metric.counterType, obj.getString("counterType"));
+    assertEquals(metric.tags, obj.getString("tags"));
   }
 
   @Test
@@ -143,18 +144,18 @@ public class MetricsPoolTest {
     }
 
     JSONArray array = new JSONArray(pool.metricsToJson());
-    Assert.assertEquals(6, array.length());
+    assertEquals(6, array.length());
     for (int i = 0; i < array.length(); ++i) {
       JSONObject j = array.getJSONObject(i);
 
       if (j.getString("metric").contains("@")) {
-        Assert.assertEquals(tags + ",table=temp", j.getString("tags"));
+        assertEquals(tags + ",table=temp", j.getString("tags"));
       } else {
-        Assert.assertEquals(tags, j.getString("tags"));
+        assertEquals(tags, j.getString("tags"));
       }
-      Assert.assertEquals("GAUGE", j.getString("counterType"));
-      Assert.assertEquals(20, j.getInt("step"));
-      Assert.assertEquals(host, j.getString("endpoint"));
+      assertEquals("GAUGE", j.getString("counterType"));
+      assertEquals(20, j.getInt("step"));
+      assertEquals(host, j.getString("endpoint"));
     }
   }
 

@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <stdint.h>
@@ -41,6 +32,7 @@
 #include <string>
 
 namespace dsn {
+class gpid;
 class message_ex;
 
 namespace replication {
@@ -50,9 +42,10 @@ class mutation_log_tool
 public:
     bool
     dump(const std::string &log_dir,
+         gpid pid,
          std::ostream &output,
          std::function<void(
              int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)> callback);
 };
-}
-}
+} // namespace replication
+} // namespace dsn

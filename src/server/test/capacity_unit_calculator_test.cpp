@@ -17,18 +17,16 @@
  * under the License.
  */
 
-#include <algorithm>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <memory>
+#include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <stdint.h>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "replica_admin_types.h"
@@ -156,9 +154,11 @@ public:
     }
 };
 
-TEST_F(capacity_unit_calculator_test, init) { test_init(); }
+INSTANTIATE_TEST_SUITE_P(, capacity_unit_calculator_test, ::testing::Values(false, true));
 
-TEST_F(capacity_unit_calculator_test, get)
+TEST_P(capacity_unit_calculator_test, init) { test_init(); }
+
+TEST_P(capacity_unit_calculator_test, get)
 {
     dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
     msg->header->context.u.is_backup_request = false;
@@ -198,7 +198,7 @@ TEST_F(capacity_unit_calculator_test, get)
     _cal->reset();
 }
 
-TEST_F(capacity_unit_calculator_test, multi_get)
+TEST_P(capacity_unit_calculator_test, multi_get)
 {
     dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
     msg->header->context.u.is_backup_request = false;
@@ -230,7 +230,7 @@ TEST_F(capacity_unit_calculator_test, multi_get)
     _cal->reset();
 }
 
-TEST_F(capacity_unit_calculator_test, scan)
+TEST_P(capacity_unit_calculator_test, scan)
 {
     dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
     msg->header->context.u.is_backup_request = false;
@@ -265,7 +265,7 @@ TEST_F(capacity_unit_calculator_test, scan)
     _cal->reset();
 }
 
-TEST_F(capacity_unit_calculator_test, sortkey_count)
+TEST_P(capacity_unit_calculator_test, sortkey_count)
 {
     dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
     msg->header->context.u.is_backup_request = false;
@@ -281,7 +281,7 @@ TEST_F(capacity_unit_calculator_test, sortkey_count)
     }
 }
 
-TEST_F(capacity_unit_calculator_test, ttl)
+TEST_P(capacity_unit_calculator_test, ttl)
 {
     dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
     msg->header->context.u.is_backup_request = false;
@@ -297,7 +297,7 @@ TEST_F(capacity_unit_calculator_test, ttl)
     }
 }
 
-TEST_F(capacity_unit_calculator_test, put)
+TEST_P(capacity_unit_calculator_test, put)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
         _cal->add_put_cu(i, key, dsn::blob::create_from_bytes(std::string(4097, ' ')));
@@ -311,7 +311,7 @@ TEST_F(capacity_unit_calculator_test, put)
     }
 }
 
-TEST_F(capacity_unit_calculator_test, remove)
+TEST_P(capacity_unit_calculator_test, remove)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
         _cal->add_remove_cu(i, key);
@@ -325,7 +325,7 @@ TEST_F(capacity_unit_calculator_test, remove)
     }
 }
 
-TEST_F(capacity_unit_calculator_test, multi_put)
+TEST_P(capacity_unit_calculator_test, multi_put)
 {
     std::vector<::dsn::apps::key_value> kvs;
 
@@ -347,7 +347,7 @@ TEST_F(capacity_unit_calculator_test, multi_put)
     }
 }
 
-TEST_F(capacity_unit_calculator_test, multi_remove)
+TEST_P(capacity_unit_calculator_test, multi_remove)
 {
     std::vector<::dsn::blob> keys;
 
@@ -369,7 +369,7 @@ TEST_F(capacity_unit_calculator_test, multi_remove)
     }
 }
 
-TEST_F(capacity_unit_calculator_test, incr)
+TEST_P(capacity_unit_calculator_test, incr)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
         _cal->add_incr_cu(i, key);
@@ -387,7 +387,7 @@ TEST_F(capacity_unit_calculator_test, incr)
     }
 }
 
-TEST_F(capacity_unit_calculator_test, check_and_set)
+TEST_P(capacity_unit_calculator_test, check_and_set)
 {
     dsn::blob cas_hash_key = dsn::blob::create_from_bytes("hash_key");
     dsn::blob check_sort_key = dsn::blob::create_from_bytes("check_sort_key");
@@ -419,7 +419,7 @@ TEST_F(capacity_unit_calculator_test, check_and_set)
     _cal->reset();
 }
 
-TEST_F(capacity_unit_calculator_test, check_and_mutate)
+TEST_P(capacity_unit_calculator_test, check_and_mutate)
 {
     dsn::blob cam_hash_key = dsn::blob::create_from_bytes("hash_key");
     dsn::blob check_sort_key = dsn::blob::create_from_bytes("check_sort_key");
@@ -456,7 +456,7 @@ TEST_F(capacity_unit_calculator_test, check_and_mutate)
     _cal->reset();
 }
 
-TEST_F(capacity_unit_calculator_test, backup_request_bytes)
+TEST_P(capacity_unit_calculator_test, backup_request_bytes)
 {
     dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
 

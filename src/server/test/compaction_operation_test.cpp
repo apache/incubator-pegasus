@@ -17,9 +17,6 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/slice.h>
 #include <stdint.h>
 #include <memory>
@@ -29,6 +26,7 @@
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
+#include "gtest/gtest.h"
 #include "server/compaction_filter_rule.h"
 #include "server/compaction_operation.h"
 

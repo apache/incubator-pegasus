@@ -17,18 +17,26 @@
 
 #include "utils/latency_tracer.h"
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <cstdint>
 #include <iterator>
+#include <set>
 #include <utility>
 
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counters.h"
 #include "runtime/api_layer1.h"
 #include "utils/autoref_ptr.h"
 #include "utils/config_api.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
+
+METRIC_DEFINE_entity(latency_tracer);
+
+METRIC_DEFINE_percentile_int64(latency_tracer,
+                               latency_tracer_duration_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The duration between two points(stages)");
 
 namespace dsn {
 namespace utils {
@@ -42,48 +50,131 @@ DSN_TAG_VARIABLE(enable_latency_tracer, FT_MUTABLE);
 DSN_DEFINE_bool(replication,
                 enable_latency_tracer_report,
                 false,
-                "whether open the latency tracer report perf counter");
+                "whether open the latency tracer report for metrics");
 DSN_TAG_VARIABLE(enable_latency_tracer_report, FT_MUTABLE);
 
-DSN_DEFINE_string(replication,
-                  latency_tracer_counter_name_prefix,
-                  "trace_latency",
-                  "perf counter common name prefix");
+namespace {
 
-utils::rw_lock_nr counter_lock; //{
-std::unordered_map<std::string, perf_counter_ptr> counters_trace_latency;
-// }
+#define LATENCY_TRACER_METRIC_ENTITY_ID(description, starting_point, end_point)                    \
+    fmt::format("latency_tracer@{}|{}|{}", description, starting_point, end_point)
 
-utils::rw_lock_nr task_code_lock; //{
+metric_entity_ptr instantiate_latency_tracer_metric_entity(const std::string &description,
+                                                           const std::string &starting_point,
+                                                           const std::string &end_point)
+{
+    auto entity_id = LATENCY_TRACER_METRIC_ENTITY_ID(description, starting_point, end_point);
+
+    return METRIC_ENTITY_latency_tracer.instantiate(entity_id,
+                                                    {{"description", description},
+                                                     {"starting_point", starting_point},
+                                                     {"end_point", end_point}});
+}
+
+// Maintain each latency-tracer-level metric entity, and all metrics attached to it.
+class latency_tracer_metrics
+{
+public:
+    latency_tracer_metrics(const std::string &description,
+                           const std::string &starting_point,
+                           const std::string &end_point);
+    ~latency_tracer_metrics() = default;
+
+    const metric_entity_ptr &latency_tracer_metric_entity() const;
+
+    METRIC_DEFINE_SET(latency_tracer_duration_ns, int64_t)
+
+private:
+    const std::string _description;
+    const std::string _starting_point;
+    const std::string _end_point;
+
+    const dsn::metric_entity_ptr _latency_tracer_metric_entity;
+    METRIC_VAR_DECLARE_percentile_int64(latency_tracer_duration_ns);
+
+    DISALLOW_COPY_AND_ASSIGN(latency_tracer_metrics);
+};
+
+latency_tracer_metrics::latency_tracer_metrics(const std::string &description,
+                                               const std::string &starting_point,
+                                               const std::string &end_point)
+    : _description(description),
+      _starting_point(starting_point),
+      _end_point(end_point),
+      _latency_tracer_metric_entity(
+          instantiate_latency_tracer_metric_entity(description, starting_point, end_point)),
+      METRIC_VAR_INIT_latency_tracer(latency_tracer_duration_ns)
+{
+}
+
+const dsn::metric_entity_ptr &latency_tracer_metrics::latency_tracer_metric_entity() const
+{
+    CHECK_NOTNULL(_latency_tracer_metric_entity,
+                  "latency_tracer metric entity (description={}, starting_point={}, end_point={}) "
+                  "should has been instantiated: uninitialized entity cannot be used to "
+                  "instantiate metric",
+                  _description,
+                  _starting_point,
+                  _end_point);
+    return _latency_tracer_metric_entity;
+}
+
+// Manage the lifetime of all latency-tracer-level metric entities.
+class latency_tracer_metric_entities
+{
+public:
+    using entity_map = std::unordered_map<std::string, std::unique_ptr<latency_tracer_metrics>>;
+
+    latency_tracer_metric_entities() = default;
+    ~latency_tracer_metric_entities() = default;
+
+// Acquire read lock firstly, since once the metric entity were created, there would be no need to
+// acquire write lock again.
+#define __METRIC_DEFINE_SET(name, value_type)                                                      \
+    void METRIC_FUNC_NAME_SET(name)(const std::string &description,                                \
+                                    const std::string &starting_point,                             \
+                                    const std::string &end_point,                                  \
+                                    value_type value)                                              \
+    {                                                                                              \
+        auto entity_id = LATENCY_TRACER_METRIC_ENTITY_ID(description, starting_point, end_point);  \
+        {                                                                                          \
+            dsn::utils::auto_read_lock l(_lock);                                                   \
+            auto iter = _entities.find(entity_id);                                                 \
+            if (dsn_likely(iter != _entities.end())) {                                             \
+                METRIC_SET(*(iter->second), name, value);                                          \
+                return;                                                                            \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        dsn::utils::auto_write_lock l(_lock);                                                      \
+        auto iter = _entities.find(entity_id);                                                     \
+        if (dsn_unlikely(iter != _entities.end())) {                                               \
+            METRIC_SET(*(iter->second), name, value);                                              \
+            return;                                                                                \
+        }                                                                                          \
+                                                                                                   \
+        auto ret = _entities.emplace(                                                              \
+            entity_id,                                                                             \
+            std::make_unique<latency_tracer_metrics>(description, starting_point, end_point));     \
+        CHECK_TRUE(ret.second);                                                                    \
+        METRIC_SET(*(ret.first->second), name, value);                                             \
+    }
+
+    __METRIC_DEFINE_SET(latency_tracer_duration_ns, int64_t)
+
+#undef __METRIC_DEFINE_SET
+
+private:
+    mutable utils::rw_lock_nr _lock;
+    entity_map _entities;
+
+    DISALLOW_COPY_AND_ASSIGN(latency_tracer_metric_entities);
+};
+
+latency_tracer_metric_entities s_latency_tracer_metric_entities;
+
+dsn::utils::rw_lock_nr task_code_lock; //{
 std::unordered_map<std::string, bool> task_codes;
 // }
-
-perf_counter_ptr get_trace_counter(const std::string &name)
-{
-    {
-        utils::auto_read_lock read(counter_lock);
-        auto iter = counters_trace_latency.find(name);
-        if (iter != counters_trace_latency.end()) {
-            return iter->second;
-        }
-    }
-
-    utils::auto_write_lock write(counter_lock);
-    auto iter = counters_trace_latency.find(name);
-    if (iter != counters_trace_latency.end()) {
-        return iter->second;
-    }
-
-    auto perf_counter =
-        dsn::perf_counters::instance().get_app_counter(FLAGS_latency_tracer_counter_name_prefix,
-                                                       name.c_str(),
-                                                       COUNTER_TYPE_NUMBER_PERCENTILES,
-                                                       name.c_str(),
-                                                       true);
-
-    counters_trace_latency.emplace(name, perf_counter);
-    return perf_counter;
-}
 
 bool is_enable_trace(const dsn::task_code &code)
 {
@@ -117,6 +208,8 @@ bool is_enable_trace(const dsn::task_code &code)
     task_codes.emplace(code_name, enable_trace);
     return enable_trace;
 }
+
+} // anonymous namespace
 
 latency_tracer::latency_tracer(bool is_sub,
                                std::string name,
@@ -242,9 +335,12 @@ void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
             auto total_latency = point.first - start_time;
 
             if (FLAGS_enable_latency_tracer_report) {
-                std::string counter_name =
-                    fmt::format("[{}]{}@{}", _description, previous_point_name, cur_point_name);
-                report_trace_point(counter_name, span_duration);
+                METRIC_SET(s_latency_tracer_metric_entities,
+                           latency_tracer_duration_ns,
+                           _description,
+                           previous_point_name,
+                           cur_point_name,
+                           span_duration);
             }
 
             if (total_time_used >= _threshold) {
@@ -278,14 +374,6 @@ void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
     if (!_is_sub && total_time_used >= _threshold) {
         LOG_WARNING("TRACE:the traces as fallow:\n{}", traces);
         return;
-    }
-}
-
-void latency_tracer::report_trace_point(const std::string &name, uint64_t span)
-{
-    auto perf_counter = get_trace_counter(name);
-    if (perf_counter) {
-        perf_counter->set(span);
     }
 }
 

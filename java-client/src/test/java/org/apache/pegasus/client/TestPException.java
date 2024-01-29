@@ -19,6 +19,9 @@
 
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import io.netty.util.concurrent.DefaultPromise;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -31,8 +34,7 @@ import org.apache.pegasus.operator.rrdb_put_operator;
 import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.async.ClusterManager;
 import org.apache.pegasus.rpc.async.TableHandler;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestPException {
   private String metaList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
@@ -43,7 +45,7 @@ public class TestPException {
     PException ex = PException.threadInterrupted("test", new InterruptedException("intxxx"));
     String exceptionInfo =
         "{version}: org.apache.pegasus.rpc.ReplicationException: ERR_THREAD_INTERRUPTED: [table=test] Thread was interrupted: intxxx";
-    Assert.assertEquals(exceptionInfo, ex.getMessage());
+    assertEquals(exceptionInfo, ex.getMessage());
   }
 
   @Test
@@ -54,7 +56,7 @@ public class TestPException {
         String.format(
             "{version}: org.apache.pegasus.rpc.ReplicationException: ERR_TIMEOUT: [metaServer=%s, table=test, request=%s, timeout=1000ms] Timeout on Future await: tmxxx",
             metaList, request.toString());
-    Assert.assertEquals(exceptionInfo, ex.getMessage());
+    assertEquals(exceptionInfo, ex.getMessage());
   }
 
   @Test
@@ -62,10 +64,10 @@ public class TestPException {
     // Test the constructors of PException
 
     PException ex = new PException("test");
-    Assert.assertEquals("{version}: test", ex.getMessage());
+    assertEquals("{version}: test", ex.getMessage());
 
     ex = new PException("test", new TimeoutException());
-    Assert.assertEquals("{version}: test", ex.getMessage());
+    assertEquals("{version}: test", ex.getMessage());
   }
 
   @Test
@@ -96,12 +98,12 @@ public class TestPException {
           String.format(
               "org.apache.pegasus.client.PException: {version}: org.apache.pegasus.rpc.ReplicationException: ERR_OBJECT_NOT_FOUND: [metaServer=%s,table=temp,operation=put,request=%s,replicaServer=%s,gpid=(%s),timeout=%dms] The replica server doesn't serve this partition!",
               client.getMetaList(), request.toString(), server, gpid.toString(), timeout);
-      Assert.assertEquals(e.getMessage(), msg);
+      assertEquals(e.getMessage(), msg);
       return;
     } catch (InterruptedException e) {
-      Assert.fail();
+      fail();
     }
-    Assert.fail();
+    fail();
   }
 
   @Test
@@ -132,7 +134,7 @@ public class TestPException {
           String.format(
               "org.apache.pegasus.client.PException: {version}: org.apache.pegasus.rpc.ReplicationException: ERR_TIMEOUT: [metaServer=%s,table=temp,operation=put,request=%s,replicaServer=%s,gpid=(%s),timeout=1000ms] The operation is timed out!",
               client.getMetaList(), request.toString(), server, gpid.toString());
-      Assert.assertEquals(e.getMessage(), msg);
+      assertEquals(e.getMessage(), msg);
     }
   }
 }

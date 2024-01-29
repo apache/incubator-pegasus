@@ -15,10 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -32,7 +28,9 @@
 #include "bulk_load_types.h"
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
+#include "gtest/gtest.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
@@ -74,8 +72,8 @@ public:
         fake_req.query_args.emplace("name", test_app);
         _mhs->get_app_handler(fake_req, fake_resp);
 
-        ASSERT_EQ(fake_resp.status_code, http_status_code::ok)
-            << http_status_code_to_string(fake_resp.status_code);
+        ASSERT_EQ(fake_resp.status_code, http_status_code::kOk)
+            << get_http_status_message(fake_resp.status_code);
         std::string fake_json = R"({"general":{"app_name":")" + test_app + R"(","app_id":"2)" +
                                 R"(","partition_count":"8","max_replica_count":"3"}})" + "\n";
         ASSERT_EQ(fake_resp.body, fake_json);
@@ -97,8 +95,8 @@ public:
         // env (value_version, 1) was set by create_app
         std::string fake_json = R"({")" + env_key + R"(":)" + R"(")" + env_value + R"(",)" +
                                 R"("value_version":"1"})" + "\n";
-        ASSERT_EQ(fake_resp.status_code, http_status_code::ok)
-            << http_status_code_to_string(fake_resp.status_code);
+        ASSERT_EQ(fake_resp.status_code, http_status_code::kOk)
+            << get_http_status_message(fake_resp.status_code);
         ASSERT_EQ(fake_resp.body, fake_json);
     }
 
@@ -164,7 +162,7 @@ public:
         if (!name.empty())
             req.query_args.emplace("name", name);
         _mhs->query_backup_policy_handler(req, resp);
-        ASSERT_EQ(resp.status_code, http_status) << http_status_code_to_string(resp.status_code);
+        ASSERT_EQ(resp.status_code, http_status) << get_http_status_message(resp.status_code);
         ASSERT_EQ(resp.body, expected_json);
     }
 
@@ -187,25 +185,25 @@ TEST_F(meta_backup_test_base, get_backup_policy)
         std::string expected_json;
         http_status_code http_status;
     } tests[5] = {
-        {"", "{}\n", http_status_code::ok},
+        {"", "{}\n", http_status_code::kOk},
         {"TEST1",
          "{\"TEST1\":{\"name\":\"TEST1\",\"backup_provider_type\":\"local_service\","
          "\"backup_interval\":\"86400\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\","
          "\"status\":\"enabled\",\"backup_history_count\":\"1\"}}\n",
-         http_status_code::ok},
+         http_status_code::kOk},
         {"TEST2",
          "{\"TEST2\":{\"name\":\"TEST2\",\"backup_provider_type\":\"local_service\","
          "\"backup_interval\":\"86400\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\","
          "\"status\":\"enabled\",\"backup_history_count\":\"1\"}}\n",
-         http_status_code::ok},
+         http_status_code::kOk},
         {"",
          "{\"TEST1\":{\"name\":\"TEST1\",\"backup_provider_type\":\"local_service\",\"backup_"
          "interval\":\"86400\",\"app_ids\":\"[2]\",\"start_time\":\"12:00\",\"status\":\"enabled\","
          "\"backup_history_count\":\"1\"},\"TEST2\":{\"name\":\"TEST2\",\"backup_provider_"
          "type\":\"local_service\",\"backup_interval\":\"86400\",\"app_ids\":\"[2]\",\"start_"
          "time\":\"12:00\",\"status\":\"enabled\",\"backup_history_count\":\"1\"}}\n",
-         http_status_code::ok},
-        {"TEST3", "{}\n", http_status_code::ok},
+         http_status_code::kOk},
+        {"TEST3", "{}\n", http_status_code::kOk},
     };
     test_get_backup_policy(tests[0].name, tests[0].expected_json, tests[0].http_status);
     add_backup_policy("TEST1");
@@ -307,20 +305,20 @@ TEST_F(meta_bulk_load_http_test, start_bulk_load_request)
         std::string expected_response_json;
     } tests[] = {
         {R"({"app":"test_bulk_load","cluster_name":"onebox","file_provider_type":"local_service","remote_root_path":"bulk_load_root"})",
-         http_status_code::bad_request,
+         http_status_code::kBadRequest,
          "invalid request structure"},
         {R"({"app_name":"test_bulk_load","cluster_name":"onebox","file_provider_type":"","remote_root_path":"bulk_load_root"})",
-         http_status_code::bad_request,
+         http_status_code::kBadRequest,
          "file_provider_type should not be empty"},
         {R"({"app_name":"test_bulk_load","cluster_name":"onebox","file_provider_type":"local_service","remote_root_path":"bulk_load_root"})",
-         http_status_code::ok,
+         http_status_code::kOk,
          R"({"error":"ERR_OK","hint_msg":""})"},
     };
     for (const auto &test : tests) {
         http_response resp = test_start_bulk_load(test.request_json);
         ASSERT_EQ(resp.status_code, test.expected_code);
         std::string expected_json = test.expected_response_json;
-        if (test.expected_code == http_status_code::ok) {
+        if (test.expected_code == http_status_code::kOk) {
             expected_json += "\n";
         }
         ASSERT_EQ(resp.body, expected_json);
@@ -363,29 +361,29 @@ TEST_F(meta_bulk_load_http_test, start_compaction_test)
         std::string expected_response_json;
     } tests[] = {
         {R"({"app_name":"test_bulk_load","type":"once","target_level":-1,"bottommost_level_compaction":"skip","max_concurrent_running_count":"0"})",
-         http_status_code::bad_request,
+         http_status_code::kBadRequest,
          "invalid request structure"},
         {R"({"app_name":"test_bulk_load","type":"wrong","target_level":-1,"bottommost_level_compaction":"skip","max_concurrent_running_count":0,"trigger_time":""})",
-         http_status_code::bad_request,
+         http_status_code::kBadRequest,
          "type should ony be 'once' or 'periodic'"},
         {R"({"app_name":"test_bulk_load","type":"once","target_level":-3,"bottommost_level_compaction":"skip","max_concurrent_running_count":0,"trigger_time":""})",
-         http_status_code::bad_request,
+         http_status_code::kBadRequest,
          "target_level should be >= -1"},
         {R"({"app_name":"test_bulk_load","type":"once","target_level":-1,"bottommost_level_compaction":"wrong","max_concurrent_running_count":0,"trigger_time":""})",
-         http_status_code::bad_request,
+         http_status_code::kBadRequest,
          "bottommost_level_compaction should ony be 'skip' or 'force'"},
         {R"({"app_name":"test_bulk_load","type":"once","target_level":-1,"bottommost_level_compaction":"skip","max_concurrent_running_count":-2,"trigger_time":""})",
-         http_status_code::bad_request,
+         http_status_code::kBadRequest,
          "max_running_count should be >= 0"},
         {R"({"app_name":"test_bulk_load","type":"once","target_level":-1,"bottommost_level_compaction":"skip","max_concurrent_running_count":0,"trigger_time":""})",
-         http_status_code::ok,
+         http_status_code::kOk,
          R"({"error":"ERR_OK","hint_message":""})"}};
 
     for (const auto &test : tests) {
         http_response resp = test_start_compaction(test.request_json);
         ASSERT_EQ(resp.status_code, test.expected_code);
         std::string expected_json = test.expected_response_json;
-        if (test.expected_code == http_status_code::ok) {
+        if (test.expected_code == http_status_code::kOk) {
             expected_json += "\n";
         }
         ASSERT_EQ(resp.body, expected_json);
@@ -400,20 +398,20 @@ TEST_F(meta_bulk_load_http_test, update_scenario_test)
         http_status_code expected_code;
         std::string expected_response_json;
     } tests[] = {{R"({"app":"test_bulk_load","scenario":"normal"})",
-                  http_status_code::bad_request,
+                  http_status_code::kBadRequest,
                   "invalid request structure"},
                  {R"({"app_name":"test_bulk_load","scenario":"wrong"})",
-                  http_status_code::bad_request,
+                  http_status_code::kBadRequest,
                   "scenario should ony be 'normal' or 'bulk_load'"},
                  {R"({"app_name":"test_bulk_load","scenario":"bulk_load"})",
-                  http_status_code::ok,
+                  http_status_code::kOk,
                   R"({"error":"ERR_OK","hint_message":""})"}};
 
     for (const auto &test : tests) {
         http_response resp = test_update_scenario(test.request_json);
         ASSERT_EQ(resp.status_code, test.expected_code);
         std::string expected_json = test.expected_response_json;
-        if (test.expected_code == http_status_code::ok) {
+        if (test.expected_code == http_status_code::kOk) {
             expected_json += "\n";
         }
         ASSERT_EQ(resp.body, expected_json);

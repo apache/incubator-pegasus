@@ -114,11 +114,16 @@ std::string get_last_component(const std::string &input, const char splitters[])
 
 char *trim_string(char *s);
 
+// TODO(yingchun): unify the following functions with the ones in utils::filesystem
 // calculate the md5 checksum of buffer
 std::string string_md5(const char *buffer, unsigned int length);
 
 // splits the "input" string by the only character "separator" to get the string prefix.
 // if there is no prefix or the first character is "separator", it will return "".
 std::string find_string_prefix(const std::string &input, char separator);
+
+// Decide if there are some space characters in the given string, such as ' ', '\r', '\n' or '\t'.
+bool has_space(const std::string &str);
+
 } // namespace utils
 } // namespace dsn

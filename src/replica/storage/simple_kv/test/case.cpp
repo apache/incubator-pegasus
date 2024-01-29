@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Replication testing framework.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "case.h"
 
 #include <boost/algorithm/string/case_conv.hpp>
@@ -42,7 +33,6 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
-#include <fmt/format.h>
 #include <fmt/printf.h>
 #include <inttypes.h>
 #include <algorithm>
