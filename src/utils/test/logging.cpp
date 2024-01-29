@@ -31,6 +31,7 @@
 #include "utils/api_utilities.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
+#include "utils/timer.h"
 
 TEST(LoggingTest, GlobalLog)
 {
@@ -66,4 +67,30 @@ TEST(LoggingTest, LogMacro)
     }
 
     dsn::fail::teardown();
+}
+
+TEST(LoggingTest, TestLogTiming)
+{
+    LOG_TIMING_PREFIX_IF(INFO, true, "prefix", "foo test{}", 0) {}
+    LOG_TIMING_IF(INFO, true, "no_prefix foo test{}", 1) {}
+    LOG_TIMING_PREFIX(INFO, "prefix", "foo test{}", 2) {}
+    LOG_TIMING(INFO, "foo test{}", 3){}
+    {
+        SCOPED_LOG_TIMING(INFO, "bar {}", 0);
+        SCOPED_LOG_SLOW_EXECUTION(INFO, 1, "bar {}", 1);
+        SCOPED_LOG_SLOW_EXECUTION_PREFIX(INFO, 1, "prefix", "bar {}", 1);
+    }
+    LOG_SLOW_EXECUTION(INFO, 1, "baz {}", 0) {}
+
+    // Previous implementations of the above macro confused clang-tidy's use-after-move
+    // check and generated false positives.
+    std::string s1 = "hello";
+    std::string s2;
+    LOG_SLOW_EXECUTION(INFO, 1, "baz")
+    {
+        LOG_INFO(s1);
+        s2 = std::move(s1);
+    }
+
+    ASSERT_EQ("hello", s2);
 }
