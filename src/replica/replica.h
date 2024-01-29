@@ -639,7 +639,7 @@ private:
     bool _is_manual_emergency_checkpointing{false};
     bool _is_duplication_master{false};
     bool _is_duplication_follower{false};
-    std::atomic<bool> _is_duplication_plog_checking{false};
+    std::atomic<bool> _is_duplication_plog_checking{false}; //replica is checking plog on duplication stage
 
     // backup
     std::unique_ptr<replica_backup_manager> _backup_mgr;
