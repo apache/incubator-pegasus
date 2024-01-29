@@ -246,7 +246,10 @@ public:
     //
     error_code trigger_manual_emergency_checkpoint(decree old_decree);
     void on_query_last_checkpoint(learn_response &response);
-    std::unique_ptr<replica_duplicator_manager> &get_duplication_manager(){ return _duplication_mgr; }
+    std::unique_ptr<replica_duplicator_manager> &get_duplication_manager()
+    {
+        return _duplication_mgr;
+    }
     bool is_duplication_master() const { return _is_duplication_master; }
     bool is_duplication_follower() const { return _is_duplication_follower; }
 
