@@ -633,7 +633,6 @@ private:
     // replica is finding some private logs to load for duplication,avoid unexpected plog gc
     std::atomic<bool> _is_duplication_plog_checking{false};
 
-
     // backup
     std::unique_ptr<replica_backup_manager> _backup_mgr;
 
