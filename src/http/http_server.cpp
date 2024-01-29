@@ -109,6 +109,11 @@ void http_service::register_handler(std::string sub_path,
     http_call_registry::instance().add(std::move(call));
 }
 
+void http_service::deregister_handler(std::string sub_path) const
+{
+    http_call_registry::instance().remove(get_rel_path(sub_path));
+}
+
 void http_server_base::update_config_handler(const http_request &req, http_response &resp)
 {
     auto res = dsn::update_config(req);

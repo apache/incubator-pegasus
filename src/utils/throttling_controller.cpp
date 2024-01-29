@@ -17,6 +17,7 @@
 
 #include "throttling_controller.h"
 
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
 #include <memory>
@@ -27,7 +28,7 @@
 #include "utils/strings.h"
 
 namespace dsn {
-namespace replication {
+namespace utils {
 
 throttling_controller::throttling_controller()
     : _enabled(false),
@@ -41,87 +42,177 @@ throttling_controller::throttling_controller()
 {
 }
 
-bool throttling_controller::parse_from_env(const std::string &env_value,
-                                           int partition_count,
-                                           std::string &parse_error,
-                                           bool &changed,
-                                           std::string &old_env_value)
+bool throttling_controller::parse_unit(std::string arg,
+                                       /*out*/ uint64_t &units,
+                                       /*out*/ std::string &hint_message)
 {
-    changed = false;
-    if (_enabled && env_value == _env_value && partition_count == _partition_count)
-        return true;
-    std::vector<std::string> sargs;
-    utils::split_args(env_value.c_str(), sargs, ',', true);
-    if (sargs.empty()) {
-        parse_error = "empty env value";
+    hint_message.clear();
+    // Extract multiplier.
+    uint64_t unit_multiplier = 1;
+    if (!arg.empty()) {
+        switch (*arg.rbegin()) {
+        case 'M':
+            unit_multiplier = 1 << 20;
+            break;
+        case 'K':
+            unit_multiplier = 1 << 10;
+            break;
+        default:
+            // Maybe a number, it's valid.
+            break;
+        }
+        // Remove the tail 'M' or 'K'.
+        if (unit_multiplier != 1) {
+            arg.pop_back();
+        }
+    }
+
+    // Parse value.
+    uint64_t tmp;
+    if (!buf2uint64(arg, tmp)) {
+        hint_message = fmt::format("'{}' should be an unsigned integer", arg);
         return false;
     }
+
+    // Check overflow.
+    uint64_t result;
+    if (__builtin_mul_overflow(tmp, unit_multiplier, &result)) {
+        hint_message = fmt::format("'{}' result is overflow", arg);
+        return false;
+    }
+    units = tmp * unit_multiplier;
+
+    return true;
+}
+
+throttling_controller::ParseResult
+throttling_controller::parse_from_env(const std::string &arg,
+                                      const std::string &type,
+                                      /*out*/ uint64_t &units,
+                                      /*out*/ uint64_t &delay_ms,
+                                      /*out*/ std::string &hint_message)
+{
+    hint_message.clear();
+    std::vector<std::string> sub_args;
+    utils::split_args(arg.c_str(), sub_args, '*', true);
+    if (sub_args.size() != 3) {
+        hint_message = fmt::format("The field count of '{}' separated by '*' must be 3", arg);
+        return ParseResult::kFail;
+    }
+
+    // 1. Check the first part, which must be a positive number, optionally followed with 'K' or
+    // 'M'.
+    uint64_t u = 0;
+    if (!parse_unit(sub_args[0], u, hint_message)) {
+        return ParseResult::kFail;
+    }
+
+    // 2. Check the second part, which must be "delay" or "reject"
+    if (sub_args[1] != type) {
+        hint_message = fmt::format("'{}' should be 'delay' or 'reject'", sub_args[1]);
+        return ParseResult::kIgnore;
+    }
+
+    // 3. Check the third part, which must be an unsigned integer.
+    uint64_t ms = 0;
+    if (!buf2uint64(sub_args[2], ms)) {
+        hint_message = fmt::format("'{}' should be an unsigned integer", sub_args[2]);
+        return ParseResult::kFail;
+    }
+
+    units = u;
+    delay_ms = ms;
+    return ParseResult::kSuccess;
+}
+
+bool throttling_controller::parse_from_env(const std::string &env_value,
+                                           /*out*/ uint64_t &delay_units,
+                                           /*out*/ uint64_t &delay_ms,
+                                           /*out*/ uint64_t &reject_units,
+                                           /*out*/ uint64_t &reject_delay_ms,
+                                           /*out*/ std::string &hint_message)
+{
+    hint_message.clear();
+    std::vector<std::string> sargs;
+    utils::split_args(env_value.c_str(), sargs, ',');
+    if (sargs.empty()) {
+        hint_message = "The value shouldn't be empty";
+        return false;
+    }
+
+    // Example for sarg: 100K*delay*100, 100M*reject*100, etc.
     bool delay_parsed = false;
-    int64_t delay_units = 0;
-    int64_t delay_ms = 0;
     bool reject_parsed = false;
-    int64_t reject_units = 0;
-    int64_t reject_delay_ms = 0;
-    for (std::string &s : sargs) {
-        std::vector<std::string> sargs1;
-        utils::split_args(s.c_str(), sargs1, '*', true);
-        if (sargs1.size() != 3) {
-            parse_error = "invalid field count, should be 3";
+    for (const auto &sarg : sargs) {
+        uint64_t units = 0;
+        uint64_t ms = 0;
+        // Check the "delay" args.
+        auto result = parse_from_env(sarg, "delay", units, ms, hint_message);
+        if (result == ParseResult::kFail) {
             return false;
         }
 
-        int64_t unit_multiplier = 1;
-        if (!sargs1[0].empty()) {
-            if (*sargs1[0].rbegin() == 'M') {
-                unit_multiplier = 1000 * 1000;
-            } else if (*sargs1[0].rbegin() == 'K') {
-                unit_multiplier = 1000;
-            }
-            if (unit_multiplier != 1) {
-                sargs1[0].pop_back();
-            }
-        }
-        int64_t units = 0;
-        if (!buf2int64(sargs1[0], units) || units < 0) {
-            parse_error = "invalid units, should be non-negative int";
-            return false;
-        }
-        units *= unit_multiplier;
-
-        int64_t ms = 0;
-        if (!buf2int64(sargs1[2], ms) || ms < 0) {
-            parse_error = "invalid delay ms, should be non-negative int";
-            return false;
-        }
-        if (sargs1[1] == "delay") {
+        if (result == ParseResult::kSuccess) {
             if (delay_parsed) {
-                parse_error = "duplicate delay config";
+                hint_message = "duplicate 'delay' config";
                 return false;
             }
             delay_parsed = true;
-            delay_units = units / partition_count + 1;
+            delay_units = units;
             delay_ms = ms;
-        } else if (sargs1[1] == "reject") {
+            continue;
+        }
+
+        // Check the "reject" args.
+        result = parse_from_env(sarg, "reject", units, ms, hint_message);
+        if (result == ParseResult::kSuccess) {
             if (reject_parsed) {
-                parse_error = "duplicate reject config";
+                hint_message = "duplicate 'reject' config";
                 return false;
             }
             reject_parsed = true;
-            reject_units = units / partition_count + 1;
+            reject_units = units;
             reject_delay_ms = ms;
-        } else {
-            parse_error = "invalid throttling type";
-            return false;
+            continue;
         }
+
+        if (hint_message.empty()) {
+            hint_message = fmt::format("only 'delay' or 'reject' is supported", sarg);
+        }
+        return false;
     }
+    return true;
+}
+
+bool throttling_controller::parse_from_env(const std::string &env_value,
+                                           int partition_count,
+                                           std::string &hint_message,
+                                           bool &changed,
+                                           std::string &old_env_value)
+{
+    hint_message.clear();
+    changed = false;
+    if (_enabled && env_value == _env_value && partition_count == _partition_count) {
+        return true;
+    }
+
+    uint64_t delay_units = 0;
+    uint64_t delay_ms = 0;
+    uint64_t reject_units = 0;
+    uint64_t reject_delay_ms = 0;
+    if (!parse_from_env(
+            env_value, delay_units, delay_ms, reject_units, reject_delay_ms, hint_message)) {
+        return false;
+    }
+
     changed = true;
     old_env_value = _env_value;
     _enabled = true;
     _env_value = env_value;
     _partition_count = partition_count;
-    _delay_units = delay_units;
+    _delay_units = delay_units == 0 ? 0 : (delay_units / partition_count + 1);
     _delay_ms = delay_ms;
-    _reject_units = reject_units;
+    _reject_units = reject_units == 0 ? 0 : (reject_units / partition_count + 1);
     _reject_delay_ms = reject_delay_ms;
     return true;
 }
@@ -179,5 +270,5 @@ throttling_controller::throttling_type throttling_controller::control(
     return PASS;
 }
 
-} // namespace replication
+} // namespace utils
 } // namespace dsn

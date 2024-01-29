@@ -148,7 +148,6 @@ const std::chrono::seconds pegasus_server_impl::kServerStatUpdateTimeSec = std::
 const std::string ROCKSDB_ENV_RESTORE_FORCE_RESTORE("restore.force_restore");
 const std::string ROCKSDB_ENV_RESTORE_POLICY_NAME("restore.policy_name");
 const std::string ROCKSDB_ENV_RESTORE_BACKUP_ID("restore.backup_id");
-const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.reserve_time_seconds");
 
 using cf_opts_setter = std::function<bool(const std::string &, rocksdb::ColumnFamilyOptions &)>;
 const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters = {
@@ -2754,7 +2753,7 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
     // if not specified, default is normal
     auto find = envs.find(dsn::replica_envs::ROCKSDB_USAGE_SCENARIO);
     std::string new_usage_scenario =
-        (find != envs.end() ? find->second : meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
+        (find != envs.end() ? find->second : dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
     if (new_usage_scenario != _usage_scenario) {
         std::string old_usage_scenario = _usage_scenario;
         if (set_usage_scenario(new_usage_scenario)) {
@@ -2802,7 +2801,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
             return;
         }
     }
-    find = envs.find(ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS);
+    find = envs.find(dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS);
     if (find != envs.end()) {
         if (!dsn::buf2int32(find->second, time) || time < 0) {
             LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
@@ -2819,7 +2818,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
     }
     if (time != _checkpoint_reserve_time_seconds) {
         LOG_INFO_PREFIX("update app env[{}] from \"{}\" to \"{}\" succeed",
-                        ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS,
+                        dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS,
                         _checkpoint_reserve_time_seconds,
                         time);
         _checkpoint_reserve_time_seconds = time;
@@ -3064,9 +3063,9 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
         return false;
     std::string old_usage_scenario = _usage_scenario;
     std::unordered_map<std::string, std::string> new_options;
-    if (usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL ||
-        usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE) {
-        if (_usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
+    if (usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL ||
+        usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE) {
+        if (_usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
             // old usage scenario is bulk load, reset first
             new_options["level0_file_num_compaction_trigger"] =
                 std::to_string(_data_cf_opts.level0_file_num_compaction_trigger);
@@ -3086,12 +3085,12 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
                 std::to_string(_data_cf_opts.max_write_buffer_number);
         }
 
-        if (usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL) {
+        if (usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL) {
             new_options["write_buffer_size"] =
                 std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size));
             new_options["level0_file_num_compaction_trigger"] =
                 std::to_string(_data_cf_opts.level0_file_num_compaction_trigger);
-        } else { // meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE
+        } else { // dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE
             uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
                                                        _data_cf_opts.write_buffer_size * 2);
             new_options["write_buffer_size"] = std::to_string(buffer_size);
@@ -3099,7 +3098,7 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
             new_options["level0_file_num_compaction_trigger"] =
                 std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
         }
-    } else if (usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
+    } else if (usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
         // refer to Options::PrepareForBulkLoad()
         new_options["level0_file_num_compaction_trigger"] = "1000000000";
         new_options["level0_slowdown_writes_trigger"] = "1000000000";
@@ -3219,9 +3218,9 @@ void pegasus_server_impl::recalculate_data_cf_options(
         return;
     }
     std::unordered_map<std::string, std::string> new_options;
-    if (meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
-        meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
-        if (meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario) {
+    if (dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
+        dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
+        if (dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario) {
             UPDATE_OPTION_IF_NOT_NEARBY(write_buffer_size, _data_cf_opts.write_buffer_size);
             UPDATE_OPTION_IF_NEEDED(level0_file_num_compaction_trigger);
         } else {

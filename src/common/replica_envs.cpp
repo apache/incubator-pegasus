@@ -21,6 +21,12 @@
 
 namespace dsn {
 const uint64_t replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS = 20;
+const std::string replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
+const std::string replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
+const std::string replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL = "normal";
+const std::string replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE = "prefer_write";
+const std::string replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD = "bulk_load";
+
 const std::string replica_envs::DENY_CLIENT_REQUEST("replica.deny_client_request");
 const std::string replica_envs::WRITE_QPS_THROTTLING("replica.write_throttling");
 const std::string replica_envs::WRITE_SIZE_THROTTLING("replica.write_throttling_by_size");

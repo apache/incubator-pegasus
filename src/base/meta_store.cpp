@@ -34,9 +34,6 @@ const std::string meta_store::DATA_VERSION = "pegasus_data_version";
 const std::string meta_store::LAST_FLUSHED_DECREE = "pegasus_last_flushed_decree";
 const std::string meta_store::LAST_MANUAL_COMPACT_FINISH_TIME =
     "pegasus_last_manual_compact_finish_time";
-const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL = "normal";
-const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE = "prefer_write";
-const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD = "bulk_load";
 
 meta_store::meta_store(const char *log_prefix,
                        rocksdb::DB *db,
@@ -85,7 +82,7 @@ uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
 std::string meta_store::get_usage_scenario() const
 {
     // If couldn't find rocksdb usage scenario in meta column family, return normal in default.
-    std::string usage_scenario = ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
+    std::string usage_scenario = dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
     auto ec = get_string_value_from_meta_cf(
         false, dsn::replica_envs::ROCKSDB_USAGE_SCENARIO, &usage_scenario);
     CHECK_PREFIX_MSG(ec == ::dsn::ERR_OK || ec == ::dsn::ERR_OBJECT_NOT_FOUND,

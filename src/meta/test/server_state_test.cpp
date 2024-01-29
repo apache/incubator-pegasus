@@ -32,6 +32,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/replica_envs.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
@@ -52,24 +53,35 @@ DSN_DECLARE_string(meta_state_service_type);
 namespace dsn {
 namespace replication {
 
-static const std::vector<std::string> keys = {"manual_compact.once.trigger_time",
-                                              "manual_compact.once.target_level",
-                                              "manual_compact.once.bottommost_level_compaction",
-                                              "manual_compact.periodic.trigger_time",
-                                              "manual_compact.periodic.target_level",
-                                              "manual_compact.periodic.bottommost_level_compaction",
-                                              "rocksdb.usage_scenario",
-                                              "rocksdb.checkpoint.reserve_min_count",
-                                              "rocksdb.checkpoint.reserve_time_seconds"};
+static const std::vector<std::string> keys = {
+    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+    dsn::replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
+    dsn::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION,
+    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL,
+    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION,
+    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO,
+    dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT,
+    dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS};
 static const std::vector<std::string> values = {
-    "p1v1", "p1v2", "p1v3", "p2v1", "p2v2", "p2v3", "p3v1", "p3v2", "p3v3"};
+    "1712846598",
+    "6",
+    dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE,
+    "1712846598",
+    "-1",
+    dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP,
+    dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL,
+    "1",
+    "0"};
 
-static const std::vector<std::string> del_keys = {"manual_compact.once.trigger_time",
-                                                  "manual_compact.periodic.trigger_time",
-                                                  "rocksdb.usage_scenario"};
-static const std::set<std::string> del_keys_set = {"manual_compact.once.trigger_time",
-                                                   "manual_compact.periodic.trigger_time",
-                                                   "rocksdb.usage_scenario"};
+static const std::vector<std::string> del_keys = {
+    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
+static const std::set<std::string> del_keys_set = {
+    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
 
 static const std::string clear_prefix = "rocksdb";
 
@@ -112,8 +124,7 @@ void meta_service_test_app::app_envs_basic_test()
     ss->initialize(svc, apps_root);
 
     ss->_all_apps.emplace(std::make_pair(fake_app->app_id, fake_app));
-    dsn::error_code ec = ss->sync_apps_to_remote_storage();
-    ASSERT_EQ(ec, dsn::ERR_OK);
+    ASSERT_EQ(dsn::ERR_OK, ss->sync_apps_to_remote_storage());
 
     std::cout << "test server_state::set_app_envs()..." << std::endl;
     {

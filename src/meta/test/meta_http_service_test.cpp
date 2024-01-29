@@ -95,9 +95,9 @@ public:
         // env (value_version, 1) was set by create_app
         std::string fake_json = R"({")" + env_key + R"(":)" + R"(")" + env_value + R"(",)" +
                                 R"("value_version":"1"})" + "\n";
-        ASSERT_EQ(fake_resp.status_code, http_status_code::kOk)
+        ASSERT_EQ(http_status_code::kOk, fake_resp.status_code)
             << get_http_status_message(fake_resp.status_code);
-        ASSERT_EQ(fake_resp.body, fake_json);
+        ASSERT_EQ(fake_json, fake_resp.body);
     }
 
     std::unique_ptr<meta_http_service> _mhs;
@@ -381,12 +381,12 @@ TEST_F(meta_bulk_load_http_test, start_compaction_test)
 
     for (const auto &test : tests) {
         http_response resp = test_start_compaction(test.request_json);
-        ASSERT_EQ(resp.status_code, test.expected_code);
+        ASSERT_EQ(test.expected_code, resp.status_code);
         std::string expected_json = test.expected_response_json;
         if (test.expected_code == http_status_code::kOk) {
             expected_json += "\n";
         }
-        ASSERT_EQ(resp.body, expected_json);
+        ASSERT_EQ(expected_json, resp.body);
     }
 }
 
