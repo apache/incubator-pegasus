@@ -27,7 +27,9 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <string>
+#include <utility>
 
+#include "gtest/gtest.h"
 #include "utils/api_utilities.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"

@@ -36,7 +36,7 @@
 // The task will always execute regardless of whether the timing information is
 // printed.
 #define LOG_TIMING_PREFIX_IF(severity, condition, prefix, ...)                                     \
-    for (dsn::timer_internal::LogTiming _l(__FILE__,                                               \
+    for (dsn::timer_internal::LogTiming _l(__FILENAME__,                                           \
                                            __FUNCTION__,                                           \
                                            __LINE__,                                               \
                                            LOG_LEVEL_##severity,                                   \
@@ -60,7 +60,7 @@
 
 // Macro to log the time spent in the rest of the block.
 #define SCOPED_LOG_TIMING(severity, ...)                                                           \
-    dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILE__,                          \
+    dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILENAME__,                      \
                                                                 __FUNCTION__,                      \
                                                                 __LINE__,                          \
                                                                 LOG_LEVEL_##severity,              \
@@ -71,7 +71,7 @@
 
 // Scoped version of LOG_SLOW_EXECUTION().
 #define SCOPED_LOG_SLOW_EXECUTION(severity, max_expected_millis, ...)                              \
-    dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILE__,                          \
+    dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILENAME__,                      \
                                                                 __FUNCTION__,                      \
                                                                 __LINE__,                          \
                                                                 LOG_LEVEL_##severity,              \
@@ -82,7 +82,7 @@
 
 // Scoped version of LOG_SLOW_EXECUTION() but with a prefix.
 #define SCOPED_LOG_SLOW_EXECUTION_PREFIX(severity, max_expected_millis, prefix, ...)               \
-    dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILE__,                          \
+    dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILENAME__,                      \
                                                                 __FUNCTION__,                      \
                                                                 __LINE__,                          \
                                                                 LOG_LEVEL_##severity,              \
@@ -99,7 +99,7 @@
 // I1102 14:35:51.726186 23082 file.cc:167] Time spent doing some task:
 //   real 3.729s user 3.570s sys 0.150s
 #define LOG_SLOW_EXECUTION(severity, max_expected_millis, ...)                                     \
-    for (dsn::timer_internal::LogTiming _l(__FILE__,                                               \
+    for (dsn::timer_internal::LogTiming _l(__FILENAME__,                                           \
                                            __FUNCTION__,                                           \
                                            __LINE__,                                               \
                                            LOG_LEVEL_##severity,                                   \
