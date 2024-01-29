@@ -267,7 +267,7 @@ static void load_symbols()
     extract_symbols_from_binary(symbol_map, info);
 
     size_t num_removed = 0;
-    LOG_TIMING_IF(INFO, num_removed > 0, "Removed {} entries", num_removed);
+    LOG_TIMING_IF(INFO, num_removed > 0, "removed {} entries", num_removed);
     bool last_is_empty = false;
     for (auto it = symbol_map.begin(); it != symbol_map.end();) {
         if (it->second.empty()) {
