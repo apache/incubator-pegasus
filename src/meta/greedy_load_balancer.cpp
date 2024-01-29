@@ -24,8 +24,12 @@
  * THE SOFTWARE.
  */
 
+#include <fmt/core.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <string.h>
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <type_traits>
@@ -72,39 +76,35 @@ greedy_load_balancer::~greedy_load_balancer() {}
 
 void greedy_load_balancer::register_ctrl_commands()
 {
-    _get_balance_operation_count = dsn::command_manager::instance().register_command(
-        {"meta.lb.get_balance_operation_count"},
-        "meta.lb.get_balance_operation_count [total | move_pri | copy_pri | copy_sec | detail]",
-        "get balance operation count",
+    _get_balance_operation_count = dsn::command_manager::instance().register_single_command(
+        "meta.lb.get_balance_operation_count",
+        "Get balance operation count",
+        "[total | move_pri | copy_pri | copy_sec | detail]",
         [this](const std::vector<std::string> &args) { return get_balance_operation_count(args); });
 }
 
 std::string greedy_load_balancer::get_balance_operation_count(const std::vector<std::string> &args)
 {
-    if (args.empty()) {
-        return std::string("total=" + std::to_string(t_operation_counters[ALL_COUNT]));
+    nlohmann::json info;
+    if (args.size() > 1) {
+        info["error"] = fmt::format("invalid arguments");
+    } else if (args.empty() || args[0] == "total") {
+        info["total"] = t_operation_counters[ALL_COUNT];
+    } else if (args[0] == "move_pri") {
+        info["move_pri"] = t_operation_counters[MOVE_PRI_COUNT];
+    } else if (args[0] == "copy_pri") {
+        info["copy_pri"] = t_operation_counters[COPY_PRI_COUNT];
+    } else if (args[0] == "copy_sec") {
+        info["copy_sec"] = t_operation_counters[COPY_SEC_COUNT];
+    } else if (args[0] == "detail") {
+        info["move_pri"] = t_operation_counters[MOVE_PRI_COUNT];
+        info["copy_pri"] = t_operation_counters[COPY_PRI_COUNT];
+        info["copy_sec"] = t_operation_counters[COPY_SEC_COUNT];
+        info["total"] = t_operation_counters[ALL_COUNT];
+    } else {
+        info["error"] = fmt::format("invalid arguments");
     }
-
-    if (args[0] == "total") {
-        return std::string("total=" + std::to_string(t_operation_counters[ALL_COUNT]));
-    }
-
-    std::string result("unknown");
-    if (args[0] == "move_pri")
-        result = std::string("move_pri=" + std::to_string(t_operation_counters[MOVE_PRI_COUNT]));
-    else if (args[0] == "copy_pri")
-        result = std::string("copy_pri=" + std::to_string(t_operation_counters[COPY_PRI_COUNT]));
-    else if (args[0] == "copy_sec")
-        result = std::string("copy_sec=" + std::to_string(t_operation_counters[COPY_SEC_COUNT]));
-    else if (args[0] == "detail")
-        result = std::string("move_pri=" + std::to_string(t_operation_counters[MOVE_PRI_COUNT]) +
-                             ",copy_pri=" + std::to_string(t_operation_counters[COPY_PRI_COUNT]) +
-                             ",copy_sec=" + std::to_string(t_operation_counters[COPY_SEC_COUNT]) +
-                             ",total=" + std::to_string(t_operation_counters[ALL_COUNT]));
-    else
-        result = std::string("ERR: invalid arguments");
-
-    return result;
+    return info.dump(2);
 }
 
 void greedy_load_balancer::score(meta_view view, double &primary_stddev, double &total_stddev)

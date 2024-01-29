@@ -547,25 +547,24 @@ bool run(const char *config_file,
         exit(1);
     }
 
-    dump_log_cmd =
-        dsn::command_manager::instance().register_command({"config-dump"},
-                                                          "config-dump - dump configuration",
-                                                          "config-dump [to-this-config-file]",
-                                                          [](const std::vector<std::string> &args) {
-                                                              std::ostringstream oss;
-                                                              std::ofstream off;
-                                                              std::ostream *os = &oss;
-                                                              if (args.size() > 0) {
-                                                                  off.open(args[0]);
-                                                                  os = &off;
+    dump_log_cmd = dsn::command_manager::instance().register_single_command(
+        "config-dump",
+        "Dump all configurations to a server local path or to stdout",
+        "[target_file]",
+        [](const std::vector<std::string> &args) {
+            std::ostringstream oss;
+            std::ofstream off;
+            std::ostream *os = &oss;
+            if (args.size() > 0) {
+                off.open(args[0]);
+                os = &off;
 
-                                                                  oss << "config dump to file "
-                                                                      << args[0] << std::endl;
-                                                              }
+                oss << "config dump to file " << args[0] << std::endl;
+            }
 
-                                                              dsn_config_dump(*os);
-                                                              return oss.str();
-                                                          });
+            dsn_config_dump(*os);
+            return oss.str();
+        });
 
     // invoke customized init after apps are created
     dsn::tools::sys_init_after_app_created.execute();

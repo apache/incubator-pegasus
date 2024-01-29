@@ -17,8 +17,12 @@
 
 #include "meta/load_balance_policy.h"
 
+#include <fmt/core.h>
+#include <fmt/format.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <limits.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <algorithm>
 #include <iterator>
 #include <limits>
@@ -189,10 +193,10 @@ load_balance_policy::load_balance_policy(meta_service *svc)
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
-            {"meta.lb.ignored_app_list"},
-            "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
-            "get, set and clear balancer ignored_app_list",
+        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_single_command(
+            "meta.lb.ignored_app_list",
+            "Get, set or clear balancer ignored_app_list",
+            "<get|set|clear> [set_app_id1,set_app_id2,...]",
             [this](const std::vector<std::string> &args) {
                 return remote_command_balancer_ignored_app_ids(args);
             });
@@ -406,70 +410,75 @@ bool load_balance_policy::execute_balance(
 std::string
 load_balance_policy::remote_command_balancer_ignored_app_ids(const std::vector<std::string> &args)
 {
-    static const std::string invalid_arguments("invalid arguments");
-    if (args.empty()) {
-        return invalid_arguments;
-    }
-    if (args[0] == "set") {
-        return set_balancer_ignored_app_ids(args);
-    }
-    if (args[0] == "get") {
-        return get_balancer_ignored_app_ids();
-    }
-    if (args[0] == "clear") {
-        return clear_balancer_ignored_app_ids();
-    }
-    return invalid_arguments;
+    static const std::string invalid_arguments_message("invalid arguments");
+    nlohmann::json info;
+    do {
+        if (args.empty()) {
+            break;
+        }
+        if (args[0] == "set") {
+            return set_balancer_ignored_app_ids(args);
+        } else if (args[0] == "get") {
+            return get_balancer_ignored_app_ids();
+        } else if (args[0] == "clear") {
+            return clear_balancer_ignored_app_ids();
+        }
+    } while (false);
+
+    info["error"] = invalid_arguments_message;
+    return info.dump(2);
 }
 
 std::string load_balance_policy::set_balancer_ignored_app_ids(const std::vector<std::string> &args)
 {
-    static const std::string invalid_arguments("invalid arguments");
+    nlohmann::json info;
+    info["error"] = "invalid argument";
     if (args.size() != 2) {
-        return invalid_arguments;
+        return info.dump(2);
     }
 
     std::vector<std::string> app_ids;
     dsn::utils::split_args(args[1].c_str(), app_ids, ',');
     if (app_ids.empty()) {
-        return invalid_arguments;
+        return info.dump(2);
     }
 
     std::set<app_id> app_list;
-    for (const std::string &app_id_str : app_ids) {
+    for (const auto &app_id_str : app_ids) {
         app_id app;
         if (!dsn::buf2int32(app_id_str, app)) {
-            return invalid_arguments;
+            return info.dump(2);
         }
         app_list.insert(app);
     }
 
-    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
-    _balancer_ignored_apps = std::move(app_list);
-    return "set ok";
+    {
+        dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
+        _balancer_ignored_apps = std::move(app_list);
+    }
+    info["error"] = "ok";
+    return info.dump(2);
 }
 
 std::string load_balance_policy::get_balancer_ignored_app_ids()
 {
-    std::stringstream oss;
-    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
-    if (_balancer_ignored_apps.empty()) {
-        return "no ignored apps";
+    nlohmann::json data;
+    {
+        dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
+        data["ignored_app_id_list"] = fmt::format("{}", fmt::join(_balancer_ignored_apps, ","));
     }
-    oss << "ignored_app_id_list: ";
-    std::copy(_balancer_ignored_apps.begin(),
-              _balancer_ignored_apps.end(),
-              std::ostream_iterator<app_id>(oss, ","));
-    std::string app_ids = oss.str();
-    app_ids[app_ids.size() - 1] = '\0';
-    return app_ids;
+    return data.dump(2);
 }
 
 std::string load_balance_policy::clear_balancer_ignored_app_ids()
 {
-    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
-    _balancer_ignored_apps.clear();
-    return "clear ok";
+    {
+        dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
+        _balancer_ignored_apps.clear();
+    }
+    nlohmann::json info;
+    info["error"] = "ok";
+    return info.dump(2);
 }
 
 bool load_balance_policy::is_ignored_app(app_id app_id)

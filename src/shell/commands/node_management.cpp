@@ -672,10 +672,10 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
         fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {
-            fprintf(stderr, "succeed: %s\n", results[i].second.c_str());
+            fprintf(stderr, "succeed:\n%s\n", results[i].second.c_str());
             succeed++;
         } else {
-            fprintf(stderr, "failed: %s\n", results[i].second.c_str());
+            fprintf(stderr, "failed:\n%s\n", results[i].second.c_str());
             failed++;
         }
     }

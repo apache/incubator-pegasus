@@ -191,19 +191,19 @@ simple_logger::simple_logger(const char *log_dir)
     //  "assertion expression: [_handlers.empty()] All commands must be deregistered before
     //  command_manager is destroyed, however 'flush-log' is still registered".
     //  We need to fix it.
-    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-        {"flush-log"},
-        "flush-log - flush log to stderr or log file",
+    _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
         "flush-log",
+        "Flush log to stderr or file",
+        "",
         [this](const std::vector<std::string> &args) {
             this->flush();
             return "Flush done.";
         }));
 
-    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-        {"reset-log-start-level"},
-        "reset-log-start-level - reset the log start level",
-        "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
+    _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+        "reset-log-start-level",
+        "Reset the log start level",
+        "[DEBUG | INFO | WARNING | ERROR | FATAL]",
         [](const std::vector<std::string> &args) {
             log_level_t start_level;
             if (args.size() == 0) {

@@ -2193,10 +2193,10 @@ void replica_stub::open_service()
 #if !defined(DSN_ENABLE_GPERF) && defined(DSN_USE_JEMALLOC)
 void replica_stub::register_jemalloc_ctrl_command()
 {
-    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-        {"replica.dump-jemalloc-stats"},
-        fmt::format("replica.dump-jemalloc-stats <{}> [buffer size]", kAllJeStatsTypesStr),
-        "dump stats of jemalloc",
+    _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+        "replica.dump-jemalloc-stats",
+        "Dump stats of jemalloc",
+        fmt::format("<{}> [buffer size]", kAllJeStatsTypesStr),
         [](const std::vector<std::string> &args) {
             if (args.empty()) {
                 return std::string("invalid arguments");
@@ -2234,10 +2234,10 @@ void replica_stub::register_ctrl_command()
     /// failure_detector::register_ctrl_commands and nfs_client_impl::register_cli_commands
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.kill_partition"},
-            "replica.kill_partition [app_id [partition_index]]",
-            "replica.kill_partition: kill partitions by (all, one app, one partition)",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.kill_partition",
+            "Kill partitions by (all, one app, one partition)",
+            "[app_id [partition_index]]",
             [this](const std::vector<std::string> &args) {
                 dsn::gpid pid;
                 if (args.size() == 0) {
@@ -2269,11 +2269,10 @@ void replica_stub::register_ctrl_command()
             "replica.verbose-commit-log",
             "control if print verbose log when commit mutation"));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.trigger-checkpoint"},
-            "replica.trigger-checkpoint [id1,id2,...] (where id is 'app_id' or "
-            "'app_id.partition_id')",
-            "replica.trigger-checkpoint - trigger replicas to do checkpoint",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.trigger-checkpoint",
+            "Trigger replicas to do checkpoint by app_id or app_id.partition_id",
+            "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
                     tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
@@ -2284,20 +2283,21 @@ void replica_stub::register_ctrl_command()
                 });
             }));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.query-compact"},
-            "replica.query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-            "replica.query-compact - query full compact status on the underlying storage engine",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.query-compact",
+            "Query full compact status on the underlying storage engine by app_id or "
+            "app_id.partition_id",
+            "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     return rep->query_manual_compact_state();
                 });
             }));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.query-app-envs"},
-            "replica.query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-            "replica.query-app-envs - query app envs on the underlying storage engine",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.query-app-envs",
+            "Query app envs on the underlying storage engine by app_id or app_id.partition_id",
+            "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     std::map<std::string, std::string> kv_map;
@@ -2312,10 +2312,10 @@ void replica_stub::register_ctrl_command()
             "replica.release-tcmalloc-memory",
             "control if try to release tcmalloc memory"));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.get-tcmalloc-status"},
-            "replica.get-tcmalloc-status - get status of tcmalloc",
-            "get status of tcmalloc",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.get-tcmalloc-status",
+            "Get the status of tcmalloc",
+            "",
             [](const std::vector<std::string> &args) {
                 char buf[4096];
                 MallocExtension::instance()->GetStats(buf, 4096);
@@ -2329,10 +2329,10 @@ void replica_stub::register_ctrl_command()
             "control tcmalloc max reserved but not-used memory percentage",
             &check_mem_release_max_reserved_mem_percentage));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.release-all-reserved-memory"},
-            "replica.release-all-reserved-memory - release tcmalloc all reserved-not-used memory",
-            "release tcmalloc all reserverd not-used memory back to operating system",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.release-all-reserved-memory",
+            "Release tcmalloc all reserved-not-used memory back to operating system",
+            "",
             [this](const std::vector<std::string> &args) {
                 auto release_bytes = gc_tcmalloc_memory(true);
                 return "OK, release_bytes=" + std::to_string(release_bytes);

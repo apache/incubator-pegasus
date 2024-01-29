@@ -26,16 +26,20 @@
 
 #include "failure_detector/failure_detector.h"
 
+#include <nlohmann/json.hpp>
 #include <chrono>
 #include <ctime>
+#include <map>
 #include <mutex>
-#include <ostream>
 #include <type_traits>
 #include <utility>
 
 #include "absl/strings/string_view.h"
 #include "failure_detector/fd.code.definition.h"
 #include "fd_types.h"
+#include "fmt/core.h"
+#include "fmt/format.h"
+#include "nlohmann/json_fwd.hpp"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
@@ -70,10 +74,10 @@ void failure_detector::register_ctrl_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _get_allow_list = dsn::command_manager::instance().register_command(
-            {"fd.allow_list"},
+        _get_allow_list = dsn::command_manager::instance().register_single_command(
             "fd.allow_list",
-            "show allow list of failure detector",
+            "Show the allow list of failure detector",
+            "",
             [this](const std::vector<std::string> &args) { return get_allow_list(args); });
     });
 }
@@ -337,18 +341,17 @@ void failure_detector::set_allow_list(const std::vector<std::string> &replica_hp
 
 std::string failure_detector::get_allow_list(const std::vector<std::string> &args) const
 {
-    if (!_is_started)
-        return "error: FD is not started";
-
-    std::stringstream oss;
-    dsn::zauto_lock l(_lock);
-    oss << "get ok: allow list " << (_use_allow_list ? "enabled. list: " : "disabled.");
-    for (auto iter = _allow_list.begin(); iter != _allow_list.end(); ++iter) {
-        if (iter != _allow_list.begin())
-            oss << ",";
-        oss << *iter;
+    if (!_is_started) {
+        nlohmann::json err_msg;
+        err_msg["error"] = fmt::format("FD is not started");
+        return err_msg.dump(2);
     }
-    return oss.str();
+
+    nlohmann::json info;
+    dsn::zauto_lock l(_lock);
+    info["enabled"] = _use_allow_list;
+    info["allow_list"] = fmt::format("{}", fmt::join(_allow_list, ","));
+    return info.dump(2);
 }
 
 void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon_ack &ack)
