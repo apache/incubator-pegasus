@@ -27,8 +27,8 @@
 
 #include "common/replica_envs.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
+#include "utils/string_conv.h"
 #include "utils/token_bucket_throttling_controller.h"
 
 namespace dsn {
@@ -61,18 +61,6 @@ bool validate_app_env(const std::string &env_name,
     return app_env_validator::instance().validate_app_env(env_name, env_value, hint_message);
 }
 
-bool check_slow_query(const std::string &env_value, std::string &hint_message)
-{
-    uint64_t threshold = 0;
-    if (!dsn::buf2uint64(env_value, threshold) ||
-        threshold < replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS) {
-        hint_message = fmt::format("Slow query threshold must be >= {}ms",
-                                   replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS);
-        return false;
-    }
-    return true;
-}
-
 bool check_deny_client(const std::string &env_value, std::string &hint_message)
 {
     std::vector<std::string> sub_sargs;
@@ -88,16 +76,6 @@ bool check_deny_client(const std::string &env_value, std::string &hint_message)
     if ((sub_sargs[0] != "timeout" && sub_sargs[0] != "reconfig") ||
         (sub_sargs[1] != "all" && sub_sargs[1] != "write" && sub_sargs[1] != "read")) {
         hint_message = invalid_hint_message;
-        return false;
-    }
-    return true;
-}
-
-bool check_rocksdb_iteration(const std::string &env_value, std::string &hint_message)
-{
-    uint64_t threshold = 0;
-    if (!dsn::buf2uint64(env_value, threshold) || threshold < 0) {
-        hint_message = "Rocksdb iteration threshold must be greater than zero";
         return false;
     }
     return true;
@@ -163,16 +141,6 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
-bool check_bool_value(const std::string &env_value, std::string &hint_message)
-{
-    bool result = false;
-    if (!dsn::buf2bool(env_value, result)) {
-        hint_message = fmt::format("invalid string {}, should be \"true\" or \"false\"", env_value);
-        return false;
-    }
-    return true;
-}
-
 bool check_rocksdb_write_buffer_size(const std::string &env_value, std::string &hint_message)
 {
     uint64_t val = 0;
@@ -197,20 +165,71 @@ bool check_rocksdb_num_levels(const std::string &env_value, std::string &hint_me
         return false;
     }
     if (val < 1 || val > 10) {
-        hint_message = fmt::format("rocksdb.num_levels suggest set val in range [1 , 10]");
+        hint_message = fmt::format("rocksdb.num_levels suggest set val in range [1, 10]");
         return false;
     }
     return true;
 }
 
+app_env_validator::EnvInfo::EnvInfo(ValueType t, std::string ld, std::string s, validator_func v)
+    : type(t), limit_desc(std::move(ld)), sample(std::move(s)), validator(std::move(v))
+{
+    if (limit_desc.empty()) {
+        switch (type) {
+        case ValueType::kBool:
+            limit_desc = "true | false";
+            break;
+        case ValueType::kUint64:
+            limit_desc = ">=0";
+            break;
+        case ValueType::kString:
+            // TODO(yingchun):
+            break;
+        default:
+            CHECK_TRUE(false);
+            __builtin_unreachable();
+        }
+    }
+    if (sample.empty()) {
+        switch (type) {
+        case ValueType::kBool:
+            sample = "true";
+            break;
+        case ValueType::kString:
+            // TODO(yingchun):
+            break;
+        default:
+            CHECK_TRUE(false);
+            __builtin_unreachable();
+        }
+    }
+    if (!validator) {
+        switch (type) {
+        case ValueType::kBool:
+            validator = [](const std::string &env_value, std::string &hint_message) {
+                bool result = false;
+                if (!dsn::buf2bool(env_value, result)) {
+                    hint_message =
+                        fmt::format("invalid value '{}', should be 'true' or 'false'", env_value);
+                    return false;
+                }
+                return true;
+            };
+            break;
+        default:
+            CHECK_TRUE(false);
+            __builtin_unreachable();
+        }
+    }
+}
 bool app_env_validator::validate_app_env(const std::string &env_name,
                                          const std::string &env_value,
                                          std::string &hint_message)
 {
     auto func_iter = _validator_funcs.find(env_name);
     if (func_iter != _validator_funcs.end()) {
-        // check function == nullptr means no check
-        if (nullptr != func_iter->second && !func_iter->second(env_value, hint_message)) {
+        if (nullptr != func_iter->second.validator &&
+            !func_iter->second.validator(env_value, hint_message)) {
             LOG_WARNING("{}={} is invalid.", env_name, env_value);
             return false;
         }
@@ -226,51 +245,73 @@ void app_env_validator::register_all_validators()
 {
     _validator_funcs = {
         {replica_envs::SLOW_QUERY_THRESHOLD,
-         std::bind(&check_slow_query, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kUint64,
+          ">=20",
+          "1000",
+          [](const std::string &env_value, std::string &hint_message) {
+              uint64_t threshold = 0;
+              if (!dsn::buf2uint64(env_value, threshold) ||
+                  threshold < replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS) {
+                  hint_message = fmt::format("Slow query threshold must be >= {}ms",
+                                             replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS);
+                  return false;
+              }
+              return true;
+          }}},
         {replica_envs::WRITE_QPS_THROTTLING,
-         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::WRITE_SIZE_THROTTLING,
-         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
-         std::bind(&check_rocksdb_iteration, std::placeholders::_1, std::placeholders::_2)},
-        {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED,
-         std::bind(&check_bool_value, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kUint64,
+          ">=0",
+          "1000",
+          [](const std::string &env_value, std::string &hint_message) {
+              uint64_t threshold = 0;
+              if (!dsn::buf2uint64(env_value, threshold) || threshold < 0) {
+                  hint_message = "Rocksdb iteration threshold must be greater than zero";
+                  return false;
+              }
+              return true;
+          }}},
+        {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED, {ValueType::kBool}},
         {replica_envs::READ_QPS_THROTTLING,
-         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::READ_SIZE_THROTTLING,
-         std::bind(&utils::token_bucket_throttling_controller::validate,
-                   std::placeholders::_1,
-                   std::placeholders::_2)},
-        {replica_envs::SPLIT_VALIDATE_PARTITION_HASH,
-         std::bind(&check_bool_value, std::placeholders::_1, std::placeholders::_2)},
-        {replica_envs::USER_SPECIFIED_COMPACTION, nullptr},
+         {ValueType::kString,
+          "<size [K|M]> or <size [K|M]>*<delay|reject>*<milliseconds>",
+          "20000*delay*100,20000*reject*100",
+          &utils::token_bucket_throttling_controller::validate}},
+        {replica_envs::SPLIT_VALIDATE_PARTITION_HASH, {ValueType::kBool}},
+        {replica_envs::USER_SPECIFIED_COMPACTION, {ValueType::kString}},
         {replica_envs::BACKUP_REQUEST_QPS_THROTTLING,
-         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
-        {replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND,
-         std::bind(&check_bool_value, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
+        {replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, {ValueType::kBool}},
         {replica_envs::DENY_CLIENT_REQUEST,
-         std::bind(&check_deny_client, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kString,
+          "timeout*all|timeout*write|timeout*read|reconfig*all|reconfig*write|reconfig*read",
+          "timeout*all",
+          &check_deny_client}},
         {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
-         std::bind(&check_rocksdb_write_buffer_size, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kUint64, "In range [16777216, 536870912]", "16777216", &check_deny_client}},
         {replica_envs::ROCKSDB_NUM_LEVELS,
-         std::bind(&check_rocksdb_num_levels, std::placeholders::_1, std::placeholders::_2)},
+         {ValueType::kUint64, "In range [1, 10]", "6", &check_rocksdb_num_levels}},
         // TODO(zhaoliwei): not implemented
-        {replica_envs::BUSINESS_INFO, nullptr},
-        {replica_envs::TABLE_LEVEL_DEFAULT_TTL, nullptr},
-        {replica_envs::ROCKSDB_USAGE_SCENARIO, nullptr},
-        {replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT, nullptr},
-        {replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS, nullptr},
-        {replica_envs::MANUAL_COMPACT_DISABLED, nullptr},
-        {replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT, nullptr},
-        {replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME, nullptr},
-        {replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL, nullptr},
-        {replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION, nullptr},
-        {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, nullptr},
-        {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, nullptr},
-        {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, nullptr},
-        {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr},
-        {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, nullptr},
-    };
+        {replica_envs::BUSINESS_INFO, {ValueType::kString}},
+        {replica_envs::TABLE_LEVEL_DEFAULT_TTL, {ValueType::kString}},
+        {replica_envs::ROCKSDB_USAGE_SCENARIO, {ValueType::kString}},
+        {replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT, {ValueType::kString}},
+        {replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_DISABLED, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, {ValueType::kString}},
+        {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, {ValueType::kString}},
+        {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, {ValueType::kString}}};
 }
 
 } // namespace replication

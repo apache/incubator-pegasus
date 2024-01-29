@@ -20,6 +20,7 @@
 #include <functional>
 #include <map>
 #include <string>
+
 #include "utils/singleton.h"
 
 namespace dsn {
@@ -44,8 +45,27 @@ private:
 
     void register_all_validators();
 
+    enum class ValueType
+    {
+        kBool,
+        kUint64,
+        kInt64ButOnlyNegativeOne,
+        kString
+    };
     using validator_func = std::function<bool(const std::string &, std::string &)>;
-    std::map<std::string, validator_func> _validator_funcs;
+    struct EnvInfo
+    {
+        ValueType type;
+        std::string limit_desc;
+        std::string sample;
+        validator_func validator;
+
+        EnvInfo(ValueType t,
+                std::string ld = "",
+                std::string s = "",
+                validator_func v = validator_func());
+    };
+    std::map<std::string, EnvInfo> _validator_funcs;
 
     friend class utils::singleton<app_env_validator>;
 };
