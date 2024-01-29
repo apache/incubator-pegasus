@@ -46,11 +46,15 @@
 #include "command_executor.h"
 #include "command_utils.h"
 #include "common/json_helper.h"
+#include "http/http_client.h"
 #include "perf_counter/perf_counter_utils.h"
 #include "remote_cmd/remote_command.h"
+#include "runtime/task/async_calls.h"
 #include "tools/mutation_log_tool.h"
 #include "utils/fmt_utils.h"
 #include "absl/strings/string_view.h"
+#include "utils/errors.h"
+#include "utils/metrics.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
@@ -66,6 +70,7 @@ using namespace dsn::replication;
 #endif
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 enum scan_data_operator
 {
@@ -635,6 +640,38 @@ inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<n
     }
 
     return true;
+}
+
+inline std::vector<dsn::http_result>
+get_metrics(const std::vector<node_desc> &nodes, const std::string &query_string)
+{
+    std::vector<dsn::http_result> results(nodes.size());
+
+    dsn::task_tracker tracker;
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        (void)dsn::tasking::enqueue(LPC_GET_METRICS, &tracker, [&nodes, &query_string, &results, i](){
+                dsn::http_url url;
+
+#define SET_RESULT_AND_RETURN_IF_URL_NOT_OK(name, expr) do { \
+  auto err =  url.set_##name(expr);\
+  if (!err) {\
+      results[i] = http_result(std::move(err)); \
+      return;\
+  }\
+} while (0) 
+    
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(host, nodes[i].address.ipv4_str());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(port, nodes[i].address.port());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(path, dsn::metrics_http_service::kMetricsQueryPath.c_str());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(query, query_string.c_str());
+                results[i] = dsn::http_get(url);
+
+#undef SET_RESULT_AND_RETURN_IF_URL_NOT_OK
+                });
+    }
+
+    tracker->wait_outstanding_tasks();
+    return results;
 }
 
 inline std::vector<std::pair<bool, std::string>>

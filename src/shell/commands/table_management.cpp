@@ -262,6 +262,8 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
+    get_metrics(nodes);
+
     std::vector<std::pair<bool, std::string>> results = call_remote_command(
         sc,
         nodes,

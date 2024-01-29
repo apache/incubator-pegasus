@@ -259,6 +259,9 @@ private:
 class http_result
 {
 public:
+    http_result() noexcept
+        : _status(http_status_code::kInvalidCode) {}
+
     http_result(dsn::error_s &&err) noexcept
         : _err(std::move(err)), _status(http_status_code::kInvalidCode)
     {
