@@ -152,8 +152,8 @@ bool replica_id::from_string(const std::string &str)
 std::string replica_state::to_string() const
 {
     std::stringstream oss;
-    oss << "{" << id.to_string() << "," << partition_status_to_short_string(status) << "," << ballot
-        << "," << last_committed_decree;
+    oss << "{" << id << "," << partition_status_to_short_string(status) << "," << ballot << ","
+        << last_committed_decree;
     if (last_durable_decree != -1)
         oss << "," << last_durable_decree;
     oss << "}";
@@ -189,7 +189,7 @@ std::string state_snapshot::to_string() const
         const replica_state &s = kv.second;
         if (i != 0)
             oss << ",";
-        oss << s.to_string();
+        oss << s;
         i++;
     }
     oss << "}";
@@ -237,29 +237,28 @@ std::string state_snapshot::diff_string(const state_snapshot &other) const
     oss << "{" << std::endl;
     while (oth_it != oth.end() && cur_it != cur.end()) {
         if (oth_it->first < cur_it->first) {
-            oss << del_mark << oth_it->second.to_string() << std::endl;
+            oss << del_mark << oth_it->second << std::endl;
             ++oth_it;
         } else if (cur_it->first < oth_it->first) {
-            oss << add_mark << cur_it->second.to_string() << std::endl;
+            oss << add_mark << cur_it->second << std::endl;
             ++cur_it;
         } else {
             CHECK_EQ(oth_it->first, cur_it->first);
             if (oth_it->second != cur_it->second) {
-                oss << chg_mark << cur_it->second.to_string()
-                    << " <= " << oth_it->second.to_string() << std::endl;
+                oss << chg_mark << cur_it->second << " <= " << oth_it->second << std::endl;
             } else {
-                oss << unc_mark << cur_it->second.to_string() << std::endl;
+                oss << unc_mark << cur_it->second << std::endl;
             }
             ++oth_it;
             ++cur_it;
         }
     }
     while (oth_it != oth.end()) {
-        oss << del_mark << oth_it->second.to_string() << std::endl;
+        oss << del_mark << oth_it->second << std::endl;
         ++oth_it;
     }
     while (cur_it != cur.end()) {
-        oss << add_mark << cur_it->second.to_string() << std::endl;
+        oss << add_mark << cur_it->second << std::endl;
         ++cur_it;
     }
     oss << "}";

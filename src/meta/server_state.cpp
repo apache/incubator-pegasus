@@ -878,7 +878,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                         LOG_WARNING(
                             "notify node({}) to gc replica({}) because it is useless partition "
                             "which is caused by cancel split",
-                            request.node.to_string(),
+                            request.node,
                             rep.pid);
                     } else {
                         // app is not recognized or partition is not recognized
@@ -944,7 +944,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
     }
     LOG_INFO("send config sync response to {}, err({}), partitions_count({}), "
              "gc_replicas_count({})",
-             request.node.to_string(),
+             request.node,
              response.err,
              response.partitions.size(),
              response.gc_replicas.size());
@@ -2309,12 +2309,11 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &
             query_replica_errors[i] = err;
             std::ostringstream oss;
             if (skip_bad_nodes) {
-                oss << "WARNING: collect app and replica info from node("
-                    << replica_nodes[i].to_string() << ") failed with err(" << err.to_string()
-                    << "), skip the bad node" << std::endl;
+                oss << "WARNING: collect app and replica info from node(" << replica_nodes[i]
+                    << ") failed with err(" << err << "), skip the bad node" << std::endl;
             } else {
-                oss << "ERROR: collect app and replica info from node("
-                    << replica_nodes[i].to_string() << ") failed with err(" << err.to_string()
+                oss << "ERROR: collect app and replica info from node(" << replica_nodes[i]
+                    << ") failed with err(" << err
                     << "), you can skip it by set skip_bad_nodes option" << std::endl;
             }
             hint_message += oss.str();
@@ -3194,7 +3193,7 @@ void server_state::get_max_replica_count(configuration_get_max_replica_count_rpc
         response.max_replica_count = 0;
         LOG_WARNING("failed to get max_replica_count: app_name={}, error_code={}, hint_message={}",
                     app_name,
-                    response.err.to_string(),
+                    response.err,
                     response.hint_message);
         return;
     }
@@ -3205,7 +3204,7 @@ void server_state::get_max_replica_count(configuration_get_max_replica_count_rpc
                   "hint_message={}",
                   app_name,
                   app->app_id,
-                  response.err.to_string(),
+                  response.err,
                   response.hint_message);
         return;
     }
@@ -3239,7 +3238,7 @@ void server_state::set_max_replica_count(configuration_set_max_replica_count_rpc
             LOG_WARNING(
                 "failed to set max_replica_count: app_name={}, error_code={}, hint_message={}",
                 app_name,
-                response.err.to_string(),
+                response.err,
                 response.hint_message);
             return;
         }
@@ -3252,7 +3251,7 @@ void server_state::set_max_replica_count(configuration_set_max_replica_count_rpc
                       "hint_message={}",
                       app_name,
                       app_id,
-                      response.err.to_string(),
+                      response.err,
                       response.hint_message);
             return;
         }
@@ -3266,7 +3265,7 @@ void server_state::set_max_replica_count(configuration_set_max_replica_count_rpc
                       "hint_message={}",
                       app_name,
                       app_id,
-                      response.err.to_string(),
+                      response.err,
                       response.hint_message);
             return;
         }
@@ -3281,7 +3280,7 @@ void server_state::set_max_replica_count(configuration_set_max_replica_count_rpc
             "failed to set max_replica_count: app_name={}, app_id={}, error_code={}, message={}",
             app_name,
             app_id,
-            response.err.to_string(),
+            response.err,
             response.hint_message);
         return;
     }
@@ -3292,7 +3291,7 @@ void server_state::set_max_replica_count(configuration_set_max_replica_count_rpc
             "failed to set max_replica_count: app_name={}, app_id={}, error_code={}, message={}",
             app_name,
             app_id,
-            response.err.to_string(),
+            response.err,
             response.hint_message);
         return;
     }
@@ -3335,7 +3334,7 @@ void server_state::set_max_replica_count_env_updating(std::shared_ptr<app_state>
                       "hint_message={}",
                       app->app_name,
                       app->app_id,
-                      response.err.to_string(),
+                      response.err,
                       response.hint_message);
             return;
         }
@@ -3435,7 +3434,7 @@ void server_state::do_update_max_replica_count(std::shared_ptr<app_state> &app,
                   "An error that can't be handled occurs while updating partition-level"
                   "max_replica_count: error_code={}, app_name={}, app_id={}, "
                   "partition_index={}, partition_count={}, new_max_replica_count={}",
-                  ec.to_string(),
+                  ec,
                   app_name,
                   app->app_id,
                   i,
@@ -3684,7 +3683,7 @@ void server_state::on_update_partition_max_replica_count_on_remote_reply(
     LOG_INFO("reply for updating partition-level max_replica_count on remote storage: "
              "error_code={}, app_name={}, app_id={}, partition_id={}, new_max_replica_count={}, "
              "new_ballot={}",
-             ec.to_string(),
+             ec,
              app->app_name,
              app->app_id,
              partition_index,

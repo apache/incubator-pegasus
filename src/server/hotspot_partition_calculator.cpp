@@ -22,18 +22,17 @@
 #include <algorithm>
 #include <cmath>
 
+#include "absl/strings/string_view.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "perf_counter/perf_counter.h"
-#include "runtime/rpc/rpc_address.h"
 #include "server/hotspot_partition_stat.h"
 #include "shell/command_executor.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
 
 struct row_data;
 
@@ -232,13 +231,13 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
              (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index,
-             target_address.to_string());
+             target_address);
 
     if (error != dsn::ERR_OK) {
         LOG_ERROR("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
                   app_name,
                   partition_index,
-                  error.to_string());
+                  error);
     }
 
     if (resp.err != dsn::ERR_OK) {

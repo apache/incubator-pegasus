@@ -114,8 +114,7 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
 
         if (query_task->error() != dsn::ERR_OK) {
             std::cout << "create app " << app_name
-                      << " failed: [query] call server error: " << query_task->error().to_string()
-                      << std::endl;
+                      << " failed: [query] call server error: " << query_task->error() << std::endl;
             return query_task->error();
         }
 
@@ -123,8 +122,7 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
         ::dsn::unmarshall(query_task->get_response(), query_resp);
         if (query_resp.err != dsn::ERR_OK) {
             std::cout << "create app " << app_name
-                      << " failed: [query] received server error: " << query_resp.err.to_string()
-                      << std::endl;
+                      << " failed: [query] received server error: " << query_resp.err << std::endl;
             return query_resp.err;
         }
         CHECK_EQ(partition_count, query_resp.partition_count);
@@ -196,15 +194,13 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
 
     if (resp_task->error() != dsn::ERR_OK) {
         std::cout << "create app " << app_name
-                  << " failed: [create] call server error: " << resp_task->error().to_string()
-                  << std::endl;
+                  << " failed: [create] call server error: " << resp_task->error() << std::endl;
         return resp_task->error();
     }
 
     if (resp.err != dsn::ERR_OK) {
         std::cout << "create app " << app_name
-                  << " failed: [create] received server error: " << resp.err.to_string()
-                  << std::endl;
+                  << " failed: [create] received server error: " << resp.err << std::endl;
         return resp.err;
     }
 
@@ -911,7 +907,7 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
     for (const dsn::rpc_address &node : replica_nodes) {
         if (std::find(req->recovery_set.begin(), req->recovery_set.end(), node) !=
             req->recovery_set.end()) {
-            out << "duplicate replica node " << node.to_string() << ", just ingore it" << std::endl;
+            out << "duplicate replica node " << node << ", just ingore it" << std::endl;
         } else {
             req->recovery_set.push_back(node);
         }
@@ -929,7 +925,7 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
     out << "Node list:" << std::endl;
     out << "=============================" << std::endl;
     for (auto &node : req->recovery_set) {
-        out << node.to_string() << std::endl;
+        out << node << std::endl;
     }
     out << "=============================" << std::endl;
 
@@ -950,7 +946,7 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
     } else {
         configuration_recovery_response resp;
         dsn::unmarshall(response_task->get_response(), resp);
-        out << "Recover result: " << resp.err.to_string() << std::endl;
+        out << "Recover result: " << resp.err << std::endl;
         if (!resp.hint_message.empty()) {
             out << "=============================" << std::endl;
             out << resp.hint_message;
@@ -1099,7 +1095,7 @@ dsn::error_code replication_ddl_client::disable_backup_policy(const std::string 
         std::cout << "disable backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
-        std::cout << "disable policy result: " << resp.err.to_string() << std::endl;
+        std::cout << "disable policy result: " << resp.err << std::endl;
         if (!resp.hint_message.empty()) {
             std::cout << "=============================" << std::endl;
             std::cout << resp.hint_message << std::endl;
@@ -1131,7 +1127,7 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
         std::cout << "policy is under backup, please try disable later" << std::endl;
         return ERR_OK;
     } else {
-        std::cout << "enable policy result: " << resp.err.to_string() << std::endl;
+        std::cout << "enable policy result: " << resp.err << std::endl;
         if (!resp.hint_message.empty()) {
             std::cout << "=============================" << std::endl;
             std::cout << resp.hint_message << std::endl;
@@ -1280,7 +1276,7 @@ replication_ddl_client::update_backup_policy(const std::string &policy_name,
         std::cout << "modify backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
-        std::cout << "Modify policy result: " << resp.err.to_string() << std::endl;
+        std::cout << "Modify policy result: " << resp.err << std::endl;
         if (!resp.hint_message.empty()) {
             std::cout << "=============================" << std::endl;
             std::cout << resp.hint_message << std::endl;

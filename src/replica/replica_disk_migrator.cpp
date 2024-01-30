@@ -221,7 +221,7 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) sync_checkpoint failed({})",
                          req.origin_disk,
                          req.target_disk,
-                         sync_checkpoint_err.to_string());
+                         sync_checkpoint_err);
         reset_status();
         return false;
     }
@@ -234,7 +234,7 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
                          req.origin_disk,
                          req.target_disk,
                          _target_data_dir,
-                         copy_checkpoint_err.to_string(),
+                         copy_checkpoint_err,
                          _target_replica_dir);
         reset_status();
         utils::filesystem::remove_path(_target_replica_dir);
@@ -259,7 +259,7 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app init info failed({})",
                          req.origin_disk,
                          req.target_disk,
-                         store_init_info_err.to_string());
+                         store_init_info_err);
         reset_status();
         return false;
     }
@@ -271,7 +271,7 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app info failed({})",
                          req.origin_disk,
                          req.target_disk,
-                         store_info_err.to_string());
+                         store_info_err);
         reset_status();
         return false;
     }

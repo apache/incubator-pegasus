@@ -344,7 +344,7 @@ std::string failure_detector::get_allow_list(const std::vector<std::string> &arg
     for (auto iter = _allow_list.begin(); iter != _allow_list.end(); ++iter) {
         if (iter != _allow_list.begin())
             oss << ",";
-        oss << iter->to_string();
+        oss << *iter;
     }
     return oss.str();
 }

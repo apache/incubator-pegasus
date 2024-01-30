@@ -214,7 +214,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
 {
     const auto err = dup->start(rpc.request().is_duplicating_checkpoint);
     if (dsn_unlikely(err != ERR_OK)) {
-        LOG_ERROR("start dup[{}({})] failed: err = {}", app->app_name, dup->id, err.to_string());
+        LOG_ERROR("start dup[{}({})] failed: err = {}", app->app_name, dup->id, err);
         return;
     }
     blob value = dup->to_json_blob();
@@ -275,7 +275,7 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
 
     node_state *ns = get_node_state(_state->_nodes, request.node, false);
     if (ns == nullptr) {
-        LOG_WARNING("node({}) is not found in meta server", request.node.to_string());
+        LOG_WARNING("node({}) is not found in meta server", request.node);
         response.err = ERR_OBJECT_NOT_FOUND;
         return;
     }
@@ -397,8 +397,8 @@ void meta_duplication_service::create_follower_app_for_duplication(
                           dup->follower_cluster_name,
                           dup->app_name,
                           duplication_status_to_string(dup->status()),
-                          create_err.to_string(),
-                          update_err.to_string());
+                          create_err,
+                          update_err);
             }
         });
 }
@@ -481,7 +481,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                           dup->follower_cluster_name,
                           dup->app_name,
                           duplication_status_to_string(dup->status()),
-                          query_err.to_string(),
+                          query_err,
                           update_err);
                   }
               });
@@ -616,7 +616,7 @@ void meta_duplication_service::do_restore_duplication_progress(
                 if (!buf2int64(value.to_string_view(), confirmed_decree)) {
                     LOG_ERROR("[{}] invalid confirmed_decree {} on partition_idx {}",
                               dup->log_prefix(),
-                              value.to_string(),
+                              value,
                               partition_idx);
                     return; // fail fast
                 }

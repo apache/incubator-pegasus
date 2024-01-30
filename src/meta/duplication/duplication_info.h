@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
@@ -34,6 +35,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -189,6 +191,11 @@ public:
     // To json encoded string.
     std::string to_string() const;
 
+    friend std::ostream &operator<<(std::ostream &os, const duplication_info &di)
+    {
+        return os << di.to_string();
+    }
+
     const char *log_prefix() const { return prefix_for_log.c_str(); }
 
 private:
@@ -256,3 +263,5 @@ extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::
 
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::duplication_info);
