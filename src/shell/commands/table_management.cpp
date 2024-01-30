@@ -262,7 +262,13 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    get_metrics(nodes);
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"replica"};
+    filters.entity_attrs = {"table_id", std::to_string(app_id)};
+    filters.entity_metrics = {"rdb_total_sst_files", "rdb_total_sst_size_mb"};
+
+    const auto &result = get_metrics(nodes, filters.to_query_string());
 
     std::vector<std::pair<bool, std::string>> results = call_remote_command(
         sc,
