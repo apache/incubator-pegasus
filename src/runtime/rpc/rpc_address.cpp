@@ -52,11 +52,11 @@ error_s rpc_address::GetAddrInfo(const std::string &hostname, const addrinfo &hi
     const int rc = getaddrinfo(hostname.c_str(), nullptr, &hints, &res);
     const int err = errno; // preserving the errno from the getaddrinfo() call
     AddrInfo result(res, ::freeaddrinfo);
-    if (rc != 0) {
+    if (dsn_unlikely(rc != 0)) {
         if (rc == EAI_SYSTEM) {
-            LOG_ERROR(
-                "getaddrinfo failed, name = {}, err = {}", hostname, utils::safe_strerror(rc));
-            return error_s::make(ERR_NETWORK_FAILURE, utils::safe_strerror(err));
+            const auto &err_msg = utils::safe_strerror(err);
+            LOG_ERROR("getaddrinfo failed, name = {}, err = {}", hostname, err_msg);
+            return error_s::make(ERR_NETWORK_FAILURE, err_msg);
         }
         LOG_ERROR("getaddrinfo failed, name = {}, err = {}", hostname, gai_strerror(rc));
         return error_s::make(ERR_NETWORK_FAILURE, gai_strerror(rc));
