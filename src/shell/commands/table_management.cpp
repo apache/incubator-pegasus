@@ -21,10 +21,10 @@
 // IWYU pragma: no_include <bits/std_abs.h>
 #include <fmt/core.h>
 #include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/error.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <algorithm>
 #include <cstdint>
 #include <fstream>
@@ -37,21 +37,19 @@
 
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "dsn.layer2_types.h"
+#include "http/http_status_code.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
-#include "perf_counter/perf_counter_utils.h"
 #include "runtime/rpc/rpc_address.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
-#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
