@@ -180,6 +180,9 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
         return error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_GROUP");
     case HOST_TYPE_IPV4:
         break;
+    default:
+        CHECK(false, "");
+        __builtin_unreachable();
     }
 
     rpc_address rpc_addr;
