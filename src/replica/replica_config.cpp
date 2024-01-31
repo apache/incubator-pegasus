@@ -398,14 +398,14 @@ void replica::update_configuration_on_meta_server(config_type::type type,
         request->node);
 
     rpc_address target(_stub->_failure_detector->get_servers());
-    _primary_states.reconfiguration_task =
-        rpc::call(target,
-                  msg,
-                  &_tracker,
-                  [=](error_code err, dsn::message_ex *reqmsg, dsn::message_ex *response) {
-                      on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
-                  },
-                  get_gpid().thread_hash());
+    _primary_states.reconfiguration_task = rpc::call(
+        target,
+        msg,
+        &_tracker,
+        [=](error_code err, dsn::message_ex *reqmsg, dsn::message_ex *response) {
+            on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
+        },
+        get_gpid().thread_hash());
 }
 
 void replica::on_update_configuration_on_meta_server_reply(
@@ -437,7 +437,7 @@ void replica::on_update_configuration_on_meta_server_reply(
             _primary_states.reconfiguration_task = tasking::enqueue(
                 LPC_DELAY_UPDATE_CONFIG,
                 &_tracker,
-                [ this, request, req2 = std::move(req) ]() {
+                [this, request, req2 = std::move(req)]() {
                     rpc_address target(_stub->_failure_detector->get_servers());
                     rpc_response_task_ptr t = rpc::create_rpc_response_task(
                         request,
@@ -1073,7 +1073,7 @@ void replica::on_config_sync(const app_info &info,
             if (config.primary == _stub->_primary_address // dead primary
                 ||
                 config.primary.is_invalid() // primary is dead (otherwise let primary remove this)
-                ) {
+            ) {
                 LOG_INFO_PREFIX("downgrade myself as inactive is not transient, remote_config({})",
                                 boost::lexical_cast<std::string>(config));
                 _stub->remove_replica_on_meta_server(_app_info, config);
@@ -1151,6 +1151,24 @@ void replica::replay_prepare_list()
 error_code replica::update_init_info_ballot_and_decree()
 {
     return _app->update_init_info_ballot_and_decree(this);
+}
+
+void replica::update_app_duplication_status(bool doing_duplication){
+    if(doing_duplication == _app_info.duplicating){
+        return;
+    }
+
+    auto old_doing_duplication_status = _app_info.duplicating;
+    _app_info.__set_duplicating(doing_duplication);
+
+    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+                        ERR_OK,
+                        "store_app_info for duplicating failed: app_name={}, "
+                        "app_id={}, duplicating_status={}, new_duplicating_status={}",
+                        _app_info.app_name,
+                        _app_info.app_id,
+                        old_doing_duplication_status,
+                        _app_info.duplicating);
 }
 
 } // namespace replication

@@ -127,18 +127,11 @@ void duplication_sync_timer::update_duplication_map(
         if (it == dup_map.end()) {
             // no duplication is assigned to this app
             r->get_duplication_manager()->update_duplication_map({});
-            doing_duplication = false;
+            r->update_app_duplication_status(false);
         } else {
             r->get_duplication_manager()->update_duplication_map(it->second);
-            doing_duplication = true;
+            r->update_app_duplication_status(true);
         }
-
-        if (doing_duplication) {
-            info->__set_duplicating(true);
-        } else {
-            info->__set_duplicating(false);
-        }
-        r->store_app_info(*info);
     }
 }
 

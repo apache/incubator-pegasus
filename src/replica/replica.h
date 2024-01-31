@@ -253,6 +253,8 @@ public:
     bool is_duplication_master() const { return _is_duplication_master; }
     bool is_duplication_follower() const { return _is_duplication_follower; }
 
+    void update_app_duplication_status(bool doing_duplication);
+
     //
     // Backup
     //
