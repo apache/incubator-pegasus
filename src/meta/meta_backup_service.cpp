@@ -75,6 +75,26 @@ metric_entity_ptr instantiate_backup_policy_metric_entity(const std::string &pol
     return METRIC_ENTITY_backup_policy.instantiate(entity_id, {{"policy_name", policy_name}});
 }
 
+bool validate_backup_interval(int64_t backup_interval_seconds, std::string &hint_message)
+{
+    if (backup_interval_seconds <= FLAGS_cold_backup_checkpoint_reserve_minutes * 60) {
+        hint_message = fmt::format(
+            "backup interval must be larger than cold_backup_checkpoint_reserve_minutes={}",
+            FLAGS_cold_backup_checkpoint_reserve_minutes);
+        return false;
+    }
+
+    // There is a bug occurred in backup if the backup interval is less than 1 day, this is a
+    // temporary resolution, the long term plan is to remove periodic backup.
+    // See details https://github.com/apache/incubator-pegasus/issues/1081.
+    if (backup_interval_seconds <= 86400) {
+        hint_message = fmt::format("backup interval must be larger than 86400 (1 day)");
+        return false;
+    }
+
+    return true;
+}
+
 } // anonymous namespace
 
 backup_policy_metrics::backup_policy_metrics(const std::string &policy_name)
@@ -1289,11 +1309,10 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
 
     // The backup interval must be greater than checkpoint reserve time.
     // Or the next cold backup checkpoint may be cleared by the clear operation.
-    if (request.backup_interval_seconds <= FLAGS_cold_backup_checkpoint_reserve_minutes * 60) {
+    std::string hint_message;
+    if (!validate_backup_interval(request.backup_interval_seconds, hint_message)) {
         response.err = ERR_INVALID_PARAMETERS;
-        response.hint_message = fmt::format(
-            "backup interval must be greater than FLAGS_cold_backup_checkpoint_reserve_minutes={}",
-            FLAGS_cold_backup_checkpoint_reserve_minutes);
+        response.hint_message = hint_message;
         _meta_svc->reply_data(msg, response);
         msg->release_ref();
         return;
@@ -1634,7 +1653,8 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
     }
 
     if (request.__isset.new_backup_interval_sec) {
-        if (request.new_backup_interval_sec > 0) {
+        std::string hint_message;
+        if (validate_backup_interval(request.new_backup_interval_sec, hint_message)) {
             LOG_INFO("{}: policy will change backup interval from {}s to {}s",
                      cur_policy.policy_name,
                      cur_policy.backup_interval_seconds,
@@ -1642,9 +1662,10 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
             cur_policy.backup_interval_seconds = request.new_backup_interval_sec;
             have_modify_policy = true;
         } else {
-            LOG_WARNING("{}: invalid backup_interval_sec({})",
+            LOG_WARNING("{}: invalid backup_interval_sec({}), {}",
                         cur_policy.policy_name,
-                        request.new_backup_interval_sec);
+                        request.new_backup_interval_sec,
+                        hint_message);
         }
     }
 
