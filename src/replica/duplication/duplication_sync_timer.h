@@ -73,11 +73,6 @@ private:
 
     std::vector<replica_ptr> get_all_replicas();
 
-    // duplication_sync_timer is async with replica close,so replica_duplicator_manager may already
-    // release
-    // dup should stop right now
-    bool replica_is_cloing_or_closed(gpid id);
-
 private:
     friend class duplication_sync_timer_test;
 
