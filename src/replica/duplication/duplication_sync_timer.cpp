@@ -75,7 +75,7 @@ void duplication_sync_timer::run()
     // collects confirm points from all primaries on this server
     for (const replica_ptr &r : get_all_primaries()) {
         gpid id = r->get_gpid();
-        if (replica_is_cloing_or_closed(id)) {
+        if (_stub->replica_is_cloing_or_closed(id)) {
             continue;
         }
         auto confirmed = r->get_duplication_manager()->get_duplication_confirms_to_update();
@@ -120,7 +120,7 @@ void duplication_sync_timer::update_duplication_map(
         app_info *info = const_cast<app_info *>(r->get_app_info());
         gpid id = r->get_gpid();
         bool doing_duplication;
-        if (replica_is_cloing_or_closed(id)) {
+        if (_stub->replica_is_cloing_or_closed(id)) {
             continue;
         }
 
@@ -213,7 +213,7 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
     std::multimap<dupid_t, replica_dup_state> result;
     for (const replica_ptr &r : get_all_primaries()) {
         gpid rid = r->get_gpid();
-        if (rid.get_app_id() != app_id || replica_is_cloing_or_closed(rid)) {
+        if (rid.get_app_id() != app_id || _stub->replica_is_cloing_or_closed(rid)) {
             continue;
         }
         *app_found = true;
@@ -231,15 +231,5 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
     }
     return result;
 }
-
-bool duplication_sync_timer::replica_is_cloing_or_closed(gpid id)
-{
-    if (_stub->_closing_replicas.find(id) != _stub->_closing_replicas.end() ||
-        _stub->_closed_replicas.find(id) != _stub->_closed_replicas.end()) {
-        return true;
-    }
-    return false;
-}
-
 } // namespace replication
 } // namespace dsn
