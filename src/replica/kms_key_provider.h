@@ -32,25 +32,25 @@ struct kms_info;
 namespace security {
 // This class generates EEK IV KV from KMS (a.k.a Key Management Service) and retrieves DEK from
 // KMS.
-class KMSKeyProvider
+class kms_key_provider
 {
 public:
-    ~KMSKeyProvider() {}
+    ~kms_key_provider() {}
 
-    KMSKeyProvider(const std::vector<std::string> &kms_url, std::string cluster_key_name)
-        : client_(kms_url, std::move(cluster_key_name))
+    kms_key_provider(const std::vector<std::string> &kms_url, std::string cluster_key_name)
+        : _client(kms_url, std::move(cluster_key_name))
     {
     }
 
     // Decrypt the encryption key in 'kms_info' via KMS. The 'decrypted_key' will be a hex string.
-    dsn::error_s DecryptEncryptionKey(const dsn::replication::kms_info &kms_info,
+    dsn::error_s DecryptEncryptionKey(const dsn::replication::kms_info &info,
                                       std::string *decrypted_key);
 
     // Generate an encryption key from KMS.
-    dsn::error_s GenerateEncryptionKey(dsn::replication::kms_info *kms_info);
+    dsn::error_s GenerateEncryptionKey(dsn::replication::kms_info *info);
 
 private:
-    KMSClient client_;
+    kms_client _client;
 };
 } // namespace security
 } // namespace dsn

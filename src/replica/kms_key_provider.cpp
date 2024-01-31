@@ -23,15 +23,15 @@
 namespace dsn {
 namespace security {
 
-dsn::error_s KMSKeyProvider::DecryptEncryptionKey(const dsn::replication::kms_info &kms_info,
+dsn::error_s kms_key_provider::DecryptEncryptionKey(const dsn::replication::kms_info &info,
                                                   std::string *decrypted_key)
 {
-    return client_.DecryptEncryptionKey(kms_info, decrypted_key);
+    return _client.DecryptEncryptionKey(info, decrypted_key);
 }
 
-dsn::error_s KMSKeyProvider::GenerateEncryptionKey(dsn::replication::kms_info *kms_info)
+dsn::error_s kms_key_provider::GenerateEncryptionKey(dsn::replication::kms_info *info)
 {
-    return client_.GenerateEncryptionKey(kms_info);
+    return _client.GenerateEncryptionKey(info);
 }
 
 } // namespace security

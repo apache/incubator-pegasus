@@ -419,7 +419,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
     }
 
-    std::string kms_path =
+    const auto &kms_path =
         utils::filesystem::path_combine(_options.data_dirs[0], kms_info::kKmsInfo);
     // FLAGS_data_dirs may be empty when load configuration, use LOG_FATAL instead of group
     // validator.
@@ -433,9 +433,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     std::string server_key;
     dsn::replication::kms_info kms_info;
     if (FLAGS_encrypt_data_at_rest && !utils::is_empty(FLAGS_hadoop_kms_url)) {
-        key_provider.reset(new dsn::security::KMSKeyProvider(
+        _key_provider.reset(new dsn::security::kms_key_provider(
             ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_cluster_name));
-        auto ec = dsn::utils::load_rjobj_from_file(
+        const auto &ec = dsn::utils::load_rjobj_from_file(
             kms_path, dsn::utils::FileDataType::kNonSensitive, &kms_info);
         if (ec != dsn::ERR_PATH_NOT_FOUND && ec != dsn::ERR_OK) {
             CHECK_EQ_MSG(dsn::ERR_OK, ec, "Can't load kms key from kms-info file");
@@ -447,10 +447,10 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         if (ec == dsn::ERR_PATH_NOT_FOUND) {
             LOG_WARNING("It's normal to encounter a temporary inability to open the kms-info file "
                         "during the first process launch.");
-            CHECK_OK(key_provider->GenerateEncryptionKey(&kms_info),
+            CHECK_OK(_key_provider->GenerateEncryptionKey(&kms_info),
                      "Generate encryption key from kms failed");
         }
-        CHECK_OK(key_provider->DecryptEncryptionKey(kms_info, &server_key),
+        CHECK_OK(_key_provider->DecryptEncryptionKey(kms_info, &server_key),
                  "Get decryption key failed from {}",
                  kms_path);
         FLAGS_server_key = server_key.c_str();
@@ -459,8 +459,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     // Initialize the file system manager.
     _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags);
 
-    if (key_provider && !utils::filesystem::path_exists(kms_path)) {
-        auto err = dsn::utils::dump_rjobj_to_file(
+    if (_key_provider && !utils::filesystem::path_exists(kms_path)) {
+        const auto &err = dsn::utils::dump_rjobj_to_file(
             kms_info, dsn::utils::FileDataType::kNonSensitive, kms_path);
         CHECK_EQ_MSG(dsn::ERR_OK, err, "Can't store kms key to kms-info file");
     }

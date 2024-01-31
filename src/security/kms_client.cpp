@@ -36,16 +36,16 @@
 namespace dsn {
 namespace security {
 
-dsn::error_s KMSClient::DecryptEncryptionKey(const dsn::replication::kms_info &kms_info,
+dsn::error_s kms_client::DecryptEncryptionKey(const dsn::replication::kms_info &info,
                                              std::string *decrypted_key)
 {
     nlohmann::json payload;
-    payload["name"] = cluster_key_name_;
-    std::string iv_plain = ::absl::HexStringToBytes(kms_info.iv);
+    payload["name"] = _cluster_key_name;
+    std::string iv_plain = ::absl::HexStringToBytes(info.iv);
     std::string iv_b64;
     ::absl::WebSafeBase64Escape(iv_plain, &iv_b64);
     payload["iv"] = iv_b64;
-    std::string eek_plain = ::absl::HexStringToBytes(kms_info.eek);
+    std::string eek_plain = ::absl::HexStringToBytes(info.encrypted_key);
     std::string eek_b64;
     ::absl::WebSafeBase64Escape(eek_plain, &eek_b64);
     payload["material"] = eek_b64;
@@ -55,9 +55,9 @@ dsn::error_s KMSClient::DecryptEncryptionKey(const dsn::replication::kms_info &k
     RETURN_NOT_OK(client.set_auth(http_auth_type::SPNEGO));
 
     std::vector<std::string> urls;
-    urls.reserve(kms_urls_.size());
-    for (const auto &url : kms_urls_) {
-        urls.emplace_back(fmt::format("{}/v1/keyversion/{}/_eek?eek_op=decrypt", url, kms_info.kv));
+    urls.reserve(_kms_urls.size());
+    for (const auto &url : _kms_urls) {
+        urls.emplace_back(fmt::format("{}/v1/keyversion/{}/_eek?eek_op=decrypt", url, info.key_version));
     }
     client.clear_header_fields();
     client.set_content_type("application/json");
@@ -106,16 +106,16 @@ dsn::error_s KMSClient::DecryptEncryptionKey(const dsn::replication::kms_info &k
     return dsn::error_s::ok();
 }
 
-dsn::error_s KMSClient::GenerateEncryptionKeyFromKMS(const std::string &key_name,
-                                                     dsn::replication::kms_info *kms_info)
+dsn::error_s kms_client::GenerateEncryptionKeyFromKMS(const std::string &key_name,
+                                                     dsn::replication::kms_info *info)
 {
     http_client client;
     RETURN_NOT_OK(client.init());
     RETURN_NOT_OK(client.set_auth(http_auth_type::SPNEGO));
 
     std::vector<std::string> urls;
-    urls.reserve(kms_urls_.size());
-    for (const auto &url : kms_urls_) {
+    urls.reserve(_kms_urls.size());
+    for (const auto &url : _kms_urls) {
         urls.emplace_back(
             fmt::format("{}/v1/key/{}/_eek?eek_op=generate&num_keys=1", url, key_name));
     }
@@ -150,7 +150,7 @@ dsn::error_s KMSClient::GenerateEncryptionKeyFromKMS(const std::string &key_name
         !j["versionName"].is_null(),
         ERR_INVALID_DATA,
         "Received null versionName in kms json data, network may have some problems.");
-    j["versionName"].get_to(kms_info->kv);
+    j["versionName"].get_to(info->key_version);
 
     std::string iv_b64;
     RETURN_ERRS_NOT_TRUE(!j["iv"].is_null(),
@@ -162,7 +162,7 @@ dsn::error_s KMSClient::GenerateEncryptionKeyFromKMS(const std::string &key_name
     RETURN_ERRS_NOT_TRUE(::absl::WebSafeBase64Unescape(iv_b64, &iv_plain),
                          ERR_INVALID_DATA,
                          "IV base64 decoding failed.");
-    kms_info->iv = ::absl::BytesToHexString(iv_plain);
+    info->iv = ::absl::BytesToHexString(iv_plain);
 
     std::string key_b64;
     RETURN_ERRS_NOT_TRUE(
@@ -179,13 +179,13 @@ dsn::error_s KMSClient::GenerateEncryptionKeyFromKMS(const std::string &key_name
     RETURN_ERRS_NOT_TRUE(::absl::WebSafeBase64Unescape(key_b64, &key_plain),
                          ERR_INVALID_DATA,
                          "Encryption key base64 decoding failed.");
-    kms_info->eek = ::absl::BytesToHexString(key_plain);
+    info->encrypted_key = ::absl::BytesToHexString(key_plain);
     return dsn::error_s::ok();
 }
 
-dsn::error_s KMSClient::GenerateEncryptionKey(dsn::replication::kms_info *kms_info)
+dsn::error_s kms_client::GenerateEncryptionKey(dsn::replication::kms_info *info)
 {
-    return GenerateEncryptionKeyFromKMS(cluster_key_name_, kms_info);
+    return GenerateEncryptionKeyFromKMS(_cluster_key_name, info);
 }
 
 } // namespace security

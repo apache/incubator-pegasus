@@ -33,27 +33,27 @@ namespace security {
 // A class designed to generate an encryption key from KMS for file writing,
 // implemented using an HTTP client.
 // This class is not thread-safe. Thus maintain one instance for each thread.
-class KMSClient
+class kms_client
 {
 public:
-    KMSClient(const std::vector<std::string> &kms_url, std::string cluster_key_name)
-        : kms_urls_(kms_url), cluster_key_name_(std::move(cluster_key_name))
+    kms_client(const std::vector<std::string> &kms_url, std::string cluster_key_name)
+        : _kms_urls(kms_url), _cluster_key_name(std::move(cluster_key_name))
     {
     }
 
     // Retrieve the Decrypted Encryption Key (DEK) from KMS after generating the EEK, IV, and KV.
-    dsn::error_s DecryptEncryptionKey(const dsn::replication::kms_info &kms_info,
+    dsn::error_s DecryptEncryptionKey(const dsn::replication::kms_info &info,
                                       std::string *decrypted_key);
 
     // Generated the EEK, IV, KV from KMS.
-    dsn::error_s GenerateEncryptionKey(dsn::replication::kms_info *kms_info);
+    dsn::error_s GenerateEncryptionKey(dsn::replication::kms_info *info);
 
 private:
     dsn::error_s GenerateEncryptionKeyFromKMS(const std::string &key_name,
-                                              dsn::replication::kms_info *kms_info);
+                                              dsn::replication::kms_info *info);
 
-    std::vector<std::string> kms_urls_;
-    std::string cluster_key_name_;
+    std::vector<std::string> _kms_urls;
+    std::string _cluster_key_name;
 };
 } // namespace security
 } // namespace dsn
