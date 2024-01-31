@@ -2768,5 +2768,14 @@ void replica_stub::wait_closing_replicas_finished()
     }
 }
 
+bool replica_stub::replica_is_closing_or_closed(gpid id)
+{
+    if (_closing_replicas.find(id) != _closing_replicas.end() ||
+        _closed_replicas.find(id) != _closed_replicas.end()) {
+        return true;
+    }
+    return false;
+}
+
 } // namespace replication
 } // namespace dsn
