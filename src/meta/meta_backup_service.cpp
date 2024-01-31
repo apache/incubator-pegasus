@@ -77,6 +77,8 @@ metric_entity_ptr instantiate_backup_policy_metric_entity(const std::string &pol
 
 bool validate_backup_interval(int64_t backup_interval_seconds, std::string &hint_message)
 {
+    // The backup interval must be larger than checkpoint reserve time.
+    // Or the next cold backup checkpoint may be cleared by the clear operation.
     if (backup_interval_seconds <= FLAGS_cold_backup_checkpoint_reserve_minutes * 60) {
         hint_message = fmt::format(
             "backup interval must be larger than cold_backup_checkpoint_reserve_minutes={}",
@@ -87,8 +89,8 @@ bool validate_backup_interval(int64_t backup_interval_seconds, std::string &hint
     // There is a bug occurred in backup if the backup interval is less than 1 day, this is a
     // temporary resolution, the long term plan is to remove periodic backup.
     // See details https://github.com/apache/incubator-pegasus/issues/1081.
-    if (backup_interval_seconds <= 86400) {
-        hint_message = fmt::format("backup interval must be larger than 86400 (1 day)");
+    if (backup_interval_seconds < 86400) {
+        hint_message = fmt::format("backup interval must be >= 86400 (1 day)");
         return false;
     }
 
@@ -1307,8 +1309,6 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     std::set<int32_t> app_ids;
     std::map<int32_t, std::string> app_names;
 
-    // The backup interval must be greater than checkpoint reserve time.
-    // Or the next cold backup checkpoint may be cleared by the clear operation.
     std::string hint_message;
     if (!validate_backup_interval(request.backup_interval_seconds, hint_message)) {
         response.err = ERR_INVALID_PARAMETERS;

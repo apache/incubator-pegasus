@@ -61,15 +61,9 @@ public:
         NO_FATALS(write_data(kTestCount));
 
         std::vector<int32_t> app_ids({table_id_});
-        // NOTICE: we enqueue a time task to check whether policy should start backup periodically,
-        // the period is 5min, so the time between two backup is at least 5min, but if we set the
-        // 'backup_interval_seconds' smaller enough such as smaller than the time of finishing once
-        // backup, we can start next backup immediately when current backup is finished.
-        // The backup interval must be greater than checkpoint reserve time, see
-        // backup_service::add_backup_policy() for details.
         ASSERT_EQ(
             ERR_OK,
-            ddl_client_->add_backup_policy("policy_1", "local_service", app_ids, 700, 6, "24:0"));
+            ddl_client_->add_backup_policy("policy_1", "local_service", app_ids, 86400, 6, "24:0"));
     }
 
     void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client_->drop_app(table_name_, 0)); }
