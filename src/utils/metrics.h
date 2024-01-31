@@ -1651,6 +1651,35 @@ private:
     DISALLOW_COPY_AND_ASSIGN(auto_count);
 };
 
+struct metric_brief_value_snapshot
+{
+    std::string name;
+    double value;
+
+    DEFINE_JSON_SERIALIZATION(name, value)
+};
+
+struct metric_entity_brief_value_snapshot
+{
+    std::string type;
+    std::string id;
+    metric_entity::attr_map attributes;
+    std::vector<metric_brief_value_snapshot> metrics;
+
+    DEFINE_JSON_SERIALIZATION(type, id, attributes, metrics)
+};
+
+struct metric_query_brief_value_snapshot
+{
+    std::string cluster;
+    std::string role;
+    std::string host;
+    uint16_t port;
+    std::vector<metric_entity_brief_value_snapshot> entities;
+
+    DEFINE_JSON_SERIALIZATION(cluster, role, host, port, entities)
+};
+
 } // namespace dsn
 
 // Since server_metric_entity() will be called in macros such as METRIC_VAR_INIT_server(), its

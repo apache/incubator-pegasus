@@ -191,36 +191,35 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
 {
     dsn::error_s err;
 
-    rapidjson::Document doc;
-    rapidjson::ParseResult result = doc.Parse(json_string.c_str());
-    if (dsn_unlikely(result.IsError())) {
-        return dsn::error_s::make(dsn::ERR_INVALID_DATA, "invalid json string");
+    dsn::metric_query_brief_value_snapshot query_snapshot;
+    dsn::blob bb(json_string.data(), 0, json_string.size());
+    if (dsn_unlikely(!dsn::json::json_forwarder<dsn::metric_query_brief_value_snapshot>::decode(
+            bb, query_snapshot))) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string");
     }
 
-    const auto &entities = doc.FindMember(dsn::kMetricEntitiesField.c_str())->value;
-    for (const auto &entity : entities.GetArray()) {
-        const auto &type = entity.FindMember(dsn::kMetricEntityTypeField.c_str())->value;
-        if (!dsn::utils::equals(type.GetString(), "replica")) {
-            continue;
+    for (const auto &entity : query_snapshot.entities) {
+        if (dsn_unlikely(entity.type != "replica")) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA,
+                           "non-replica entity should not be included: {}",
+                           entity.type);
         }
 
-        const auto &attrs = entity.FindMember(dsn::kMetricEntityAttrsField.c_str())->value;
-        const auto &partition = attrs.FindMember("partition_id")->value;
+        const auto &partition = entity.attributes.find("partition_id");
+        if (dsn_unlikely(partition == entity.attributes.end())) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "partition_id field was not found");
+        }
+
         int32_t partition_id;
-        if (!dsn::buf2int32(partition.GetString(), partition_id)) {
-            return FMT_ERR(
-                dsn::ERR_INVALID_DATA, "invalid partition id: {}", partition.GetString());
+        if (dsn_unlikely(!dsn::buf2int32(partition->second, partition_id))) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid partition_id: {}", partition->second);
         }
 
-        const auto &metrics = entity.FindMember(dsn::kMetricEntityMetricsField.c_str())->value;
-        for (const auto &m : metrics.GetArray()) {
-            const auto &name = m.FindMember(dsn::kMetricNameField.c_str())->value;
-            if (dsn::utils::equals(name.GetString(), "rdb_total_sst_files")) {
-                const auto &value = m.FindMember(dsn::kMetricSingleValueField.c_str())->value;
-                count_map[partition_id] = static_cast<double>(value.GetInt64());
-            } else if (dsn::utils::equals(name.GetString(), "rdb_total_sst_size_mb")) {
-                const auto &value = m.FindMember(dsn::kMetricSingleValueField.c_str())->value;
-                disk_map[partition_id] = static_cast<double>(value.GetInt64());
+        for (const auto &m : entity.metrics) {
+            if (m.name == "rdb_total_sst_files") {
+                count_map[partition_id] = m.value;
+            } else if (m.name == "rdb_total_sst_size_mb") {
+                disk_map[partition_id] = m.value;
             }
         }
     }
@@ -324,7 +323,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
     std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
     for (int i = 0; i < nodes.size(); ++i) {
-        if (!results[i].error().is_ok()) {
+        if (!results[i].error()) {
             std::cout << "ERROR: send http request to query sst metrics from node "
                       << nodes[i].address << " failed: " << results[i].error() << std::endl;
             return true;
