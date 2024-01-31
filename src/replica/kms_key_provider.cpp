@@ -24,7 +24,7 @@ namespace dsn {
 namespace security {
 
 dsn::error_s kms_key_provider::DecryptEncryptionKey(const dsn::replication::kms_info &info,
-                                                  std::string *decrypted_key)
+                                                    std::string *decrypted_key)
 {
     return _client.DecryptEncryptionKey(info, decrypted_key);
 }

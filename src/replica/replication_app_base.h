@@ -90,8 +90,8 @@ public:
 struct kms_info
 {
     std::string encrypted_key; // a.k.a encrypted encryption key
-    std::string iv;  // a.k.a initialization vector
-    std::string key_version;  // a.k.a key version
+    std::string iv;            // a.k.a initialization vector
+    std::string key_version;   // a.k.a key version
     DEFINE_JSON_SERIALIZATION(encrypted_key, iv, key_version)
     static const std::string kKmsInfo; // json file name
 

@@ -37,7 +37,7 @@ namespace dsn {
 namespace security {
 
 dsn::error_s kms_client::DecryptEncryptionKey(const dsn::replication::kms_info &info,
-                                             std::string *decrypted_key)
+                                              std::string *decrypted_key)
 {
     nlohmann::json payload;
     payload["name"] = _cluster_key_name;
@@ -57,7 +57,8 @@ dsn::error_s kms_client::DecryptEncryptionKey(const dsn::replication::kms_info &
     std::vector<std::string> urls;
     urls.reserve(_kms_urls.size());
     for (const auto &url : _kms_urls) {
-        urls.emplace_back(fmt::format("{}/v1/keyversion/{}/_eek?eek_op=decrypt", url, info.key_version));
+        urls.emplace_back(
+            fmt::format("{}/v1/keyversion/{}/_eek?eek_op=decrypt", url, info.key_version));
     }
     client.clear_header_fields();
     client.set_content_type("application/json");
@@ -107,7 +108,7 @@ dsn::error_s kms_client::DecryptEncryptionKey(const dsn::replication::kms_info &
 }
 
 dsn::error_s kms_client::GenerateEncryptionKeyFromKMS(const std::string &key_name,
-                                                     dsn::replication::kms_info *info)
+                                                      dsn::replication::kms_info *info)
 {
     http_client client;
     RETURN_NOT_OK(client.init());
