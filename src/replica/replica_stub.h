@@ -495,7 +495,7 @@ private:
     std::atomic_int _manual_emergency_checkpointing_count;
 
     // replica decrypted key for rocksdb
-    std::string server_key;
+    std::string _server_key;
 
     bool _is_running;
 
