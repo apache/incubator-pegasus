@@ -98,8 +98,11 @@ dsn::metric_filters resource_usage_filters()
 {
     dsn::metric_filters filters;
     filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
-    filters.entity_types = {"server"};
-    filters.entity_metrics = {"resident_mem_usage_mb", "rdb_block_cache_mem_usage_bytes"};
+    filters.entity_types = {"server", "replica"};
+    filters.entity_metrics = {"resident_mem_usage_mb",
+                              "rdb_block_cache_mem_usage_bytes",
+                              "rdb_memtable_mem_usage_bytes",
+                              "rdb_index_and_filter_blocks_mem_usage_bytes"};
     return filters;
 }
 
@@ -115,12 +118,18 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
     }
 
     for (const auto &entity : query_snapshot.entities) {
-        if (entity.type == "server") {
-            for (const auto &m : entity.metrics) {
+        for (const auto &m : entity.metrics) {
+            if (entity.type == "server") {
                 if (m.name == "resident_mem_usage_mb") {
                     stat.memused_res_mb += m.value;
                 } else if (m.name == "rdb_block_cache_mem_usage_bytes") {
                     stat.block_cache_bytes += m.value;
+                }
+            } else if (entity.type == "replica") {
+                if (m.name == "rdb_memtable_mem_usage_bytes") {
+                    stat.mem_tbl_bytes += m.value;
+                } else if (m.name == "rdb_index_and_filter_blocks_mem_usage_bytes") {
+                    stat.mem_idx_bytes += m.value;
                 }
             }
         }
@@ -275,8 +284,6 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         // TODO(wangdan): following replica-level and disk-level metrics would be replaced:
         // "replica*eon.replica_stub*disk.available.total.ratio"
         // "replica*eon.replica_stub*disk.available.min.ratio"
-        // "replica*app.pegasus*rdb.memtable.memory_usage"
-        // "replica*app.pegasus*rdb.index_and_filter_blocks.memory_usage"
 
         for (size_t i = 0; i < nodes.size(); ++i) {
             auto tmp_it = tmp_map.find(nodes[i].address);
@@ -313,11 +320,6 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                     stat.disk_available_total_ratio += m.value;
                 else if (m.name.find("disk.available.min.ratio") != std::string::npos)
                     stat.disk_available_min_ratio += m.value;
-                else if (m.name.find("rdb.memtable.memory_usage") != std::string::npos)
-                    stat.mem_tbl_bytes += m.value;
-                else if (m.name.find("rdb.index_and_filter_blocks.memory_usage") !=
-                         std::string::npos)
-                    stat.mem_idx_bytes += m.value;
             }
         }
     }
