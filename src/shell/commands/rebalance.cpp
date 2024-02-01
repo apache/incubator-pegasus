@@ -58,7 +58,7 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
         std::cout << "control meta level ok, the old level is "
                   << _meta_function_level_VALUES_TO_NAMES.find(resp.old_level)->second << std::endl;
     } else {
-        std::cout << "control meta level got error " << resp.err.to_string() << std::endl;
+        std::cout << "control meta level got error " << resp.err << std::endl;
     }
     return true;
 }
@@ -71,7 +71,7 @@ bool get_meta_level(command_executor *e, shell_context *sc, arguments args)
         std::cout << "current meta level is "
                   << _meta_function_level_VALUES_TO_NAMES.find(resp.old_level)->second << std::endl;
     } else {
-        std::cout << "get meta level got error " << resp.err.to_string() << std::endl;
+        std::cout << "get meta level got error " << resp.err << std::endl;
     }
     return true;
 }
@@ -133,7 +133,7 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
         tp != config_type::CT_INVALID, "parse %s as config_type failed.\n", proposal_type.c_str());
     request.action_list = {new_proposal_action(target, node, tp)};
     dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
-    std::cout << "send proposal response: " << err.to_string() << std::endl;
+    std::cout << "send proposal response: " << err << std::endl;
     return true;
 }
 
@@ -223,6 +223,6 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
     dsn::error_code ec = sc->ddl_client->send_balancer_proposal(request);
-    std::cout << "send balance proposal result: " << ec.to_string() << std::endl;
+    std::cout << "send balance proposal result: " << ec << std::endl;
     return true;
 }

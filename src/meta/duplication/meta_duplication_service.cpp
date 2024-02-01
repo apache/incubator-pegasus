@@ -647,7 +647,7 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
             auto dup = duplication_info::decode_from_blob(
                 dup_id, app->app_id, app->app_name, app->partition_count, store_path, json);
             if (nullptr == dup) {
-                LOG_ERROR("failed to decode json \"{}\" on path {}", json.to_string(), store_path);
+                LOG_ERROR("failed to decode json \"{}\" on path {}", json, store_path);
                 return; // fail fast
             }
             if (!dup->is_invalid_status()) {

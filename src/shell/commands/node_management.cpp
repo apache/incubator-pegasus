@@ -88,7 +88,7 @@ bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 
     ::dsn::error_code err = sc->ddl_client->cluster_info(out_file, resolve_ip, json);
     if (err != ::dsn::ERR_OK) {
-        std::cout << "get cluster info failed, error=" << err.to_string() << std::endl;
+        std::cout << "get cluster info failed, error=" << err << std::endl;
     }
     return true;
 }
@@ -293,7 +293,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
     auto r = sc->ddl_client->list_nodes(s, nodes);
     if (r != dsn::ERR_OK) {
-        std::cout << "list nodes failed, error=" << r.to_string() << std::endl;
+        std::cout << "list nodes failed, error=" << r << std::endl;
         return true;
     }
 
@@ -316,7 +316,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         std::vector<::dsn::app_info> apps;
         r = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
         if (r != dsn::ERR_OK) {
-            std::cout << "list apps failed, error=" << r.to_string() << std::endl;
+            std::cout << "list apps failed, error=" << r << std::endl;
             return true;
         }
 
@@ -326,8 +326,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             std::vector<dsn::partition_configuration> partitions;
             r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, partitions);
             if (r != dsn::ERR_OK) {
-                std::cout << "list app " << app.app_name << " failed, error=" << r.to_string()
-                          << std::endl;
+                std::cout << "list app " << app.app_name << " failed, error=" << r << std::endl;
                 return true;
             }
 
@@ -396,19 +395,19 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             if (tmp_it == tmp_map.end())
                 continue;
             if (!results[i].first) {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " failed" << std::endl;
+                std::cout << "query perf counter info from node " << node_addr << " failed"
+                          << std::endl;
                 return true;
             }
             dsn::perf_counter_info info;
             dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
             if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                std::cout << "decode perf counter info from node " << node_addr.to_string()
+                std::cout << "decode perf counter info from node " << node_addr
                           << " failed, result = " << results[i].second << std::endl;
                 return true;
             }
             if (info.result != "OK") {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
+                std::cout << "query perf counter info from node " << node_addr
                           << " returns error, error = " << info.result << std::endl;
                 return true;
             }

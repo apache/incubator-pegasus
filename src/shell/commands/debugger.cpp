@@ -227,8 +227,8 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
                               update.set_expire_ts_seconds);
                 } else {
                     os << INDENT << "ERROR: unsupported code "
-                       << ::dsn::task_code(msg->local_rpc_code).to_string() << "("
-                       << msg->local_rpc_code << ")" << std::endl;
+                       << ::dsn::task_code(msg->local_rpc_code) << "(" << msg->local_rpc_code << ")"
+                       << std::endl;
                 }
             }
         };
