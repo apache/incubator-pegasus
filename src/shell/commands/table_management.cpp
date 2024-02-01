@@ -323,7 +323,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
     std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
     std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
-    for (int i = 0; i < nodes.size(); ++i) {
+    for (size_t i = 0; i < nodes.size(); ++i) {
         if (!results[i].error()) {
             std::cout << "ERROR: send http request to query sst metrics from node "
                       << nodes[i].address << " failed: " << results[i].error() << std::endl;

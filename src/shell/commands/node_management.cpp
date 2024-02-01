@@ -35,6 +35,7 @@
 #include "common/json_helper.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
+#include "http/http_status_code.h"
 #include "meta_admin_types.h"
 #include "perf_counter/perf_counter_utils.h"
 #include "runtime/rpc/rpc_address.h"
@@ -45,7 +46,10 @@
 #include "shell/sds/sds.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/metrics.h"
 #include "utils/output_utils.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
@@ -87,6 +91,45 @@ bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
     }
     return true;
 }
+
+namespace {
+
+dsn::metric_filters resource_usage_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"server"};
+    filters.entity_metrics = {"resident_mem_usage_mb", "rdb_block_cache_mem_usage_bytes"};
+    return filters;
+}
+
+dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_helper &stat)
+{
+    dsn::error_s err;
+
+    dsn::metric_query_brief_value_snapshot query_snapshot;
+    dsn::blob bb(json_string.data(), 0, json_string.size());
+    if (dsn_unlikely(!dsn::json::json_forwarder<dsn::metric_query_brief_value_snapshot>::decode(
+            bb, query_snapshot))) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string");
+    }
+
+    for (const auto &entity : query_snapshot.entities) {
+        if (entity.type == "server") {
+            for (const auto &m : entity.metrics) {
+                if (m.name == "resident_mem_usage_mb") {
+                    stat.memused_res_mb += m.value;
+                } else if (m.name == "rdb_block_cache_mem_usage_bytes") {
+                    stat.block_cache_bytes += m.value;
+                }
+            }
+        }
+    }
+
+    return dsn::error_s::ok();
+}
+
+} // anonymous namespace
 
 bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 {
@@ -227,54 +270,54 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        std::vector<std::pair<bool, std::string>> results =
-            call_remote_command(sc,
-                                nodes,
-                                "perf-counters-by-prefix",
-                                {"replica*server*memused.res(MB)",
-                                 "replica*app.pegasus*rdb.block_cache.memory_usage",
-                                 "replica*eon.replica_stub*disk.available.total.ratio",
-                                 "replica*eon.replica_stub*disk.available.min.ratio",
-                                 "replica*app.pegasus*rdb.memtable.memory_usage",
-                                 "replica*app.pegasus*rdb.index_and_filter_blocks.memory_usage"});
+        const auto &results = get_metrics(nodes, resource_usage_filters().to_query_string());
 
-        for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            auto tmp_it = tmp_map.find(node_addr);
-            if (tmp_it == tmp_map.end())
+        // TODO(wangdan): following replica-level and disk-level metrics would be replaced:
+        // "replica*eon.replica_stub*disk.available.total.ratio"
+        // "replica*eon.replica_stub*disk.available.min.ratio"
+        // "replica*app.pegasus*rdb.memtable.memory_usage"
+        // "replica*app.pegasus*rdb.index_and_filter_blocks.memory_usage"
+
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            auto tmp_it = tmp_map.find(nodes[i].address);
+            if (tmp_it == tmp_map.end()) {
                 continue;
-            if (!results[i].first) {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " failed" << std::endl;
+            }
+
+            if (!results[i].error()) {
+                std::cout << "ERROR: send http request to query resource metrics from node "
+                          << nodes[i].address << " failed: " << results[i].error() << std::endl;
                 return true;
             }
+            if (results[i].status() != dsn::http_status_code::kOk) {
+                std::cout << "ERROR: send http request to query resource metrics from node "
+                          << nodes[i].address
+                          << " failed: " << dsn::get_http_status_message(results[i].status())
+                          << std::endl
+                          << results[i].body() << std::endl;
+                return true;
+            }
+
+            auto &stat = tmp_it->second;
+            const auto &res = parse_resource_usage(results[i].body(), stat);
+            if (!res) {
+                std::cout << "ERROR: parse sst metrics response from node " << nodes[i].address
+                          << " failed: " << res << std::endl;
+                return true;
+            }
+
+            // TODO(wangdan): after migrated to new metrics, remove following code:
             dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                std::cout << "decode perf counter info from node " << node_addr.to_string()
-                          << " failed, result = " << results[i].second << std::endl;
-                return true;
-            }
-            if (info.result != "OK") {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " returns error, error = " << info.result << std::endl;
-                return true;
-            }
-            list_nodes_helper &h = tmp_it->second;
             for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name.find("memused.res(MB)") != std::string::npos)
-                    h.memused_res_mb += m.value;
-                else if (m.name.find("rdb.block_cache.memory_usage") != std::string::npos)
-                    h.block_cache_bytes += m.value;
-                else if (m.name.find("disk.available.total.ratio") != std::string::npos)
-                    h.disk_available_total_ratio += m.value;
+                if (m.name.find("disk.available.total.ratio") != std::string::npos)
+                    stat.disk_available_total_ratio += m.value;
                 else if (m.name.find("disk.available.min.ratio") != std::string::npos)
-                    h.disk_available_min_ratio += m.value;
+                    stat.disk_available_min_ratio += m.value;
                 else if (m.name.find("rdb.memtable.memory_usage") != std::string::npos)
-                    h.mem_tbl_bytes += m.value;
+                    stat.mem_tbl_bytes += m.value;
                 else if (m.name.find("rdb.index_and_filter_blocks.memory_usage") !=
                          std::string::npos)
-                    h.mem_idx_bytes += m.value;
+                    stat.mem_idx_bytes += m.value;
             }
         }
     }
