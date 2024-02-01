@@ -28,7 +28,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -47,8 +46,10 @@
 #include "shell/sds/sds.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/output_utils.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
