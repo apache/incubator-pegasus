@@ -58,6 +58,6 @@ TEST_F(KmsClientTest, test_generate_and_decrypt_encryption_key)
     // 2. decrypt encryption key.
     std::string server_key;
     ASSERT_EQ(dsn::ERR_OK, key_provider->DecryptEncryptionKey(info, &server_key).code());
-    ASSERT_EQ(server_key.size(), kms_info.encrypted_key.length());
+    ASSERT_EQ(server_key.size(), info.encrypted_key.length());
     ASSERT_NE(server_key, info.encrypted_key);
 }
