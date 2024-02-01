@@ -76,7 +76,7 @@ dsn::error_s kms_client::DecryptEncryptionKey(const dsn::replication::kms_info &
         }
         RETURN_NOT_OK(err);
         http_status_code http_status;
-        client.get_http_status(http_status);
+        RETURN_NOT_OK(client.get_http_status(http_status));
         if (http_status != http_status_code::kOk) {
             LOG_WARNING("The http status is ({}), and url is ({})",
                         get_http_status_message(http_status),
@@ -126,13 +126,13 @@ dsn::error_s kms_client::GenerateEncryptionKeyFromKMS(const std::string &key_nam
         RETURN_NOT_OK(client.set_url(url));
         RETURN_NOT_OK(client.with_get_method());
         std::string resp;
-        auto err = client.exec_method(&resp);
+        const auto &err = client.exec_method(&resp);
         if (err.code() == ERR_NETWORK_FAILURE || err.code() == ERR_TIMEOUT) {
             continue;
         }
         RETURN_NOT_OK(err);
         http_status_code http_status;
-        client.get_http_status(http_status);
+        RETURN_NOT_OK(client.get_http_status(http_status));
         if (http_status != http_status_code::kOk) {
             LOG_WARNING("The http status is ({}), and url is ({})",
                         get_http_status_message(http_status),
