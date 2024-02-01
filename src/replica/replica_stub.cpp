@@ -449,10 +449,10 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             CHECK_OK(_key_provider->GenerateEncryptionKey(&kms_info),
                      "Generate encryption key from kms failed");
         }
-        CHECK_OK(_key_provider->DecryptEncryptionKey(kms_info, &server_key),
+        CHECK_OK(_key_provider->DecryptEncryptionKey(kms_info, &_server_key),
                  "Get decryption key failed from {}",
                  kms_path);
-        FLAGS_server_key = server_key.c_str();
+        FLAGS_server_key = _server_key.c_str();
     }
 
     // Initialize the file system manager.
