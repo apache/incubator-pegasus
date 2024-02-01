@@ -85,6 +85,24 @@ public:
     error_code store(const std::string &fname);
 };
 
+// This class stores and loads EEK, IV, and KV from KMS as a JSON file.
+// To get the decrypted key, should POST EEK, IV, and KV to KMS.
+struct kms_info
+{
+    std::string encrypted_key;         // a.k.a encrypted encryption key
+    std::string initialization_vector; // a.k.a initialization vector
+    std::string key_version;           // a.k.a key version
+    DEFINE_JSON_SERIALIZATION(encrypted_key, initialization_vector, key_version)
+    static const std::string kKmsInfo; // json file name
+
+    kms_info(const std::string &e_key = "",
+             const std::string &i = "",
+             const std::string &k_version = "")
+        : encrypted_key(e_key), initialization_vector(i), key_version(k_version)
+    {
+    }
+};
+
 /// The store engine interface of Pegasus.
 /// Inherited by pegasus::pegasus_server_impl
 /// Inherited by apps::rrdb_service

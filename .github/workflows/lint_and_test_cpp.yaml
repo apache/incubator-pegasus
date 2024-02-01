@@ -154,6 +154,7 @@ jobs:
           - pegasus_unit_test
           - recovery_test
           - restore_test
+          - security_test
           - throttle_test
     needs: build_Release
     runs-on: ubuntu-latest
@@ -235,6 +236,7 @@ jobs:
           - pegasus_unit_test
           - recovery_test
           - restore_test
+          - security_test
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
           # it has been optimized.
 #          - throttle_test
@@ -319,6 +321,7 @@ jobs:
 #          - pegasus_unit_test
 #          - recovery_test
 #          - restore_test
+#          - security_test
 #          - throttle_test
 #    needs: build_UBSAN
 #    runs-on: ubuntu-latest

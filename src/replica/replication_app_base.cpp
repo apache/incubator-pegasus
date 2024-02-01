@@ -69,6 +69,7 @@ namespace dsn {
 namespace replication {
 
 const std::string replica_init_info::kInitInfo = ".init-info";
+const std::string kms_info::kKmsInfo = ".kms-info";
 
 std::string replica_init_info::to_string()
 {

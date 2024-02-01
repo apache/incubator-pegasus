@@ -15,13 +15,32 @@
 # specific language governing permissions and limitations
 # under the License.
 
-add_subdirectory(utils)
-add_subdirectory(backup_restore)
-add_subdirectory(base_api)
-add_subdirectory(bulk_load)
-add_subdirectory(detect_hotspot)
-add_subdirectory(partition_split)
-add_subdirectory(recovery)
-add_subdirectory(restore)
-add_subdirectory(security)
-add_subdirectory(throttle)
+set(MY_PROJ_NAME "security_test")
+set(MY_PROJ_SRC "")
+
+set(MY_SRC_SEARCH_MODE "GLOB")
+
+set(MY_PROJ_LIBS
+        absl::strings
+        dsn_http
+        curl
+        dsn_meta_server
+        dsn_utils
+        dsn_security
+        dsn_ranger
+        dsn_replica_server
+        sasl2
+        gssapi_krb5
+        krb5
+        gtest
+        function_test_utils
+        rocksdb
+        test_utils)
+
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+
+set(MY_BINPLACES
+        ./config.ini
+        ../run.sh)
+
+dsn_add_test()

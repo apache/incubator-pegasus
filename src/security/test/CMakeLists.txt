@@ -19,12 +19,16 @@ set(MY_PROJ_NAME dsn_security_tests)
 set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
+        absl::strings
+        dsn_http
+        curl
         dsn_security
         dsn_meta_server
         dsn_replication_common
         dsn_runtime
         dsn_utils
-        gtest)
+        gtest
+        rocksdb)
 set(MY_BINPLACES
         config.ini
         run.sh)
