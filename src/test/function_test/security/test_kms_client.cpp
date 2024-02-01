@@ -37,27 +37,27 @@ DSN_DECLARE_string(hadoop_kms_url);
 } // namespace replication
 } // namespace dsn
 
-class KmsClientTest : public testing::Test
+class kms_client_test : public testing::Test
 {
 };
 
-TEST_F(KmsClientTest, test_generate_and_decrypt_encryption_key)
+TEST_F(kms_client_test, test_generate_and_decrypt_encryption_key)
 {
     if (strlen(dsn::replication::FLAGS_hadoop_kms_url) == 0) {
         GTEST_SKIP() << "Set a proper 'hadoop_kms_url' in config.ini to enable this test.";
     }
 
-    auto key_provider = std::make_unique<dsn::security::kms_key_provider>(
+    auto _key_provider = std::make_unique<dsn::security::kms_key_provider>(
         ::absl::StrSplit(dsn::replication::FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()),
         dsn::FLAGS_cluster_name);
     dsn::replication::kms_info info;
 
     // 1. generate encryption key.
-    ASSERT_EQ(dsn::ERR_OK, key_provider->GenerateEncryptionKey(&info).code());
+    ASSERT_EQ(dsn::ERR_OK, _key_provider->GenerateEncryptionKey(&info).code());
 
     // 2. decrypt encryption key.
     std::string server_key;
-    ASSERT_EQ(dsn::ERR_OK, key_provider->DecryptEncryptionKey(info, &server_key).code());
+    ASSERT_EQ(dsn::ERR_OK, _key_provider->DecryptEncryptionKey(info, &server_key).code());
     ASSERT_EQ(server_key.size(), info.encrypted_key.length());
     ASSERT_NE(server_key, info.encrypted_key);
 }

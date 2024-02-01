@@ -494,6 +494,9 @@ private:
     // replica count executing emergency checkpoint concurrently
     std::atomic_int _manual_emergency_checkpointing_count;
 
+    // replica decrypted key for rocksdb
+    std::string server_key;
+
     bool _is_running;
 
     std::unique_ptr<dsn::security::access_controller> _access_controller;

@@ -430,7 +430,6 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                   kms_path);
     }
 
-    static std::string server_key;
     dsn::replication::kms_info kms_info;
     if (FLAGS_encrypt_data_at_rest && !utils::is_empty(FLAGS_hadoop_kms_url)) {
         _key_provider.reset(new dsn::security::kms_key_provider(

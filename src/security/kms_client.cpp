@@ -41,7 +41,7 @@ dsn::error_s kms_client::DecryptEncryptionKey(const dsn::replication::kms_info &
 {
     nlohmann::json payload;
     payload["name"] = _cluster_key_name;
-    std::string iv_plain = ::absl::HexStringToBytes(info.iv);
+    std::string iv_plain = ::absl::HexStringToBytes(info.initialization_vector);
     std::string iv_b64;
     ::absl::WebSafeBase64Escape(iv_plain, &iv_b64);
     payload["iv"] = iv_b64;
@@ -163,7 +163,7 @@ dsn::error_s kms_client::GenerateEncryptionKeyFromKMS(const std::string &key_nam
     RETURN_ERRS_NOT_TRUE(::absl::WebSafeBase64Unescape(iv_b64, &iv_plain),
                          ERR_INVALID_DATA,
                          "IV base64 decoding failed.");
-    info->iv = ::absl::BytesToHexString(iv_plain);
+    info->initialization_vector = ::absl::BytesToHexString(iv_plain);
 
     std::string key_b64;
     RETURN_ERRS_NOT_TRUE(
