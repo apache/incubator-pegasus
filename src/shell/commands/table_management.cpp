@@ -30,6 +30,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -37,9 +38,9 @@
 #include "common/gpid.h"
 #include "common/json_helper.h"
 #include "dsn.layer2_types.h"
+#include "http/http_status_code.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
-#include "perf_counter/perf_counter_utils.h"
 #include "runtime/rpc/rpc_address.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
@@ -49,7 +50,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
@@ -173,6 +174,62 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+namespace {
+
+dsn::metric_filters sst_stat_filters(int32_t table_id)
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"replica"};
+    filters.entity_attrs = {"table_id", std::to_string(table_id)};
+    filters.entity_metrics = {"rdb_total_sst_files", "rdb_total_sst_size_mb"};
+    return filters;
+}
+
+dsn::error_s parse_sst_stat(const std::string &json_string,
+                            std::map<int32_t, double> &count_map,
+                            std::map<int32_t, double> &disk_map)
+{
+    dsn::error_s err;
+
+    dsn::metric_query_brief_value_snapshot query_snapshot;
+    dsn::blob bb(json_string.data(), 0, json_string.size());
+    if (dsn_unlikely(!dsn::json::json_forwarder<dsn::metric_query_brief_value_snapshot>::decode(
+            bb, query_snapshot))) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string");
+    }
+
+    for (const auto &entity : query_snapshot.entities) {
+        if (dsn_unlikely(entity.type != "replica")) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA,
+                           "non-replica entity should not be included: {}",
+                           entity.type);
+        }
+
+        const auto &partition = entity.attributes.find("partition_id");
+        if (dsn_unlikely(partition == entity.attributes.end())) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "partition_id field was not found");
+        }
+
+        int32_t partition_id;
+        if (dsn_unlikely(!dsn::buf2int32(partition->second, partition_id))) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid partition_id: {}", partition->second);
+        }
+
+        for (const auto &m : entity.metrics) {
+            if (m.name == "rdb_total_sst_files") {
+                count_map[partition_id] = m.value;
+            } else if (m.name == "rdb_total_sst_size_mb") {
+                disk_map[partition_id] = m.value;
+            }
+        }
+    }
+
+    return dsn::error_s::ok();
+}
+
+} // anonymous namespace
+
 bool app_disk(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc <= 1)
@@ -262,45 +319,31 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    std::vector<std::pair<bool, std::string>> results = call_remote_command(
-        sc,
-        nodes,
-        "perf-counters-by-prefix",
-        {fmt::format("replica*app.pegasus*disk.storage.sst(MB)@{}.", app_id),
-         fmt::format("replica*app.pegasus*disk.storage.sst.count@{}.", app_id)});
+    const auto &results = get_metrics(nodes, sst_stat_filters(app_id).to_query_string());
 
     std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
     std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
     for (int i = 0; i < nodes.size(); ++i) {
-        if (!results[i].first) {
-            std::cout << "ERROR: query perf counter from node " << nodes[i].address.to_string()
-                      << " failed" << std::endl;
+        if (!results[i].error()) {
+            std::cout << "ERROR: send http request to query sst metrics from node "
+                      << nodes[i].address << " failed: " << results[i].error() << std::endl;
             return true;
         }
-        dsn::perf_counter_info info;
-        dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-        if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-            std::cout << "ERROR: decode perf counter info from node "
-                      << nodes[i].address.to_string() << " failed, result = " << results[i].second
-                      << std::endl;
+        if (results[i].status() != dsn::http_status_code::kOk) {
+            std::cout << "ERROR: send http request to query sst metrics from node "
+                      << nodes[i].address
+                      << " failed: " << dsn::get_http_status_message(results[i].status())
+                      << std::endl
+                      << results[i].body() << std::endl;
             return true;
         }
-        if (info.result != "OK") {
-            std::cout << "ERROR: query perf counter info from node " << nodes[i].address.to_string()
-                      << " returns error, error = " << info.result << std::endl;
+
+        const auto &res = parse_sst_stat(
+            results[i].body(), count_map[nodes[i].address], disk_map[nodes[i].address]);
+        if (!res) {
+            std::cout << "ERROR: parse sst metrics response from node " << nodes[i].address
+                      << " failed: " << res << std::endl;
             return true;
-        }
-        for (dsn::perf_counter_metric &m : info.counters) {
-            int32_t app_id_x, partition_index_x;
-            std::string counter_name;
-            bool parse_ret = parse_app_pegasus_perf_counter_name(
-                m.name, app_id_x, partition_index_x, counter_name);
-            CHECK(parse_ret, "name = {}", m.name);
-            if (m.name.find("sst(MB)") != std::string::npos) {
-                disk_map[nodes[i].address][partition_index_x] = m.value;
-            } else if (m.name.find("sst.count") != std::string::npos) {
-                count_map[nodes[i].address][partition_index_x] = m.value;
-            }
         }
     }
 

@@ -116,10 +116,10 @@ geo_client::geo_client(const char *config_file,
 dsn::error_s geo_client::set_max_level(int level)
 {
     if (level <= FLAGS_min_level) {
-        return dsn::FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
-                            "level({}) must be larger than FLAGS_min_level({})",
-                            level,
-                            FLAGS_min_level);
+        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
+                       "level({}) must be larger than FLAGS_min_level({})",
+                       level,
+                       FLAGS_min_level);
     }
 
     FLAGS_max_level = level;

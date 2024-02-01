@@ -29,6 +29,7 @@ set(MY_PROJ_LIBS
         dsn_ranger
         dsn_replication_common
         dsn_client
+        dsn_http
         dsn_utils
         dsn.block_service.local
         dsn.block_service.hdfs
@@ -43,9 +44,11 @@ set(MY_PROJ_LIBS
         absl::flat_hash_set
         absl::strings
         s2
-        hdfs)
+        hdfs
+        curl)
 set(MY_BINPLACES
         ${CMAKE_CURRENT_SOURCE_DIR}/config.ini)
+
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 SET(CMAKE_INSTALL_RPATH ".")
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
