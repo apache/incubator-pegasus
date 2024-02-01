@@ -102,13 +102,6 @@ rpc_address node_to_address(const std::string &name)
     return test_checker::instance().node_name_to_address(name);
 }
 
-std::string gpid_to_string(gpid gpid)
-{
-    std::stringstream oss;
-    oss << gpid.get_app_id() << "." << gpid.get_partition_index();
-    return oss.str();
-}
-
 bool gpid_from_string(const std::string &str, gpid &gpid)
 {
     size_t pos = str.find('.');
@@ -123,7 +116,7 @@ std::string replica_id::to_string() const
 {
     std::stringstream oss;
 #ifdef ENABLE_GPID
-    oss << gpid_to_string(gpid) << "@" << node;
+    oss << gpid << "@" << node;
 #else
     oss << node;
 #endif
@@ -271,7 +264,7 @@ std::string parti_config::to_string() const
     std::stringstream oss;
     oss << "{"
 #ifdef ENABLE_GPID
-        << gpid_to_string(gpid) << ","
+        << gpid << ","
 #endif
         << ballot << "," << primary << ",[";
     for (size_t i = 0; i < secondaries.size(); ++i) {
