@@ -1720,7 +1720,16 @@ function run_shell()
     fi
 
     cd ${ROOT}
-    ln -s -f ${ROOT}/bin/pegasus_shell/pegasus_shell
+    if [ -f ${ROOT}/bin/pegasus_shell/pegasus_shell ]; then
+        # The pegasus_shell was packaged by pack_tools, to be used on production environment.
+        ln -s -f ${ROOT}/bin/pegasus_shell/pegasus_shell
+    elif [ -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell ]; then
+        # The pegasus_shell was built locally, to be used for test on development environment.
+        ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell
+    else
+        echo "ERROR: pegasus_shell could not be found"
+        exit 1
+    fi
     ./pegasus_shell ${CONFIG} $CLUSTER_NAME
     # because pegasus shell will catch 'Ctrl-C' signal, so the following commands will be executed
     # even user inputs 'Ctrl-C', so that the temporary config file will be cleared when exit shell.
