@@ -102,7 +102,7 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
 
     std::string compact_rule;
     if (check_once_compact(envs)) {
-        //        compact_rule = dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_KEY_PREFIX;
+        compact_rule = dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_PREFIX;
     }
 
     if (compact_rule.empty() && check_periodic_compact(envs)) {
@@ -244,8 +244,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     options.exclusive_manual_compaction = true;
     options.change_level = true;
     options.target_level = -1;
-    auto find =
-        envs.find(key_prefix + dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL_KEY);
+    auto find = envs.find(key_prefix + dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL);
     if (find != envs.end()) {
         int32_t target_level;
         if (dsn::buf2int32(find->second, target_level) &&

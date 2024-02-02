@@ -378,7 +378,7 @@ const std::string replica_envs::TABLE_LEVEL_DEFAULT_TTL("default_ttl");
 /// ```
 /// manual_compact.disabled=false                               // optional, default false
 /// ```
-const std::string replica_envs::MANUAL_COMPACT_PREFIX("manual_compact.");
+const std::string MANUAL_COMPACT_PREFIX("manual_compact.");
 const std::string replica_envs::MANUAL_COMPACT_DISABLED(MANUAL_COMPACT_PREFIX + "disabled");
 const std::string replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT(
     MANUAL_COMPACT_PREFIX + "max_concurrent_running_count");
@@ -386,7 +386,7 @@ const std::string replica_envs::MANUAL_COMPACT_ONCE_PREFIX(MANUAL_COMPACT_PREFIX
 const std::string replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME(MANUAL_COMPACT_ONCE_PREFIX +
                                                                  "trigger_time");
 // see more about the following two keys in rocksdb::CompactRangeOptions
-const std::string replica_envs::MANUAL_COMPACT_TARGET_LEVEL_KEY("target_level");
+const std::string replica_envs::MANUAL_COMPACT_TARGET_LEVEL("target_level");
 const std::string replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL(MANUAL_COMPACT_ONCE_PREFIX +
                                                                  "target_level");
 const std::string replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION(

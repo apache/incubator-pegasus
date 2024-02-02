@@ -264,7 +264,7 @@ TEST_P(manual_compact_service_test, extract_manual_compact_opts)
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
     envs[dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_PREFIX +
-         dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL_KEY] = "2";
+         dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL] = "2";
     envs[dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION] =
         pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
     extract_manual_compact_opts(
@@ -273,7 +273,7 @@ TEST_P(manual_compact_service_test, extract_manual_compact_opts)
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kForce);
 
     envs[dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_PREFIX +
-         dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-1";
+         dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL] = "-1";
     envs[dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION] =
         pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
     extract_manual_compact_opts(
@@ -282,7 +282,7 @@ TEST_P(manual_compact_service_test, extract_manual_compact_opts)
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
     envs[dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_PREFIX +
-         dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-2";
+         dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL] = "-2";
     envs[dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION] =
         "nonono";
     extract_manual_compact_opts(
@@ -291,7 +291,7 @@ TEST_P(manual_compact_service_test, extract_manual_compact_opts)
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
     envs[dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_PREFIX +
-         dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL_KEY] = "8";
+         dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL] = "8";
     extract_manual_compact_opts(
         envs, dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_PREFIX, out);
     ASSERT_EQ(out.target_level, -1);
