@@ -47,6 +47,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/math.h"
 #include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
@@ -98,11 +99,13 @@ dsn::metric_filters resource_usage_filters()
 {
     dsn::metric_filters filters;
     filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
-    filters.entity_types = {"server", "replica"};
+    filters.entity_types = {"server", "replica", "disk"};
     filters.entity_metrics = {"resident_mem_usage_mb",
                               "rdb_block_cache_mem_usage_bytes",
                               "rdb_memtable_mem_usage_bytes",
-                              "rdb_index_and_filter_blocks_mem_usage_bytes"};
+                              "rdb_index_and_filter_blocks_mem_usage_bytes",
+                              "disk_capacity_total_mb",
+                              "disk_capacity_avail_mb"};
     return filters;
 }
 
@@ -117,23 +120,47 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
         return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string");
     }
 
+    int64_t total_capacity_mb = 0;
+    int64_t total_available_mb = 0;
+    stat.disk_available_min_ratio = 100;
     for (const auto &entity : query_snapshot.entities) {
-        for (const auto &m : entity.metrics) {
-            if (entity.type == "server") {
+        if (entity.type == "server") {
+            for (const auto &m : entity.metrics) {
                 if (m.name == "resident_mem_usage_mb") {
                     stat.memused_res_mb += m.value;
                 } else if (m.name == "rdb_block_cache_mem_usage_bytes") {
                     stat.block_cache_bytes += m.value;
                 }
-            } else if (entity.type == "replica") {
+            }
+        } else if (entity.type == "replica") {
+            for (const auto &m : entity.metrics) {
                 if (m.name == "rdb_memtable_mem_usage_bytes") {
                     stat.mem_tbl_bytes += m.value;
                 } else if (m.name == "rdb_index_and_filter_blocks_mem_usage_bytes") {
                     stat.mem_idx_bytes += m.value;
                 }
             }
+        } else if (entity.type == "disk") {
+            int64_t capacity_mb = 0;
+            int64_t available_mb = 0;
+            for (const auto &m : entity.metrics) {
+                if (m.name == "disk_capacity_total_mb") {
+                    total_capacity_mb += m.value;
+                    capacity_mb = m.value;
+                } else if (m.name == "disk_capacity_avail_mb") {
+                    total_available_mb += m.value;
+                    available_mb = m.value;
+                }
+            }
+
+            const auto available_ratio = dsn::utils::calc_percentage(available_mb, capacity_mb);
+            stat.disk_available_min_ratio =
+                std::min(stat.disk_available_min_ratio, available_ratio);
         }
     }
+
+    stat.disk_available_total_ratio =
+        dsn::utils::calc_percentage(total_available_mb, total_capacity_mb);
 
     return dsn::error_s::ok();
 }
@@ -281,10 +308,6 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
         const auto &results = get_metrics(nodes, resource_usage_filters().to_query_string());
 
-        // TODO(wangdan): following replica-level and disk-level metrics would be replaced:
-        // "replica*eon.replica_stub*disk.available.total.ratio"
-        // "replica*eon.replica_stub*disk.available.min.ratio"
-
         for (size_t i = 0; i < nodes.size(); ++i) {
             auto tmp_it = tmp_map.find(nodes[i].address);
             if (tmp_it == tmp_map.end()) {
@@ -311,15 +334,6 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 std::cout << "ERROR: parse sst metrics response from node " << nodes[i].address
                           << " failed: " << res << std::endl;
                 return true;
-            }
-
-            // TODO(wangdan): after migrated to new metrics, remove following code:
-            dsn::perf_counter_info info;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name.find("disk.available.total.ratio") != std::string::npos)
-                    stat.disk_available_total_ratio += m.value;
-                else if (m.name.find("disk.available.min.ratio") != std::string::npos)
-                    stat.disk_available_min_ratio += m.value;
             }
         }
     }

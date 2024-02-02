@@ -18,12 +18,29 @@
 #pragma once
 
 #include <vector>
+#include <cmath>
 #include <cstdint>
+#include <type_traits>
+
+#include "utils/ports.h"
 
 namespace dsn {
 namespace utils {
 
 double mean_stddev(const std::vector<uint32_t> &result_set, bool partial_sample);
+
+template <typename TOutput = int64_t,
+          typename TInput = int64_t,
+          typename = typename std::enable_if<std::is_arithmetic<TOutput>::value>::type,
+          typename = typename std::enable_if<std::is_arithmetic<TInput>::value>::type>
+TOutput calc_percentage(TInput numerator, TInput denominator)
+{
+    if (dsn_unlikely(denominator == 0)) {
+        return static_cast<TOutput>(0);
+    }
+
+    return static_cast<TOutput>(std::round(numerator * 100.0 / denominator));
+}
 
 } // namespace utils
 } // namespace dsn
