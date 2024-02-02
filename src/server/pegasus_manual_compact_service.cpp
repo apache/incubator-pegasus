@@ -61,8 +61,6 @@ DSN_DEFINE_int32(pegasus.server,
                  "minimal interval time in seconds to start a new manual compaction, <= 0 "
                  "means no interval limit");
 
-const std::string pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY(
-    "bottommost_level_compaction");
 const std::string
     pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
 const std::string
@@ -260,7 +258,8 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     }
 
     options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
-    find = envs.find(key_prefix + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY);
+    find = envs.find(key_prefix +
+                     dsn::replication::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION);
     if (find != envs.end()) {
         const std::string &argv = find->second;
         if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {

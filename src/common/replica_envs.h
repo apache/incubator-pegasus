@@ -54,6 +54,7 @@ public:
     static const std::string MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT;
     static const std::string MANUAL_COMPACT_ONCE_TRIGGER_TIME;
     static const std::string MANUAL_COMPACT_ONCE_TARGET_LEVEL;
+    static const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION;
     static const std::string MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION;
     static const std::string MANUAL_COMPACT_PERIODIC_TRIGGER_TIME;
     static const std::string MANUAL_COMPACT_PERIODIC_TARGET_LEVEL;

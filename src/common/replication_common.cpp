@@ -389,6 +389,8 @@ const std::string replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME(MANUAL_COMPACT_
 const std::string replica_envs::MANUAL_COMPACT_TARGET_LEVEL("target_level");
 const std::string replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL(MANUAL_COMPACT_ONCE_PREFIX +
                                                                  "target_level");
+const std::string
+    replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION("bottommost_level_compaction");
 const std::string replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION(
     MANUAL_COMPACT_ONCE_PREFIX + "bottommost_level_compaction");
 const std::string replica_envs::MANUAL_COMPACT_PERIODIC_PREFIX(MANUAL_COMPACT_PREFIX + "periodic.");
