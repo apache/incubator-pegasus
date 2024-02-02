@@ -50,6 +50,7 @@
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
 #include "capacity_unit_calculator.h"
+#include "common/replica_envs.h"
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
 #include "consensus_types.h"
@@ -145,6 +146,12 @@ const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
 const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
 const std::chrono::seconds pegasus_server_impl::kServerStatUpdateTimeSec = std::chrono::seconds(10);
+
+// should be same with items in dsn::backup_restore_constant
+const std::string ROCKSDB_ENV_RESTORE_FORCE_RESTORE("restore.force_restore");
+const std::string ROCKSDB_ENV_RESTORE_POLICY_NAME("restore.policy_name");
+const std::string ROCKSDB_ENV_RESTORE_BACKUP_ID("restore.backup_id");
+const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.reserve_time_seconds");
 
 void pegasus_server_impl::parse_checkpoints()
 {
@@ -2595,7 +2602,7 @@ void pegasus_server_impl::update_rocksdb_dynamic_options(
     }
 
     std::unordered_map<std::string, std::string> new_options;
-    for (const auto &option : ROCKSDB_DYNAMIC_OPTIONS) {
+    for (const auto &option : dsn::replication::replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
         const auto &find = envs.find(option);
         if (find == envs.end()) {
             continue;
@@ -2621,7 +2628,7 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
         return;
     }
 
-    for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
+    for (const auto &option : dsn::replication::replica_envs::ROCKSDB_STATIC_OPTIONS) {
         const auto &find = envs.find(option);
         if (find == envs.end()) {
             continue;
@@ -2634,7 +2641,7 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
         }
     }
 
-    for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
+    for (const auto &option : dsn::replication::replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
         const auto &find = envs.find(option);
         if (find == envs.end()) {
             continue;
@@ -2682,20 +2689,21 @@ void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::stri
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
     // write_buffer_size involves random values (refer to pegasus_server_impl::set_usage_scenario),
     // so it can only be taken from _data_cf_opts
-    envs[ROCKSDB_WRITE_BUFFER_SIZE] = std::to_string(_data_cf_opts.write_buffer_size);
+    envs[dsn::replication::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE] =
+        std::to_string(_data_cf_opts.write_buffer_size);
 
     // Get Data ColumnFamilyOptions directly from _data_cf
     rocksdb::ColumnFamilyDescriptor desc;
     CHECK_TRUE(_data_cf->GetDescriptor(&desc).ok());
-    for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
+    for (const auto &option : dsn::replication::replica_envs::ROCKSDB_STATIC_OPTIONS) {
         auto getter = cf_opts_getters.find(option);
         CHECK_TRUE(getter != cf_opts_getters.end());
         std::string option_val;
         getter->second(desc.options, option_val);
         envs[option] = option_val;
     }
-    for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
-        if (option.compare(ROCKSDB_WRITE_BUFFER_SIZE) == 0) {
+    for (const auto &option : dsn::replication::replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
+        if (option.compare(dsn::replication::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE) == 0) {
             continue;
         }
         auto getter = cf_opts_getters.find(option);
@@ -2735,7 +2743,7 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
 
 void pegasus_server_impl::update_default_ttl(const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(TABLE_LEVEL_DEFAULT_TTL);
+    auto find = envs.find(dsn::replication::replica_envs::TABLE_LEVEL_DEFAULT_TTL);
     if (find != envs.end()) {
         int32_t ttl = 0;
         if (!dsn::buf2int32(find->second, ttl) || ttl < 0) {
@@ -2753,7 +2761,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
     int32_t count = FLAGS_checkpoint_reserve_min_count;
     int32_t time = FLAGS_checkpoint_reserve_time_seconds;
 
-    auto find = envs.find(ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT);
+    auto find = envs.find(dsn::replication::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT);
     if (find != envs.end()) {
         if (!dsn::buf2int32(find->second, count) || count <= 0) {
             LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
@@ -2770,7 +2778,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
 
     if (count != _checkpoint_reserve_min_count) {
         LOG_INFO_PREFIX("update app env[{}] from \"{}\" to \"{}\" succeed",
-                        ROCKDB_CHECKPOINT_RESERVE_MIN_COUNT,
+                        dsn::replication::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT,
                         _checkpoint_reserve_min_count,
                         count);
         _checkpoint_reserve_min_count = count;
@@ -2790,7 +2798,7 @@ void pegasus_server_impl::update_throttling_controller(
     bool throttling_changed = false;
     std::string old_throttling;
     std::string parse_error;
-    auto find = envs.find(READ_SIZE_THROTTLING);
+    auto find = envs.find(dsn::replication::replica_envs::READ_SIZE_THROTTLING);
     if (find != envs.end()) {
         if (!_read_size_throttling_controller->parse_from_env(find->second,
                                                               get_app_info()->partition_count,
@@ -2798,7 +2806,7 @@ void pegasus_server_impl::update_throttling_controller(
                                                               throttling_changed,
                                                               old_throttling)) {
             LOG_WARNING_PREFIX("parse env failed, key = \"{}\", value = \"{}\", error = \"{}\"",
-                               READ_SIZE_THROTTLING,
+                               dsn::replication::replica_envs::READ_SIZE_THROTTLING,
                                find->second,
                                parse_error);
             // reset if parse failed
@@ -2810,7 +2818,7 @@ void pegasus_server_impl::update_throttling_controller(
     }
     if (throttling_changed) {
         LOG_INFO_PREFIX("switch {} from \"{}\" to \"{}\"",
-                        READ_SIZE_THROTTLING,
+                        dsn::replication::replica_envs::READ_SIZE_THROTTLING,
                         old_throttling,
                         _read_size_throttling_controller->env_value());
     }
@@ -2820,7 +2828,7 @@ void pegasus_server_impl::update_slow_query_threshold(
     const std::map<std::string, std::string> &envs)
 {
     uint64_t threshold_ns = FLAGS_rocksdb_slow_query_threshold_ns;
-    auto find = envs.find(ROCKSDB_ENV_SLOW_QUERY_THRESHOLD);
+    auto find = envs.find(dsn::replication::replica_envs::SLOW_QUERY_THRESHOLD);
     if (find != envs.end()) {
         // get slow query from env(the unit of slow query from env is ms)
         uint64_t threshold_ms;
@@ -2834,7 +2842,7 @@ void pegasus_server_impl::update_slow_query_threshold(
     // check if they are changed
     if (_slow_query_threshold_ns != threshold_ns) {
         LOG_INFO_PREFIX("update app env[{}] from \"{}\" to \"{}\" succeed",
-                        ROCKSDB_ENV_SLOW_QUERY_THRESHOLD,
+                        dsn::replication::replica_envs::SLOW_QUERY_THRESHOLD,
                         _slow_query_threshold_ns,
                         threshold_ns);
         _slow_query_threshold_ns = threshold_ns;
@@ -2845,7 +2853,7 @@ void pegasus_server_impl::update_rocksdb_iteration_threshold(
     const std::map<std::string, std::string> &envs)
 {
     uint64_t threshold_ms = FLAGS_rocksdb_iteration_threshold_time_ms;
-    auto find = envs.find(ROCKSDB_ITERATION_THRESHOLD_TIME_MS);
+    auto find = envs.find(dsn::replication::replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS);
     if (find != envs.end()) {
         // the unit of iteration threshold from env is ms
         if (!dsn::buf2uint64(find->second, threshold_ms) || threshold_ms < 0) {
@@ -2856,7 +2864,7 @@ void pegasus_server_impl::update_rocksdb_iteration_threshold(
 
     if (_rng_rd_opts.rocksdb_iteration_threshold_time_ms != threshold_ms) {
         LOG_INFO_PREFIX("update app env[{}] from \"{}\" to \"{}\" succeed",
-                        ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
+                        dsn::replication::replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
                         _rng_rd_opts.rocksdb_iteration_threshold_time_ms,
                         threshold_ms);
         _rng_rd_opts.rocksdb_iteration_threshold_time_ms = threshold_ms;
@@ -2868,7 +2876,7 @@ void pegasus_server_impl::update_rocksdb_block_cache_enabled(
 {
     // default of ReadOptions:fill_cache is true
     bool cache_enabled = true;
-    auto find = envs.find(ROCKSDB_BLOCK_CACHE_ENABLED);
+    auto find = envs.find(dsn::replication::replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED);
     if (find != envs.end()) {
         if (!dsn::buf2bool(find->second, cache_enabled)) {
             LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
@@ -2878,7 +2886,7 @@ void pegasus_server_impl::update_rocksdb_block_cache_enabled(
 
     if (_data_cf_rd_opts.fill_cache != cache_enabled) {
         LOG_INFO_PREFIX("update app env[{}] from \"{}\" to \"{}\" succeed",
-                        ROCKSDB_BLOCK_CACHE_ENABLED,
+                        dsn::replication::replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED,
                         _data_cf_rd_opts.fill_cache,
                         cache_enabled);
         _data_cf_rd_opts.fill_cache = cache_enabled;
@@ -2889,7 +2897,7 @@ void pegasus_server_impl::update_validate_partition_hash(
     const std::map<std::string, std::string> &envs)
 {
     bool new_value = false;
-    auto iter = envs.find(SPLIT_VALIDATE_PARTITION_HASH);
+    auto iter = envs.find(dsn::replication::replica_envs::SPLIT_VALIDATE_PARTITION_HASH);
     if (iter != envs.end()) {
         if (!dsn::buf2bool(iter->second, new_value)) {
             LOG_ERROR_PREFIX("{}={} is invalid.", iter->first, iter->second);
@@ -2907,7 +2915,7 @@ void pegasus_server_impl::update_validate_partition_hash(
 void pegasus_server_impl::update_user_specified_compaction(
     const std::map<std::string, std::string> &envs)
 {
-    auto iter = envs.find(USER_SPECIFIED_COMPACTION);
+    auto iter = envs.find(dsn::replication::replica_envs::USER_SPECIFIED_COMPACTION);
     if (dsn_unlikely(iter == envs.end() && _user_specified_compaction != "")) {
         LOG_INFO_PREFIX("clear user specified compaction coz it was deleted");
         _key_ttl_compaction_filter_factory->clear_user_specified_ops();
@@ -2925,7 +2933,7 @@ void pegasus_server_impl::update_user_specified_compaction(
 bool pegasus_server_impl::parse_allow_ingest_behind(const std::map<std::string, std::string> &envs)
 {
     bool allow_ingest_behind = false;
-    const auto &iter = envs.find(ROCKSDB_ALLOW_INGEST_BEHIND);
+    const auto &iter = envs.find(dsn::replication::replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND);
     if (iter == envs.end()) {
         return allow_ingest_behind;
     }

@@ -47,7 +47,11 @@ public:
     static const std::string ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS;
     static const std::string ROCKSDB_ITERATION_THRESHOLD_TIME_MS;
     static const std::string ROCKSDB_BLOCK_CACHE_ENABLED;
+    static const std::string MANUAL_COMPACT_PREFIX;
+    static const std::string MANUAL_COMPACT_ONCE_PREFIX;
+    static const std::string MANUAL_COMPACT_PERIODIC_PREFIX;
     static const std::string MANUAL_COMPACT_DISABLED;
+    static const std::string MANUAL_COMPACT_TARGET_LEVEL_KEY;
     static const std::string MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT;
     static const std::string MANUAL_COMPACT_ONCE_TRIGGER_TIME;
     static const std::string MANUAL_COMPACT_ONCE_TARGET_LEVEL;
