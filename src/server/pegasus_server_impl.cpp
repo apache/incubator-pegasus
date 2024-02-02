@@ -153,6 +153,41 @@ const std::string ROCKSDB_ENV_RESTORE_POLICY_NAME("restore.policy_name");
 const std::string ROCKSDB_ENV_RESTORE_BACKUP_ID("restore.backup_id");
 const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.reserve_time_seconds");
 
+using cf_opts_setter = std::function<bool(const std::string &, rocksdb::ColumnFamilyOptions &)>;
+const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters = {
+    {dsn::replication::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.write_buffer_size = static_cast<size_t>(val);
+         return true;
+     }},
+    {dsn::replication::replica_envs::ROCKSDB_NUM_LEVELS,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.num_levels = val;
+         return true;
+     }},
+};
+
+using cf_opts_getter =
+    std::function<void(const rocksdb::ColumnFamilyOptions &, /*out*/ std::string &)>;
+const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters = {
+    {dsn::replication::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.write_buffer_size);
+     }},
+    {dsn::replication::replica_envs::ROCKSDB_NUM_LEVELS,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.num_levels);
+     }},
+};
+
 void pegasus_server_impl::parse_checkpoints()
 {
     std::vector<std::string> dirs;

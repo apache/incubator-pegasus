@@ -62,7 +62,12 @@ DSN_DEFINE_int32(pegasus.server,
                  "minimal interval time in seconds to start a new manual compaction, <= 0 "
                  "means no interval limit");
 
-const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY("bottommost_level_compaction");
+const std::string pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY(
+    "bottommost_level_compaction");
+const std::string
+    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
+const std::string
+    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
 
 pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_impl *app)
     : replica_base(*app),

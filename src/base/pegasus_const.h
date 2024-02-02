@@ -34,17 +34,5 @@ const int SCAN_CONTEXT_ID_VALID_MIN = 0;
 const int SCAN_CONTEXT_ID_COMPLETED = -1;
 const int SCAN_CONTEXT_ID_NOT_EXIST = -2;
 
-extern const std::string MANUAL_COMPACT_TARGET_LEVEL_KEY;
-
-extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
-extern const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
-
 extern const std::string PEGASUS_CLUSTER_SECTION_NAME;
-
-using cf_opts_setter = std::function<bool(const std::string &, rocksdb::ColumnFamilyOptions &)>;
-extern const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters;
-
-using cf_opts_getter =
-    std::function<void(const rocksdb::ColumnFamilyOptions &, /*out*/ std::string &)>;
-extern const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters;
 } // namespace pegasus
