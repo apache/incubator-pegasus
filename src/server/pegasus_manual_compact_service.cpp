@@ -27,7 +27,6 @@
 #include <set>
 #include <utility>
 
-#include "base/pegasus_const.h"
 #include "common/replication.codes.h"
 #include "common/replica_envs.h"
 #include "pegasus_server_impl.h"

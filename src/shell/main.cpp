@@ -31,10 +31,10 @@
 #include <vector>
 
 #include "args.h"
-#include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
 #include "command_executor.h"
 #include "commands.h"
+#include "common/common.h"
 #include "common/replication_other_types.h"
 #include "pegasus/client.h"
 #include "runtime/app_model.h"
@@ -658,15 +658,14 @@ static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
 {
     s_global_context.current_cluster_name = cluster_name;
     std::string server_list =
-        dsn_config_get_value_string(pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
+        dsn_config_get_value_string(dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
                                     s_global_context.current_cluster_name.c_str(),
                                     "",
                                     "");
 
-    dsn::replication::replica_helper::load_meta_servers(
-        s_global_context.meta_list,
-        pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
-        cluster_name.c_str());
+    dsn::replication::replica_helper::load_meta_servers(s_global_context.meta_list,
+                                                        dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
+                                                        cluster_name.c_str());
     s_global_context.ddl_client =
         std::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
 

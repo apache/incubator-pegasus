@@ -31,7 +31,6 @@
 #include <thread>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"

@@ -22,7 +22,6 @@
 #include <rocksdb/db.h>
 #include <rocksdb/status.h>
 
-#include "pegasus_const.h"
 #include "server/pegasus_server_impl.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"

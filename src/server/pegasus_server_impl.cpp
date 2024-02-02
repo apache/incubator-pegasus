@@ -57,7 +57,6 @@
 #include "dsn.layer2_types.h"
 #include "hotkey_collector.h"
 #include "meta_store.h"
-#include "pegasus_const.h"
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "replica_admin_types.h"
@@ -1383,7 +1382,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                                 std::chrono::minutes(5));
     } else {
         // scan completed
-        resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
+        resp.context_id = pegasus_scan_context::SCAN_CONTEXT_ID_COMPLETED;
     }
 
     METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);
@@ -1528,7 +1527,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
                                     std::chrono::minutes(5));
         } else {
             // scan completed
-            resp.context_id = pegasus::SCAN_CONTEXT_ID_COMPLETED;
+            resp.context_id = pegasus_scan_context::SCAN_CONTEXT_ID_COMPLETED;
         }
 
         METRIC_VAR_INCREMENT_BY(read_expired_values, expire_count);

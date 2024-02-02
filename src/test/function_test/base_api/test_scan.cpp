@@ -29,7 +29,6 @@
 #include <utility>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "base/pegasus_utils.h"
 #include "client/replication_ddl_client.h"
 #include "common/replica_envs.h"

@@ -31,7 +31,6 @@
 #include "common/replica_envs.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"

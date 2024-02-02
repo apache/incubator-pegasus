@@ -26,7 +26,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "base/pegasus_const.h"
+#include "common/common.h"
 #include "common/replication_other_types.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "pegasus/client.h"
@@ -65,7 +65,7 @@ pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *a
 {
     std::vector<dsn::rpc_address> meta_servers;
     dsn::replication::replica_helper::load_meta_servers(
-        meta_servers, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name);
+        meta_servers, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name);
     CHECK_GT(meta_servers.size(), 0);
     _meta_server.assign_group("meta-servers");
     _meta_server.group_address()->add_list(meta_servers);

@@ -25,7 +25,6 @@
 #include <string>
 #include <thread>
 
-#include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
 #include "common/replica_envs.h"
 #include "gtest/gtest.h"

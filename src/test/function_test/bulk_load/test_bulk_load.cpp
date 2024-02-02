@@ -30,7 +30,6 @@
 #include <thread>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"

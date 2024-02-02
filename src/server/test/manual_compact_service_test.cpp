@@ -26,7 +26,6 @@
 
 #include "common/replica_envs.h"
 #include "gtest/gtest.h"
-#include "pegasus_const.h"
 #include "pegasus_server_test_base.h"
 #include "runtime/api_layer1.h"
 #include "server/pegasus_manual_compact_service.h"
