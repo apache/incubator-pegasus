@@ -78,13 +78,20 @@ private:
                                                            const std::string &key,
                                                            std::string *value);
 
+    friend class pegasus_server_impl;
     friend class pegasus_write_service;
     friend class rocksdb_wrapper;
+    FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_latest_options);
+    FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_app_envs);
 
     // Keys of meta data wrote into meta column family.
     static const std::string DATA_VERSION;
     static const std::string LAST_FLUSHED_DECREE;
     static const std::string LAST_MANUAL_COMPACT_FINISH_TIME;
+    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_KEY;
+    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
+    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
+    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
 
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_meta_cf;

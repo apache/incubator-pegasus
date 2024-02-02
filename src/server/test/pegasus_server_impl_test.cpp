@@ -36,6 +36,7 @@
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/serverlet.h"
+#include "server/meta_store.h"
 #include "server/pegasus_read_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
@@ -160,17 +161,17 @@ TEST_P(pegasus_server_impl_test, test_open_db_with_latest_options)
 {
     // open a new db with no app env.
     ASSERT_EQ(dsn::ERR_OK, start());
-    ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL, _server->_usage_scenario);
+    ASSERT_EQ(meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL, _server->_usage_scenario);
     // set bulk_load scenario for the db.
-    ASSERT_TRUE(_server->set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD));
-    ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
+    ASSERT_TRUE(_server->set_usage_scenario(meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD));
+    ASSERT_EQ(meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
     rocksdb::Options opts = _server->_db->GetOptions();
     ASSERT_EQ(1000000000, opts.level0_file_num_compaction_trigger);
     ASSERT_EQ(true, opts.disable_auto_compactions);
     // reopen the db.
     ASSERT_EQ(dsn::ERR_OK, _server->stop(false));
     ASSERT_EQ(dsn::ERR_OK, start());
-    ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
+    ASSERT_EQ(meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
     ASSERT_EQ(opts.level0_file_num_compaction_trigger,
               _server->_db->GetOptions().level0_file_num_compaction_trigger);
     ASSERT_EQ(opts.disable_auto_compactions, _server->_db->GetOptions().disable_auto_compactions);
@@ -179,9 +180,10 @@ TEST_P(pegasus_server_impl_test, test_open_db_with_latest_options)
 TEST_P(pegasus_server_impl_test, test_open_db_with_app_envs)
 {
     std::map<std::string, std::string> envs;
-    envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
+    envs[meta_store::ROCKSDB_ENV_USAGE_SCENARIO_KEY] =
+        meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
     ASSERT_EQ(dsn::ERR_OK, start(envs));
-    ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
+    ASSERT_EQ(meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
 }
 
 TEST_P(pegasus_server_impl_test, test_open_db_with_rocksdb_envs)

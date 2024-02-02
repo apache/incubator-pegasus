@@ -28,11 +28,6 @@
 
 namespace pegasus {
 
-const std::string ROCKSDB_ENV_USAGE_SCENARIO_KEY("rocksdb.usage_scenario");
-const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL("normal");
-const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE("prefer_write");
-const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD("bulk_load");
-
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
 const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
 
