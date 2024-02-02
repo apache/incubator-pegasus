@@ -28,7 +28,6 @@
 
 #include <fmt/std.h> // IWYU pragma: keep
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <utility>
 
@@ -41,6 +40,7 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/math.h"
 #include "utils/ports.h"
 
 METRIC_DEFINE_entity(disk);
@@ -171,17 +171,16 @@ void dir_node::update_disk_stat()
 
     disk_capacity_mb = dsi.capacity >> 20;
     disk_available_mb = dsi.available >> 20;
-    disk_available_ratio = static_cast<int>(
-        disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
+    disk_available_ratio = dsn::utils::calc_percentage<int>(disk_available_mb, disk_capacity_mb);
 
     METRIC_SET(disk_capacity, disk_capacity_total_mb, disk_capacity_mb);
     METRIC_SET(disk_capacity, disk_capacity_avail_mb, disk_available_mb);
 
     // It's able to change status from NORMAL to SPACE_INSUFFICIENT, and vice versa.
-    disk_status::type old_status = status;
-    auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
-                          ? disk_status::SPACE_INSUFFICIENT
-                          : disk_status::NORMAL;
+    const disk_status::type old_status = status;
+    const auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
+                                ? disk_status::SPACE_INSUFFICIENT
+                                : disk_status::NORMAL;
     if (old_status != new_status) {
         status = new_status;
     }
@@ -389,8 +388,7 @@ void fs_manager::update_disk_stat()
         min_available_ratio = std::min(dn->disk_available_ratio, min_available_ratio);
         max_available_ratio = std::max(dn->disk_available_ratio, max_available_ratio);
     }
-    total_available_ratio = static_cast<int>(
-        total_capacity_mb == 0 ? 0 : std::round(total_available_mb * 100.0 / total_capacity_mb));
+    total_available_ratio = dsn::utils::calc_percentage<int>(total_available_mb, total_capacity_mb);
 
     LOG_INFO("update disk space succeed: disk_count = {}, total_capacity_mb = {}, "
              "total_available_mb = {}, total_available_ratio = {}%, min_available_ratio = {}%, "

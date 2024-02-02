@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
-#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -48,6 +47,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/math.h"
 #include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
@@ -153,15 +153,14 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
                 }
             }
 
-            auto available_ratio = static_cast<int64_t>(
-                capacity_mb == 0 ? 0 : std::round(available_mb * 100.0 / capacity_mb));
+            auto available_ratio = dsn::utils::calc_percentage(available_mb, capacity_mb);
             stat.disk_available_min_ratio =
                 std::min(stat.disk_available_min_ratio, available_ratio);
         }
     }
 
-    stat.disk_available_total_ratio = static_cast<int64_t>(
-        total_capacity_mb == 0 ? 0 : std::round(total_available_mb * 100.0 / total_capacity_mb));
+    stat.disk_available_total_ratio =
+        dsn::utils::calc_percentage(total_available_mb, total_capacity_mb);
 
     return dsn::error_s::ok();
 }
@@ -335,15 +334,6 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 std::cout << "ERROR: parse sst metrics response from node " << nodes[i].address
                           << " failed: " << res << std::endl;
                 return true;
-            }
-
-            // TODO(wangdan): after migrated to new metrics, remove following code:
-            dsn::perf_counter_info info;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name.find("disk.available.total.ratio") != std::string::npos)
-                    stat.disk_available_total_ratio += m.value;
-                else if (m.name.find("disk.available.min.ratio") != std::string::npos)
-                    stat.disk_available_min_ratio += m.value;
             }
         }
     }

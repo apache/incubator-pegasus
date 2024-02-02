@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
+#include "utils/math.h"
 
 #include "replica/test/replica_test_base.h"
 
@@ -159,12 +160,12 @@ private:
 
     void generate_mock_dir_nodes(int num)
     {
-        int64_t disk_capacity_mb = num * 100;
+        const int64_t disk_capacity_mb = num * 100;
         int count = 0;
         while (count++ < num) {
-            int64_t disk_available_mb = count * 50;
-            int disk_available_ratio =
-                static_cast<int>(std::round((double)100 * disk_available_mb / disk_capacity_mb));
+            const int64_t disk_available_mb = count * 50;
+            const auto disk_available_ratio =
+                dsn::utils::calc_percentage<int>(disk_available_mb, disk_capacity_mb);
             // create one mock dir_node and make sure disk_capacity_mb_ > disk_available_mb_
             dir_node *node_disk = new dir_node("tag_" + std::to_string(count),
                                                "./tag_" + std::to_string(count),
