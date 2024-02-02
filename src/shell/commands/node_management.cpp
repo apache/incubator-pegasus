@@ -153,7 +153,7 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
                 }
             }
 
-            auto available_ratio = dsn::utils::calc_percentage(available_mb, capacity_mb);
+            const auto available_ratio = dsn::utils::calc_percentage(available_mb, capacity_mb);
             stat.disk_available_min_ratio =
                 std::min(stat.disk_available_min_ratio, available_ratio);
         }
