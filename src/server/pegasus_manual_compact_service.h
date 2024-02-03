@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <gtest/gtest_prod.h>
 #include <stdint.h>
 #include <atomic>
 #include <map>

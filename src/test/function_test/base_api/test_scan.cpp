@@ -422,9 +422,8 @@ TEST_F(scan_test, REQUEST_EXPIRE_TS)
 TEST_F(scan_test, ITERATION_TIME_LIMIT)
 {
     // update iteration threshold to 1ms
-    NO_FATALS(
-        update_table_env({dsn::replication::replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS},
-                         {std::to_string(1)}));
+    NO_FATALS(update_table_env({dsn::replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS},
+                               {std::to_string(1)}));
 
     // write data into table
     int32_t i = 0;
@@ -444,7 +443,6 @@ TEST_F(scan_test, ITERATION_TIME_LIMIT)
     ASSERT_EQ(-1, count);
 
     // set iteration threshold to 100ms
-    NO_FATALS(
-        update_table_env({dsn::replication::replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS},
-                         {std::to_string(100)}));
+    NO_FATALS(update_table_env({dsn::replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS},
+                               {std::to_string(100)}));
 }

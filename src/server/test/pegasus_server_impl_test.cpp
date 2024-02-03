@@ -73,7 +73,7 @@ public:
             // set table level slow query threshold
             std::map<std::string, std::string> envs;
             _server->query_app_envs(envs);
-            envs[dsn::replication::replica_envs::SLOW_QUERY_THRESHOLD] =
+            envs[dsn::replica_envs::SLOW_QUERY_THRESHOLD] =
                 std::to_string(test.slow_query_threshold_ms);
             _server->update_app_envs(envs);
 
@@ -115,10 +115,10 @@ public:
             for (const auto &test : tests) {
                 all_test_envs[test.env_key] = test.env_value;
             }
-            for (const auto &option : dsn::replication::replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
+            for (const auto &option : dsn::replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
                 ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
             }
-            for (const auto &option : dsn::replication::replica_envs::ROCKSDB_STATIC_OPTIONS) {
+            for (const auto &option : dsn::replica_envs::ROCKSDB_STATIC_OPTIONS) {
                 ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
             }
         }
@@ -222,7 +222,7 @@ TEST_P(pegasus_server_impl_test, test_update_user_specified_compaction)
     ASSERT_EQ("", _server->_user_specified_compaction);
 
     std::string user_specified_compaction = "test";
-    envs[dsn::replication::replica_envs::USER_SPECIFIED_COMPACTION] = user_specified_compaction;
+    envs[dsn::replica_envs::USER_SPECIFIED_COMPACTION] = user_specified_compaction;
     _server->update_user_specified_compaction(envs);
     ASSERT_EQ(user_specified_compaction, _server->_user_specified_compaction);
 }

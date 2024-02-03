@@ -26,6 +26,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "absl/strings/string_view.h"
 #include "common/common.h"
 #include "common/replication_other_types.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
@@ -40,10 +41,8 @@
 #include "runtime/task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
 #include "utils/synchronize.h"
 #include "utils/threadpool_code.h"
-#include "utils/utils.h"
 
 namespace dsn {
 class message_ex;

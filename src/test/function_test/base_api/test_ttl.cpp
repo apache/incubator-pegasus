@@ -54,9 +54,9 @@ public:
         std::map<std::string, std::string> envs;
         ASSERT_EQ(ERR_OK, ddl_client_->get_app_envs(client_->get_app_name(), envs));
 
-        std::string env = envs[dsn::replication::replica_envs::TABLE_LEVEL_DEFAULT_TTL];
+        std::string env = envs[dsn::replica_envs::TABLE_LEVEL_DEFAULT_TTL];
         if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
-            NO_FATALS(update_table_env({dsn::replication::replica_envs::TABLE_LEVEL_DEFAULT_TTL},
+            NO_FATALS(update_table_env({dsn::replica_envs::TABLE_LEVEL_DEFAULT_TTL},
                                        {std::to_string(ttl)}));
         }
     }
@@ -119,7 +119,7 @@ TEST_F(ttl_test, set_without_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    NO_FATALS(update_table_env({dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME},
+    NO_FATALS(update_table_env({dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME},
                                {std::to_string(time(nullptr))}));
 
     // check expired one
@@ -187,7 +187,7 @@ TEST_F(ttl_test, set_with_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    NO_FATALS(update_table_env({dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME},
+    NO_FATALS(update_table_env({dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME},
                                {std::to_string(time(nullptr))}));
 
     // check forever one

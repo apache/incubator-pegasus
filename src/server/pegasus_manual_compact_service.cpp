@@ -100,11 +100,11 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
 
     std::string compact_rule;
     if (check_once_compact(envs)) {
-        compact_rule = dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_PREFIX;
+        compact_rule = dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX;
     }
 
     if (compact_rule.empty() && check_periodic_compact(envs)) {
-        compact_rule = dsn::replication::replica_envs::MANUAL_COMPACT_PERIODIC_PREFIX;
+        compact_rule = dsn::replica_envs::MANUAL_COMPACT_PERIODIC_PREFIX;
     }
 
     if (compact_rule.empty()) {
@@ -129,7 +129,7 @@ bool pegasus_manual_compact_service::check_compact_disabled(
     const std::map<std::string, std::string> &envs)
 {
     bool new_disabled = false;
-    auto find = envs.find(dsn::replication::replica_envs::MANUAL_COMPACT_DISABLED);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_DISABLED);
     if (find != envs.end() && find->second == "true") {
         new_disabled = true;
     }
@@ -153,8 +153,7 @@ int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
     const std::map<std::string, std::string> &envs)
 {
     int new_count = INT_MAX;
-    auto find =
-        envs.find(dsn::replication::replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT);
     if (find != envs.end() && !dsn::buf2int32(find->second, new_count)) {
         LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
     }
@@ -172,7 +171,7 @@ int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
 bool pegasus_manual_compact_service::check_once_compact(
     const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(dsn::replication::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME);
     if (find == envs.end()) {
         return false;
     }
@@ -189,7 +188,7 @@ bool pegasus_manual_compact_service::check_once_compact(
 bool pegasus_manual_compact_service::check_periodic_compact(
     const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(dsn::replication::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME);
     if (find == envs.end()) {
         return false;
     }
@@ -242,7 +241,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     options.exclusive_manual_compaction = true;
     options.change_level = true;
     options.target_level = -1;
-    auto find = envs.find(key_prefix + dsn::replication::replica_envs::MANUAL_COMPACT_TARGET_LEVEL);
+    auto find = envs.find(key_prefix + dsn::replica_envs::MANUAL_COMPACT_TARGET_LEVEL);
     if (find != envs.end()) {
         int32_t target_level;
         if (dsn::buf2int32(find->second, target_level) &&
@@ -258,8 +257,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     }
 
     options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
-    find = envs.find(key_prefix +
-                     dsn::replication::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION);
+    find = envs.find(key_prefix + dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION);
     if (find != envs.end()) {
         const std::string &argv = find->second;
         if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
