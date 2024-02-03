@@ -179,7 +179,7 @@ TEST_P(pegasus_server_impl_test, test_open_db_with_latest_options)
 TEST_P(pegasus_server_impl_test, test_open_db_with_app_envs)
 {
     std::map<std::string, std::string> envs;
-    envs[meta_store::ROCKSDB_ENV_USAGE_SCENARIO_KEY] =
+    envs[dsn::replica_envs::ROCKSDB_USAGE_SCENARIO] =
         meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
     ASSERT_EQ(dsn::ERR_OK, start(envs));
     ASSERT_EQ(meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);

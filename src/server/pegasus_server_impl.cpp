@@ -2720,7 +2720,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
 
 void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
 {
-    envs[meta_store::ROCKSDB_ENV_USAGE_SCENARIO_KEY] = _usage_scenario;
+    envs[dsn::replica_envs::ROCKSDB_USAGE_SCENARIO] = _usage_scenario;
     // write_buffer_size involves random values (refer to pegasus_server_impl::set_usage_scenario),
     // so it can only be taken from _data_cf_opts
     envs[dsn::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE] =
@@ -2752,19 +2752,19 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
 {
     // update usage scenario
     // if not specified, default is normal
-    auto find = envs.find(meta_store::ROCKSDB_ENV_USAGE_SCENARIO_KEY);
+    auto find = envs.find(dsn::replica_envs::ROCKSDB_USAGE_SCENARIO);
     std::string new_usage_scenario =
         (find != envs.end() ? find->second : meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
     if (new_usage_scenario != _usage_scenario) {
         std::string old_usage_scenario = _usage_scenario;
         if (set_usage_scenario(new_usage_scenario)) {
             LOG_INFO_PREFIX("update app env[{}] from \"{}\" to \"{}\" succeed",
-                            meta_store::ROCKSDB_ENV_USAGE_SCENARIO_KEY,
+                            dsn::replica_envs::ROCKSDB_USAGE_SCENARIO,
                             old_usage_scenario,
                             new_usage_scenario);
         } else {
             LOG_ERROR_PREFIX("update app env[{}] from \"{}\" to \"{}\" failed",
-                             meta_store::ROCKSDB_ENV_USAGE_SCENARIO_KEY,
+                             dsn::replica_envs::ROCKSDB_USAGE_SCENARIO,
                              old_usage_scenario,
                              new_usage_scenario);
         }

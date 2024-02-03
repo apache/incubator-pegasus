@@ -89,7 +89,6 @@ private:
     static const std::string DATA_VERSION;
     static const std::string LAST_FLUSHED_DECREE;
     static const std::string LAST_MANUAL_COMPACT_FINISH_TIME;
-    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_KEY;
     static const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
     static const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
     static const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
