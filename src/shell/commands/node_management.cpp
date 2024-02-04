@@ -113,12 +113,7 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
 {
     dsn::error_s err;
 
-    dsn::metric_query_brief_value_snapshot query_snapshot;
-    dsn::blob bb(json_string.data(), 0, json_string.size());
-    if (dsn_unlikely(!dsn::json::json_forwarder<dsn::metric_query_brief_value_snapshot>::decode(
-            bb, query_snapshot))) {
-        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string");
-    }
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
     int64_t total_capacity_mb = 0;
     int64_t total_available_mb = 0;
@@ -161,6 +156,60 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
 
     stat.disk_available_total_ratio =
         dsn::utils::calc_percentage(total_available_mb, total_capacity_mb);
+
+    return dsn::error_s::ok();
+}
+
+dsn::metric_filters profiler_latency_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField,
+                                  dsn::kth_percentile_to_name(dsn::kth_percentile_type::P99)};
+    filters.entity_types = {"profiler"};
+    filters.entity_metrics = {"profiler_server_rpc_latency_ns"};
+    return filters;
+}
+
+dsn::error_s parse_profiler_latency(const std::string &json_string, list_nodes_helper &stat)
+{
+    dsn::error_s err;
+
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(p99, json_string, query_snapshot);
+
+    for (const auto &entity : query_snapshot.entities) {
+        if (dsn_unlikely(entity.type != "profiler")) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA,
+                           "non-replica entity should not be included: {}",
+                           entity.type);
+        }
+
+        const auto &t = entity.attributes.find("task_name");
+        if (dsn_unlikely(t == entity.attributes.end())) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "task_name field was not found");
+        }
+
+        double *latency = nullptr;
+        const auto &task_name = t->second;
+        if (task_name == "RPC_RRDB_RRDB_GET") {
+            latency = &stat.get_p99;
+        } else if (task_name == "RPC_RRDB_RRDB_PUT") {
+            latency = &stat.put_p99;
+        } else if (task_name == "RPC_RRDB_RRDB_MULTI_GET") {
+            latency = &stat.multi_get_p99;
+        } else if (task_name == "RPC_RRDB_RRDB_MULTI_PUT") {
+            latency = &stat.multi_put_p99;
+        } else if (task_name == "RPC_RRDB_RRDB_BATCH_GET") {
+            latency = &stat.batch_get_p99;
+        } else {
+            continue;
+        }
+
+        for (const auto &m : entity.metrics) {
+            if (m.name == "profiler_server_rpc_latency_ns") {
+                *latency = m.p99;
+            }
+        }
+    }
 
     return dsn::error_s::ok();
 }
@@ -314,27 +363,11 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 continue;
             }
 
-            if (!results[i].error()) {
-                std::cout << "ERROR: send http request to query resource metrics from node "
-                          << nodes[i].address << " failed: " << results[i].error() << std::endl;
-                return true;
-            }
-            if (results[i].status() != dsn::http_status_code::kOk) {
-                std::cout << "ERROR: send http request to query resource metrics from node "
-                          << nodes[i].address
-                          << " failed: " << dsn::get_http_status_message(results[i].status())
-                          << std::endl
-                          << results[i].body() << std::endl;
-                return true;
-            }
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "resource");
 
             auto &stat = tmp_it->second;
-            const auto &res = parse_resource_usage(results[i].body(), stat);
-            if (!res) {
-                std::cout << "ERROR: parse sst metrics response from node " << nodes[i].address
-                          << " failed: " << res << std::endl;
-                return true;
-            }
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+                parse_resource_usage(results[i].body(), stat), nodes[i], "resource");
         }
     }
 
@@ -406,51 +439,19 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        std::vector<std::pair<bool, std::string>> results =
-            call_remote_command(sc,
-                                nodes,
-                                "perf-counters-by-postfix",
-                                {"zion*profiler*RPC_RRDB_RRDB_GET.latency.server",
-                                 "zion*profiler*RPC_RRDB_RRDB_PUT.latency.server",
-                                 "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server",
-                                 "zion*profiler*RPC_RRDB_RRDB_BATCH_GET.latency.server",
-                                 "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server"});
+        const auto &results = get_metrics(nodes, profiler_latency_filters().to_query_string());
 
         for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            auto tmp_it = tmp_map.find(node_addr);
-            if (tmp_it == tmp_map.end())
+            auto tmp_it = tmp_map.find(nodes[i].address);
+            if (tmp_it == tmp_map.end()) {
                 continue;
-            if (!results[i].first) {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " failed" << std::endl;
-                return true;
             }
-            dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                std::cout << "decode perf counter info from node " << node_addr.to_string()
-                          << " failed, result = " << results[i].second << std::endl;
-                return true;
-            }
-            if (info.result != "OK") {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " returns error, error = " << info.result << std::endl;
-                return true;
-            }
-            list_nodes_helper &h = tmp_it->second;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name.find("RPC_RRDB_RRDB_GET.latency.server") != std::string::npos)
-                    h.get_p99 = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_PUT.latency.server") != std::string::npos)
-                    h.put_p99 = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_MULTI_GET.latency.server") != std::string::npos)
-                    h.multi_get_p99 = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_MULTI_PUT.latency.server") != std::string::npos)
-                    h.multi_put_p99 = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_BATCH_GET.latency.server") != std::string::npos)
-                    h.batch_get_p99 = m.value;
-            }
+
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "profiler latency");
+
+            auto &stat = tmp_it->second;
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+                parse_profiler_latency(results[i].body(), stat), nodes[i], "profiler latency");
         }
     }
 
