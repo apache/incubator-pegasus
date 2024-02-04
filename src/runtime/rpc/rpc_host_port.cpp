@@ -31,6 +31,7 @@
 #include "utils/error_code.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
+#include "utils/timer.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -40,46 +41,55 @@ const host_port host_port::s_invalid_host_port;
 host_port::host_port(std::string host, uint16_t port)
     : _host(std::move(host)), _port(port), _type(HOST_TYPE_IPV4)
 {
-    CHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
+    // ipv4_from_host may be slow, just call it in DEBUG version.
+    DCHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
 }
 
-host_port::host_port(rpc_address addr)
+host_port host_port::from_address(rpc_address addr)
 {
+    host_port hp;
+    SCOPED_LOG_SLOW_EXECUTION(
+        WARNING, 100, "construct host_port '{}' from rpc_address '{}'", hp, addr);
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
-        CHECK(utils::hostname_from_ip(htonl(addr.ip()), &_host),
+        CHECK(utils::hostname_from_ip(htonl(addr.ip()), &hp._host),
               "invalid host_port {}",
               addr.ipv4_str());
-        _port = addr.port();
+        hp._port = addr.port();
     } break;
     case HOST_TYPE_GROUP: {
-        _group_host_port = std::make_shared<rpc_group_host_port>(addr.group_address());
+        hp._group_host_port = std::make_shared<rpc_group_host_port>(addr.group_address());
     } break;
     default:
         break;
     }
-    _type = addr.type();
+    hp._type = addr.type();
+    return hp;
 }
 
-bool host_port::from_string(const std::string &s)
+host_port host_port::from_string(const std::string &host_port_str)
 {
-    const auto pos = s.find_last_of(':');
+    host_port hp;
+    SCOPED_LOG_SLOW_EXECUTION(
+        WARNING, 100, "construct host_port '{}' from string '{}'", hp, host_port_str);
+    const auto pos = host_port_str.find_last_of(':');
     if (dsn_unlikely(pos == std::string::npos)) {
-        return false;
-    }
-    _host = s.substr(0, pos);
-    std::string port = s.substr(pos + 1);
-
-    if (dsn_unlikely(!dsn::buf2uint16(port, _port))) {
-        return false;
+        return hp;
     }
 
-    if (dsn_unlikely(rpc_address::ipv4_from_host(_host.c_str()) == 0)) {
-        return false;
+    hp._host = host_port_str.substr(0, pos);
+    const auto port_str = host_port_str.substr(pos + 1);
+    if (dsn_unlikely(!dsn::buf2uint16(port_str, hp._port))) {
+        return hp;
     }
 
-    _type = HOST_TYPE_IPV4;
-    return true;
+    if (dsn_unlikely(rpc_address::ipv4_from_host(hp._host.c_str()) == 0)) {
+        return hp;
+    }
+
+    // Now is_invalid() return true.
+    hp._type = HOST_TYPE_IPV4;
+    return hp;
 }
 
 void host_port::reset()

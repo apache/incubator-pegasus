@@ -63,7 +63,7 @@ TEST(host_port_test, host_port_build)
 
     {
         rpc_address addr = rpc_address("localhost", 8080);
-        host_port hp1(addr);
+        host_port hp1 = host_port::from_address(addr);
         ASSERT_EQ(hp, hp1);
     }
 }
@@ -91,14 +91,16 @@ TEST(host_port_test, operators)
     std::string hp_str = "localhost:8080";
     host_port hp3;
     ASSERT_TRUE(hp3.is_invalid());
-    ASSERT_TRUE(hp3.from_string(hp_str));
+    hp3 = host_port::from_string(hp_str);
+    ASSERT_TRUE(hp3.is_invalid());
     ASSERT_EQ(hp, hp3);
     ASSERT_FALSE(hp3.is_invalid());
 
     host_port hp4;
     ASSERT_TRUE(hp4.is_invalid());
     std::string hp_str2 = "pegasus:8080";
-    ASSERT_FALSE(hp4.from_string(hp_str2));
+    hp4 = host_port::from_string(hp_str2);
+    ASSERT_FALSE(hp4.is_invalid());
     ASSERT_TRUE(hp4.is_invalid());
 
     host_port hp5("localhost", 8081);
@@ -196,7 +198,7 @@ TEST(host_port_test, rpc_group_host_port)
     ASSERT_EQ(2, g_addr->count());
 
     host_port hp_grp2;
-    hp_grp2 = host_port(addr_grp);
+    hp_grp2 = host_port::from_address(addr_grp);
     ASSERT_EQ(HOST_TYPE_GROUP, hp_grp2.type());
 
     auto g_hp = hp_grp2.group_host_port();
@@ -254,7 +256,7 @@ TEST(host_port_test, dns_resolver)
         ASSERT_EQ(g_addr->is_update_leader_automatically(), g_hp->is_update_leader_automatically());
         ASSERT_STREQ(g_addr->name(), g_hp->name());
         ASSERT_EQ(g_addr->count(), g_hp->count());
-        ASSERT_EQ(host_port(g_addr->leader()), g_hp->leader());
+        ASSERT_EQ(host_port::from_address(g_addr->leader()), g_hp->leader());
     }
 }
 
