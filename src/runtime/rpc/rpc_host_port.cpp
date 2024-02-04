@@ -28,6 +28,7 @@
 #include "fmt/core.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
