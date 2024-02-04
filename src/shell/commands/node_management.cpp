@@ -28,6 +28,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -35,7 +36,6 @@
 #include "common/json_helper.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
-#include "http/http_status_code.h"
 #include "meta_admin_types.h"
 #include "perf_counter/perf_counter_utils.h"
 #include "runtime/rpc/rpc_address.h"

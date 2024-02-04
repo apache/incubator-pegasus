@@ -43,7 +43,6 @@
 #include "http/http_server.h"
 #include "utils/alloc.h"
 #include "utils/autoref_ptr.h"
-#include "utils/blob.h"
 #include "utils/casts.h"
 #include "utils/enum_helper.h"
 #include "utils/errors.h"
