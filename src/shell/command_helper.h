@@ -55,6 +55,7 @@
 #include "absl/strings/string_view.h"
 #include "utils/errors.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
@@ -676,6 +677,32 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     tracker.wait_outstanding_tasks();
     return results;
 }
+
+#define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what)                                     \
+    do {                                                                                           \
+        if (dsn_unlikely(!result.error())) {                                                       \
+            std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
+                      << node.address << " failed: " << result.error() << std::endl;               \
+            return true;                                                                           \
+        }                                                                                          \
+        if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {                         \
+            std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
+                      << node.address                                                              \
+                      << " failed: " << dsn::get_http_status_message(result.status()) << std::endl \
+                      << result.body() << std::endl;                                               \
+            return true;                                                                           \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what)                                     \
+    do {                                                                                           \
+        const auto &res = (expr);                                                                  \
+        if (dsn_unlikely(!res)) {                                                                  \
+            std::cout << "ERROR: parse " << what << " metrics response from node " << node.address \
+                      << " failed: " << res << std::endl;                                          \
+            return true;                                                                           \
+        }                                                                                          \
+    } while (0)
 
 inline std::vector<std::pair<bool, std::string>>
 call_remote_command(shell_context *sc,

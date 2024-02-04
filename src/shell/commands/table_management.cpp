@@ -36,9 +36,7 @@
 
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "dsn.layer2_types.h"
-#include "http/http_status_code.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
 #include "runtime/rpc/rpc_address.h"
@@ -47,7 +45,6 @@
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
-#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/metrics.h"
@@ -192,12 +189,7 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
 {
     dsn::error_s err;
 
-    dsn::metric_query_brief_value_snapshot query_snapshot;
-    dsn::blob bb(json_string.data(), 0, json_string.size());
-    if (dsn_unlikely(!dsn::json::json_forwarder<dsn::metric_query_brief_value_snapshot>::decode(
-            bb, query_snapshot))) {
-        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string");
-    }
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
     for (const auto &entity : query_snapshot.entities) {
         if (dsn_unlikely(entity.type != "replica")) {
@@ -324,27 +316,13 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
     std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
     for (size_t i = 0; i < nodes.size(); ++i) {
-        if (!results[i].error()) {
-            std::cout << "ERROR: send http request to query sst metrics from node "
-                      << nodes[i].address << " failed: " << results[i].error() << std::endl;
-            return true;
-        }
-        if (results[i].status() != dsn::http_status_code::kOk) {
-            std::cout << "ERROR: send http request to query sst metrics from node "
-                      << nodes[i].address
-                      << " failed: " << dsn::get_http_status_message(results[i].status())
-                      << std::endl
-                      << results[i].body() << std::endl;
-            return true;
-        }
+        RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "sst");
 
-        const auto &res = parse_sst_stat(
-            results[i].body(), count_map[nodes[i].address], disk_map[nodes[i].address]);
-        if (!res) {
-            std::cout << "ERROR: parse sst metrics response from node " << nodes[i].address
-                      << " failed: " << res << std::endl;
-            return true;
-        }
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(parse_sst_stat(results[i].body(),
+                                                            count_map[nodes[i].address],
+                                                            disk_map[nodes[i].address]),
+                                             nodes[i],
+                                             "sst");
     }
 
     ::dsn::utils::table_printer tp_general("result");
