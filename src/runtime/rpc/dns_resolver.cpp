@@ -31,6 +31,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 METRIC_DEFINE_gauge_int64(server,
                           dns_resolver_cache_size,
