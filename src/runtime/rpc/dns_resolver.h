@@ -35,8 +35,6 @@ namespace dsn {
 // the resolved result list.
 // If some host_port's rpc_address changes, you need to restart the Pegasus process to make it take
 // effect.
-// TODO(yingchun): Now the cache is unlimited, the cache size may be huge. Implement an expiration
-// mechanism to limit the cache size and make it possible to update the resolve result.
 class dns_resolver
 {
 public:
