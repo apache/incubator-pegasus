@@ -62,7 +62,7 @@ TEST(host_port_test, host_port_build)
     ASSERT_EQ("localhost", hp.host());
 
     {
-        rpc_address addr = rpc_address("localhost", 8080);
+        rpc_address addr = rpc_address::from_host_port("localhost", 8080);
         host_port hp1 = host_port::from_address(addr);
         ASSERT_EQ(hp, hp1);
     }
@@ -180,8 +180,8 @@ TEST(host_port_test, rpc_group_host_port)
     }
 
     // address_group -> host_port_group
-    rpc_address addr("127.0.0.1", 8080);
-    rpc_address addr2("127.0.0.1", 8081);
+    const auto addr = rpc_address::from_ip_port("127.0.0.1", 8080);
+    const auto addr2 = rpc_address::from_ip_port("127.0.0.1", 8081);
 
     rpc_address addr_grp;
     addr_grp.assign_group("test_group");
@@ -211,8 +211,8 @@ TEST(host_port_test, transfer_rpc_address)
         std::vector<rpc_address> addresses;
         host_port hp("localhost", 8080);
         ASSERT_EQ(hp.resolve_addresses(addresses), error_s::ok());
-        ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == addresses[0] ||
-                    rpc_address("127.0.1.1", 8080) == addresses[0]);
+        ASSERT_TRUE(rpc_address::from_ip_port("127.0.0.1", 8080) == addresses[0] ||
+                    rpc_address::from_ip_port("127.0.1.1", 8080) == addresses[0]);
     }
     {
         std::vector<rpc_address> addresses;
@@ -233,8 +233,8 @@ TEST(host_port_test, dns_resolver)
     {
         host_port hp("localhost", 8080);
         const auto &addr = dns_resolver::instance().resolve_address(hp);
-        ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == addr ||
-                    rpc_address("127.0.1.1", 8080) == addr);
+        ASSERT_TRUE(rpc_address::from_ip_port("127.0.0.1", 8080) == addr ||
+                    rpc_address::from_ip_port("127.0.1.1", 8080) == addr);
     }
 
     {
@@ -260,7 +260,7 @@ TEST(host_port_test, dns_resolver)
 void send_and_check_host_port_by_serialize(const host_port &hp, dsn_msg_serialize_format t)
 {
     const auto &hp_str = hp.to_string();
-    ::dsn::rpc_address server("localhost", 20101);
+    const auto server = ::dsn::rpc_address::from_host_port("localhost", 20101);
 
     dsn::message_ptr msg_ptr = dsn::message_ex::create_request(RPC_TEST_THRIFT_HOST_PORT_PARSER);
     msg_ptr->header->context.u.serialize_format = t;

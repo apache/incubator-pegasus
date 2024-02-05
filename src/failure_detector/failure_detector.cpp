@@ -319,9 +319,9 @@ void failure_detector::set_allow_list(const std::vector<std::string> &replica_ad
     CHECK(!_is_started, "FD is already started, the allow list should really not be modified");
 
     std::vector<rpc_address> nodes;
-    for (auto &addr : replica_addrs) {
-        rpc_address node;
-        if (!node.from_string_ipv4(addr.c_str())) {
+    for (const auto &addr : replica_addrs) {
+        rpc_address node = dsn::rpc_address::from_host_port(addr);
+        if (!node) {
             LOG_WARNING("replica_white_list has invalid ip {}, the allow list won't be modified",
                         addr);
             return;

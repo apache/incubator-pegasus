@@ -98,7 +98,8 @@ TEST_F(meta_access_controller_test, allowed)
 
     std::unique_ptr<tools::sim_network_provider> sim_net(
         new tools::sim_network_provider(nullptr, nullptr));
-    auto sim_session = sim_net->create_client_session(rpc_address("localhost", 10086));
+    auto sim_session =
+        sim_net->create_client_session(rpc_address::from_host_port("localhost", 10086));
     for (const auto &test : tests) {
         dsn::message_ptr msg = message_ex::create_request(test.rpc_code);
         msg->io_session = sim_session;

@@ -716,7 +716,7 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
 
     response.values.push_back(oss.str());
     response.keys.push_back("primary_meta_server");
-    response.values.push_back(dsn_primary_address().to_std_string());
+    response.values.push_back(dsn_primary_address().to_string());
     response.keys.push_back("zookeeper_hosts");
     response.values.push_back(FLAGS_hosts_list);
     response.keys.push_back("zookeeper_root");

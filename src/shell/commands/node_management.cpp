@@ -317,7 +317,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             alive_node_count++;
         std::string status_str = dsn::enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        std::string node_name = kv.first.to_std_string();
+        std::string node_name = kv.first.to_string();
         if (resolve_ip) {
             // TODO: put hostname_from_ip_port into common utils
             dsn::utils::hostname_from_ip_port(node_name.c_str(), &node_name);
@@ -626,8 +626,8 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node;
-            if (!node.from_string_ipv4(token.c_str())) {
+            dsn::rpc_address node = dsn::rpc_address::from_host_port(token);
+            if (!node) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
             }

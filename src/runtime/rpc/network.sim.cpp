@@ -159,7 +159,7 @@ void sim_server_session::send(uint64_t sig)
 sim_network_provider::sim_network_provider(rpc_engine *rpc, network *inner_provider)
     : connection_oriented_network(rpc, inner_provider)
 {
-    _address.assign_ipv4("localhost", 1);
+    _address = rpc_address::from_host_port("localhost", 1);
 }
 
 error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
@@ -168,12 +168,12 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
           "invalid given channel {}",
           channel);
 
-    _address = ::dsn::rpc_address("localhost", port);
+    _address = dsn::rpc_address::from_host_port("localhost", port);
     auto hostname = boost::asio::ip::host_name();
     if (!client_only) {
         for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++) {
             if (s_switch[channel][i].put(_address, this)) {
-                auto ep2 = ::dsn::rpc_address(hostname.c_str(), port);
+                auto ep2 = ::dsn::rpc_address::from_host_port(hostname, port);
                 s_switch[channel][i].put(ep2, this);
             } else {
                 return ERR_ADDRESS_ALREADY_USED;

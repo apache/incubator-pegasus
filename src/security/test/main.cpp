@@ -30,7 +30,7 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::service_app::register_factory<test_client>("test");
+    dsn::service_app::register_factory<dsn::test_client>("test");
     dsn_run(argc, argv, false);
     while (g_test_count == 0) {
         std::this_thread::sleep_for(std::chrono::seconds(1));

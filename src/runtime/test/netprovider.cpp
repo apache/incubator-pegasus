@@ -170,7 +170,7 @@ TEST(tools_common, asio_net_provider)
     LOG_INFO("result: {}", start_result);
 
     rpc_session_ptr client_session =
-        asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
+        asio_network->create_client_session(rpc_address::from_host_port("localhost", TEST_PORT));
     client_session->connect();
 
     rpc_client_session_send(client_session);
@@ -243,7 +243,7 @@ TEST(tools_common, sim_net_provider)
     ASSERT_TRUE(ans == ERR_ADDRESS_ALREADY_USED);
 
     rpc_session_ptr client_session =
-        sim_net->create_client_session(rpc_address("localhost", TEST_PORT));
+        sim_net->create_client_session(rpc_address::from_host_port("localhost", TEST_PORT));
     client_session->connect();
 
     rpc_client_session_send(client_session);
@@ -278,8 +278,8 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     // not exceed threshold
     for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
         LOG_INFO("client # {}", count);
-        rpc_session_ptr client_session =
-            asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
+        rpc_session_ptr client_session = asio_network->create_client_session(
+            rpc_address::from_host_port("localhost", TEST_PORT));
         client_session->connect();
 
         rpc_client_session_send(client_session);
@@ -292,8 +292,8 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     bool reject = false;
     for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
         LOG_INFO("client # {}", count);
-        rpc_session_ptr client_session =
-            asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
+        rpc_session_ptr client_session = asio_network->create_client_session(
+            rpc_address::from_host_port("localhost", TEST_PORT));
         client_session->connect();
 
         if (count >= CONN_THRESHOLD)

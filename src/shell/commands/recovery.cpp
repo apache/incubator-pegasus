@@ -116,8 +116,8 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node;
-            if (!node.from_string_ipv4(token.c_str())) {
+            dsn::rpc_address node = dsn::rpc_address::from_host_port(token);
+            if (!node) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
             }
@@ -137,8 +137,8 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
             boost::trim(str);
             if (str.empty() || str[0] == '#' || str[0] == ';')
                 continue;
-            dsn::rpc_address node;
-            if (!node.from_string_ipv4(str.c_str())) {
+            dsn::rpc_address node = dsn::rpc_address::from_host_port(str);
+            if (!node) {
                 fprintf(stderr,
                         "parse %s at file %s line %d as ip:port failed\n",
                         str.c_str(),
@@ -360,12 +360,12 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
                     std::cout << "    > Please input the primary node: ";
                     std::string addr;
                     std::cin >> addr;
-                    if (primary.from_string_ipv4(addr.c_str())) {
+                    primary = dsn::rpc_address::from_host_port(addr);
+                    if (primary) {
                         break;
-                    } else {
-                        std::cout << "    > Sorry, you have input an invalid node address."
-                                  << std::endl;
                     }
+                    std::cout << "    > Sorry, you have input an invalid node address."
+                              << std::endl;
                 } while (true);
             }
 

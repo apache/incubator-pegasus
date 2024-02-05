@@ -30,7 +30,8 @@ bool validate_ip(shell_context *sc,
                  dsn::rpc_address &target_address,
                  std::string &err_info)
 {
-    if (!target_address.from_string_ipv4(ip_str.c_str())) {
+    target_address = dsn::rpc_address::from_ip_port(ip_str);
+    if (!target_address) {
         err_info = fmt::format("invalid ip:port={}, can't transform it into rpc_address", ip_str);
         return false;
     }

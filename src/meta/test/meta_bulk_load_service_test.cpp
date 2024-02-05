@@ -502,10 +502,10 @@ public:
     std::string PROVIDER = "local_service";
     std::string ROOT_PATH = "bulk_load_root";
     int64_t BALLOT = 4;
-    const rpc_address PRIMARY = rpc_address("127.0.0.1", 10086);
-    const rpc_address SECONDARY1 = rpc_address("127.0.0.1", 10085);
-    const rpc_address SECONDARY2 = rpc_address("127.0.0.1", 10087);
-    const rpc_address SECONDARY3 = rpc_address("127.0.0.1", 10080);
+    const rpc_address PRIMARY = rpc_address::from_ip_port("127.0.0.1", 10086);
+    const rpc_address SECONDARY1 = rpc_address::from_ip_port("127.0.0.1", 10085);
+    const rpc_address SECONDARY2 = rpc_address::from_ip_port("127.0.0.1", 10087);
+    const rpc_address SECONDARY3 = rpc_address::from_ip_port("127.0.0.1", 10080);
 };
 
 /// start bulk load unit tests

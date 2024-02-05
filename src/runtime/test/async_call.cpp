@@ -122,9 +122,9 @@ TEST(async_call, task_call)
 
 TEST(async_call, rpc_call)
 {
-    rpc_address addr("localhost", 20101);
-    rpc_address addr2("localhost", TEST_PORT_END);
-    rpc_address addr3("localhost", 32767);
+    const auto addr = rpc_address::from_host_port("localhost", 20101);
+    const auto addr2 = rpc_address::from_host_port("localhost", TEST_PORT_END);
+    const auto addr3 = rpc_address::from_host_port("localhost", 32767);
 
     tracker_class *tc = new tracker_class();
     rpc::call_one_way_typed(addr, RPC_TEST_STRING_COMMAND, std::string("expect_no_reply"), 0);

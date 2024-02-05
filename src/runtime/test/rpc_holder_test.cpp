@@ -99,7 +99,7 @@ TEST(rpc_holder, mock_rpc_call)
         for (int i = 0; i < 10; i++) {
             auto request = std::make_unique<query_cfg_request>();
             t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
-            rpc.call(rpc_address("127.0.0.1", 12321), nullptr, [](error_code) {});
+            rpc.call(rpc_address::from_ip_port("127.0.0.1", 12321), nullptr, [](error_code) {});
         }
 
         ASSERT_EQ(mail_box.size(), 10);
@@ -114,7 +114,7 @@ TEST(rpc_holder, mock_rpc_call)
             auto request = std::make_unique<query_cfg_request>();
             t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
             rpc.error() = ERR_BUSY;
-            rpc.call(rpc_address("127.0.0.1", 12321), nullptr, [](error_code) {});
+            rpc.call(rpc_address::from_ip_port("127.0.0.1", 12321), nullptr, [](error_code) {});
         }
 
         ASSERT_EQ(mail_box.size(), 10);
@@ -133,7 +133,7 @@ TEST(rpc_holder, mock_rpc_call)
         for (int i = 0; i < 10; i++) {
             auto request = std::make_unique<query_cfg_request>();
             t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
-            rpc.call(rpc_address("127.0.0.1", 12321), nullptr, [](error_code) {});
+            rpc.call(rpc_address::from_ip_port("127.0.0.1", 12321), nullptr, [](error_code) {});
         }
 
         ASSERT_EQ(mail_box.size(), 10);
@@ -166,7 +166,7 @@ TEST(rpc_holder, mock_rpc_forward)
     {
         auto &mail_box = t_rpc::mail_box();
         auto &forward_mail_box = t_rpc::forward_mail_box();
-        rpc_address forward_addr("127.0.0.1", 10086);
+        const auto forward_addr = rpc_address::from_ip_port("127.0.0.1", 10086);
 
         for (int i = 0; i < 10; i++) {
             query_cfg_request request;

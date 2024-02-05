@@ -41,7 +41,6 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled");
@@ -194,34 +193,18 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
 {
     servers.clear();
     std::string server_list = dsn_config_get_value_string(section, key, "", "");
-    std::vector<std::string> lv;
-    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
-    for (auto &s : lv) {
-        ::dsn::rpc_address addr;
-        std::vector<std::string> hostname_port;
-        uint32_t ip = 0;
-        utils::split_args(s.c_str(), hostname_port, ':');
-        CHECK_EQ_MSG(2,
-                     hostname_port.size(),
-                     "invalid address '{}' specified in config [{}].{}",
-                     s,
-                     section,
-                     key);
-        uint32_t port_num = 0;
-        CHECK(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
-              "invalid address '{}' specified in config [{}].{}",
-              s,
-              section,
-              key);
-        if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
-            addr.assign_ipv4(ip, static_cast<uint16_t>(port_num));
-        } else if (!addr.from_string_ipv4(s.c_str())) {
-            LOG_ERROR("invalid address '{}' specified in config [{}].{}", s, section, key);
+    std::vector<std::string> host_ports;
+    ::dsn::utils::split_args(server_list.c_str(), host_ports, ',');
+    for (const auto &host_port : host_ports) {
+        auto addr = dsn::rpc_address::from_host_port(host_port);
+        if (!addr) {
+            LOG_ERROR("invalid address '{}' specified in config [{}].{}", host_port, section, key);
             return false;
         }
-        // TODO(yingchun): check there is no duplicates
         servers.push_back(addr);
     }
+
+    // TODO(yingchun): check there is no duplicates
     if (servers.empty()) {
         LOG_ERROR("no meta server specified in config [{}].{}", section, key);
         return false;

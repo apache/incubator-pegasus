@@ -46,7 +46,7 @@ void on_lpc_test(void *p)
 TEST(core, lpc)
 {
     std::string result = "heheh";
-    dsn::task_ptr t(new raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
+    dsn::task_ptr t(new dsn::raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
     t->enqueue();
     t->wait();
     EXPECT_TRUE(result.substr(0, result.length() - 2) == "client.THREAD_POOL_TEST_SERVER");

@@ -88,7 +88,7 @@ public:
 
 public:
     ingestion_context::node_context _context;
-    const rpc_address NODE = rpc_address("127.0.0.1", 10086);
+    const rpc_address NODE = rpc_address::from_ip_port("127.0.0.1", 10086);
     const std::string TAG = "default";
     const std::string TAG2 = "tag2";
 };
@@ -313,10 +313,10 @@ public:
     const uint32_t PARTITION_COUNT = 4;
     const uint32_t MAX_NODE_COUNT = 2;
     const uint32_t MIN_DISK_COUNT = 2;
-    const rpc_address NODE1 = rpc_address("127.0.0.1", 10086);
-    const rpc_address NODE2 = rpc_address("127.0.0.1", 10085);
-    const rpc_address NODE3 = rpc_address("127.0.0.1", 10087);
-    const rpc_address NODE4 = rpc_address("127.0.0.1", 10088);
+    const rpc_address NODE1 = rpc_address::from_ip_port("127.0.0.1", 10086);
+    const rpc_address NODE2 = rpc_address::from_ip_port("127.0.0.1", 10085);
+    const rpc_address NODE3 = rpc_address::from_ip_port("127.0.0.1", 10087);
+    const rpc_address NODE4 = rpc_address::from_ip_port("127.0.0.1", 10088);
     const std::string TAG1 = "tag1";
     const std::string TAG2 = "tag2";
 };

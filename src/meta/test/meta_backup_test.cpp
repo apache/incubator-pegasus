@@ -250,7 +250,7 @@ public:
                               int32_t progress)
     {
         gpid pid = gpid(_app_id, partition_index);
-        rpc_address mock_primary_address = rpc_address("127.0.0.1", 10000 + partition_index);
+        auto mock_primary_address = rpc_address::from_ip_port("127.0.0.1", 10000 + partition_index);
 
         backup_response resp;
         resp.backup_id = _backup_engine->_cur_backup.backup_id;
@@ -264,7 +264,7 @@ public:
     void mock_on_backup_reply_when_timeout(int32_t partition_index, error_code rpc_err)
     {
         gpid pid = gpid(_app_id, partition_index);
-        rpc_address mock_primary_address = rpc_address("127.0.0.1", 10000 + partition_index);
+        auto mock_primary_address = rpc_address::from_ip_port("127.0.0.1", 10000 + partition_index);
         backup_response resp;
         _backup_engine->on_backup_reply(rpc_err, resp, pid, mock_primary_address);
     }

@@ -74,7 +74,7 @@ void replica_follower::init_master_info()
     CHECK(!metas.empty(), "master cluster meta list is invalid!");
     for (const auto &meta : metas) {
         dsn::rpc_address node;
-        CHECK(node.from_string_ipv4(meta.c_str()), "{} is invalid meta address", meta);
+        CHECK((node = rpc_address::from_host_port(meta)), "{} is invalid meta address", meta);
         _master_meta_list.emplace_back(std::move(node));
     }
 }

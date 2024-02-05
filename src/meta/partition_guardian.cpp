@@ -17,6 +17,7 @@
 
 #include "meta/partition_guardian.h"
 
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -353,8 +354,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                 node_state *ns = get_node_state(*view.nodes, nodes[i], false);
                 if (ns == nullptr || !ns->alive()) {
                     ready = false;
-                    reason = "the last dropped node(" + nodes[i].to_std_string() +
-                             ") haven't come back yet";
+                    reason =
+                        fmt::format("the last dropped node({}) hasn't come back yet", nodes[i]);
                     LOG_WARNING("{}: don't select primary: {}", gpid_name, reason);
                 } else {
                     std::vector<dropped_replica>::iterator it = cc.find_from_dropped(nodes[i]);
@@ -367,8 +368,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                             collected_info[i] = {nodes[i], 0, -1, -1, -1};
                         } else {
                             ready = false;
-                            reason = "the last dropped node(" + nodes[i].to_std_string() +
-                                     ") is unavailable because ";
+                            reason = fmt::format(
+                                "the last dropped node({}) is unavailable because ", nodes[i]);
                             if (it == cc.dropped.end()) {
                                 reason += "the node is not exist in dropped_nodes";
                             } else {
@@ -733,7 +734,7 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
     std::set<dsn::rpc_address> addr_list;
     for (const std::string &s : ip_ports) {
         dsn::rpc_address addr;
-        if (!addr.from_string_ipv4(s.c_str())) {
+        if (!(addr = rpc_address::from_host_port(s))) {
             return invalid_arguments;
         }
         addr_list.insert(addr);

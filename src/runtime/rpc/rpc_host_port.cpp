@@ -169,12 +169,13 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     }
 
     rpc_address rpc_addr;
-    // Resolve hostname like "localhost:80" or "192.168.0.1:8080".
-    if (rpc_addr.from_string_ipv4(this->to_string().c_str())) {
+    // 1. Try to resolve hostname in the form of "localhost:80" or "192.168.0.1:8080".
+    if ((rpc_addr = rpc_address::from_ip_port(this->to_string()))) {
         addresses.emplace_back(rpc_addr);
         return error_s::ok();
     }
 
+    // 2. Try to resolve hostname in the form of "host1:80".
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;

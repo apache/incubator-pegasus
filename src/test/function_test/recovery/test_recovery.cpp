@@ -19,6 +19,7 @@
 
 #include <fmt/core.h>
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -70,13 +71,12 @@ public:
     // cluster has only one meta server, while "onebox" means the cluster has 3 meta servers.
     recovery_test() : test_util(std::map<std::string, std::string>(), "single_master_cluster") {}
 
-    std::vector<dsn::rpc_address> get_rpc_address_list(const std::vector<int> ports)
+    std::vector<dsn::rpc_address> get_rpc_address_list(const std::vector<uint16_t> &ports)
     {
         std::vector<dsn::rpc_address> result;
         result.reserve(ports.size());
-        for (const int &p : ports) {
-            dsn::rpc_address address(global_env::instance()._host_ip.c_str(), p);
-            result.push_back(address);
+        for (const auto &port : ports) {
+            result.emplace_back(dsn::rpc_address(global_env::instance()._host_ip, port));
         }
         return result;
     }

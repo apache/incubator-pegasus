@@ -145,7 +145,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
           "invalid given channel {}",
           channel);
 
-    _address.assign_ipv4(get_local_ipv4(), port);
+    _address = rpc_address(get_local_ipv4(), port);
 
     if (!client_only) {
         auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
@@ -376,11 +376,11 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
         do {
             // FIXME: we actually do not need to set a random port for client if the rpc_engine is
             // refactored
-            _address.assign_ipv4(get_local_ipv4(),
-                                 std::numeric_limits<uint16_t>::max() -
-                                     rand::next_u64(std::numeric_limits<uint64_t>::min(),
-                                                    std::numeric_limits<uint64_t>::max()) %
-                                         5000);
+            _address = rpc_address(get_local_ipv4(),
+                                   std::numeric_limits<uint16_t>::max() -
+                                       rand::next_u64(std::numeric_limits<uint64_t>::min(),
+                                                      std::numeric_limits<uint64_t>::max()) %
+                                           5000);
             ::boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(),
                                                       _address.port());
             boost::system::error_code ec;
@@ -402,7 +402,7 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             break;
         } while (true);
     } else {
-        _address.assign_ipv4(get_local_ipv4(), port);
+        _address = rpc_address(get_local_ipv4(), port);
         ::boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(),
                                                   _address.port());
         boost::system::error_code ec;

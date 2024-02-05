@@ -162,8 +162,9 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
             zoo_sasl_params_t sasl_params = {0};
             sasl_params.service = FLAGS_zookeeper_kerberos_service_name;
             sasl_params.mechlist = "GSSAPI";
-            rpc_address addr;
-            CHECK(addr.from_string_ipv4(FLAGS_zookeeper_sasl_service_fqdn),
+            rpc_address addr =
+                dsn::rpc_address::from_host_port(FLAGS_zookeeper_sasl_service_fqdn);
+            CHECK(addr,
                   "zookeeper_sasl_service_fqdn {} is invalid",
                   FLAGS_zookeeper_sasl_service_fqdn);
             sasl_params.host = FLAGS_zookeeper_sasl_service_fqdn;

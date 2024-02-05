@@ -410,9 +410,9 @@ public:
     std::string ROOT_PATH = "bulk_load_root";
     gpid PID = gpid(1, 0);
     ballot BALLOT = 3;
-    rpc_address PRIMARY = rpc_address("127.0.0.2", 34801);
-    rpc_address SECONDARY = rpc_address("127.0.0.3", 34801);
-    rpc_address SECONDARY2 = rpc_address("127.0.0.4", 34801);
+    rpc_address PRIMARY = rpc_address::from_ip_port("127.0.0.2", 34801);
+    rpc_address SECONDARY = rpc_address::from_ip_port("127.0.0.3", 34801);
+    rpc_address SECONDARY2 = rpc_address::from_ip_port("127.0.0.4", 34801);
     int32_t MAX_DOWNLOADING_COUNT = 5;
     std::string LOCAL_DIR = bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR;
     std::string METADATA = bulk_load_constant::BULK_LOAD_METADATA;
