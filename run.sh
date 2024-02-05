@@ -1591,9 +1591,19 @@ function run_bench()
         shift
     done
     cd ${ROOT}
-    cp ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
+    if [ -f ${ROOT}/bin/pegasus_bench/pegasus_bench ]; then
+        # The pegasus_bench was packaged by pack_tools, to be used on production environment.
+        ln -s -f ${ROOT}/bin/pegasus_bench/pegasus_bench
+        cp -a ${ROOT}/bin/pegasus_bench/config.ini ./config-bench.ini
+    elif [ -f ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/pegasus_bench ]; then
+        # The pegasus_bench was built locally, to be used for test on development environment.
+        ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/pegasus_bench
+        cp -a ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
+    else
+        echo "ERROR: pegasus_bench could not be found"
+        exit 1
+    fi
     fill_bench_config
-    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/pegasus_bench
     ./pegasus_bench ./config-bench.ini
     rm -f ./config-bench.ini
 }
