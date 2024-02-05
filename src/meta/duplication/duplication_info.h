@@ -188,9 +188,6 @@ public:
     // Test util
     bool equals_to(const duplication_info &rhs) const { return to_string() == rhs.to_string(); }
 
-    // To json encoded string.
-    std::string to_string() const;
-
     friend std::ostream &operator<<(std::ostream &os, const duplication_info &di)
     {
         return os << di.to_string();
@@ -199,6 +196,9 @@ public:
     const char *log_prefix() const { return prefix_for_log.c_str(); }
 
 private:
+    // To json encoded string.
+    std::string to_string() const;
+
     friend class duplication_info_test;
     friend class meta_duplication_service_test;
 

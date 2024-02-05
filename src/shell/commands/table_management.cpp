@@ -112,7 +112,7 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     }
     ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
     if (err != ::dsn::ERR_OK)
-        std::cout << "list apps failed, error=" << err.to_string() << std::endl;
+        std::cout << "list apps failed, error=" << err << std::endl;
     return true;
 }
 
@@ -166,7 +166,7 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
     ::dsn::error_code err =
         sc->ddl_client->list_app(app_name, detailed, json, out_file, resolve_ip);
     if (err != ::dsn::ERR_OK) {
-        std::cout << "query app " << app_name << " failed, error=" << err.to_string() << std::endl;
+        std::cout << "query app " << app_name << " failed, error=" << err << std::endl;
     }
     return true;
 }
@@ -297,8 +297,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
     dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
     if (err != ::dsn::ERR_OK) {
-        std::cout << "ERROR: list app " << app_name << " failed, error=" << err.to_string()
-                  << std::endl;
+        std::cout << "ERROR: list app " << app_name << " failed, error=" << err << std::endl;
         return true;
     }
     if (!partitions.empty()) {
@@ -390,7 +389,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
                 oss << hostname << "(";
             } else {
-                oss << p.primary.to_string() << "(";
+                oss << p.primary << "(";
             };
             if (disk_found)
                 oss << disk_value;
@@ -441,7 +440,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
                     oss << hostname << "(";
                 } else {
-                    oss << p.secondaries[j].to_string() << "(";
+                    oss << p.secondaries[j] << "(";
                 };
                 if (found)
                     oss << value;
@@ -740,7 +739,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
                   << std::endl;
     else
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name)
-                  << "\" failed, error = " << err.to_string() << std::endl;
+                  << "\" failed, error = " << err << std::endl;
     return true;
 }
 
@@ -779,7 +778,7 @@ bool drop_app(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "drop app " << app_name << " succeed" << std::endl;
     else
-        std::cout << "drop app " << app_name << " failed, error=" << err.to_string() << std::endl;
+        std::cout << "drop app " << app_name << " failed, error=" << err << std::endl;
     return true;
 }
 
@@ -839,7 +838,7 @@ bool recall_app(command_executor *e, shell_context *sc, arguments args)
     if (dsn::ERR_OK == err)
         std::cout << "recall app " << id << " succeed" << std::endl;
     else
-        std::cout << "recall app " << id << " failed, error=" << err.to_string() << std::endl;
+        std::cout << "recall app " << id << " failed, error=" << err << std::endl;
     return true;
 }
 

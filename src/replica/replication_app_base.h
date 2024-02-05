@@ -70,8 +70,8 @@ public:
 
     static const std::string kInitInfo;
 
-public:
-    std::string to_string();
+private:
+    std::string to_string() const;
 };
 
 class replica_app_info

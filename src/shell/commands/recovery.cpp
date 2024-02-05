@@ -158,7 +158,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
     dsn::error_code ec = sc->ddl_client->do_recovery(
         node_list, wait_seconds, skip_bad_nodes, skip_lost_partitions, output_file);
     if (!output_file.empty()) {
-        std::cout << "recover complete with err = " << ec.to_string() << std::endl;
+        std::cout << "recover complete with err = " << ec << std::endl;
     }
     return true;
 }
@@ -283,7 +283,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
     int proposed_count = 0;
     int i = 0;
     for (const ddd_partition_info &pinfo : ddd_partitions) {
-        out << "(" << ++i << ") " << pinfo.config.pid.to_string() << std::endl;
+        out << "(" << ++i << ") " << pinfo.config.pid << std::endl;
         out << "    config: ballot(" << pinfo.config.ballot << "), "
             << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
         out << "    ----" << std::endl;
@@ -297,7 +297,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             char time_buf[30] = {0};
             ::dsn::utils::time_ms_to_string(n.drop_time_ms, time_buf);
             out << "    dropped[" << j++ << "]: "
-                << "node(" << n.node.to_string() << "), "
+                << "node(" << n.node << "), "
                 << "drop_time(" << time_buf << "), "
                 << "alive(" << (n.is_alive ? "true" : "false") << "), "
                 << "collected(" << (n.is_collected ? "true" : "false") << "), "
@@ -314,7 +314,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         j = 0;
         for (const ::dsn::rpc_address &r : pinfo.config.last_drops) {
             out << "    last_drops[" << j++ << "]: "
-                << "node(" << r.to_string() << ")";
+                << "node(" << r << ")";
             if (j == (int)pinfo.config.last_drops.size() - 1)
                 out << "  <== the secondary latest";
             else if (j == (int)pinfo.config.last_drops.size())
@@ -376,10 +376,9 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
                     new_proposal_action(primary, primary, config_type::CT_ASSIGN_PRIMARY)};
                 request.force = false;
                 dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
-                out << "    propose_request: propose -g " << request.gpid.to_string()
-                    << " -p ASSIGN_PRIMARY -t " << primary.to_string() << " -n "
-                    << primary.to_string() << std::endl;
-                out << "    propose_response: " << err.to_string() << std::endl;
+                out << "    propose_request: propose -g " << request.gpid
+                    << " -p ASSIGN_PRIMARY -t " << primary << " -n " << primary << std::endl;
+                out << "    propose_response: " << err << std::endl;
                 proposed_count++;
             } else {
                 out << "    propose_request: none" << std::endl;

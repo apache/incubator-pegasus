@@ -1106,7 +1106,7 @@ void test_case::print(case_line *cl, const std::string &other, bool is_skip)
     {
         char buf[100];
         sprintf(buf, "%5d  ", cl->line_no());
-        std::cout << buf << cl->to_string() << std::endl;
+        std::cout << buf << *cl << std::endl;
         if (!other.empty()) {
             std::cout << " <==>  " << other << std::endl;
         }
