@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <absl/strings/str_split.h>
 #include <boost/algorithm/string/replace.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
@@ -54,23 +55,26 @@
 #include "mutation_log.h"
 #include "nfs/nfs_node.h"
 #include "nfs_types.h"
+#include "ranger/access_type.h"
 #include "replica.h"
 #include "replica/duplication/replica_follower.h"
+#include "replica/kms_key_provider.h"
 #include "replica/replica_context.h"
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
-#include "replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/command_manager.h"
+#include "utils/env.h"
+#include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/load_dump_object.h"
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"
@@ -215,7 +219,15 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kBytes,
                           "The max size of copied files among all splitting replicas");
 
+DSN_DECLARE_bool(encrypt_data_at_rest);
+DSN_DECLARE_string(server_key);
+
 namespace dsn {
+DSN_DECLARE_string(cluster_name);
+
+namespace security {
+DSN_DECLARE_bool(enable_acl);
+}
 namespace replication {
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
@@ -284,12 +296,39 @@ DSN_DEFINE_int32(
     "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
     "memory, replica server will release the exceeding memory back to operating system");
 
+DSN_DEFINE_string(
+    pegasus.server,
+    hadoop_kms_url,
+    "",
+    "Provide the comma-separated list of URLs from which to retrieve the "
+    "file system's server key. Example format: 'hostname1:1234/kms,hostname2:1234/kms'.");
+
 DSN_DECLARE_bool(duplication_enabled);
 DSN_DECLARE_int32(fd_beacon_interval_seconds);
 DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
 DSN_DECLARE_int32(fd_lease_seconds);
 DSN_DECLARE_int32(gc_interval_ms);
+DSN_DECLARE_string(data_dirs);
+DSN_DEFINE_group_validator(encrypt_data_at_rest_pre_check, [](std::string &message) -> bool {
+    if (!dsn::security::FLAGS_enable_acl && FLAGS_encrypt_data_at_rest) {
+        message = fmt::format("[pegasus.server] encrypt_data_at_rest should be enabled only if "
+                              "[security] enable_acl is enabled.");
+        return false;
+    }
+    return true;
+});
+
+DSN_DEFINE_group_validator(encrypt_data_at_rest_with_kms_url, [](std::string &message) -> bool {
+#ifndef MOCK_TEST
+    if (FLAGS_encrypt_data_at_rest && utils::is_empty(FLAGS_hadoop_kms_url)) {
+        message = fmt::format("[security] hadoop_kms_url should not be empty when [pegasus.server] "
+                              "encrypt_data_at_rest is enabled.");
+        return false;
+    }
+#endif
+    return true;
+});
 
 bool replica_stub::s_not_exit_on_log_failure = false;
 
@@ -381,8 +420,50 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
     }
 
+    const auto &kms_path =
+        utils::filesystem::path_combine(_options.data_dirs[0], kms_info::kKmsInfo);
+    // FLAGS_data_dirs may be empty when load configuration, use LOG_FATAL instead of group
+    // validator.
+    if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
+        LOG_FATAL("The kms_info file exists at ({}), but [pegasus.server] "
+                  "encrypt_data_at_rest is enbale."
+                  "Encryption in Pegasus is irreversible after its initial activation.",
+                  kms_path);
+    }
+
+    dsn::replication::kms_info kms_info;
+    if (FLAGS_encrypt_data_at_rest && !utils::is_empty(FLAGS_hadoop_kms_url)) {
+        _key_provider.reset(new dsn::security::kms_key_provider(
+            ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_cluster_name));
+        const auto &ec = dsn::utils::load_rjobj_from_file(
+            kms_path, dsn::utils::FileDataType::kNonSensitive, &kms_info);
+        if (ec != dsn::ERR_PATH_NOT_FOUND && ec != dsn::ERR_OK) {
+            CHECK_EQ_MSG(dsn::ERR_OK, ec, "Can't load kms key from kms-info file");
+        }
+        // Upon the first launch, the encryption key should be empty. The process will then retrieve
+        // EEK, IV, and KV from KMS.
+        // After the first launch, the encryption key, obtained from the kms-info file, should not
+        // be empty. The process will then acquire the DEK from KMS.
+        if (ec == dsn::ERR_PATH_NOT_FOUND) {
+            LOG_WARNING("It's normal to encounter a temporary inability to open the kms-info file "
+                        "during the first process launch.");
+            CHECK_OK(_key_provider->GenerateEncryptionKey(&kms_info),
+                     "Generate encryption key from kms failed");
+        }
+        CHECK_OK(_key_provider->DecryptEncryptionKey(kms_info, &_server_key),
+                 "Get decryption key failed from {}",
+                 kms_path);
+        FLAGS_server_key = _server_key.c_str();
+    }
+
     // Initialize the file system manager.
     _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags);
+
+    if (_key_provider && !utils::filesystem::path_exists(kms_path)) {
+        const auto &err = dsn::utils::dump_rjobj_to_file(
+            kms_info, dsn::utils::FileDataType::kNonSensitive, kms_path);
+        CHECK_EQ_MSG(dsn::ERR_OK, err, "Can't store kms key to kms-info file");
+    }
 
     // Check slog is not exist.
     auto full_slog_path = fmt::format("{}/replica/slog/", _options.slog_dir);
@@ -1701,9 +1782,9 @@ void replica_stub::open_replica(
                       configuration_update->config.last_committed_decree == 0,
                   "{}@{}: cannot load replica({}.{}), ballot = {}, "
                   "last_committed_decree = {}, but it does not existed!",
-                  id.to_string(),
+                  id,
                   _primary_address_str,
-                  id.to_string(),
+                  id,
                   app.app_type.c_str(),
                   configuration_update->config.ballot,
                   configuration_update->config.last_committed_decree);
@@ -1743,25 +1824,17 @@ void replica_stub::open_replica(
         LOG_WARNING(
             "{}@{}: open replica failed, erase from opening replicas", id, _primary_address_str);
         zauto_write_lock l(_replicas_lock);
-        CHECK_GT_MSG(_opening_replicas.erase(id),
-                     0,
-                     "replica {} is not in _opening_replicas",
-                     id.to_string());
+        CHECK_GT_MSG(_opening_replicas.erase(id), 0, "replica {} is not in _opening_replicas", id);
         METRIC_VAR_DECREMENT(opening_replicas);
         return;
     }
 
     {
         zauto_write_lock l(_replicas_lock);
-        CHECK_GT_MSG(_opening_replicas.erase(id),
-                     0,
-                     "replica {} is not in _opening_replicas",
-                     id.to_string());
+        CHECK_GT_MSG(_opening_replicas.erase(id), 0, "replica {} is not in _opening_replicas", id);
         METRIC_VAR_DECREMENT(opening_replicas);
 
-        CHECK(_replicas.find(id) == _replicas.end(),
-              "replica {} is already in _replicas",
-              id.to_string());
+        CHECK(_replicas.find(id) == _replicas.end(), "replica {} is already in _replicas", id);
         _replicas.insert(replicas::value_type(rep->get_gpid(), rep));
         METRIC_VAR_INCREMENT(total_replicas);
 
@@ -2371,7 +2444,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
     std::stringstream query_state;
     query_state << processed << " processed, " << not_found << " not found";
     for (auto &kv : results) {
-        query_state << "\n    " << kv.first.to_string() << "@" << _primary_address_str;
+        query_state << "\n    " << kv.first << "@" << _primary_address_str;
         if (kv.second.first != partition_status::PS_INVALID)
             query_state << "@" << (kv.second.first == partition_status::PS_PRIMARY ? "P" : "S");
         query_state << " : " << kv.second.second;
@@ -2680,7 +2753,7 @@ void replica_stub::on_group_bulk_load(group_bulk_load_rpc rpc)
              "meta_bulk_load_status = {}",
              request.config.pid,
              _primary_address_str,
-             request.config.primary.to_string(),
+             request.config.primary,
              request.config.ballot,
              enum_to_string(request.meta_bulk_load_status));
 

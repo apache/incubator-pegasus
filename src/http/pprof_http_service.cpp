@@ -28,7 +28,6 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
@@ -42,6 +41,7 @@
 #include "http/http_server.h"
 #include "http/http_status_code.h"
 #include "runtime/api_layer1.h"
+#include "utils/api_utilities.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
 #include "utils/fmt_logging.h"
@@ -98,8 +98,7 @@ static bool has_ext(const std::string &name, const std::string &ext)
 static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_map,
                                        const lib_info &lib_info)
 {
-    timer tm;
-    tm.start();
+    SCOPED_LOG_TIMING(INFO, "load {}", lib_info.path);
     std::string cmd = "nm -C -p ";
     cmd.append(lib_info.path);
     std::stringstream ss;
@@ -191,15 +190,12 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
     if (addr_map.find(lib_info.end_addr) == addr_map.end()) {
         addr_map[lib_info.end_addr] = std::string();
     }
-    tm.stop();
-    LOG_INFO("Loaded {} in {}ms", lib_info.path, tm.m_elapsed().count());
     return 0;
 }
 
 static void load_symbols()
 {
-    timer tm;
-    tm.start();
+    SCOPED_LOG_TIMING(INFO, "load all symbols");
     auto fp = fopen("/proc/self/maps", "r");
     if (fp == nullptr) {
         return;
@@ -270,9 +266,8 @@ static void load_symbols()
     info.path = program_invocation_name;
     extract_symbols_from_binary(symbol_map, info);
 
-    timer tm2;
-    tm2.start();
     size_t num_removed = 0;
+    LOG_TIMING_IF(INFO, num_removed > 0, "removed {} entries", num_removed);
     bool last_is_empty = false;
     for (auto it = symbol_map.begin(); it != symbol_map.end();) {
         if (it->second.empty()) {
@@ -287,13 +282,6 @@ static void load_symbols()
             ++it;
         }
     }
-    tm2.stop();
-    if (num_removed) {
-        LOG_INFO("Removed {} entries in {}ms", num_removed, tm2.m_elapsed().count());
-    }
-
-    tm.stop();
-    LOG_INFO("Loaded all symbols in {}ms", tm.m_elapsed().count());
 }
 
 static void find_symbols(std::string *out, std::vector<uintptr_t> &addr_list)

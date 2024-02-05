@@ -28,6 +28,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -45,7 +46,11 @@
 #include "shell/sds/sds.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
+#include "utils/math.h"
+#include "utils/metrics.h"
 #include "utils/output_utils.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
@@ -83,10 +88,133 @@ bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 
     ::dsn::error_code err = sc->ddl_client->cluster_info(out_file, resolve_ip, json);
     if (err != ::dsn::ERR_OK) {
-        std::cout << "get cluster info failed, error=" << err.to_string() << std::endl;
+        std::cout << "get cluster info failed, error=" << err << std::endl;
     }
     return true;
 }
+
+namespace {
+
+dsn::metric_filters resource_usage_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"server", "replica", "disk"};
+    filters.entity_metrics = {"resident_mem_usage_mb",
+                              "rdb_block_cache_mem_usage_bytes",
+                              "rdb_memtable_mem_usage_bytes",
+                              "rdb_index_and_filter_blocks_mem_usage_bytes",
+                              "disk_capacity_total_mb",
+                              "disk_capacity_avail_mb"};
+    return filters;
+}
+
+dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_helper &stat)
+{
+    dsn::error_s err;
+
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
+
+    int64_t total_capacity_mb = 0;
+    int64_t total_available_mb = 0;
+    stat.disk_available_min_ratio = 100;
+    for (const auto &entity : query_snapshot.entities) {
+        if (entity.type == "server") {
+            for (const auto &m : entity.metrics) {
+                if (m.name == "resident_mem_usage_mb") {
+                    stat.memused_res_mb += m.value;
+                } else if (m.name == "rdb_block_cache_mem_usage_bytes") {
+                    stat.block_cache_bytes += m.value;
+                }
+            }
+        } else if (entity.type == "replica") {
+            for (const auto &m : entity.metrics) {
+                if (m.name == "rdb_memtable_mem_usage_bytes") {
+                    stat.mem_tbl_bytes += m.value;
+                } else if (m.name == "rdb_index_and_filter_blocks_mem_usage_bytes") {
+                    stat.mem_idx_bytes += m.value;
+                }
+            }
+        } else if (entity.type == "disk") {
+            int64_t capacity_mb = 0;
+            int64_t available_mb = 0;
+            for (const auto &m : entity.metrics) {
+                if (m.name == "disk_capacity_total_mb") {
+                    total_capacity_mb += m.value;
+                    capacity_mb = m.value;
+                } else if (m.name == "disk_capacity_avail_mb") {
+                    total_available_mb += m.value;
+                    available_mb = m.value;
+                }
+            }
+
+            const auto available_ratio = dsn::utils::calc_percentage(available_mb, capacity_mb);
+            stat.disk_available_min_ratio =
+                std::min(stat.disk_available_min_ratio, available_ratio);
+        }
+    }
+
+    stat.disk_available_total_ratio =
+        dsn::utils::calc_percentage(total_available_mb, total_capacity_mb);
+
+    return dsn::error_s::ok();
+}
+
+dsn::metric_filters profiler_latency_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField,
+                                  dsn::kth_percentile_to_name(dsn::kth_percentile_type::P99)};
+    filters.entity_types = {"profiler"};
+    filters.entity_metrics = {"profiler_server_rpc_latency_ns"};
+    return filters;
+}
+
+dsn::error_s parse_profiler_latency(const std::string &json_string, list_nodes_helper &stat)
+{
+    dsn::error_s err;
+
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(p99, json_string, query_snapshot);
+
+    for (const auto &entity : query_snapshot.entities) {
+        if (dsn_unlikely(entity.type != "profiler")) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA,
+                           "non-replica entity should not be included: {}",
+                           entity.type);
+        }
+
+        const auto &t = entity.attributes.find("task_name");
+        if (dsn_unlikely(t == entity.attributes.end())) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "task_name field was not found");
+        }
+
+        double *latency = nullptr;
+        const auto &task_name = t->second;
+        if (task_name == "RPC_RRDB_RRDB_GET") {
+            latency = &stat.get_p99;
+        } else if (task_name == "RPC_RRDB_RRDB_PUT") {
+            latency = &stat.put_p99;
+        } else if (task_name == "RPC_RRDB_RRDB_MULTI_GET") {
+            latency = &stat.multi_get_p99;
+        } else if (task_name == "RPC_RRDB_RRDB_MULTI_PUT") {
+            latency = &stat.multi_put_p99;
+        } else if (task_name == "RPC_RRDB_RRDB_BATCH_GET") {
+            latency = &stat.batch_get_p99;
+        } else {
+            continue;
+        }
+
+        for (const auto &m : entity.metrics) {
+            if (m.name == "profiler_server_rpc_latency_ns") {
+                *latency = m.p99;
+            }
+        }
+    }
+
+    return dsn::error_s::ok();
+}
+
+} // anonymous namespace
 
 bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 {
@@ -165,7 +293,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
     auto r = sc->ddl_client->list_nodes(s, nodes);
     if (r != dsn::ERR_OK) {
-        std::cout << "list nodes failed, error=" << r.to_string() << std::endl;
+        std::cout << "list nodes failed, error=" << r << std::endl;
         return true;
     }
 
@@ -188,7 +316,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         std::vector<::dsn::app_info> apps;
         r = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
         if (r != dsn::ERR_OK) {
-            std::cout << "list apps failed, error=" << r.to_string() << std::endl;
+            std::cout << "list apps failed, error=" << r << std::endl;
             return true;
         }
 
@@ -198,8 +326,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             std::vector<dsn::partition_configuration> partitions;
             r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, partitions);
             if (r != dsn::ERR_OK) {
-                std::cout << "list app " << app.app_name << " failed, error=" << r.to_string()
-                          << std::endl;
+                std::cout << "list app " << app.app_name << " failed, error=" << r << std::endl;
                 return true;
             }
 
@@ -227,55 +354,19 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        std::vector<std::pair<bool, std::string>> results =
-            call_remote_command(sc,
-                                nodes,
-                                "perf-counters-by-prefix",
-                                {"replica*server*memused.res(MB)",
-                                 "replica*app.pegasus*rdb.block_cache.memory_usage",
-                                 "replica*eon.replica_stub*disk.available.total.ratio",
-                                 "replica*eon.replica_stub*disk.available.min.ratio",
-                                 "replica*app.pegasus*rdb.memtable.memory_usage",
-                                 "replica*app.pegasus*rdb.index_and_filter_blocks.memory_usage"});
+        const auto &results = get_metrics(nodes, resource_usage_filters().to_query_string());
 
-        for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            auto tmp_it = tmp_map.find(node_addr);
-            if (tmp_it == tmp_map.end())
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            auto tmp_it = tmp_map.find(nodes[i].address);
+            if (tmp_it == tmp_map.end()) {
                 continue;
-            if (!results[i].first) {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " failed" << std::endl;
-                return true;
             }
-            dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                std::cout << "decode perf counter info from node " << node_addr.to_string()
-                          << " failed, result = " << results[i].second << std::endl;
-                return true;
-            }
-            if (info.result != "OK") {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " returns error, error = " << info.result << std::endl;
-                return true;
-            }
-            list_nodes_helper &h = tmp_it->second;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name.find("memused.res(MB)") != std::string::npos)
-                    h.memused_res_mb += m.value;
-                else if (m.name.find("rdb.block_cache.memory_usage") != std::string::npos)
-                    h.block_cache_bytes += m.value;
-                else if (m.name.find("disk.available.total.ratio") != std::string::npos)
-                    h.disk_available_total_ratio += m.value;
-                else if (m.name.find("disk.available.min.ratio") != std::string::npos)
-                    h.disk_available_min_ratio += m.value;
-                else if (m.name.find("rdb.memtable.memory_usage") != std::string::npos)
-                    h.mem_tbl_bytes += m.value;
-                else if (m.name.find("rdb.index_and_filter_blocks.memory_usage") !=
-                         std::string::npos)
-                    h.mem_idx_bytes += m.value;
-            }
+
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "resource");
+
+            auto &stat = tmp_it->second;
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+                parse_resource_usage(results[i].body(), stat), nodes[i], "resource");
         }
     }
 
@@ -304,19 +395,19 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             if (tmp_it == tmp_map.end())
                 continue;
             if (!results[i].first) {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " failed" << std::endl;
+                std::cout << "query perf counter info from node " << node_addr << " failed"
+                          << std::endl;
                 return true;
             }
             dsn::perf_counter_info info;
             dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
             if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                std::cout << "decode perf counter info from node " << node_addr.to_string()
+                std::cout << "decode perf counter info from node " << node_addr
                           << " failed, result = " << results[i].second << std::endl;
                 return true;
             }
             if (info.result != "OK") {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
+                std::cout << "query perf counter info from node " << node_addr
                           << " returns error, error = " << info.result << std::endl;
                 return true;
             }
@@ -347,51 +438,19 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        std::vector<std::pair<bool, std::string>> results =
-            call_remote_command(sc,
-                                nodes,
-                                "perf-counters-by-postfix",
-                                {"zion*profiler*RPC_RRDB_RRDB_GET.latency.server",
-                                 "zion*profiler*RPC_RRDB_RRDB_PUT.latency.server",
-                                 "zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server",
-                                 "zion*profiler*RPC_RRDB_RRDB_BATCH_GET.latency.server",
-                                 "zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.latency.server"});
+        const auto &results = get_metrics(nodes, profiler_latency_filters().to_query_string());
 
         for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            auto tmp_it = tmp_map.find(node_addr);
-            if (tmp_it == tmp_map.end())
+            auto tmp_it = tmp_map.find(nodes[i].address);
+            if (tmp_it == tmp_map.end()) {
                 continue;
-            if (!results[i].first) {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " failed" << std::endl;
-                return true;
             }
-            dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                std::cout << "decode perf counter info from node " << node_addr.to_string()
-                          << " failed, result = " << results[i].second << std::endl;
-                return true;
-            }
-            if (info.result != "OK") {
-                std::cout << "query perf counter info from node " << node_addr.to_string()
-                          << " returns error, error = " << info.result << std::endl;
-                return true;
-            }
-            list_nodes_helper &h = tmp_it->second;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name.find("RPC_RRDB_RRDB_GET.latency.server") != std::string::npos)
-                    h.get_p99 = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_PUT.latency.server") != std::string::npos)
-                    h.put_p99 = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_MULTI_GET.latency.server") != std::string::npos)
-                    h.multi_get_p99 = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_MULTI_PUT.latency.server") != std::string::npos)
-                    h.multi_put_p99 = m.value;
-                else if (m.name.find("RPC_RRDB_RRDB_BATCH_GET.latency.server") != std::string::npos)
-                    h.batch_get_p99 = m.value;
-            }
+
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "profiler latency");
+
+            auto &stat = tmp_it->second;
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+                parse_profiler_latency(results[i].body(), stat), nodes[i], "profiler latency");
         }
     }
 

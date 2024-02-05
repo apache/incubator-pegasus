@@ -37,6 +37,9 @@ using std::map;
 using std::string;
 
 namespace dsn {
+namespace security {
+DSN_DECLARE_bool(enable_acl);
+} // namespace security
 namespace replication {
 DSN_DECLARE_bool(duplication_enabled);
 DSN_DECLARE_bool(fd_disabled);
@@ -50,6 +53,12 @@ public:
         // Disable unnecessary works before starting stub.
         FLAGS_fd_disabled = true;
         FLAGS_duplication_enabled = false;
+        // Set FLAGS_enable_acl to true, ensuring the group validator's
+        // encrypt_data_at_rest_pre_check
+        // is successful when encrypt_data_at_rest is also true.
+        // TODO(jingwei): It's a trick for test, it should set together at class
+        // pegasus::encrypt_data_at_rest.
+        dsn::security::FLAGS_enable_acl = true;
         stub->initialize_start();
 
         http_call_registry::instance().clear_paths();

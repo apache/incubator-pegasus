@@ -126,8 +126,6 @@ public:
     // won't be effected when this duplication is removed.
     dsn::task_tracker *tracker() { return &_tracker; }
 
-    std::string to_string() const;
-
     // To ensure mutation logs after start_decree is available
     // for duplication. If not, it means the eventual consistency
     // of duplication is no longer guaranteed due to the missing logs.
@@ -154,6 +152,8 @@ private:
 
     friend class load_mutation;
     friend class ship_mutation;
+
+    std::string to_string() const;
 
     const dupid_t _id;
     const std::string _remote_cluster_name;

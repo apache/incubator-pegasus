@@ -436,7 +436,8 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::host_port &hp)
     if (host_port_string == "invalid host_port") {
         return true;
     }
-    return hp.from_string(host_port_string);
+    hp = host_port::from_string(host_port_string);
+    return !hp.is_invalid();
 }
 
 inline void json_encode(JsonWriter &out, const dsn::partition_configuration &config);

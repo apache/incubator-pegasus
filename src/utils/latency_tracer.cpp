@@ -320,7 +320,7 @@ void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
         traces.append(fmt::format("\t{}[TRACE:[{}.{}]{}]{}\n",
                                   header_format,
                                   _description,
-                                  dsn::task_code(_task_code).to_string(),
+                                  dsn::task_code(_task_code),
                                   _name,
                                   header_format));
         uint64_t previous_point_ts = _points.begin()->first;

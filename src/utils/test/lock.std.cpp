@@ -28,7 +28,7 @@
 #include <thread>
 
 #include "gtest/gtest.h"
-#include "runtime/rpc/rpc_address.h"
+#include "utils/enum_helper.h"
 #include "utils/lockp.std.h"
 
 using namespace dsn;

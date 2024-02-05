@@ -69,8 +69,9 @@ namespace dsn {
 namespace replication {
 
 const std::string replica_init_info::kInitInfo = ".init-info";
+const std::string kms_info::kKmsInfo = ".kms-info";
 
-std::string replica_init_info::to_string()
+std::string replica_init_info::to_string() const
 {
     return fmt::format(
         "init_ballot = {}, init_durable_decree = {}, init_offset_in_private_log = {}",

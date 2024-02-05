@@ -511,7 +511,7 @@ TEST(json_helper, host_port_encode_decode)
     dsn::host_port hp("localhost", 8888);
     dsn::blob bb = dsn::json::json_forwarder<decltype(hp)>::encode(hp);
     dsn::host_port hp2;
-    dsn::json::json_forwarder<dsn::host_port>::decode(bb, hp2);
+    ASSERT_TRUE(dsn::json::json_forwarder<dsn::host_port>::decode(bb, hp2));
 
     ASSERT_EQ(hp, hp2);
 }
