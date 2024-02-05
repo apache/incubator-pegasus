@@ -110,7 +110,7 @@ void task_worker_pool::start()
         "{}, partitioned = {}, ...",
         _node->full_name(),
         _spec.name,
-        _spec.pool_code.to_string(),
+        _spec.pool_code,
         _spec.worker_count,
         _spec.worker_share_core ? "true" : "false",
         _spec.partitioned ? "true" : "false");
@@ -301,8 +301,7 @@ void task_engine::get_queue_info(/*out*/ std::stringstream &ss)
                 first_flag = 1;
             else
                 ss << ",";
-            ss << "\t{\"pool_name\":\"" << p->spec().pool_code.to_string()
-               << "\",\n\t\"pool_queue\":\n";
+            ss << "\t{\"pool_name\":\"" << p->spec().pool_code << "\",\n\t\"pool_queue\":\n";
             p->get_queue_info(ss);
             ss << "}\n";
         }

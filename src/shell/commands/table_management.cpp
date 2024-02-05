@@ -30,26 +30,24 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
-#include "perf_counter/perf_counter_utils.h"
 #include "runtime/rpc/rpc_address.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
-#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
@@ -114,7 +112,7 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     }
     ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
     if (err != ::dsn::ERR_OK)
-        std::cout << "list apps failed, error=" << err.to_string() << std::endl;
+        std::cout << "list apps failed, error=" << err << std::endl;
     return true;
 }
 
@@ -168,10 +166,61 @@ bool query_app(command_executor *e, shell_context *sc, arguments args)
     ::dsn::error_code err =
         sc->ddl_client->list_app(app_name, detailed, json, out_file, resolve_ip);
     if (err != ::dsn::ERR_OK) {
-        std::cout << "query app " << app_name << " failed, error=" << err.to_string() << std::endl;
+        std::cout << "query app " << app_name << " failed, error=" << err << std::endl;
     }
     return true;
 }
+
+namespace {
+
+dsn::metric_filters sst_stat_filters(int32_t table_id)
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"replica"};
+    filters.entity_attrs = {"table_id", std::to_string(table_id)};
+    filters.entity_metrics = {"rdb_total_sst_files", "rdb_total_sst_size_mb"};
+    return filters;
+}
+
+dsn::error_s parse_sst_stat(const std::string &json_string,
+                            std::map<int32_t, double> &count_map,
+                            std::map<int32_t, double> &disk_map)
+{
+    dsn::error_s err;
+
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
+
+    for (const auto &entity : query_snapshot.entities) {
+        if (dsn_unlikely(entity.type != "replica")) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA,
+                           "non-replica entity should not be included: {}",
+                           entity.type);
+        }
+
+        const auto &partition = entity.attributes.find("partition_id");
+        if (dsn_unlikely(partition == entity.attributes.end())) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "partition_id field was not found");
+        }
+
+        int32_t partition_id;
+        if (dsn_unlikely(!dsn::buf2int32(partition->second, partition_id))) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid partition_id: {}", partition->second);
+        }
+
+        for (const auto &m : entity.metrics) {
+            if (m.name == "rdb_total_sst_files") {
+                count_map[partition_id] = m.value;
+            } else if (m.name == "rdb_total_sst_size_mb") {
+                disk_map[partition_id] = m.value;
+            }
+        }
+    }
+
+    return dsn::error_s::ok();
+}
+
+} // anonymous namespace
 
 bool app_disk(command_executor *e, shell_context *sc, arguments args)
 {
@@ -248,8 +297,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
     dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
     if (err != ::dsn::ERR_OK) {
-        std::cout << "ERROR: list app " << app_name << " failed, error=" << err.to_string()
-                  << std::endl;
+        std::cout << "ERROR: list app " << app_name << " failed, error=" << err << std::endl;
         return true;
     }
     if (!partitions.empty()) {
@@ -262,46 +310,18 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    std::vector<std::pair<bool, std::string>> results = call_remote_command(
-        sc,
-        nodes,
-        "perf-counters-by-prefix",
-        {fmt::format("replica*app.pegasus*disk.storage.sst(MB)@{}.", app_id),
-         fmt::format("replica*app.pegasus*disk.storage.sst.count@{}.", app_id)});
+    const auto &results = get_metrics(nodes, sst_stat_filters(app_id).to_query_string());
 
     std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
     std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
-    for (int i = 0; i < nodes.size(); ++i) {
-        if (!results[i].first) {
-            std::cout << "ERROR: query perf counter from node " << nodes[i].address.to_string()
-                      << " failed" << std::endl;
-            return true;
-        }
-        dsn::perf_counter_info info;
-        dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-        if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-            std::cout << "ERROR: decode perf counter info from node "
-                      << nodes[i].address.to_string() << " failed, result = " << results[i].second
-                      << std::endl;
-            return true;
-        }
-        if (info.result != "OK") {
-            std::cout << "ERROR: query perf counter info from node " << nodes[i].address.to_string()
-                      << " returns error, error = " << info.result << std::endl;
-            return true;
-        }
-        for (dsn::perf_counter_metric &m : info.counters) {
-            int32_t app_id_x, partition_index_x;
-            std::string counter_name;
-            bool parse_ret = parse_app_pegasus_perf_counter_name(
-                m.name, app_id_x, partition_index_x, counter_name);
-            CHECK(parse_ret, "name = {}", m.name);
-            if (m.name.find("sst(MB)") != std::string::npos) {
-                disk_map[nodes[i].address][partition_index_x] = m.value;
-            } else if (m.name.find("sst.count") != std::string::npos) {
-                count_map[nodes[i].address][partition_index_x] = m.value;
-            }
-        }
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "sst");
+
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(parse_sst_stat(results[i].body(),
+                                                            count_map[nodes[i].address],
+                                                            disk_map[nodes[i].address]),
+                                             nodes[i],
+                                             "sst");
     }
 
     ::dsn::utils::table_printer tp_general("result");
@@ -369,7 +389,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
                 oss << hostname << "(";
             } else {
-                oss << p.primary.to_string() << "(";
+                oss << p.primary << "(";
             };
             if (disk_found)
                 oss << disk_value;
@@ -420,7 +440,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
                     oss << hostname << "(";
                 } else {
-                    oss << p.secondaries[j].to_string() << "(";
+                    oss << p.secondaries[j] << "(";
                 };
                 if (found)
                     oss << value;
@@ -719,7 +739,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
                   << std::endl;
     else
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name)
-                  << "\" failed, error = " << err.to_string() << std::endl;
+                  << "\" failed, error = " << err << std::endl;
     return true;
 }
 
@@ -758,7 +778,7 @@ bool drop_app(command_executor *e, shell_context *sc, arguments args)
     if (err == ::dsn::ERR_OK)
         std::cout << "drop app " << app_name << " succeed" << std::endl;
     else
-        std::cout << "drop app " << app_name << " failed, error=" << err.to_string() << std::endl;
+        std::cout << "drop app " << app_name << " failed, error=" << err << std::endl;
     return true;
 }
 
@@ -818,7 +838,7 @@ bool recall_app(command_executor *e, shell_context *sc, arguments args)
     if (dsn::ERR_OK == err)
         std::cout << "recall app " << id << " succeed" << std::endl;
     else
-        std::cout << "recall app " << id << " failed, error=" << err.to_string() << std::endl;
+        std::cout << "recall app " << id << " failed, error=" << err << std::endl;
     return true;
 }
 

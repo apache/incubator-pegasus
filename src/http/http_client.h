@@ -259,6 +259,8 @@ private:
 class http_result
 {
 public:
+    http_result() noexcept : _status(http_status_code::kInvalidCode) {}
+
     http_result(dsn::error_s &&err) noexcept
         : _err(std::move(err)), _status(http_status_code::kInvalidCode)
     {
@@ -271,11 +273,39 @@ public:
 
     ~http_result() = default;
 
-    http_result(const http_result &) noexcept = default;
-    http_result &operator=(const http_result &) noexcept = default;
+    http_result(const http_result &rhs) noexcept
+        : _err(rhs._err), _status(rhs._status), _body(rhs._body)
+    {
+    }
 
-    http_result(http_result &&) noexcept = default;
-    http_result &operator=(http_result &&) noexcept = default;
+    http_result &operator=(const http_result &rhs) noexcept
+    {
+        if (this == &rhs) {
+            return *this;
+        }
+
+        _err = rhs._err;
+        _status = rhs._status;
+        _body = rhs._body;
+        return *this;
+    }
+
+    http_result(http_result &&rhs) noexcept
+        : _err(std::move(rhs._err)), _status(rhs._status), _body(std::move(rhs._body))
+    {
+    }
+
+    http_result &operator=(http_result &&rhs) noexcept
+    {
+        if (this == &rhs) {
+            return *this;
+        }
+
+        _err = std::move(rhs._err);
+        _status = rhs._status;
+        _body = std::move(rhs._body);
+        return *this;
+    }
 
     explicit operator bool() const noexcept { return _err.is_ok(); }
 

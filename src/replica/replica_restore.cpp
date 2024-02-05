@@ -255,9 +255,8 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         ->wait();
 
     if (create_response.err != dsn::ERR_OK) {
-        LOG_ERROR("{}: create file of block_service failed, reason {}",
-                  name(),
-                  create_response.err.to_string());
+        LOG_ERROR(
+            "{}: create file of block_service failed, reason {}", name(), create_response.err);
         return create_response.err;
     }
 
@@ -274,7 +273,7 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         LOG_ERROR("{}: read file {} failed, reason {}",
                   name(),
                   create_response.file_handle->file_name(),
-                  r.err.to_string());
+                  r.err);
         return r.err;
     }
 

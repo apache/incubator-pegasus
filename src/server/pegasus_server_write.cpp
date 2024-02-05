@@ -33,7 +33,6 @@
 #include "pegasus_server_write.h"
 #include "pegasus_utils.h"
 #include "rrdb/rrdb.code.definition.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "server/pegasus_write_service.h"
@@ -84,7 +83,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     } catch (TTransportException &ex) {
         METRIC_VAR_INCREMENT(corrupt_writes);
         LOG_ERROR_PREFIX("pegasus not batch write handler failed, from = {}, exception = {}",
-                         requests[0]->header->from_address.to_string(),
+                         requests[0]->header->from_address,
                          ex.what());
         return rocksdb::Status::kOk;
     }
@@ -120,15 +119,15 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 } else {
                     if (_non_batch_write_handlers.find(rpc_code) !=
                         _non_batch_write_handlers.end()) {
-                        LOG_FATAL("rpc code not allow batch: {}", rpc_code.to_string());
+                        LOG_FATAL("rpc code not allow batch: {}", rpc_code);
                     } else {
-                        LOG_FATAL("rpc code not handled: {}", rpc_code.to_string());
+                        LOG_FATAL("rpc code not handled: {}", rpc_code);
                     }
                 }
             } catch (TTransportException &ex) {
                 METRIC_VAR_INCREMENT(corrupt_writes);
                 LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
-                                 requests[i]->header->from_address.to_string(),
+                                 requests[i]->header->from_address,
                                  ex.what());
             }
 
@@ -171,7 +170,7 @@ void pegasus_server_write::request_key_check(int64_t decree,
         LOG_INFO_ROCKSDB("Write",
                          "decree: {}, code: {}, hash_key: {}, sort_key: {}",
                          decree,
-                         msg->local_rpc_code.to_string(),
+                         msg->local_rpc_code,
                          utils::c_escape_sensitive_string(hash_key),
                          utils::c_escape_sensitive_string(sort_key));
     }

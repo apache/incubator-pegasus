@@ -20,12 +20,12 @@ set -e
 
 LOCAL_HOSTNAME=`hostname -f`
 PID=$$
-ROOT=`pwd`
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 export BUILD_ROOT_DIR=${ROOT}/build
 export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
-export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${ROOT}/lib:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 # Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
 export ASAN_OPTIONS=detect_odr_violation=0
 # See https://github.com/gperftools/gperftools/wiki/gperftools'-stacktrace-capturing-methods-and-their-issues.
@@ -1591,9 +1591,19 @@ function run_bench()
         shift
     done
     cd ${ROOT}
-    cp ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
+    if [ -f ${ROOT}/bin/pegasus_bench/pegasus_bench ]; then
+        # The pegasus_bench was packaged by pack_tools, to be used on production environment.
+        ln -s -f ${ROOT}/bin/pegasus_bench/pegasus_bench
+        cp -a ${ROOT}/bin/pegasus_bench/config.ini ./config-bench.ini
+    elif [ -f ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/pegasus_bench ]; then
+        # The pegasus_bench was built locally, to be used for test on development environment.
+        ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/pegasus_bench
+        cp -a ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
+    else
+        echo "ERROR: pegasus_bench could not be found"
+        exit 1
+    fi
     fill_bench_config
-    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_bench/pegasus_bench
     ./pegasus_bench ./config-bench.ini
     rm -f ./config-bench.ini
 }
@@ -1720,7 +1730,16 @@ function run_shell()
     fi
 
     cd ${ROOT}
-    ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell
+    if [ -f ${ROOT}/bin/pegasus_shell/pegasus_shell ]; then
+        # The pegasus_shell was packaged by pack_tools, to be used on production environment.
+        ln -s -f ${ROOT}/bin/pegasus_shell/pegasus_shell
+    elif [ -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell ]; then
+        # The pegasus_shell was built locally, to be used for test on development environment.
+        ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell
+    else
+        echo "ERROR: pegasus_shell could not be found"
+        exit 1
+    fi
     ./pegasus_shell ${CONFIG} $CLUSTER_NAME
     # because pegasus shell will catch 'Ctrl-C' signal, so the following commands will be executed
     # even user inputs 'Ctrl-C', so that the temporary config file will be cleared when exit shell.

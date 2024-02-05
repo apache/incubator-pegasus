@@ -153,7 +153,7 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
 
         LOG_DEBUG("already exists {} alive nodes: ", nodes.size());
         for (const auto &node : nodes) {
-            LOG_DEBUG("    {}", node.to_string());
+            LOG_DEBUG("    {}", node);
         }
 
         // ensure that _ms->_alive_set is identical with _ss->_nodes
@@ -177,7 +177,7 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
 
     LOG_DEBUG("created {} alive nodes: ", nodes.size());
     for (const auto &node : nodes) {
-        LOG_DEBUG("    {}", node.to_string());
+        LOG_DEBUG("    {}", node);
     }
     return nodes;
 }
@@ -199,7 +199,7 @@ void meta_test_base::create_app(const std::string &name, uint32_t partition_coun
 
     auto result = fake_create_app(_ss.get(), req);
     fake_wait_rpc(result, resp);
-    ASSERT_EQ(resp.err, ERR_OK) << resp.err.to_string() << " " << name;
+    ASSERT_EQ(resp.err, ERR_OK) << resp.err << " " << name;
 
     // wait for the table to create
     ASSERT_TRUE(_ss->spin_wait_staging(30));
@@ -215,7 +215,7 @@ void meta_test_base::drop_app(const std::string &name)
 
     auto result = fake_drop_app(_ss.get(), req);
     fake_wait_rpc(result, resp);
-    ASSERT_EQ(resp.err, ERR_OK) << resp.err.to_string() << " " << name;
+    ASSERT_EQ(resp.err, ERR_OK) << resp.err << " " << name;
 
     ASSERT_TRUE(_ss->spin_wait_staging(30));
 }

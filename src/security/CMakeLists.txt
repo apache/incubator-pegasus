@@ -23,9 +23,14 @@ thrift_generate_cpp(
 set(MY_PROJ_SRC ${SECURITY_THRIFT_SRCS})
 set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
+        absl::strings
+        curl
+        dsn_http
         dsn_meta_server
         dsn_replication_common
         dsn_runtime
-        dsn_utils)
+        dsn_utils
+        gssapi_krb5)
+
 dsn_add_object()
 add_subdirectory(test)

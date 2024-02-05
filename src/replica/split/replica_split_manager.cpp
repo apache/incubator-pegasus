@@ -148,7 +148,7 @@ void replica_split_manager::parent_start_split(
                     _child_gpid,
                     _child_init_ballot,
                     enum_to_string(status()),
-                    request.config.primary.to_string());
+                    request.config.primary);
 
     tasking::enqueue(LPC_CREATE_CHILD,
                      tracker(),
@@ -618,7 +618,7 @@ void replica_split_manager::child_notify_catch_up() // on child partition
 
     LOG_INFO_PREFIX("send notification to primary parent[{}@{}], ballot={}",
                     _replica->_split_states.parent_gpid,
-                    _replica->_config.primary.to_string(),
+                    _replica->_config.primary,
                     get_ballot());
 
     notify_catch_up_rpc rpc(std::move(request),
@@ -649,7 +649,7 @@ void replica_split_manager::child_notify_catch_up() // on child partition
         }
         LOG_INFO_PREFIX("notify primary parent[{}@{}] catch up succeed",
                         _replica->_split_states.parent_gpid,
-                        _replica->_config.primary.to_string());
+                        _replica->_config.primary);
     });
 }
 
@@ -683,7 +683,7 @@ void replica_split_manager::parent_handle_child_catch_up(
     response.err = ERR_OK;
     LOG_INFO_PREFIX("receive catch_up request from {}@{}, current ballot={}",
                     request.child_gpid,
-                    request.child_address.to_string(),
+                    request.child_address,
                     request.child_ballot);
 
     _replica->_primary_states.caught_up_children.insert(request.child_address);
@@ -803,7 +803,7 @@ void replica_split_manager::parent_send_update_partition_count_request(
 
     LOG_INFO_PREFIX(
         "send update child group partition count request to node({}), new partition_count = {}",
-        address.to_string(),
+        address,
         new_partition_count);
     update_child_group_partition_count_rpc rpc(std::move(request),
                                                RPC_SPLIT_UPDATE_CHILD_PARTITION_COUNT,
@@ -903,7 +903,7 @@ void replica_split_manager::on_update_child_group_partition_count_reply(
     if (error == ERR_TIMEOUT) {
         LOG_WARNING_PREFIX(
             "failed to update child node({}) partition_count, error = {}, wait and retry",
-            request.target_address.to_string(),
+            request.target_address,
             error);
         tasking::enqueue(
             LPC_PARTITION_SPLIT,
@@ -920,7 +920,7 @@ void replica_split_manager::on_update_child_group_partition_count_reply(
 
     if (error != ERR_OK) {
         LOG_ERROR_PREFIX("failed to update child node({}) partition_count({}), error = {}",
-                         request.target_address.to_string(),
+                         request.target_address,
                          request.new_partition_count,
                          error);
         parent_handle_split_error("on_update_child_group_partition_count_reply error", true);
@@ -928,7 +928,7 @@ void replica_split_manager::on_update_child_group_partition_count_reply(
     }
 
     LOG_INFO_PREFIX("update node({}) child({}) partition_count({}) succeed",
-                    request.target_address.to_string(),
+                    request.target_address,
                     request.child_pid,
                     request.new_partition_count);
 
@@ -1509,7 +1509,7 @@ void replica_split_manager::parent_send_notify_stop_request(
 
     LOG_INFO_PREFIX("group {} split succeed, send notify_stop_request to meta server({})",
                     meta_split_status == split_status::PAUSING ? "pause" : "cancel",
-                    meta_address.to_string());
+                    meta_address);
     notify_stop_split_rpc rpc(
         std::move(req), RPC_CM_NOTIFY_STOP_SPLIT, 0_ms, 0, get_gpid().thread_hash());
     rpc.call(meta_address, tracker(), [this, rpc](error_code ec) mutable {
@@ -1532,8 +1532,7 @@ void replica_split_manager::query_child_state() // on primary parent
     request->partition_count = _replica->_app_info.partition_count;
 
     rpc_address meta_address(_stub->_failure_detector->get_servers());
-    LOG_INFO_PREFIX("send query child partition state request to meta server({})",
-                    meta_address.to_string());
+    LOG_INFO_PREFIX("send query child partition state request to meta server({})", meta_address);
     query_child_state_rpc rpc(
         std::move(request), RPC_CM_QUERY_CHILD_STATE, 0_ms, 0, get_gpid().thread_hash());
     _replica->_primary_states.query_child_task =

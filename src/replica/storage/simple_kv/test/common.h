@@ -62,7 +62,6 @@ std::string address_to_node(rpc_address addr);
 // return invalid addr if not found
 rpc_address node_to_address(const std::string &name);
 
-std::string gpid_to_string(gpid gpid);
 bool gpid_from_string(const std::string &str, gpid &gpid);
 
 struct replica_id
@@ -128,6 +127,10 @@ struct replica_state
     bool operator!=(const replica_state &o) const { return !(*this == o); }
     std::string to_string() const;
     bool from_string(const std::string &str);
+    friend std::ostream &operator<<(std::ostream &os, const replica_state &rs)
+    {
+        return os << rs.to_string();
+    }
 };
 
 struct state_snapshot

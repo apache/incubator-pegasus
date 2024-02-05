@@ -170,7 +170,7 @@ public:
 
         auto dup_sptr = duplication_info::decode_from_blob(
             1, 1, "temp", 4, "/meta_test/101/duplication/1", json);
-        ASSERT_TRUE(dup_sptr->equals_to(dup)) << dup_sptr->to_string() << " " << dup.to_string();
+        ASSERT_TRUE(dup_sptr->equals_to(dup)) << *dup_sptr << " " << dup;
 
         blob new_json =
             blob::create_from_bytes(boost::replace_all_copy(json.to_string(), "DS_APP", "DS_FOO"));

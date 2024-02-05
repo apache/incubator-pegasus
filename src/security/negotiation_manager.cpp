@@ -24,7 +24,6 @@
 #include "http/http_server.h"
 #include "negotiation_utils.h"
 #include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_code.h"
 #include "security_types.h"
@@ -144,8 +143,8 @@ std::shared_ptr<negotiation> negotiation_manager::get_negotiation(negotiation_rp
     auto it = _negotiations.find(rpc.dsn_request()->io_session);
     if (it == _negotiations.end()) {
         LOG_INFO("negotiation was removed for msg: {}, {}",
-                 rpc.dsn_request()->rpc_code().to_string(),
-                 rpc.remote_address().to_string());
+                 rpc.dsn_request()->rpc_code(),
+                 rpc.remote_address());
         return nullptr;
     }
 

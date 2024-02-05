@@ -2784,8 +2784,8 @@ bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args
         ::dsn::error_code err =
             sc->ddl_client->list_app(sc->current_app_name, app_id, partition_count, partitions);
         if (err != ::dsn::ERR_OK) {
-            std::cout << "list app [" << sc->current_app_name
-                      << "] failed, error=" << err.to_string() << std::endl;
+            std::cout << "list app [" << sc->current_app_name << "] failed, error=" << err
+                      << std::endl;
             return true;
         }
         uint64_t partition_index = key_hash % (uint64_t)partition_count;
@@ -2801,7 +2801,7 @@ bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args
             for (int i = 0; i < pc.secondaries.size(); ++i) {
                 if (i != 0)
                     oss << ",";
-                oss << pc.secondaries[i].to_string();
+                oss << pc.secondaries[i];
             }
             tp.add_row_name_and_data("secondaries", oss.str());
         }

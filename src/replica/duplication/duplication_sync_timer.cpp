@@ -87,7 +87,7 @@ void duplication_sync_timer::run()
 
     duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC, 3_s);
     rpc_address meta_server_address(_stub->get_meta_server_address());
-    LOG_INFO("duplication_sync to meta({})", meta_server_address.to_string());
+    LOG_INFO("duplication_sync to meta({})", meta_server_address);
 
     zauto_lock l(_lock);
     _rpc_task =
@@ -103,7 +103,7 @@ void duplication_sync_timer::on_duplication_sync_reply(error_code err,
         err = resp.err;
     }
     if (err != ERR_OK) {
-        LOG_ERROR("on_duplication_sync_reply: err({})", err.to_string());
+        LOG_ERROR("on_duplication_sync_reply: err({})", err);
     } else {
         update_duplication_map(resp.dup_map);
     }
