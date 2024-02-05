@@ -31,11 +31,15 @@
 #include <cstdint>
 // IWYU pragma: no_include <experimental/string_view>
 #include <functional>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
 
+#include "utils/errors.h"
 #include "utils/fmt_utils.h"
+
+struct addrinfo;
 
 namespace apache {
 namespace thrift {
@@ -54,6 +58,8 @@ USER_DEFINED_ENUM_FORMATTER(dsn_host_type_t)
 
 namespace dsn {
 
+using AddrInfo = std::unique_ptr<addrinfo, std::function<void(addrinfo *)>>;
+
 class rpc_group_address;
 
 class rpc_address
@@ -64,6 +70,7 @@ public:
     static bool is_site_local_address(uint32_t ip_net);
     static uint32_t ipv4_from_host(const char *hostname);
     static uint32_t ipv4_from_network_interface(const char *network_interface);
+    static error_s GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo *info);
 
     ~rpc_address();
 

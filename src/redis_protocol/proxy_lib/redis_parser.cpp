@@ -931,7 +931,7 @@ void redis_parser::counter_internal(message_entry &entry)
             LOG_WARNING_PREFIX("command {} seqid({}) with invalid 'increment': {}",
                                command,
                                entry.sequence_id,
-                               entry.request.sub_requests[2].data.to_string());
+                               entry.request.sub_requests[2].data);
             simple_error_reply(entry,
                                fmt::format("wrong type of argument 'increment 'for '{}'", command));
             return;

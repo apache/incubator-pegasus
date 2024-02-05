@@ -132,7 +132,8 @@ else
 fi
 
 copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/lib/
-copy_file ./thirdparty/output/lib/libhdfs* ${pack}/lib
+copy_file ./thirdparty/output/lib/libhdfs* ${pack}/lib/
+copy_file ./thirdparty/output/lib/librocksdb.so.8 ${pack}/lib/
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/lib/
 
 pack_tools_lib() {

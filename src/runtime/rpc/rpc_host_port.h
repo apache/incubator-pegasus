@@ -52,7 +52,6 @@ public:
     static const host_port s_invalid_host_port;
     explicit host_port() = default;
     explicit host_port(std::string host, uint16_t port);
-    explicit host_port(rpc_address addr);
 
     host_port(const host_port &other) { *this = other; }
     host_port &operator=(const host_port &other);
@@ -64,7 +63,7 @@ public:
     const std::string &host() const { return _host; }
     uint16_t port() const { return _port; }
 
-    bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
+    [[nodiscard]] bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
 
     std::string to_string() const;
 
@@ -83,8 +82,15 @@ public:
     // Resolve host_port to rpc_addresses.
     // Trere may be multiple rpc_addresses for one host_port.
     error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
-    // This function is used for validating the format of string like "localhost:8888".
-    bool from_string(const std::string &s);
+
+    // Construct a host_port object from 'addr'
+    static host_port from_address(rpc_address addr);
+
+    // Construct a host_port object from 'host_port_str', the latter is in the format of
+    // "localhost:8888".
+    // NOTE: The constructed host_port object maybe invalid, remember to check it by is_invalid()
+    // before using it.
+    static host_port from_string(const std::string &host_port_str);
 
     // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);

@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
+#include "fmt/core.h"
 #include "fmt/format.h"
 #include "runtime/global_config.h"
 #include "runtime/rpc/rpc_message.h"
@@ -302,8 +303,7 @@ void tracer::install(service_spec &spec)
         if (i == TASK_CODE_INVALID)
             continue;
 
-        std::string section_name =
-            std::string("task.") + std::string(dsn::task_code(i).to_string());
+        std::string section_name = fmt::format("task.{}", dsn::task_code(i));
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
 

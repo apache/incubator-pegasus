@@ -581,9 +581,9 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         "{}, learn_start_decree = {}, last_commit_decree = {}, current_learning_status = "
         "{} ",
         req.signature,
-        resp.config.primary.to_string(),
+        resp.config.primary,
         _potential_secondary_states.duration_ms(),
-        resp.err.to_string(),
+        resp.err,
         resp.last_committed_decree,
         resp.prepare_start_decree,
         enum_to_string(resp.type),
@@ -1408,7 +1408,7 @@ void replica::on_add_learner(const group_check_request &request)
 {
     LOG_INFO_PREFIX("process add learner, primary = {}, ballot ={}, status ={}, "
                     "last_committed_decree = {}, duplicating = {}",
-                    request.config.primary.to_string(),
+                    request.config.primary,
                     request.config.ballot,
                     enum_to_string(request.config.status),
                     request.last_committed_decree,
@@ -1554,7 +1554,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
         _potential_secondary_states.learning_version,
         duplicating,
         step_back,
-        _config.primary.to_string(),
+        _config.primary,
         _potential_secondary_states.duration_ms(),
         state.files.size(),
         _potential_secondary_states.first_learn_start_decree,
@@ -1585,7 +1585,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                             "learned_to_decree_included({}) > last_committed_decree({}), commit to "
                             "to_decree_included",
                             _potential_secondary_states.learning_version,
-                            _config.primary.to_string(),
+                            _config.primary,
                             state.to_decree_included,
                             last_committed_decree());
             plist.commit(state.to_decree_included, COMMIT_TO_DECREE_SOFT);
@@ -1595,7 +1595,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                         "learn_duration ={} ms, apply in-buffer private logs done, "
                         "replay_count ={}, app_committed_decree = {}",
                         _potential_secondary_states.learning_version,
-                        _config.primary.to_string(),
+                        _config.primary,
                         _potential_secondary_states.duration_ms(),
                         replay_count,
                         _app->last_committed_decree());

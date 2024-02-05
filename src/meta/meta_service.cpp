@@ -729,7 +729,7 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
     for (size_t i = 0; i < _opts.meta_servers.size(); ++i) {
         if (i != 0)
             oss << ",";
-        oss << _opts.meta_servers[i].to_string();
+        oss << _opts.meta_servers[i];
     }
 
     response.values.push_back(oss.str());
@@ -774,7 +774,7 @@ void meta_service::on_query_configuration_by_index(configuration_query_by_index_
     _state->query_configuration_by_index(rpc.request(), response);
     if (ERR_OK == response.err) {
         LOG_INFO("client {} queried an available app {} with appid {}",
-                 rpc.dsn_request()->header->from_address.to_string(),
+                 rpc.dsn_request()->header->from_address,
                  rpc.request().app_name,
                  response.app_id);
     }

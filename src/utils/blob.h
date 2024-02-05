@@ -33,6 +33,7 @@
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TProtocol.h>
 
+#include "utils/fmt_utils.h"
 #include "utils.h"
 
 namespace dsn {
@@ -158,6 +159,11 @@ public:
         return std::string(_data, _length);
     }
 
+    friend std::ostream &operator<<(std::ostream &os, const blob &bb)
+    {
+        return os << bb.to_string();
+    }
+
     absl::string_view to_string_view() const { return absl::string_view(_data, _length); }
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
@@ -214,3 +220,5 @@ inline uint32_t blob::write(apache::thrift::protocol::TProtocol *oprot) const
 }
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::blob);

@@ -177,7 +177,7 @@ bool primary_context::secondary_disk_abnormal() const
         if (kv.second != disk_status::NORMAL) {
             LOG_INFO("partition[{}] secondary[{}] disk space is {}",
                      membership.pid,
-                     kv.first.to_string(),
+                     kv.first,
                      enum_to_string(kv.second));
             return true;
         }

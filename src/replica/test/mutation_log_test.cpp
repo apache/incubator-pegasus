@@ -381,7 +381,7 @@ public:
 
             error_code ec;
             log_file_ptr file = log_file::open_read(log_file_path.c_str(), ec);
-            ASSERT_EQ(ec, ERR_OK) << ec.to_string();
+            ASSERT_EQ(ec, ERR_OK) << ec;
 
             int64_t end_offset;
             int mutation_index = -1;
@@ -397,7 +397,7 @@ public:
                     return true;
                 },
                 end_offset);
-            ASSERT_EQ(ec, ERR_HANDLE_EOF) << ec.to_string();
+            ASSERT_EQ(ec, ERR_HANDLE_EOF) << ec;
         }
     }
 

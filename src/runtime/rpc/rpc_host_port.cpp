@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -29,87 +28,71 @@
 #include "fmt/core.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/ports.h"
-#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
+#include "utils/timer.h"
 #include "utils/utils.h"
 
 namespace dsn {
 
 const host_port host_port::s_invalid_host_port;
 
-namespace {
-
-using AddrInfo = std::unique_ptr<addrinfo, std::function<void(addrinfo *)>>;
-
-error_s GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo *info)
-{
-    addrinfo *res = nullptr;
-    const int rc = getaddrinfo(hostname.c_str(), nullptr, &hints, &res);
-    const int err = errno; // preserving the errno from the getaddrinfo() call
-    AddrInfo result(res, ::freeaddrinfo);
-    if (rc != 0) {
-        if (rc == EAI_SYSTEM) {
-            return error_s::make(ERR_NETWORK_FAILURE, utils::safe_strerror(err));
-        }
-        return error_s::make(ERR_NETWORK_FAILURE, gai_strerror(rc));
-    }
-
-    if (info != nullptr) {
-        info->swap(result);
-    }
-    return error_s::ok();
-}
-}
-
 host_port::host_port(std::string host, uint16_t port)
     : _host(std::move(host)), _port(port), _type(HOST_TYPE_IPV4)
 {
-    CHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
+    // ipv4_from_host may be slow, just call it in DEBUG version.
+    DCHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
 }
 
-host_port::host_port(rpc_address addr)
+host_port host_port::from_address(rpc_address addr)
 {
+    host_port hp;
+    SCOPED_LOG_SLOW_EXECUTION(
+        WARNING, 100, "construct host_port '{}' from rpc_address '{}'", hp, addr);
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
-        CHECK(utils::hostname_from_ip(htonl(addr.ip()), &_host),
+        CHECK(utils::hostname_from_ip(htonl(addr.ip()), &hp._host),
               "invalid host_port {}",
               addr.ipv4_str());
-        _port = addr.port();
+        hp._port = addr.port();
     } break;
     case HOST_TYPE_GROUP: {
-        _group_host_port = std::make_shared<rpc_group_host_port>(addr.group_address());
+        hp._group_host_port = std::make_shared<rpc_group_host_port>(addr.group_address());
     } break;
     default:
         break;
     }
-    _type = addr.type();
+
+    // Now is_invalid() return false.
+    hp._type = addr.type();
+    return hp;
 }
 
-bool host_port::from_string(const std::string &s)
+host_port host_port::from_string(const std::string &host_port_str)
 {
-    const auto pos = s.find_last_of(':');
+    host_port hp;
+    SCOPED_LOG_SLOW_EXECUTION(
+        WARNING, 100, "construct host_port '{}' from string '{}'", hp, host_port_str);
+    const auto pos = host_port_str.find_last_of(':');
     if (dsn_unlikely(pos == std::string::npos)) {
-        return false;
-    }
-    _host = s.substr(0, pos);
-    std::string port = s.substr(pos + 1);
-
-    if (dsn_unlikely(!dsn::buf2uint16(port, _port))) {
-        return false;
+        return hp;
     }
 
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    if (dsn_unlikely(!GetAddrInfo(_host, hints, nullptr))) {
-        return false;
+    hp._host = host_port_str.substr(0, pos);
+    const auto port_str = host_port_str.substr(pos + 1);
+    if (dsn_unlikely(!dsn::buf2uint16(port_str, hp._port))) {
+        return hp;
     }
 
-    _type = HOST_TYPE_IPV4;
-    return true;
+    if (dsn_unlikely(rpc_address::ipv4_from_host(hp._host.c_str()) == 0)) {
+        return hp;
+    }
+
+    // Now is_invalid() return false.
+    hp._type = HOST_TYPE_IPV4;
+    return hp;
 }
 
 void host_port::reset()
@@ -180,6 +163,9 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
         return error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_GROUP");
     case HOST_TYPE_IPV4:
         break;
+    default:
+        CHECK(false, "");
+        __builtin_unreachable();
     }
 
     rpc_address rpc_addr;
@@ -194,7 +180,7 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     AddrInfo result;
-    RETURN_NOT_OK(GetAddrInfo(_host, hints, &result));
+    RETURN_NOT_OK(rpc_address::GetAddrInfo(_host, hints, &result));
 
     // DNS may return the same host multiple times. We want to return only the unique
     // addresses, but in the same order as DNS returned them. To do so, we keep track

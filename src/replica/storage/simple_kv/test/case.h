@@ -74,6 +74,11 @@ public:
     virtual std::string to_string() const = 0;
     virtual bool parse(const std::string &params) = 0;
 
+    friend std::ostream &operator<<(std::ostream &os, const case_line &cl)
+    {
+        return os << cl.to_string();
+    }
+
 private:
     int _line_no;
 };
@@ -84,12 +89,13 @@ public:
     static const char *NAME() { return "set"; }
     virtual ~set_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     void apply_set() const;
 
 private:
+    std::string to_string() const override;
+
     bool _null_loop_set;
     int _null_loop;
     bool _lb_for_test;
@@ -117,14 +123,16 @@ public:
     static const char *NAME() { return "skip"; }
     virtual ~skip_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     int count() const { return _count; }
     int skipped() const { return _skipped; }
     void skip_one() { _skipped++; }
     bool is_skip_done() const { return _skipped >= _count; }
+
 private:
+    std::string to_string() const override;
+
     int _count;
     int _skipped;
 };
@@ -136,8 +144,10 @@ public:
     static const char *NAME() { return "exit"; }
     virtual ~exit_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
+
+private:
+    std::string to_string() const override;
 };
 
 class state_case_line : public case_line
@@ -146,7 +156,6 @@ public:
     static const char *NAME() { return "state"; }
     virtual ~state_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     // return false if check failed
@@ -154,6 +163,8 @@ public:
     bool check_state(const state_snapshot &cur_state, bool &forward);
 
 private:
+    std::string to_string() const override;
+
     state_snapshot _state;
 };
 
@@ -163,7 +174,6 @@ public:
     static const char *NAME() { return "config"; }
     virtual ~config_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     // return false if check failed
@@ -171,6 +181,8 @@ public:
     bool check_config(const parti_config &cur_config, bool &forward);
 
 private:
+    std::string to_string() const override;
+
     parti_config _config;
 };
 
@@ -203,13 +215,15 @@ public:
     // return true if 'ev' satisfy 'this' condition
     virtual bool check_satisfied(const event *ev) const = 0;
 
-    std::string to_string() const;
     friend std::ostream &operator<<(std::ostream &os, const event &evt)
     {
         return os << evt.to_string();
     }
 
     static event *parse(int line_no, const std::string &params);
+
+private:
+    std::string to_string() const;
 };
 
 class event_on_task : public event
@@ -344,19 +358,19 @@ public:
 class event_case_line : public case_line
 {
 public:
-public:
     virtual ~event_case_line()
     {
         if (_event_cond)
             delete _event_cond;
     }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     bool check_satisfied(const event *ev) const;
 
-public:
     event *_event_cond;
+
+protected:
+    std::string to_string() const override;
 };
 
 class wait_case_line : public event_case_line
@@ -378,12 +392,13 @@ class modify_case_line : public event_case_line
 {
 public:
     static const char *NAME() { return "modify"; }
-    virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
+    virtual std::string name() const { return NAME(); };
     virtual bool parse(const std::string &params);
     virtual void modify(const event *ev);
 
-public:
+private:
+    std::string to_string() const override;
+
     std::string _modify_delay;
 };
 
@@ -402,7 +417,6 @@ public:
 public:
     static const char *NAME() { return "client"; }
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     client_type type() const { return _type; }
@@ -420,6 +434,8 @@ public:
     std::string config_command_to_string(dsn::replication::config_type::type cfg_command) const;
 
 private:
+    std::string to_string() const override;
+
     client_type _type;
     int _id;
     std::string _key;
@@ -499,4 +515,5 @@ private:
 }
 }
 
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::case_line);
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::event);

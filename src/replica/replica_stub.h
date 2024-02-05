@@ -72,6 +72,9 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+namespace security {
+class kms_key_provider;
+} // namespace security
 
 namespace service {
 class copy_request;
@@ -459,6 +462,7 @@ private:
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
     std::unique_ptr<replica_backup_server> _backup_server;
+    std::unique_ptr<dsn::security::kms_key_provider> _key_provider;
 
     // command_handlers
     std::vector<std::unique_ptr<command_deregister>> _cmds;
@@ -489,6 +493,9 @@ private:
 
     // replica count executing emergency checkpoint concurrently
     std::atomic_int _manual_emergency_checkpointing_count;
+
+    // replica decrypted key for rocksdb
+    std::string _server_key;
 
     bool _is_running;
 

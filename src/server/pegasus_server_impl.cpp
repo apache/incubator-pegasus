@@ -44,6 +44,7 @@
 #include <ostream>
 #include <set>
 
+#include "absl/strings/string_view.h"
 #include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
@@ -62,7 +63,6 @@
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
@@ -81,7 +81,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 #include "utils/token_bucket_throttling_controller.h"
@@ -878,7 +877,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     if (request.keys.empty()) {
         response.error = rocksdb::Status::kInvalidArgument;
         LOG_ERROR_PREFIX("Invalid argument for batch_get from {}: 'keys' field in request is empty",
-                         rpc.remote_address().to_string());
+                         rpc.remote_address());
         _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
         return;
     }
@@ -932,12 +931,12 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
             if (FLAGS_rocksdb_verbose_log) {
                 LOG_ERROR_PREFIX(
                     "rocksdb get failed for batch_get from {}:  error = {}, key size = {}",
-                    rpc.remote_address().to_string(),
+                    rpc.remote_address(),
                     status.ToString(),
                     request.keys.size());
             } else {
                 LOG_ERROR_PREFIX("rocksdb get failed for batch_get from {}: error = {}",
-                                 rpc.remote_address().to_string(),
+                                 rpc.remote_address(),
                                  status.ToString());
             }
 
@@ -1748,7 +1747,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             last_flushed);
         auto err = async_checkpoint(false);
         if (err != dsn::ERR_OK) {
-            LOG_ERROR_PREFIX("create checkpoint failed, error = {}", err.to_string());
+            LOG_ERROR_PREFIX("create checkpoint failed, error = {}", err);
             release_db();
             return err;
         }
@@ -2038,7 +2037,7 @@ private:
     ::dsn::error_code err =
         copy_checkpoint_to_dir_unsafe(tmp_dir.c_str(), &checkpoint_decree, flush_memtable);
     if (err != ::dsn::ERR_OK) {
-        LOG_ERROR_PREFIX("copy_checkpoint_to_dir_unsafe failed with err = {}", err.to_string());
+        LOG_ERROR_PREFIX("copy_checkpoint_to_dir_unsafe failed with err = {}", err);
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
 
