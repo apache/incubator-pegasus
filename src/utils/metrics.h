@@ -353,6 +353,7 @@ const std::string kMetricClusterField = "cluster";
 const std::string kMetricRoleField = "role";
 const std::string kMetricHostField = "host";
 const std::string kMetricPortField = "port";
+const std::string kMetricTimestampNsField = "timestamp_ns";
 const std::string kMetricEntitiesField = "entities";
 
 class metric_entity : public ref_counter
@@ -1679,6 +1680,7 @@ private:
         std::string role;                                                                          \
         std::string host;                                                                          \
         uint16_t port;                                                                             \
+        uint64_t timestamp_ns;                                                                     \
         std::vector<metric_entity_brief_##field##_snapshot> entities;                              \
                                                                                                    \
         DEFINE_JSON_SERIALIZATION(cluster, role, host, port, entities)                             \
@@ -1700,7 +1702,7 @@ DEF_ALL_METRIC_BRIEF_SNAPSHOTS(p99);
         if (dsn_unlikely(                                                                          \
                 !dsn::json::json_forwarder<dsn::metric_query_brief_##field##_snapshot>::decode(    \
                     bb, query_snapshot))) {                                                        \
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string");                          \
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string: {}", json_string);         \
         }                                                                                          \
     } while (0)
 

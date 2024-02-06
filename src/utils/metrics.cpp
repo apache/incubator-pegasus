@@ -520,6 +520,13 @@ void encode_port(dsn::metric_json_writer &writer)
     ENCODE_OBJ_VAL(rpc != nullptr, rpc->primary_address().port());
 }
 
+void encode_timestamp_ns(dsn::metric_json_writer &writer)
+{
+    writer.Key(dsn::kMetricTimestampNsField.c_str());
+
+    ENCODE_OBJ_VAL(true, dsn_now_ns());
+}
+
 #undef ENCODE_OBJ_VAL
 
 } // anonymous namespace
@@ -549,6 +556,7 @@ void metric_registry::take_snapshot(metric_json_writer &writer, const metric_fil
     encode_role(writer);
     encode_host(writer);
     encode_port(writer);
+    encode_timestamp_ns(writer);
     encode_entities(writer, filters);
     writer.EndObject();
 }
@@ -557,7 +565,7 @@ metric_registry::collected_entities_info metric_registry::collect_stale_entities
 {
     collected_entities_info collected_info;
 
-    auto now = dsn_now_ms();
+    const auto now = dsn_now_ms();
 
     utils::auto_read_lock l(_lock);
 
@@ -596,7 +604,7 @@ metric_registry::retire_stale_entities(const collected_entity_list &collected_en
 
     retired_entities_stat retired_stat;
 
-    auto now = dsn_now_ms();
+    const auto now = dsn_now_ms();
 
     utils::auto_write_lock l(_lock);
 

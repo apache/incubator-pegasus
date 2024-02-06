@@ -704,6 +704,63 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
         }                                                                                          \
     } while (0)
 
+using stat_var_map = std::unordered_map<std::string, double *>;
+inline dsn::error_s calc_metric_deltas(const std::string &json_string_1,
+                                       const std::string &json_string_2,
+                                       const std::string &entity_type,
+                                       stat_var_map &incs,
+                                       stat_var_map &rates)
+{
+    // Currently only Gauge and Counter are considered to have "increase" and "rate", thus brief
+    // `value` field is enough.
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_1, query_snapshot_1);
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_2, query_snapshot_2);
+
+    if (query_snapshot_2.timestamp_ns <= query_snapshot_1.timestamp_ns) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA,
+                       "duration for metric samples should > 0, json_string_1={}, json_string_2={}",
+                       json_string_1,
+                       json_string_2);
+    }
+
+    const std::vector<stat_var_map *> stat_vars = {&incs, &rates};
+
+#define CALC_STAT_VAR(op)                                                                          \
+    do {                                                                                           \
+        if (entity.type != entity_type) {                                                          \
+            continue;                                                                              \
+        }                                                                                          \
+                                                                                                   \
+        for (const auto &m : entity.metrics) {                                                     \
+            for (auto &stat : stat_vars) {                                                         \
+                auto iter = stat->find(m.name);                                                    \
+                if (iter != stat->end()) {                                                         \
+                    *iter->second op m.value;                                                      \
+                }                                                                                  \
+            }                                                                                      \
+        }                                                                                          \
+    } while (0)
+
+    for (const auto &entity : query_snapshot_2.entities) {
+        CALC_STAT_VAR(+=);
+    }
+
+    for (const auto &entity : query_snapshot_1.entities) {
+        CALC_STAT_VAR(-=);
+    }
+
+#undef CALC_STAT_VAR
+
+    const std::chrono::duration<double, std::nano> duration_ns(
+        static_cast<double>(query_snapshot_2.timestamp_ns - query_snapshot_1.timestamp_ns));
+    const std::chrono::duration<double> duration_s = duration_ns;
+    for (auto &rate : rates) {
+        *rate.second /= duration_s.count();
+    }
+
+    return dsn::error_s::ok();
+}
+
 inline std::vector<std::pair<bool, std::string>>
 call_remote_command(shell_context *sc,
                     const std::vector<node_desc> &nodes,
