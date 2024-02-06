@@ -20,6 +20,7 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <type_traits>
 
 #include "common/backup_common.h"
 #include "common/replication.codes.h"

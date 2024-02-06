@@ -32,8 +32,6 @@
 #include <limits>
 #include <sstream> // IWYU pragma: keep
 #include <thread>
-#include <type_traits>
-#include <utility>
 
 namespace dsn {
 
