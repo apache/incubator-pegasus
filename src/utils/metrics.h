@@ -1683,7 +1683,7 @@ private:
         uint64_t timestamp_ns;                                                                     \
         std::vector<metric_entity_brief_##field##_snapshot> entities;                              \
                                                                                                    \
-        DEFINE_JSON_SERIALIZATION(cluster, role, host, port, entities)                             \
+        DEFINE_JSON_SERIALIZATION(cluster, role, host, port, timestamp_ns, entities)               \
     }
 
 #define DEF_ALL_METRIC_BRIEF_SNAPSHOTS(field)                                                      \

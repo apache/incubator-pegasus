@@ -718,9 +718,10 @@ inline dsn::error_s calc_metric_deltas(const std::string &json_string_1,
 
     if (query_snapshot_2.timestamp_ns <= query_snapshot_1.timestamp_ns) {
         return FMT_ERR(dsn::ERR_INVALID_DATA,
-                       "duration for metric samples should > 0, json_string_1={}, json_string_2={}",
-                       json_string_1,
-                       json_string_2);
+                       "duration for metric samples should be > 0: timestamp_ns_1={}, "
+                       "timestamp_ns_2={}",
+                       query_snapshot_1.timestamp_ns,
+                       query_snapshot_2.timestamp_ns);
     }
 
     const std::vector<stat_var_map *> stat_vars = {&incs, &rates};
