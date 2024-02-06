@@ -140,11 +140,8 @@ pack_tools_lib() {
     pack_system_lib "${pack}/lib" shell "$1"
 }
 
-pack_tools_lib snappy
 pack_tools_lib crypto
 pack_tools_lib ssl
-pack_tools_lib zstd
-pack_tools_lib lz4
 
 chmod -x ${pack}/lib/*
 
