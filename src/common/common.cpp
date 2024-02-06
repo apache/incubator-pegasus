@@ -29,4 +29,6 @@ DSN_DEFINE_string(replication, cluster_name, "", "name of this cluster");
     CHECK(!utils::is_empty(FLAGS_cluster_name), "cluster_name is not set");
     return FLAGS_cluster_name;
 }
+
+const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
 } // namespace dsn

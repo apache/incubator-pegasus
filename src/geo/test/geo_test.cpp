@@ -34,8 +34,8 @@
 #include <utility>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
+#include "common/common.h"
 #include "common/replication_other_types.h"
 #include "geo/lib/geo_client.h"
 #include "gtest/gtest.h"
@@ -63,7 +63,7 @@ public:
     {
         std::vector<dsn::rpc_address> meta_list;
         bool ok = dsn::replication::replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "onebox");
+            meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), "onebox");
         CHECK(ok, "load_meta_servers failed");
         auto ddl_client = new dsn::replication::replication_ddl_client(meta_list);
         dsn::error_code error = ddl_client->create_app("temp_geo", "pegasus", 4, 3, {}, false);

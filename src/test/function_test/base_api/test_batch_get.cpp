@@ -28,7 +28,6 @@
 #include <utility>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "base/pegasus_key_schema.h"
 #include "client/partition_resolver.h"
 #include "gtest/gtest.h"
