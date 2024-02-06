@@ -32,6 +32,7 @@
 #include <limits>
 #include <sstream> // IWYU pragma: keep
 #include <thread>
+#include <utility>
 
 namespace dsn {
 

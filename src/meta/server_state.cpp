@@ -38,7 +38,7 @@
 #include <sstream> // IWYU pragma: keep
 #include <string>
 #include <thread>
-#include <type_traits>
+// IWYU pragma: no_include <type_traits>
 #include <unordered_map>
 
 #include "app_env_validator.h"
