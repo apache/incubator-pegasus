@@ -95,6 +95,8 @@ DSN_DEFINE_int32(replication,
                  max_concurrent_bulk_load_downloading_count,
                  5,
                  kMaxConcurrentBulkLoadDownloadingCountDesc);
+DSN_DEFINE_validator(max_concurrent_bulk_load_downloading_count,
+                     [](int32_t value) -> bool { return value >= 0; });
 
 METRIC_DEFINE_gauge_int64(server,
                           total_replicas,
@@ -300,6 +302,12 @@ DSN_DEFINE_int32(
     10,
     "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
     "memory, replica server will release the exceeding memory back to operating system");
+bool check_mem_release_max_reserved_mem_percentage(int32_t value)
+{
+    return value > 0 && value <= 100;
+}
+DSN_DEFINE_validator(mem_release_max_reserved_mem_percentage,
+                     &check_mem_release_max_reserved_mem_percentage);
 
 DSN_DEFINE_string(
     pegasus.server,
@@ -2255,7 +2263,7 @@ void replica_stub::register_ctrl_command()
             FLAGS_mem_release_max_reserved_mem_percentage,
             "replica.mem-release-max-reserved-percentage",
             "control tcmalloc max reserved but not-used memory percentage",
-            [](int32_t new_value) -> bool { return new_value > 0 && new_value <= 100; }));
+            &check_mem_release_max_reserved_mem_percentage));
 
         _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.release-all-reserved-memory"},
