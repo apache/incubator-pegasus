@@ -69,14 +69,18 @@ DSN_DEFINE_uint32(nfs,
                   nfs_copy_block_bytes,
                   4 * 1024 * 1024,
                   "max block size (bytes) for each network copy");
-static const char *max_copy_rate_megabytes_per_disk_desc =
+static const char *kMaxCopyRateMegaBytesPerDiskDesc =
     "The maximum bandwidth (MB/s) of writing data per local disk when copying from remote node, 0 "
     "means no limit";
-DSN_DEFINE_int64(nfs, max_copy_rate_megabytes_per_disk, 0, max_copy_rate_megabytes_per_disk_desc);
+DSN_DEFINE_int64(nfs, max_copy_rate_megabytes_per_disk, 0, kMaxCopyRateMegaBytesPerDiskDesc);
 DSN_TAG_VARIABLE(max_copy_rate_megabytes_per_disk, FT_MUTABLE);
+
+bool check_max_copy_rate_megabytes_per_disk(int64_t value)
+{
+    return value == 0 || (value << 20) > FLAGS_nfs_copy_block_bytes;
+}
 DSN_DEFINE_group_validator(max_copy_rate_megabytes_per_disk, [](std::string &message) -> bool {
-    return FLAGS_max_copy_rate_megabytes_per_disk == 0 ||
-           (FLAGS_max_copy_rate_megabytes_per_disk << 20) > FLAGS_nfs_copy_block_bytes;
+    return check_max_copy_rate_megabytes_per_disk(FLAGS_max_copy_rate_megabytes_per_disk);
 });
 
 DSN_DEFINE_int32(nfs,
@@ -585,11 +589,9 @@ void nfs_client_impl::register_cli_commands()
             "nfs.max_copy_rate_megabytes_per_disk",
             fmt::format("{}, "
                         "should be less than 'nfs_copy_block_bytes' which is {}",
-                        max_copy_rate_megabytes_per_disk_desc,
+                        kMaxCopyRateMegaBytesPerDiskDesc,
                         FLAGS_nfs_copy_block_bytes),
-            [](int64_t new_value) -> bool {
-                return new_value == 0 || (new_value << 20) > FLAGS_nfs_copy_block_bytes;
-            });
+            &check_max_copy_rate_megabytes_per_disk);
     });
 }
 } // namespace service

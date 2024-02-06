@@ -89,12 +89,12 @@
 #include "remote_cmd/remote_command.h"
 #include "utils/fail_point.h"
 
-static const char *max_concurrent_bulk_load_downloading_count_desc =
+static const char *kMaxConcurrentBulkLoadDownloadingCountDesc =
     "The maximum concurrent bulk load downloading replica count";
 DSN_DEFINE_int32(replication,
                  max_concurrent_bulk_load_downloading_count,
                  5,
-                 max_concurrent_bulk_load_downloading_count_desc);
+                 kMaxConcurrentBulkLoadDownloadingCountDesc);
 
 METRIC_DEFINE_gauge_int64(server,
                           total_replicas,
@@ -2272,7 +2272,7 @@ void replica_stub::register_ctrl_command()
             FLAGS_max_concurrent_bulk_load_downloading_count,
             FLAGS_max_concurrent_bulk_load_downloading_count,
             "replica.max-concurrent-bulk-load-downloading-count",
-            max_concurrent_bulk_load_downloading_count_desc));
+            kMaxConcurrentBulkLoadDownloadingCountDesc));
     });
 }
 

@@ -52,9 +52,7 @@ command_manager::register_command(const std::vector<std::string> &commands,
     utils::auto_write_lock l(_lock);
     for (const auto &cmd : commands) {
         CHECK(!cmd.empty(), "should not register empty command");
-        CHECK(_handlers.insert(std::make_pair(cmd, c)).second,
-              "command '{}' already registered",
-              cmd);
+        CHECK(_handlers.emplace(cmd, c).second, "command '{}' already registered", cmd);
     }
 
     return std::make_unique<command_deregister>(reinterpret_cast<uintptr_t>(c));

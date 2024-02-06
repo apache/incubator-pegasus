@@ -61,10 +61,10 @@ class disk_file;
 
 namespace service {
 
-static const char *max_send_rate_megabytes_per_disk_desc =
+static const char *kMaxSendRateMegaBytesPerDiskDesc =
     "The maximum bandwidth (MB/s) of reading data per local disk "
     "when transferring data to remote node, 0 means no limit";
-DSN_DEFINE_int64(nfs, max_send_rate_megabytes_per_disk, 0, max_send_rate_megabytes_per_disk_desc);
+DSN_DEFINE_int64(nfs, max_send_rate_megabytes_per_disk, 0, kMaxSendRateMegaBytesPerDiskDesc);
 DSN_TAG_VARIABLE(max_send_rate_megabytes_per_disk, FT_MUTABLE);
 
 DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
@@ -263,7 +263,7 @@ void nfs_service_impl::register_cli_commands()
             FLAGS_max_send_rate_megabytes_per_disk,
             FLAGS_max_send_rate_megabytes_per_disk,
             "nfs.max_send_rate_megabytes_per_disk",
-            max_send_rate_megabytes_per_disk_desc);
+            kMaxSendRateMegaBytesPerDiskDesc);
     });
 }
 
