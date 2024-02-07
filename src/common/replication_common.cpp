@@ -66,11 +66,11 @@ DSN_DEFINE_int32(replication,
                  "The interval seconds of failure detector to send beacon message to remote peers");
 DSN_DEFINE_int32(replication,
                  fd_lease_seconds,
-                 9,
+                 20,
                  "The lease in seconds get from remote FD master");
 DSN_DEFINE_int32(replication,
                  fd_grace_seconds,
-                 10,
+                 22,
                  "The grace in seconds assigned to remote FD slaves");
 DSN_DEFINE_int32(replication,
                  cold_backup_checkpoint_reserve_minutes,

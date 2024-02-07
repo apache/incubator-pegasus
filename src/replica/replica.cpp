@@ -66,7 +66,7 @@ DSN_DEFINE_bool(replication,
                 "Whether to disable auto-batch of replicated write requests");
 DSN_DEFINE_int32(replication,
                  staleness_for_commit,
-                 10,
+                 20,
                  "The maximum number of two-phase commit rounds are allowed");
 DSN_DEFINE_int32(replication,
                  max_mutation_count_in_prepare_list,

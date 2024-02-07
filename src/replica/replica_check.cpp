@@ -70,7 +70,7 @@ DSN_DEFINE_bool(replication,
 DSN_DEFINE_int32(
     replication,
     group_check_interval_ms,
-    10000,
+    100000,
     "The interval in milliseconds for the primary replicas to send group-check requests");
 
 DSN_DECLARE_bool(empty_write_disabled);

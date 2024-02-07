@@ -45,7 +45,7 @@ DSN_DEFINE_int32(
     "The maximum number of replicas retained in a replica group (alive + dead replicas)");
 DSN_DEFINE_int64(meta_server,
                  replica_assign_delay_ms_for_dropouts,
-                 300000,
+                 600000,
                  "The maximum time threshold for waiting for a secondary replica to re-join the "
                  "cluster after it has been removed. If the secondary replica has not yet "
                  "recovered beyond this time threshold, an attempt will be made to add new "
