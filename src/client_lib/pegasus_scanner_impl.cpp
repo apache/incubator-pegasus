@@ -27,7 +27,6 @@
 #include <utility>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "common/gpid.h"
 #include "pegasus/client.h"
 #include "pegasus/error.h"
@@ -51,6 +50,13 @@ using namespace pegasus;
 
 namespace pegasus {
 namespace client {
+
+// TODO(yingchun): There are duplicate variables in src/server/pegasus_scan_context.h,
+// because this is in client library, it's better to avoid including too many headers.
+// We can move it to thrift which would be included by both server and client.
+static const int SCAN_CONTEXT_ID_VALID_MIN = 0;
+static const int SCAN_CONTEXT_ID_COMPLETED = -1;
+static const int SCAN_CONTEXT_ID_NOT_EXIST = -2;
 
 pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrdb_client *client,
                                                                 std::vector<uint64_t> &&hash,

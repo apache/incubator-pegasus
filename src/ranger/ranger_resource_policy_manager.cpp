@@ -582,8 +582,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
 
         auto req = std::make_unique<dsn::replication::configuration_update_app_env_request>();
         req->__set_app_name(app.app_name);
-        req->__set_keys(
-            {dsn::replication::replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES});
+        req->__set_keys({dsn::replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES});
         std::vector<matched_database_table_policy> matched_database_table_policies;
         for (const auto &policy : table_policies->second) {
             // If this table does not match any database, this policy will be skipped and will not

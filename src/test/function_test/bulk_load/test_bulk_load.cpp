@@ -30,7 +30,6 @@
 #include <thread>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
@@ -39,6 +38,7 @@
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/bulk_load_common.h"
+#include "common/replica_envs.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h" // IWYU pragma: keep
 #include "meta/meta_bulk_load_service.h"
@@ -342,7 +342,7 @@ TEST_F(bulk_load_test, missing_p0_bulk_load_metadata)
 // Test bulk load failed because the allow_ingest_behind config is inconsistent.
 TEST_F(bulk_load_test, allow_ingest_behind_inconsistent)
 {
-    NO_FATALS(update_table_env({ROCKSDB_ALLOW_INGEST_BEHIND}, {"false"}));
+    NO_FATALS(update_table_env({dsn::replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND}, {"false"}));
     ASSERT_EQ(ERR_INCONSISTENT_STATE, start_bulk_load(/* ingest_behind */ true));
 }
 
@@ -353,6 +353,6 @@ TEST_F(bulk_load_test, normal) { check_bulk_load(/* ingest_behind */ false); }
 // load data.
 TEST_F(bulk_load_test, allow_ingest_behind)
 {
-    NO_FATALS(update_table_env({ROCKSDB_ALLOW_INGEST_BEHIND}, {"true"}));
+    NO_FATALS(update_table_env({dsn::replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND}, {"true"}));
     check_bulk_load(/* ingest_behind */ true);
 }

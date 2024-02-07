@@ -19,8 +19,6 @@
 
 #include "common/common.h"
 
-#include <memory>
-
 #include "gtest/gtest.h"
 
 namespace dsn {
