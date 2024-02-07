@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "backup_types.h"
-#include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
 #include "gtest/gtest.h"
 #include "test/function_test/utils/test_util.h"

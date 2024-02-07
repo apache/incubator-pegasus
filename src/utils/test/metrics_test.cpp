@@ -2271,6 +2271,7 @@ const std::unordered_set<std::string> kAllMetricQueryFields = {kMetricClusterFie
                                                                kMetricRoleField,
                                                                kMetricHostField,
                                                                kMetricPortField,
+                                                               kMetricTimestampNsField,
                                                                kMetricEntitiesField};
 
 void check_entity_ids_from_json_string(const std::string &json_string,

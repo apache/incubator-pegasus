@@ -30,8 +30,8 @@
 #include <utility>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
+#include "common/common.h"
 #include "common/replication_other_types.h"
 #include "fmt/core.h"
 #include "gtest/gtest.h"
@@ -83,7 +83,7 @@ void test_util::SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize
 void test_util::SetUp()
 {
     ASSERT_TRUE(replica_helper::load_meta_servers(
-        meta_list_, PEGASUS_CLUSTER_SECTION_NAME.c_str(), kClusterName.c_str()));
+        meta_list_, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), kClusterName.c_str()));
     ASSERT_FALSE(meta_list_.empty());
 
     ddl_client_ = std::make_shared<replication_ddl_client>(meta_list_);
