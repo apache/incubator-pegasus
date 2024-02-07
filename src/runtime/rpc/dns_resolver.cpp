@@ -29,7 +29,9 @@
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
 #include "utils/autoref_ptr.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 METRIC_DEFINE_gauge_int64(server,
                           dns_resolver_cache_size,
@@ -47,6 +49,12 @@ METRIC_DEFINE_percentile_int64(server,
                                dsn::metric_unit::kNanoSeconds,
                                "The duration of resolving a host port by DNS lookup");
 namespace dsn {
+
+DSN_DEFINE_int32(network,
+                 max_count_for_dns_cache,
+                 100,
+                 "The size of dns_cache on dns_resolver. The part exceeding the "
+                 "cache size needs to be resolved from the system level each time");
 
 dns_resolver::dns_resolver()
     : METRIC_VAR_INIT_server(dns_resolver_cache_size),
@@ -95,10 +103,12 @@ error_s dns_resolver::resolve_addresses(const host_port &hp, std::vector<rpc_add
                       resolved_addresses[0]);
         }
 
-        utils::auto_write_lock l(_lock);
-        const auto it = _dns_cache.insert(std::make_pair(hp, resolved_addresses[0]));
-        if (it.second) {
-            METRIC_VAR_INCREMENT(dns_resolver_cache_size);
+        if (dsn_likely(_dns_cache.size() < FLAGS_max_count_for_dns_cache)) {
+            utils::auto_write_lock l(_lock);
+            const auto it = _dns_cache.insert(std::make_pair(hp, resolved_addresses[0]));
+            if (it.second) {
+                METRIC_VAR_INCREMENT(dns_resolver_cache_size);
+            }
         }
     }
 
