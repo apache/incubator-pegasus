@@ -265,8 +265,8 @@ DSN_DEFINE_bool(replication,
 DSN_DEFINE_bool(replication,
                 config_sync_disabled,
                 false,
-                "The interval milliseconds of replica server to send replica config-sync "
-                "requests to meta server");
+                "Whether to disable replica server to send replica config-sync "
+                "requests to meta server periodically");
 DSN_DEFINE_bool(replication, fd_disabled, false, "Whether to disable failure detection");
 DSN_DEFINE_bool(replication,
                 verbose_commit_log_on_start,
