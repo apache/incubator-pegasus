@@ -187,8 +187,6 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
                             std::map<int32_t, double> &count_map,
                             std::map<int32_t, double> &disk_map)
 {
-    dsn::error_s err;
-
     DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
     for (const auto &entity : query_snapshot.entities) {
