@@ -41,7 +41,7 @@
 DSN_DEFINE_uint64(replication,
                   gc_disk_error_replica_interval_seconds,
                   7 * 24 * 3600 /*7day*/,
-                  "The interval milliseconds to GC error replicas, which are in directories "
+                  "The interval in seconds to GC error replicas, which are in directories "
                   "suffixed with '.err'");
 DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
 
