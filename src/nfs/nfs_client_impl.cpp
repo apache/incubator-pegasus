@@ -588,7 +588,7 @@ void nfs_client_impl::register_cli_commands()
             FLAGS_max_copy_rate_megabytes_per_disk,
             "nfs.max_copy_rate_megabytes_per_disk",
             fmt::format("{}, "
-                        "should be less than 'nfs_copy_block_bytes' which is {}",
+                        "should be greater than 'nfs_copy_block_bytes' which is {}",
                         kMaxCopyRateMegaBytesPerDiskDesc,
                         FLAGS_nfs_copy_block_bytes),
             &check_max_copy_rate_megabytes_per_disk);
