@@ -26,14 +26,13 @@
 
 #include "utils/command_manager.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdlib.h>
 #include <chrono>
 #include <limits>
 #include <sstream> // IWYU pragma: keep
 #include <thread>
 #include <utility>
-
-#include "utils/fmt_logging.h"
 
 namespace dsn {
 
@@ -43,29 +42,30 @@ command_manager::register_command(const std::vector<std::string> &commands,
                                   const std::string &help_long,
                                   command_handler handler)
 {
-    utils::auto_write_lock l(_lock);
-    bool is_valid_cmd = false;
-    for (const std::string &cmd : commands) {
-        if (!cmd.empty()) {
-            is_valid_cmd = true;
-            CHECK(_handlers.find(cmd) == _handlers.end(), "command '{}' already regisered", cmd);
-        }
-    }
-    CHECK(is_valid_cmd, "should not register empty command");
-
-    command_instance *c = new command_instance();
+    auto *c = new command_instance();
     c->commands = commands;
     c->help_short = help_one_line;
     c->help_long = help_long;
-    c->handler = handler;
+    c->handler = std::move(handler);
 
-    for (const std::string &cmd : commands) {
-        if (!cmd.empty()) {
-            _handlers[cmd] = c;
-        }
+    utils::auto_write_lock l(_lock);
+    for (const auto &cmd : commands) {
+        CHECK(!cmd.empty(), "should not register empty command");
+        CHECK(_handlers.emplace(cmd, c).second, "command '{}' already registered", cmd);
     }
 
     return std::make_unique<command_deregister>(reinterpret_cast<uintptr_t>(c));
+}
+
+std::unique_ptr<command_deregister> command_manager::register_bool_command(
+    bool &value, const std::string &command, const std::string &help)
+{
+    return register_command({command},
+                            fmt::format("{} <true|false>", command),
+                            help,
+                            [&value, command](const std::vector<std::string> &args) {
+                                return set_bool(value, command, args);
+                            });
 }
 
 void command_manager::deregister_command(uintptr_t handle)
@@ -97,6 +97,33 @@ bool command_manager::run_command(const std::string &cmd,
         output = h->handler(args);
         return true;
     }
+}
+
+std::string command_manager::set_bool(bool &value,
+                                      const std::string &name,
+                                      const std::vector<std::string> &args)
+{
+    // Query.
+    if (args.empty()) {
+        return value ? "true" : "false";
+    }
+
+    // Invalid arguments size.
+    if (args.size() > 1) {
+        return fmt::format("ERR: invalid arguments, only one boolean argument is acceptable");
+    }
+
+    // Invalid argument.
+    bool new_value;
+    if (!dsn::buf2bool(args[0], new_value, /* ignore_case */ true)) {
+        return fmt::format("ERR: invalid arguments, '{}' is not a boolean", args[0]);
+    }
+
+    // Set to a new value.
+    value = new_value;
+    LOG_INFO("set {} to {} by remote command", name, new_value);
+
+    return "OK";
 }
 
 command_manager::command_manager()

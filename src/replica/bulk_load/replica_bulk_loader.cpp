@@ -44,6 +44,7 @@
 #include "utils/env.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/load_dump_object.h"
 #include "utils/thread_access_checker.h"
@@ -82,6 +83,8 @@ METRIC_DEFINE_counter(replica,
                       bulk_load_download_file_bytes,
                       dsn::metric_unit::kBytes,
                       "The size of files that have been downloaded successfully for bulk loads");
+
+DSN_DECLARE_int32(max_concurrent_bulk_load_downloading_count);
 
 namespace dsn {
 namespace dist {
@@ -425,7 +428,7 @@ error_code replica_bulk_loader::start_download(const std::string &remote_dir,
                                                const std::string &provider_name)
 {
     if (_stub->_bulk_load_downloading_count.load() >=
-        _stub->_max_concurrent_bulk_load_downloading_count) {
+        FLAGS_max_concurrent_bulk_load_downloading_count) {
         LOG_WARNING_PREFIX("node[{}] already has {} replica downloading, wait for next round",
                            _stub->_primary_address_str,
                            _stub->_bulk_load_downloading_count.load());

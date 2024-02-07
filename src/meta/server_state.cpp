@@ -38,6 +38,7 @@
 #include <sstream> // IWYU pragma: keep
 #include <string>
 #include <thread>
+// IWYU pragma: no_include <type_traits>
 #include <unordered_map>
 
 #include "app_env_validator.h"
@@ -163,38 +164,16 @@ void server_state::register_cli_commands()
             return std::string(err.to_string());
         }));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"meta.lb.add_secondary_enable_flow_control"},
-        "meta.lb.add_secondary_enable_flow_control <true|false>",
-        "control whether enable add secondary flow control",
-        [this](const std::vector<std::string> &args) {
-            return remote_command_set_bool_flag(
-                _add_secondary_enable_flow_control, "lb.add_secondary_enable_flow_control", args);
-        }));
+    _cmds.emplace_back(dsn::command_manager::instance().register_bool_command(
+        _add_secondary_enable_flow_control,
+        "meta.lb.add_secondary_enable_flow_control",
+        "control whether enable add secondary flow control"));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"meta.lb.add_secondary_max_count_for_one_node"},
-        "meta.lb.add_secondary_max_count_for_one_node [num | DEFAULT]",
-        "control the max count to add secondary for one node",
-        [this](const std::vector<std::string> &args) {
-            std::string result("OK");
-            if (args.empty()) {
-                result = std::to_string(_add_secondary_max_count_for_one_node);
-            } else {
-                if (args[0] == "DEFAULT") {
-                    _add_secondary_max_count_for_one_node =
-                        FLAGS_add_secondary_max_count_for_one_node;
-                } else {
-                    int32_t v = 0;
-                    if (!dsn::buf2int32(args[0], v) || v < 0) {
-                        result = std::string("ERR: invalid arguments");
-                    } else {
-                        _add_secondary_max_count_for_one_node = v;
-                    }
-                }
-            }
-            return result;
-        }));
+    _cmds.emplace_back(dsn::command_manager::instance().register_int_command(
+        _add_secondary_max_count_for_one_node,
+        FLAGS_add_secondary_max_count_for_one_node,
+        "meta.lb.add_secondary_max_count_for_one_node",
+        "control the max count to add secondary for one node"));
 }
 
 void server_state::initialize(meta_service *meta_svc, const std::string &apps_root)

@@ -42,7 +42,6 @@
 #include "utils/env.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
-#include "utils/string_conv.h"
 #include "utils/utils.h"
 
 METRIC_DEFINE_counter(
@@ -62,11 +61,10 @@ class disk_file;
 
 namespace service {
 
-DSN_DEFINE_uint32(
-    nfs,
-    max_send_rate_megabytes_per_disk,
-    0,
-    "max rate per disk of send to remote node(MB/s)，zero means disable rate limiter");
+static const char *kMaxSendRateMegaBytesPerDiskDesc =
+    "The maximum bandwidth (MB/s) of reading data per local disk "
+    "when transferring data to remote node, 0 means no limit";
+DSN_DEFINE_int64(nfs, max_send_rate_megabytes_per_disk, 0, kMaxSendRateMegaBytesPerDiskDesc);
 DSN_TAG_VARIABLE(max_send_rate_megabytes_per_disk, FT_MUTABLE);
 
 DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
@@ -261,26 +259,11 @@ void nfs_service_impl::register_cli_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _nfs_max_send_rate_megabytes_cmd = dsn::command_manager::instance().register_command(
-            {"nfs.max_send_rate_megabytes_per_disk"},
-            "nfs.max_send_rate_megabytes_per_disk [num]",
-            "control the max rate(MB/s) for one disk to send file to remote node",
-            [](const std::vector<std::string> &args) {
-                std::string result("OK");
-
-                if (args.empty()) {
-                    return std::to_string(FLAGS_max_send_rate_megabytes_per_disk);
-                }
-
-                int32_t max_send_rate_megabytes = 0;
-                if (!dsn::buf2int32(args[0], max_send_rate_megabytes) ||
-                    max_send_rate_megabytes <= 0) {
-                    return std::string("ERR: invalid arguments");
-                }
-
-                FLAGS_max_send_rate_megabytes_per_disk = max_send_rate_megabytes;
-                return result;
-            });
+        _nfs_max_send_rate_megabytes_cmd = dsn::command_manager::instance().register_int_command(
+            FLAGS_max_send_rate_megabytes_per_disk,
+            FLAGS_max_send_rate_megabytes_per_disk,
+            "nfs.max_send_rate_megabytes_per_disk",
+            kMaxSendRateMegaBytesPerDiskDesc);
     });
 }
 

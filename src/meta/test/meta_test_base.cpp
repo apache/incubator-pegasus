@@ -116,7 +116,7 @@ void meta_test_base::set_min_live_node_count_for_unfreeze(uint64_t node_count)
     FLAGS_min_live_node_count_for_unfreeze = node_count;
 }
 
-void meta_test_base::set_node_live_percentage_threshold_for_update(uint64_t percentage_threshold)
+void meta_test_base::set_node_live_percentage_threshold_for_update(int32_t percentage_threshold)
 {
     _ms->_node_live_percentage_threshold_for_update = percentage_threshold;
 }
