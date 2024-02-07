@@ -34,11 +34,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-struct row_data;
-
-namespace pegasus {
-namespace server {
-
 DSN_DEFINE_int64(pegasus.collector,
                  max_hotspot_store_size,
                  100,
@@ -66,6 +61,11 @@ DSN_DEFINE_uint32(pegasus.collector,
                   3,
                   "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
 DSN_TAG_VARIABLE(occurrence_threshold, FT_MUTABLE);
+
+struct row_data;
+
+namespace pegasus {
+namespace server {
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {

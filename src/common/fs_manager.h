@@ -36,13 +36,13 @@
 #include "utils/ports.h"
 #include "utils/zlocks.h"
 
+DSN_DECLARE_int32(disk_min_available_space_ratio);
+
 namespace dsn {
 class gpid;
 
 namespace replication {
 class disk_info;
-
-DSN_DECLARE_int32(disk_min_available_space_ratio);
 
 error_code disk_status_to_error_code(disk_status::type ds);
 

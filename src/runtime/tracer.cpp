@@ -49,10 +49,10 @@
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
 
+DSN_DEFINE_bool(task..default, is_trace, false, "whether to trace tasks by default");
+
 namespace dsn {
 namespace tools {
-
-DSN_DEFINE_bool(task..default, is_trace, false, "whether to trace tasks by default");
 
 static void tracer_on_task_create(task *caller, task *callee)
 {

@@ -81,8 +81,6 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace replication {
 DSN_DEFINE_bool(meta_server,
                 add_secondary_enable_flow_control,
                 false,
@@ -126,6 +124,9 @@ DSN_DEFINE_int32(meta_server,
                  "add secondary max count for one node when flow control enabled");
 
 DSN_DECLARE_bool(recover_from_replica_server);
+
+namespace dsn {
+namespace replication {
 
 static const char *lock_state = "lock";
 static const char *unlock_state = "unlock";

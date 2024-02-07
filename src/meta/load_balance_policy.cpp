@@ -37,9 +37,10 @@
 #include "absl/strings/string_view.h"
 #include "utils/strings.h"
 
+DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
+
 namespace dsn {
 namespace replication {
-DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
 void dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const disk_load &load)
 {

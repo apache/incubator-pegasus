@@ -28,16 +28,17 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-class rpc_address;
-
-namespace replication {
 DSN_DEFINE_bool(meta_server, balancer_in_turn, false, "balance the apps one-by-one/concurrently");
 DSN_DEFINE_bool(meta_server, only_primary_balancer, false, "only try to make the primary balanced");
 DSN_DEFINE_bool(meta_server,
                 only_move_primary,
                 false,
                 "only try to make the primary balanced by move");
+
+namespace dsn {
+class rpc_address;
+
+namespace replication {
 app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(svc)
 {
     if (_svc != nullptr) {

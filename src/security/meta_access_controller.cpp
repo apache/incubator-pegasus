@@ -29,8 +29,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace security {
 DSN_DEFINE_string(security,
                   meta_acl_rpc_allow_list,
                   "",
@@ -38,6 +36,9 @@ DSN_DEFINE_string(security,
 
 DSN_DECLARE_bool(enable_acl);
 DSN_DECLARE_bool(enable_ranger_acl);
+
+namespace dsn {
+namespace security {
 
 meta_access_controller::meta_access_controller(
     const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager)

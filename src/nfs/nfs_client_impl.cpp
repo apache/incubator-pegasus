@@ -40,31 +40,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/token_buckets.h"
 
-METRIC_DEFINE_counter(server,
-                      nfs_client_copy_bytes,
-                      dsn::metric_unit::kBytes,
-                      "The accumulated data size in bytes requested by client during nfs copy");
-
-METRIC_DEFINE_counter(server,
-                      nfs_client_copy_failed_requests,
-                      dsn::metric_unit::kRequests,
-                      "The number of failed nfs copy requests (requested by client)");
-
-METRIC_DEFINE_counter(
-    server,
-    nfs_client_write_bytes,
-    dsn::metric_unit::kBytes,
-    "The accumulated data size in bytes that are written to local file in client");
-
-METRIC_DEFINE_counter(server,
-                      nfs_client_failed_writes,
-                      dsn::metric_unit::kWrites,
-                      "The number of failed writes to local file in client");
-
-namespace dsn {
-namespace service {
-static uint32_t current_max_copy_rate_megabytes = 0;
-
 DSN_DEFINE_uint32(nfs,
                   nfs_copy_block_bytes,
                   4 * 1024 * 1024,
@@ -112,6 +87,31 @@ DSN_DEFINE_int32(nfs,
                  1e5, // 100s
                  "rpc timeout in milliseconds for nfs copy, "
                  "0 means use default timeout of rpc engine");
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_copy_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The accumulated data size in bytes requested by client during nfs copy");
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_copy_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed nfs copy requests (requested by client)");
+
+METRIC_DEFINE_counter(
+    server,
+    nfs_client_write_bytes,
+    dsn::metric_unit::kBytes,
+    "The accumulated data size in bytes that are written to local file in client");
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_failed_writes,
+                      dsn::metric_unit::kWrites,
+                      "The number of failed writes to local file in client");
+
+namespace dsn {
+namespace service {
+static uint32_t current_max_copy_rate_megabytes = 0;
 
 nfs_client_impl::nfs_client_impl()
     : _concurrent_copy_request_count(0),

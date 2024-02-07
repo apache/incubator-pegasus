@@ -52,8 +52,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/uniq_timestamp_us.h"
 
-namespace dsn {
-namespace replication {
 DSN_DEFINE_bool(replication, checkpoint_disabled, false, "whether checkpoint is disabled");
 DSN_DEFINE_int32(replication,
                  checkpoint_interval_seconds,
@@ -64,6 +62,9 @@ DSN_DEFINE_int32(replication,
                  log_private_file_size_mb,
                  32,
                  "private log maximum segment file size (MB)");
+
+namespace dsn {
+namespace replication {
 
 error_code replica::initialize_on_new()
 {

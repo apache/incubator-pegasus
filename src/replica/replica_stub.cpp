@@ -226,16 +226,18 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kBytes,
                           "The max size of copied files among all splitting replicas");
 
+DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_bool(enable_acl);
 DSN_DECLARE_bool(encrypt_data_at_rest);
+DSN_DECLARE_int32(fd_beacon_interval_seconds);
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+DSN_DECLARE_int32(fd_lease_seconds);
+DSN_DECLARE_int32(gc_interval_ms);
+DSN_DECLARE_string(cluster_name);
+DSN_DECLARE_string(data_dirs);
 DSN_DECLARE_string(server_key);
 
-namespace dsn {
-DSN_DECLARE_string(cluster_name);
-
-namespace security {
-DSN_DECLARE_bool(enable_acl);
-}
-namespace replication {
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
                 false,
@@ -316,15 +318,8 @@ DSN_DEFINE_string(
     "Provide the comma-separated list of URLs from which to retrieve the "
     "file system's server key. Example format: 'hostname1:1234/kms,hostname2:1234/kms'.");
 
-DSN_DECLARE_bool(duplication_enabled);
-DSN_DECLARE_int32(fd_beacon_interval_seconds);
-DSN_DECLARE_int32(fd_check_interval_seconds);
-DSN_DECLARE_int32(fd_grace_seconds);
-DSN_DECLARE_int32(fd_lease_seconds);
-DSN_DECLARE_int32(gc_interval_ms);
-DSN_DECLARE_string(data_dirs);
 DSN_DEFINE_group_validator(encrypt_data_at_rest_pre_check, [](std::string &message) -> bool {
-    if (!dsn::security::FLAGS_enable_acl && FLAGS_encrypt_data_at_rest) {
+    if (!FLAGS_enable_acl && FLAGS_encrypt_data_at_rest) {
         message = fmt::format("[pegasus.server] encrypt_data_at_rest should be enabled only if "
                               "[security] enable_acl is enabled.");
         return false;
@@ -343,6 +338,8 @@ DSN_DEFINE_group_validator(encrypt_data_at_rest_with_kms_url, [](std::string &me
     return true;
 });
 
+namespace dsn {
+namespace replication {
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,

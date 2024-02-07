@@ -39,6 +39,9 @@
 #include "utils/flags.h"
 #include "utils/token_bucket_throttling_controller.h"
 
+DSN_DECLARE_uint64(perf_counter_read_capacity_unit_size);
+DSN_DECLARE_uint64(perf_counter_write_capacity_unit_size);
+
 namespace dsn {
 namespace replication {
 struct replica_base;
@@ -47,9 +50,6 @@ struct replica_base;
 
 namespace pegasus {
 namespace server {
-
-DSN_DECLARE_uint64(perf_counter_read_capacity_unit_size);
-DSN_DECLARE_uint64(perf_counter_write_capacity_unit_size);
 
 class mock_capacity_unit_calculator : public capacity_unit_calculator
 {

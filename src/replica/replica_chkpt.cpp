@@ -62,10 +62,7 @@
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
-namespace replication {
-
-// The checkpoint of the replicated app part of replica.
+/// The checkpoint of the replicated app part of replica.
 
 DSN_DEFINE_int32(replication,
                  checkpoint_max_interval_hours,
@@ -85,6 +82,9 @@ DSN_DEFINE_int32(replication,
                  "FLAGS_log_private_reserve_max_size_mb and "
                  "FLAGS_log_private_reserve_max_time_seconds are both satisfied, the useless logs "
                  "can be reserved.");
+
+namespace dsn {
+namespace replication {
 
 const std::string kCheckpointFolderPrefix /*NOLINT*/ = "checkpoint";
 

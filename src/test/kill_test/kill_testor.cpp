@@ -37,13 +37,14 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace pegasus {
-namespace test {
 DSN_DEFINE_uint32(pegasus.killtest, kill_interval_seconds, 30, "");
 DSN_DEFINE_uint32(pegasus.killtest, max_seconds_for_all_partitions_to_recover, 600, "");
 
 DSN_DECLARE_string(pegasus_cluster_name);
 DSN_DECLARE_string(verify_app_name);
+
+namespace pegasus {
+namespace test {
 
 kill_testor::kill_testor(const char *config_file)
 {

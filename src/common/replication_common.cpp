@@ -44,9 +44,6 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled");
 
 DSN_DEFINE_int32(replication,
@@ -103,6 +100,9 @@ DSN_DEFINE_string(replication,
                   cold_backup_root,
                   "",
                   "The prefix of cold backup data path on remote storage");
+
+namespace dsn {
+namespace replication {
 
 replication_options::~replication_options() {}
 

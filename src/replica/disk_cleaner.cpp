@@ -38,9 +38,6 @@
 #include "utils/string_conv.h"
 #include "absl/strings/string_view.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_uint64(
     replication,
     gc_disk_error_replica_interval_seconds,
@@ -69,6 +66,8 @@ DSN_DEFINE_uint64(replication,
                   "directory with '.ori' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_origin_replica_interval_seconds, FT_MUTABLE);
 
+namespace dsn {
+namespace replication {
 const std::string kFolderSuffixErr = ".err";
 const std::string kFolderSuffixGar = ".gar";
 const std::string kFolderSuffixBak = ".bak";

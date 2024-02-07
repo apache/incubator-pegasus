@@ -49,10 +49,10 @@
 #include "utils/flags.h"
 #include "utils/time_utils.h"
 
+DSN_DECLARE_int32(log_private_file_size_mb);
+
 namespace dsn {
 namespace replication {
-
-DSN_DECLARE_int32(log_private_file_size_mb);
 
 bool mutation_log_tool::dump(
     const std::string &log_dir,

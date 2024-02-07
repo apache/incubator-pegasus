@@ -25,9 +25,6 @@
 #include "utils/errors.h"
 #include "utils/flags.h"
 
-namespace dsn {
-namespace utils {
-
 DSN_DEFINE_int32(flag_test, test_int32, 5, "");
 DSN_TAG_VARIABLE(test_int32, FT_MUTABLE);
 
@@ -136,6 +133,9 @@ DSN_DEFINE_group_validator(lesser_greater_1, [](std::string &message) -> bool {
 
     return true;
 });
+
+namespace dsn {
+namespace utils {
 
 TEST(flag_test, update_config)
 {

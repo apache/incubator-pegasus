@@ -27,10 +27,6 @@
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 
-namespace rocksdb {
-class DB;
-} // namespace rocksdb
-
 METRIC_DEFINE_counter(replica,
                       rdb_flush_completed_count,
                       dsn::metric_unit::kFlushes,
@@ -67,6 +63,10 @@ METRIC_DEFINE_counter(
     rdb_changed_stopped_writes,
     dsn::metric_unit::kWrites,
     "The number of rocksdb stopped writes changed from another write stall condition");
+
+namespace rocksdb {
+class DB;
+} // namespace rocksdb
 
 namespace pegasus {
 namespace server {

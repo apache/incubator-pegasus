@@ -38,9 +38,6 @@ METRIC_DEFINE_percentile_int64(latency_tracer,
                                dsn::metric_unit::kNanoSeconds,
                                "The duration between two points(stages)");
 
-namespace dsn {
-namespace utils {
-
 DSN_DEFINE_bool(replication,
                 enable_latency_tracer,
                 false,
@@ -53,6 +50,8 @@ DSN_DEFINE_bool(replication,
                 "whether open the latency tracer report for metrics");
 DSN_TAG_VARIABLE(enable_latency_tracer_report, FT_MUTABLE);
 
+namespace dsn {
+namespace utils {
 namespace {
 
 #define LATENCY_TRACER_METRIC_ENTITY_ID(description, starting_point, end_point)                    \

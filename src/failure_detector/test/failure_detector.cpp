@@ -65,11 +65,10 @@
 #include "utils/zlocks.h"
 
 DSN_DECLARE_int32(max_succssive_unstable_restart);
+DSN_DECLARE_uint64(stable_rs_min_running_seconds);
 
 using namespace dsn;
 using namespace dsn::fd;
-
-DSN_DECLARE_uint64(stable_rs_min_running_seconds);
 
 #define MPORT_START 30001
 #define WPORT 40001

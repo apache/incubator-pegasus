@@ -34,8 +34,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace replication {
 // TODO(yingchun): add more description for string configs, and add validators
 DSN_DEFINE_string(meta_server,
                   meta_state_service_parameters,
@@ -53,6 +51,9 @@ DSN_DEFINE_string(meta_server,
                   replica_white_list,
                   "",
                   "white list of replica-servers in meta-server");
+
+namespace dsn {
+namespace replication {
 
 void meta_options::initialize()
 {

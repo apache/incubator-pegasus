@@ -53,8 +53,10 @@
 #include "utils/fmt_logging.h"
 #include "utils/time_utils.h"
 
-METRIC_DEFINE_entity(backup_policy);
+DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+DSN_DECLARE_int32(fd_lease_seconds);
 
+METRIC_DEFINE_entity(backup_policy);
 METRIC_DEFINE_gauge_int64(backup_policy,
                           backup_recent_duration_ms,
                           dsn::metric_unit::kMilliSeconds,
@@ -62,9 +64,6 @@ METRIC_DEFINE_gauge_int64(backup_policy,
 
 namespace dsn {
 namespace replication {
-
-DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
-DSN_DECLARE_int32(fd_lease_seconds);
 
 namespace {
 

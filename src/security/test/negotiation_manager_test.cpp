@@ -32,10 +32,11 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(mandatory_auth);
+
+namespace dsn {
+namespace security {
 
 class negotiation_manager_test : public testing::Test
 {

@@ -59,12 +59,6 @@
 #include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 
-namespace dsn {
-namespace replication {
-class replica;
-} // namespace replication
-} // namespace dsn
-
 METRIC_DEFINE_counter(replica,
                       get_requests,
                       dsn::metric_unit::kRequests,
@@ -249,9 +243,6 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kBytesPerSec,
                           "The through bytes per second that go through the rate limiter which "
                           "takes control of the write rate of flush and compaction of rocksdb");
-
-namespace pegasus {
-namespace server {
 
 DSN_DEFINE_int64(
     pegasus.server,
@@ -574,6 +565,13 @@ DSN_DEFINE_validator(rocksdb_filter_type, [](const char *value) -> bool {
     return dsn::utils::equals(value, "common") || dsn::utils::equals(value, "prefix");
 });
 
+namespace dsn {
+namespace replication {
+class replica;
+} // namespace replication
+} // namespace dsn
+namespace pegasus {
+namespace server {
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},

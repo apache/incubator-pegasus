@@ -58,7 +58,6 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kSessions,
                           "The number of sessions from server side");
 
-namespace dsn {
 DSN_DEFINE_uint32(network,
                   conn_threshold_per_ip,
                   0,
@@ -75,6 +74,7 @@ DSN_DEFINE_string(network,
                   "network interface name used to init primary ipv4 address, "
                   "if empty, means using a site local address");
 
+namespace dsn {
 /*static*/ join_point<void, rpc_session *>
     rpc_session::on_rpc_session_connected("rpc.session.connected");
 /*static*/ join_point<void, rpc_session *>

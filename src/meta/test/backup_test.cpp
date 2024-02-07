@@ -60,14 +60,14 @@
 #include "utils/time_utils.h"
 #include "utils/zlocks.h"
 
+DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+DSN_DECLARE_string(cluster_root);
+DSN_DECLARE_string(meta_state_service_type);
+
 namespace dsn {
 namespace replication {
 class meta_options;
 class mock_policy;
-
-DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
-DSN_DECLARE_string(cluster_root);
-DSN_DECLARE_string(meta_state_service_type);
 
 struct method_record
 {

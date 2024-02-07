@@ -73,6 +73,13 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 #include "utils/join_point.h"
 #include "utils/metrics.h"
 
+DSN_DEFINE_bool(task..default, is_profile, false, "whether to profile this kind of task");
+DSN_DEFINE_bool(task..default,
+                collect_call_count,
+                true,
+                "whether to collect how many time this kind of tasks invoke each of other kinds "
+                "tasks");
+
 METRIC_DEFINE_entity(profiler);
 
 METRIC_DEFINE_gauge_int64(profiler,
@@ -146,13 +153,6 @@ namespace dsn {
 struct service_spec;
 
 namespace tools {
-
-DSN_DEFINE_bool(task..default, is_profile, false, "whether to profile this kind of task");
-DSN_DEFINE_bool(task..default,
-                collect_call_count,
-                true,
-                "whether to collect how many time this kind of tasks invoke each of other kinds "
-                "tasks");
 
 typedef uint64_extension_helper<task_spec_profiler, task> task_ext_for_profiler;
 typedef uint64_extension_helper<task_spec_profiler, message_ex> message_ext_for_profiler;

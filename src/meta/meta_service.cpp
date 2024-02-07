@@ -69,27 +69,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-METRIC_DEFINE_counter(server,
-                      replica_server_disconnections,
-                      dsn::metric_unit::kDisconnections,
-                      "The number of disconnections with replica servers");
-
-METRIC_DEFINE_gauge_int64(server,
-                          unalive_replica_servers,
-                          dsn::metric_unit::kServers,
-                          "The number of unalive replica servers");
-
-METRIC_DEFINE_gauge_int64(server,
-                          alive_replica_servers,
-                          dsn::metric_unit::kServers,
-                          "The number of alive replica servers");
-
-namespace dsn {
-namespace dist {
 DSN_DECLARE_string(hosts_list);
-} // namespace dist
-
-namespace replication {
 DSN_DEFINE_bool(meta_server,
                 recover_from_replica_server,
                 false,
@@ -141,6 +121,24 @@ DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
 DSN_DECLARE_int32(fd_lease_seconds);
 DSN_DECLARE_string(cold_backup_root);
+
+METRIC_DEFINE_counter(server,
+                      replica_server_disconnections,
+                      dsn::metric_unit::kDisconnections,
+                      "The number of disconnections with replica servers");
+
+METRIC_DEFINE_gauge_int64(server,
+                          unalive_replica_servers,
+                          dsn::metric_unit::kServers,
+                          "The number of unalive replica servers");
+
+METRIC_DEFINE_gauge_int64(server,
+                          alive_replica_servers,
+                          dsn::metric_unit::kServers,
+                          "The number of alive replica servers");
+
+namespace dsn {
+namespace replication {
 
 #define CHECK_APP_ID_STATUS_AND_AUTHZ(app_id)                                                      \
     do {                                                                                           \
@@ -720,7 +718,7 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
     response.keys.push_back("primary_meta_server");
     response.values.push_back(dsn_primary_address().to_std_string());
     response.keys.push_back("zookeeper_hosts");
-    response.values.push_back(dsn::dist::FLAGS_hosts_list);
+    response.values.push_back(FLAGS_hosts_list);
     response.keys.push_back("zookeeper_root");
     response.values.push_back(_cluster_root);
     response.keys.push_back("meta_function_level");

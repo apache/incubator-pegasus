@@ -36,9 +36,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-namespace replication {
-
 // There is an option FLAGS_max_replicas_in_group which restricts the max replica count of the whole
 // cluster. It's a cluster-level option. However, now that it's allowed to update the replication
 // factor of each table, this cluster-level option should be replaced.
@@ -74,6 +71,9 @@ DSN_DEFINE_uint32(meta_server,
                   1,
                   "max reserved number allowed for dropped replicas");
 DSN_TAG_VARIABLE(max_reserved_dropped_replicas, FT_MUTABLE);
+
+namespace dsn {
+namespace replication {
 
 void when_update_replicas(config_type::type t, const std::function<void(bool)> &func)
 {

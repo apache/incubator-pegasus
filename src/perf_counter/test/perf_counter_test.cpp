@@ -41,15 +41,15 @@
 #include "utils/fmt_logging.h"
 #include "utils/shared_io_service.h"
 
-using namespace dsn;
-using namespace dsn::tools;
-
-const int count_times = 10000;
-
 DSN_DEFINE_int32(components.simple_perf_counter,
                  counter_computation_interval_seconds_for_testing,
                  3,
                  "period");
+
+using namespace dsn;
+using namespace dsn::tools;
+
+const int count_times = 10000;
 
 static void adder_function(perf_counter_ptr pc, int id, const std::vector<int> &vec)
 {

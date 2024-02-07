@@ -38,14 +38,14 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_int32(meta_server, max_replicas_in_group, 4, "max replicas(alive & dead) in a group");
 DSN_DEFINE_int64(meta_server,
                  replica_assign_delay_ms_for_dropouts,
                  300000,
                  "The delay milliseconds to dropout replicas assign");
+
+namespace dsn {
+namespace replication {
 
 partition_guardian::partition_guardian(meta_service *svc) : _svc(svc)
 {
