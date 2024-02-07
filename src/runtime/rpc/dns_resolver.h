@@ -26,6 +26,7 @@
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/errors.h"
 #include "utils/metrics.h"
+#include "utils/singleton.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
@@ -37,15 +38,18 @@ namespace dsn {
 // effect.
 // TODO(yingchun): Now the cache is unlimited, the cache size may be huge. Implement an expiration
 // mechanism to limit the cache size and make it possible to update the resolve result.
-class dns_resolver
+class dns_resolver : public utils::singleton<dns_resolver>
 {
 public:
-    explicit dns_resolver();
-
     // Resolve this host_port to an unique rpc_address.
     rpc_address resolve_address(const host_port &hp);
 
 private:
+    dns_resolver();
+    ~dns_resolver();
+
+    friend class utils::singleton<dns_resolver>;
+
     bool get_cached_addresses(const host_port &hp, std::vector<rpc_address> &addresses);
 
     error_s resolve_addresses(const host_port &hp, std::vector<rpc_address> &addresses);
