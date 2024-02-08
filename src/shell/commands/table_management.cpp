@@ -196,14 +196,10 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
                            entity.type);
         }
 
-        const auto &partition = entity.attributes.find("partition_id");
-        if (dsn_unlikely(partition == entity.attributes.end())) {
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "partition_id field was not found");
-        }
-
         int32_t partition_id;
-        if (dsn_unlikely(!dsn::buf2int32(partition->second, partition_id))) {
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid partition_id: {}", partition->second);
+        const auto err = dsn::parse_metric_partition_id(entity.attributes, partition_id);
+        if (!err) {
+            return err;
         }
 
         for (const auto &m : entity.metrics) {

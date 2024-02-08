@@ -390,9 +390,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        const auto &results_1 = get_metrics(nodes, rw_requests_filters().to_query_string());
+        const auto &results_start = get_metrics(nodes, rw_requests_filters().to_query_string());
         std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_nodes_sample_interval_ms));
-        const auto &results_2 = get_metrics(nodes, rw_requests_filters().to_query_string());
+        const auto &results_end = get_metrics(nodes, rw_requests_filters().to_query_string());
 
         for (size_t i = 0; i < nodes.size(); ++i) {
             auto tmp_it = tmp_map.find(nodes[i].address);
@@ -400,20 +400,20 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                 continue;
             }
 
-            RETURN_SHELL_IF_GET_METRICS_FAILED(results_1[i], nodes[i], "1st rw requests");
-            RETURN_SHELL_IF_GET_METRICS_FAILED(results_2[i], nodes[i], "2nd rw requests");
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results_start[i], nodes[i], "starting rw requests");
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending rw requests");
 
             list_nodes_helper &stat = tmp_it->second;
-            stat_var_map incs = {{"read_capacity_units", &stat.read_cu},
-                                 {"write_capacity_units", &stat.write_cu}};
+            stat_var_map increases = {{"read_capacity_units", &stat.read_cu},
+                                      {"write_capacity_units", &stat.write_cu}};
             stat_var_map rates = {{"get_requests", &stat.get_qps},
                                   {"multi_get_requests", &stat.multi_get_qps},
                                   {"batch_get_requests", &stat.batch_get_qps},
                                   {"put_requests", &stat.put_qps},
                                   {"multi_put_requests", &stat.multi_put_qps}};
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                calc_metric_deltas(
-                    results_1[i].body(), results_2[i].body(), "replica", incs, rates),
+                aggregate_metrics(
+                    results_start[i].body(), results_end[i].body(), "replica", increases, rates),
                 nodes[i],
                 "rw requests");
         }

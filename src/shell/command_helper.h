@@ -21,6 +21,7 @@
 
 #include <getopt.h>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <queue>
 #include <thread>
@@ -704,62 +705,129 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
         }                                                                                          \
     } while (0)
 
+using metric_attrs_filter =
+    std::function<dsn::error_s(const dsn::metric_entity::attr_map &, bool &)>;
+
 using stat_var_map = std::unordered_map<std::string, double *>;
-inline dsn::error_s calc_metric_deltas(const std::string &json_string_1,
-                                       const std::string &json_string_2,
-                                       const std::string &entity_type,
-                                       stat_var_map &incs,
-                                       stat_var_map &rates)
+
+inline dsn::error_s
+aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
+                  const dsn::metric_query_brief_value_snapshot &query_snapshot_end,
+                  const std::string &entity_type,
+                  const metric_attrs_filter &attrs_filter,
+                  stat_var_map &values,
+                  stat_var_map &increases,
+                  stat_var_map &rates)
 {
-    // Currently only Gauge and Counter are considered to have "increase" and "rate", thus brief
-    // `value` field is enough.
-    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_1, query_snapshot_1);
-    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_2, query_snapshot_2);
-
-    if (query_snapshot_2.timestamp_ns <= query_snapshot_1.timestamp_ns) {
-        return FMT_ERR(dsn::ERR_INVALID_DATA,
-                       "duration for metric samples should be > 0: timestamp_ns_1={}, "
-                       "timestamp_ns_2={}",
-                       query_snapshot_1.timestamp_ns,
-                       query_snapshot_2.timestamp_ns);
-    }
-
-    const std::vector<stat_var_map *> stat_vars = {&incs, &rates};
-
-#define CALC_STAT_VAR(op)                                                                          \
+#define CALC_STAT_VARS(stat_vars_list, entities, op)                                               \
     do {                                                                                           \
-        if (entity.type != entity_type) {                                                          \
-            continue;                                                                              \
-        }                                                                                          \
+        for (auto &stat_vars : stat_vars_list) {                                                   \
+            if (stat_vars->empty()) {                                                              \
+                continue;                                                                          \
+            }                                                                                      \
                                                                                                    \
-        for (const auto &m : entity.metrics) {                                                     \
-            for (auto &stat : stat_vars) {                                                         \
-                auto iter = stat->find(m.name);                                                    \
-                if (iter != stat->end()) {                                                         \
-                    *iter->second op m.value;                                                      \
+            for (const auto &entity : entities) {                                                  \
+                if (entity.type != entity_type) {                                                  \
+                    continue;                                                                      \
+                }                                                                                  \
+                                                                                                   \
+                bool matched = false;                                                              \
+                const auto &err = attrs_filter(entity.attributes, matched);                        \
+                if (!err) {                                                                        \
+                    return err;                                                                    \
+                }                                                                                  \
+                                                                                                   \
+                if (!matched) {                                                                    \
+                    continue;                                                                      \
+                }                                                                                  \
+                                                                                                   \
+                for (const auto &m : entity.metrics) {                                             \
+                    auto iter = stat_vars->find(m.name);                                           \
+                    if (iter != stat_vars->end()) {                                                \
+                        *iter->second op m.value;                                                  \
+                    }                                                                              \
                 }                                                                                  \
             }                                                                                      \
         }                                                                                          \
     } while (0)
 
-    for (const auto &entity : query_snapshot_2.entities) {
-        CALC_STAT_VAR(+=);
-    }
+    const std::array values_list = {&values};
+    CALC_STAT_VARS(values_list, query_snapshot_end.entities, =);
 
-    for (const auto &entity : query_snapshot_1.entities) {
-        CALC_STAT_VAR(-=);
-    }
+    const std::array deltas_list = {&increases, &rates};
+    CALC_STAT_VARS(deltas_list, query_snapshot_end.entities, +=);
+    CALC_STAT_VARS(deltas_list, query_snapshot_start.entities, -=);
 
-#undef CALC_STAT_VAR
+#undef CALC_STAT_VARS
 
     const std::chrono::duration<double, std::nano> duration_ns(
-        static_cast<double>(query_snapshot_2.timestamp_ns - query_snapshot_1.timestamp_ns));
+        static_cast<double>(query_snapshot_end.timestamp_ns - query_snapshot_start.timestamp_ns));
     const std::chrono::duration<double> duration_s = duration_ns;
     for (auto &rate : rates) {
         *rate.second /= duration_s.count();
     }
 
     return dsn::error_s::ok();
+}
+
+inline dsn::error_s aggregate_metrics(const std::string &json_string_start,
+                                      const std::string &json_string_end,
+                                      const std::string &entity_type,
+                                      stat_var_map &increases,
+                                      stat_var_map &rates)
+{
+    DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
+        json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
+
+    aggregate_metrics(
+        query_snapshot_start, query_snapshot_end, entity_type, {}, {}, increases, rates);
+}
+
+using table_stat_map = std::unordered_map<int32_t, stat_var_map>;
+
+inline dsn::error_s aggregate_metrics(const std::string &json_string_start,
+                                      const std::string &json_string_end,
+                                      const std::string &entity_type,
+                                      const int32_t &table_id,
+                                      const std::unordered_set &partition_ids,
+                                      stat_var_map &values,
+                                      stat_var_map &increases,
+                                      stat_var_map &rates)
+{
+    DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
+        json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
+
+    aggregate_metrics(
+        query_snapshot_start,
+        query_snapshot_end,
+        entity_type,
+        [table_id, &partition_ids](const dsn::metric_entity::attr_map &attrs, bool &matched) {
+            int32_t metric_table_id;
+            const auto err = dsn::parse_metric_partition_id(attrs, metric_table_id);
+            if (!err) {
+                return err;
+            }
+            if (metric_table_id != table_id) {
+                matched = false;
+                return dsn::error_s::ok();
+            }
+
+            int32_t metric_partition_id;
+            const auto err = dsn::parse_metric_partition_id(attrs, metric_partition_id);
+            if (!err) {
+                return err;
+            }
+            if (partition_ids.find(metric_partition_id) == partition_ids.end()) {
+                matched = false;
+                return dsn::error_s::ok();
+            }
+
+            matched = true;
+            return dsn::error_s::ok();
+        },
+        values,
+        increases,
+        rates);
 }
 
 inline std::vector<std::pair<bool, std::string>>

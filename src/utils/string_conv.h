@@ -173,4 +173,17 @@ inline bool buf2double(absl::string_view buf, double &result)
     result = v;
     return true;
 }
+
+inline bool buf2numeric(absl::string_view buf, int32_t &result) { return buf2int32(buf, result); }
+
+inline bool buf2numeric(absl::string_view buf, int64_t &result) { return buf2int64(buf, result); }
+
+inline bool buf2numeric(absl::string_view buf, uint16_t &result) { return buf2uint16(buf, result); }
+
+inline bool buf2numeric(absl::string_view buf, uint32_t &result) { return buf2uint32(buf, result); }
+
+inline bool buf2numeric(absl::string_view buf, uint64_t &result) { return buf2uint64(buf, result); }
+
+inline bool buf2numeric(absl::string_view buf, double &result) { return buf2double(buf, result); }
+
 } // namespace dsn
