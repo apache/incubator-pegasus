@@ -46,7 +46,7 @@ public:
 
 private:
     dns_resolver();
-    ~dns_resolver();
+    ~dns_resolver() = default;
 
     friend class utils::singleton<dns_resolver>;
 

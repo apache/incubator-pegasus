@@ -55,7 +55,7 @@ public:
     void set_leader(rpc_address addr);
     bool remove(rpc_address addr) WARN_UNUSED_RESULT;
     bool contains(rpc_address addr) const WARN_UNUSED_RESULT;
-    int count();
+    int count() const;
 
     const std::vector<rpc_address> &members() const { return _members; }
     rpc_address random_member() const
@@ -194,7 +194,7 @@ inline bool rpc_group_address::contains(rpc_address addr) const
     return _members.end() != std::find(_members.begin(), _members.end(), addr);
 }
 
-inline int rpc_group_address::count()
+inline int rpc_group_address::count() const
 {
     alr_t l(_lock);
     return _members.size();

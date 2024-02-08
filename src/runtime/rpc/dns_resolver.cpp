@@ -141,6 +141,4 @@ rpc_address dns_resolver::resolve_address(const host_port &hp)
     }
 }
 
-dns_resolver::~dns_resolver() { _dns_cache.clear(); }
-
 } // namespace dsn
