@@ -1724,6 +1724,16 @@ DEF_ALL_METRIC_BRIEF_SNAPSHOTS(p99);
         }                                                                                          \
     } while (0)
 
+inline double calc_metric_sample_duration_s(uint64_t timestamp_ns_start, uint64_t timestamp_ns_end)
+{
+    CHECK_LT(timestamp_ns_start, timestamp_ns_end);
+
+    const std::chrono::duration<double, std::nano> duration_ns(
+        static_cast<double>(timestamp_ns_end - timestamp_ns_start));
+    const std::chrono::duration<double> duration_s = duration_ns;
+    return duration_s.count();
+}
+
 template <typename TAttrValue,
           typename = typename std::enable_if<std::is_arithmetic<TAttrValue>::value>::type>
 inline error_s parse_metric_attribute(const metric_entity::attr_map &attrs,
