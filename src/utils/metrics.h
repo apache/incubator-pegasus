@@ -25,10 +25,12 @@
 #include <algorithm>
 #include <atomic>
 #include <bitset>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <new>
+#include <ratio>
 #include <set>
 #include <sstream>
 #include <string>
@@ -45,6 +47,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/casts.h"
 #include "utils/enum_helper.h"
+#include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 #include "utils/long_adder.h"
