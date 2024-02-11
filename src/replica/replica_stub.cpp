@@ -329,7 +329,7 @@ DSN_DEFINE_group_validator(encrypt_data_at_rest_pre_check, [](std::string &messa
 
 DSN_DEFINE_group_validator(encrypt_data_at_rest_with_kms_url, [](std::string &message) -> bool {
 #ifndef MOCK_TEST
-    if (FLAGS_encrypt_data_at_rest && utils::is_empty(FLAGS_hadoop_kms_url)) {
+    if (FLAGS_encrypt_data_at_rest && dsn::utils::is_empty(FLAGS_hadoop_kms_url)) {
         message = fmt::format("[security] hadoop_kms_url should not be empty when [pegasus.server] "
                               "encrypt_data_at_rest is enabled.");
         return false;
