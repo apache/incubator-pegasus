@@ -456,7 +456,6 @@ int pegasus_write_service::duplicate(int64_t decree,
             }
         }
 
-
         resp.__set_error(rocksdb::Status::kInvalidArgument);
         resp.__set_error_hint(fmt::format("unrecognized task code {}", request.task_code));
         return empty_put(ctx.decree);

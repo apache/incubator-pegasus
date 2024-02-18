@@ -93,7 +93,6 @@ DSN_DEFINE_bool("replication",
                 "doing duplication");
 DSN_TAG_VARIABLE(force_send_no_idempotent_when_duplication, FT_MUTABLE);
 
-
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_secondaries,
                  1000,
