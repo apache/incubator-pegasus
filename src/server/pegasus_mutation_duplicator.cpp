@@ -101,6 +101,22 @@ using namespace dsn::literals::chrono_literals;
         dsn::from_blob_to_thrift(data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
+    if (tc == dsn::apps::RPC_RRDB_RRDB_INCR) {
+        dsn::apps::incr_request thrift_request;
+        dsn::from_blob_to_thrift(data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.key);
+    }
+    if (tc == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+        dsn::apps::check_and_set_request thrift_request;
+        dsn::from_blob_to_thrift(data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.hash_key);
+    }
+    if (tc == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+        dsn::apps::check_and_mutate_request thrift_request;
+        dsn::from_blob_to_thrift(data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.hash_key);
+    }
+
     LOG_FATAL("unexpected task code: {}", tc);
     __builtin_unreachable();
 }

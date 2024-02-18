@@ -42,6 +42,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/link.h"
+#include "utils/flags.h"
 
 namespace dsn {
 class binary_reader;
@@ -53,6 +54,8 @@ class latency_tracer;
 } // namespace utils
 
 namespace replication {
+
+DSN_DECLARE_bool(force_send_no_idempotent_when_duplication);
 
 class mutation;
 

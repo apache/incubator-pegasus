@@ -86,6 +86,14 @@ DSN_DEFINE_bool(replication,
                 "reject client write requests if disk status is space insufficient");
 DSN_TAG_VARIABLE(reject_write_when_disk_insufficient, FT_MUTABLE);
 
+DSN_DEFINE_bool("replication",
+                force_send_no_idempotent_when_duplication,
+                false,
+                "receive client idempotent write requests and send them to backup cluster when "
+                "doing duplication");
+DSN_TAG_VARIABLE(force_send_no_idempotent_when_duplication, FT_MUTABLE);
+
+
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_secondaries,
                  1000,
@@ -154,7 +162,8 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    if (is_duplication_master() && !spec->rpc_request_is_write_idempotent) {
+    if (is_duplication_master() && !spec->rpc_request_is_write_idempotent &&
+        !FLAGS_force_send_no_idempotent_when_duplication) {
         // Ignore non-idempotent write, because duplication provides no guarantee of atomicity to
         // make this write produce the same result on multiple clusters.
         METRIC_VAR_INCREMENT(dup_rejected_non_idempotent_write_requests);
