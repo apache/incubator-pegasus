@@ -59,7 +59,7 @@ DSN_DEFINE_bool(replication,
 
 DSN_DEFINE_int32(replication,
                  checkpoint_interval_seconds,
-                 300,
+                 100,
                  "The interval in seconds to generate replica checkpoints. Note that "
                  "the checkpoint may not be generated when attempt");
 
