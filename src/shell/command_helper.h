@@ -758,27 +758,41 @@ protected:
     virtual void calc_rates(double duration_s) = 0;
 };
 
-inline dsn::error_s aggregate_metrics(const std::string &json_string_start,
-                                      const std::string &json_string_end,
-                                      aggregate_stats &values,
-                                      aggregate_stats &increases,
-                                      aggregate_stats &rates)
+struct aggregate_stats_calcs
 {
-    DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
-        json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
+    aggregate_stats_calcs() : sums(nullptr), increases(nullptr), rates(nullptr) {}
 
-    RETURN_NOT_OK(values.assign(query_snapshot_end.entities));
+    dsn::error_s aggregate_metrics(const std::string &json_string_start,
+                                   const std::string &json_string_end)
+    {
+        DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
+            json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
 
-    const std::array deltas_list = {&increases, &rates};
-    for (const auto stats : deltas_list) {
-        RETURN_NOT_OK(stats->add_assign(query_snapshot_end.entities));
-        RETURN_NOT_OK(stats->sub_assign(query_snapshot_start.entities));
+        if (sums != nullptr) {
+            RETURN_NOT_OK(sums->add_assign(query_snapshot_end.entities));
+        }
+
+        const std::array deltas_list = {increases, rates};
+        for (const auto stats : deltas_list) {
+            if (stats == nullptr) {
+                continue;
+            }
+
+            RETURN_NOT_OK(stats->add_assign(query_snapshot_end.entities));
+            RETURN_NOT_OK(stats->sub_assign(query_snapshot_start.entities));
+        }
+
+        if (rates != nullptr) {
+            rates->calc_rates(query_snapshot_start.timestamp_ns, query_snapshot_end.timestamp_ns);
+        }
+
+        return dsn::error_s::ok();
     }
 
-    rates.calc_rates(query_snapshot_start.timestamp_ns, query_snapshot_end.timestamp_ns);
-
-    return dsn::error_s::ok();
-}
+    aggregate_stats *sums;
+    aggregate_stats *increases;
+    aggregate_stats *rates;
+};
 
 class total_aggregate_stats : public aggregate_stats
 {
@@ -836,7 +850,7 @@ public:
                           std::unordered_set<dsn::gpid> &&partitions)
         : _my_entity_type(entity_type),
           _my_table_stats(std::move(table_stats)),
-          _my_partitions(partitions)
+          _my_partitions(std::move(partitions))
     {
     }
 
@@ -851,12 +865,14 @@ protected:
         RETURN_NULL_STAT_VARS_IF_NOT_OK(
             dsn::parse_metric_partition_id(entity_attrs, metric_table_id));
 
-        int32_t metric_partition_id;
-        RETURN_NULL_STAT_VARS_IF_NOT_OK(
-            dsn::parse_metric_partition_id(entity_attrs, metric_partition_id));
+        if (!_my_partitions.empty()) {
+            int32_t metric_partition_id;
+            RETURN_NULL_STAT_VARS_IF_NOT_OK(
+                dsn::parse_metric_partition_id(entity_attrs, metric_partition_id));
 
-        dsn::gpid metric_pid(metric_table_id, metric_partition_id);
-        RETURN_NULL_STAT_VARS_IF(_my_partitions.find(metric_pid) == _my_partitions.end());
+            dsn::gpid metric_pid(metric_table_id, metric_partition_id);
+            RETURN_NULL_STAT_VARS_IF(_my_partitions.find(metric_pid) == _my_partitions.end());
+        }
 
         const auto &table_stat = _my_table_stats.find(metric_table_id);
         CHECK_TRUE(table_stat != _my_table_stats.end());
@@ -1154,6 +1170,81 @@ struct row_data
     double rdb_read_amplification = 0;
 };
 
+inline dsn::metric_filters row_data_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"replica"};
+    filters.entity_metrics = {
+        "get_requests",
+        "multi_get_requests",
+        "batch_get_requests",
+        "put_requests",
+        "multi_put_requests",
+        "remove_requests",
+        "multi_remove_requests",
+        "incr_requests",
+        "check_and_set_requests",
+        "check_and_mutate_requests",
+        "scan_requests",
+        "dup_requests",
+        "dup_shipped_successful_requests",
+        "dup_shipped_failed_requests",
+        "dup_recent_lost_mutations",
+        "read_capacity_units",
+        "write_capacity_units",
+        "read_expired_values",
+        "read_filtered_values",
+        "abnormal_read_requests",
+    };
+    return filters;
+}
+
+#define BIND_ROW(metric_name, member)                                                              \
+    {                                                                                              \
+        #metric_name, &row.member                                                                  \
+    }
+
+inline stat_var_map create_sums(row_data &row)
+{
+    return stat_var_map({
+        BIND_ROW(dup_recent_lost_mutations, dup_recent_mutation_loss_count),
+    });
+}
+
+inline stat_var_map create_increases(row_data &row)
+{
+    return stat_var_map({
+        BIND_ROW(read_capacity_units, recent_read_cu),
+        BIND_ROW(write_capacity_units, recent_write_cu),
+        BIND_ROW(read_expired_values, recent_expire_count),
+        BIND_ROW(read_filtered_values, recent_filter_count),
+        BIND_ROW(abnormal_read_requests, recent_abnormal_count),
+    });
+}
+
+inline stat_var_map create_rates(row_data &row)
+{
+    return stat_var_map({
+        BIND_ROW(get_requests, get_qps),
+        BIND_ROW(multi_get_requests, multi_get_qps),
+        BIND_ROW(batch_get_requests, batch_get_qps),
+        BIND_ROW(put_requests, put_qps),
+        BIND_ROW(multi_put_requests, multi_put_qps),
+        BIND_ROW(remove_requests, remove_qps),
+        BIND_ROW(multi_remove_requests, multi_remove_qps),
+        BIND_ROW(incr_requests, incr_qps),
+        BIND_ROW(check_and_set_requests, check_and_set_qps),
+        BIND_ROW(check_and_mutate_requests, check_and_mutate_qps),
+        BIND_ROW(scan_requests, scan_qps),
+        BIND_ROW(dup_requests, duplicate_qps),
+        BIND_ROW(dup_shipped_successful_requests, dup_shipped_ops),
+        BIND_ROW(dup_shipped_failed_requests, dup_failed_shipping_ops),
+    });
+}
+
+#undef BIND_ROW
+
 inline bool
 update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, double value)
 {
@@ -1414,8 +1505,9 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
 {
     std::vector<::dsn::app_info> apps;
     std::vector<node_desc> nodes;
-    if (!get_apps_and_nodes(sc, apps, nodes))
+    if (!get_apps_and_nodes(sc, apps, nodes)) {
         return false;
+    }
 
     ::dsn::app_info *app_info = nullptr;
     if (!app_name.empty()) {
