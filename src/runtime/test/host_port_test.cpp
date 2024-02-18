@@ -230,10 +230,9 @@ TEST(host_port_test, transfer_rpc_address)
 
 TEST(host_port_test, dns_resolver)
 {
-    dns_resolver resolver;
     {
         host_port hp("localhost", 8080);
-        auto addr = resolver.resolve_address(hp);
+        const auto &addr = dns_resolver::instance().resolve_address(hp);
         ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == addr ||
                     rpc_address("127.0.1.1", 8080) == addr);
     }
@@ -248,8 +247,8 @@ TEST(host_port_test, dns_resolver)
         host_port hp2("localhost", 8081);
         g_hp->set_leader(hp2);
 
-        auto addr_grp = resolver.resolve_address(hp_grp);
-        auto g_addr = addr_grp.group_address();
+        const auto &addr_grp = dns_resolver::instance().resolve_address(hp_grp);
+        const auto *const g_addr = addr_grp.group_address();
 
         ASSERT_EQ(g_addr->is_update_leader_automatically(), g_hp->is_update_leader_automatically());
         ASSERT_STREQ(g_addr->name(), g_hp->name());
