@@ -38,11 +38,18 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-DSN_DEFINE_int32(meta_server, max_replicas_in_group, 4, "max replicas(alive & dead) in a group");
+DSN_DEFINE_int32(
+    meta_server,
+    max_replicas_in_group,
+    4,
+    "The maximum number of replicas retained in a replica group (alive + dead replicas)");
 DSN_DEFINE_int64(meta_server,
                  replica_assign_delay_ms_for_dropouts,
-                 300000,
-                 "The delay milliseconds to dropout replicas assign");
+                 600000,
+                 "The maximum time threshold for waiting for a secondary replica to re-join the "
+                 "cluster after it has been removed. If the secondary replica has not yet "
+                 "recovered beyond this time threshold, an attempt will be made to add new "
+                 "secondary replicas on other nodes");
 
 namespace dsn {
 namespace replication {

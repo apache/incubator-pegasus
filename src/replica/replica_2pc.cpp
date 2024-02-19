@@ -85,12 +85,14 @@ DSN_TAG_VARIABLE(reject_write_when_disk_insufficient, FT_MUTABLE);
 
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_secondaries,
-                 1000,
-                 "timeout (ms) for prepare message to secondaries in two phase commit");
+                 3000,
+                 "The timeout in millisecond for the primary replicas to send prepare requests to "
+                 "the secondaries in two phase commit");
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_potential_secondaries,
-                 3000,
-                 "timeout (ms) for prepare message to potential secondaries in two phase commit");
+                 5000,
+                 "The timeout in millisecond for the primary replicas to send prepare requests to "
+                 "the learners in two phase commit");
 DSN_DEFINE_int32(replication,
                  prepare_decree_gap_for_debug_logging,
                  10000,

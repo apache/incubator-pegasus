@@ -62,11 +62,16 @@
 
 /// The replica membership state periodical checking part of replica.
 
-DSN_DEFINE_bool(replication, group_check_disabled, false, "whether group check is disabled");
-DSN_DEFINE_int32(replication,
-                 group_check_interval_ms,
-                 10000,
-                 "every what period (ms) we check the replica healthness");
+DSN_DEFINE_bool(replication,
+                group_check_disabled,
+                false,
+                "Whether to disable the primary replicas to send group-check requests to "
+                "other replicas periodically");
+DSN_DEFINE_int32(
+    replication,
+    group_check_interval_ms,
+    100000,
+    "The interval in milliseconds for the primary replicas to send group-check requests");
 
 DSN_DECLARE_bool(empty_write_disabled);
 

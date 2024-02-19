@@ -83,8 +83,8 @@
 
 DSN_DEFINE_uint32(network,
                   io_service_worker_count,
-                  1,
-                  "thread number for io service (timer and boost network)");
+                  4,
+                  "The thread number of IO service (timer and boost network)");
 
 namespace dsn {
 class rpc_engine;

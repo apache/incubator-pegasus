@@ -49,16 +49,21 @@
 DSN_DEFINE_int32(meta_server,
                  max_succssive_unstable_restart,
                  5,
-                 "meta server will treat a rs unstable so as to reject it is beacons if "
-                 "its successively restarting count exceeds this value.");
+                 "The maximum number of times a ReplicaServer can be disconnected. If the number "
+                 "of a ReplicaServer disconnects exceeds this threshold, MetaServer will add it to "
+                 "the blacklist to avoid instability caused by frequent reconnection");
 DSN_DEFINE_uint64(meta_server,
                   stable_rs_min_running_seconds,
                   600,
-                  "The minimal running seconds for a stable replica server");
+                  "The time threshold for determining whether a ReplicaServer is running stably");
 DSN_DEFINE_string(meta_server,
                   distributed_lock_service_type,
+#ifdef MOCK_TEST
                   "distributed_lock_service_simple",
-                  "dist lock provider");
+#else
+                  "distributed_lock_service_zookeeper",
+#endif
+                  "The implementation class of distributed lock service");
 
 namespace dsn {
 namespace replication {

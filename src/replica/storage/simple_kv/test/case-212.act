@@ -85,7 +85,6 @@ state:{{r1,pri,2,20,5},{r2,sec,2,20,5}}
 #                    (1)
 #   learn        :    |-->
 #
-#   private_log is in memory because log_private_batch_buffer_kb=4
 client:replica_config:receiver=r1,type=add_secondary,node=r3
 config:{3,r1,[r2,r3]}
 state:{{r1,pri,3,20},{r2,sec,3,20},{r3,sec,3,20}}

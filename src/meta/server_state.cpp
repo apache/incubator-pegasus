@@ -117,7 +117,7 @@ DSN_DEFINE_group_validator(min_max_allowed_replica_count, [](std::string &messag
 DSN_DEFINE_int32(meta_server,
                  hold_seconds_for_dropped_app,
                  604800,
-                 "how long to hold data for dropped apps");
+                 "Default time in seconds to reserve the data of deleted tables");
 DSN_DEFINE_int32(meta_server,
                  add_secondary_max_count_for_one_node,
                  10,
@@ -425,19 +425,28 @@ error_code server_state::initialize_default_apps()
 
             // TODO(yingchun): the old configuration launch methods should be kept to launch repeat
             //  configs.
-            default_app.app_name = dsn_config_get_value_string(s, "app_name", "", "app name");
+            default_app.app_name = dsn_config_get_value_string(s, "app_name", "", "Table name");
             if (default_app.app_name.length() == 0) {
                 LOG_WARNING("'[{}] app_name' not specified, ignore this section", s);
                 continue;
             }
 
-            default_app.app_type = dsn_config_get_value_string(s, "app_type", "", "app type name");
-            default_app.partition_count = (int)dsn_config_get_value_uint64(
-                s, "partition_count", 1, "how many partitions the app should have");
-            default_app.is_stateful =
-                dsn_config_get_value_bool(s, "stateful", true, "whether this is a stateful app");
+            default_app.app_type = dsn_config_get_value_string(
+                s,
+                "app_type",
+                "",
+                "The storage engine type, 'pegasus' represents the storage engine based on "
+                "Rocksdb. Currently, only 'pegasus' is available");
+            default_app.partition_count =
+                (int)dsn_config_get_value_uint64(s, "partition_count", 1, "Partition count");
+            // TODO(yingchun): always true, remove it.
+            default_app.is_stateful = dsn_config_get_value_bool(
+                s,
+                "stateful",
+                true,
+                "Whether this is a stateful table, it must be true if 'app_type = pegasus'");
             default_app.max_replica_count = (int)dsn_config_get_value_uint64(
-                s, "max_replica_count", 3, "max replica count in app");
+                s, "max_replica_count", 3, "The maximum replica count of each partition");
             default_app.create_second = dsn_now_ms() / 1000;
             std::string envs_str = dsn_config_get_value_string(s, "envs", "", "app envs");
             bool parse = dsn::utils::parse_kv_map(envs_str.c_str(), default_app.envs, ',', '=');

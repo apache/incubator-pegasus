@@ -49,27 +49,29 @@ DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled"
 DSN_DEFINE_int32(replication,
                  mutation_2pc_min_replica_count,
                  2,
-                 "minimum number of alive replicas under which write is allowed. it's valid if "
-                 "larger than 0, otherwise, the final value is based on app_max_replica_count");
-DSN_DEFINE_int32(
-    replication,
-    gc_interval_ms,
-    30 * 1000,
-    "every what period (ms) we do replica stat. The name contains 'gc' is for legacy reason.");
+                 "The minimum number of ALIVE replicas under which write is allowed. It's valid if "
+                 "larger than 0, otherwise, the final value is based on 'app_max_replica_count'");
+DSN_DEFINE_int32(replication,
+                 gc_interval_ms,
+                 30 * 1000,
+                 "The interval milliseconds to do replica statistics. The name contains 'gc' is "
+                 "for legacy reason");
 DSN_DEFINE_int32(replication,
                  fd_check_interval_seconds,
                  2,
-                 "every this period(seconds) the FD will check healthness of remote peers");
+                 "The interval seconds of failure detector to check healthness of remote peers");
 DSN_DEFINE_int32(replication,
                  fd_beacon_interval_seconds,
                  3,
-                 "every this period(seconds) the FD sends beacon message to remote peers");
-DSN_DEFINE_int32(replication, fd_lease_seconds, 9, "lease (seconds) get from remote FD master");
+                 "The interval seconds of failure detector to send beacon message to remote peers");
+DSN_DEFINE_int32(replication,
+                 fd_lease_seconds,
+                 20,
+                 "The lease in seconds get from remote FD master");
 DSN_DEFINE_int32(replication,
                  fd_grace_seconds,
-                 10,
-                 "grace (seconds) assigned to remote FD slaves (grace > lease)");
-
+                 22,
+                 "The grace in seconds assigned to remote FD slaves");
 DSN_DEFINE_int32(replication,
                  cold_backup_checkpoint_reserve_minutes,
                  10,
@@ -82,20 +84,25 @@ DSN_DEFINE_int32(replication,
 DSN_DEFINE_bool(replication,
                 empty_write_disabled,
                 false,
-                "whether to disable empty write, default is false");
+                "Whether to disable the function of primary replicas periodically "
+                "generating empty write operations to check the group status");
 DSN_TAG_VARIABLE(empty_write_disabled, FT_MUTABLE);
 
 DSN_DEFINE_string(replication,
                   slog_dir,
                   "",
-                  "The shared log directory. Deprecated since Pegasus "
-                  "2.6.0, but leave it and do not modify the value if "
-                  "upgrading from older versions.");
-DSN_DEFINE_string(replication, data_dirs, "", "replica directory list");
+                  "The shared log directory. Deprecated since Pegasus 2.6.0, but "
+                  "leave it and do not modify the value if upgrading from older versions.");
+DSN_DEFINE_string(replication,
+                  data_dirs,
+                  "",
+                  "A list of directories for replica data storage, it is recommended to "
+                  "configure one item per disk. 'tag' is the tag name of the directory");
 DSN_DEFINE_string(replication,
                   data_dirs_black_list_file,
                   "/home/work/.pegasus_data_dirs_black_list",
-                  "replica directory black list file");
+                  "Blacklist file, where each line is a path that needs to be ignored, mainly used "
+                  "to filter out bad drives");
 DSN_DEFINE_string(replication,
                   cold_backup_root,
                   "",

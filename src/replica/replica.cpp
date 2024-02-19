@@ -63,15 +63,15 @@
 DSN_DEFINE_bool(replication,
                 batch_write_disabled,
                 false,
-                "whether to disable auto-batch of replicated write requests");
+                "Whether to disable auto-batch of replicated write requests");
 DSN_DEFINE_int32(replication,
                  staleness_for_commit,
-                 10,
-                 "how many concurrent two phase commit rounds are allowed");
+                 20,
+                 "The maximum number of two-phase commit rounds are allowed");
 DSN_DEFINE_int32(replication,
                  max_mutation_count_in_prepare_list,
                  110,
-                 "maximum number of mutations in prepare list");
+                 "The maximum number of mutations allowed in prepare list");
 DSN_DEFINE_group_validator(max_mutation_count_in_prepare_list, [](std::string &message) -> bool {
     if (FLAGS_max_mutation_count_in_prepare_list < FLAGS_staleness_for_commit) {
         message = fmt::format("replication.max_mutation_count_in_prepare_list({}) should be >= "
