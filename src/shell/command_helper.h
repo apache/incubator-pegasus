@@ -714,7 +714,7 @@ class aggregate_stats
 public:
     aggregate_stats() = default;
 
-    ~aggregate_stats() = default;
+    virtual ~aggregate_stats() = default;
 
 #define CALC_STAT_VARS(entities, op)                                                               \
     for (const auto &entity : entities) {                                                          \
@@ -886,7 +886,7 @@ public:
     {
     }
 
-    ~table_aggregate_stats() = default;
+    ~table_aggregate_stats() override = default;
 
 protected:
     dsn::error_s get_stat_vars(const std::string &entity_type,
@@ -899,6 +899,8 @@ protected:
         RETURN_NULL_STAT_VARS_IF_NOT_OK(
             dsn::parse_metric_partition_id(entity_attrs, metric_table_id));
 
+        // Empty `_my_partitions` means there is no restriction; otherwise, the partition id
+        // should be found in `_my_partitions`.
         if (!_my_partitions.empty()) {
             int32_t metric_partition_id;
             RETURN_NULL_STAT_VARS_IF_NOT_OK(
@@ -942,7 +944,7 @@ public:
     {
     }
 
-    ~partition_aggregate_stats() = default;
+    ~partition_aggregate_stats() override = default;
 
 protected:
     dsn::error_s get_stat_vars(const std::string &entity_type,
