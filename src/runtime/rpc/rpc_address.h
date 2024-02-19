@@ -61,7 +61,6 @@ namespace dsn {
 using AddrInfo = std::unique_ptr<addrinfo, std::function<void(addrinfo *)>>;
 
 class rpc_group_address;
-class test_client;
 
 class rpc_address
 {
