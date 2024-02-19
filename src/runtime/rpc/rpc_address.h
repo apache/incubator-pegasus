@@ -90,7 +90,7 @@ public:
     static bool is_docker_netcard(const char *netcard_interface, uint32_t ip_net);
     static bool is_site_local_address(uint32_t ip_net);
     // TODO(yingchun): Use dsn_resolver to resolve hostname.
-    static uint32_t ipv4_from_host(const char *hostname);
+    static error_s ipv4_from_host(const char *hostname, uint32_t *ip);
     static uint32_t ipv4_from_network_interface(const char *network_interface);
     static error_s GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo *info);
 

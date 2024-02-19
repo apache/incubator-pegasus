@@ -245,3 +245,9 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
             return dsn::error_s::make(code, fmt::format(__VA_ARGS__));                             \
         }                                                                                          \
     } while (false)
+
+#ifndef NDEBUG
+#define DCHECK_OK CHECK_OK
+#else
+#define DCHECK_OK(s, ...)
+#endif

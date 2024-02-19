@@ -43,7 +43,7 @@ host_port::host_port(std::string host, uint16_t port)
     : _host(std::move(host)), _port(port), _type(HOST_TYPE_IPV4)
 {
     // ipv4_from_host may be slow, just call it in DEBUG version.
-    DCHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
+    DCHECK_OK(rpc_address::ipv4_from_host(_host.c_str(), nullptr), "invalid hostname: {}", _host);
 }
 
 host_port host_port::from_address(rpc_address addr)
@@ -86,7 +86,8 @@ host_port host_port::from_string(const std::string &host_port_str)
         return hp;
     }
 
-    if (dsn_unlikely(rpc_address::ipv4_from_host(hp._host.c_str()) == 0)) {
+    // Validate the hostname.
+    if (dsn_unlikely(!rpc_address::ipv4_from_host(hp._host.c_str(), nullptr).is_ok())) {
         return hp;
     }
 

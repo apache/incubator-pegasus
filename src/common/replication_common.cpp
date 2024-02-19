@@ -198,7 +198,7 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
     for (const auto &host_port : host_ports) {
         auto addr = dsn::rpc_address::from_host_port(host_port);
         if (!addr) {
-            LOG_ERROR("invalid address '{}' specified in config [{}].{}", host_port, section, key);
+            LOG_ERROR("invalid address '{}' specified in config [{}]{}", host_port, section, key);
             return false;
         }
         servers.push_back(addr);

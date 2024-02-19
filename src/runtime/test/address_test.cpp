@@ -25,8 +25,11 @@
  */
 
 #include <fmt/core.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <stdint.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <set>
 #include <string>
 #include <utility>
@@ -35,6 +38,7 @@
 #include "gtest/gtest.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_address.h"
+#include "utils/errors.h"
 
 namespace dsn {
 
@@ -50,13 +54,46 @@ static inline uint32_t host_ipv4(uint8_t sec1, uint8_t sec2, uint8_t sec3, uint8
 
 TEST(rpc_address_test, rpc_address_ipv4_from_host)
 {
-    // localhost --> 127.0.0.1
-    // on some systems "localhost" could be "127.0.1.1" (debian)
-    ASSERT_TRUE(host_ipv4(127, 0, 0, 1) == rpc_address::ipv4_from_host("localhost") ||
-                host_ipv4(127, 0, 1, 1) == rpc_address::ipv4_from_host("localhost"));
+    struct resolve_test
+    {
+        std::string hostname;
+        bool valid;
+        std::set<uint32_t> expect_ips;
 
-    // 127.0.0.1 --> 127.0.0.1
-    ASSERT_EQ(host_ipv4(127, 0, 0, 1), rpc_address::ipv4_from_host("127.0.0.1"));
+        resolve_test(std::string hn, bool v, std::set<uint32_t> expects)
+            : hostname(std::move(hn)), valid(v), expect_ips(std::move(expects))
+        {
+        }
+    };
+
+    const resolve_test tests[] = {
+        {"127.0.0.1", true, {host_ipv4(127, 0, 0, 1)}},
+        {"0.0.0.0", true, {host_ipv4(0, 0, 0, 0)}},
+        // on some systems "localhost" could be "127.0.1.1" (debian)
+        {"localhost", true, {host_ipv4(127, 0, 0, 1), host_ipv4(127, 0, 1, 1)}},
+        {"whatthefuckyoucanhavesuchahostname", false, {}}};
+
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    for (const auto &test : tests) {
+        // Check ipv4_from_host()
+        uint32_t ip;
+        ASSERT_EQ(test.valid, rpc_address::ipv4_from_host(test.hostname.c_str(), &ip).is_ok());
+
+        // Check GetAddrInfo()
+        AddrInfo result;
+        ASSERT_EQ(test.valid, rpc_address::GetAddrInfo(test.hostname, hints, &result).is_ok())
+            << test.hostname;
+        if (test.valid) {
+            ASSERT_GT(test.expect_ips.count(ip), 0) << test.hostname;
+
+            ASSERT_EQ(result.get()->ai_family, AF_INET);
+            auto *ipv4 = reinterpret_cast<struct sockaddr_in *>(result.get()->ai_addr);
+            ASSERT_GT(test.expect_ips.count(ntohl(ipv4->sin_addr.s_addr)), 0) << test.hostname;
+        }
+    }
 }
 
 TEST(rpc_address_test, rpc_address_ipv4_from_network_interface)
@@ -280,6 +317,7 @@ TEST(rpc_address_test, from_host_port)
         {"127.0.0.1:8080", true},
         {"127.0.0.1:", false},
         {"172.16.254.1:1234", true},
+        {"0.0.0.0:1234", {"0.0.0.0:1234"}, true, true},
         {"172.16.254.1:222222", false},
         {"172.16.254.1", false},
         {"2222,123,33,1:8080", false},
@@ -356,6 +394,7 @@ TEST(rpc_address_test, from_host_port2)
         {"172.16.254.1:", 1234, false},
         {"2222,123,33,1", 8080, false},
         {"123.456.789.1", 8080, false},
+        {"0.0.0.0", 1234, {"0.0.0.0:1234"}, true, true},
         // "001.223.110.002" can be resolved by host, but not by IP.
         {"001.223.110.002", 8080, {"1.223.110.2:8080"}, false, true},
         {"127.0.0.11", 123, true},

@@ -112,20 +112,21 @@ rpc_address::rpc_address(const rpc_address &another) { *this = another; }
 rpc_address::~rpc_address() { set_invalid(); }
 
 /*static*/
-uint32_t rpc_address::ipv4_from_host(const char *hostname)
+error_s rpc_address::ipv4_from_host(const char *hostname, uint32_t *ip)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     AddrInfo result;
-    if (dsn_unlikely(!GetAddrInfo(hostname, hints, &result).is_ok())) {
-        return 0;
-    }
+    RETURN_NOT_OK(GetAddrInfo(hostname, hints, &result));
     CHECK_EQ(result.get()->ai_family, AF_INET);
     auto *ipv4 = reinterpret_cast<struct sockaddr_in *>(result.get()->ai_addr);
     // converts from network byte order to host byte order
-    return ntohl(ipv4->sin_addr.s_addr);
+    if (ip != nullptr) {
+        *ip = ntohl(ipv4->sin_addr.s_addr);
+    }
+    return error_s::ok();
 }
 
 /*static*/
@@ -300,8 +301,8 @@ rpc_address rpc_address::from_host_port(std::string_view host_port)
 
 rpc_address rpc_address::from_host_port(std::string_view hostname, uint16_t port)
 {
-    uint32_t ip = ipv4_from_host(hostname.data());
-    if (dsn_unlikely(ip == 0)) {
+    uint32_t ip = 0;
+    if (!ipv4_from_host(hostname.data(), &ip).is_ok()) {
         return {};
     }
 
