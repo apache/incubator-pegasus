@@ -896,8 +896,7 @@ protected:
         RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
 
         int32_t metric_table_id;
-        RETURN_NULL_STAT_VARS_IF_NOT_OK(
-            dsn::parse_metric_partition_id(entity_attrs, metric_table_id));
+        RETURN_NULL_STAT_VARS_IF_NOT_OK(dsn::parse_metric_table_id(entity_attrs, metric_table_id));
 
         // Empty `_my_partitions` means there is no restriction; otherwise, the partition id
         // should be found in `_my_partitions`.
@@ -954,8 +953,7 @@ protected:
         RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
 
         int32_t metric_table_id;
-        RETURN_NULL_STAT_VARS_IF_NOT_OK(
-            dsn::parse_metric_partition_id(entity_attrs, metric_table_id));
+        RETURN_NULL_STAT_VARS_IF_NOT_OK(dsn::parse_metric_table_id(entity_attrs, metric_table_id));
 
         int32_t metric_partition_id;
         RETURN_NULL_STAT_VARS_IF_NOT_OK(
@@ -1292,6 +1290,8 @@ inline stat_var_map create_rates(row_data &row)
     });
 }
 
+#undef BIND_ROW
+
 inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs(
     const std::map<int32_t, std::vector<dsn::partition_configuration>> &table_partitions,
     const std::map<int32_t, size_t> &table_rows,
@@ -1312,7 +1312,7 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
         CHECK_LT(table_row->second, rows.size());
 
         auto &row = rows[table_row->second];
-        std::vector<std::pair<table_stat_map *, std::function<stat_var_map(row_data &)>>>
+        const std::vector<std::pair<table_stat_map *, std::function<stat_var_map(row_data &)>>>
             processors = {
                 {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
             };
@@ -1335,8 +1335,6 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
     calcs->create_rates<table_aggregate_stats>(entity_type, std::move(rates), partitions);
     return calcs;
 }
-
-#undef BIND_ROW
 
 inline bool
 update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, double value)
