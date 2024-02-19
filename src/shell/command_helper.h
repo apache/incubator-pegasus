@@ -23,8 +23,10 @@
 #include <fstream>
 #include <functional>
 #include <iomanip>
+#include <memory>
 #include <queue>
 #include <thread>
+#include <utility>
 
 #include <boost/algorithm/string.hpp>
 #include <fmt/ostream.h>
@@ -710,6 +712,10 @@ using stat_var_map = std::unordered_map<std::string, double *>;
 class aggregate_stats
 {
 public:
+    aggregate_stats() = default;
+
+    ~aggregate_stats() = default;
+
 #define CALC_STAT_VARS(entities, op)                                                               \
     for (const auto &entity : entities) {                                                          \
         stat_var_map *stat_vars = nullptr;                                                         \
@@ -758,9 +764,28 @@ protected:
     virtual void calc_rates(double duration_s) = 0;
 };
 
-struct aggregate_stats_calcs
+class aggregate_stats_calcs
 {
-    aggregate_stats_calcs() : sums(nullptr), increases(nullptr), rates(nullptr) {}
+public:
+    aggregate_stats_calcs() noexcept = default;
+
+    ~aggregate_stats_calcs() = default;
+
+    aggregate_stats_calcs(aggregate_stats_calcs &&) noexcept = default;
+    aggregate_stats_calcs &operator=(aggregate_stats_calcs &&) noexcept = default;
+
+#define DEF_CALC_CREATOR(name)                                                                     \
+    template <typename T, typename... Args>                                                        \
+    void create_##name(Args &&... args)                                                            \
+    {                                                                                              \
+        _##name = std::make_unique<T>(std::forward<Args>(args)...);                                \
+    }
+
+    DEF_CALC_CREATOR(sums)
+    DEF_CALC_CREATOR(increases)
+    DEF_CALC_CREATOR(rates)
+
+#undef DEF_CALC_CREATOR
 
     dsn::error_s aggregate_metrics(const std::string &json_string_start,
                                    const std::string &json_string_end)
@@ -768,30 +793,33 @@ struct aggregate_stats_calcs
         DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
             json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
 
-        if (sums != nullptr) {
-            RETURN_NOT_OK(sums->add_assign(query_snapshot_end.entities));
+        if (_sums) {
+            RETURN_NOT_OK(_sums->add_assign(query_snapshot_end.entities));
         }
 
-        const std::array deltas_list = {increases, rates};
+        const std::array deltas_list = {&_increases, &_rates};
         for (const auto stats : deltas_list) {
-            if (stats == nullptr) {
+            if (*stats) {
                 continue;
             }
 
-            RETURN_NOT_OK(stats->add_assign(query_snapshot_end.entities));
-            RETURN_NOT_OK(stats->sub_assign(query_snapshot_start.entities));
+            RETURN_NOT_OK((*stats)->add_assign(query_snapshot_end.entities));
+            RETURN_NOT_OK((*stats)->sub_assign(query_snapshot_start.entities));
         }
 
-        if (rates != nullptr) {
-            rates->calc_rates(query_snapshot_start.timestamp_ns, query_snapshot_end.timestamp_ns);
+        if (_rates) {
+            _rates->calc_rates(query_snapshot_start.timestamp_ns, query_snapshot_end.timestamp_ns);
         }
 
         return dsn::error_s::ok();
     }
 
-    aggregate_stats *sums;
-    aggregate_stats *increases;
-    aggregate_stats *rates;
+private:
+    DISALLOW_COPY_AND_ASSIGN(aggregate_stats_calcs);
+
+    std::unique_ptr<aggregate_stats> _sums;
+    std::unique_ptr<aggregate_stats> _increases;
+    std::unique_ptr<aggregate_stats> _rates;
 };
 
 class total_aggregate_stats : public aggregate_stats
@@ -801,6 +829,8 @@ public:
         : _my_entity_type(entity_type), _my_stat_vars(std::move(stat_vars))
     {
     }
+
+    ~total_aggregate_stats() = default;
 
 protected:
     dsn::error_s get_stat_vars(const std::string &entity_type,
@@ -819,6 +849,8 @@ protected:
     }
 
 private:
+    DISALLOW_COPY_AND_ASSIGN(total_aggregate_stats);
+
     const std::string _my_entity_type;
     stat_var_map _my_stat_vars;
 };
@@ -847,12 +879,14 @@ class table_aggregate_stats : public aggregate_stats
 public:
     table_aggregate_stats(const std::string &entity_type,
                           table_stat_map &&table_stats,
-                          std::unordered_set<dsn::gpid> &&partitions)
+                          const std::unordered_set<dsn::gpid> &partitions)
         : _my_entity_type(entity_type),
           _my_table_stats(std::move(table_stats)),
           _my_partitions(std::move(partitions))
     {
     }
+
+    ~table_aggregate_stats() = default;
 
 protected:
     dsn::error_s get_stat_vars(const std::string &entity_type,
@@ -891,6 +925,8 @@ protected:
     }
 
 private:
+    DISALLOW_COPY_AND_ASSIGN(table_aggregate_stats);
+
     const std::string _my_entity_type;
     table_stat_map _my_table_stats;
     std::unordered_set<dsn::gpid> _my_partitions;
@@ -905,6 +941,8 @@ public:
         : _my_entity_type(entity_type), _my_partition_stats(std::move(partition_stats))
     {
     }
+
+    ~partition_aggregate_stats() = default;
 
 protected:
     dsn::error_s get_stat_vars(const std::string &entity_type,
@@ -939,6 +977,8 @@ protected:
     }
 
 private:
+    DISALLOW_COPY_AND_ASSIGN(partition_aggregate_stats);
+
     const std::string _my_entity_type;
     partition_stat_map _my_partition_stats;
 };
@@ -1200,6 +1240,13 @@ inline dsn::metric_filters row_data_filters()
     return filters;
 }
 
+inline dsn::metric_filters row_data_filters(int32_t table_id)
+{
+    auto filters = row_data_filters();
+    filters.entity_attrs = {"table_id", std::to_string(table_id)};
+    return filters;
+}
+
 #define BIND_ROW(metric_name, member)                                                              \
     {                                                                                              \
         #metric_name, &row.member                                                                  \
@@ -1241,6 +1288,50 @@ inline stat_var_map create_rates(row_data &row)
         BIND_ROW(dup_shipped_successful_requests, dup_shipped_ops),
         BIND_ROW(dup_shipped_failed_requests, dup_failed_shipping_ops),
     });
+}
+
+inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs(
+    const std::map<int32_t, std::vector<dsn::partition_configuration>> &table_partitions,
+    const std::map<int32_t, size_t> &table_rows,
+    const dsn::rpc_address &node,
+    const std::string &entity_type,
+    std::vector<row_data> &rows)
+{
+    table_stat_map sums;
+    table_stat_map increases;
+    table_stat_map rates;
+    std::unordered_set<dsn::gpid> partitions;
+    for (const auto &table : table_partitions) {
+        const auto &table_id = table.first;
+        const auto &table_row = table_rows.find(table_id);
+        CHECK(table_row != table_rows.end(),
+              "table could not be found in table_rows: table_id={}",
+              table_id);
+        CHECK_LT(table_row->second, rows.size());
+
+        auto &row = rows[table_row->second];
+        std::vector<std::pair<table_stat_map *, std::function<stat_var_map(row_data &)>>>
+            processors = {
+                {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
+            };
+        for (auto &processor : processors) {
+            processor.first->emplace(table_id, processor.second(row));
+        }
+
+        for (const auto &partition : table.second) {
+            if (partition.primary != node) {
+                continue;
+            }
+
+            partitions.insert(partition.pid);
+        }
+    }
+
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_sums<table_aggregate_stats>(entity_type, std::move(sums), partitions);
+    calcs->create_increases<table_aggregate_stats>(entity_type, std::move(increases), partitions);
+    calcs->create_rates<table_aggregate_stats>(entity_type, std::move(rates), partitions);
+    return calcs;
 }
 
 #undef BIND_ROW
@@ -1500,8 +1591,10 @@ inline bool get_app_partition_stat(shell_context *sc,
     return true;
 }
 
-inline bool
-get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_data> &rows)
+inline bool get_app_stat(shell_context *sc,
+                         const std::string &app_name,
+                         uint32_t sample_interval_ms,
+                         std::vector<row_data> &rows)
 {
     std::vector<::dsn::app_info> apps;
     std::vector<node_desc> nodes;
@@ -1535,41 +1628,38 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         call_remote_command(sc, nodes, "perf-counters", arguments);
 
     if (app_name.empty()) {
-        std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
-        if (!get_app_partitions(sc, apps, app_partitions))
-            return false;
+        const auto &results_start = get_metrics(nodes, row_data_filters().to_query_string());
+        std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+        const auto &results_end = get_metrics(nodes, row_data_filters().to_query_string());
 
-        rows.resize(app_partitions.size());
-        int idx = 0;
-        std::map<int32_t, int> app_row_idx; // app_id --> row_idx
-        for (::dsn::app_info &app : apps) {
+        std::map<int32_t, std::vector<dsn::partition_configuration>> table_partitions;
+        if (!get_app_partitions(sc, apps, table_partitions)) {
+            return false;
+        }
+
+        rows.resize(table_partitions.size());
+        size_t idx = 0;
+        std::map<int32_t, size_t> table_rows; // app_id --> row_idx
+        for (const auto &app : apps) {
             rows[idx].row_name = app.app_name;
             rows[idx].app_id = app.app_id;
             rows[idx].partition_count = app.partition_count;
-            app_row_idx[app.app_id] = idx;
+            table_rows[app.app_id] = idx;
             idx++;
         }
 
-        for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            dsn::perf_counter_info info;
-            if (!decode_node_perf_counter_info(node_addr, results[i], info))
-                return false;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                int32_t app_id_x, partition_index_x;
-                std::string counter_name;
-                if (!parse_app_pegasus_perf_counter_name(
-                        m.name, app_id_x, partition_index_x, counter_name)) {
-                    continue;
-                }
-                auto find = app_partitions.find(app_id_x);
-                if (find == app_partitions.end())
-                    continue;
-                dsn::partition_configuration &pc = find->second[partition_index_x];
-                if (pc.primary != node_addr)
-                    continue;
-                update_app_pegasus_perf_counter(rows[app_row_idx[app_id_x]], counter_name, m.value);
-            }
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            RETURN_SHELL_IF_GET_METRICS_FAILED(
+                results_start[i], nodes[i], "starting row data requests");
+            RETURN_SHELL_IF_GET_METRICS_FAILED(
+                results_end[i], nodes[i], "ending row data requests");
+
+            auto calcs = create_table_aggregate_stats_calcs(
+                table_partitions, table_rows, nodes[i].address, "replica", rows);
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+                calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
+                nodes[i],
+                "row data requests");
         }
     } else {
         rows.resize(app_info->partition_count);

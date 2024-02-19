@@ -53,6 +53,8 @@
 #include "utils/strings.h"
 #include "utils/utils.h"
 
+DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
+
 double convert_to_ratio(double hit, double total)
 {
     return std::abs(total) < 1e-6 ? 0 : hit / total;
@@ -527,7 +529,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::vector<row_data> rows;
-    if (!get_app_stat(sc, app_name, rows)) {
+    if (!get_app_stat(sc, app_name, FLAGS_tables_sample_interval_ms, rows)) {
         std::cout << "ERROR: query app stat from server failed" << std::endl;
         return true;
     }

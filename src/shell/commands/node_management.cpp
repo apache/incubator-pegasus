@@ -404,19 +404,18 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending rw requests");
 
             list_nodes_helper &stat = tmp_it->second;
-            total_aggregate_stats increases(
-                "replica",
-                {{"read_capacity_units", &stat.read_cu}, {"write_capacity_units", &stat.write_cu}});
-            total_aggregate_stats rates("replica",
-                                        {{"get_requests", &stat.get_qps},
-                                         {"multi_get_requests", &stat.multi_get_qps},
-                                         {"batch_get_requests", &stat.batch_get_qps},
-                                         {"put_requests", &stat.put_qps},
-                                         {"multi_put_requests", &stat.multi_put_qps}});
-
             aggregate_stats_calcs calcs;
-            calcs.increases = &increases;
-            calcs.rates = &rates;
+            calcs.create_increases<total_aggregate_stats>(
+                "replica",
+                stat_var_map({{"read_capacity_units", &stat.read_cu},
+                              {"write_capacity_units", &stat.write_cu}}));
+            calcs.create_rates<total_aggregate_stats>(
+                "replica",
+                stat_var_map({{"get_requests", &stat.get_qps},
+                              {"multi_get_requests", &stat.multi_get_qps},
+                              {"batch_get_requests", &stat.batch_get_qps},
+                              {"put_requests", &stat.put_qps},
+                              {"multi_put_requests", &stat.multi_put_qps}}));
 
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
                 calcs.aggregate_metrics(results_start[i].body(), results_end[i].body()),
