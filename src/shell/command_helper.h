@@ -799,7 +799,7 @@ public:
 
         const std::array deltas_list = {&_increases, &_rates};
         for (const auto stats : deltas_list) {
-            if (*stats) {
+            if (!(*stats)) {
                 continue;
             }
 
