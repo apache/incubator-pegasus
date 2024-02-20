@@ -77,13 +77,7 @@ hdfs_service::hdfs_service()
 
 hdfs_service::~hdfs_service()
 {
-    // We should not call hdfsDisconnect() here if jvm has exited.
-    // And there is no simple, safe way to call hdfsDisconnect()
-    // when process terminates (the proper solution is likely to create a
-    // signal handler to detect when the process is killed, but we would still
-    // leak when pegasus crashes).
-    //
-    // close();
+    close();
 }
 
 error_code hdfs_service::initialize(const std::vector<std::string> &args)
