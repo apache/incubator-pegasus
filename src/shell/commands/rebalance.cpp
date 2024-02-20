@@ -112,14 +112,12 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
             proposal_type += optarg;
             break;
         case 't':
-            verify_logged((target = dsn::rpc_address::from_host_port(optarg)),
-                          "parse %s as target_address failed\n",
-                          optarg);
+            target = dsn::rpc_address::from_host_port(optarg);
+            verify_logged(target, "parse %s as target_address failed\n", optarg);
             break;
         case 'n':
-            verify_logged((node = dsn::rpc_address::from_host_port(optarg)),
-                          "parse %s as node failed\n",
-                          optarg);
+            node = dsn::rpc_address::from_host_port(optarg);
+            verify_logged(node, "parse %s as node failed\n", optarg);
             break;
         default:
             return false;
@@ -176,13 +174,15 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
             balance_type = optarg;
             break;
         case 'f':
-            if (!(from = dsn::rpc_address::from_host_port(optarg))) {
+            from = dsn::rpc_address::from_host_port(optarg);
+            if (!from) {
                 fprintf(stderr, "parse %s as from_address failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if (!(to = dsn::rpc_address::from_host_port(optarg))) {
+            to = dsn::rpc_address::from_host_port(optarg);
+            if (!to) {
                 fprintf(stderr, "parse %s as target_address failed\n", optarg);
                 return false;
             }

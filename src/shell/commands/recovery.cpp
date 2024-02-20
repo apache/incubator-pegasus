@@ -116,7 +116,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node = dsn::rpc_address::from_host_port(token);
+            const auto node = dsn::rpc_address::from_host_port(token);
             if (!node) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
@@ -137,7 +137,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
             boost::trim(str);
             if (str.empty() || str[0] == '#' || str[0] == ';')
                 continue;
-            dsn::rpc_address node = dsn::rpc_address::from_host_port(str);
+            const auto node = dsn::rpc_address::from_host_port(str);
             if (!node) {
                 fprintf(stderr,
                         "parse %s at file %s line %d as ip:port failed\n",

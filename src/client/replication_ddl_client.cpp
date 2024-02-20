@@ -772,8 +772,8 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
             tp_details.append_data(oss.str());
-            tp_details.append_data(
-                p.primary ? "-" : host_name_resolve(resolve_ip, p.primary.to_string()));
+            tp_details.append_data(p.primary ? host_name_resolve(resolve_ip, p.primary.to_string())
+                                             : "-");
             oss.str("");
             oss << "[";
             // TODO (yingchun) join

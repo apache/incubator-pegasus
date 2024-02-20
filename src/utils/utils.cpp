@@ -98,7 +98,7 @@ bool hostname_from_ip(const char *ip, std::string *hostname_result)
 
 bool hostname_from_ip_port(const char *ip_port, std::string *hostname_result)
 {
-    dsn::rpc_address addr = dsn::rpc_address::from_ip_port(ip_port);
+    const auto addr = dsn::rpc_address::from_ip_port(ip_port);
     if (!addr) {
         LOG_WARNING("invalid ip_port({})", ip_port);
         *hostname_result = ip_port;

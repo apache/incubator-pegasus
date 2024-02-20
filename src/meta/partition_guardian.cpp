@@ -733,8 +733,8 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
 
     std::set<dsn::rpc_address> addr_list;
     for (const std::string &s : ip_ports) {
-        dsn::rpc_address addr;
-        if (!(addr = rpc_address::from_host_port(s))) {
+        const auto addr = rpc_address::from_host_port(s);
+        if (!addr) {
             return invalid_arguments;
         }
         addr_list.insert(addr);

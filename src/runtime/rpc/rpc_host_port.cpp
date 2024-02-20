@@ -169,9 +169,9 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
         __builtin_unreachable();
     }
 
-    rpc_address rpc_addr;
     // 1. Try to resolve hostname in the form of "localhost:80" or "192.168.0.1:8080".
-    if ((rpc_addr = rpc_address::from_ip_port(this->to_string()))) {
+    const auto rpc_addr = rpc_address::from_ip_port(this->to_string());
+    if (rpc_addr) {
         addresses.emplace_back(rpc_addr);
         return error_s::ok();
     }

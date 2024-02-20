@@ -320,7 +320,7 @@ void failure_detector::set_allow_list(const std::vector<std::string> &replica_ad
 
     std::vector<rpc_address> nodes;
     for (const auto &addr : replica_addrs) {
-        rpc_address node = dsn::rpc_address::from_host_port(addr);
+        const auto node = dsn::rpc_address::from_host_port(addr);
         if (!node) {
             LOG_WARNING("replica_white_list has invalid ip {}, the allow list won't be modified",
                         addr);

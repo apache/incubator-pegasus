@@ -626,7 +626,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node = dsn::rpc_address::from_host_port(token);
+            const auto node = dsn::rpc_address::from_host_port(token);
             if (!node) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
