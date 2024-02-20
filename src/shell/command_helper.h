@@ -646,6 +646,7 @@ inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<n
     return true;
 }
 
+// Fetch the metrics according to `query_string` for each target node.
 inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &nodes,
                                                  const std::string &query_string)
 {
@@ -709,6 +710,12 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
 
 using stat_var_map = std::unordered_map<std::string, double *>;
 
+// Abstract class used to aggregate the stats based on the custom filters while iterating over
+// the fetched metrics.
+//
+// Given the type and attributes of an entity, derived classes need to implement a custom filter
+// to return the selected `stat_var_map`, if any. Calculations including addition and subtraction
+// are also provided for aggregating the stats.
 class aggregate_stats
 {
 public:
@@ -1616,6 +1623,7 @@ inline bool get_app_stat(shell_context *sc,
         }
     }
 
+    // TODO(wangdan): would be removed after migrating to new metrics completely.
     std::vector<std::string> arguments;
     char tmp[256];
     if (app_name.empty()) {
@@ -1662,6 +1670,8 @@ inline bool get_app_stat(shell_context *sc,
                 "row data requests");
         }
     } else {
+        // TODO(wangdan): use partition_aggregate_stats to implement partition-level stats
+        // for a specific table.
         rows.resize(app_info->partition_count);
         for (int i = 0; i < app_info->partition_count; i++)
             rows[i].row_name = std::to_string(i);

@@ -1727,6 +1727,8 @@ DEF_ALL_METRIC_BRIEF_SNAPSHOTS(p99);
         }                                                                                          \
     } while (0)
 
+// Find the duration between the 2 timestamps, generally used for calculate the rates over the
+// metrics, such as QPS.
 inline double calc_metric_sample_duration_s(uint64_t timestamp_ns_start, uint64_t timestamp_ns_end)
 {
     CHECK_LT(timestamp_ns_start, timestamp_ns_end);
@@ -1737,6 +1739,7 @@ inline double calc_metric_sample_duration_s(uint64_t timestamp_ns_start, uint64_
     return duration_s.count();
 }
 
+// Parse the attributes as their original types.
 template <typename TAttrValue,
           typename = typename std::enable_if<std::is_arithmetic<TAttrValue>::value>::type>
 inline error_s parse_metric_attribute(const metric_entity::attr_map &attrs,

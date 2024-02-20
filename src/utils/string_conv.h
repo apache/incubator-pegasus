@@ -174,16 +174,28 @@ inline bool buf2double(absl::string_view buf, double &result)
     return true;
 }
 
-inline bool buf2numeric(absl::string_view buf, int32_t &result) { return buf2int32(buf, result); }
+#define DEF_BUF2NUMERIC_FUNC(type, postfix)                                                        \
+    inline bool buf2numeric(absl::string_view buf, type &result)                                   \
+    {                                                                                              \
+        return buf2##postfix(buf, result);                                                         \
+    }
 
-inline bool buf2numeric(absl::string_view buf, int64_t &result) { return buf2int64(buf, result); }
+#define DEF_BUF2INT_FUNC(type) DEF_BUF2NUMERIC_FUNC(type##_t, type)
 
-inline bool buf2numeric(absl::string_view buf, uint16_t &result) { return buf2uint16(buf, result); }
+DEF_BUF2INT_FUNC(int32)
+DEF_BUF2INT_FUNC(int64)
+DEF_BUF2INT_FUNC(uint16)
+DEF_BUF2INT_FUNC(uint32)
+DEF_BUF2INT_FUNC(uint64)
 
-inline bool buf2numeric(absl::string_view buf, uint32_t &result) { return buf2uint32(buf, result); }
+#undef DEF_BUF2INT_FUNC
 
-inline bool buf2numeric(absl::string_view buf, uint64_t &result) { return buf2uint64(buf, result); }
+#define DEF_BUF2FLOAT_FUNC(type) DEF_BUF2NUMERIC_FUNC(type, type)
 
-inline bool buf2numeric(absl::string_view buf, double &result) { return buf2double(buf, result); }
+DEF_BUF2FLOAT_FUNC(double)
+
+#undef DEF_BUF2FLOAT_FUNC
+
+#undef DEF_BUF2NUMERIC_FUNC
 
 } // namespace dsn

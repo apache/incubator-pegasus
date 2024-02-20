@@ -199,10 +199,7 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
         }
 
         int32_t partition_id;
-        const auto err = dsn::parse_metric_partition_id(entity.attributes, partition_id);
-        if (!err) {
-            return err;
-        }
+        RETURN_NOT_OK(dsn::parse_metric_partition_id(entity.attributes, partition_id));
 
         for (const auto &m : entity.metrics) {
             if (m.name == "rdb_total_sst_files") {
