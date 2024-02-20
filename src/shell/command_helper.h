@@ -715,7 +715,8 @@ using stat_var_map = std::unordered_map<std::string, double *>;
 //
 // Given the type and attributes of an entity, derived classes need to implement a custom filter
 // to return the selected `stat_var_map`, if any. Calculations including addition and subtraction
-// are also provided for aggregating the stats.
+// are also provided for aggregating the stats. The metric name would be a dimension for the
+// aggregation.
 class aggregate_stats
 {
 public:
@@ -741,16 +742,24 @@ public:
     }                                                                                              \
     return dsn::error_s::ok()
 
+    // Following interfaces provide calculations over the fetched metrics. They would perform
+    // each calculation on each metric whose name was found in `stat_var_map` returned by
+    // `get_stat_vars`.
+
+    // Assign the matched metric value directly to the selected member of `stat_var_map` without
+    // extra calculation.
     dsn::error_s assign(const std::vector<dsn::metric_entity_brief_value_snapshot> &entities)
     {
         CALC_STAT_VARS(entities, =);
     }
 
+    // Add and assign the matched metric value to the selected member of `stat_var_map`.
     dsn::error_s add_assign(const std::vector<dsn::metric_entity_brief_value_snapshot> &entities)
     {
         CALC_STAT_VARS(entities, +=);
     }
 
+    // Subtract and assign the matched metric value to the selected member of `stat_var_map`.
     dsn::error_s sub_assign(const std::vector<dsn::metric_entity_brief_value_snapshot> &entities)
     {
         CALC_STAT_VARS(entities, -=);
@@ -764,13 +773,18 @@ public:
 #undef CALC_STAT_VARS
 
 protected:
+    // Given the type and attributes of an entity, decide which `stat_var_map` is selected, if any.
+    // Otherwise, `*stat_vars` would be set to nullptr.
     virtual dsn::error_s get_stat_vars(const std::string &entity_type,
                                        const dsn::metric_entity::attr_map &entity_attrs,
                                        stat_var_map **stat_vars) = 0;
 
+    // Implement self-defined calculation for rates, such as QPS.
     virtual void calc_rates(double duration_s) = 0;
 };
 
+// Support multiple kinds of aggregations over the fetched metrics, such as sums, increases and
+// rates. Users could choose to create aggregations as needed.
 class aggregate_stats_calcs
 {
 public:
@@ -788,12 +802,14 @@ public:
         _##name = std::make_unique<T>(std::forward<Args>(args)...);                                \
     }
 
+    // Create the aggregations as needed.
     DEF_CALC_CREATOR(sums)
     DEF_CALC_CREATOR(increases)
     DEF_CALC_CREATOR(rates)
 
 #undef DEF_CALC_CREATOR
 
+    // Perform the chosen aggregations on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string_start,
                                    const std::string &json_string_end)
     {
@@ -829,6 +845,27 @@ private:
     std::unique_ptr<aggregate_stats> _rates;
 };
 
+// Convenient macros for `get_stat_vars` to set `*stat_vars` to nullptr and return under some
+// circumstances.
+#define RETURN_NULL_STAT_VARS_IF(expr)                                                             \
+    do {                                                                                           \
+        if (expr) {                                                                                \
+            *stat_vars = nullptr;                                                                  \
+            return dsn::error_s::ok();                                                             \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_NULL_STAT_VARS_IF_NOT_OK(expr)                                                      \
+    do {                                                                                           \
+        const auto &err = (expr);                                                                  \
+        if (dsn_unlikely(!err)) {                                                                  \
+            *stat_vars = nullptr;                                                                  \
+            return err;                                                                            \
+        }                                                                                          \
+    } while (0)
+
+// Total aggregation over the fetched metrics. The only dimension is the metric name, which
+// is also the key of `stat_var_map`.
 class total_aggregate_stats : public aggregate_stats
 {
 public:
@@ -862,25 +899,17 @@ private:
     stat_var_map _my_stat_vars;
 };
 
-#define RETURN_NULL_STAT_VARS_IF(expr)                                                             \
-    do {                                                                                           \
-        if (expr) {                                                                                \
-            *stat_vars = nullptr;                                                                  \
-            return dsn::error_s::ok();                                                             \
-        }                                                                                          \
-    } while (0)
-
-#define RETURN_NULL_STAT_VARS_IF_NOT_OK(expr)                                                      \
-    do {                                                                                           \
-        const auto &err = (expr);                                                                  \
-        if (dsn_unlikely(!err)) {                                                                  \
-            *stat_vars = nullptr;                                                                  \
-            return err;                                                                            \
-        }                                                                                          \
-    } while (0)
-
 using table_stat_map = std::unordered_map<int32_t, stat_var_map>;
 
+// Table-level aggregation over the fetched metrics. There are 2 dimensions for the aggregation:
+// * the table id, from the attributes of the metric entity;
+// * the metric name, which is also the key of `stat_var_map`.
+//
+// It should be noted that `partitions` argument is also provided as the filter. The reason is
+// that partition-level metrics from a node should be excluded under some circumstances. For
+// example, the partition-level QPS we care about must be from the primary replica. The fetched
+// metrics would be ignored once they are from a node that is not the primary replica of the
+// target partition. However, empty `partitions` means there is no restriction.
 class table_aggregate_stats : public aggregate_stats
 {
 public:
@@ -942,6 +971,10 @@ private:
 
 using partition_stat_map = std::unordered_map<dsn::gpid, stat_var_map>;
 
+// Partition-level aggregation over the fetched metrics. There are 3 dimensions for the aggregation:
+// * the table id, from the attributes of the metric entity;
+// * the partition id, also from the attributes of the metric entity;
+// * the metric name, which is also the key of `stat_var_map`.
 class partition_aggregate_stats : public aggregate_stats
 {
 public:
@@ -1067,7 +1100,7 @@ inline bool parse_app_perf_counter_name(const std::string &name,
 struct row_data
 {
     row_data() = default;
-    explicit row_data(const std::string &row_name) : row_name(row_name) {}
+    explicit row_data(const std::string &name) : row_name(name) {}
 
     double get_total_read_qps() const { return get_qps + multi_get_qps + batch_get_qps + scan_qps; }
 
@@ -1217,6 +1250,7 @@ struct row_data
     double rdb_read_amplification = 0;
 };
 
+// TODO(wangdan): there are still dozens of fields to be added to the following functions.
 inline dsn::metric_filters row_data_filters()
 {
     dsn::metric_filters filters;
@@ -1299,9 +1333,9 @@ inline stat_var_map create_rates(row_data &row)
 
 #undef BIND_ROW
 
+// Create all aggregations for the table-level stats.
 inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs(
     const std::map<int32_t, std::vector<dsn::partition_configuration>> &table_partitions,
-    const std::map<int32_t, size_t> &table_rows,
     const dsn::rpc_address &node,
     const std::string &entity_type,
     std::vector<row_data> &rows)
@@ -1310,25 +1344,25 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
     table_stat_map increases;
     table_stat_map rates;
     std::unordered_set<dsn::gpid> partitions;
-    for (const auto &table : table_partitions) {
-        const auto &table_id = table.first;
-        const auto &table_row = table_rows.find(table_id);
-        CHECK(table_row != table_rows.end(),
-              "table could not be found in table_rows: table_id={}",
-              table_id);
-        CHECK_LT(table_row->second, rows.size());
-
-        auto &row = rows[table_row->second];
+    for (auto &row : rows) {
         const std::vector<std::pair<table_stat_map *, std::function<stat_var_map(row_data &)>>>
             processors = {
                 {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
             };
         for (auto &processor : processors) {
-            processor.first->emplace(table_id, processor.second(row));
+            // Put both dimensions of table id and metric name into filters for each kind of
+            // aggregation.
+            processor.first->emplace(row.app_id, processor.second(row));
         }
 
-        for (const auto &partition : table.second) {
+        const auto &table = table_partitions.find(row.app_id);
+        CHECK(table != table_partitions.end(),
+              "table could not be found in table_partitions: table_id={}",
+              row.app_id);
+
+        for (const auto &partition : table->second) {
             if (partition.primary != node) {
+                // Ignore once the replica of the metrics is not the primary of the partition.
                 continue;
             }
 
@@ -1636,6 +1670,8 @@ inline bool get_app_stat(shell_context *sc,
         call_remote_command(sc, nodes, "perf-counters", arguments);
 
     if (app_name.empty()) {
+        // Aggregate the table-level stats for all tables since table name is not specified.
+
         const auto &results_start = get_metrics(nodes, row_data_filters().to_query_string());
         std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
         const auto &results_end = get_metrics(nodes, row_data_filters().to_query_string());
@@ -1645,16 +1681,17 @@ inline bool get_app_stat(shell_context *sc,
             return false;
         }
 
-        rows.resize(table_partitions.size());
-        size_t idx = 0;
-        std::map<int32_t, size_t> table_rows; // app_id --> row_idx
-        for (const auto &app : apps) {
-            rows[idx].row_name = app.app_name;
-            rows[idx].app_id = app.app_id;
-            rows[idx].partition_count = app.partition_count;
-            table_rows[app.app_id] = idx;
-            idx++;
-        }
+        rows.clear();
+        rows.reserve(apps.size());
+        std::transform(
+            apps.begin(), apps.end(), std::back_inserter(rows), [](const dsn::app_info &app) {
+                row_data row;
+                row.row_name = app.app_name;
+                row.app_id = app.app_id;
+                row.partition_count = app.partition_count;
+                return row;
+            });
+        CHECK_EQ(rows.size(), table_partitions.size());
 
         for (size_t i = 0; i < nodes.size(); ++i) {
             RETURN_SHELL_IF_GET_METRICS_FAILED(
@@ -1663,13 +1700,15 @@ inline bool get_app_stat(shell_context *sc,
                 results_end[i], nodes[i], "ending row data requests");
 
             auto calcs = create_table_aggregate_stats_calcs(
-                table_partitions, table_rows, nodes[i].address, "replica", rows);
+                table_partitions, nodes[i].address, "replica", rows);
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
                 calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
                 nodes[i],
                 "row data requests");
         }
     } else {
+        // Aggregate the partition-level stats for the specified table.
+
         // TODO(wangdan): use partition_aggregate_stats to implement partition-level stats
         // for a specific table.
         rows.resize(app_info->partition_count);
