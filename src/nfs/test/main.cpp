@@ -39,7 +39,7 @@
 #include "nfs/nfs_node.h"
 #include "runtime/app_model.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "runtime/tool_api.h"
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"

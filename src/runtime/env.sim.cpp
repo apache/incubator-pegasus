@@ -28,7 +28,7 @@
 
 #include <random>
 
-#include "runtime/task/task_worker.h"
+#include "task/task_worker.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"

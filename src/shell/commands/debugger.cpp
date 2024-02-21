@@ -56,7 +56,7 @@
 #include "rrdb/rrdb_types.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "shell/args.h"
 #include "shell/command_executor.h"
 #include "shell/commands.h"

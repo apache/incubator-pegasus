@@ -29,7 +29,7 @@
 #include "dsn.layer2_types.h"
 #include "partition_kill_testor.h"
 #include "remote_cmd/remote_command.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "test/kill_test/kill_testor.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"

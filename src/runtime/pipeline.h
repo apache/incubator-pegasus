@@ -20,9 +20,9 @@
 #pragma once
 
 #include <absl/utility/utility.h>
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
-#include "runtime/task/async_calls.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
+#include "task/async_calls.h"
 #include "utils/chrono_literals.h"
 
 namespace dsn {

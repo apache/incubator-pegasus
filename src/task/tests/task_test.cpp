@@ -15,15 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/task/task.h"
+#include "task/task.h"
 
 #include <string>
 
 #include "aio/aio_task.h"
 #include "aio/file_io.h"
 #include "gtest/gtest.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/flags.h"
 #include "utils/threadpool_code.h"
 
@@ -67,10 +67,10 @@ public:
 
     static void test_signal_finished_task()
     {
-        // config-test.ini is not encrypted, so set FLAGS_encrypt_data_at_rest = false on force.
+        // config.ini is not encrypted, so set FLAGS_encrypt_data_at_rest = false on force.
         FLAGS_encrypt_data_at_rest = false;
 
-        disk_file *fp = file::open("config-test.ini", file::FileOpenType::kReadOnly);
+        disk_file *fp = file::open("config.ini", file::FileOpenType::kReadOnly);
 
         // this aio task is enqueued into read-queue of disk_engine
         char buffer[128];

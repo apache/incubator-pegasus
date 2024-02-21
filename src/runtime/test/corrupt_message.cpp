@@ -31,7 +31,7 @@
 
 #include "gtest/gtest.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "runtime/test_utils.h"
 #include "utils/error_code.h"
 

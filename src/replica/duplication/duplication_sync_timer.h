@@ -25,7 +25,7 @@
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
 #include "replica/replica.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/zlocks.h"
 
 namespace dsn {

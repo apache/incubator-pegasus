@@ -23,7 +23,7 @@
 #include <unordered_map>
 
 #include "common/replication.codes.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/flags.h"
 #include "utils/ports.h"
 #include "utils/synchronize.h"

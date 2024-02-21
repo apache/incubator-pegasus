@@ -31,7 +31,7 @@
 #include "replica/duplication/mutation_duplicator.h"
 #include "replica/mutation.h"
 #include "replica/prepare_list.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 
 namespace dsn {

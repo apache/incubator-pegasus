@@ -35,7 +35,7 @@
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"

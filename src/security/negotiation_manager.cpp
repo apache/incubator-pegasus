@@ -25,7 +25,7 @@
 #include "negotiation_utils.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "security_types.h"
 #include "server_negotiation.h"
 #include "utils/autoref_ptr.h"

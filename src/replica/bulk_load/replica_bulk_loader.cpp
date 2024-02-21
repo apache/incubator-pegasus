@@ -38,7 +38,7 @@
 #include "replica_bulk_loader.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/env.h"

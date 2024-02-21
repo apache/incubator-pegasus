@@ -35,7 +35,7 @@
 #include "rpc_address.h"
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_utils.h"

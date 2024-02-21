@@ -41,7 +41,7 @@
 #include "replica/mutation_log.h"
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"

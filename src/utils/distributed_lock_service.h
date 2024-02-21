@@ -32,7 +32,7 @@
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "common/gpid.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/rpc/rpc_stream.h"
@@ -40,7 +40,7 @@
 #include "runtime/service_app.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
-#include "runtime/task/future_types.h"
+#include "task/future_types.h"
 #include <string>
 #include <functional>
 #include <utility>

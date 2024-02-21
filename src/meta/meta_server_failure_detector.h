@@ -35,7 +35,7 @@
 #include "failure_detector/failure_detector.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 

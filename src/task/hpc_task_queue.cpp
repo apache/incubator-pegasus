@@ -24,33 +24,61 @@
  * THE SOFTWARE.
  */
 
-#pragma once
-
-#include <concurrentqueue/concurrentqueue.h>
+#include "hpc_task_queue.h"
 
 #include "concurrentqueue/lightweightsemaphore.h"
-#include "runtime/task/task_code.h"
+
+#include "boost/iterator/function_output_iterator.hpp"
+#include "concurrentqueue/concurrentqueue.h"
+#include "task.h"
 #include "task_queue.h"
+#include "task_spec.h"
 
 namespace dsn {
-class task;
 class task_worker_pool;
 
 namespace tools {
-class hpc_concurrent_task_queue : public task_queue
+
+hpc_concurrent_task_queue::hpc_concurrent_task_queue(task_worker_pool *pool,
+                                                     int index,
+                                                     task_queue *inner_provider)
+    : task_queue(pool, index, inner_provider)
 {
-    moodycamel::LightweightSemaphore _sema;
-    struct queue_t
-    {
-        moodycamel::ConcurrentQueue<task *> q;
-    } _queues[TASK_PRIORITY_COUNT];
+}
 
-public:
-    hpc_concurrent_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
+void hpc_concurrent_task_queue::enqueue(task *task)
+{
+    _queues[task->spec().priority].q.enqueue(task);
+    _sema.signal(1);
+}
 
-    void enqueue(task *task) override;
+task *hpc_concurrent_task_queue::dequeue(int &batch_size)
+{
+    batch_size = _sema.waitMany(batch_size);
+    if (batch_size == 0) {
+        return nullptr;
+    }
+    task *head = nullptr, *last = nullptr;
+    auto out = boost::make_function_output_iterator([&head, &last](task *in) {
+        if (last) {
+            last->next = in;
+        } else {
+            head = in;
+        }
 
-    task *dequeue(/*inout*/ int &batch_size) override;
-};
+        last = in;
+        last->next = nullptr;
+    });
+    auto count = batch_size;
+    do {
+        for (auto &qs : _queues) {
+            count -= qs.q.try_dequeue_bulk(out, count);
+            if (count == 0) {
+                break;
+            }
+        }
+    } while (count != 0);
+    return head;
+}
 }
 }

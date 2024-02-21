@@ -27,7 +27,7 @@
 #include "dsn.layer2_types.h"
 #include "replica/replica_base.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 

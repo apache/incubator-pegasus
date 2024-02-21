@@ -34,7 +34,7 @@
 #include "meta/meta_state_service_simple.h"
 #include "meta/meta_state_service_zookeeper.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "test_util/test_util.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"

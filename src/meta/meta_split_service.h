@@ -20,7 +20,7 @@
 
 #include "common/partition_split_common.h"
 #include "partition_split_types.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "server_state.h"
 
 namespace dsn {
