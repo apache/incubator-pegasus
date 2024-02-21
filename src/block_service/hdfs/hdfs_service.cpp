@@ -18,10 +18,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <rocksdb/env.h>
+#include <stdlib.h>
 #include <algorithm>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 
+#include "fmt/core.h"
 #include "hdfs/hdfs.h"
 #include "hdfs_service.h"
 #include "rocksdb/slice.h"
