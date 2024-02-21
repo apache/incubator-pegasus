@@ -31,6 +31,7 @@ DSN_DEFINE_bool(security,
                 enable_zookeeper_kerberos,
                 false,
                 "whether to enable kerberos for zookeeper client");
+DSN_TAG_VARIABLE(enable_zookeeper_kerberos, FT_MUTABLE);
 DSN_DEFINE_bool(security, mandatory_auth, false, "wheter to do authertication mandatorily");
 DSN_TAG_VARIABLE(mandatory_auth, FT_MUTABLE);
 
