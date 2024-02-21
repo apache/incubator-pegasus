@@ -62,7 +62,7 @@ TEST(host_port_test, host_port_build)
     ASSERT_EQ("localhost", hp.host());
 
     {
-        rpc_address addr = rpc_address::from_host_port("localhost", 8080);
+        const auto addr = rpc_address::from_host_port("localhost", 8080);
         host_port hp1 = host_port::from_address(addr);
         ASSERT_EQ(hp, hp1);
     }

@@ -80,7 +80,7 @@ TEST(rpc_address_test, rpc_address_ipv4_from_host)
     for (const auto &test : tests) {
         // Check ipv4_from_host()
         uint32_t ip;
-        ASSERT_EQ(test.valid, rpc_address::ipv4_from_host(test.hostname.c_str(), &ip).is_ok());
+        ASSERT_EQ(test.valid, rpc_address::ipv4_from_host(test.hostname, &ip).is_ok());
 
         // Check GetAddrInfo()
         AddrInfo result;

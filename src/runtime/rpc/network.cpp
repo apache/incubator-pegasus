@@ -585,12 +585,12 @@ uint32_t network::get_local_ipv4()
         s = rpc_address::ipv4_from_host(FLAGS_explicit_host_address, &ip);
     }
 
-    if (!s.is_ok() || 0 == ip) {
+    if (!s || 0 == ip) {
         ip = rpc_address::ipv4_from_network_interface(FLAGS_primary_interface);
     }
 
     if (0 == ip) {
-        char name[128];
+        char name[128] = {0};
         CHECK_EQ_MSG(::gethostname(name, sizeof(name)),
                      0,
                      "gethostname failed, err = {}",

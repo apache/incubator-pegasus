@@ -41,7 +41,7 @@ TEST(ip_to_hostname, localhost)
     const std::string valid_ip_port_list = "127.0.0.1:8080,127.0.0.1:8080,127.0.0.1:8080";
     const std::string expected_hostname_port_list = "localhost:8080,localhost:8080,localhost:8080";
 
-    rpc_address rpc_example_valid = rpc_address::from_ip_port(valid_ip, 23010);
+    const auto rpc_example_valid = rpc_address::from_ip_port(valid_ip, 23010);
 
     // static bool hostname(const rpc_address &address,std::string *hostname_result);
     ASSERT_TRUE(dsn::utils::hostname(rpc_example_valid, &hostname_result));

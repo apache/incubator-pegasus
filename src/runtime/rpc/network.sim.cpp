@@ -173,8 +173,7 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
     if (!client_only) {
         for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++) {
             if (s_switch[channel][i].put(_address, this)) {
-                auto ep2 = ::dsn::rpc_address::from_host_port(hostname, port);
-                s_switch[channel][i].put(ep2, this);
+                s_switch[channel][i].put(dsn::rpc_address::from_host_port(hostname, port), this);
             } else {
                 return ERR_ADDRESS_ALREADY_USED;
             }

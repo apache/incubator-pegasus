@@ -60,7 +60,7 @@ uint32_t random32(uint32_t min, uint32_t max)
 
 void generate_node_list(std::vector<dsn::rpc_address> &output_list, int min_count, int max_count)
 {
-    auto count = random32(min_count, max_count);
+    const auto count = random32(min_count, max_count);
     output_list.resize(count);
     for (auto i = 0; i < count; ++i) {
         output_list[i] = dsn::rpc_address::from_ip_port("127.0.0.1", i + 1);

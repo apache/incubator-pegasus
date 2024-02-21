@@ -33,6 +33,7 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <string>
 
 #include "absl/strings/string_view.h"
 #include "runtime/rpc/group_address.h"
@@ -46,10 +47,10 @@
 
 namespace dsn {
 /*static*/
-error_s rpc_address::GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo *info)
+error_s rpc_address::GetAddrInfo(std::string_view hostname, const addrinfo &hints, AddrInfo *info)
 {
     addrinfo *res = nullptr;
-    const int rc = ::getaddrinfo(hostname.c_str(), nullptr, &hints, &res);
+    const int rc = ::getaddrinfo(hostname.data(), nullptr, &hints, &res);
     const int err = errno; // preserving the errno from the getaddrinfo() call
     AddrInfo result(res, ::freeaddrinfo);
     if (dsn_unlikely(rc != 0)) {
@@ -112,7 +113,7 @@ rpc_address::rpc_address(const rpc_address &another) { *this = another; }
 rpc_address::~rpc_address() { set_invalid(); }
 
 /*static*/
-error_s rpc_address::ipv4_from_host(const char *hostname, uint32_t *ip)
+error_s rpc_address::ipv4_from_host(std::string_view hostname, uint32_t *ip)
 {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -302,7 +303,7 @@ rpc_address rpc_address::from_host_port(std::string_view host_port)
 rpc_address rpc_address::from_host_port(std::string_view hostname, uint16_t port)
 {
     uint32_t ip = 0;
-    if (!ipv4_from_host(hostname.data(), &ip).is_ok()) {
+    if (!ipv4_from_host(hostname, &ip)) {
         return {};
     }
 
@@ -322,7 +323,7 @@ const char *rpc_address::to_string() const
         struct in_addr net_addr;
         net_addr.s_addr = htonl(ip());
         ::inet_ntop(AF_INET, &net_addr, p, sz);
-        int ip_len = strlen(p);
+        const auto ip_len = strlen(p);
         snprintf_p(p + ip_len, sz - ip_len, ":%hu", port());
         break;
     }
