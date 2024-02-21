@@ -75,10 +75,7 @@ hdfs_service::hdfs_service()
     _write_token_bucket.reset(new folly::DynamicTokenBucket());
 }
 
-hdfs_service::~hdfs_service()
-{
-    close();
-}
+hdfs_service::~hdfs_service() { close(); }
 
 error_code hdfs_service::initialize(const std::vector<std::string> &args)
 {
