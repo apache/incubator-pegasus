@@ -69,6 +69,41 @@ namespace block_service {
 
 DEFINE_TASK_CODE(LPC_HDFS_SERVICE_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_BLOCK_SERVICE)
 
+namespace {
+static const char *LIBHDFS_OPTS = "LIBHDFS_OPTS";
+static const char *REDUCE_SIGNAL_OPT = "-Xrs";
+
+bool check_LIBHDFS_OPTS()
+{
+    char *str = ::getenv(LIBHDFS_OPTS);
+    if (str == nullptr) {
+        return false;
+    }
+
+    std::unordered_set<std::string> opts;
+    utils::split_args(str, opts, ' ');
+    return opts.count(REDUCE_SIGNAL_OPT) > 0;
+}
+
+void adjust_LIBHDFS_OPTS()
+{
+    if (!check_LIBHDFS_OPTS()) {
+        // Reduces the use of operating system signals by the JVM. See details:
+        // https://docs.oracle.com/javase/8/docs/technotes/tools/unix/java.html
+        std::string new_env;
+        char *old_env = ::getenv(LIBHDFS_OPTS);
+        if (old_env == nullptr) {
+            new_env = REDUCE_SIGNAL_OPT;
+        } else {
+            new_env = fmt::format("{} {}", old_env, REDUCE_SIGNAL_OPT);
+        }
+        ::setenv(LIBHDFS_OPTS, new_env.c_str(), 1);
+        LOG_WARNING("update '{}' to '{}'", LIBHDFS_OPTS, new_env);
+    }
+    CHECK_TRUE(check_LIBHDFS_OPTS());
+}
+} // anonymous namespace
+
 hdfs_service::hdfs_service()
 {
     _read_token_bucket.reset(new folly::DynamicTokenBucket());
@@ -82,6 +117,9 @@ error_code hdfs_service::initialize(const std::vector<std::string> &args)
     if (args.size() < 1) {
         return ERR_INVALID_PARAMETERS;
     }
+
+    adjust_LIBHDFS_OPTS();
+
     // Name_node and root_path should be set in args of block_service configuration.
     // If no path was configured, just use "/" as default root path.
     _hdfs_name_node = args[0];
