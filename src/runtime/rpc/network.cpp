@@ -41,6 +41,7 @@
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
 #include "utils/customizable_id.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -579,21 +580,22 @@ message_parser *network::new_message_parser(network_header_format hdr_format)
 uint32_t network::get_local_ipv4()
 {
     uint32_t ip = 0;
+    error_s s;
     if (!utils::is_empty(FLAGS_explicit_host_address)) {
-        ip = rpc_address::ipv4_from_host(FLAGS_explicit_host_address);
+        s = rpc_address::ipv4_from_host(FLAGS_explicit_host_address, &ip);
     }
 
-    if (0 == ip) {
+    if (!s || 0 == ip) {
         ip = rpc_address::ipv4_from_network_interface(FLAGS_primary_interface);
     }
 
     if (0 == ip) {
-        char name[128];
-        CHECK_EQ_MSG(gethostname(name, sizeof(name)),
+        char name[128] = {0};
+        CHECK_EQ_MSG(::gethostname(name, sizeof(name)),
                      0,
                      "gethostname failed, err = {}",
                      utils::safe_strerror(errno));
-        ip = rpc_address::ipv4_from_host(name);
+        CHECK_OK(rpc_address::ipv4_from_host(name, &ip), "ipv4_from_host for '{}' failed", name);
     }
 
     return ip;

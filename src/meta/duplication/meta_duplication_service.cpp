@@ -424,9 +424,9 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                       int count = dup->partition_count;
                       while (count-- > 0) {
                           partition_configuration p;
-                          p.primary = rpc_address("127.0.0.1", 34801);
-                          p.secondaries.emplace_back(rpc_address("127.0.0.2", 34801));
-                          p.secondaries.emplace_back(rpc_address("127.0.0.3", 34801));
+                          p.primary = rpc_address::from_ip_port("127.0.0.1", 34801);
+                          p.secondaries.emplace_back(rpc_address::from_ip_port("127.0.0.2", 34801));
+                          p.secondaries.emplace_back(rpc_address::from_ip_port("127.0.0.3", 34801));
                           resp.partitions.emplace_back(p);
                       }
                   });

@@ -54,7 +54,7 @@ public:
             rpc.dsn_request()->header->context.u.is_forward_supported = false;
             ASSERT_FALSE(_ms->check_status_and_authz(rpc, &leader));
             ASSERT_EQ(ERR_FORWARD_TO_OTHERS, rpc.response().err);
-            ASSERT_EQ(leader.to_std_string(), "1.2.3.4:10086");
+            ASSERT_STREQ("1.2.3.4:10086", leader.to_string());
             ASSERT_EQ(app_env_rpc::forward_mail_box().size(), 0);
         }
 
@@ -64,8 +64,8 @@ public:
             auto rpc = create_fake_rpc();
             ASSERT_FALSE(_ms->check_status_and_authz(rpc));
             ASSERT_EQ(app_env_rpc::forward_mail_box().size(), 1);
-            ASSERT_EQ(app_env_rpc::forward_mail_box()[0].remote_address().to_std_string(),
-                      "1.2.3.4:10086");
+            ASSERT_STREQ("1.2.3.4:10086",
+                         app_env_rpc::forward_mail_box()[0].remote_address().to_string());
         }
 
         fail::teardown();

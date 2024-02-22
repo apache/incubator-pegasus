@@ -45,8 +45,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-using namespace ::dsn;
-
 #ifndef TEST_PORT_BEGIN
 #define TEST_PORT_BEGIN 20201
 #define TEST_PORT_END 20203
@@ -74,6 +72,7 @@ inline void exec_tests()
     g_test_count++;
 }
 
+namespace dsn {
 class test_client : public ::dsn::serverlet<test_client>, public ::dsn::service_app
 {
 public:
@@ -96,18 +95,18 @@ public:
         if (command == "expect_talk_to_others") {
             dsn::rpc_address next_addr = dsn::service_app::primary_address();
             if (next_addr.port() != TEST_PORT_END) {
-                next_addr.assign_ipv4(next_addr.ip(), next_addr.port() + 1);
+                next_addr._addr.v4.port++;
                 LOG_INFO("test_client_server, talk_to_others: {}", next_addr);
                 dsn_rpc_forward(message, next_addr);
             } else {
                 LOG_INFO("test_client_server, talk_to_me: {}", next_addr);
-                reply(message, next_addr.to_std_string());
+                reply(message, std::string(next_addr.to_string()));
             }
         } else if (command == "expect_no_reply") {
             if (dsn::service_app::primary_address().port() == TEST_PORT_END) {
                 LOG_INFO("test_client_server, talk_with_reply: {}",
                          dsn::service_app::primary_address());
-                reply(message, dsn::service_app::primary_address().to_std_string());
+                reply(message, std::string(dsn::service_app::primary_address().to_string()));
             }
         } else if (command.substr(0, 5) == "echo ") {
             reply(message, command.substr(5));
@@ -158,3 +157,4 @@ public:
 
     ::dsn::error_code stop(bool cleanup = false) { return ERR_OK; }
 };
+} // namespace dsn
