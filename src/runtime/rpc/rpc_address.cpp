@@ -172,7 +172,7 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
         // Get the specified network interface, or the first internal network interface if not
         // specified.
         if (utils::equals(i->ifa_name, network_interface) ||
-            (network_interface[0] == '\0' && !is_docker_netcard(i->ifa_name, ip_val) &&
+            (utils::is_empty(network_interface) && !is_docker_netcard(i->ifa_name, ip_val) &&
              is_site_local_address(ip_val))) {
             ret = static_cast<uint32_t>(ntohl(ip_val));
             break;
@@ -316,12 +316,13 @@ rpc_address rpc_address::from_host_port(std::string_view hostname, uint16_t port
 
 const char *rpc_address::to_string() const
 {
-    char *p = bf.next();
+    char *p = nullptr;
     switch (_addr.v4.type) {
     case HOST_TYPE_IPV4: {
         const auto sz = bf.get_chunk_size();
         struct in_addr net_addr;
         net_addr.s_addr = htonl(ip());
+        p = bf.next();
         ::inet_ntop(AF_INET, &net_addr, p, sz);
         const auto ip_len = strlen(p);
         snprintf_p(p + ip_len, sz - ip_len, ":%hu", port());
