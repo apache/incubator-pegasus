@@ -21,12 +21,13 @@ package session
 
 import (
 	"context"
-	"github.com/apache/incubator-pegasus/go-client/idl/base"
-	"github.com/apache/incubator-pegasus/go-client/idl/replication"
-	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
 )
 
 type metaCallFunc func(context.Context, *metaSession) (metaResponse, error)
