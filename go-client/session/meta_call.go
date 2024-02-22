@@ -134,8 +134,8 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 			})
 			curLeader = len(c.metas) - 1
 			c.metas[curLeader].logger.Printf("add forward address %s as meta server", addr)
+			resp, err = c.callFunc(ctx, c.metas[curLeader])
 		}
-		resp, err = c.callFunc(ctx, c.metas[curLeader])
 	}
 
 	if err != nil || resp.GetErr().Errno == base.ERR_FORWARD_TO_OTHERS.String() {
