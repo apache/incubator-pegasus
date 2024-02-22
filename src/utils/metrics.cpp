@@ -37,7 +37,6 @@
 #include "utils/flags.h"
 #include "utils/rand.h"
 #include "utils/shared_io_service.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 DSN_DEFINE_uint64(metrics,
