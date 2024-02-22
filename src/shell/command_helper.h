@@ -1632,10 +1632,9 @@ inline bool get_app_partition_stat(shell_context *sc,
     return true;
 }
 
-inline bool get_app_stat(shell_context *sc,
-                         const std::string &app_name,
-                         uint32_t sample_interval_ms,
-                         std::vector<row_data> &rows)
+// Aggregate the table-level stats for all tables since table name is not specified.
+inline bool
+get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_data> &rows)
 {
     std::vector<::dsn::app_info> apps;
     std::vector<node_desc> nodes;
@@ -1643,109 +1642,109 @@ inline bool get_app_stat(shell_context *sc,
         return false;
     }
 
-    ::dsn::app_info *app_info = nullptr;
-    if (!app_name.empty()) {
-        for (auto &app : apps) {
-            if (app.app_name == app_name) {
-                app_info = &app;
-                break;
-            }
-        }
-        if (app_info == nullptr) {
-            LOG_ERROR("app {} not found", app_name);
-            return false;
-        }
+    const auto filters = row_data_filters();
+    const auto &results_start = get_metrics(nodes, filters.to_query_string());
+    std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+    const auto &results_end = get_metrics(nodes, filters.to_query_string());
+
+    std::map<int32_t, std::vector<dsn::partition_configuration>> table_partitions;
+    if (!get_app_partitions(sc, apps, table_partitions)) {
+        return false;
     }
 
-    // TODO(wangdan): would be removed after migrating to new metrics completely.
-    std::vector<std::string> arguments;
-    char tmp[256];
-    if (app_name.empty()) {
-        sprintf(tmp, ".*@.*");
-    } else {
-        sprintf(tmp, ".*@%d\\..*", app_info->app_id);
+    rows.clear();
+    rows.reserve(apps.size());
+    std::transform(
+        apps.begin(), apps.end(), std::back_inserter(rows), [](const dsn::app_info &app) {
+            row_data row;
+            row.row_name = app.app_name;
+            row.app_id = app.app_id;
+            row.partition_count = app.partition_count;
+            return row;
+        });
+    CHECK_EQ(rows.size(), table_partitions.size());
+
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        RETURN_SHELL_IF_GET_METRICS_FAILED(
+            results_start[i], nodes[i], "starting row data requests");
+        RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending row data requests");
+
+        auto calcs =
+            create_table_aggregate_stats_calcs(table_partitions, nodes[i].address, "replica", rows);
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+            calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
+            nodes[i],
+            "row data requests");
     }
-    arguments.emplace_back(tmp);
-    std::vector<std::pair<bool, std::string>> results =
-        call_remote_command(sc, nodes, "perf-counters", arguments);
 
-    if (app_name.empty()) {
-        // Aggregate the table-level stats for all tables since table name is not specified.
-
-        const auto &results_start = get_metrics(nodes, row_data_filters().to_query_string());
-        std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
-        const auto &results_end = get_metrics(nodes, row_data_filters().to_query_string());
-
-        std::map<int32_t, std::vector<dsn::partition_configuration>> table_partitions;
-        if (!get_app_partitions(sc, apps, table_partitions)) {
-            return false;
-        }
-
-        rows.clear();
-        rows.reserve(apps.size());
-        std::transform(
-            apps.begin(), apps.end(), std::back_inserter(rows), [](const dsn::app_info &app) {
-                row_data row;
-                row.row_name = app.app_name;
-                row.app_id = app.app_id;
-                row.partition_count = app.partition_count;
-                return row;
-            });
-        CHECK_EQ(rows.size(), table_partitions.size());
-
-        for (size_t i = 0; i < nodes.size(); ++i) {
-            RETURN_SHELL_IF_GET_METRICS_FAILED(
-                results_start[i], nodes[i], "starting row data requests");
-            RETURN_SHELL_IF_GET_METRICS_FAILED(
-                results_end[i], nodes[i], "ending row data requests");
-
-            auto calcs = create_table_aggregate_stats_calcs(
-                table_partitions, nodes[i].address, "replica", rows);
-            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
-                nodes[i],
-                "row data requests");
-        }
-    } else {
-        // Aggregate the partition-level stats for the specified table.
-
-        // TODO(wangdan): use partition_aggregate_stats to implement partition-level stats
-        // for a specific table.
-        rows.resize(app_info->partition_count);
-        for (int i = 0; i < app_info->partition_count; i++)
-            rows[i].row_name = std::to_string(i);
-        int32_t app_id = 0;
-        int32_t partition_count = 0;
-        std::vector<dsn::partition_configuration> partitions;
-        dsn::error_code err =
-            sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
-        if (err != ::dsn::ERR_OK) {
-            LOG_ERROR("list app {} failed, error = {}", app_name, err);
-            return false;
-        }
-        CHECK_EQ(app_id, app_info->app_id);
-        CHECK_EQ(partition_count, app_info->partition_count);
-
-        for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            dsn::perf_counter_info info;
-            if (!decode_node_perf_counter_info(node_addr, results[i], info))
-                return false;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                int32_t app_id_x, partition_index_x;
-                std::string counter_name;
-                bool parse_ret = parse_app_pegasus_perf_counter_name(
-                    m.name, app_id_x, partition_index_x, counter_name);
-                CHECK(parse_ret, "name = {}", m.name);
-                CHECK_EQ_MSG(app_id_x, app_id, "name = {}", m.name);
-                CHECK_LT_MSG(partition_index_x, partition_count, "name = {}", m.name);
-                if (partitions[partition_index_x].primary != node_addr)
-                    continue;
-                update_app_pegasus_perf_counter(rows[partition_index_x], counter_name, m.value);
-            }
-        }
-    }
     return true;
+}
+
+// Aggregate the partition-level stats for the specified table.
+inline bool get_partition_stats(shell_context *sc,
+                                const std::string &table_name,
+                                uint32_t sample_interval_ms,
+                                std::vector<row_data> &rows)
+{
+    std::vector<node_desc> nodes;
+    if (!fill_nodes(sc, "replica-server", nodes)) {
+        LOG_ERROR("get replica server node list failed");
+        return false;
+    }
+
+    int32_t table_id = 0;
+    int32_t partition_count = 0;
+    std::vector<dsn::partition_configuration> partitions;
+    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, partitions);
+    if (err != ::dsn::ERR_OK) {
+        LOG_ERROR("list app {} failed, error = {}", table_name, err);
+        return false;
+    }
+
+    const auto filters = row_data_filters(table_id);
+    const auto &results_start = get_metrics(nodes, filters.to_query_string());
+    std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+    const auto &results_end = get_metrics(nodes, filters.to_query_string());
+
+    // TODO(wangdan): use partition_aggregate_stats to implement partition-level stats
+    // for a specific table.
+    rows.resize(partition_count);
+    for (int32_t i = 0; i < partition_count; ++i) {
+        rows[i].row_name = std::to_string(i);
+    }
+
+    for (int i = 0; i < nodes.size(); ++i) {
+        dsn::rpc_address node_addr = nodes[i].address;
+        dsn::perf_counter_info info;
+        if (!decode_node_perf_counter_info(node_addr, results[i], info))
+            return false;
+        for (dsn::perf_counter_metric &m : info.counters) {
+            int32_t app_id_x, partition_index_x;
+            std::string counter_name;
+            bool parse_ret = parse_app_pegasus_perf_counter_name(
+                m.name, app_id_x, partition_index_x, counter_name);
+            CHECK(parse_ret, "name = {}", m.name);
+            CHECK_EQ_MSG(app_id_x, app_id, "name = {}", m.name);
+            CHECK_LT_MSG(partition_index_x, partition_count, "name = {}", m.name);
+            if (partitions[partition_index_x].primary != node_addr)
+                continue;
+            update_app_pegasus_perf_counter(rows[partition_index_x], counter_name, m.value);
+        }
+    }
+
+    return true;
+}
+
+inline bool get_app_stat(shell_context *sc,
+                         const std::string &table_name,
+                         uint32_t sample_interval_ms,
+                         std::vector<row_data> &rows)
+{
+    if (table_name.empty()) {
+        return get_table_stats(sc, sample_interval_ms, rows);
+    }
+
+    return get_partition_stats(sc, table_name, sample_interval_ms, rows);
 }
 
 struct node_capacity_unit_stat
