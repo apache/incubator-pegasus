@@ -178,7 +178,7 @@ app_env_validator::EnvInfo::EnvInfo(ValueType t, std::string ld, std::string s, 
         case ValueType::kUint64:
             limit_desc = ">= 0";
             break;
-        case ValueType::kInt64ButOnlyNegativeOne:
+        case ValueType::kUint64AndNegativeOne:
             limit_desc = ">= 0 or == -1";
             break;
         case ValueType::kString:
@@ -305,6 +305,33 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, {ValueType::kString}},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, {ValueType::kString}},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, {ValueType::kString}}};
+}
+
+std::unordered_map<app_env_validator::ValueType, std::string>
+    app_env_validator::EnvInfo::ValueType2String{
+        {ValueType::kBool, "bool"},
+        {ValueType::kUint64, "unsigned int"},
+        {ValueType::kUint64AndNegativeOne, "unsigned int and -1"},
+        {ValueType::kString, "string"}};
+
+nlohmann::json app_env_validator::EnvInfo::to_json()
+{
+    CHECK_GT(ValueType2String.count(type), 0);
+    nlohmann::json info;
+    info["type"] = ValueType2String[type];
+    info["limitation"] = limit_desc;
+    info["sample"] = sample;
+    return info;
+}
+
+void app_env_validator::list_all_envs(const http_request &req, http_response &resp)
+{
+    nlohmann::json envs;
+    for (auto validator_func : _validator_funcs) {
+        envs[validator_func.first] = validator_func.second.to_json();
+    }
+    resp.body = envs.dump(2);
+    resp.status_code = http_status_code::kOk;
 }
 
 } // namespace replication

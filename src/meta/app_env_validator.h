@@ -21,16 +21,30 @@
 #include <map>
 #include <string>
 
-#include "utils/singleton.h"
+#include <nlohmann/json.hpp>
+
+#include "http/http_server.h"
 
 namespace dsn {
 namespace replication {
 
-class app_env_validator
+class app_env_validator : public http_service
 {
 public:
-    app_env_validator() { register_all_validators(); }
+    app_env_validator()
+    {
+        register_all_validators();
+        register_handler("list",
+                         std::bind(&app_env_validator::list_all_envs,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2),
+                         "ip:port/envs/list");
+    }
+
     ~app_env_validator() = default;
+
+    std::string path() const override { return "envs"; }
 
     bool validate_app_env(const std::string &env_name,
                           const std::string &env_value,
@@ -41,11 +55,13 @@ public:
 private:
     void register_all_validators();
 
-    enum class ValueType
+    void list_all_envs(const http_request &req, http_response &resp);
+
+    enum class ValueType : uint32_t
     {
         kBool,
         kUint64,
-        kInt64ButOnlyNegativeOne,
+        kUint64AndNegativeOne,
         kString
     };
     using validator_func = std::function<bool(const std::string &, std::string &)>;
@@ -60,10 +76,12 @@ private:
                 std::string ld = "",
                 std::string s = "",
                 validator_func v = validator_func());
+
+        nlohmann::json to_json();
+
+        static std::unordered_map<app_env_validator::ValueType, std::string> ValueType2String;
     };
     std::map<std::string, EnvInfo> _validator_funcs;
-
-    friend class utils::singleton<app_env_validator>;
 };
 
 } // namespace replication
