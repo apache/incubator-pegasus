@@ -41,7 +41,6 @@
 // IWYU pragma: no_include <type_traits>
 #include <unordered_map>
 
-#include "app_env_validator.h"
 #include "common/duplication_common.h"
 #include "common/json_helper.h"
 #include "common/replica_envs.h"
@@ -1099,7 +1098,7 @@ void server_state::create_app(dsn::message_ex *msg)
                !validate_target_max_replica_count(request.options.replica_count)) {
         response.err = ERR_INVALID_PARAMETERS;
         will_create_app = false;
-    } else if (!validate_app_envs(request.options.envs)) {
+    } else if (!_app_env_validator.validate_app_envs(request.options.envs)) {
         response.err = ERR_INVALID_PARAMETERS;
         will_create_app = false;
     } else {
@@ -2708,7 +2707,8 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         if (i != 0)
             os << ", ";
 
-        if (!validate_app_env(keys[i], values[i], env_rpc.response().hint_message)) {
+        if (!_app_env_validator.validate_app_env(
+                keys[i], values[i], env_rpc.response().hint_message)) {
             env_rpc.response().err = ERR_INVALID_PARAMETERS;
             return;
         }

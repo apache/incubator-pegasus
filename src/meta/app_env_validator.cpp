@@ -33,33 +33,6 @@
 
 namespace dsn {
 namespace replication {
-bool validate_app_envs(const std::map<std::string, std::string> &envs)
-{
-    // only check rocksdb app envs currently
-
-    for (const auto &it : envs) {
-        if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(it.first) ==
-                replica_envs::ROCKSDB_STATIC_OPTIONS.end() &&
-            replica_envs::ROCKSDB_DYNAMIC_OPTIONS.find(it.first) ==
-                replica_envs::ROCKSDB_DYNAMIC_OPTIONS.end()) {
-            continue;
-        }
-        std::string hint_message;
-        if (!validate_app_env(it.first, it.second, hint_message)) {
-            LOG_WARNING(
-                "app env {}={} is invaild, hint_message:{}", it.first, it.second, hint_message);
-            return false;
-        }
-    }
-    return true;
-}
-
-bool validate_app_env(const std::string &env_name,
-                      const std::string &env_value,
-                      std::string &hint_message)
-{
-    return app_env_validator::instance().validate_app_env(env_name, env_value, hint_message);
-}
 
 bool check_slow_query(const std::string &env_value, std::string &hint_message)
 {
@@ -261,6 +234,26 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
 
     hint_message = fmt::format("app_env \"{}\" is not supported", env_name);
     return false;
+}
+
+bool app_env_validator::validate_app_envs(const std::map<std::string, std::string> &envs)
+{
+    // only check rocksdb app envs currently
+    for (const auto &it : envs) {
+        if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(it.first) ==
+                replica_envs::ROCKSDB_STATIC_OPTIONS.end() &&
+            replica_envs::ROCKSDB_DYNAMIC_OPTIONS.find(it.first) ==
+                replica_envs::ROCKSDB_DYNAMIC_OPTIONS.end()) {
+            continue;
+        }
+        std::string hint_message;
+        if (!validate_app_env(it.first, it.second, hint_message)) {
+            LOG_WARNING(
+                "app env {}={} is invaild, hint_message:{}", it.first, it.second, hint_message);
+            return false;
+        }
+    }
+    return true;
 }
 
 void app_env_validator::register_all_validators()

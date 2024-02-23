@@ -26,23 +26,19 @@
 namespace dsn {
 namespace replication {
 
-bool validate_app_envs(const std::map<std::string, std::string> &envs);
-
-bool validate_app_env(const std::string &env_name,
-                      const std::string &env_value,
-                      std::string &hint_message);
-
-class app_env_validator : public utils::singleton<app_env_validator>
+class app_env_validator
 {
 public:
+    app_env_validator() { register_all_validators(); }
+    ~app_env_validator() = default;
+
     bool validate_app_env(const std::string &env_name,
                           const std::string &env_value,
                           std::string &hint_message);
 
-private:
-    app_env_validator() { register_all_validators(); }
-    ~app_env_validator() = default;
+    bool validate_app_envs(const std::map<std::string, std::string> &envs);
 
+private:
     void register_all_validators();
 
     enum class ValueType
