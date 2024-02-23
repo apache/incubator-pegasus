@@ -196,54 +196,54 @@ bool check_rocksdb_num_levels(const std::string &env_value, std::string &hint_me
 app_env_validator::EnvInfo::EnvInfo(ValueType t, std::string ld, std::string s, validator_func v)
     : type(t), limit_desc(std::move(ld)), sample(std::move(s)), validator(std::move(v))
 {
+    // Set default limitation description.
     if (limit_desc.empty()) {
         switch (type) {
         case ValueType::kBool:
             limit_desc = "true | false";
             break;
         case ValueType::kUint64:
-            limit_desc = ">=0";
+            limit_desc = ">= 0";
+            break;
+        case ValueType::kInt64ButOnlyNegativeOne:
+            limit_desc = ">= 0 or == -1";
             break;
         case ValueType::kString:
-            // TODO(yingchun):
             break;
         default:
             CHECK_TRUE(false);
             __builtin_unreachable();
         }
     }
+
+    // Set default sample.
     if (sample.empty()) {
         switch (type) {
         case ValueType::kBool:
             sample = "true";
             break;
         case ValueType::kString:
-            // TODO(yingchun):
             break;
         default:
             CHECK_TRUE(false);
             __builtin_unreachable();
         }
     }
-    if (!validator) {
-        switch (type) {
-        case ValueType::kBool:
-            validator = [](const std::string &env_value, std::string &hint_message) {
-                bool result = false;
-                if (!dsn::buf2bool(env_value, result)) {
-                    hint_message =
-                        fmt::format("invalid value '{}', should be 'true' or 'false'", env_value);
-                    return false;
-                }
-                return true;
-            };
-            break;
-        default:
-            CHECK_TRUE(false);
-            __builtin_unreachable();
-        }
+
+    // Set default validator.
+    if (validator == nullptr && type == ValueType::kBool) {
+        validator = [](const std::string &env_value, std::string &hint_message) {
+            bool result = false;
+            if (!dsn::buf2bool(env_value, result)) {
+                hint_message =
+                    fmt::format("invalid value '{}', should be 'true' or 'false'", env_value);
+                return false;
+            }
+            return true;
+        };
     }
 }
+
 bool app_env_validator::validate_app_env(const std::string &env_name,
                                          const std::string &env_value,
                                          std::string &hint_message)
