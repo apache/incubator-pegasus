@@ -1373,16 +1373,19 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
     }
 
     auto calcs = std::make_unique<aggregate_stats_calcs>();
-    calcs->create_sums<partition_aggregate_stats>(entity_type, std::move(sums), partitions);
+    calcs->create_sums<table_aggregate_stats>(entity_type, std::move(sums), partitions);
     calcs->create_increases<table_aggregate_stats>(entity_type, std::move(increases), partitions);
     calcs->create_rates<table_aggregate_stats>(entity_type, std::move(rates), partitions);
     return calcs;
 }
 
 // Create all aggregations for the partition-level stats.
-inline std::unique_ptr<aggregate_stats_calcs> create_partition_aggregate_stats_calcs(
-    const int32_t table_id, const std::vector<dsn::partition_configuration> &partitions;
-    const dsn::rpc_address &node, const std::string &entity_type, std::vector<row_data> &rows)
+inline std::unique_ptr<aggregate_stats_calcs>
+create_partition_aggregate_stats_calcs(const int32_t table_id,
+                                       const std::vector<dsn::partition_configuration> &partitions,
+                                       const dsn::rpc_address &node,
+                                       const std::string &entity_type,
+                                       std::vector<row_data> &rows)
 {
     CHECK_EQ(rows.size(), partitions.size());
 
@@ -1743,8 +1746,6 @@ inline bool get_partition_stats(shell_context *sc,
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
     const auto &results_end = get_metrics(nodes, query_string);
 
-    // TODO(wangdan): use partition_aggregate_stats to implement partition-level stats
-    // for a specific table.
     rows.clear();
     rows.reserve(partition_count);
     for (int32_t i = 0; i < partition_count; ++i) {
