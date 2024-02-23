@@ -61,6 +61,18 @@ bool validate_app_env(const std::string &env_name,
     return app_env_validator::instance().validate_app_env(env_name, env_value, hint_message);
 }
 
+bool check_slow_query(const std::string &env_value, std::string &hint_message)
+{
+    uint64_t threshold = 0;
+    if (!dsn::buf2uint64(env_value, threshold) ||
+        threshold < replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS) {
+        hint_message = fmt::format("Slow query threshold must be >= {}ms",
+                                   replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS);
+        return false;
+    }
+    return true;
+}
+
 bool check_deny_client(const std::string &env_value, std::string &hint_message)
 {
     std::vector<std::string> sub_sargs;
@@ -76,6 +88,16 @@ bool check_deny_client(const std::string &env_value, std::string &hint_message)
     if ((sub_sargs[0] != "timeout" && sub_sargs[0] != "reconfig") ||
         (sub_sargs[1] != "all" && sub_sargs[1] != "write" && sub_sargs[1] != "read")) {
         hint_message = invalid_hint_message;
+        return false;
+    }
+    return true;
+}
+
+bool check_rocksdb_iteration(const std::string &env_value, std::string &hint_message)
+{
+    uint64_t threshold = 0;
+    if (!dsn::buf2uint64(env_value, threshold) || threshold < 0) {
+        hint_message = "Rocksdb iteration threshold must be greater than zero";
         return false;
     }
     return true;
@@ -245,35 +267,13 @@ void app_env_validator::register_all_validators()
 {
     _validator_funcs = {
         {replica_envs::SLOW_QUERY_THRESHOLD,
-         {ValueType::kUint64,
-          ">=20",
-          "1000",
-          [](const std::string &env_value, std::string &hint_message) {
-              uint64_t threshold = 0;
-              if (!dsn::buf2uint64(env_value, threshold) ||
-                  threshold < replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS) {
-                  hint_message = fmt::format("Slow query threshold must be >= {}ms",
-                                             replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS);
-                  return false;
-              }
-              return true;
-          }}},
+         {ValueType::kUint64, ">=20", "1000", &check_slow_query}},
         {replica_envs::WRITE_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::WRITE_SIZE_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
-         {ValueType::kUint64,
-          ">=0",
-          "1000",
-          [](const std::string &env_value, std::string &hint_message) {
-              uint64_t threshold = 0;
-              if (!dsn::buf2uint64(env_value, threshold) || threshold < 0) {
-                  hint_message = "Rocksdb iteration threshold must be greater than zero";
-                  return false;
-              }
-              return true;
-          }}},
+         {ValueType::kUint64, ">=0", "1000", &check_rocksdb_iteration}},
         {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED, {ValueType::kBool}},
         {replica_envs::READ_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
