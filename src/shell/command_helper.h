@@ -682,11 +682,12 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     return results;
 }
 
-#define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what)                                     \
+#define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what, ...)                                \
     do {                                                                                           \
         if (dsn_unlikely(!result.error())) {                                                       \
-            std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
-                      << node.address << " failed: " << result.error() << std::endl;               \
+            std::cout << "ERROR: send http request to query " << fmt::format(what, ##__VA_ARGS__)  \
+                      << " metrics from node " << node.address << " failed: " << result.error()    \
+                      << std::endl;                                                                \
             return true;                                                                           \
         }                                                                                          \
         if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {                         \
@@ -698,12 +699,13 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
         }                                                                                          \
     } while (0)
 
-#define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what)                                     \
+#define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what, ...)                                \
     do {                                                                                           \
         const auto &res = (expr);                                                                  \
         if (dsn_unlikely(!res)) {                                                                  \
-            std::cout << "ERROR: parse " << what << " metrics response from node " << node.address \
-                      << " failed: " << res << std::endl;                                          \
+            std::cout << "ERROR: parse " << fmt::format(what, ##__VA_ARGS__)                       \
+                      << " metrics response from node " << node.address << " failed: " << res      \
+                      << std::endl;                                                                \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
@@ -1371,9 +1373,43 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
     }
 
     auto calcs = std::make_unique<aggregate_stats_calcs>();
-    calcs->create_sums<table_aggregate_stats>(entity_type, std::move(sums), partitions);
+    calcs->create_sums<partition_aggregate_stats>(entity_type, std::move(sums), partitions);
     calcs->create_increases<table_aggregate_stats>(entity_type, std::move(increases), partitions);
     calcs->create_rates<table_aggregate_stats>(entity_type, std::move(rates), partitions);
+    return calcs;
+}
+
+// Create all aggregations for the partition-level stats.
+inline std::unique_ptr<aggregate_stats_calcs> create_partition_aggregate_stats_calcs(
+    const int32_t table_id, const std::vector<dsn::partition_configuration> &partitions;
+    const dsn::rpc_address &node, const std::string &entity_type, std::vector<row_data> &rows)
+{
+    CHECK_EQ(rows.size(), partitions.size());
+
+    partition_stat_map sums;
+    partition_stat_map increases;
+    partition_stat_map rates;
+    for (size_t i = 0; i < rows.size(); ++i) {
+        if (partitions[i].primary != node) {
+            // Ignore once the replica of the metrics is not the primary of the partition.
+            continue;
+        }
+
+        const std::vector<std::pair<partition_stat_map *, std::function<stat_var_map(row_data &)>>>
+            processors = {
+                {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
+            };
+        for (auto &processor : processors) {
+            // Put all dimensions of table id, partition_id,  and metric name into filters for
+            // each kind of aggregation.
+            processor.first->emplace(dsn::gpid(table_id, i), processor.second(rows[i]));
+        }
+    }
+
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_sums<partition_aggregate_stats>(entity_type, std::move(sums));
+    calcs->create_increases<partition_aggregate_stats>(entity_type, std::move(increases));
+    calcs->create_rates<partition_aggregate_stats>(entity_type, std::move(rates));
     return calcs;
 }
 
@@ -1642,10 +1678,10 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
         return false;
     }
 
-    const auto filters = row_data_filters();
-    const auto &results_start = get_metrics(nodes, filters.to_query_string());
+    const auto query_string = row_data_filters().to_query_string();
+    const auto &results_start = get_metrics(nodes, query_string);
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
-    const auto &results_end = get_metrics(nodes, filters.to_query_string());
+    const auto &results_end = get_metrics(nodes, query_string);
 
     std::map<int32_t, std::vector<dsn::partition_configuration>> table_partitions;
     if (!get_app_partitions(sc, apps, table_partitions)) {
@@ -1700,36 +1736,34 @@ inline bool get_partition_stats(shell_context *sc,
         LOG_ERROR("list app {} failed, error = {}", table_name, err);
         return false;
     }
+    CHECK_EQ(partitions.size(), partition_count);
 
-    const auto filters = row_data_filters(table_id);
-    const auto &results_start = get_metrics(nodes, filters.to_query_string());
+    const auto query_string = row_data_filters(table_id).to_query_string();
+    const auto &results_start = get_metrics(nodes, query_string);
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
-    const auto &results_end = get_metrics(nodes, filters.to_query_string());
+    const auto &results_end = get_metrics(nodes, query_string);
 
     // TODO(wangdan): use partition_aggregate_stats to implement partition-level stats
     // for a specific table.
-    rows.resize(partition_count);
+    rows.clear();
+    rows.reserve(partition_count);
     for (int32_t i = 0; i < partition_count; ++i) {
-        rows[i].row_name = std::to_string(i);
+        rows.emplace_back(std::to_string(i));
     }
 
-    for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
-        dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(node_addr, results[i], info))
-            return false;
-        for (dsn::perf_counter_metric &m : info.counters) {
-            int32_t app_id_x, partition_index_x;
-            std::string counter_name;
-            bool parse_ret = parse_app_pegasus_perf_counter_name(
-                m.name, app_id_x, partition_index_x, counter_name);
-            CHECK(parse_ret, "name = {}", m.name);
-            CHECK_EQ_MSG(app_id_x, app_id, "name = {}", m.name);
-            CHECK_LT_MSG(partition_index_x, partition_count, "name = {}", m.name);
-            if (partitions[partition_index_x].primary != node_addr)
-                continue;
-            update_app_pegasus_perf_counter(rows[partition_index_x], counter_name, m.value);
-        }
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        RETURN_SHELL_IF_GET_METRICS_FAILED(
+            results_start[i], nodes[i], "starting row data requests for table(id={})", table_id);
+        RETURN_SHELL_IF_GET_METRICS_FAILED(
+            results_end[i], nodes[i], "ending row data requests for table(id={})", table_id);
+
+        auto calcs = create_partition_aggregate_stats_calcs(
+            table_id, partitions, nodes[i].address, "replica", rows);
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+            calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
+            nodes[i],
+            "row data requests for table(id={})",
+            table_id);
     }
 
     return true;
