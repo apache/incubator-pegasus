@@ -91,22 +91,22 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
         std::vector<std::string> sub_sargs;
         utils::split_args(sarg.c_str(), sub_sargs, '*', true);
         if (sub_sargs.size() != 3) {
-            hint_message = fmt::format("The field count of {} should be 3", sarg);
+            hint_message = fmt::format("The field count of '{}' separated by '*' must be 3", sarg);
             return false;
         }
 
-        // check the first part, which is must be a positive number followed with 'K' or 'M'
-        int64_t units = 0;
+        // check the first part, which must be a positive number followed with 'K' or 'M'
+        uint64_t units = 0;
         if (!sub_sargs[0].empty() &&
             ('M' == *sub_sargs[0].rbegin() || 'K' == *sub_sargs[0].rbegin())) {
             sub_sargs[0].pop_back();
         }
-        if (!buf2int64(sub_sargs[0], units) || units < 0) {
-            hint_message = fmt::format("{} should be non-negative int", sub_sargs[0]);
+        if (!buf2uint64(sub_sargs[0], units)) {
+            hint_message = fmt::format("'{}' should be an unsigned integer", sub_sargs[0]);
             return false;
         }
 
-        // check the second part, which is must be "delay" or "reject"
+        // check the second part, which must be "delay" or "reject"
         if (sub_sargs[1] == "delay") {
             if (delay_parsed) {
                 hint_message = "duplicate delay config";
@@ -120,14 +120,14 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
             }
             reject_parsed = true;
         } else {
-            hint_message = fmt::format("{} should be \"delay\" or \"reject\"", sub_sargs[1]);
+            hint_message = fmt::format("'{}' should be 'delay' or 'reject'", sub_sargs[1]);
             return false;
         }
 
         // check the third part, which must be a positive number or 0
-        int64_t delay_ms = 0;
-        if (!buf2int64(sub_sargs[2], delay_ms) || delay_ms < 0) {
-            hint_message = fmt::format("{} should be non-negative int", sub_sargs[2]);
+        uint64_t delay_ms = 0;
+        if (!buf2uint64(sub_sargs[2], delay_ms)) {
+            hint_message = fmt::format("'{}' should be an unsigned integer", sub_sargs[2]);
             return false;
         }
     }
@@ -252,6 +252,8 @@ void app_env_validator::register_all_validators()
     static const auto kMaxWriteBufferSize = 512 << 20;
     static const auto kMinLevel = 1;
     static const auto kMaxLevel = 10;
+    static const std::string check_throttling_limit = "<size[K|M]>*<delay|reject>*<milliseconds>";
+    static const std::string check_throttling_sample = "10000*delay*100,20000*reject*100";
     _validator_funcs = {
         {replica_envs::SLOW_QUERY_THRESHOLD,
          {ValueType::kInt64,
@@ -261,23 +263,23 @@ void app_env_validator::register_all_validators()
               return replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS <= new_value;
           }}},
         {replica_envs::WRITE_QPS_THROTTLING,
-         {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
+         {ValueType::kString, check_throttling_limit, check_throttling_sample, &check_throttling}},
         {replica_envs::WRITE_SIZE_THROTTLING,
-         {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
+         {ValueType::kString, check_throttling_limit, check_throttling_sample, &check_throttling}},
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
          {ValueType::kInt64, ">= 0", "1000", [](int64_t new_value) { return new_value >= 0; }}},
         {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED, {ValueType::kBool}},
         {replica_envs::READ_QPS_THROTTLING,
-         {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
+         {ValueType::kString, check_throttling_limit, check_throttling_sample, &check_throttling}},
         {replica_envs::READ_SIZE_THROTTLING,
          {ValueType::kString,
-          "<size [K|M]> or <size [K|M]>*<delay|reject>*<milliseconds>",
+          "",
           "20000*delay*100,20000*reject*100",
           &utils::token_bucket_throttling_controller::validate}},
         {replica_envs::SPLIT_VALIDATE_PARTITION_HASH, {ValueType::kBool}},
         {replica_envs::USER_SPECIFIED_COMPACTION, {ValueType::kString}},
         {replica_envs::BACKUP_REQUEST_QPS_THROTTLING,
-         {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
+         {ValueType::kString, check_throttling_limit, check_throttling_sample, &check_throttling}},
         {replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, {ValueType::kBool}},
         {replica_envs::DENY_CLIENT_REQUEST,
          {ValueType::kString,
