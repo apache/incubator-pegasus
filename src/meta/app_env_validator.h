@@ -64,7 +64,6 @@ private:
     {
         kBool,
         kUint64,
-        kUint64AndNegativeOne, // Both uint64 and -1 are valid.
         kString
     };
 

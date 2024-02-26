@@ -48,7 +48,7 @@ bool app_env_validator::validate_app_envs(const std::map<std::string, std::strin
         std::string hint_message;
         if (!validate_app_env(it.first, it.second, hint_message)) {
             LOG_WARNING(
-                "app env {}={} is invaild, hint_message:{}", it.first, it.second, hint_message);
+                "app env {}={} is invalid, hint_message:{}", it.first, it.second, hint_message);
             return false;
         }
     }
@@ -172,6 +172,7 @@ bool check_rocksdb_write_buffer_size(const std::string &env_value, std::string &
     }
     return true;
 }
+
 bool check_rocksdb_num_levels(const std::string &env_value, std::string &hint_message)
 {
     int32_t val = 0;
@@ -199,9 +200,6 @@ app_env_validator::EnvInfo::EnvInfo(ValueType t, std::string ld, std::string s, 
         case ValueType::kUint64:
             limit_desc = ">= 0";
             break;
-        case ValueType::kUint64AndNegativeOne:
-            limit_desc = ">= 0 or == -1";
-            break;
         case ValueType::kString:
             break;
         default:
@@ -223,38 +221,49 @@ app_env_validator::EnvInfo::EnvInfo(ValueType t, std::string ld, std::string s, 
             __builtin_unreachable();
         }
     }
-
-    // Set default validator.
-    if (validator == nullptr && type == ValueType::kBool) {
-        validator = [](const std::string &env_value, std::string &hint_message) {
-            bool result = false;
-            if (!dsn::buf2bool(env_value, result)) {
-                hint_message =
-                    fmt::format("invalid value '{}', should be 'true' or 'false'", env_value);
-                return false;
-            }
-            return true;
-        };
-    }
 }
 
 bool app_env_validator::validate_app_env(const std::string &env_name,
                                          const std::string &env_value,
                                          std::string &hint_message)
 {
-    auto func_iter = _validator_funcs.find(env_name);
-    if (func_iter != _validator_funcs.end()) {
-        if (nullptr != func_iter->second.validator &&
-            !func_iter->second.validator(env_value, hint_message)) {
-            LOG_WARNING("{}={} is invalid.", env_name, env_value);
-            return false;
-        }
-
-        return true;
+    // Check if the env is supported.
+    const auto func_iter = _validator_funcs.find(env_name);
+    if (func_iter == _validator_funcs.end()) {
+        hint_message = fmt::format("app_env \"{}\" is not supported", env_name);
+        return false;
     }
 
-    hint_message = fmt::format("app_env \"{}\" is not supported", env_name);
-    return false;
+    // Check by the default validator.
+    switch (func_iter->second.type) {
+    case ValueType::kBool: {
+        bool result = false;
+        if (!dsn::buf2bool(env_value, result)) {
+            hint_message =
+                fmt::format("invalid value '{}', should be 'true' or 'false'", env_value);
+            return false;
+        }
+        break;
+    }
+    case ValueType::kUint64: {
+        int64_t result = 0;
+        if (!dsn::buf2int64(env_value, result)) {
+            hint_message = fmt::format("invalid value '{}', should be an integer", env_value);
+            return false;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    // Check by the self defined validator.
+    if (nullptr != func_iter->second.validator &&
+        !func_iter->second.validator(env_value, hint_message)) {
+        return false;
+    }
+
+    return true;
 }
 
 void app_env_validator::register_all_validators()
@@ -267,7 +276,7 @@ void app_env_validator::register_all_validators()
         {replica_envs::WRITE_SIZE_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
-         {ValueType::kUint64, ">=0", "1000", &check_rocksdb_iteration}},
+         {ValueType::kUint64, "", "1000", &check_rocksdb_iteration}},
         {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED, {ValueType::kBool}},
         {replica_envs::READ_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
@@ -283,7 +292,8 @@ void app_env_validator::register_all_validators()
         {replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, {ValueType::kBool}},
         {replica_envs::DENY_CLIENT_REQUEST,
          {ValueType::kString,
-          "timeout*all|timeout*write|timeout*read|reconfig*all|reconfig*write|reconfig*read",
+          "timeout*all | timeout*write | timeout*read | reconfig*all | reconfig*write | "
+          "reconfig*read",
           "timeout*all",
           &check_deny_client}},
         {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
@@ -299,7 +309,8 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_DISABLED, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME, {ValueType::kString}},
-        {replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
+         {ValueType::kUint64, "-1 or >= 1", "6", nullptr}},
         {replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, {ValueType::kString}},
@@ -309,11 +320,9 @@ void app_env_validator::register_all_validators()
 }
 
 const std::unordered_map<app_env_validator::ValueType, std::string>
-    app_env_validator::EnvInfo::ValueType2String{
-        {ValueType::kBool, "bool"},
-        {ValueType::kUint64, "unsigned int"},
-        {ValueType::kUint64AndNegativeOne, "unsigned int and -1"},
-        {ValueType::kString, "string"}};
+    app_env_validator::EnvInfo::ValueType2String{{ValueType::kBool, "bool"},
+                                                 {ValueType::kUint64, "unsigned int"},
+                                                 {ValueType::kString, "string"}};
 
 nlohmann::json app_env_validator::EnvInfo::to_json() const
 {
@@ -329,7 +338,7 @@ nlohmann::json app_env_validator::EnvInfo::to_json() const
 void app_env_validator::list_all_envs(const http_request &req, http_response &resp) const
 {
     nlohmann::json envs;
-    for (auto validator_func : _validator_funcs) {
+    for (const auto &validator_func : _validator_funcs) {
         envs[validator_func.first] = validator_func.second.to_json();
     }
     resp.body = envs.dump(2);
