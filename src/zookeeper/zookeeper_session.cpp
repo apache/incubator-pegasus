@@ -63,7 +63,6 @@ DSN_DEFINE_string(zookeeper,
                   sasl_password_file,
                   "",
                   "File containing the password (recommended for SASL/DIGEST-MD5)");
-DSN_TAG_VARIABLE(sasl_mechanisms_type, FT_MUTABLE);
 DSN_DEFINE_group_validator(enable_zookeeper_kerberos, [](std::string &message) -> bool {
     if (FLAGS_enable_zookeeper_kerberos &&
         !dsn::utils::equals(FLAGS_sasl_mechanisms_type, "GSSAPI")) {
@@ -178,55 +177,58 @@ zookeeper_session::zookeeper_session(const service_app_info &node) : _handle(nul
 int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
 {
     utils::auto_write_lock l(_watcher_lock);
-    if (nullptr == _handle) {
+    do {
+        if (nullptr != _handle) {
+            break;
+        }
         if (utils::is_empty(FLAGS_sasl_mechanisms_type)) {
             _handle = zookeeper_init(
                 FLAGS_hosts_list, global_watcher, FLAGS_timeout_ms, nullptr, this, 0);
-        } else {
-            int err = sasl_client_init(nullptr);
-            CHECK_EQ_MSG(err,
-                         SASL_OK,
-                         "Unable to initialize SASL library {}",
-                         sasl_errstring(err, nullptr, nullptr));
+            break;
+        }
+        int err = sasl_client_init(nullptr);
+        CHECK_EQ_MSG(err,
+                     SASL_OK,
+                     "Unable to initialize SASL library {}",
+                     sasl_errstring(err, nullptr, nullptr));
 
-            if (!utils::is_empty(FLAGS_sasl_password_file)) {
-                CHECK(utils::filesystem::file_exists(FLAGS_sasl_password_file),
-                      "sasl_password_file {} not exist!",
-                      FLAGS_sasl_password_file);
-            }
-
-            auto param_host = "";
-            if (!utils::is_empty(FLAGS_sasl_service_fqdn)) {
-                rpc_address addr;
-                CHECK(dsn::rpc_address::from_host_port(FLAGS_sasl_service_fqdn),
-                      "sasl_service_fqdn {} is invalid",
-                      FLAGS_sasl_service_fqdn);
-                param_host = FLAGS_sasl_service_fqdn;
-            }
-            // DIGEST-MD5 requires '--server-fqdn zk-sasl-md5' for historical reasons on zk c client
-            if (dsn::utils::equals(FLAGS_sasl_mechanisms_type, "DIGEST-MD5")) {
-                param_host = "zk-sasl-md5";
-            }
-
-            zoo_sasl_params_t sasl_params = {0};
-            sasl_params.service = FLAGS_sasl_service_name;
-            sasl_params.mechlist = FLAGS_sasl_mechanisms_type;
-            sasl_params.host = param_host;
-            sasl_params.callbacks = zoo_sasl_make_basic_callbacks(
-                FLAGS_sasl_user_name, FLAGS_sasl_realm, FLAGS_sasl_password_file);
-
-            _handle = zookeeper_init_sasl(FLAGS_hosts_list,
-                                          global_watcher,
-                                          FLAGS_timeout_ms,
-                                          nullptr,
-                                          this,
-                                          0,
-                                          nullptr,
-                                          &sasl_params);
+        if (!utils::is_empty(FLAGS_sasl_password_file)) {
+            CHECK(utils::filesystem::file_exists(FLAGS_sasl_password_file),
+                  "sasl_password_file {} not exist!",
+                  FLAGS_sasl_password_file);
         }
 
-        CHECK_NOTNULL(_handle, "zookeeper session init failed");
-    }
+        auto param_host = "";
+        if (!utils::is_empty(FLAGS_sasl_service_fqdn)) {
+            rpc_address addr;
+            CHECK(dsn::rpc_address::from_host_port(FLAGS_sasl_service_fqdn),
+                  "sasl_service_fqdn {} is invalid",
+                  FLAGS_sasl_service_fqdn);
+            param_host = FLAGS_sasl_service_fqdn;
+        }
+        // DIGEST-MD5 requires '--server-fqdn zk-sasl-md5' for historical reasons on zk c client
+        if (dsn::utils::equals(FLAGS_sasl_mechanisms_type, "DIGEST-MD5")) {
+            param_host = "zk-sasl-md5";
+        }
+
+        zoo_sasl_params_t sasl_params = {0};
+        sasl_params.service = FLAGS_sasl_service_name;
+        sasl_params.mechlist = FLAGS_sasl_mechanisms_type;
+        sasl_params.host = param_host;
+        sasl_params.callbacks = zoo_sasl_make_basic_callbacks(
+            FLAGS_sasl_user_name, FLAGS_sasl_realm, FLAGS_sasl_password_file);
+
+        _handle = zookeeper_init_sasl(FLAGS_hosts_list,
+                                      global_watcher,
+                                      FLAGS_timeout_ms,
+                                      nullptr,
+                                      this,
+                                      0,
+                                      nullptr,
+                                      &sasl_params);
+    } while (false);
+
+    CHECK_NOTNULL(_handle, "zookeeper session init failed");
 
     _watchers.push_back(watcher_object());
     _watchers.back().watcher_path = "";
