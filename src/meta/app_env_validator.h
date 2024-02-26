@@ -79,11 +79,16 @@ private:
         string_validator_func string_validator;
         int_validator_func int_validator;
 
+        // Construct an object with kBool type.
         EnvInfo(ValueType t);
+
+        // Construct an object with kString type.
         EnvInfo(ValueType t,
                 std::string ld,
                 std::string s,
                 string_validator_func v = string_validator_func());
+
+        // Construct an object with kInt64 type.
         EnvInfo(ValueType t,
                 std::string ld,
                 std::string s,

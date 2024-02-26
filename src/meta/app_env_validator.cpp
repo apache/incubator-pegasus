@@ -154,24 +154,26 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
+static const auto kMinWriteBufferSize = 16 << 20;
+static const auto kMaxWriteBufferSize = 512 << 20;
 bool check_rocksdb_write_buffer_size(int64_t new_value, std::string &hint_message)
 {
-    static const auto min = 16 << 20;
-    static const auto max = 512 << 20;
-    if (new_value < min || new_value > max) {
-        hint_message =
-            fmt::format("rocksdb.write_buffer_size suggest set val in range [{}, {}]", min, max);
+    if (new_value < kMinWriteBufferSize || new_value > kMaxWriteBufferSize) {
+        hint_message = fmt::format("rocksdb.write_buffer_size suggest set val in range [{}, {}]",
+                                   kMinWriteBufferSize,
+                                   kMaxWriteBufferSize);
         return false;
     }
     return true;
 }
 
+static const auto kMinLevel = 1;
+static const auto kMaxLevel = 10;
 bool check_rocksdb_num_levels(int64_t new_value, std::string &hint_message)
 {
-    static const auto min = 1;
-    static const auto max = 10;
-    if (new_value < min || new_value > max) {
-        hint_message = fmt::format("rocksdb.num_levels suggest set val in range [1, 10]");
+    if (new_value < kMinLevel || new_value > kMaxLevel) {
+        hint_message = fmt::format(
+            "rocksdb.num_levels suggest set val in range [{}, {}]", kMinLevel, kMaxLevel);
         return false;
     }
     return true;
@@ -232,6 +234,7 @@ app_env_validator::EnvInfo::EnvInfo(ValueType t,
                                     string_validator_func v)
     : type(t), limit_desc(std::move(ld)), sample(std::move(s)), string_validator(std::move(v))
 {
+    CHECK_TRUE(type == ValueType::kString);
     init();
 }
 
@@ -241,6 +244,7 @@ app_env_validator::EnvInfo::EnvInfo(ValueType t,
                                     int_validator_func v)
     : type(t), limit_desc(std::move(ld)), sample(std::move(s)), int_validator(std::move(v))
 {
+    CHECK_TRUE(type == ValueType::kInt64);
     init();
 }
 
@@ -301,13 +305,16 @@ void app_env_validator::register_all_validators()
 {
     _validator_funcs = {
         {replica_envs::SLOW_QUERY_THRESHOLD,
-         {ValueType::kInt64, ">=20", "1000", &check_slow_query}},
+         {ValueType::kInt64,
+          fmt::format(">= {}", replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS),
+          "1000",
+          &check_slow_query}},
         {replica_envs::WRITE_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::WRITE_SIZE_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
-         {ValueType::kInt64, "", "1000", &check_rocksdb_iteration}},
+         {ValueType::kInt64, ">= 0", "1000", &check_rocksdb_iteration}},
         {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED, {ValueType::kBool}},
         {replica_envs::READ_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
@@ -329,11 +336,14 @@ void app_env_validator::register_all_validators()
           &check_deny_client}},
         {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
          {ValueType::kInt64,
-          "In range [16777216, 536870912]",
-          "16777216",
+          fmt::format("In range [{}, {}]", kMinWriteBufferSize, kMaxWriteBufferSize),
+          fmt::format("{}", kMinWriteBufferSize),
           &check_rocksdb_write_buffer_size}},
         {replica_envs::ROCKSDB_NUM_LEVELS,
-         {ValueType::kInt64, "In range [1, 10]", "6", &check_rocksdb_num_levels}},
+         {ValueType::kInt64,
+          fmt::format("In range [{}, {}]", kMinLevel, kMaxLevel),
+          "6",
+          &check_rocksdb_num_levels}},
         // TODO(zhaoliwei): not implemented
         {replica_envs::BUSINESS_INFO, {ValueType::kString}},
         {replica_envs::TABLE_LEVEL_DEFAULT_TTL, {ValueType::kString}},
