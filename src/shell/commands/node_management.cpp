@@ -390,9 +390,10 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        const auto &results_start = get_metrics(nodes, rw_requests_filters().to_query_string());
+        const auto query_string = rw_requests_filters().to_query_string();
+        const auto &results_start = get_metrics(nodes, query_string);
         std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_nodes_sample_interval_ms));
-        const auto &results_end = get_metrics(nodes, rw_requests_filters().to_query_string());
+        const auto &results_end = get_metrics(nodes, query_string);
 
         for (size_t i = 0; i < nodes.size(); ++i) {
             auto tmp_it = tmp_map.find(nodes[i].address);
