@@ -532,10 +532,9 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    rows.resize(rows.size() + 1);
-    row_data &sum = rows.back();
-    sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
-    for (int i = 0; i < rows.size() - 1; ++i) {
+    rows.emplace_back("(total:" + std::to_string(rows.size() - 1) + ")");
+    auto &sum = rows.back();
+    for (size_t i = 0; i < rows.size() - 1; ++i) {
         row_data &row = rows[i];
         sum.partition_count += row.partition_count;
         sum.get_qps += row.get_qps;
