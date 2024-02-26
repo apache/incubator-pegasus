@@ -87,6 +87,8 @@ private:
 
         static const std::unordered_map<app_env_validator::ValueType, std::string> ValueType2String;
     };
+
+    // The table envs and their limit descriptions, all available envs must be registered here.
     std::map<std::string, EnvInfo> _validator_funcs;
 };
 
