@@ -818,7 +818,7 @@ public:
         }                                                                                          \
     } while (0)
 
-    // Perform the chosen aggregations on the fetched metrics.
+    // Perform the chosen accum aggregations on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string)
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
@@ -828,13 +828,14 @@ public:
         return dsn::error_s::ok();
     }
 
-    // Perform the chosen aggregations on the fetched metrics.
+    // Perform all of the chosen aggregations (both accum and delta) on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string_start,
                                    const std::string &json_string_end)
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
             json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
 
+        // Apply ending sample to the accum aggregations.
         CALC_ACCUM_STATS(query_snapshot_end.entities);
 
         const std::array deltas_list = {&_increases, &_rates};

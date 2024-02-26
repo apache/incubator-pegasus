@@ -2255,7 +2255,7 @@ create_rdb_estimated_keys_stats_calcs(const int32_t table_id,
     return calcs;
 }
 
-// Aggregate the partition-level stats for the specified table.
+// Aggregate the partition-level rdb_estimated_keys for the specified table.
 bool get_rdb_estimated_keys_stats(shell_context *sc,
                                   const std::string &table_name,
                                   std::vector<row_data> &rows)
@@ -2442,13 +2442,12 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
 
-        // get estimate key number
         std::vector<row_data> rows;
         const std::string table_name(sc->pg_client->get_app_name());
         CHECK(!table_name.empty(), "table_name must be non-empty, see data_operations()");
 
         if (!get_rdb_estimated_keys_stats(sc, table_name, rows)) {
-            fprintf(stderr, "ERROR: query app stat from server failed");
+            fprintf(stderr, "ERROR: get rdb_estimated_keys stats failed");
             return true;
         }
 
