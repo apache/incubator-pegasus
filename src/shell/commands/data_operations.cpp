@@ -42,6 +42,7 @@
 #include <vector>
 
 #include "client/replication_ddl_client.h"
+#include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "geo/lib/geo_client.h"
 #include "idl_utils.h"
@@ -60,8 +61,10 @@
 #include "utils/blob.h"
 #include "utils/defer.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
 
