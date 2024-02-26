@@ -55,16 +55,6 @@ bool app_env_validator::validate_app_envs(const std::map<std::string, std::strin
     return true;
 }
 
-bool check_slow_query(int64_t new_value, std::string &hint_message)
-{
-    if (new_value < replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS) {
-        hint_message = fmt::format("Slow query threshold must be >= {}ms",
-                                   replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS);
-        return false;
-    }
-    return true;
-}
-
 bool check_deny_client(const std::string &env_value, std::string &hint_message)
 {
     std::vector<std::string> sub_sargs;
@@ -80,15 +70,6 @@ bool check_deny_client(const std::string &env_value, std::string &hint_message)
     if ((sub_sargs[0] != "timeout" && sub_sargs[0] != "reconfig") ||
         (sub_sargs[1] != "all" && sub_sargs[1] != "write" && sub_sargs[1] != "read")) {
         hint_message = invalid_hint_message;
-        return false;
-    }
-    return true;
-}
-
-bool check_rocksdb_iteration(int64_t new_value, std::string &hint_message)
-{
-    if (new_value < 0) {
-        hint_message = "Rocksdb iteration threshold must be greater than zero";
         return false;
     }
     return true;
@@ -143,7 +124,7 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
             return false;
         }
 
-        // check the third part, which is must be a positive number or 0
+        // check the third part, which must be a positive number or 0
         int64_t delay_ms = 0;
         if (!buf2int64(sub_sargs[2], delay_ms) || delay_ms < 0) {
             hint_message = fmt::format("{} should be non-negative int", sub_sargs[2]);
@@ -154,40 +135,6 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
-static const auto kMinWriteBufferSize = 16 << 20;
-static const auto kMaxWriteBufferSize = 512 << 20;
-bool check_rocksdb_write_buffer_size(int64_t new_value, std::string &hint_message)
-{
-    if (new_value < kMinWriteBufferSize || new_value > kMaxWriteBufferSize) {
-        hint_message = fmt::format("rocksdb.write_buffer_size suggest set val in range [{}, {}]",
-                                   kMinWriteBufferSize,
-                                   kMaxWriteBufferSize);
-        return false;
-    }
-    return true;
-}
-
-static const auto kMinLevel = 1;
-static const auto kMaxLevel = 10;
-bool check_rocksdb_num_levels(int64_t new_value, std::string &hint_message)
-{
-    if (new_value < kMinLevel || new_value > kMaxLevel) {
-        hint_message = fmt::format(
-            "rocksdb.num_levels suggest set val in range [{}, {}]", kMinLevel, kMaxLevel);
-        return false;
-    }
-    return true;
-}
-
-bool check_rocksdb_compact_target_levels(int64_t new_value, std::string &hint_message)
-{
-    if (new_value != -1 && new_value < 1) {
-        hint_message = fmt::format("target should be set to -1 or >= 1");
-        return false;
-    }
-    return true;
-}
-
 void app_env_validator::EnvInfo::init()
 {
     // Set default limitation description.
@@ -195,9 +142,6 @@ void app_env_validator::EnvInfo::init()
         switch (type) {
         case ValueType::kBool:
             limit_desc = "true | false";
-            break;
-        case ValueType::kInt64:
-            limit_desc = ">= 0";
             break;
         case ValueType::kString:
             break;
@@ -264,8 +208,7 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
         // Check by the default boolean validator.
         bool result = false;
         if (!dsn::buf2bool(env_value, result)) {
-            hint_message =
-                fmt::format("invalid value '{}', should be 'true' or 'false'", env_value);
+            hint_message = fmt::format("invalid value '{}', should be a boolean", env_value);
             return false;
         }
         break;
@@ -280,7 +223,9 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
 
         // Check by the self defined validator.
         if (nullptr != func_iter->second.int_validator &&
-            !func_iter->second.int_validator(result, hint_message)) {
+            !func_iter->second.int_validator(result)) {
+            hint_message = fmt::format(
+                "invalid value '{}', should be {}", env_value, func_iter->second.limit_desc);
             return false;
         }
         break;
@@ -303,18 +248,24 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
 
 void app_env_validator::register_all_validators()
 {
+    static const auto kMinWriteBufferSize = 16 << 20;
+    static const auto kMaxWriteBufferSize = 512 << 20;
+    static const auto kMinLevel = 1;
+    static const auto kMaxLevel = 10;
     _validator_funcs = {
         {replica_envs::SLOW_QUERY_THRESHOLD,
          {ValueType::kInt64,
           fmt::format(">= {}", replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS),
           "1000",
-          &check_slow_query}},
+          [](int64_t new_value) {
+              return replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS <= new_value;
+          }}},
         {replica_envs::WRITE_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::WRITE_SIZE_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
-         {ValueType::kInt64, ">= 0", "1000", &check_rocksdb_iteration}},
+         {ValueType::kInt64, ">= 0", "1000", [](int64_t new_value) { return new_value >= 0; }}},
         {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED, {ValueType::kBool}},
         {replica_envs::READ_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
@@ -338,12 +289,14 @@ void app_env_validator::register_all_validators()
          {ValueType::kInt64,
           fmt::format("In range [{}, {}]", kMinWriteBufferSize, kMaxWriteBufferSize),
           fmt::format("{}", kMinWriteBufferSize),
-          &check_rocksdb_write_buffer_size}},
+          [](int64_t new_value) {
+              return kMinWriteBufferSize <= new_value && new_value <= kMaxWriteBufferSize;
+          }}},
         {replica_envs::ROCKSDB_NUM_LEVELS,
          {ValueType::kInt64,
           fmt::format("In range [{}, {}]", kMinLevel, kMaxLevel),
           "6",
-          &check_rocksdb_num_levels}},
+          [](int64_t new_value) { return kMinLevel <= new_value && new_value <= kMaxLevel; }}},
         // TODO(zhaoliwei): not implemented
         {replica_envs::BUSINESS_INFO, {ValueType::kString}},
         {replica_envs::TABLE_LEVEL_DEFAULT_TTL, {ValueType::kString}},
@@ -354,11 +307,17 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
-         {ValueType::kInt64, "-1 or >= 1", "6", &check_rocksdb_compact_target_levels}},
+         {ValueType::kInt64,
+          "-1 or >= 1",
+          "6",
+          [](int64_t new_value) { return new_value == -1 || new_value >= 1; }}},
         {replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL,
-         {ValueType::kInt64, "-1 or >= 1", "6", &check_rocksdb_compact_target_levels}},
+         {ValueType::kInt64,
+          "-1 or >= 1",
+          "6",
+          [](int64_t new_value) { return new_value == -1 || new_value >= 1; }}},
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, {ValueType::kString}},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, {ValueType::kString}},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, {ValueType::kString}}};

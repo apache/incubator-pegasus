@@ -71,7 +71,7 @@ private:
     struct EnvInfo
     {
         using string_validator_func = std::function<bool(const std::string &, std::string &)>;
-        using int_validator_func = std::function<bool(int64_t, std::string &)>;
+        using int_validator_func = std::function<bool(int64_t)>;
 
         ValueType type;
         std::string limit_desc;
