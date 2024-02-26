@@ -55,11 +55,9 @@ bool app_env_validator::validate_app_envs(const std::map<std::string, std::strin
     return true;
 }
 
-bool check_slow_query(const std::string &env_value, std::string &hint_message)
+bool check_slow_query(int64_t new_value, std::string &hint_message)
 {
-    uint64_t threshold = 0;
-    if (!dsn::buf2uint64(env_value, threshold) ||
-        threshold < replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS) {
+    if (new_value < replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS) {
         hint_message = fmt::format("Slow query threshold must be >= {}ms",
                                    replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS);
         return false;
@@ -87,10 +85,9 @@ bool check_deny_client(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
-bool check_rocksdb_iteration(const std::string &env_value, std::string &hint_message)
+bool check_rocksdb_iteration(int64_t new_value, std::string &hint_message)
 {
-    uint64_t threshold = 0;
-    if (!dsn::buf2uint64(env_value, threshold) || threshold < 0) {
+    if (new_value < 0) {
         hint_message = "Rocksdb iteration threshold must be greater than zero";
         return false;
     }
@@ -157,39 +154,39 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
-bool check_rocksdb_write_buffer_size(const std::string &env_value, std::string &hint_message)
+bool check_rocksdb_write_buffer_size(int64_t new_value, std::string &hint_message)
 {
-    uint64_t val = 0;
-
-    if (!dsn::buf2uint64(env_value, val)) {
-        hint_message = fmt::format("rocksdb.write_buffer_size cannot set this val: {}", env_value);
-        return false;
-    }
-    if (val < (16 << 20) || val > (512 << 20)) {
+    static const auto min = 16 << 20;
+    static const auto max = 512 << 20;
+    if (new_value < min || new_value > max) {
         hint_message =
-            fmt::format("rocksdb.write_buffer_size suggest set val in range [16777216, 536870912]");
+            fmt::format("rocksdb.write_buffer_size suggest set val in range [{}, {}]", min, max);
         return false;
     }
     return true;
 }
 
-bool check_rocksdb_num_levels(const std::string &env_value, std::string &hint_message)
+bool check_rocksdb_num_levels(int64_t new_value, std::string &hint_message)
 {
-    int32_t val = 0;
-
-    if (!dsn::buf2int32(env_value, val)) {
-        hint_message = fmt::format("rocksdb.num_levels cannot set this val: {}", env_value);
-        return false;
-    }
-    if (val < 1 || val > 10) {
+    static const auto min = 1;
+    static const auto max = 10;
+    if (new_value < min || new_value > max) {
         hint_message = fmt::format("rocksdb.num_levels suggest set val in range [1, 10]");
         return false;
     }
     return true;
 }
 
-app_env_validator::EnvInfo::EnvInfo(ValueType t, std::string ld, std::string s, validator_func v)
-    : type(t), limit_desc(std::move(ld)), sample(std::move(s)), validator(std::move(v))
+bool check_rocksdb_compact_target_levels(int64_t new_value, std::string &hint_message)
+{
+    if (new_value != -1 && new_value < 1) {
+        hint_message = fmt::format("target should be set to -1 or >= 1");
+        return false;
+    }
+    return true;
+}
+
+void app_env_validator::EnvInfo::init()
 {
     // Set default limitation description.
     if (limit_desc.empty()) {
@@ -197,7 +194,7 @@ app_env_validator::EnvInfo::EnvInfo(ValueType t, std::string ld, std::string s, 
         case ValueType::kBool:
             limit_desc = "true | false";
             break;
-        case ValueType::kUint64:
+        case ValueType::kInt64:
             limit_desc = ">= 0";
             break;
         case ValueType::kString:
@@ -223,6 +220,30 @@ app_env_validator::EnvInfo::EnvInfo(ValueType t, std::string ld, std::string s, 
     }
 }
 
+app_env_validator::EnvInfo::EnvInfo(ValueType t) : type(t)
+{
+    CHECK_TRUE(type == ValueType::kBool);
+    init();
+}
+
+app_env_validator::EnvInfo::EnvInfo(ValueType t,
+                                    std::string ld,
+                                    std::string s,
+                                    string_validator_func v)
+    : type(t), limit_desc(std::move(ld)), sample(std::move(s)), string_validator(std::move(v))
+{
+    init();
+}
+
+app_env_validator::EnvInfo::EnvInfo(ValueType t,
+                                    std::string ld,
+                                    std::string s,
+                                    int_validator_func v)
+    : type(t), limit_desc(std::move(ld)), sample(std::move(s)), int_validator(std::move(v))
+{
+    init();
+}
+
 bool app_env_validator::validate_app_env(const std::string &env_name,
                                          const std::string &env_value,
                                          std::string &hint_message)
@@ -234,9 +255,9 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
         return false;
     }
 
-    // Check by the default validator.
     switch (func_iter->second.type) {
     case ValueType::kBool: {
+        // Check by the default boolean validator.
         bool result = false;
         if (!dsn::buf2bool(env_value, result)) {
             hint_message =
@@ -245,22 +266,32 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
         }
         break;
     }
-    case ValueType::kUint64: {
+    case ValueType::kInt64: {
+        // Check by the default int64 validator.
         int64_t result = 0;
         if (!dsn::buf2int64(env_value, result)) {
             hint_message = fmt::format("invalid value '{}', should be an integer", env_value);
             return false;
         }
+
+        // Check by the self defined validator.
+        if (nullptr != func_iter->second.int_validator &&
+            !func_iter->second.int_validator(result, hint_message)) {
+            return false;
+        }
+        break;
+    }
+    case ValueType::kString: {
+        // Check by the self defined validator.
+        if (nullptr != func_iter->second.string_validator &&
+            !func_iter->second.string_validator(env_value, hint_message)) {
+            return false;
+        }
         break;
     }
     default:
-        break;
-    }
-
-    // Check by the self defined validator.
-    if (nullptr != func_iter->second.validator &&
-        !func_iter->second.validator(env_value, hint_message)) {
-        return false;
+        CHECK_TRUE(false);
+        __builtin_unreachable();
     }
 
     return true;
@@ -270,13 +301,13 @@ void app_env_validator::register_all_validators()
 {
     _validator_funcs = {
         {replica_envs::SLOW_QUERY_THRESHOLD,
-         {ValueType::kUint64, ">=20", "1000", &check_slow_query}},
+         {ValueType::kInt64, ">=20", "1000", &check_slow_query}},
         {replica_envs::WRITE_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::WRITE_SIZE_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
-         {ValueType::kUint64, "", "1000", &check_rocksdb_iteration}},
+         {ValueType::kInt64, "", "1000", &check_rocksdb_iteration}},
         {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED, {ValueType::kBool}},
         {replica_envs::READ_QPS_THROTTLING,
          {ValueType::kString, "<QPS>*delay*<milliseconds>", "1000*delay*100", &check_throttling}},
@@ -297,9 +328,12 @@ void app_env_validator::register_all_validators()
           "timeout*all",
           &check_deny_client}},
         {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
-         {ValueType::kUint64, "In range [16777216, 536870912]", "16777216", &check_deny_client}},
+         {ValueType::kInt64,
+          "In range [16777216, 536870912]",
+          "16777216",
+          &check_rocksdb_write_buffer_size}},
         {replica_envs::ROCKSDB_NUM_LEVELS,
-         {ValueType::kUint64, "In range [1, 10]", "6", &check_rocksdb_num_levels}},
+         {ValueType::kInt64, "In range [1, 10]", "6", &check_rocksdb_num_levels}},
         // TODO(zhaoliwei): not implemented
         {replica_envs::BUSINESS_INFO, {ValueType::kString}},
         {replica_envs::TABLE_LEVEL_DEFAULT_TTL, {ValueType::kString}},
@@ -310,10 +344,11 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
-         {ValueType::kUint64, "-1 or >= 1", "6", nullptr}},
+         {ValueType::kInt64, "-1 or >= 1", "6", &check_rocksdb_compact_target_levels}},
         {replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION, {ValueType::kString}},
         {replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME, {ValueType::kString}},
-        {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL, {ValueType::kString}},
+        {replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL,
+         {ValueType::kInt64, "-1 or >= 1", "6", &check_rocksdb_compact_target_levels}},
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, {ValueType::kString}},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, {ValueType::kString}},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, {ValueType::kString}}};
@@ -321,7 +356,7 @@ void app_env_validator::register_all_validators()
 
 const std::unordered_map<app_env_validator::ValueType, std::string>
     app_env_validator::EnvInfo::ValueType2String{{ValueType::kBool, "bool"},
-                                                 {ValueType::kUint64, "unsigned int"},
+                                                 {ValueType::kInt64, "unsigned int"},
                                                  {ValueType::kString, "string"}};
 
 nlohmann::json app_env_validator::EnvInfo::to_json() const

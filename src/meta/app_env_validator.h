@@ -63,28 +63,38 @@ private:
     enum class ValueType : uint32_t
     {
         kBool,
-        kUint64,
+        kInt64,
         kString
     };
 
     // The type of table env and its limit description.
     struct EnvInfo
     {
-        using validator_func = std::function<bool(const std::string &, std::string &)>;
+        using string_validator_func = std::function<bool(const std::string &, std::string &)>;
+        using int_validator_func = std::function<bool(int64_t, std::string &)>;
 
         ValueType type;
         std::string limit_desc;
         std::string sample;
-        validator_func validator;
+        string_validator_func string_validator;
+        int_validator_func int_validator;
 
+        EnvInfo(ValueType t);
         EnvInfo(ValueType t,
-                std::string ld = "",
-                std::string s = "",
-                validator_func v = validator_func());
+                std::string ld,
+                std::string s,
+                string_validator_func v = string_validator_func());
+        EnvInfo(ValueType t,
+                std::string ld,
+                std::string s,
+                int_validator_func v = int_validator_func());
 
         nlohmann::json to_json() const;
 
         static const std::unordered_map<app_env_validator::ValueType, std::string> ValueType2String;
+
+    private:
+        void init();
     };
 
     // The table envs and their limit descriptions, all available envs must be registered here.
