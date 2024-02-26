@@ -85,15 +85,6 @@ DSN_DEFINE_bool(replication,
                 true,
                 "reject client write requests if disk status is space insufficient");
 DSN_TAG_VARIABLE(reject_write_when_disk_insufficient, FT_MUTABLE);
-
-DSN_DEFINE_bool("replication",
-                force_send_no_idempotent_when_duplication,
-                false,
-                "receive client idempotent write requests and send them to backup cluster when "
-                "doing duplication");
-DSN_TAG_VARIABLE(force_send_no_idempotent_when_duplication, FT_MUTABLE);
-
-
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_secondaries,
                  1000,
