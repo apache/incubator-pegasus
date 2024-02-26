@@ -17,18 +17,20 @@
 
 #pragma once
 
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <stdint.h>
 #include <functional>
 #include <map>
 #include <string>
-
-#include <nlohmann/json.hpp>
+#include <unordered_map>
 
 #include "http/http_server.h"
 
 namespace dsn {
 namespace replication {
 
-class app_env_validator : public http_service
+class app_env_validator final : public http_service
 {
 public:
     app_env_validator()
@@ -42,7 +44,7 @@ public:
                          "ip:port/envs/list");
     }
 
-    ~app_env_validator() = default;
+    ~app_env_validator() final = default;
 
     std::string path() const override { return "envs"; }
 
@@ -55,18 +57,22 @@ public:
 private:
     void register_all_validators();
 
-    void list_all_envs(const http_request &req, http_response &resp);
+    void list_all_envs(const http_request &req, http_response &resp) const;
 
+    // The type of table env.
     enum class ValueType : uint32_t
     {
         kBool,
         kUint64,
-        kUint64AndNegativeOne,
+        kUint64AndNegativeOne, // Both uint64 and -1 are valid.
         kString
     };
-    using validator_func = std::function<bool(const std::string &, std::string &)>;
+
+    // The type of table env and its limit description.
     struct EnvInfo
     {
+        using validator_func = std::function<bool(const std::string &, std::string &)>;
+
         ValueType type;
         std::string limit_desc;
         std::string sample;
@@ -77,9 +83,9 @@ private:
                 std::string s = "",
                 validator_func v = validator_func());
 
-        nlohmann::json to_json();
+        nlohmann::json to_json() const;
 
-        static std::unordered_map<app_env_validator::ValueType, std::string> ValueType2String;
+        static const std::unordered_map<app_env_validator::ValueType, std::string> ValueType2String;
     };
     std::map<std::string, EnvInfo> _validator_funcs;
 };

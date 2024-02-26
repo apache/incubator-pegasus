@@ -19,6 +19,7 @@
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
+#include <nlohmann/json.hpp>
 #include <stdint.h>
 #include <memory>
 #include <set>
@@ -26,9 +27,10 @@
 #include <vector>
 
 #include "common/replica_envs.h"
+#include "http/http_status_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/strings.h"
 #include "utils/string_conv.h"
+#include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 
 namespace dsn {
@@ -307,24 +309,25 @@ void app_env_validator::register_all_validators()
         {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, {ValueType::kString}}};
 }
 
-std::unordered_map<app_env_validator::ValueType, std::string>
+const std::unordered_map<app_env_validator::ValueType, std::string>
     app_env_validator::EnvInfo::ValueType2String{
         {ValueType::kBool, "bool"},
         {ValueType::kUint64, "unsigned int"},
         {ValueType::kUint64AndNegativeOne, "unsigned int and -1"},
         {ValueType::kString, "string"}};
 
-nlohmann::json app_env_validator::EnvInfo::to_json()
+nlohmann::json app_env_validator::EnvInfo::to_json() const
 {
-    CHECK_GT(ValueType2String.count(type), 0);
+    const auto &type_str = ValueType2String.find(type);
+    CHECK_TRUE(type_str != ValueType2String.end());
     nlohmann::json info;
-    info["type"] = ValueType2String[type];
+    info["type"] = type_str->second;
     info["limitation"] = limit_desc;
     info["sample"] = sample;
     return info;
 }
 
-void app_env_validator::list_all_envs(const http_request &req, http_response &resp)
+void app_env_validator::list_all_envs(const http_request &req, http_response &resp) const
 {
     nlohmann::json envs;
     for (auto validator_func : _validator_funcs) {
