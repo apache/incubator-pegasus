@@ -31,6 +31,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
+#include "utils/throttling_controller.h"
 #include "utils/token_bucket_throttling_controller.h"
 
 namespace dsn {
@@ -77,62 +78,12 @@ bool check_deny_client(const std::string &env_value, std::string &hint_message)
 
 bool check_throttling(const std::string &env_value, std::string &hint_message)
 {
-    std::vector<std::string> sargs;
-    utils::split_args(env_value.c_str(), sargs, ',');
-    if (sargs.empty()) {
-        hint_message = "The value shouldn't be empty";
-        return false;
-    }
-
-    // example for sarg: 100K*delay*100 / 100M*reject*100
-    bool reject_parsed = false;
-    bool delay_parsed = false;
-    for (std::string &sarg : sargs) {
-        std::vector<std::string> sub_sargs;
-        utils::split_args(sarg.c_str(), sub_sargs, '*', true);
-        if (sub_sargs.size() != 3) {
-            hint_message = fmt::format("The field count of '{}' separated by '*' must be 3", sarg);
-            return false;
-        }
-
-        // check the first part, which must be a positive number followed with 'K' or 'M'
-        uint64_t units = 0;
-        if (!sub_sargs[0].empty() &&
-            ('M' == *sub_sargs[0].rbegin() || 'K' == *sub_sargs[0].rbegin())) {
-            sub_sargs[0].pop_back();
-        }
-        if (!buf2uint64(sub_sargs[0], units)) {
-            hint_message = fmt::format("'{}' should be an unsigned integer", sub_sargs[0]);
-            return false;
-        }
-
-        // check the second part, which must be "delay" or "reject"
-        if (sub_sargs[1] == "delay") {
-            if (delay_parsed) {
-                hint_message = "duplicate delay config";
-                return false;
-            }
-            delay_parsed = true;
-        } else if (sub_sargs[1] == "reject") {
-            if (reject_parsed) {
-                hint_message = "duplicate reject config";
-                return false;
-            }
-            reject_parsed = true;
-        } else {
-            hint_message = fmt::format("'{}' should be 'delay' or 'reject'", sub_sargs[1]);
-            return false;
-        }
-
-        // check the third part, which must be a positive number or 0
-        uint64_t delay_ms = 0;
-        if (!buf2uint64(sub_sargs[2], delay_ms)) {
-            hint_message = fmt::format("'{}' should be an unsigned integer", sub_sargs[2]);
-            return false;
-        }
-    }
-
-    return true;
+    uint64_t delay_units = 0;
+    uint64_t delay_ms = 0;
+    uint64_t reject_units = 0;
+    uint64_t reject_delay_ms = 0;
+    return utils::throttling_controller::parse_from_env(
+        env_value, delay_units, delay_ms, reject_units, reject_delay_ms, hint_message);
 }
 
 void app_env_validator::EnvInfo::init()

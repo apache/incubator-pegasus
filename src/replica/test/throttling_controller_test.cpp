@@ -20,14 +20,14 @@
 #include "gtest/gtest.h"
 
 namespace dsn {
-namespace replication {
+namespace utils {
 
 class throttling_controller_test : public ::testing::Test
 {
 public:
     void test_parse_env_basic()
     {
-        throttling_controller cntl;
+        utils::throttling_controller cntl;
         std::string parse_err;
         bool env_changed = false;
         std::string old_value;
@@ -77,7 +77,7 @@ public:
 
     void test_parse_env_multiplier()
     {
-        throttling_controller cntl;
+        utils::throttling_controller cntl;
         std::string parse_err;
         bool env_changed = false;
         std::string old_value;
@@ -127,5 +127,5 @@ TEST_F(throttling_controller_test, parse_env_basic) { test_parse_env_basic(); }
 
 TEST_F(throttling_controller_test, parse_env_multiplier) { test_parse_env_multiplier(); }
 
-} // namespace replication
+} // namespace utils
 } // namespace dsn
