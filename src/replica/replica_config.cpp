@@ -74,10 +74,10 @@
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 
+/// The configuration management part of replica.
+
 namespace dsn {
 namespace replication {
-
-// The configuration management part of replica.
 
 bool get_bool_envs(const std::map<std::string, std::string> &envs,
                    const std::string &name,

@@ -31,9 +31,10 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 
+DSN_DECLARE_bool(enable_acl);
+
 namespace dsn {
 namespace security {
-DSN_DECLARE_bool(enable_acl);
 
 class replica_access_controller_test : public testing::Test
 {
@@ -72,7 +73,8 @@ TEST_F(replica_access_controller_test, allowed)
 
     std::unique_ptr<tools::sim_network_provider> sim_net(
         new tools::sim_network_provider(nullptr, nullptr));
-    auto sim_session = sim_net->create_client_session(rpc_address("localhost", 10086));
+    auto sim_session =
+        sim_net->create_client_session(rpc_address::from_host_port("localhost", 10086));
     dsn::message_ptr msg = message_ex::create_request(RPC_CM_LIST_APPS);
     msg->io_session = sim_session;
 

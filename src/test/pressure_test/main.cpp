@@ -39,11 +39,6 @@
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 
-using namespace std;
-using namespace ::pegasus;
-
-DEFINE_TASK_CODE(LPC_DEFAUT_TASK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
-
 DSN_DEFINE_int32(pressureclient, qps, 0, "qps of pressure client");
 DSN_DEFINE_int32(pressureclient, hashkey_len, 64, "hashkey length");
 DSN_DEFINE_int32(pressureclient, sortkey_len, 64, "sortkey length");
@@ -57,8 +52,8 @@ DSN_DEFINE_int64(pressureclient,
                  sortkey_limit,
                  0,
                  "The sortkey range to generate, in format [0, ****key_limit].");
-DSN_DEFINE_string(pressureclient, cluster_name, "onebox", "cluster name");
-DSN_DEFINE_validator(cluster_name,
+DSN_DEFINE_string(pressureclient, test_cluster_name, "onebox", "cluster name");
+DSN_DEFINE_validator(test_cluster_name,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 DSN_DEFINE_string(pressureclient, app_name, "temp", "app name");
@@ -68,6 +63,11 @@ DSN_DEFINE_validator(app_name,
 DSN_DEFINE_string(pressureclient, operation_name, "", "operation name");
 DSN_DEFINE_validator(operation_name,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
+using namespace std;
+using namespace ::pegasus;
+
+DEFINE_TASK_CODE(LPC_DEFAUT_TASK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
 
 // for app
 static pegasus_client *pg_client = nullptr;
@@ -248,7 +248,7 @@ int main(int argc, const char **argv)
 
     LOG_INFO("pressureclient {} qps = {}", FLAGS_operation_name, FLAGS_qps);
 
-    pg_client = pegasus_client_factory::get_client(FLAGS_cluster_name, FLAGS_app_name);
+    pg_client = pegasus_client_factory::get_client(FLAGS_test_cluster_name, FLAGS_app_name);
     CHECK_NOTNULL(pg_client, "initialize pg_client failed");
 
     auto it = _all_funcs.find(FLAGS_operation_name);

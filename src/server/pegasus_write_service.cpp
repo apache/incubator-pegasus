@@ -46,11 +46,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-class blob;
-class message_ex;
-} // namespace dsn
-
 METRIC_DEFINE_counter(replica,
                       put_requests,
                       dsn::metric_unit::kRequests,
@@ -142,14 +137,18 @@ METRIC_DEFINE_counter(
     dsn::metric_unit::kRequests,
     "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
 
-namespace pegasus {
-namespace server {
-
 DSN_DEFINE_int64(pegasus.server,
                  dup_lagging_write_threshold_ms,
                  10 * 1000,
                  "If the duration that a write flows from master to slave is larger than this "
                  "threshold, the write is defined a lagging write.");
+
+namespace dsn {
+class blob;
+class message_ex;
+} // namespace dsn
+namespace pegasus {
+namespace server {
 
 DEFINE_TASK_CODE(LPC_INGESTION, TASK_PRIORITY_COMMON, THREAD_POOL_INGESTION)
 

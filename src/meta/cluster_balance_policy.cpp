@@ -30,15 +30,15 @@
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
 
-namespace dsn {
-namespace replication {
-class meta_service;
-
 DSN_DEFINE_uint32(meta_server,
                   balance_op_count_per_round,
                   10,
                   "balance operation count per round for cluster balancer");
 DSN_TAG_VARIABLE(balance_op_count_per_round, FT_MUTABLE);
+
+namespace dsn {
+namespace replication {
+class meta_service;
 
 uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t app_id)
 {

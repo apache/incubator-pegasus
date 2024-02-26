@@ -34,10 +34,11 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_string(service_fqdn);
 DSN_DECLARE_string(service_name);
+
+namespace dsn {
+namespace security {
 
 server_negotiation::server_negotiation(rpc_session_ptr session) : negotiation(session)
 {

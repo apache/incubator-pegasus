@@ -103,7 +103,7 @@ TEST(DDLClientTest, RetryMetaRequest)
          dsn::ERR_BUSY_CREATING},
     };
 
-    std::vector<rpc_address> meta_list = {{"127.0.0.1", 34601}};
+    const std::vector<rpc_address> meta_list = {rpc_address::from_ip_port("127.0.0.1", 34601)};
     auto req = std::make_shared<configuration_create_app_request>();
     for (const auto &test : tests) {
         fail::setup();

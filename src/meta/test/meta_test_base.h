@@ -53,7 +53,7 @@ public:
 
     void set_min_live_node_count_for_unfreeze(uint64_t node_count);
 
-    void set_node_live_percentage_threshold_for_update(uint64_t percentage_threshold);
+    void set_node_live_percentage_threshold_for_update(int32_t percentage_threshold);
 
     std::vector<rpc_address> ensure_enough_alive_nodes(int min_node_count);
 

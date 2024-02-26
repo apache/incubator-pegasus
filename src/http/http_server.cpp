@@ -41,9 +41,9 @@
 #include "utils/output_utils.h"
 #include "utils/strings.h"
 
-namespace dsn {
-
 DSN_DEFINE_bool(http, enable_http_server, true, "whether to enable the embedded HTTP server");
+
+namespace dsn {
 
 namespace {
 error_s update_config(const http_request &req)

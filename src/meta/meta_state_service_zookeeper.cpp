@@ -42,10 +42,10 @@
 #include "zookeeper/zookeeper_session.h"
 #include "zookeeper/zookeeper_session_mgr.h"
 
+DSN_DECLARE_int32(timeout_ms);
+
 namespace dsn {
 namespace dist {
-
-DSN_DECLARE_int32(timeout_ms);
 
 class zoo_transaction : public meta_state_service::transaction_entries
 {

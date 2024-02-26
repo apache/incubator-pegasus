@@ -2355,10 +2355,12 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         // get estimate key number
         std::vector<row_data> rows;
         std::string app_name = sc->pg_client->get_app_name();
-        if (!get_app_stat(sc, app_name, rows)) {
-            fprintf(stderr, "ERROR: query app stat from server failed");
-            return true;
-        }
+        // TODO(wangdan): no need to use get_app_stat since only rdb_estimate_num_keys is needed.
+        // Would be refactored later.
+        // if (!get_app_stat(sc, app_name, rows)) {
+        //    fprintf(stderr, "ERROR: query app stat from server failed");
+        //    return true;
+        // }
 
         rows.resize(rows.size() + 1);
         row_data &sum = rows.back();

@@ -30,7 +30,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -47,12 +46,15 @@
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+
+DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
 
 double convert_to_ratio(double hit, double total)
 {
@@ -187,8 +189,6 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
                             std::map<int32_t, double> &count_map,
                             std::map<int32_t, double> &disk_map)
 {
-    dsn::error_s err;
-
     DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
     for (const auto &entity : query_snapshot.entities) {
@@ -198,15 +198,8 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
                            entity.type);
         }
 
-        const auto &partition = entity.attributes.find("partition_id");
-        if (dsn_unlikely(partition == entity.attributes.end())) {
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "partition_id field was not found");
-        }
-
         int32_t partition_id;
-        if (dsn_unlikely(!dsn::buf2int32(partition->second, partition_id))) {
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid partition_id: {}", partition->second);
-        }
+        RETURN_NOT_OK(dsn::parse_metric_partition_id(entity.attributes, partition_id));
 
         for (const auto &m : entity.metrics) {
             if (m.name == "rdb_total_sst_files") {
@@ -534,7 +527,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::vector<row_data> rows;
-    if (!get_app_stat(sc, app_name, rows)) {
+    if (!get_app_stat(sc, app_name, FLAGS_tables_sample_interval_ms, rows)) {
         std::cout << "ERROR: query app stat from server failed" << std::endl;
         return true;
     }

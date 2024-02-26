@@ -35,6 +35,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
 
+DSN_DEFINE_uint32(tools.simulator, random_seed, 0, "random seed");
+
 int gtest_flags = 0;
 int gtest_ret = 0;
 
@@ -45,8 +47,6 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_META_TEST)
 DEFINE_TASK_CODE(TASK_META_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_META_TEST)
 
 meta_service_test_app *g_app;
-
-DSN_DEFINE_uint32(tools.simulator, random_seed, 0, "random seed");
 
 // as it is not easy to clean test environment in some cases, we simply run these tests in several
 // commands,

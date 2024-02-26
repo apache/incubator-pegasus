@@ -43,9 +43,9 @@
 #include "utils/strings.h"
 #include "utils/test/nth_element_utils.h"
 
-namespace dsn {
-
 DSN_DECLARE_uint64(entity_retirement_delay_ms);
+
+namespace dsn {
 
 class my_gauge : public metric
 {
@@ -2271,6 +2271,7 @@ const std::unordered_set<std::string> kAllMetricQueryFields = {kMetricClusterFie
                                                                kMetricRoleField,
                                                                kMetricHostField,
                                                                kMetricPortField,
+                                                               kMetricTimestampNsField,
                                                                kMetricEntitiesField};
 
 void check_entity_ids_from_json_string(const std::string &json_string,

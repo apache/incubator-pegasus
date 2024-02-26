@@ -40,14 +40,14 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
+DSN_DECLARE_uint32(hotkey_buckets_num);
+
 namespace dsn {
 class message_ex;
 } // namespace dsn
 
 namespace pegasus {
 namespace server {
-
-DSN_DECLARE_uint32(hotkey_buckets_num);
 
 static std::string generate_hash_key_by_random(bool is_hotkey, int probability = 100)
 {

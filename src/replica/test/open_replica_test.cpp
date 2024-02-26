@@ -60,13 +60,12 @@ TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
         decree last_committed_decree;
         bool expect_crash;
     } tests[] = {{0, 0, false}, {5, 5, true}};
-    int i = 0;
+    uint16_t i = 0;
     for (auto test : tests) {
         gpid pid(ai.app_id, i);
         stub->_opening_replicas[pid] = task_ptr(nullptr);
 
-        dsn::rpc_address node;
-        node.assign_ipv4("127.0.0.11", static_cast<uint16_t>(12321 + i + 1));
+        const auto node = rpc_address::from_ip_port("127.0.0.11", 12321 + i + 1);
 
         _replica->register_service();
 

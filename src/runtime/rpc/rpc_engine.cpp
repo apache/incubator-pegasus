@@ -47,9 +47,9 @@
 #include "utils/rand.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
 DSN_DECLARE_uint32(local_hash);
 
+namespace dsn {
 DEFINE_TASK_CODE(LPC_RPC_TIMEOUT, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 class rpc_timeout_task : public task

@@ -66,10 +66,11 @@
 #include "utils/string_conv.h"
 #include "utils/test_macros.h"
 
-namespace dsn {
-namespace replication {
 DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_string(cold_backup_root);
+
+namespace dsn {
+namespace replication {
 
 class replica_test : public replica_test_base
 {

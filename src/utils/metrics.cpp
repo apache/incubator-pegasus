@@ -37,8 +37,14 @@
 #include "utils/flags.h"
 #include "utils/rand.h"
 #include "utils/shared_io_service.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
+
+DSN_DEFINE_uint64(metrics,
+                  entity_retirement_delay_ms,
+                  10 * 60 * 1000,
+                  "The retention interval (milliseconds) for an entity after it becomes stale.");
+
+DSN_DECLARE_string(cluster_name);
 
 METRIC_DEFINE_entity(server);
 
@@ -49,11 +55,6 @@ dsn::metric_entity_ptr server_metric_entity()
 }
 
 namespace dsn {
-
-DSN_DEFINE_uint64(metrics,
-                  entity_retirement_delay_ms,
-                  10 * 60 * 1000,
-                  "The retention interval (milliseconds) for an entity after it becomes stale.");
 
 metric_entity::metric_entity(const metric_entity_prototype *prototype,
                              const std::string &id,
@@ -476,8 +477,6 @@ metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_pro
     return entity;
 }
 
-DSN_DECLARE_string(cluster_name);
-
 namespace {
 
 #define ENCODE_OBJ_VAL(cond, val)                                                                  \
@@ -493,7 +492,7 @@ void encode_cluster(dsn::metric_json_writer &writer)
 {
     writer.Key(dsn::kMetricClusterField.c_str());
 
-    ENCODE_OBJ_VAL(!utils::is_empty(dsn::FLAGS_cluster_name), dsn::FLAGS_cluster_name);
+    ENCODE_OBJ_VAL(!utils::is_empty(FLAGS_cluster_name), FLAGS_cluster_name);
 }
 
 void encode_role(dsn::metric_json_writer &writer)
@@ -518,6 +517,13 @@ void encode_port(dsn::metric_json_writer &writer)
 
     const auto *const rpc = dsn::task::get_current_rpc2();
     ENCODE_OBJ_VAL(rpc != nullptr, rpc->primary_address().port());
+}
+
+void encode_timestamp_ns(dsn::metric_json_writer &writer)
+{
+    writer.Key(dsn::kMetricTimestampNsField.c_str());
+
+    ENCODE_OBJ_VAL(true, dsn_now_ns());
 }
 
 #undef ENCODE_OBJ_VAL
@@ -549,6 +555,7 @@ void metric_registry::take_snapshot(metric_json_writer &writer, const metric_fil
     encode_role(writer);
     encode_host(writer);
     encode_port(writer);
+    encode_timestamp_ns(writer);
     encode_entities(writer, filters);
     writer.EndObject();
 }
@@ -557,7 +564,7 @@ metric_registry::collected_entities_info metric_registry::collect_stale_entities
 {
     collected_entities_info collected_info;
 
-    auto now = dsn_now_ms();
+    const auto now = dsn_now_ms();
 
     utils::auto_read_lock l(_lock);
 
@@ -596,7 +603,7 @@ metric_registry::retire_stale_entities(const collected_entity_list &collected_en
 
     retired_entities_stat retired_stat;
 
-    auto now = dsn_now_ms();
+    const auto now = dsn_now_ms();
 
     utils::auto_write_lock l(_lock);
 

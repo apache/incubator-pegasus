@@ -41,42 +41,36 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled");
-DSN_DEFINE_int32(replication,
-                 max_concurrent_bulk_load_downloading_count,
-                 5,
-                 "concurrent bulk load downloading replica count");
 
 DSN_DEFINE_int32(replication,
                  mutation_2pc_min_replica_count,
                  2,
-                 "minimum number of alive replicas under which write is allowed. it's valid if "
-                 "larger than 0, otherwise, the final value is based on app_max_replica_count");
-DSN_DEFINE_int32(
-    replication,
-    gc_interval_ms,
-    30 * 1000,
-    "every what period (ms) we do replica stat. The name contains 'gc' is for legacy reason.");
+                 "The minimum number of ALIVE replicas under which write is allowed. It's valid if "
+                 "larger than 0, otherwise, the final value is based on 'app_max_replica_count'");
+DSN_DEFINE_int32(replication,
+                 gc_interval_ms,
+                 30 * 1000,
+                 "The interval milliseconds to do replica statistics. The name contains 'gc' is "
+                 "for legacy reason");
 DSN_DEFINE_int32(replication,
                  fd_check_interval_seconds,
                  2,
-                 "every this period(seconds) the FD will check healthness of remote peers");
+                 "The interval seconds of failure detector to check healthness of remote peers");
 DSN_DEFINE_int32(replication,
                  fd_beacon_interval_seconds,
                  3,
-                 "every this period(seconds) the FD sends beacon message to remote peers");
-DSN_DEFINE_int32(replication, fd_lease_seconds, 9, "lease (seconds) get from remote FD master");
+                 "The interval seconds of failure detector to send beacon message to remote peers");
+DSN_DEFINE_int32(replication,
+                 fd_lease_seconds,
+                 20,
+                 "The lease in seconds get from remote FD master");
 DSN_DEFINE_int32(replication,
                  fd_grace_seconds,
-                 10,
-                 "grace (seconds) assigned to remote FD slaves (grace > lease)");
-
+                 22,
+                 "The grace in seconds assigned to remote FD slaves");
 DSN_DEFINE_int32(replication,
                  cold_backup_checkpoint_reserve_minutes,
                  10,
@@ -89,24 +83,32 @@ DSN_DEFINE_int32(replication,
 DSN_DEFINE_bool(replication,
                 empty_write_disabled,
                 false,
-                "whether to disable empty write, default is false");
+                "Whether to disable the function of primary replicas periodically "
+                "generating empty write operations to check the group status");
 DSN_TAG_VARIABLE(empty_write_disabled, FT_MUTABLE);
 
 DSN_DEFINE_string(replication,
                   slog_dir,
                   "",
-                  "The shared log directory. Deprecated since Pegasus "
-                  "2.6.0, but leave it and do not modify the value if "
-                  "upgrading from older versions.");
-DSN_DEFINE_string(replication, data_dirs, "", "replica directory list");
+                  "The shared log directory. Deprecated since Pegasus 2.6.0, but "
+                  "leave it and do not modify the value if upgrading from older versions.");
+DSN_DEFINE_string(replication,
+                  data_dirs,
+                  "",
+                  "A list of directories for replica data storage, it is recommended to "
+                  "configure one item per disk. 'tag' is the tag name of the directory");
 DSN_DEFINE_string(replication,
                   data_dirs_black_list_file,
                   "/home/work/.pegasus_data_dirs_black_list",
-                  "replica directory black list file");
+                  "Blacklist file, where each line is a path that needs to be ignored, mainly used "
+                  "to filter out bad drives");
 DSN_DEFINE_string(replication,
                   cold_backup_root,
                   "",
                   "The prefix of cold backup data path on remote storage");
+
+namespace dsn {
+namespace replication {
 
 replication_options::~replication_options() {}
 
@@ -143,8 +145,6 @@ void replication_options::initialize()
     }
 
     CHECK(!data_dirs.empty(), "no replica data dir found, maybe not set or excluded by black list");
-
-    max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
 
     CHECK(replica_helper::load_meta_servers(meta_servers), "invalid meta server config");
 }
@@ -200,34 +200,18 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
 {
     servers.clear();
     std::string server_list = dsn_config_get_value_string(section, key, "", "");
-    std::vector<std::string> lv;
-    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
-    for (auto &s : lv) {
-        ::dsn::rpc_address addr;
-        std::vector<std::string> hostname_port;
-        uint32_t ip = 0;
-        utils::split_args(s.c_str(), hostname_port, ':');
-        CHECK_EQ_MSG(2,
-                     hostname_port.size(),
-                     "invalid address '{}' specified in config [{}].{}",
-                     s,
-                     section,
-                     key);
-        uint32_t port_num = 0;
-        CHECK(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
-              "invalid address '{}' specified in config [{}].{}",
-              s,
-              section,
-              key);
-        if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
-            addr.assign_ipv4(ip, static_cast<uint16_t>(port_num));
-        } else if (!addr.from_string_ipv4(s.c_str())) {
-            LOG_ERROR("invalid address '{}' specified in config [{}].{}", s, section, key);
+    std::vector<std::string> host_ports;
+    ::dsn::utils::split_args(server_list.c_str(), host_ports, ',');
+    for (const auto &host_port : host_ports) {
+        auto addr = dsn::rpc_address::from_host_port(host_port);
+        if (!addr) {
+            LOG_ERROR("invalid address '{}' specified in config [{}]{}", host_port, section, key);
             return false;
         }
-        // TODO(yingchun): check there is no duplicates
         servers.push_back(addr);
     }
+
+    // TODO(yingchun): check there is no duplicates
     if (servers.empty()) {
         LOG_ERROR("no meta server specified in config [{}].{}", section, key);
         return false;

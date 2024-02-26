@@ -25,10 +25,11 @@
 #include "utils/flags.h"
 #include "absl/strings/string_view.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_string(service_fqdn);
 DSN_DECLARE_string(service_name);
+
+namespace dsn {
+namespace security {
 
 error_s sasl_client_wrapper::init()
 {

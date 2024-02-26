@@ -25,13 +25,13 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-
 DSN_DEFINE_uint32(http,
                   curl_timeout_ms,
                   10000,
                   "The maximum time in milliseconds that you allow the libcurl transfer operation "
                   "to complete");
+
+namespace dsn {
 
 #define RETURN_IF_CURL_NOT_OK(expr, ok, ...)                                                       \
     do {                                                                                           \

@@ -31,9 +31,6 @@
 #include "utils/singleton.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_uint32(replication,
                   duplicate_log_batch_bytes,
                   4096,
@@ -46,6 +43,9 @@ DSN_DEFINE_bool("replication",
                 "receive client idempotent write requests and send them to backup cluster when "
                 "doing duplication");
 DSN_TAG_VARIABLE(force_send_no_idempotent_when_duplication, FT_MUTABLE);
+
+namespace dsn {
+namespace replication {
 
 const std::string duplication_constants::kDuplicationCheckpointRootDir /*NOLINT*/ = "duplication";
 const std::string duplication_constants::kClustersSectionName /*NOLINT*/ = "pegasus.clusters";

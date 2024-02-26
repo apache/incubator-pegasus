@@ -89,9 +89,6 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kBytes,
                       "The number of bytes for backup requests");
 
-namespace pegasus {
-namespace server {
-
 DSN_DEFINE_uint64(pegasus.server,
                   perf_counter_read_capacity_unit_size,
                   4 * 1024,
@@ -105,6 +102,9 @@ DSN_DEFINE_uint64(pegasus.server,
                   "capacity unit size of write requests, default 4KB");
 DSN_DEFINE_validator(perf_counter_write_capacity_unit_size,
                      [](const uint64_t value) -> bool { return powerof2(value); });
+
+namespace pegasus {
+namespace server {
 
 capacity_unit_calculator::capacity_unit_calculator(
     replica_base *r,

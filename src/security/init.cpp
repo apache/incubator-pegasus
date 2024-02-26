@@ -25,12 +25,13 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_string(krb5_config);
 DSN_DECLARE_string(krb5_keytab);
 DSN_DECLARE_string(krb5_principal);
+
+namespace dsn {
+namespace security {
 
 /***
  * set kerberos envs(for more details:
