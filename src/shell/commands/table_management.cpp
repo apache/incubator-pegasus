@@ -532,7 +532,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    rows.emplace_back("(total:" + std::to_string(rows.size() - 1) + ")");
+    rows.emplace_back(fmt::format("(total:{})", rows.size() - 1);
     auto &sum = rows.back();
     for (size_t i = 0; i < rows.size() - 1; ++i) {
         row_data &row = rows[i];
