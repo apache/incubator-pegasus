@@ -200,9 +200,8 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
 
         auto param_host = "";
         if (!utils::is_empty(FLAGS_sasl_service_fqdn)) {
-            rpc_address addr;
             CHECK(dsn::rpc_address::from_host_port(FLAGS_sasl_service_fqdn),
-                  "sasl_service_fqdn {} is invalid",
+                  "sasl_service_fqdn '{}' is invalid",
                   FLAGS_sasl_service_fqdn);
             param_host = FLAGS_sasl_service_fqdn;
         }
