@@ -19,12 +19,7 @@
 
 #include "global_env.h"
 
-#include <arpa/inet.h>
 #include <libgen.h>
-#include <netinet/in.h>
-#include <stdint.h>
-#include <string.h>
-#include <sys/socket.h>
 #include <unistd.h>
 #include <iostream>
 #include <sstream> // IWYU pragma: keep
@@ -61,12 +56,4 @@ void global_env::get_dirs()
     std::cout << "working dir: " << _working_dir << std::endl;
 }
 
-void global_env::get_hostip()
-{
-    uint32_t ip = dsn::rpc_address::ipv4_from_network_interface("lo");
-    uint32_t ipnet = htonl(ip);
-    char buffer[512] = {0};
-    memset(buffer, 0, sizeof(buffer));
-    CHECK(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)), "");
-    _host_ip = buffer;
-}
+void global_env::get_hostip() { _host_ip = dsn::rpc_address::ipv4_from_network_interface("lo"); }

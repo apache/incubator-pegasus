@@ -36,10 +36,10 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
+DSN_DECLARE_uint32(kill_interval_seconds);
+
 namespace pegasus {
 namespace test {
-
-DSN_DECLARE_uint32(kill_interval_seconds);
 
 partition_kill_testor::partition_kill_testor(const char *config_file) : kill_testor(config_file) {}
 

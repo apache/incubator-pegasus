@@ -34,6 +34,7 @@
 
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
+#include "common/duplication_common.h"
 #include "consensus_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
@@ -42,7 +43,6 @@
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/link.h"
-#include "utils/flags.h"
 
 namespace dsn {
 class binary_reader;
@@ -54,8 +54,6 @@ class latency_tracer;
 } // namespace utils
 
 namespace replication {
-
-DSN_DECLARE_bool(force_send_no_idempotent_when_duplication);
 
 class mutation;
 

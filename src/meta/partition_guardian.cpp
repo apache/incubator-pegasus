@@ -17,10 +17,12 @@
 
 #include "meta/partition_guardian.h"
 
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <algorithm>
+#include <cstdint>
 #include <ostream>
 #include <unordered_map>
 
@@ -34,18 +36,24 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
+DSN_DEFINE_int32(
+    meta_server,
+    max_replicas_in_group,
+    4,
+    "The maximum number of replicas retained in a replica group (alive + dead replicas)");
+DSN_DEFINE_int64(meta_server,
+                 replica_assign_delay_ms_for_dropouts,
+                 600000,
+                 "The maximum time threshold for waiting for a secondary replica to re-join the "
+                 "cluster after it has been removed. If the secondary replica has not yet "
+                 "recovered beyond this time threshold, an attempt will be made to add new "
+                 "secondary replicas on other nodes");
+
 namespace dsn {
 namespace replication {
-
-DSN_DEFINE_int32(meta_server, max_replicas_in_group, 4, "max replicas(alive & dead) in a group");
-DSN_DEFINE_uint64(meta_server,
-                  replica_assign_delay_ms_for_dropouts,
-                  300000,
-                  "The delay milliseconds to dropout replicas assign");
 
 partition_guardian::partition_guardian(meta_service *svc) : _svc(svc)
 {
@@ -353,8 +361,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                 node_state *ns = get_node_state(*view.nodes, nodes[i], false);
                 if (ns == nullptr || !ns->alive()) {
                     ready = false;
-                    reason = "the last dropped node(" + nodes[i].to_std_string() +
-                             ") haven't come back yet";
+                    reason =
+                        fmt::format("the last dropped node({}) hasn't come back yet", nodes[i]);
                     LOG_WARNING("{}: don't select primary: {}", gpid_name, reason);
                 } else {
                     std::vector<dropped_replica>::iterator it = cc.find_from_dropped(nodes[i]);
@@ -367,8 +375,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                             collected_info[i] = {nodes[i], 0, -1, -1, -1};
                         } else {
                             ready = false;
-                            reason = "the last dropped node(" + nodes[i].to_std_string() +
-                                     ") is unavailable because ";
+                            reason = fmt::format(
+                                "the last dropped node({}) is unavailable because ", nodes[i]);
                             if (it == cc.dropped.end()) {
                                 reason += "the node is not exist in dropped_nodes";
                             } else {
@@ -681,12 +689,11 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
 
 void partition_guardian::register_ctrl_commands()
 {
-    // TODO(yingchun): update _replica_assign_delay_ms_for_dropouts by http
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"meta.lb.assign_delay_ms"},
-        "lb.assign_delay_ms [num | DEFAULT]",
-        "control the replica_assign_delay_ms_for_dropouts config",
-        [this](const std::vector<std::string> &args) { return ctrl_assign_delay_ms(args); }));
+    _cmds.emplace_back(dsn::command_manager::instance().register_int_command(
+        _replica_assign_delay_ms_for_dropouts,
+        FLAGS_replica_assign_delay_ms_for_dropouts,
+        "meta.lb.assign_delay_ms",
+        "control the replica_assign_delay_ms_for_dropouts config"));
 
     _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"meta.lb.assign_secondary_black_list"},
@@ -695,26 +702,6 @@ void partition_guardian::register_ctrl_commands()
         [this](const std::vector<std::string> &args) {
             return ctrl_assign_secondary_black_list(args);
         }));
-}
-
-std::string partition_guardian::ctrl_assign_delay_ms(const std::vector<std::string> &args)
-{
-    std::string result("OK");
-    if (args.empty()) {
-        result = std::to_string(_replica_assign_delay_ms_for_dropouts);
-    } else {
-        if (args[0] == "DEFAULT") {
-            _replica_assign_delay_ms_for_dropouts = FLAGS_replica_assign_delay_ms_for_dropouts;
-        } else {
-            int32_t v = 0;
-            if (!dsn::buf2int32(args[0], v) || v <= 0) {
-                result = std::string("ERR: invalid arguments");
-            } else {
-                _replica_assign_delay_ms_for_dropouts = v;
-            }
-        }
-    }
-    return result;
 }
 
 std::string
@@ -753,8 +740,8 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
 
     std::set<dsn::rpc_address> addr_list;
     for (const std::string &s : ip_ports) {
-        dsn::rpc_address addr;
-        if (!addr.from_string_ipv4(s.c_str())) {
+        const auto addr = rpc_address::from_host_port(s);
+        if (!addr) {
             return invalid_arguments;
         }
         addr_list.insert(addr);

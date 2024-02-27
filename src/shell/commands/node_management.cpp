@@ -17,42 +17,44 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <bits/getopt_core.h>
 #include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
+// IWYU pragma: no_include <bits/getopt_core.h>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
-#include "common/json_helper.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
-#include "perf_counter/perf_counter_utils.h"
 #include "runtime/rpc/rpc_address.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
-#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/math.h"
 #include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+
+DSN_DEFINE_uint32(shell, nodes_sample_interval_ms, 1000, "The interval between sampling metrics.");
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
@@ -111,8 +113,6 @@ dsn::metric_filters resource_usage_filters()
 
 dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_helper &stat)
 {
-    dsn::error_s err;
-
     DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
     int64_t total_capacity_mb = 0;
@@ -172,8 +172,6 @@ dsn::metric_filters profiler_latency_filters()
 
 dsn::error_s parse_profiler_latency(const std::string &json_string, list_nodes_helper &stat)
 {
-    dsn::error_s err;
-
     DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(p99, json_string, query_snapshot);
 
     for (const auto &entity : query_snapshot.entities) {
@@ -212,6 +210,21 @@ dsn::error_s parse_profiler_latency(const std::string &json_string, list_nodes_h
     }
 
     return dsn::error_s::ok();
+}
+
+dsn::metric_filters rw_requests_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"replica"};
+    filters.entity_metrics = {"get_requests",
+                              "multi_get_requests",
+                              "batch_get_requests",
+                              "put_requests",
+                              "multi_put_requests",
+                              "read_capacity_units",
+                              "write_capacity_units"};
+    return filters;
 }
 
 } // anonymous namespace
@@ -304,7 +317,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             alive_node_count++;
         std::string status_str = dsn::enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        std::string node_name = kv.first.to_std_string();
+        std::string node_name = kv.first.to_string();
         if (resolve_ip) {
             // TODO: put hostname_from_ip_port into common utils
             dsn::utils::hostname_from_ip_port(node_name.c_str(), &node_name);
@@ -377,57 +390,38 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        std::vector<std::pair<bool, std::string>> results =
-            call_remote_command(sc,
-                                nodes,
-                                "perf-counters-by-prefix",
-                                {"replica*app.pegasus*get_qps",
-                                 "replica*app.pegasus*multi_get_qps",
-                                 "replica*app.pegasus*batch_get_qps",
-                                 "replica*app.pegasus*put_qps",
-                                 "replica*app.pegasus*multi_put_qps",
-                                 "replica*app.pegasus*recent.read.cu",
-                                 "replica*app.pegasus*recent.write.cu"});
+        const auto query_string = rw_requests_filters().to_query_string();
+        const auto &results_start = get_metrics(nodes, query_string);
+        std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_nodes_sample_interval_ms));
+        const auto &results_end = get_metrics(nodes, query_string);
 
-        for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            auto tmp_it = tmp_map.find(node_addr);
-            if (tmp_it == tmp_map.end())
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            auto tmp_it = tmp_map.find(nodes[i].address);
+            if (tmp_it == tmp_map.end()) {
                 continue;
-            if (!results[i].first) {
-                std::cout << "query perf counter info from node " << node_addr << " failed"
-                          << std::endl;
-                return true;
             }
-            dsn::perf_counter_info info;
-            dsn::blob bb(results[i].second.data(), 0, results[i].second.size());
-            if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-                std::cout << "decode perf counter info from node " << node_addr
-                          << " failed, result = " << results[i].second << std::endl;
-                return true;
-            }
-            if (info.result != "OK") {
-                std::cout << "query perf counter info from node " << node_addr
-                          << " returns error, error = " << info.result << std::endl;
-                return true;
-            }
-            list_nodes_helper &h = tmp_it->second;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                if (m.name.find("replica*app.pegasus*get_qps") != std::string::npos)
-                    h.get_qps += m.value;
-                else if (m.name.find("replica*app.pegasus*multi_get_qps") != std::string::npos)
-                    h.multi_get_qps += m.value;
-                else if (m.name.find("replica*app.pegasus*batch_get_qps") != std::string::npos)
-                    h.batch_get_qps += m.value;
-                else if (m.name.find("replica*app.pegasus*put_qps") != std::string::npos)
-                    h.put_qps += m.value;
-                else if (m.name.find("replica*app.pegasus*multi_put_qps") != std::string::npos)
-                    h.multi_put_qps += m.value;
-                else if (m.name.find("replica*app.pegasus*recent.read.cu") != std::string::npos)
-                    h.read_cu += m.value;
-                else if (m.name.find("replica*app.pegasus*recent.write.cu") != std::string::npos)
-                    h.write_cu += m.value;
-            }
+
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results_start[i], nodes[i], "starting rw requests");
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending rw requests");
+
+            list_nodes_helper &stat = tmp_it->second;
+            aggregate_stats_calcs calcs;
+            calcs.create_increases<total_aggregate_stats>(
+                "replica",
+                stat_var_map({{"read_capacity_units", &stat.read_cu},
+                              {"write_capacity_units", &stat.write_cu}}));
+            calcs.create_rates<total_aggregate_stats>(
+                "replica",
+                stat_var_map({{"get_requests", &stat.get_qps},
+                              {"multi_get_requests", &stat.multi_get_qps},
+                              {"batch_get_requests", &stat.batch_get_qps},
+                              {"put_requests", &stat.put_qps},
+                              {"multi_put_requests", &stat.multi_put_qps}}));
+
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+                calcs.aggregate_metrics(results_start[i].body(), results_end[i].body()),
+                nodes[i],
+                "rw requests");
         }
     }
 
@@ -440,7 +434,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
         const auto &results = get_metrics(nodes, profiler_latency_filters().to_query_string());
 
-        for (int i = 0; i < nodes.size(); ++i) {
+        for (size_t i = 0; i < nodes.size(); ++i) {
             auto tmp_it = tmp_map.find(nodes[i].address);
             if (tmp_it == tmp_map.end()) {
                 continue;
@@ -638,8 +632,8 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node;
-            if (!node.from_string_ipv4(token.c_str())) {
+            const auto node = dsn::rpc_address::from_host_port(token);
+            if (!node) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
             }

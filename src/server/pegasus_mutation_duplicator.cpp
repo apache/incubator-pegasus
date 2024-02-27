@@ -48,6 +48,7 @@
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
+#include "pegasus_rpc_types.h"
 
 METRIC_DEFINE_counter(replica,
                       dup_shipped_successful_requests,
@@ -58,6 +59,11 @@ METRIC_DEFINE_counter(replica,
                       dup_shipped_failed_requests,
                       dsn::metric_unit::kRequests,
                       "The number of failed DUPLICATE requests sent from client");
+
+METRIC_DEFINE_counter(replica,
+                      dup_retry_no_idempotent_duplicate_qps,
+                      dsn::metric_unit::kRequests,
+                      "The qps of Non-idempotent write when doing DUPLICATE which is Retried");
 
 namespace dsn {
 namespace replication {
@@ -205,6 +211,9 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
             // retry this rpc
             _inflights[hash].push_front(rpc);
             _env.schedule([hash, cb, this]() { send(hash, cb); }, 1_s);
+
+            type_force_send_no_idempotent_if_need(rpc);
+
             return;
         }
         if (_inflights[hash].empty()) {
@@ -217,6 +226,74 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
             // start next rpc immediately
             _env.schedule([hash, cb, this]() { send(hash, cb); });
             return;
+        }
+    }
+}
+
+void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicate_rpc &rpc)
+{
+
+    // there maybe more than one mutation in one dup rpc
+    if (dsn::replication::FLAGS_force_send_no_idempotent_when_duplication) {
+        for (auto entry : rpc.request().entries) {
+            if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
+                entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
+                entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+
+                METRIC_VAR_INCREMENT(dup_retry_no_idempotent_duplicate_qps);
+
+                dsn::message_ex *write =
+                    dsn::from_blob_to_received_msg(entry.task_code, entry.raw_message);
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
+                    incr_rpc raw_rpc(write);
+                    absl::string_view unmarshall_key(raw_rpc.request().key.data(),
+                                                    raw_rpc.request().key.length());
+
+                    LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_INCR has been retried when doing "
+                             "duplication,"
+                             "key is [{}]",
+                             unmarshall_key);
+                    continue;
+                }
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+                    check_and_set_rpc raw_rpc(write);
+                    absl::string_view unmarshall_hash_key(raw_rpc.request().hash_key.data(),
+                                                         raw_rpc.request().hash_key.length());
+                    absl::string_view unmarshall_ori_sort_key(
+                        raw_rpc.request().check_sort_key.data(),
+                        raw_rpc.request().check_sort_key.length());
+                    absl::string_view unmarshall_set_sort_key(
+                        raw_rpc.request().set_sort_key.data(),
+                        raw_rpc.request().set_sort_key.length());
+
+                    LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_SET has been retried "
+                             "when doing duplication,"
+                             "hash key [{}], check sort key [{}],"
+                             "set sort key [{}]",
+                             unmarshall_hash_key,
+                             unmarshall_ori_sort_key,
+                             unmarshall_set_sort_key);
+                    continue;
+                }
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+                    check_and_mutate_rpc raw_rpc(write);
+                    absl::string_view unmarshall_hash_key(raw_rpc.request().hash_key.data(),
+                                                         raw_rpc.request().hash_key.length());
+                    absl::string_view unmarshall_ori_sort_key(
+                        raw_rpc.request().check_sort_key.data(),
+                        raw_rpc.request().check_sort_key.length());
+
+                    LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_MUTATE has been "
+                             "retried when doing duplication,"
+                             "hash key is [{}] , sort key is [{}] .",
+                             unmarshall_hash_key,
+                             unmarshall_ori_sort_key);
+                    continue;
+                }
+            }
         }
     }
 }
@@ -250,8 +327,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             batch_bytes += raw_message.length();
         }
 
-        if (batch_count == muts.size() ||
-            batch_bytes >= dsn::replication::FLAGS_duplicate_log_batch_bytes) {
+        if (batch_count == muts.size() || batch_bytes >= FLAGS_duplicate_log_batch_bytes) {
             // since all the plog's mutations of replica belong to same gpid though the hash of
             // mutation is different, use the last mutation of one batch to get and represents the
             // current hash value, it will still send to remote correct replica

@@ -66,10 +66,14 @@ public:
             incr_qps->set(row_stats.incr_qps);
             check_and_set_qps->set(row_stats.check_and_set_qps);
             check_and_mutate_qps->set(row_stats.check_and_mutate_qps);
+            force_receive_no_idempotent_duplicate_qps->set(
+                row_stats.force_receive_no_idempotent_duplicate_qps);
             scan_qps->set(row_stats.scan_qps);
             duplicate_qps->set(row_stats.duplicate_qps);
             dup_shipped_ops->set(row_stats.dup_shipped_ops);
             dup_failed_shipping_ops->set(row_stats.dup_failed_shipping_ops);
+            dup_retry_no_idempotent_duplicate_qps->set(
+                row_stats.dup_retry_no_idempotent_duplicate_qps);
             dup_recent_mutation_loss_count->set(row_stats.dup_recent_mutation_loss_count);
             recent_read_cu->set(row_stats.recent_read_cu);
             recent_write_cu->set(row_stats.recent_write_cu);
@@ -144,10 +148,12 @@ public:
         ::dsn::perf_counter_wrapper incr_qps;
         ::dsn::perf_counter_wrapper check_and_set_qps;
         ::dsn::perf_counter_wrapper check_and_mutate_qps;
+        ::dsn::perf_counter_wrapper force_receive_no_idempotent_duplicate_qps;
         ::dsn::perf_counter_wrapper scan_qps;
         ::dsn::perf_counter_wrapper duplicate_qps;
         ::dsn::perf_counter_wrapper dup_shipped_ops;
         ::dsn::perf_counter_wrapper dup_failed_shipping_ops;
+        ::dsn::perf_counter_wrapper dup_retry_no_idempotent_duplicate_qps;
         ::dsn::perf_counter_wrapper dup_recent_mutation_loss_count;
         ::dsn::perf_counter_wrapper recent_read_cu;
         ::dsn::perf_counter_wrapper recent_write_cu;

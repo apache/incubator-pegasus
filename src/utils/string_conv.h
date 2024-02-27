@@ -173,4 +173,29 @@ inline bool buf2double(absl::string_view buf, double &result)
     result = v;
     return true;
 }
+
+#define DEF_BUF2NUMERIC_FUNC(type, postfix)                                                        \
+    inline bool buf2numeric(absl::string_view buf, type &result)                                   \
+    {                                                                                              \
+        return buf2##postfix(buf, result);                                                         \
+    }
+
+#define DEF_BUF2INT_FUNC(type) DEF_BUF2NUMERIC_FUNC(type##_t, type)
+
+DEF_BUF2INT_FUNC(int32)
+DEF_BUF2INT_FUNC(int64)
+DEF_BUF2INT_FUNC(uint16)
+DEF_BUF2INT_FUNC(uint32)
+DEF_BUF2INT_FUNC(uint64)
+
+#undef DEF_BUF2INT_FUNC
+
+#define DEF_BUF2FLOAT_FUNC(type) DEF_BUF2NUMERIC_FUNC(type, type)
+
+DEF_BUF2FLOAT_FUNC(double)
+
+#undef DEF_BUF2FLOAT_FUNC
+
+#undef DEF_BUF2NUMERIC_FUNC
+
 } // namespace dsn

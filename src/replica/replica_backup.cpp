@@ -59,6 +59,13 @@
 #include "utils/thread_access_checker.h"
 #include "utils/time_utils.h"
 
+DSN_DEFINE_uint64(replication,
+                  max_concurrent_uploading_file_count,
+                  10,
+                  "concurrent uploading file count to block service");
+
+DSN_DECLARE_string(cold_backup_root);
+
 namespace dsn {
 namespace dist {
 namespace block_service {
@@ -67,14 +74,6 @@ class block_filesystem;
 } // namespace dist
 
 namespace replication {
-
-DSN_DEFINE_uint64(replication,
-                  max_concurrent_uploading_file_count,
-                  10,
-                  "concurrent uploading file count to block service");
-
-DSN_DECLARE_string(cold_backup_root);
-
 void replica::on_cold_backup(const backup_request &request, /*out*/ backup_response &response)
 {
     _checker.only_one_thread_access();

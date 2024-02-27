@@ -27,15 +27,9 @@
 #include "utils/errors.h"
 #include "utils/flags.h"
 
-namespace dsn {
-DSN_DECLARE_string(cluster_name);
-namespace security {
 DSN_DECLARE_bool(enable_acl);
-} // namespace security
-namespace replication {
+DSN_DECLARE_string(cluster_name);
 DSN_DECLARE_string(hadoop_kms_url);
-} // namespace replication
-} // namespace dsn
 
 class kms_client_test : public testing::Test
 {
@@ -43,13 +37,12 @@ class kms_client_test : public testing::Test
 
 TEST_F(kms_client_test, test_generate_and_decrypt_encryption_key)
 {
-    if (strlen(dsn::replication::FLAGS_hadoop_kms_url) == 0) {
+    if (strlen(FLAGS_hadoop_kms_url) == 0) {
         GTEST_SKIP() << "Set a proper 'hadoop_kms_url' in config.ini to enable this test.";
     }
 
     auto _key_provider = std::make_unique<dsn::security::kms_key_provider>(
-        ::absl::StrSplit(dsn::replication::FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()),
-        dsn::FLAGS_cluster_name);
+        ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_cluster_name);
     dsn::replication::kms_info info;
 
     // 1. generate encryption key.

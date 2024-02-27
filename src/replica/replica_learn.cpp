@@ -73,10 +73,7 @@
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
-namespace replication {
-
-// The replication learning process part of replica.
+/// The replication learning process part of replica.
 
 DSN_DEFINE_int32(replication,
                  learn_app_max_concurrent_count,
@@ -84,6 +81,9 @@ DSN_DEFINE_int32(replication,
                  "max count of learning app concurrently");
 
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
+
+namespace dsn {
+namespace replication {
 
 void replica::init_learn(uint64_t signature)
 {

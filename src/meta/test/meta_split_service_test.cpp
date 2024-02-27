@@ -377,7 +377,7 @@ public:
     const int32_t PARENT_BALLOT = 3;
     const int32_t PARENT_INDEX = 0;
     const int32_t CHILD_INDEX = 4;
-    const rpc_address NODE = rpc_address("127.0.0.1", 10086);
+    const rpc_address NODE = rpc_address::from_ip_port("127.0.0.1", 10086);
     std::shared_ptr<app_state> app;
 };
 

@@ -33,9 +33,9 @@
 #include "utils/flags.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
-
 DSN_DECLARE_bool(enable_http_server);
+
+namespace dsn {
 
 /// The rpc code for all the HTTP RPCs.
 DEFINE_TASK_CODE_RPC(RPC_HTTP_SERVICE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);

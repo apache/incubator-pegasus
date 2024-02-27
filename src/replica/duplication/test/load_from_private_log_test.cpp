@@ -68,6 +68,8 @@
 #include "replica/mutation_log_utils.h"
 #include "test_util/test_util.h"
 
+DSN_DECLARE_bool(plog_force_flush);
+
 namespace dsn {
 namespace replication {
 
@@ -144,7 +146,6 @@ public:
         int last_commit_decree_start = 5;
         int decree_start = 10;
         {
-            DSN_DECLARE_bool(plog_force_flush);
             auto reserved_plog_force_flush = FLAGS_plog_force_flush;
             FLAGS_plog_force_flush = true;
             for (int i = decree_start; i <= num_entries + decree_start; i++) {

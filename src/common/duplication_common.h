@@ -30,10 +30,11 @@
 #include "utils/flags.h"
 #include "utils/fmt_utils.h"
 
+DSN_DECLARE_uint32(duplicate_log_batch_bytes);
+DSN_DECLARE_bool(force_send_no_idempotent_when_duplication);
+
 namespace dsn {
 namespace replication {
-
-DSN_DECLARE_uint32(duplicate_log_batch_bytes);
 
 typedef rpc_holder<duplication_modify_request, duplication_modify_response> duplication_modify_rpc;
 typedef rpc_holder<duplication_add_request, duplication_add_response> duplication_add_rpc;

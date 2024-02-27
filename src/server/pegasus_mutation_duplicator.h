@@ -73,6 +73,8 @@ private:
 
     void on_duplicate_reply(uint64_t hash, callback, duplicate_rpc, dsn::error_code err);
 
+    void type_force_send_no_idempotent_if_need(duplicate_rpc &rpc);
+
 private:
     friend class pegasus_mutation_duplicator_test;
 
@@ -91,6 +93,7 @@ private:
 
     METRIC_VAR_DECLARE_counter(dup_shipped_successful_requests);
     METRIC_VAR_DECLARE_counter(dup_shipped_failed_requests);
+    METRIC_VAR_DECLARE_counter(dup_retry_no_idempotent_duplicate_qps);
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and

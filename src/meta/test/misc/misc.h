@@ -26,6 +26,7 @@
 
 #pragma once
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <algorithm>
@@ -40,6 +41,7 @@
 
 namespace dsn {
 class gpid;
+
 namespace replication {
 class configuration_proposal_action;
 class fs_manager;
@@ -72,7 +74,8 @@ inline std::vector<dsn::rpc_address> generate_node_list(size_t size, int start_p
     std::vector<dsn::rpc_address> result;
     result.resize(size);
     for (int i = 0; i < size; ++i)
-        result[i].assign_ipv4("127.0.0.1", static_cast<uint16_t>(start_port + i + 1));
+        result[i] =
+            dsn::rpc_address::from_ip_port("127.0.0.1", static_cast<uint16_t>(start_port + i + 1));
     return result;
 }
 

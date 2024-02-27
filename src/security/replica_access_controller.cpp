@@ -36,10 +36,11 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_acl);
 DSN_DECLARE_bool(enable_ranger_acl);
+
+namespace dsn {
+namespace security {
 replica_access_controller::replica_access_controller(const std::string &replica_name)
 {
     _name = replica_name;

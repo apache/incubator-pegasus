@@ -28,9 +28,10 @@
 #include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
 
+DSN_DEFINE_string(security, sasl_plugin_path, "/usr/lib/sasl2", "path to search sasl plugins");
+
 namespace dsn {
 namespace security {
-DSN_DEFINE_string(security, sasl_plugin_path, "/usr/lib/sasl2", "path to search sasl plugins");
 
 log_level_t get_log_level(int level)
 {

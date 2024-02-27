@@ -77,30 +77,21 @@
 #include "utils/thread_access_checker.h"
 #include "utils/uniq_timestamp_us.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_bool(replication,
                 reject_write_when_disk_insufficient,
                 true,
                 "reject client write requests if disk status is space insufficient");
 DSN_TAG_VARIABLE(reject_write_when_disk_insufficient, FT_MUTABLE);
-
-DSN_DEFINE_bool("replication",
-                force_send_no_idempotent_when_duplication,
-                false,
-                "receive client idempotent write requests and send them to backup cluster when "
-                "doing duplication");
-DSN_TAG_VARIABLE(force_send_no_idempotent_when_duplication, FT_MUTABLE);
-
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_secondaries,
-                 1000,
-                 "timeout (ms) for prepare message to secondaries in two phase commit");
+                 3000,
+                 "The timeout in millisecond for the primary replicas to send prepare requests to "
+                 "the secondaries in two phase commit");
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_potential_secondaries,
-                 3000,
-                 "timeout (ms) for prepare message to potential secondaries in two phase commit");
+                 5000,
+                 "The timeout in millisecond for the primary replicas to send prepare requests to "
+                 "the learners in two phase commit");
 DSN_DEFINE_int32(replication,
                  prepare_decree_gap_for_debug_logging,
                  10000,
@@ -114,6 +105,8 @@ DSN_DEFINE_uint64(
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
 DSN_DECLARE_int32(staleness_for_commit);
 
+namespace dsn {
+namespace replication {
 void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 {
     _checker.only_one_thread_access();

@@ -42,10 +42,10 @@
 #include "utils/threadpool_spec.h"
 #include "utils/zlock_provider.h"
 
+DSN_DECLARE_int32(random_seed);
+
 namespace dsn {
 namespace tools {
-
-DSN_DECLARE_int32(random_seed);
 
 /*static*/
 void simulator::register_checker(const std::string &name, checker::factory f)

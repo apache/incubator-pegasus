@@ -34,25 +34,27 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace replication {
 // TODO(yingchun): add more description for string configs, and add validators
 DSN_DEFINE_string(meta_server,
                   meta_state_service_parameters,
                   "",
-                  "meta_state_service provider parameters");
+                  "Initialization parameters for metadata storage services");
 DSN_DEFINE_string(meta_server,
                   meta_function_level_on_start,
                   "steady",
-                  "meta function level on start");
+                  "The default function_level state when MetaServer starts. "
+                  "The 'steady' represents a stable state without load balancing");
 DSN_DEFINE_string(meta_server,
                   distributed_lock_service_parameters,
                   "",
-                  "distributed_lock_service provider parameters");
+                  "Initialization parameters for distributed lock services");
 DSN_DEFINE_string(meta_server,
                   replica_white_list,
                   "",
                   "white list of replica-servers in meta-server");
+
+namespace dsn {
+namespace replication {
 
 void meta_options::initialize()
 {

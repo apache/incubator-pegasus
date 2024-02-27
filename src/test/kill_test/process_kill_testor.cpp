@@ -35,9 +35,6 @@
 #include "utils/process_utils.h"
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace test {
-
 DSN_DEFINE_int32(pegasus.killtest, total_meta_count, 0, "total meta count");
 DSN_DEFINE_int32(pegasus.killtest, total_replica_count, 0, "total replica count");
 DSN_DEFINE_int32(pegasus.killtest, total_zookeeper_count, 0, "total zookeeper count");
@@ -74,6 +71,9 @@ DSN_DEFINE_validator(killer_handler,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 DSN_DECLARE_uint32(kill_interval_seconds);
+
+namespace pegasus {
+namespace test {
 
 process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(config_file)
 {

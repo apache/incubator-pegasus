@@ -65,11 +65,10 @@
 #include "utils/zlocks.h"
 
 DSN_DECLARE_int32(max_succssive_unstable_restart);
+DSN_DECLARE_uint64(stable_rs_min_running_seconds);
 
 using namespace dsn;
 using namespace dsn::fd;
-
-DSN_DECLARE_uint64(stable_rs_min_running_seconds);
 
 #define MPORT_START 30001
 #define WPORT 40001
@@ -190,7 +189,7 @@ public:
     {
         std::vector<rpc_address> master_group;
         for (int i = 0; i < 3; ++i)
-            master_group.push_back(rpc_address("localhost", MPORT_START + i));
+            master_group.push_back(rpc_address::from_host_port("localhost", MPORT_START + i));
         _worker_fd = new worker_fd_test(nullptr, master_group);
         _worker_fd->start(1, 1, 9, 10);
         ++started_apps;
@@ -236,8 +235,7 @@ public:
             std::vector<std::string> ports;
             utils::split_args(args[2].c_str(), ports, ',');
             for (auto &port : ports) {
-                rpc_address addr;
-                addr.assign_ipv4(network::get_local_ipv4(), std::stoi(port));
+                rpc_address addr(network::get_local_ipv4(), std::stoi(port));
                 _master_fd->add_allow_list(addr);
             }
             use_allow_list = true;
@@ -307,7 +305,8 @@ bool get_worker_and_master(test_worker *&worker, std::vector<test_master *> &mas
 
 void master_group_set_leader(std::vector<test_master *> &master_group, int leader_index)
 {
-    rpc_address leader_addr("localhost", MPORT_START + leader_index);
+    const auto leader_addr =
+        rpc_address::from_host_port("localhost", static_cast<uint16_t>(MPORT_START + leader_index));
     int i = 0;
     for (test_master *&master : master_group) {
         master->fd()->set_leader_for_test(leader_addr, leader_index == i);
@@ -317,15 +316,16 @@ void master_group_set_leader(std::vector<test_master *> &master_group, int leade
 
 void worker_set_leader(test_worker *worker, int leader_contact)
 {
-    worker->fd()->set_leader_for_test(rpc_address("localhost", MPORT_START + leader_contact));
+    worker->fd()->set_leader_for_test(
+        rpc_address::from_host_port("localhost", MPORT_START + leader_contact));
 
     config_master_message msg;
-    msg.master = rpc_address("localhost", MPORT_START + leader_contact);
+    msg.master = rpc_address::from_host_port("localhost", MPORT_START + leader_contact);
     msg.is_register = true;
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
-        rpc_address("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
+        rpc_address::from_host_port("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
     ASSERT_EQ(err, ERR_OK);
 }
 
@@ -339,7 +339,7 @@ void clear(test_worker *worker, std::vector<test_master *> masters)
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
-        rpc_address("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
+        rpc_address::from_host_port("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
     ASSERT_EQ(err, ERR_OK);
 
     worker->fd()->toggle_send_ping(false);
@@ -612,7 +612,7 @@ TEST(fd, worker_died_when_switch_master)
         });
 
     /* we assume the worker is alive */
-    tst_master->fd()->test_register_worker(rpc_address("localhost", WPORT));
+    tst_master->fd()->test_register_worker(rpc_address::from_host_port("localhost", WPORT));
     master_group_set_leader(masters, index);
 
     /* then stop the worker*/
@@ -652,8 +652,8 @@ TEST(fd, update_stability)
 
     dsn::rpc_replier<beacon_ack> r(create_fake_rpc_response());
     beacon_msg msg;
-    msg.from_addr = rpc_address("localhost", 123);
-    msg.to_addr = rpc_address("localhost", MPORT_START);
+    msg.from_addr = rpc_address::from_host_port("localhost", 123);
+    msg.to_addr = rpc_address::from_host_port("localhost", MPORT_START);
     msg.time = dsn_now_ms();
     msg.__isset.start_time = true;
     msg.start_time = 1000;

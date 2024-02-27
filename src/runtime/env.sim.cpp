@@ -36,13 +36,13 @@
 #include "utils/threadpool_code.h"
 #include "utils/threadpool_spec.h"
 
-namespace dsn {
-namespace tools {
-
 DSN_DEFINE_int32(tools.simulator,
                  random_seed,
                  0,
                  "random seed for the simulator, 0 for random seed");
+
+namespace dsn {
+namespace tools {
 
 void sim_env_provider::on_worker_start(task_worker *worker)
 {

@@ -51,9 +51,6 @@
 #include "utils/string_conv.h"
 #include "absl/strings/string_view.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_uint32(meta_server,
                   bulk_load_max_rollback_times,
                   10,
@@ -75,6 +72,9 @@ DSN_DEFINE_bool(meta_server,
                 false,
                 "whether to enable different apps to execute bulk load at the same time");
 DSN_TAG_VARIABLE(enable_concurrent_bulk_load, FT_MUTABLE);
+
+namespace dsn {
+namespace replication {
 
 bulk_load_service::bulk_load_service(meta_service *meta_svc, const std::string &bulk_load_dir)
     : _meta_svc(meta_svc), _state(meta_svc->get_server_state()), _bulk_load_root(bulk_load_dir)

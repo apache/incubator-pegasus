@@ -33,17 +33,16 @@
 #include "utils/flags.h"
 #include "utils/test_macros.h"
 
+DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_bool(enable_acl);
+DSN_DECLARE_bool(fd_disabled);
+DSN_DECLARE_uint32(config_sync_interval_ms);
+
 using std::map;
 using std::string;
 
 namespace dsn {
-namespace security {
-DSN_DECLARE_bool(enable_acl);
-} // namespace security
 namespace replication {
-DSN_DECLARE_bool(duplication_enabled);
-DSN_DECLARE_bool(fd_disabled);
-DSN_DECLARE_uint32(config_sync_interval_ms);
 
 class replica_http_service_test : public replica_test_base
 {
@@ -58,7 +57,7 @@ public:
         // is successful when encrypt_data_at_rest is also true.
         // TODO(jingwei): It's a trick for test, it should set together at class
         // pegasus::encrypt_data_at_rest.
-        dsn::security::FLAGS_enable_acl = true;
+        FLAGS_enable_acl = true;
         stub->initialize_start();
 
         http_call_registry::instance().clear_paths();

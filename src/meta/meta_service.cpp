@@ -55,8 +55,8 @@
 #include "meta_service.h"
 #include "meta_split_service.h"
 #include "partition_split_types.h"
-#include "remote_cmd/remote_command.h"
 #include "ranger/ranger_resource_policy_manager.h"
+#include "remote_cmd/remote_command.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "server_load_balancer.h"
@@ -67,8 +67,69 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
+
+DSN_DECLARE_string(hosts_list);
+DSN_DEFINE_bool(meta_server,
+                recover_from_replica_server,
+                false,
+                "Whether to recover tables from replica servers when there is no "
+                "data of the tables in remote storage");
+DSN_DEFINE_bool(meta_server, cold_backup_disabled, true, "whether to disable cold backup");
+DSN_DEFINE_bool(meta_server,
+                enable_white_list,
+                false,
+                "whether to enable white list of replica servers");
+DSN_DEFINE_uint64(meta_server,
+                  min_live_node_count_for_unfreeze,
+                  3,
+                  "If the number of ALIVE nodes is less than this threshold, MetaServer will "
+                  "also enter the 'freezed' protection state");
+DSN_TAG_VARIABLE(min_live_node_count_for_unfreeze, FT_MUTABLE);
+DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
+                     [](uint64_t min_live_node_count) -> bool { return min_live_node_count > 0; });
+
+DSN_DEFINE_int32(replication,
+                 lb_interval_ms,
+                 10000,
+                 "The interval milliseconds of meta server to execute load balance");
+DSN_DEFINE_int32(meta_server,
+                 node_live_percentage_threshold_for_update,
+                 65,
+                 "If the proportion of ALIVE nodes is less than this threshold, MetaServer will "
+                 "enter the 'freezed' protection state");
+DSN_DEFINE_validator(node_live_percentage_threshold_for_update,
+                     [](int32_t value) -> bool { return value >= 0 && value <= 100; });
+DSN_DEFINE_string(meta_server,
+                  meta_state_service_type,
+#ifdef MOCK_TEST
+                  "meta_state_service_simple",
+#else
+                  "meta_state_service_zookeeper",
+#endif
+                  "The implementation class of metadata storage service");
+DSN_DEFINE_string(meta_server,
+                  cluster_root,
+                  "/",
+                  "The root of the cluster meta state service to be stored on remote storage. "
+                  "Different meta servers in the same cluster need to be configured with the "
+                  "same value, while different clusters using different values if they share "
+                  "the same remote storage");
+DSN_DEFINE_string(meta_server,
+                  server_load_balancer_type,
+                  "greedy_load_balancer",
+                  "The implementation class of load balancer");
+DSN_DEFINE_string(meta_server,
+                  partition_guardian_type,
+                  "partition_guardian",
+                  "partition guardian provider");
+
+DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_int32(fd_beacon_interval_seconds);
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+DSN_DECLARE_int32(fd_lease_seconds);
+DSN_DECLARE_string(cold_backup_root);
 
 METRIC_DEFINE_counter(server,
                       replica_server_disconnections,
@@ -86,60 +147,7 @@ METRIC_DEFINE_gauge_int64(server,
                           "The number of alive replica servers");
 
 namespace dsn {
-namespace dist {
-DSN_DECLARE_string(hosts_list);
-} // namespace dist
-
 namespace replication {
-DSN_DEFINE_bool(meta_server,
-                recover_from_replica_server,
-                false,
-                "whether to recover from replica server when no apps in remote storage");
-DSN_DEFINE_bool(meta_server, cold_backup_disabled, true, "whether to disable cold backup");
-DSN_DEFINE_bool(meta_server,
-                enable_white_list,
-                false,
-                "whether to enable white list of replica servers");
-DSN_DEFINE_uint64(meta_server,
-                  min_live_node_count_for_unfreeze,
-                  3,
-                  "minimum live node count without which the state is freezed");
-DSN_TAG_VARIABLE(min_live_node_count_for_unfreeze, FT_MUTABLE);
-DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
-                     [](uint64_t min_live_node_count) -> bool { return min_live_node_count > 0; });
-
-DSN_DEFINE_int32(replication,
-                 lb_interval_ms,
-                 10000,
-                 "every this period(ms) the meta server will do load balance");
-DSN_DEFINE_uint64(meta_server,
-                  node_live_percentage_threshold_for_update,
-                  65,
-                  "If live_node_count * 100 < total_node_count * "
-                  "node_live_percentage_threshold_for_update, then freeze the cluster.");
-DSN_DEFINE_string(meta_server,
-                  meta_state_service_type,
-                  "meta_state_service_simple",
-                  "meta_state_service provider type");
-DSN_DEFINE_string(meta_server,
-                  cluster_root,
-                  "/",
-                  "The root of the cluster meta state service to be stored on remote storage");
-DSN_DEFINE_string(meta_server,
-                  server_load_balancer_type,
-                  "greedy_load_balancer",
-                  "server load balancer provider");
-DSN_DEFINE_string(meta_server,
-                  partition_guardian_type,
-                  "partition_guardian",
-                  "partition guardian provider");
-
-DSN_DECLARE_bool(duplication_enabled);
-DSN_DECLARE_int32(fd_beacon_interval_seconds);
-DSN_DECLARE_int32(fd_check_interval_seconds);
-DSN_DECLARE_int32(fd_grace_seconds);
-DSN_DECLARE_int32(fd_lease_seconds);
-DSN_DECLARE_string(cold_backup_root);
 
 #define CHECK_APP_ID_STATUS_AND_AUTHZ(app_id)                                                      \
     do {                                                                                           \
@@ -303,29 +311,12 @@ void meta_service::unlock_meta_op_status()
 void meta_service::register_ctrl_commands()
 {
     _ctrl_node_live_percentage_threshold_for_update =
-        dsn::command_manager::instance().register_command(
-            {"meta.live_percentage"},
-            "meta.live_percentage [num | DEFAULT]",
+        dsn::command_manager::instance().register_int_command(
+            _node_live_percentage_threshold_for_update,
+            FLAGS_node_live_percentage_threshold_for_update,
+            "meta.live_percentage",
             "node live percentage threshold for update",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    result = std::to_string(_node_live_percentage_threshold_for_update);
-                } else {
-                    if (args[0] == "DEFAULT") {
-                        _node_live_percentage_threshold_for_update =
-                            FLAGS_node_live_percentage_threshold_for_update;
-                    } else {
-                        int32_t v = 0;
-                        if (!dsn::buf2int32(args[0], v) || v < 0) {
-                            result = std::string("ERR: invalid arguments");
-                        } else {
-                            _node_live_percentage_threshold_for_update = v;
-                        }
-                    }
-                }
-                return result;
-            });
+            [](int32_t new_value) -> bool { return new_value >= 0 && new_value <= 100; });
 }
 
 void meta_service::start_service()
@@ -405,6 +396,7 @@ error_code meta_service::start()
         _failure_detector->set_allow_list(_meta_opts.replica_white_list);
     _failure_detector->register_ctrl_commands();
 
+    CHECK_GT_MSG(FLAGS_fd_grace_seconds, FLAGS_fd_lease_seconds, "");
     err = _failure_detector->start(FLAGS_fd_check_interval_seconds,
                                    FLAGS_fd_beacon_interval_seconds,
                                    FLAGS_fd_lease_seconds,
@@ -734,9 +726,9 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
 
     response.values.push_back(oss.str());
     response.keys.push_back("primary_meta_server");
-    response.values.push_back(dsn_primary_address().to_std_string());
+    response.values.push_back(dsn_primary_address().to_string());
     response.keys.push_back("zookeeper_hosts");
-    response.values.push_back(dsn::dist::FLAGS_hosts_list);
+    response.values.push_back(FLAGS_hosts_list);
     response.keys.push_back("zookeeper_root");
     response.values.push_back(_cluster_root);
     response.keys.push_back("meta_function_level");

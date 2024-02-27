@@ -79,8 +79,8 @@ struct threadpool_spec
 };
 
 CONFIG_BEGIN(threadpool_spec)
-CONFIG_FLD_STRING(name, "", "thread pool name")
-CONFIG_FLD(int, uint64, worker_count, 2, "thread/worker count")
+CONFIG_FLD_STRING(name, "", "Thread pool name")
+CONFIG_FLD(int, uint64, worker_count, 4, "The number of threads in the thread pool")
 CONFIG_FLD(int,
            uint64,
            dequeue_batch_size,
@@ -92,7 +92,7 @@ CONFIG_FLD_ENUM(worker_priority_t,
                 THREAD_xPRIORITY_NORMAL,
                 THREAD_xPRIORITY_INVALID,
                 false,
-                "thread priority")
+                "The scheduling priority of threads in OS")
 CONFIG_FLD(bool, bool, worker_share_core, true, "whether the threads share all assigned cores")
 CONFIG_FLD(uint64_t,
            uint64,
@@ -103,9 +103,9 @@ CONFIG_FLD(bool,
            bool,
            partitioned,
            false,
-           "whethe the threads share a single "
-           "queue(partitioned=false) or not; the latter is usually "
-           "for workload hash partitioning for avoiding locking")
+           "Whether each thread has its own task queue, and tasks are assigned to a specific "
+           "thread for execution based on a hash rule to reduce lock contention. Otherwise, "
+           "the threads share a single queue")
 CONFIG_FLD_STRING(queue_factory_name, "", "task queue provider name")
 CONFIG_FLD_STRING(worker_factory_name, "", "task worker provider name")
 CONFIG_FLD_STRING_LIST(queue_aspects, "task queue aspects names, usually for tooling purpose")

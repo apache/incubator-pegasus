@@ -41,17 +41,6 @@
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 
-namespace pegasus {
-namespace server {
-
-DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
-                 TASK_PRIORITY_COMMON,
-                 ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
-                 TASK_PRIORITY_COMMON,
-                 ::dsn::THREAD_POOL_DEFAULT)
-
 DSN_DEFINE_uint32(pegasus.collector, app_stat_interval_seconds, 10, "app stat interval seconds");
 DSN_DEFINE_uint32(pegasus.collector,
                   capacity_unit_fetch_interval_seconds,
@@ -68,6 +57,17 @@ DSN_DEFINE_string(pegasus.collector,
                   "storage size");
 DSN_DEFINE_validator(usage_stat_app,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
+namespace pegasus {
+namespace server {
+
+DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                 TASK_PRIORITY_COMMON,
+                 ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
+                 TASK_PRIORITY_COMMON,
+                 ::dsn::THREAD_POOL_DEFAULT)
 
 info_collector::info_collector()
 {
@@ -207,9 +207,11 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(incr_qps);
     INIT_COUNTER(check_and_set_qps);
     INIT_COUNTER(check_and_mutate_qps);
+    INIT_COUNTER(force_receive_no_idempotent_duplicate_qps);
     INIT_COUNTER(scan_qps);
     INIT_COUNTER(duplicate_qps);
     INIT_COUNTER(dup_shipped_ops);
+    INIT_COUNTER(dup_retry_no_idempotent_duplicate_qps);
     INIT_COUNTER(dup_failed_shipping_ops);
     INIT_COUNTER(dup_recent_mutation_loss_count);
     INIT_COUNTER(recent_read_cu);

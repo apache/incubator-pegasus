@@ -46,11 +46,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-class blob;
-class message_ex;
-} // namespace dsn
-
 METRIC_DEFINE_counter(replica,
                       put_requests,
                       dsn::metric_unit::kRequests,
@@ -127,9 +122,9 @@ METRIC_DEFINE_counter(replica,
                       "The number of DUPLICATE requests");
 
 METRIC_DEFINE_counter(replica,
-                      no_idempotent_duplicate,
+                      force_receive_no_idempotent_duplicate_qps,
                       dsn::metric_unit::kRequests,
-                      "The number of forced idempotent requests when doing duplication");
+                      "statistic the those no idempotent qps of DUPLICATE requests Force received");
 
 METRIC_DEFINE_percentile_int64(replica,
                                dup_time_lag_ms,
@@ -142,14 +137,18 @@ METRIC_DEFINE_counter(
     dsn::metric_unit::kRequests,
     "the number of lagging writes (time lag larger than `dup_lagging_write_threshold_ms`)");
 
-namespace pegasus {
-namespace server {
-
 DSN_DEFINE_int64(pegasus.server,
                  dup_lagging_write_threshold_ms,
                  10 * 1000,
                  "If the duration that a write flows from master to slave is larger than this "
                  "threshold, the write is defined a lagging write.");
+
+namespace dsn {
+class blob;
+class message_ex;
+} // namespace dsn
+namespace pegasus {
+namespace server {
 
 DEFINE_TASK_CODE(LPC_INGESTION, TASK_PRIORITY_COMMON, THREAD_POOL_INGESTION)
 
@@ -174,7 +173,7 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       METRIC_VAR_INIT_replica(check_and_set_latency_ns),
       METRIC_VAR_INIT_replica(check_and_mutate_latency_ns),
       METRIC_VAR_INIT_replica(dup_requests),
-      METRIC_VAR_INIT_replica(no_idempotent_duplicate),
+      METRIC_VAR_INIT_replica(force_receive_no_idempotent_duplicate_qps),
       METRIC_VAR_INIT_replica(dup_time_lag_ms),
       METRIC_VAR_INIT_replica(dup_lagging_writes),
       _put_batch_size(0),
@@ -427,7 +426,7 @@ int pegasus_write_service::duplicate(int64_t decree,
             request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
             request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
             // receive no idempotent request from master cluster via duplication
-            METRIC_VAR_INCREMENT(no_idempotent_duplicate);
+            METRIC_VAR_INCREMENT(force_receive_no_idempotent_duplicate_qps);
 
             if (request.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
                 incr_rpc rpc(write);

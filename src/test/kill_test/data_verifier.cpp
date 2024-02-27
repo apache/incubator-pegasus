@@ -34,6 +34,22 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
+DSN_DEFINE_uint32(pegasus.killtest,
+                  set_and_get_timeout_milliseconds,
+                  3000,
+                  "set() and get() timeout in milliseconds.");
+DSN_DEFINE_uint32(pegasus.killtest, set_thread_count, 5, "Thread count of the setter.");
+DSN_DEFINE_uint32(pegasus.killtest,
+                  get_thread_count,
+                  FLAGS_set_thread_count * 4,
+                  "Thread count of the getter.");
+DSN_DEFINE_string(pegasus.killtest, pegasus_cluster_name, "onebox", "The Pegasus cluster name");
+DSN_DEFINE_validator(pegasus_cluster_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+DSN_DEFINE_string(pegasus.killtest, verify_app_name, "temp", "verify app name");
+DSN_DEFINE_validator(verify_app_name,
+                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
 namespace pegasus {
 namespace test {
 
@@ -54,22 +70,6 @@ static const long stat_p99_pos = stat_batch - stat_batch / 100 - 1;
 static const long stat_p999_pos = stat_batch - stat_batch / 1000 - 1;
 static const long stat_p9999_pos = stat_batch - stat_batch / 10000 - 1;
 static const long stat_max_pos = stat_batch - 1;
-
-DSN_DEFINE_uint32(pegasus.killtest,
-                  set_and_get_timeout_milliseconds,
-                  3000,
-                  "set() and get() timeout in milliseconds.");
-DSN_DEFINE_uint32(pegasus.killtest, set_thread_count, 5, "Thread count of the setter.");
-DSN_DEFINE_uint32(pegasus.killtest,
-                  get_thread_count,
-                  FLAGS_set_thread_count * 4,
-                  "Thread count of the getter.");
-DSN_DEFINE_string(pegasus.killtest, pegasus_cluster_name, "onebox", "The Pegasus cluster name");
-DSN_DEFINE_validator(pegasus_cluster_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
-DSN_DEFINE_string(pegasus.killtest, verify_app_name, "temp", "verify app name");
-DSN_DEFINE_validator(verify_app_name,
-                     [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
 // return time in us.
 long get_time()

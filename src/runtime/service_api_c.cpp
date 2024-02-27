@@ -78,10 +78,11 @@
 #include "utils/sys_exit_hook.h"
 #include "utils/threadpool_spec.h"
 
-DSN_DEFINE_bool(core,
-                pause_on_start,
-                false,
-                "whether to pause at startup time for easier debugging");
+DSN_DEFINE_bool(
+    core,
+    pause_on_start,
+    false,
+    "Whether to pause during startup to wait for interactive input, often for debugging perpose");
 #ifdef DSN_ENABLE_GPERF
 DSN_DEFINE_double(core,
                   tcmalloc_release_rate,
@@ -91,12 +92,9 @@ DSN_DEFINE_double(core,
                   "[0.0, 10.0]");
 #endif
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
-} // namespace security
-} // namespace dsn
+
 //
 // global state
 //
@@ -485,7 +483,7 @@ bool run(const char *config_file,
     dsn_all.engine_ready = true;
 
     // init security if FLAGS_enable_auth == true
-    if (dsn::security::FLAGS_enable_auth) {
+    if (FLAGS_enable_auth) {
         if (!dsn::security::init(is_server)) {
             return false;
         }
@@ -494,7 +492,7 @@ bool run(const char *config_file,
         // include two steps:
         // 1) apply kerberos ticket and keep it valid
         // 2) complete sasl init for client(use FLAGS_sasl_plugin_path)
-    } else if (dsn::security::FLAGS_enable_zookeeper_kerberos && app_list == "meta") {
+    } else if (FLAGS_enable_zookeeper_kerberos && app_list == "meta") {
         if (!dsn::security::init_for_zookeeper_client()) {
             return false;
         }
