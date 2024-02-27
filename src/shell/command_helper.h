@@ -811,16 +811,32 @@ public:
 
 #undef DEF_CALC_CREATOR
 
-    // Perform the chosen aggregations on the fetched metrics.
+#define CALC_ACCUM_STATS(entities)                                                                 \
+    do {                                                                                           \
+        if (_sums) {                                                                               \
+            RETURN_NOT_OK(_sums->add_assign(entities));                                            \
+        }                                                                                          \
+    } while (0)
+
+    // Perform the chosen accum aggregations on the fetched metrics.
+    dsn::error_s aggregate_metrics(const std::string &json_string)
+    {
+        DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
+
+        CALC_ACCUM_STATS(query_snapshot.entities);
+
+        return dsn::error_s::ok();
+    }
+
+    // Perform all of the chosen aggregations (both accum and delta) on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string_start,
                                    const std::string &json_string_end)
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
             json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
 
-        if (_sums) {
-            RETURN_NOT_OK(_sums->add_assign(query_snapshot_end.entities));
-        }
+        // Apply ending sample to the accum aggregations.
+        CALC_ACCUM_STATS(query_snapshot_end.entities);
 
         const std::array deltas_list = {&_increases, &_rates};
         for (const auto stats : deltas_list) {
@@ -838,6 +854,8 @@ public:
 
         return dsn::error_s::ok();
     }
+
+#undef CALC_ACCUM_STATS
 
 private:
     DISALLOW_COPY_AND_ASSIGN(aggregate_stats_calcs);
@@ -1335,7 +1353,8 @@ inline stat_var_map create_rates(row_data &row)
 
 #undef BIND_ROW
 
-// Create all aggregations for the table-level stats.
+// Given all tables, create all aggregations needed for the table-level stats. All selected
+// partitions should have their primary replicas on this node.
 inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs(
     const std::map<int32_t, std::vector<dsn::partition_configuration>> &table_partitions,
     const dsn::rpc_address &node,
@@ -1379,7 +1398,8 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
     return calcs;
 }
 
-// Create all aggregations for the partition-level stats.
+// Given a table and all of its partitions, create all aggregations needed for the partition-level
+// stats. All selected partitions should have their primary replicas on this node.
 inline std::unique_ptr<aggregate_stats_calcs>
 create_partition_aggregate_stats_calcs(const int32_t table_id,
                                        const std::vector<dsn::partition_configuration> &partitions,
@@ -1681,7 +1701,7 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
         return false;
     }
 
-    const auto query_string = row_data_filters().to_query_string();
+    const auto &query_string = row_data_filters().to_query_string();
     const auto &results_start = get_metrics(nodes, query_string);
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
     const auto &results_end = get_metrics(nodes, query_string);
@@ -1741,7 +1761,7 @@ inline bool get_partition_stats(shell_context *sc,
     }
     CHECK_EQ(partitions.size(), partition_count);
 
-    const auto query_string = row_data_filters(table_id).to_query_string();
+    const auto &query_string = row_data_filters(table_id).to_query_string();
     const auto &results_start = get_metrics(nodes, query_string);
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
     const auto &results_end = get_metrics(nodes, query_string);
