@@ -248,19 +248,20 @@ void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicat
                 if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
                     incr_rpc raw_rpc(write);
                     absl::string_view unmarshall_key(raw_rpc.request().key.data(),
-                                                    raw_rpc.request().key.length());
+                                                     raw_rpc.request().key.length());
 
-                    LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_INCR has been retried when doing "
-                             "duplication,"
-                             "key is [{}]",
-                             unmarshall_key);
+                    LOG_DEBUG(
+                        "Non-indempotent write RPC_RRDB_RRDB_INCR has been retried when doing "
+                        "duplication,"
+                        "key is [{}]",
+                        unmarshall_key);
                     continue;
                 }
 
                 if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
                     check_and_set_rpc raw_rpc(write);
                     absl::string_view unmarshall_hash_key(raw_rpc.request().hash_key.data(),
-                                                         raw_rpc.request().hash_key.length());
+                                                          raw_rpc.request().hash_key.length());
                     absl::string_view unmarshall_ori_sort_key(
                         raw_rpc.request().check_sort_key.data(),
                         raw_rpc.request().check_sort_key.length());
@@ -269,28 +270,28 @@ void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicat
                         raw_rpc.request().set_sort_key.length());
 
                     LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_SET has been retried "
-                             "when doing duplication,"
-                             "hash key [{}], check sort key [{}],"
-                             "set sort key [{}]",
-                             unmarshall_hash_key,
-                             unmarshall_ori_sort_key,
-                             unmarshall_set_sort_key);
+                              "when doing duplication,"
+                              "hash key [{}], check sort key [{}],"
+                              "set sort key [{}]",
+                              unmarshall_hash_key,
+                              unmarshall_ori_sort_key,
+                              unmarshall_set_sort_key);
                     continue;
                 }
 
                 if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
                     check_and_mutate_rpc raw_rpc(write);
                     absl::string_view unmarshall_hash_key(raw_rpc.request().hash_key.data(),
-                                                         raw_rpc.request().hash_key.length());
+                                                          raw_rpc.request().hash_key.length());
                     absl::string_view unmarshall_ori_sort_key(
                         raw_rpc.request().check_sort_key.data(),
                         raw_rpc.request().check_sort_key.length());
 
                     LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_MUTATE has been "
-                             "retried when doing duplication,"
-                             "hash key is [{}] , sort key is [{}] .",
-                             unmarshall_hash_key,
-                             unmarshall_ori_sort_key);
+                              "retried when doing duplication,"
+                              "hash key is [{}] , sort key is [{}] .",
+                              unmarshall_hash_key,
+                              unmarshall_ori_sort_key);
                     continue;
                 }
             }
