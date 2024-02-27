@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/strings/string_view.h"
+#include "common/duplication_common.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "metadata_types.h"

@@ -38,6 +38,7 @@
 
 #include "bulk_load/replica_bulk_loader.h"
 #include "bulk_load_types.h"
+#include "common/duplication_common.h"
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"

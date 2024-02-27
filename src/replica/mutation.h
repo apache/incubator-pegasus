@@ -34,7 +34,6 @@
 
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
-#include "common/duplication_common.h"
 #include "consensus_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
@@ -49,6 +48,7 @@ class binary_reader;
 class binary_writer;
 class blob;
 class gpid;
+
 namespace utils {
 class latency_tracer;
 } // namespace utils
