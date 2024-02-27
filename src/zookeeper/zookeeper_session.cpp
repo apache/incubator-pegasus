@@ -41,6 +41,14 @@
 #include "zookeeper_session.h"
 
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
+DSN_DEFINE_string(security,
+                  zookeeper_kerberos_service_name,
+                  "",
+                  "[Deprecated] zookeeper kerberos service name");
+DSN_DEFINE_string(security,
+                  zookeeper_sasl_service_fqdn,
+                  "",
+                  "[Deprecated] The FQDN of a Zookeeper server, used in Kerberos Principal");
 // TODO(yingchun): to keep compatibility, the global name is FLAGS_timeout_ms. The name is not very
 //  suitable, maybe improve the macro to us another global name.
 DSN_DEFINE_int32(zookeeper,
@@ -68,6 +76,22 @@ DSN_DEFINE_group_validator(enable_zookeeper_kerberos, [](std::string &message) -
         !dsn::utils::equals(FLAGS_sasl_mechanisms_type, "GSSAPI")) {
         message = "Please set [zookeeper] sasl_mechanisms_type to GSSAPI if [security] "
                   "enable_zookeeper_kerberos is true.";
+        return false;
+    }
+
+    return true;
+});
+DSN_DEFINE_group_validator(consistency_between_configurations, [](std::string &message) -> bool {
+    if (!dsn::utils::is_empty(FLAGS_zookeeper_kerberos_service_name) &&
+        !dsn::utils::equals(FLAGS_zookeeper_kerberos_service_name, FLAGS_sasl_service_name)) {
+        message = "zookeeper_kerberos_service_name deprecated, if set should be same as "
+                  "sasl_service_name.";
+        return false;
+    }
+    if (!dsn::utils::is_empty(FLAGS_zookeeper_sasl_service_fqdn) &&
+        !dsn::utils::equals(FLAGS_zookeeper_sasl_service_fqdn, FLAGS_sasl_service_fqdn)) {
+        message =
+            "zookeeper_sasl_service_fqdn deprecated, if set should be same as sasl_service_fqdn.";
         return false;
     }
 
