@@ -234,7 +234,7 @@ void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicat
 {
 
     // there maybe more than one mutation in one dup rpc
-    if (dsn::replication::FLAGS_force_send_no_idempotent_when_duplication) {
+    if (FLAGS_force_send_no_idempotent_when_duplication) {
         for (auto entry : rpc.request().entries) {
             if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
                 entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
