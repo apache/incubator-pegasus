@@ -1297,6 +1297,27 @@ inline dsn::metric_filters row_data_filters()
         "read_expired_values",
         "read_filtered_values",
         "abnormal_read_requests",
+        "throttling_delayed_write_requests",
+        "throttling_rejected_write_requests",
+        "throttling_delayed_read_requests",
+        "throttling_rejected_read_requests",
+        "throttling_delayed_backup_requests",
+        "throttling_rejected_backup_requests",
+        "splitting_rejected_write_requests",
+        "splitting_rejected_read_requests",
+        "bulk_load_ingestion_rejected_write_requests",
+        "rdb_total_sst_size_mb",
+        "rdb_total_sst_files",
+        "rdb_block_cache_hit_count",
+        "rdb_block_cache_total_count",
+        "rdb_index_and_filter_blocks_mem_usage_bytes",
+        "rdb_memtable_mem_usage_bytes",
+        "rdb_estimated_keys",
+        "rdb_bloom_filter_seek_negatives",
+        "rdb_bloom_filter_seek_total",
+        "rdb_bloom_filter_point_lookup_negatives",
+        "rdb_bloom_filter_point_lookup_positives",
+        "rdb_bloom_filter_point_lookup_true_positives",
     };
     return filters;
 }
@@ -1317,6 +1338,19 @@ inline stat_var_map create_sums(row_data &row)
 {
     return stat_var_map({
         BIND_ROW(dup_recent_lost_mutations, dup_recent_mutation_loss_count),
+        BIND_ROW(rdb_total_sst_size_mb, storage_mb),
+        BIND_ROW(rdb_total_sst_files, storage_count),
+        BIND_ROW(rdb_block_cache_hit_count, rdb_block_cache_hit_count),
+        BIND_ROW(rdb_block_cache_total_count, rdb_block_cache_total_count),
+        BIND_ROW(rdb_index_and_filter_blocks_mem_usage_bytes,
+                 rdb_index_and_filter_blocks_mem_usage),
+        BIND_ROW(rdb_memtable_mem_usage_bytes, rdb_memtable_mem_usage),
+        BIND_ROW(rdb_estimated_keys, rdb_estimate_num_keys),
+        BIND_ROW(rdb_bloom_filter_seek_negatives, rdb_bf_seek_negatives),
+        BIND_ROW(rdb_bloom_filter_seek_total, rdb_bf_seek_total),
+        BIND_ROW(rdb_bloom_filter_point_lookup_true_positives, rdb_bf_point_positive_true),
+        BIND_ROW(rdb_bloom_filter_point_lookup_positives, rdb_bf_point_positive_total),
+        BIND_ROW(rdb_bloom_filter_point_lookup_negatives, rdb_bf_point_negatives),
     });
 }
 
@@ -1328,6 +1362,17 @@ inline stat_var_map create_increases(row_data &row)
         BIND_ROW(read_expired_values, recent_expire_count),
         BIND_ROW(read_filtered_values, recent_filter_count),
         BIND_ROW(abnormal_read_requests, recent_abnormal_count),
+        BIND_ROW(throttling_delayed_write_requests, recent_write_throttling_delay_count),
+        BIND_ROW(throttling_rejected_write_requests, recent_write_throttling_reject_count),
+        BIND_ROW(throttling_delayed_read_requests, recent_read_throttling_delay_count),
+        BIND_ROW(throttling_rejected_read_requests, recent_read_throttling_reject_count),
+        BIND_ROW(throttling_delayed_backup_requests, recent_backup_request_throttling_delay_count),
+        BIND_ROW(throttling_rejected_backup_requests,
+                 recent_backup_request_throttling_reject_count),
+        BIND_ROW(splitting_rejected_write_requests, recent_write_splitting_reject_count),
+        BIND_ROW(splitting_rejected_read_requests, recent_read_splitting_reject_count),
+        BIND_ROW(bulk_load_ingestion_rejected_write_requests,
+                 recent_write_bulk_load_ingestion_reject_count),
     });
 }
 
