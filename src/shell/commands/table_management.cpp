@@ -480,10 +480,11 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
-                                           {"only_qps", required_argument, 0, 'q'},
-                                           {"only_usage", required_argument, 0, 'u'},
+                                           {"only_qps", no_argument, 0, 'q'},
+                                           {"only_usage", no_argument, 0, 'u'},
                                            {"json", no_argument, 0, 'j'},
                                            {"output", required_argument, 0, 'o'},
+                                           {"sample_interval_ms", required_argument, 0, 't'},
                                            {0, 0, 0, 0}};
 
     std::string app_name;
@@ -491,14 +492,17 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     bool only_qps = false;
     bool only_usage = false;
     bool json = false;
+    uint32_t sample_interval_ms = FLAGS_tables_sample_interval_ms;
 
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "a:qujo:", long_options, &option_index);
-        if (c == -1)
+        int c = getopt_long(args.argc, args.argv, "a:qujo:t:", long_options, &option_index);
+        if (c == -1) {
+            // -1 means all command-line options have been parsed.
             break;
+        }
+
         switch (c) {
         case 'a':
             app_name = optarg;
@@ -515,6 +519,11 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             out_file = optarg;
             break;
+        case 't':
+            verify_logged(dsn::buf2uint32(optarg, sample_interval_ms),
+                          "parse sample_interval_ms(%s) failed",
+                          optarg);
+            break;
         default:
             return false;
         }
@@ -527,7 +536,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::vector<row_data> rows;
-    if (!get_app_stat(sc, app_name, FLAGS_tables_sample_interval_ms, rows)) {
+    if (!get_app_stat(sc, app_name, sample_interval_ms, rows)) {
         std::cout << "ERROR: query app stat from server failed" << std::endl;
         return true;
     }
