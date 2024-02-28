@@ -79,9 +79,9 @@ DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAU
 
 #define RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID()                                               \
     verify_logged(dsn::buf2uint32(optarg, sample_interval_ms),                                     \
-                  "parse sample_interval_ms(%s) failed",                                           \
+                  "parse sample_interval_ms(%s) failed\n",                                         \
                   optarg);                                                                         \
-    verify_logged(sample_interval_ms > 0, "sample_interval_ms should be > 0")
+    verify_logged(sample_interval_ms > 0, "sample_interval_ms should be > 0\n")
 
 enum scan_data_operator
 {
