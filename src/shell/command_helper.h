@@ -1315,9 +1315,27 @@ inline dsn::metric_filters row_data_filters()
         "rdb_estimated_keys",
         "rdb_bloom_filter_seek_negatives",
         "rdb_bloom_filter_seek_total",
-        "rdb_bloom_filter_point_lookup_negatives",
-        "rdb_bloom_filter_point_lookup_positives",
         "rdb_bloom_filter_point_lookup_true_positives",
+        "rdb_bloom_filter_point_lookup_positives",
+        "rdb_bloom_filter_point_lookup_negatives",
+        "backup_requests",
+        "backup_request_bytes",
+        "get_bytes",
+        "multi_get_bytes",
+        "batch_get_bytes",
+        "scan_bytes",
+        "put_bytes",
+        "multi_put_bytes",
+        "check_and_set_bytes",
+        "check_and_mutate_bytes",
+        "rdb_compaction_input_bytes",
+        "rdb_compaction_output_bytes",
+        "rdb_l2_and_up_hit_count",
+        "rdb_l1_hit_count",
+        "rdb_l0_hit_count",
+        "rdb_memtable_hit_count",
+        "rdb_write_amplification",
+        "rdb_read_amplification",
     };
     return filters;
 }
@@ -1351,6 +1369,12 @@ inline stat_var_map create_sums(row_data &row)
         BIND_ROW(rdb_bloom_filter_point_lookup_true_positives, rdb_bf_point_positive_true),
         BIND_ROW(rdb_bloom_filter_point_lookup_positives, rdb_bf_point_positive_total),
         BIND_ROW(rdb_bloom_filter_point_lookup_negatives, rdb_bf_point_negatives),
+        BIND_ROW(rdb_l2_and_up_hit_count, rdb_read_l2andup_hit_count),
+        BIND_ROW(rdb_l1_hit_count, rdb_read_l1_hit_count),
+        BIND_ROW(rdb_l0_hit_count, rdb_read_l0_hit_count),
+        BIND_ROW(rdb_memtable_hit_count, rdb_read_memtable_hit_count),
+        BIND_ROW(rdb_write_amplification, rdb_write_amplification),
+        BIND_ROW(rdb_read_amplification, rdb_read_amplification),
     });
 }
 
@@ -1373,6 +1397,8 @@ inline stat_var_map create_increases(row_data &row)
         BIND_ROW(splitting_rejected_read_requests, recent_read_splitting_reject_count),
         BIND_ROW(bulk_load_ingestion_rejected_write_requests,
                  recent_write_bulk_load_ingestion_reject_count),
+        BIND_ROW(rdb_compaction_input_bytes, recent_rdb_compaction_input_bytes),
+        BIND_ROW(rdb_compaction_output_bytes, recent_rdb_compaction_output_bytes),
     });
 }
 
@@ -1393,6 +1419,16 @@ inline stat_var_map create_rates(row_data &row)
         BIND_ROW(dup_requests, duplicate_qps),
         BIND_ROW(dup_shipped_successful_requests, dup_shipped_ops),
         BIND_ROW(dup_shipped_failed_requests, dup_failed_shipping_ops),
+        BIND_ROW(backup_requests, backup_request_qps),
+        BIND_ROW(backup_request_bytes, backup_request_bytes),
+        BIND_ROW(get_bytes, get_bytes),
+        BIND_ROW(multi_get_bytes, multi_get_bytes),
+        BIND_ROW(batch_get_bytes, batch_get_bytes),
+        BIND_ROW(scan_bytes, scan_bytes),
+        BIND_ROW(put_bytes, put_bytes),
+        BIND_ROW(multi_put_bytes, multi_put_bytes),
+        BIND_ROW(check_and_set_bytes, check_and_set_bytes),
+        BIND_ROW(check_and_mutate_bytes, check_and_mutate_bytes),
     });
 }
 
