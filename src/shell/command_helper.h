@@ -1327,6 +1327,7 @@ inline dsn::metric_filters row_data_filters()
         "put_bytes",
         "multi_put_bytes",
         "check_and_set_bytes",
+        "check_and_mutate_bytes",
         "rdb_compaction_input_bytes",
         "rdb_compaction_output_bytes",
         "rdb_l2_and_up_hit_count",
