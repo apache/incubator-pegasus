@@ -308,8 +308,8 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                              std::string("ns_") + status,
                              ::dsn::replication::node_status::NS_INVALID);
         verify_logged(s != ::dsn::replication::node_status::NS_INVALID,
-                      "parse %s as node_status::type failed",
-                      status.c_str());
+                      "parse {} as node_status::type failed",
+                      status);
     }
 
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;

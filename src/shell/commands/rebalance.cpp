@@ -50,7 +50,7 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
                          std::string("fl_") + args.argv[1],
                          meta_function_level::fl_invalid);
     verify_logged(l != meta_function_level::fl_invalid,
-                  "parse %s as meta function level failed\n",
+                  "parse {} as meta function level failed\n",
                   args.argv[1]);
 
     configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(l);
@@ -106,18 +106,18 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'g':
             ans = request.gpid.parse_from(optarg);
-            verify_logged(ans, "parse %s as gpid failed\n", optarg);
+            verify_logged(ans, "parse {} as gpid failed\n", optarg);
             break;
         case 'p':
             proposal_type += optarg;
             break;
         case 't':
             target = dsn::rpc_address::from_host_port(optarg);
-            verify_logged(target, "parse %s as target_address failed\n", optarg);
+            verify_logged(target, "parse {} as target_address failed\n", optarg);
             break;
         case 'n':
             node = dsn::rpc_address::from_host_port(optarg);
-            verify_logged(node, "parse %s as node failed\n", optarg);
+            verify_logged(node, "parse {} as node failed\n", optarg);
             break;
         default:
             return false;
@@ -131,7 +131,7 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
     config_type::type tp =
         type_from_string(_config_type_VALUES_TO_NAMES, proposal_type, config_type::CT_INVALID);
     verify_logged(
-        tp != config_type::CT_INVALID, "parse %s as config_type failed.\n", proposal_type.c_str());
+        tp != config_type::CT_INVALID, "parse {} as config_type failed.\n", proposal_type);
     request.action_list = {new_proposal_action(target, node, tp)};
     dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send proposal response: " << err << std::endl;

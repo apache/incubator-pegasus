@@ -72,8 +72,8 @@ bool validate_ip(shell_context *sc,
 
 #define verify_logged(exp, ...)                                                                    \
     do {                                                                                           \
-        if (!(exp)) {                                                                              \
-            fprintf(stderr, __VA_ARGS__);                                                          \
+        if (dsn_unlikely(!(exp))) {                                                                \
+            fmt::print(stderr, __VA_ARGS__);                                                       \
             return false;                                                                          \
         }                                                                                          \
     } while (0)
