@@ -892,6 +892,91 @@ private:
         }                                                                                          \
     } while (0)
 
+// A helper macro to parse command argument, the result is filled in a string vector variable named
+// 'container'.
+#define PARSE_STRS(container)                                                                      \
+    do {                                                                                           \
+        const auto param = cmd(param_index++).str();                                               \
+        ::dsn::utils::split_args(param.c_str(), container, ',');                                   \
+        if (container.empty()) {                                                                   \
+            fmt::print(stderr,                                                                     \
+                       "invalid command, '{}' should be in the form of 'val1,val2,val3' and "      \
+                       "should not be empty\n",                                                    \
+                       param);                                                                     \
+            return false;                                                                          \
+        }                                                                                          \
+        std::set<std::string> str_set(container.begin(), container.end());                         \
+        if (str_set.size() != container.size()) {                                                  \
+            fmt::print(stderr, "invalid command, '{}' has duplicate values\n", param);             \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+// A helper macro to parse command argument, the result is filled in an uint32_t variable named
+// 'value'.
+#define PARSE_UINT(value)                                                                          \
+    do {                                                                                           \
+        const auto param = cmd(param_index++).str();                                               \
+        if (!::dsn::buf2uint32(param, value)) {                                                    \
+            fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", param);    \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+// A helper macro to parse an optional command argument, the result is filled in an uint32_t
+// variable 'value'.
+#define PARSE_OPT_UINT(name, value, def_val)                                                       \
+    do {                                                                                           \
+        const auto param = cmd(name, (def_val)).str();                                             \
+        if (!::dsn::buf2uint32(param, value)) {                                                    \
+            fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", param);    \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+// A helper macro to parse command argument, the result is filled in an uint32_t vector variable
+// 'container'.
+#define PARSE_UINTS(container)                                                                     \
+    do {                                                                                           \
+        std::vector<std::string> strs;                                                             \
+        PARSE_STRS(strs);                                                                          \
+        container.clear();                                                                         \
+        for (const auto &str : strs) {                                                             \
+            uint32_t v;                                                                            \
+            if (!::dsn::buf2uint32(str, v)) {                                                      \
+                fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", str);  \
+                return false;                                                                      \
+            }                                                                                      \
+            container.insert(v);                                                                   \
+        }                                                                                          \
+    } while (false)
+
+#define RETURN_FALSE_IF_NOT(expr, ...)                                                             \
+    do {                                                                                           \
+        if (dsn_unlikely(!(expr))) {                                                               \
+            fmt::print(stderr, "{}\n", fmt::format(__VA_ARGS__));                                  \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+#define RETURN_FALSE_IF_NON_OK(expr, ...)                                                          \
+    do {                                                                                           \
+        const auto _ec = (expr);                                                                   \
+        if (dsn_unlikely(_ec != dsn::ERR_OK)) {                                                    \
+            fmt::print(stderr, "{}: {}\n", _ec, fmt::format(__VA_ARGS__));                         \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+#define RETURN_FALSE_IF_NON_RDB_OK(expr, ...)                                                      \
+    do {                                                                                           \
+        const auto _s = (expr);                                                                    \
+        if (dsn_unlikely(!_s.ok())) {                                                              \
+            fmt::print(stderr, "{}: {}\n", _s.ToString(), fmt::format(__VA_ARGS__));               \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
 // Total aggregation over the fetched metrics. The only dimension is the metric name, which
 // is also the key of `stat_var_map`.
 class total_aggregate_stats : public aggregate_stats
