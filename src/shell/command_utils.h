@@ -70,7 +70,7 @@ bool validate_ip(shell_context *sc,
                  /*out*/ dsn::rpc_address &target_address,
                  /*out*/ std::string &err_info);
 
-// Print messages to stderr and return false.
+// Print messages to stderr and return false if `exp` is evaluated to false.
 #define PRINT_AND_RETURN_FALSE_IF_NOT(exp, ...)                                                    \
     do {                                                                                           \
         if (dsn_unlikely(!(exp))) {                                                                \
