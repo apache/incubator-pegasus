@@ -94,7 +94,7 @@ private:
                             uint64_t total_file_size,
                             decree last_committed_decree);
 
-    // TODO(heyuchen): total_file_size is used for split perf-counter in further pull request
+    // TODO(heyuchen): total_file_size is used for split-related  metrics in further pull request.
     // Applies mutation logs that were learned from the parent of this child.
     // This stage follows after that child applies the checkpoint of parent, and begins to apply the
     // mutations.
