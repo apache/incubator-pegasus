@@ -109,9 +109,8 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
         s = type_from_string(::dsn::_app_status_VALUES_TO_NAMES,
                              std::string("as_") + status,
                              ::dsn::app_status::AS_INVALID);
-        verify_logged(s != ::dsn::app_status::AS_INVALID,
-                      "parse %s as app_status::type failed",
-                      status.c_str());
+        PRINT_AND_RETURN_FALSE_IF_NOT(
+            s != ::dsn::app_status::AS_INVALID, "parse {} as app_status::type failed", status);
     }
     ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
     if (err != ::dsn::ERR_OK)
