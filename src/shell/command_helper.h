@@ -59,6 +59,7 @@
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
@@ -75,6 +76,12 @@ using namespace dsn::replication;
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+#define RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID()                                               \
+    verify_logged(dsn::buf2uint32(optarg, sample_interval_ms),                                     \
+                  "parse sample_interval_ms(%s) failed\n",                                         \
+                  optarg);                                                                         \
+    verify_logged(sample_interval_ms > 0, "sample_interval_ms should be > 0\n")
 
 enum scan_data_operator
 {

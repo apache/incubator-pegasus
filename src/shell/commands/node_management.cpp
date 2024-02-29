@@ -55,6 +55,7 @@
 #include "utils/utils.h"
 
 DSN_DEFINE_uint32(shell, nodes_sample_interval_ms, 1000, "The interval between sampling metrics.");
+DSN_DEFINE_validator(nodes_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
@@ -238,23 +239,28 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                                            {"json", no_argument, 0, 'j'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
+                                           {"sample_interval_ms", required_argument, 0, 't'},
                                            {0, 0, 0, 0}};
 
     std::string status;
     std::string output_file;
+    uint32_t sample_interval_ms = FLAGS_nodes_sample_interval_ms;
     bool detailed = false;
     bool resolve_ip = false;
     bool resource_usage = false;
     bool show_qps = false;
     bool show_latency = false;
     bool json = false;
+
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "druqjs:o:", long_options, &option_index);
-        if (c == -1)
+        int c = getopt_long(args.argc, args.argv, "druqjs:o:t:", long_options, &option_index);
+        if (c == -1) {
+            // -1 means all command-line options have been parsed.
             break;
+        }
+
         switch (c) {
         case 'd':
             detailed = true;
@@ -277,6 +283,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'o':
             output_file = optarg;
+            break;
+        case 't':
+            RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
             break;
         default:
             return false;
@@ -392,7 +401,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
         const auto &query_string = rw_requests_filters().to_query_string();
         const auto &results_start = get_metrics(nodes, query_string);
-        std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_nodes_sample_interval_ms));
+        std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
         const auto &results_end = get_metrics(nodes, query_string);
 
         for (size_t i = 0; i < nodes.size(); ++i) {
