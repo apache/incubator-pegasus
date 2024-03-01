@@ -285,7 +285,7 @@ public:
     // see more in function `child_check_split_context` and `parent_check_states`
     task_ptr check_state_task;
 
-    // Used for split related perf-counter
+    // Used for split-related metrics.
     uint64_t splitting_start_ts_ns{0};
     uint64_t splitting_start_async_learn_ts_ns{0};
     uint64_t splitting_copy_file_count{0};

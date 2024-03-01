@@ -641,7 +641,6 @@ private:
 
     std::unique_ptr<replica_follower> _replica_follower;
 
-    // perf counters
     METRIC_VAR_DECLARE_gauge_int64(private_log_size_mb);
     METRIC_VAR_DECLARE_counter(throttling_delayed_write_requests);
     METRIC_VAR_DECLARE_counter(throttling_rejected_write_requests);

@@ -235,7 +235,7 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
                 current_learner.last_committed_decree > info.last_committed_decree ||
                 current_learner.last_prepared_decree > info.last_prepared_decree) {
 
-                // TODO: need to add a perf counter here
+                // TODO: need to add a metric here.
                 LOG_WARNING("{}: learner({})'s progress step back, please trace this carefully",
                             info.pid,
                             node);

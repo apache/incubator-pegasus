@@ -239,7 +239,7 @@ private:
     uint32_t _put_batch_size;
     uint32_t _remove_batch_size;
 
-    // TODO(wutao1): add perf counters for failed rpc.
+    // TODO(wutao1): add metrics for failed rpc.
 };
 
 } // namespace server
