@@ -38,12 +38,12 @@ public class TestDefaultRetryPolicy {
     now = System.nanoTime();
     action = policy.shouldRetry(1, now + TimeUnit.MINUTES.toNanos(1), Duration.ofMillis(300));
     assertEquals(RetryPolicy.RetryDecision.RETRY, action.getDecision());
-    assertEquals(100, action.getDelay().toMillis());
+    assertEquals(100, action.getDelay().toNanos());
 
     now = System.nanoTime();
     action = policy.shouldRetry(1, now + TimeUnit.SECONDS.toNanos(1), Duration.ofSeconds(10));
     assertEquals(RetryPolicy.RetryDecision.RETRY, action.getDecision());
     // should not have a delay which makes the nanos greater than deadline
-    assertThat(action.getDelay().toMillis(), lessThanOrEqualTo(TimeUnit.SECONDS.toMillis(1)));
+    assertThat(action.getDelay().toNanos(), lessThanOrEqualTo(TimeUnit.SECONDS.toNanos(1)));
   }
 }
