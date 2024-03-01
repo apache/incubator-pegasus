@@ -33,7 +33,7 @@ public class ExponentialBackoffRetryPolicy implements RetryPolicy {
   private final int retryMaxTimes;
 
   public ExponentialBackoffRetryPolicy(ClientOptions opts) {
-    // The minimum unit of retry interval time is milliseconds.
+    // The minimum unit of retry interval time for user is milliseconds.
     // When the user sets the interval time unit to nano, it will change to default interval ms.
     if (opts.getRetryBaseInterval().toMillis() < 1) {
       this.retryBaseIntervalMs = ClientOptions.DEFAULT_RETRY_BASE_INTERVAL_MS;
@@ -53,12 +53,12 @@ public class ExponentialBackoffRetryPolicy implements RetryPolicy {
     if (now >= deadlineNanos) {
       return new RetryAction(RetryDecision.FAIL, Duration.ZERO, "request deadline reached");
     }
-    long normalIntervalMs =
-        retryBaseIntervalMs * RETRY_BACKOFF[Math.min(retries, RETRY_BACKOFF.length - 1)];
+    long normalIntervalNanos =
+        retryBaseIntervalMs * RETRY_BACKOFF[Math.min(retries, RETRY_BACKOFF.length - 1)] * 1000000;
     // 1% possible jitter
-    long jitterMs = (long) (normalIntervalMs * ThreadLocalRandom.current().nextFloat() * 0.01f);
-    long retryIntervalMs =
-        Math.min(normalIntervalMs + jitterMs, TimeUnit.NANOSECONDS.toMillis(deadlineNanos - now));
-    return new RetryAction(RetryDecision.RETRY, Duration.ofMillis(retryIntervalMs), "");
+    long jitterMs = (long) (normalIntervalNanos * ThreadLocalRandom.current().nextFloat() * 0.01f);
+    long retryIntervalNanos =
+        Math.min(normalIntervalNanos + jitterMs, TimeUnit.NANOSECONDS.toNanos(deadlineNanos - now));
+    return new RetryAction(RetryDecision.RETRY, Duration.ofNanos(retryIntervalNanos), "");
   }
 }
