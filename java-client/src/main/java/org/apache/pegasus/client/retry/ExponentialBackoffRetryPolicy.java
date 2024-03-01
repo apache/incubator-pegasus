@@ -56,9 +56,11 @@ public class ExponentialBackoffRetryPolicy implements RetryPolicy {
     long normalIntervalNanos =
         retryBaseIntervalMs * RETRY_BACKOFF[Math.min(retries, RETRY_BACKOFF.length - 1)] * 1000000;
     // 1% possible jitter
-    long jitterMs = (long) (normalIntervalNanos * ThreadLocalRandom.current().nextFloat() * 0.01f);
+    long jitterNanos =
+        (long) (normalIntervalNanos * ThreadLocalRandom.current().nextFloat() * 0.01f);
     long retryIntervalNanos =
-        Math.min(normalIntervalNanos + jitterMs, TimeUnit.NANOSECONDS.toNanos(deadlineNanos - now));
+        Math.min(
+            normalIntervalNanos + jitterNanos, TimeUnit.NANOSECONDS.toNanos(deadlineNanos - now));
     return new RetryAction(RetryDecision.RETRY, Duration.ofNanos(retryIntervalNanos), "");
   }
 }
