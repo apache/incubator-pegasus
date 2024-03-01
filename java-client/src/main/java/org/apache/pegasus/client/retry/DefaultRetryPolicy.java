@@ -38,10 +38,11 @@ public class DefaultRetryPolicy implements RetryPolicy {
     if (now >= deadlineNanos) {
       return new RetryAction(RetryDecision.FAIL, Duration.ZERO, "request deadline reached");
     }
-    long timeoutMs = timeout.toMillis();
-    long retryDelayMs =
+    long timeoutNanos = timeout.toNanos();
+    long retryDelayNanos =
         Math.min(
-            timeoutMs > 3 ? timeoutMs / 3 : 1, TimeUnit.NANOSECONDS.toMillis(deadlineNanos - now));
-    return new RetryAction(RetryDecision.RETRY, Duration.ofNanos(retryDelayMs), "");
+            timeoutNanos > 3000000 ? timeoutNanos / 3000000 : 1,
+            TimeUnit.NANOSECONDS.toNanos(deadlineNanos - now));
+    return new RetryAction(RetryDecision.RETRY, Duration.ofNanos(retryDelayNanos), "");
   }
 }
