@@ -55,6 +55,7 @@
 #include "utils/utils.h"
 
 DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
+DSN_DEFINE_validator(tables_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
 
 double convert_to_ratio(double hit, double total)
 {
@@ -108,9 +109,8 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
         s = type_from_string(::dsn::_app_status_VALUES_TO_NAMES,
                              std::string("as_") + status,
                              ::dsn::app_status::AS_INVALID);
-        verify_logged(s != ::dsn::app_status::AS_INVALID,
-                      "parse %s as app_status::type failed",
-                      status.c_str());
+        PRINT_AND_RETURN_FALSE_IF_NOT(
+            s != ::dsn::app_status::AS_INVALID, "parse {} as app_status::type failed", status);
     }
     ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
     if (err != ::dsn::ERR_OK)
@@ -480,10 +480,11 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
-                                           {"only_qps", required_argument, 0, 'q'},
-                                           {"only_usage", required_argument, 0, 'u'},
+                                           {"only_qps", no_argument, 0, 'q'},
+                                           {"only_usage", no_argument, 0, 'u'},
                                            {"json", no_argument, 0, 'j'},
                                            {"output", required_argument, 0, 'o'},
+                                           {"sample_interval_ms", required_argument, 0, 't'},
                                            {0, 0, 0, 0}};
 
     std::string app_name;
@@ -491,14 +492,17 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     bool only_qps = false;
     bool only_usage = false;
     bool json = false;
+    uint32_t sample_interval_ms = FLAGS_tables_sample_interval_ms;
 
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "a:qujo:", long_options, &option_index);
-        if (c == -1)
+        int c = getopt_long(args.argc, args.argv, "a:qujo:t:", long_options, &option_index);
+        if (c == -1) {
+            // -1 means all command-line options have been parsed.
             break;
+        }
+
         switch (c) {
         case 'a':
             app_name = optarg;
@@ -515,6 +519,9 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             out_file = optarg;
             break;
+        case 't':
+            RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
+            break;
         default:
             return false;
         }
@@ -527,15 +534,14 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::vector<row_data> rows;
-    if (!get_app_stat(sc, app_name, FLAGS_tables_sample_interval_ms, rows)) {
+    if (!get_app_stat(sc, app_name, sample_interval_ms, rows)) {
         std::cout << "ERROR: query app stat from server failed" << std::endl;
         return true;
     }
 
-    rows.resize(rows.size() + 1);
-    row_data &sum = rows.back();
-    sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
-    for (int i = 0; i < rows.size() - 1; ++i) {
+    rows.emplace_back(fmt::format("(total:{})", rows.size() - 1));
+    auto &sum = rows.back();
+    for (size_t i = 0; i < rows.size() - 1; ++i) {
         row_data &row = rows[i];
         sum.partition_count += row.partition_count;
         sum.get_qps += row.get_qps;
