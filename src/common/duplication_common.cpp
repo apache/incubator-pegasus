@@ -37,7 +37,7 @@ DSN_DEFINE_uint32(replication,
                   "send mutation log batch bytes size per rpc");
 DSN_TAG_VARIABLE(duplicate_log_batch_bytes, FT_MUTABLE);
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 force_send_no_idempotent_when_duplication,
                 false,
                 "receive client idempotent write requests and send them to backup cluster when "
