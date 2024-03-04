@@ -1159,11 +1159,13 @@ struct row_data
         incr_qps += row.incr_qps;
         check_and_set_qps += row.check_and_set_qps;
         check_and_mutate_qps += row.check_and_mutate_qps;
-        force_receive_non_idempotent_duplicate_request += row.force_receive_non_idempotent_duplicate_request;
+        force_receive_non_idempotent_duplicate_request +=
+            row.force_receive_non_idempotent_duplicate_request;
         scan_qps += row.scan_qps;
         duplicate_qps += row.duplicate_qps;
         dup_shipped_ops += row.dup_shipped_ops;
-        dup_retry_non_idempotent_duplicate_request += row.dup_retry_non_idempotent_duplicate_request;
+        dup_retry_non_idempotent_duplicate_request +=
+            row.dup_retry_non_idempotent_duplicate_request;
         dup_failed_shipping_ops += row.dup_failed_shipping_ops;
         dup_recent_mutation_loss_count += row.dup_recent_mutation_loss_count;
         recent_read_cu += row.recent_read_cu;
