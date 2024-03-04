@@ -45,7 +45,7 @@ void dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const
 {
     std::ostringstream load_string;
     load_string << std::endl << "<<<<<<<<<<" << std::endl;
-    load_string << "load for " << node.to_string() << ", "
+    load_string << "load for " << node << ", "
                 << "app id: " << id;
     if (only_primary) {
         load_string << ", only for primary";
@@ -68,7 +68,7 @@ bool calc_disk_load(node_mapper &nodes,
 {
     load.clear();
     const node_state *ns = get_node_state(nodes, node, false);
-    CHECK_NOTNULL(ns, "can't find node({}) from node_state", node.to_string());
+    CHECK_NOTNULL(ns, "can't find node({}) from node_state", node);
 
     auto add_one_replica_to_disk_load = [&](const gpid &pid) {
         LOG_DEBUG("add gpid({}) to node({}) disk load", pid, node);
@@ -107,7 +107,7 @@ get_node_loads(const std::shared_ptr<app_state> &app,
                 nodes, apps, app->app_id, iter->first, only_primary, node_loads[iter->first])) {
             LOG_WARNING(
                 "stop the balancer as some replica infos aren't collected, node({}), app({})",
-                iter->first.to_string(),
+                iter->first,
                 app->get_logname());
             return node_loads;
         }
@@ -259,7 +259,7 @@ bool load_balance_policy::move_primary(std::unique_ptr<flow_path> path)
     if (!calc_disk_load(
             nodes, apps, path->_app->app_id, address_vec[current], true, *current_load)) {
         LOG_WARNING("stop move primary as some replica infos aren't collected, node({}), app({})",
-                    address_vec[current].to_string(),
+                    address_vec[current],
                     path->_app->get_logname());
         return false;
     }
@@ -271,7 +271,7 @@ bool load_balance_policy::move_primary(std::unique_ptr<flow_path> path)
         if (!calc_disk_load(nodes, apps, path->_app->app_id, from, true, *prev_load)) {
             LOG_WARNING(
                 "stop move primary as some replica infos aren't collected, node({}), app({})",
-                from.to_string(),
+                from,
                 path->_app->get_logname());
             return false;
         }
@@ -730,9 +730,7 @@ gpid copy_replica_operation::select_partition(migration_list *result)
 
     int id_max = *_ordered_address_ids.rbegin();
     const node_state &ns = _nodes.find(_address_vec[id_max])->second;
-    CHECK(partitions != nullptr && !partitions->empty(),
-          "max load({}) shouldn't empty",
-          ns.addr().to_string());
+    CHECK(partitions != nullptr && !partitions->empty(), "max load({}) shouldn't empty", ns.addr());
 
     return select_max_load_gpid(partitions, result);
 }

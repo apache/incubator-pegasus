@@ -349,3 +349,11 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #define DCHECK_GT_PREFIX(var1, var2)
 #define DCHECK_LT_PREFIX(var1, var2)
 #endif
+
+// Macro that allows definition of a variable appended with the current line
+// number in the source file. Typically for use by other macros to allow the
+// user to declare multiple variables with the same "base" name inside the same
+// lexical block.
+#define VARNAME_LINENUM(varname) VARNAME_LINENUM_INTERNAL(varname##_L, __LINE__)
+#define VARNAME_LINENUM_INTERNAL(v, line) VARNAME_LINENUM_INTERNAL2(v, line)
+#define VARNAME_LINENUM_INTERNAL2(v, line) v##line

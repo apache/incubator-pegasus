@@ -137,8 +137,7 @@ error_code replica_follower::update_master_replica_config(error_code err, query_
 {
     error_code err_code = err != ERR_OK ? err : resp.err;
     if (dsn_unlikely(err_code != ERR_OK)) {
-        LOG_ERROR_PREFIX(
-            "query master[{}] config failed: {}", master_replica_name(), err_code.to_string());
+        LOG_ERROR_PREFIX("query master[{}] config failed: {}", master_replica_name(), err_code);
         return err_code;
     }
 
@@ -176,8 +175,8 @@ error_code replica_follower::update_master_replica_config(error_code err, query_
     LOG_INFO_PREFIX(
         "query master[{}] config successfully and update local config: remote={}, gpid={}",
         master_replica_name(),
-        _master_replica_config.primary.to_string(),
-        _master_replica_config.pid.to_string());
+        _master_replica_config.primary,
+        _master_replica_config.pid);
     return ERR_OK;
 }
 
@@ -206,7 +205,7 @@ error_code replica_follower::nfs_copy_checkpoint(error_code err, learn_response 
     if (dsn_unlikely(err_code != ERR_OK)) {
         LOG_ERROR_PREFIX("query master[{}] replica checkpoint info failed, err = {}",
                          master_replica_name(),
-                         err_code.to_string());
+                         err_code);
         return err_code;
     }
 
@@ -254,7 +253,7 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
                 LOG_ERROR_PREFIX("nfs copy master[{}] checkpoint failed: checkpoint = {}, err = {}",
                                  master_replica_name(),
                                  remote_dir,
-                                 err.to_string());
+                                 err);
                 return;
             }
             LOG_INFO_PREFIX("nfs copy master[{}] checkpoint completed: checkpoint = {}, size = {}",

@@ -38,19 +38,20 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "common/json_helper.h"
 #include "http/http_server.h"
 #include "utils/alloc.h"
 #include "utils/autoref_ptr.h"
 #include "utils/casts.h"
 #include "utils/enum_helper.h"
+#include "utils/errors.h"
 #include "utils/fmt_logging.h"
 #include "utils/long_adder.h"
 #include "utils/macros.h"
 #include "utils/nth_element.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
-#include "absl/strings/string_view.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
 
@@ -1650,6 +1651,58 @@ private:
 
     DISALLOW_COPY_AND_ASSIGN(auto_count);
 };
+
+#define DEF_METRIC_BRIEF_SNAPSHOT(field)                                                           \
+    struct metric_brief_##field##_snapshot                                                         \
+    {                                                                                              \
+        std::string name;                                                                          \
+        double field;                                                                              \
+                                                                                                   \
+        DEFINE_JSON_SERIALIZATION(name, field)                                                     \
+    }
+
+#define DEF_METRIC_ENTITY_BRIEF_SNAPSHOT(field)                                                    \
+    struct metric_entity_brief_##field##_snapshot                                                  \
+    {                                                                                              \
+        std::string type;                                                                          \
+        std::string id;                                                                            \
+        metric_entity::attr_map attributes;                                                        \
+        std::vector<metric_brief_##field##_snapshot> metrics;                                      \
+                                                                                                   \
+        DEFINE_JSON_SERIALIZATION(type, id, attributes, metrics)                                   \
+    }
+
+#define DEF_METRIC_QUERY_BRIEF_SNAPSHOT(field)                                                     \
+    struct metric_query_brief_##field##_snapshot                                                   \
+    {                                                                                              \
+        std::string cluster;                                                                       \
+        std::string role;                                                                          \
+        std::string host;                                                                          \
+        uint16_t port;                                                                             \
+        std::vector<metric_entity_brief_##field##_snapshot> entities;                              \
+                                                                                                   \
+        DEFINE_JSON_SERIALIZATION(cluster, role, host, port, entities)                             \
+    }
+
+#define DEF_ALL_METRIC_BRIEF_SNAPSHOTS(field)                                                      \
+    DEF_METRIC_BRIEF_SNAPSHOT(field);                                                              \
+    DEF_METRIC_ENTITY_BRIEF_SNAPSHOT(field);                                                       \
+    DEF_METRIC_QUERY_BRIEF_SNAPSHOT(field)
+
+DEF_ALL_METRIC_BRIEF_SNAPSHOTS(value);
+
+DEF_ALL_METRIC_BRIEF_SNAPSHOTS(p99);
+
+#define DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(field, json_string, query_snapshot)                \
+    dsn::metric_query_brief_##field##_snapshot query_snapshot;                                     \
+    do {                                                                                           \
+        dsn::blob bb(json_string.data(), 0, json_string.size());                                   \
+        if (dsn_unlikely(                                                                          \
+                !dsn::json::json_forwarder<dsn::metric_query_brief_##field##_snapshot>::decode(    \
+                    bb, query_snapshot))) {                                                        \
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string");                          \
+        }                                                                                          \
+    } while (0)
 
 } // namespace dsn
 

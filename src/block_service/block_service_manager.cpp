@@ -161,7 +161,7 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
         create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
     error_code err = create_resp.err;
     if (err != ERR_OK) {
-        LOG_ERROR("create file({}) failed with error({})", remote_file_name, err.to_string());
+        LOG_ERROR("create file({}) failed with error({})", remote_file_name, err);
         return err;
     }
     block_file_ptr bf = create_resp.file_handle;
@@ -180,7 +180,7 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
     }
 
     LOG_INFO("download file({}) succeed, file_size = {}, md5 = {}",
-             local_file_name.c_str(),
+             local_file_name,
              resp.downloaded_size,
              resp.file_md5);
     download_file_size = resp.downloaded_size;

@@ -27,8 +27,8 @@
 #include <set>
 #include <utility>
 
-#include "base/pegasus_const.h"
 #include "common/replication.codes.h"
+#include "common/replica_envs.h"
 #include "pegasus_server_impl.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
@@ -60,6 +60,11 @@ DSN_DEFINE_int32(pegasus.server,
                  0,
                  "minimal interval time in seconds to start a new manual compaction, <= 0 "
                  "means no interval limit");
+
+const std::string
+    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
+const std::string
+    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
 
 pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_impl *app)
     : replica_base(*app),
@@ -95,11 +100,11 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
 
     std::string compact_rule;
     if (check_once_compact(envs)) {
-        compact_rule = MANUAL_COMPACT_ONCE_KEY_PREFIX;
+        compact_rule = dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX;
     }
 
     if (compact_rule.empty() && check_periodic_compact(envs)) {
-        compact_rule = MANUAL_COMPACT_PERIODIC_KEY_PREFIX;
+        compact_rule = dsn::replica_envs::MANUAL_COMPACT_PERIODIC_PREFIX;
     }
 
     if (compact_rule.empty()) {
@@ -124,7 +129,7 @@ bool pegasus_manual_compact_service::check_compact_disabled(
     const std::map<std::string, std::string> &envs)
 {
     bool new_disabled = false;
-    auto find = envs.find(MANUAL_COMPACT_DISABLED_KEY);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_DISABLED);
     if (find != envs.end() && find->second == "true") {
         new_disabled = true;
     }
@@ -148,7 +153,7 @@ int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
     const std::map<std::string, std::string> &envs)
 {
     int new_count = INT_MAX;
-    auto find = envs.find(MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT);
     if (find != envs.end() && !dsn::buf2int32(find->second, new_count)) {
         LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
     }
@@ -166,7 +171,7 @@ int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
 bool pegasus_manual_compact_service::check_once_compact(
     const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME);
     if (find == envs.end()) {
         return false;
     }
@@ -183,7 +188,7 @@ bool pegasus_manual_compact_service::check_once_compact(
 bool pegasus_manual_compact_service::check_periodic_compact(
     const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME);
     if (find == envs.end()) {
         return false;
     }
@@ -236,7 +241,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     options.exclusive_manual_compaction = true;
     options.change_level = true;
     options.target_level = -1;
-    auto find = envs.find(key_prefix + MANUAL_COMPACT_TARGET_LEVEL_KEY);
+    auto find = envs.find(key_prefix + dsn::replica_envs::MANUAL_COMPACT_TARGET_LEVEL);
     if (find != envs.end()) {
         int32_t target_level;
         if (dsn::buf2int32(find->second, target_level) &&
@@ -252,7 +257,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     }
 
     options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
-    find = envs.find(key_prefix + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY);
+    find = envs.find(key_prefix + dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION);
     if (find != envs.end()) {
         const std::string &argv = find->second;
         if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {

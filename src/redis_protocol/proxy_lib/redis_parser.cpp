@@ -32,7 +32,7 @@
 #include <chrono>
 #include <cstdint>
 
-#include "base/pegasus_const.h"
+#include "common/common.h"
 #include "common/replication_other_types.h"
 #include "pegasus/client.h"
 #include "rrdb/rrdb_types.h"
@@ -98,7 +98,7 @@ redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
     if (op) {
         std::vector<dsn::rpc_address> meta_list;
         dsn::replication::replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), op->get_cluster());
+            meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), op->get_cluster());
         r = new ::dsn::apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
         if (!dsn::utils::is_empty(op->get_geo_app())) {
             _geo_client = std::make_unique<geo::geo_client>(
@@ -931,7 +931,7 @@ void redis_parser::counter_internal(message_entry &entry)
             LOG_WARNING_PREFIX("command {} seqid({}) with invalid 'increment': {}",
                                command,
                                entry.sequence_id,
-                               entry.request.sub_requests[2].data.to_string());
+                               entry.request.sub_requests[2].data);
             simple_error_reply(entry,
                                fmt::format("wrong type of argument 'increment 'for '{}'", command));
             return;

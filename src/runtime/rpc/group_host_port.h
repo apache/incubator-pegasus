@@ -128,10 +128,10 @@ inline rpc_group_host_port::rpc_group_host_port(const rpc_group_address *g_addr)
 {
     _name = g_addr->name();
     for (const auto &addr : g_addr->members()) {
-        CHECK_TRUE(add(host_port(addr)));
+        CHECK_TRUE(add(host_port::from_address(addr)));
     }
     _update_leader_automatically = g_addr->is_update_leader_automatically();
-    set_leader(host_port(g_addr->leader()));
+    set_leader(host_port::from_address(g_addr->leader()));
 }
 
 inline rpc_group_host_port &rpc_group_host_port::operator=(const rpc_group_host_port &other)

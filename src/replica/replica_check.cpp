@@ -174,7 +174,7 @@ void replica::on_group_check(const group_check_request &request,
 
     LOG_INFO_PREFIX("process group check, primary = {}, ballot = {}, status = {}, "
                     "last_committed_decree = {}, confirmed_decree = {}",
-                    request.config.primary.to_string(),
+                    request.config.primary,
                     request.config.ballot,
                     enum_to_string(request.config.status),
                     request.last_committed_decree,

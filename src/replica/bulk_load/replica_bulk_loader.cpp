@@ -197,7 +197,7 @@ void replica_bulk_loader::broadcast_group_bulk_load(const bulk_load_request &met
         request->meta_bulk_load_status = meta_req.meta_bulk_load_status;
         request->remote_root_path = meta_req.remote_root_path;
 
-        LOG_INFO_PREFIX("send group_bulk_load_request to {}", addr.to_string());
+        LOG_INFO_PREFIX("send group_bulk_load_request to {}", addr);
 
         group_bulk_load_rpc rpc(
             std::move(request), RPC_GROUP_BULK_LOAD, 0_ms, 0, get_gpid().thread_hash());
@@ -242,7 +242,7 @@ void replica_bulk_loader::on_group_bulk_load(const group_bulk_load_request &requ
 
     LOG_INFO_PREFIX("receive group_bulk_load request, primary address = {}, ballot = {}, "
                     "meta bulk_load_status = {}, local bulk_load_status = {}",
-                    request.config.primary.to_string(),
+                    request.config.primary,
                     request.config.ballot,
                     enum_to_string(request.meta_bulk_load_status),
                     enum_to_string(_status));
@@ -278,17 +278,16 @@ void replica_bulk_loader::on_group_bulk_load_reply(error_code err,
     _replica->_primary_states.group_bulk_load_pending_replies.erase(req.target_address);
 
     if (err != ERR_OK) {
-        LOG_ERROR_PREFIX("failed to receive group_bulk_load_reply from {}, error = {}",
-                         req.target_address.to_string(),
-                         err.to_string());
+        LOG_ERROR_PREFIX(
+            "failed to receive group_bulk_load_reply from {}, error = {}", req.target_address, err);
         _replica->_primary_states.reset_node_bulk_load_states(req.target_address);
         return;
     }
 
     if (resp.err != ERR_OK) {
         LOG_ERROR_PREFIX("receive group_bulk_load response from {} failed, error = {}",
-                         req.target_address.to_string(),
-                         resp.err.to_string());
+                         req.target_address,
+                         resp.err);
         _replica->_primary_states.reset_node_bulk_load_states(req.target_address);
         return;
     }
@@ -296,7 +295,7 @@ void replica_bulk_loader::on_group_bulk_load_reply(error_code err,
     if (req.config.ballot != get_ballot()) {
         LOG_ERROR_PREFIX("recevied wrong group_bulk_load response from {}, request ballot = {}, "
                          "current ballot = {}",
-                         req.target_address.to_string(),
+                         req.target_address,
                          req.config.ballot,
                          get_ballot());
         _replica->_primary_states.reset_node_bulk_load_states(req.target_address);
@@ -495,8 +494,7 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
         if (err != ERR_OK && err != ERR_PATH_ALREADY_EXIST) {
             try_decrease_bulk_load_download_count();
             _download_status.store(err);
-            LOG_ERROR_PREFIX("download bulk load metadata file failed, error = {}",
-                             err.to_string());
+            LOG_ERROR_PREFIX("download bulk load metadata file failed, error = {}", err);
             return;
         }
 
@@ -507,7 +505,7 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
         if (err != ERR_OK) {
             try_decrease_bulk_load_download_count();
             _download_status.store(err);
-            LOG_ERROR_PREFIX("parse bulk load metadata failed, error = {}", err.to_string());
+            LOG_ERROR_PREFIX("parse bulk load metadata failed, error = {}", err);
             return;
         }
     }
@@ -574,7 +572,7 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
             try_decrease_bulk_load_download_count();
             _download_status.store(ec);
         }
-        LOG_ERROR_PREFIX("failed to download file({}), error = {}", f_meta.name, ec.to_string());
+        LOG_ERROR_PREFIX("failed to download file({}), error = {}", f_meta.name, ec);
         METRIC_VAR_INCREMENT(bulk_load_download_file_failed_count);
         return;
     }
@@ -924,7 +922,7 @@ void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_respo
     }
     response.group_bulk_load_state[_replica->_primary_states.membership.primary] = primary_state;
     LOG_INFO_PREFIX("primary = {}, download progress = {}%, status = {}",
-                    _replica->_primary_states.membership.primary.to_string(),
+                    _replica->_primary_states.membership.primary,
                     primary_state.download_progress,
                     primary_state.download_status);
 
@@ -937,7 +935,7 @@ void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_respo
         error_code s_status =
             secondary_state.__isset.download_status ? secondary_state.download_status : ERR_OK;
         LOG_INFO_PREFIX("secondary = {}, download progress = {}%, status={}",
-                        target_address.to_string(),
+                        target_address,
                         s_progress,
                         s_status);
         response.group_bulk_load_state[target_address] = secondary_state;
@@ -964,7 +962,7 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
     primary_state.__set_ingest_status(_replica->_app->get_ingestion_status());
     response.group_bulk_load_state[_replica->_primary_states.membership.primary] = primary_state;
     LOG_INFO_PREFIX("primary = {}, ingestion status = {}",
-                    _replica->_primary_states.membership.primary.to_string(),
+                    _replica->_primary_states.membership.primary,
                     enum_to_string(primary_state.ingest_status));
 
     bool is_group_ingestion_finish =
@@ -977,9 +975,8 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
         ingestion_status::type ingest_status = secondary_state.__isset.ingest_status
                                                    ? secondary_state.ingest_status
                                                    : ingestion_status::IS_INVALID;
-        LOG_INFO_PREFIX("secondary = {}, ingestion status={}",
-                        target_address.to_string(),
-                        enum_to_string(ingest_status));
+        LOG_INFO_PREFIX(
+            "secondary = {}, ingestion status={}", target_address, enum_to_string(ingest_status));
         response.group_bulk_load_state[target_address] = secondary_state;
         is_group_ingestion_finish &= (ingest_status == ingestion_status::IS_SUCCEED);
     }
@@ -1008,7 +1005,7 @@ void replica_bulk_loader::report_group_cleaned_up(bulk_load_response &response)
     primary_state.__set_is_cleaned_up(is_cleaned_up());
     response.group_bulk_load_state[_replica->_primary_states.membership.primary] = primary_state;
     LOG_INFO_PREFIX("primary = {}, bulk load states cleaned_up = {}",
-                    _replica->_primary_states.membership.primary.to_string(),
+                    _replica->_primary_states.membership.primary,
                     primary_state.is_cleaned_up);
 
     bool group_flag = (primary_state.is_cleaned_up) &&
@@ -1019,9 +1016,8 @@ void replica_bulk_loader::report_group_cleaned_up(bulk_load_response &response)
             _replica->_primary_states.secondary_bulk_load_states[target_address];
         bool is_cleaned_up =
             secondary_state.__isset.is_cleaned_up ? secondary_state.is_cleaned_up : false;
-        LOG_INFO_PREFIX("secondary = {}, bulk load states cleaned_up = {}",
-                        target_address.to_string(),
-                        is_cleaned_up);
+        LOG_INFO_PREFIX(
+            "secondary = {}, bulk load states cleaned_up = {}", target_address, is_cleaned_up);
         response.group_bulk_load_state[target_address] = secondary_state;
         group_flag &= is_cleaned_up;
     }
@@ -1044,7 +1040,7 @@ void replica_bulk_loader::report_group_is_paused(bulk_load_response &response)
     primary_state.__set_is_paused(_status == bulk_load_status::BLS_PAUSED);
     response.group_bulk_load_state[_replica->_primary_states.membership.primary] = primary_state;
     LOG_INFO_PREFIX("primary = {}, bulk_load is_paused = {}",
-                    _replica->_primary_states.membership.primary.to_string(),
+                    _replica->_primary_states.membership.primary,
                     primary_state.is_paused);
 
     bool group_is_paused =
@@ -1054,8 +1050,7 @@ void replica_bulk_loader::report_group_is_paused(bulk_load_response &response)
         partition_bulk_load_state secondary_state =
             _replica->_primary_states.secondary_bulk_load_states[target_address];
         bool is_paused = secondary_state.__isset.is_paused ? secondary_state.is_paused : false;
-        LOG_INFO_PREFIX(
-            "secondary = {}, bulk_load is_paused = {}", target_address.to_string(), is_paused);
+        LOG_INFO_PREFIX("secondary = {}, bulk_load is_paused = {}", target_address, is_paused);
         response.group_bulk_load_state[target_address] = secondary_state;
         group_is_paused &= is_paused;
     }

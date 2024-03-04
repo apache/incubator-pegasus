@@ -74,9 +74,9 @@ void verbose_apps(const app_mapper &input_apps)
         std::cout << apps.first << " " << app->partition_count << std::endl;
         for (int i = 0; i < app->partition_count; ++i) {
             std::cout << app->partitions[i].secondaries.size() + 1 << " "
-                      << app->partitions[i].primary.to_string();
+                      << app->partitions[i].primary;
             for (int j = 0; j < app->partitions[i].secondaries.size(); ++j) {
-                std::cout << " " << app->partitions[i].secondaries[j].to_string();
+                std::cout << " " << app->partitions[i].secondaries[j];
             }
             std::cout << std::endl;
         }

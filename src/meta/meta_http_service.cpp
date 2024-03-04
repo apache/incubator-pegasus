@@ -102,7 +102,7 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         return;
     }
     if (response.err != dsn::ERR_OK) {
-        resp.body = response.err.to_string();
+        resp.body = response.err;
         resp.status_code = http_status_code::kInternalServerError;
         return;
     }
@@ -226,7 +226,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
     _service->_state->list_apps(request, response);
 
     if (response.err != dsn::ERR_OK) {
-        resp.body = response.err.to_string();
+        resp.body = response.err;
         resp.status_code = http_status_code::kInternalServerError;
         return;
     }

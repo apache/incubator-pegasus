@@ -75,6 +75,28 @@ metric_entity_ptr instantiate_backup_policy_metric_entity(const std::string &pol
     return METRIC_ENTITY_backup_policy.instantiate(entity_id, {{"policy_name", policy_name}});
 }
 
+bool validate_backup_interval(int64_t backup_interval_seconds, std::string &hint_message)
+{
+    // The backup interval must be larger than checkpoint reserve time.
+    // Or the next cold backup checkpoint may be cleared by the clear operation.
+    if (backup_interval_seconds <= FLAGS_cold_backup_checkpoint_reserve_minutes * 60) {
+        hint_message = fmt::format(
+            "backup interval must be larger than cold_backup_checkpoint_reserve_minutes={}",
+            FLAGS_cold_backup_checkpoint_reserve_minutes);
+        return false;
+    }
+
+    // There is a bug occurred in backup if the backup interval is less than 1 day, this is a
+    // temporary resolution, the long term plan is to remove periodic backup.
+    // See details https://github.com/apache/incubator-pegasus/issues/1081.
+    if (backup_interval_seconds < 86400) {
+        hint_message = fmt::format("backup interval must be >= 86400 (1 day)");
+        return false;
+    }
+
+    return true;
+}
+
 } // anonymous namespace
 
 backup_policy_metrics::backup_policy_metrics(const std::string &policy_name)
@@ -194,7 +216,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                 _is_backup_failed = true;
                 LOG_ERROR("write {} failed, err = {}, don't try again when got this error.",
                           remote_file->file_name(),
-                          resp.err.to_string());
+                          resp.err);
                 return;
             } else {
                 LOG_WARNING("write {} failed, reason({}), try it later",
@@ -310,7 +332,7 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
                 _is_backup_failed = true;
                 LOG_ERROR("write {} failed, err = {}, don't try again when got this error.",
                           remote_file->file_name(),
-                          resp.err.to_string());
+                          resp.err);
                 return;
             } else {
                 LOG_WARNING("write {} failed, reason({}), try it later",
@@ -417,7 +439,7 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
                 _is_backup_failed = true;
                 LOG_ERROR("write {} failed, err = {}, don't try again when got this error.",
                           remote_file->file_name(),
-                          resp.err.to_string());
+                          resp.err);
                 return;
             } else {
                 LOG_WARNING("write {} failed, reason({}), try it later",
@@ -444,8 +466,8 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
         LOG_WARNING(
             "{}: backup of partition {} has been finished, ignore the backup response from {} ",
             _backup_sig,
-            pid.to_string(),
-            source.to_string());
+            pid,
+            source);
         return true;
     }
 
@@ -455,18 +477,17 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
                     _backup_sig,
                     local_progress,
                     progress,
-                    source.to_string(),
-                    pid.to_string());
+                    source,
+                    pid);
     }
 
     local_progress = progress;
-    LOG_DEBUG(
-        "{}: update partition {} backup progress to {}.", _backup_sig, pid.to_string(), progress);
+    LOG_DEBUG("{}: update partition {} backup progress to {}.", _backup_sig, pid, progress);
     if (local_progress == cold_backup_constant::PROGRESS_FINISHED) {
         LOG_INFO("{}: finish backup for partition {}, the app has {} unfinished backup "
                  "partition now.",
                  _backup_sig,
-                 pid.to_string(),
+                 pid,
                  _progress.unfinished_partitions_per_app[pid.get_app_id()]);
 
         // update the progress-chain: partition => app => current_backup_instance
@@ -509,7 +530,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
     if (partition_primary.is_invalid()) {
         LOG_WARNING("{}: partition {} doesn't have a primary now, retry to backup it later",
                     _backup_sig,
-                    pid.to_string());
+                    pid);
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this, pid]() {
@@ -537,8 +558,8 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         });
     LOG_INFO("{}: send backup command to partition {}, target_addr = {}",
              _backup_sig,
-             pid.to_string(),
-             partition_primary.to_string());
+             pid,
+             partition_primary);
     _backup_service->get_meta_service()->send_request(request, partition_primary, rpc_callback);
 }
 
@@ -547,10 +568,8 @@ void policy_context::on_backup_reply(error_code err,
                                      gpid pid,
                                      const rpc_address &primary)
 {
-    LOG_INFO("{}: receive backup response for partition {} from server {}.",
-             _backup_sig,
-             pid.to_string(),
-             primary.to_string());
+    LOG_INFO(
+        "{}: receive backup response for partition {} from server {}.", _backup_sig, pid, primary);
     if (err == dsn::ERR_OK && response.err == dsn::ERR_OK) {
         CHECK_EQ_MSG(response.policy_name,
                      _policy.policy_name,
@@ -574,8 +593,8 @@ void policy_context::on_backup_reply(error_code err,
             LOG_WARNING("{}: got a backup response of partition {} from server {}, whose backup id "
                         "{} is smaller than current backup id {},  maybe it is a stale message",
                         _backup_sig,
-                        pid.to_string(),
-                        primary.to_string(),
+                        pid,
+                        primary,
                         response.backup_id,
                         _cur_backup.backup_id);
         } else {
@@ -592,18 +611,18 @@ void policy_context::on_backup_reply(error_code err,
         LOG_ERROR("{}: backup got error {} for partition {} from {}, don't try again when got "
                   "this error.",
                   _backup_sig.c_str(),
-                  response.err.to_string(),
-                  pid.to_string(),
-                  primary.to_string());
+                  response.err,
+                  pid,
+                  primary);
         return;
     } else {
         LOG_WARNING(
             "{}: backup got error for partition {} from {}, rpc error {}, response error {}",
             _backup_sig.c_str(),
-            pid.to_string(),
-            primary.to_string(),
-            err.to_string(),
-            response.err.to_string());
+            pid,
+            primary,
+            err,
+            response.err);
     }
 
     // retry to backup the partition.
@@ -699,10 +718,7 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
                              0,
                              _backup_service->backup_option().meta_retry_delay_ms);
         } else {
-            CHECK(false,
-                  "{}: we can't handle this right now, error({})",
-                  _backup_sig,
-                  err.to_string());
+            CHECK(false, "{}: we can't handle this right now, error({})", _backup_sig, err);
         }
     };
 
@@ -1114,7 +1130,7 @@ void backup_service::start_create_policy_meta_root(dsn::task_ptr callback)
                     0,
                     _opt.meta_retry_delay_ms);
             } else {
-                CHECK(false, "we can't handle this error({}) right now", err.to_string());
+                CHECK(false, "we can't handle this error({}) right now", err);
             }
         });
 }
@@ -1287,13 +1303,10 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     std::set<int32_t> app_ids;
     std::map<int32_t, std::string> app_names;
 
-    // The backup interval must be greater than checkpoint reserve time.
-    // Or the next cold backup checkpoint may be cleared by the clear operation.
-    if (request.backup_interval_seconds <= FLAGS_cold_backup_checkpoint_reserve_minutes * 60) {
+    std::string hint_message;
+    if (!validate_backup_interval(request.backup_interval_seconds, hint_message)) {
         response.err = ERR_INVALID_PARAMETERS;
-        response.hint_message = fmt::format(
-            "backup interval must be greater than FLAGS_cold_backup_checkpoint_reserve_minutes={}",
-            FLAGS_cold_backup_checkpoint_reserve_minutes);
+        response.hint_message = hint_message;
         _meta_svc->reply_data(msg, response);
         msg->release_ref();
         return;
@@ -1634,7 +1647,8 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
     }
 
     if (request.__isset.new_backup_interval_sec) {
-        if (request.new_backup_interval_sec > 0) {
+        std::string hint_message;
+        if (validate_backup_interval(request.new_backup_interval_sec, hint_message)) {
             LOG_INFO("{}: policy will change backup interval from {}s to {}s",
                      cur_policy.policy_name,
                      cur_policy.backup_interval_seconds,
@@ -1642,9 +1656,10 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
             cur_policy.backup_interval_seconds = request.new_backup_interval_sec;
             have_modify_policy = true;
         } else {
-            LOG_WARNING("{}: invalid backup_interval_sec({})",
+            LOG_WARNING("{}: invalid backup_interval_sec({}), {}",
                         cur_policy.policy_name,
-                        request.new_backup_interval_sec);
+                        request.new_backup_interval_sec,
+                        hint_message);
         }
     }
 

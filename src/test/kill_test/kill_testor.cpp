@@ -27,8 +27,8 @@
 #include <unordered_set>
 #include <utility>
 
-#include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
+#include "common/common.h"
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "kill_testor.h"
@@ -54,7 +54,7 @@ kill_testor::kill_testor(const char *config_file)
 
     // load meta_list
     dsn::replication::replica_helper::load_meta_servers(
-        meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), FLAGS_pegasus_cluster_name);
+        meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), FLAGS_pegasus_cluster_name);
     if (meta_list.empty()) {
         LOG_ERROR("Should config the meta address for killer");
         exit(-1);

@@ -223,7 +223,7 @@ private:
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
 
-#define FMT_ERR(ec, msg, args...) error_s::make(ec, fmt::format(msg, ##args))
+#define FMT_ERR(ec, msg, args...) ::dsn::error_s::make(ec, fmt::format(msg, ##args))
 
 #define RETURN_NOT_OK(s)                                                                           \
     do {                                                                                           \

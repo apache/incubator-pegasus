@@ -79,10 +79,8 @@ private:
     {
         std::string app_info = fmt::format("{}.{}", _master_cluster_name, _master_app_name);
         if (_master_replica_config.primary != rpc_address::s_invalid_address) {
-            return fmt::format("{}({}|{})",
-                               app_info,
-                               _master_replica_config.primary.to_string(),
-                               _master_replica_config.pid.to_string());
+            return fmt::format(
+                "{}({}|{})", app_info, _master_replica_config.primary, _master_replica_config.pid);
         }
         return app_info;
     }

@@ -527,7 +527,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         for (int i = 0; i < cc.dropped.size(); ++i) {
             if (i != 0)
                 oss << ",";
-            oss << cc.dropped[i].node.to_string();
+            oss << cc.dropped[i].node;
         }
         LOG_INFO(
             "gpid({}): try to choose node in dropped list, dropped_list({}), prefered_dropped({})",
@@ -730,7 +730,7 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
              ++iter) {
             if (iter != _assign_secondary_black_list.begin())
                 oss << ",";
-            oss << iter->to_string();
+            oss << *iter;
         }
         return oss.str();
     }
