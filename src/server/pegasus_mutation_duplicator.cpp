@@ -61,7 +61,7 @@ METRIC_DEFINE_counter(replica,
                       "The number of failed DUPLICATE requests sent from client");
 
 METRIC_DEFINE_counter(replica,
-                      dup_retry_no_idempotent_duplicate_qps,
+                      dup_retry_non_idempotent_duplicate_request,
                       dsn::metric_unit::kRequests,
                       "The qps of Non-idempotent write when doing DUPLICATE which is Retried");
 
@@ -232,33 +232,33 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
 
 void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicate_rpc &rpc)
 {
+    if (!FLAGS_force_send_non_idempotent_when_duplication) {
+        return;
+    }
 
     // there maybe more than one mutation in one dup rpc
-    if (FLAGS_force_send_no_idempotent_when_duplication) {
-        for (auto entry : rpc.request().entries) {
-            if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
-                entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
-                entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+    for (auto entry : rpc.request().entries) {
+        // not a non idempotent request
+        if(!_non_idempotent_code.count(entry.task_code)){
+            continue ;
+        }
 
-                METRIC_VAR_INCREMENT(dup_retry_no_idempotent_duplicate_qps);
+        METRIC_VAR_INCREMENT(dup_retry_non_idempotent_duplicate_request);
+        dsn::message_ex *write =dsn::from_blob_to_received_msg(entry.task_code, entry.raw_message);
 
-                dsn::message_ex *write =
-                    dsn::from_blob_to_received_msg(entry.task_code, entry.raw_message);
+        if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
+            incr_rpc raw_rpc(write);
+            absl::string_view unmarshall_key(raw_rpc.request().key.data(),
+                                             raw_rpc.request().key.length());
 
-                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
-                    incr_rpc raw_rpc(write);
-                    absl::string_view unmarshall_key(raw_rpc.request().key.data(),
-                                                     raw_rpc.request().key.length());
-
-                    LOG_DEBUG(
-                        "Non-indempotent write RPC_RRDB_RRDB_INCR has been retried when doing "
+            LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_INCR has been retried when doing "
                         "duplication,"
                         "key is [{}]",
                         unmarshall_key);
                     continue;
-                }
+        }
 
-                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+        if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
                     check_and_set_rpc raw_rpc(write);
                     absl::string_view unmarshall_hash_key(raw_rpc.request().hash_key.data(),
                                                           raw_rpc.request().hash_key.length());
@@ -277,9 +277,9 @@ void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicat
                               unmarshall_ori_sort_key,
                               unmarshall_set_sort_key);
                     continue;
-                }
+        }
 
-                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+        if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
                     check_and_mutate_rpc raw_rpc(write);
                     absl::string_view unmarshall_hash_key(raw_rpc.request().hash_key.data(),
                                                           raw_rpc.request().hash_key.length());
@@ -293,10 +293,9 @@ void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicat
                               unmarshall_hash_key,
                               unmarshall_ori_sort_key);
                     continue;
-                }
-            }
         }
     }
+
 }
 
 void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb)

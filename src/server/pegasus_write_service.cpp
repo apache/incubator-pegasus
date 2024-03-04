@@ -122,7 +122,7 @@ METRIC_DEFINE_counter(replica,
                       "The number of DUPLICATE requests");
 
 METRIC_DEFINE_counter(replica,
-                      force_receive_no_idempotent_duplicate_qps,
+                      force_receive_non_idempotent_duplicate_request,
                       dsn::metric_unit::kRequests,
                       "statistic the those no idempotent qps of DUPLICATE requests Force received");
 
@@ -173,7 +173,7 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       METRIC_VAR_INIT_replica(check_and_set_latency_ns),
       METRIC_VAR_INIT_replica(check_and_mutate_latency_ns),
       METRIC_VAR_INIT_replica(dup_requests),
-      METRIC_VAR_INIT_replica(force_receive_no_idempotent_duplicate_qps),
+      METRIC_VAR_INIT_replica(force_receive_non_idempotent_duplicate_request),
       METRIC_VAR_INIT_replica(dup_time_lag_ms),
       METRIC_VAR_INIT_replica(dup_lagging_writes),
       _put_batch_size(0),
@@ -422,11 +422,12 @@ int pegasus_write_service::duplicate(int64_t decree,
             continue;
         }
 
+        // Parse non-idempotent writes via duplication
         if (request.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
             request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
             request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
             // receive no idempotent request from master cluster via duplication
-            METRIC_VAR_INCREMENT(force_receive_no_idempotent_duplicate_qps);
+            METRIC_VAR_INCREMENT(force_receive_non_idempotent_duplicate_request);
 
             if (request.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
                 incr_rpc rpc(write);

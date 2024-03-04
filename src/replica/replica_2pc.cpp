@@ -156,7 +156,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (is_duplication_master() && !spec->rpc_request_is_write_idempotent &&
-        !FLAGS_force_send_no_idempotent_when_duplication) {
+        !FLAGS_force_send_non_idempotent_when_duplication) {
         // Ignore non-idempotent write, because duplication provides no guarantee of atomicity to
         // make this write produce the same result on multiple clusters.
         METRIC_VAR_INCREMENT(dup_rejected_non_idempotent_write_requests);

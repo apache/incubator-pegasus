@@ -91,9 +91,13 @@ private:
 
     size_t _total_shipped_size{0};
 
+    const std::set<dsn::task_code> _non_idempotent_code = {dsn::apps::RPC_RRDB_RRDB_INCR,
+                                                     dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
+                                                     dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE};
+
     METRIC_VAR_DECLARE_counter(dup_shipped_successful_requests);
     METRIC_VAR_DECLARE_counter(dup_shipped_failed_requests);
-    METRIC_VAR_DECLARE_counter(dup_retry_no_idempotent_duplicate_qps);
+    METRIC_VAR_DECLARE_counter(dup_retry_non_idempotent_duplicate_request);
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and

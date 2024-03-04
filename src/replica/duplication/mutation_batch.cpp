@@ -175,7 +175,7 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
         // before the duplication was added.
         // To ignore means this write will be lost, which is acceptable under this rare case.
         if (!task_spec::get(update.code)->rpc_request_is_write_idempotent &&
-            !FLAGS_force_send_no_idempotent_when_duplication) {
+            !FLAGS_force_send_non_idempotent_when_duplication) {
             continue;
         }
         blob bb;

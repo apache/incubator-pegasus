@@ -38,11 +38,11 @@ DSN_DEFINE_uint32(replication,
 DSN_TAG_VARIABLE(duplicate_log_batch_bytes, FT_MUTABLE);
 
 DSN_DEFINE_bool(replication,
-                force_send_no_idempotent_when_duplication,
+                force_send_non_idempotent_when_duplication,
                 false,
                 "receive client idempotent write requests and send them to backup cluster when "
                 "doing duplication");
-DSN_TAG_VARIABLE(force_send_no_idempotent_when_duplication, FT_MUTABLE);
+DSN_TAG_VARIABLE(force_send_non_idempotent_when_duplication, FT_MUTABLE);
 
 namespace dsn {
 namespace replication {
