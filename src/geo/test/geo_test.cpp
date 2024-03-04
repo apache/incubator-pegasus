@@ -47,10 +47,10 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 
+DSN_DECLARE_int32(min_level);
+
 namespace pegasus {
 namespace geo {
-
-DSN_DECLARE_int32(min_level);
 
 // TODO(yingchun): it doesn't make sense to derive from pegasus::encrypt_data_test_base to test
 //  encryption or non-encryption senarios, because the Pegasus cluster has been started with a

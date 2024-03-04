@@ -535,7 +535,7 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
         status_str = status_str.substr(status_str.find("NS_") + 3);
         tmp_map.emplace(
             kv.first,
-            list_nodes_helper(host_name_resolve(resolve_ip, kv.first.to_std_string()), status_str));
+            list_nodes_helper(host_name_resolve(resolve_ip, kv.first.to_string()), status_str));
     }
 
     if (detailed) {
@@ -772,16 +772,15 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
             tp_details.append_data(oss.str());
-            tp_details.append_data(
-                (p.primary.is_invalid() ? "-" : host_name_resolve(resolve_ip,
-                                                                  p.primary.to_std_string())));
+            tp_details.append_data(p.primary ? host_name_resolve(resolve_ip, p.primary.to_string())
+                                             : "-");
             oss.str("");
             oss << "[";
             // TODO (yingchun) join
             for (int j = 0; j < p.secondaries.size(); j++) {
                 if (j != 0)
                     oss << ",";
-                oss << host_name_resolve(resolve_ip, p.secondaries[j].to_std_string());
+                oss << host_name_resolve(resolve_ip, p.secondaries[j].to_string());
                 node_stat[p.secondaries[j]].second++;
             }
             oss << "]";
@@ -796,7 +795,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
         tp_nodes.add_column("secondary");
         tp_nodes.add_column("total");
         for (auto &kv : node_stat) {
-            tp_nodes.add_row(host_name_resolve(resolve_ip, kv.first.to_std_string()));
+            tp_nodes.add_row(host_name_resolve(resolve_ip, kv.first.to_string()));
             tp_nodes.append_data(kv.second.first);
             tp_nodes.append_data(kv.second.second);
             tp_nodes.append_data(kv.second.first + kv.second.second);

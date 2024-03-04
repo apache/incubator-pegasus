@@ -46,10 +46,11 @@
 #include "utils/error_code.h"
 #include "utils/flags.h"
 
-namespace dsn {
-namespace replication {
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
+
+namespace dsn {
+namespace replication {
 
 static const std::vector<std::string> keys = {"manual_compact.once.trigger_time",
                                               "manual_compact.once.target_level",

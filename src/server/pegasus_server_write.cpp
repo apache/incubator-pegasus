@@ -47,9 +47,10 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of corrupt writes for each replica");
 
+DSN_DECLARE_bool(rocksdb_verbose_log);
+
 namespace pegasus {
 namespace server {
-DSN_DECLARE_bool(rocksdb_verbose_log);
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
     : replica_base(server),

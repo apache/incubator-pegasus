@@ -68,6 +68,7 @@ github:
     - ninsmiracle
     - Samunroyu
     - limowang
+    - lengyuexuexuan
 
 notifications:
   commits: commits@pegasus.apache.org

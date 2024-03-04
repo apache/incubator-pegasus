@@ -30,6 +30,7 @@
 #include <mutex>
 
 #include "absl/strings/string_view.h"
+#include "fmt/core.h"
 #include "nfs/nfs_code_definition.h"
 #include "nfs/nfs_node.h"
 #include "utils/blob.h"
@@ -37,49 +38,24 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/token_buckets.h"
-
-METRIC_DEFINE_counter(server,
-                      nfs_client_copy_bytes,
-                      dsn::metric_unit::kBytes,
-                      "The accumulated data size in bytes requested by client during nfs copy");
-
-METRIC_DEFINE_counter(server,
-                      nfs_client_copy_failed_requests,
-                      dsn::metric_unit::kRequests,
-                      "The number of failed nfs copy requests (requested by client)");
-
-METRIC_DEFINE_counter(
-    server,
-    nfs_client_write_bytes,
-    dsn::metric_unit::kBytes,
-    "The accumulated data size in bytes that are written to local file in client");
-
-METRIC_DEFINE_counter(server,
-                      nfs_client_failed_writes,
-                      dsn::metric_unit::kWrites,
-                      "The number of failed writes to local file in client");
-
-namespace dsn {
-namespace service {
-static uint32_t current_max_copy_rate_megabytes = 0;
 
 DSN_DEFINE_uint32(nfs,
                   nfs_copy_block_bytes,
                   4 * 1024 * 1024,
                   "max block size (bytes) for each network copy");
-DSN_DEFINE_uint32(
-    nfs,
-    max_copy_rate_megabytes_per_disk,
-    0,
-    "max rate per disk of copying from remote node(MB/s), zero means disable rate limiter");
+static const char *kMaxCopyRateMegaBytesPerDiskDesc =
+    "The maximum bandwidth (MB/s) of writing data per local disk when copying from remote node, 0 "
+    "means no limit";
+DSN_DEFINE_int64(nfs, max_copy_rate_megabytes_per_disk, 0, kMaxCopyRateMegaBytesPerDiskDesc);
 DSN_TAG_VARIABLE(max_copy_rate_megabytes_per_disk, FT_MUTABLE);
-// max_copy_rate_bytes should be zero or greater than nfs_copy_block_bytes which is the max
-// batch copy size once
+
+bool check_max_copy_rate_megabytes_per_disk(int64_t value)
+{
+    return value == 0 || (value << 20) > FLAGS_nfs_copy_block_bytes;
+}
 DSN_DEFINE_group_validator(max_copy_rate_megabytes_per_disk, [](std::string &message) -> bool {
-    return FLAGS_max_copy_rate_megabytes_per_disk == 0 ||
-           (FLAGS_max_copy_rate_megabytes_per_disk << 20) > FLAGS_nfs_copy_block_bytes;
+    return check_max_copy_rate_megabytes_per_disk(FLAGS_max_copy_rate_megabytes_per_disk);
 });
 
 DSN_DEFINE_int32(nfs,
@@ -111,6 +87,31 @@ DSN_DEFINE_int32(nfs,
                  1e5, // 100s
                  "rpc timeout in milliseconds for nfs copy, "
                  "0 means use default timeout of rpc engine");
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_copy_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The accumulated data size in bytes requested by client during nfs copy");
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_copy_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed nfs copy requests (requested by client)");
+
+METRIC_DEFINE_counter(
+    server,
+    nfs_client_write_bytes,
+    dsn::metric_unit::kBytes,
+    "The accumulated data size in bytes that are written to local file in client");
+
+METRIC_DEFINE_counter(server,
+                      nfs_client_failed_writes,
+                      dsn::metric_unit::kWrites,
+                      "The number of failed writes to local file in client");
+
+namespace dsn {
+namespace service {
+static uint32_t current_max_copy_rate_megabytes = 0;
 
 nfs_client_impl::nfs_client_impl()
     : _concurrent_copy_request_count(0),
@@ -582,33 +583,15 @@ void nfs_client_impl::register_cli_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _nfs_max_copy_rate_megabytes_cmd = dsn::command_manager::instance().register_command(
-            {"nfs.max_copy_rate_megabytes_per_disk"},
-            "nfs.max_copy_rate_megabytes_per_disk [num]",
-            "control the max rate(MB/s) for one disk to copy file from remote node",
-            [](const std::vector<std::string> &args) {
-                std::string result("OK");
-
-                if (args.empty()) {
-                    return std::to_string(FLAGS_max_copy_rate_megabytes_per_disk);
-                }
-
-                int32_t max_copy_rate_megabytes = 0;
-                if (!dsn::buf2int32(args[0], max_copy_rate_megabytes) ||
-                    max_copy_rate_megabytes <= 0) {
-                    return std::string("ERR: invalid arguments");
-                }
-
-                uint32_t max_copy_rate_bytes = max_copy_rate_megabytes << 20;
-                if (max_copy_rate_bytes <= FLAGS_nfs_copy_block_bytes) {
-                    result = std::string("ERR: max_copy_rate_bytes(max_copy_rate_megabytes << 20) "
-                                         "should be greater than nfs_copy_block_bytes:")
-                                 .append(std::to_string(FLAGS_nfs_copy_block_bytes));
-                    return result;
-                }
-                FLAGS_max_copy_rate_megabytes_per_disk = max_copy_rate_megabytes;
-                return result;
-            });
+        _nfs_max_copy_rate_megabytes_cmd = dsn::command_manager::instance().register_int_command(
+            FLAGS_max_copy_rate_megabytes_per_disk,
+            FLAGS_max_copy_rate_megabytes_per_disk,
+            "nfs.max_copy_rate_megabytes_per_disk",
+            fmt::format("{}, "
+                        "should be greater than 'nfs_copy_block_bytes' which is {}",
+                        kMaxCopyRateMegaBytesPerDiskDesc,
+                        FLAGS_nfs_copy_block_bytes),
+            &check_max_copy_rate_megabytes_per_disk);
     });
 }
 } // namespace service

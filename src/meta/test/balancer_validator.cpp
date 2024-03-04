@@ -172,13 +172,6 @@ void meta_service_test_app::balancer_validator()
     check_cure(apps, nodes, pc);
 }
 
-dsn::rpc_address get_rpc_address(const std::string &ip_port)
-{
-    int splitter = ip_port.find_first_of(':');
-    return rpc_address(ip_port.substr(0, splitter).c_str(),
-                       boost::lexical_cast<int>(ip_port.substr(splitter + 1)));
-}
-
 static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper &nodes)
 {
     apps.clear();
@@ -192,7 +185,7 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
     std::vector<dsn::rpc_address> node_list;
     for (int i = 0; i < total_nodes; ++i) {
         infile >> ip_port;
-        node_list.push_back(get_rpc_address(ip_port));
+        node_list.push_back(rpc_address::from_ip_port(ip_port));
     }
 
     int total_apps;
@@ -212,10 +205,10 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
             int n;
             infile >> n;
             infile >> ip_port;
-            app->partitions[j].primary = get_rpc_address(ip_port);
+            app->partitions[j].primary = rpc_address::from_ip_port(ip_port);
             for (int k = 1; k < n; ++k) {
                 infile >> ip_port;
-                app->partitions[j].secondaries.push_back(get_rpc_address(ip_port));
+                app->partitions[j].secondaries.push_back(rpc_address::from_ip_port(ip_port));
             }
         }
     }

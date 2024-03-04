@@ -78,7 +78,6 @@
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #ifdef DSN_ENABLE_GPERF
@@ -89,6 +88,15 @@
 #include "nfs/nfs_code_definition.h"
 #include "remote_cmd/remote_command.h"
 #include "utils/fail_point.h"
+
+static const char *kMaxConcurrentBulkLoadDownloadingCountDesc =
+    "The maximum concurrent bulk load downloading replica count";
+DSN_DEFINE_int32(replication,
+                 max_concurrent_bulk_load_downloading_count,
+                 5,
+                 kMaxConcurrentBulkLoadDownloadingCountDesc);
+DSN_DEFINE_validator(max_concurrent_bulk_load_downloading_count,
+                     [](int32_t value) -> bool { return value >= 0; });
 
 METRIC_DEFINE_gauge_int64(server,
                           total_replicas,
@@ -218,20 +226,22 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kBytes,
                           "The max size of copied files among all splitting replicas");
 
+DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_bool(enable_acl);
 DSN_DECLARE_bool(encrypt_data_at_rest);
+DSN_DECLARE_int32(fd_beacon_interval_seconds);
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+DSN_DECLARE_int32(fd_lease_seconds);
+DSN_DECLARE_int32(gc_interval_ms);
+DSN_DECLARE_string(cluster_name);
+DSN_DECLARE_string(data_dirs);
 DSN_DECLARE_string(server_key);
 
-namespace dsn {
-DSN_DECLARE_string(cluster_name);
-
-namespace security {
-DSN_DECLARE_bool(enable_acl);
-}
-namespace replication {
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
                 false,
-                "whether to deny client read and write requests when starting the server");
+                "Whether to deny client read and write requests when starting the server");
 DSN_DEFINE_bool(replication,
                 verbose_client_log_on_start,
                 false,
@@ -241,10 +251,11 @@ DSN_DEFINE_bool(replication,
                 mem_release_enabled,
                 true,
                 "whether to enable periodic memory release");
-DSN_DEFINE_bool(replication,
-                gc_disabled,
-                false,
-                "whether to disable replica stat. The name contains 'gc' is for legacy reason.");
+DSN_DEFINE_bool(
+    replication,
+    gc_disabled,
+    false,
+    "Whether to disable replica statistics. The name contains 'gc' is for legacy reason");
 DSN_DEFINE_bool(replication, disk_stat_disabled, false, "whether to disable disk stat");
 DSN_DEFINE_bool(replication,
                 delay_for_fd_timeout_on_start,
@@ -254,8 +265,9 @@ DSN_DEFINE_bool(replication,
 DSN_DEFINE_bool(replication,
                 config_sync_disabled,
                 false,
-                "whether to disable replica configuration periodical sync with the meta server");
-DSN_DEFINE_bool(replication, fd_disabled, false, "whether to disable failure detection");
+                "Whether to disable replica server to send replica config-sync "
+                "requests to meta server periodically");
+DSN_DEFINE_bool(replication, fd_disabled, false, "Whether to disable failure detection");
 DSN_DEFINE_bool(replication,
                 verbose_commit_log_on_start,
                 false,
@@ -281,8 +293,8 @@ DSN_DEFINE_int32(replication,
 DSN_DEFINE_int32(replication,
                  gc_memory_replica_interval_ms,
                  10 * 60 * 1000,
-                 "after closing a healthy replica (due to LB), the replica will remain in memory "
-                 "for this long (ms) for quick recover");
+                 "The milliseconds of a replica remain in memory for quick recover aim after it's "
+                 "closed in healthy state (due to LB)");
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,
@@ -294,6 +306,12 @@ DSN_DEFINE_int32(
     10,
     "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
     "memory, replica server will release the exceeding memory back to operating system");
+bool check_mem_release_max_reserved_mem_percentage(int32_t value)
+{
+    return value > 0 && value <= 100;
+}
+DSN_DEFINE_validator(mem_release_max_reserved_mem_percentage,
+                     &check_mem_release_max_reserved_mem_percentage);
 
 DSN_DEFINE_string(
     pegasus.server,
@@ -302,15 +320,8 @@ DSN_DEFINE_string(
     "Provide the comma-separated list of URLs from which to retrieve the "
     "file system's server key. Example format: 'hostname1:1234/kms,hostname2:1234/kms'.");
 
-DSN_DECLARE_bool(duplication_enabled);
-DSN_DECLARE_int32(fd_beacon_interval_seconds);
-DSN_DECLARE_int32(fd_check_interval_seconds);
-DSN_DECLARE_int32(fd_grace_seconds);
-DSN_DECLARE_int32(fd_lease_seconds);
-DSN_DECLARE_int32(gc_interval_ms);
-DSN_DECLARE_string(data_dirs);
 DSN_DEFINE_group_validator(encrypt_data_at_rest_pre_check, [](std::string &message) -> bool {
-    if (!dsn::security::FLAGS_enable_acl && FLAGS_encrypt_data_at_rest) {
+    if (!FLAGS_enable_acl && FLAGS_encrypt_data_at_rest) {
         message = fmt::format("[pegasus.server] encrypt_data_at_rest should be enabled only if "
                               "[security] enable_acl is enabled.");
         return false;
@@ -320,7 +331,7 @@ DSN_DEFINE_group_validator(encrypt_data_at_rest_pre_check, [](std::string &messa
 
 DSN_DEFINE_group_validator(encrypt_data_at_rest_with_kms_url, [](std::string &message) -> bool {
 #ifndef MOCK_TEST
-    if (FLAGS_encrypt_data_at_rest && utils::is_empty(FLAGS_hadoop_kms_url)) {
+    if (FLAGS_encrypt_data_at_rest && dsn::utils::is_empty(FLAGS_hadoop_kms_url)) {
         message = fmt::format("[security] hadoop_kms_url should not be empty when [pegasus.server] "
                               "encrypt_data_at_rest is enabled.");
         return false;
@@ -329,6 +340,8 @@ DSN_DEFINE_group_validator(encrypt_data_at_rest_with_kms_url, [](std::string &me
     return true;
 });
 
+namespace dsn {
+namespace replication {
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
@@ -339,7 +352,6 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _verbose_commit_log(false),
       _release_tcmalloc_memory(false),
       _mem_release_max_reserved_mem_percentage(10),
-      _max_concurrent_bulk_load_downloading_count(5),
       _learn_app_concurrent_count(0),
       _bulk_load_downloading_count(0),
       _manual_emergency_checkpointing_count(0),
@@ -406,8 +418,6 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     _verbose_commit_log = FLAGS_verbose_commit_log_on_start;
     _release_tcmalloc_memory = FLAGS_mem_release_enabled;
     _mem_release_max_reserved_mem_percentage = FLAGS_mem_release_max_reserved_mem_percentage;
-    _max_concurrent_bulk_load_downloading_count =
-        _options.max_concurrent_bulk_load_downloading_count;
 
     // clear dirs if need
     if (clear) {
@@ -679,6 +689,7 @@ void replica_stub::initialize_start()
             [this]() { this->on_meta_server_disconnected(); },
             [this]() { this->on_meta_server_connected(); });
 
+        CHECK_GT_MSG(FLAGS_fd_grace_seconds, FLAGS_fd_lease_seconds, "");
         CHECK_EQ_MSG(_failure_detector->start(FLAGS_fd_check_interval_seconds,
                                               FLAGS_fd_beacon_interval_seconds,
                                               FLAGS_fd_lease_seconds,
@@ -2181,32 +2192,18 @@ void replica_stub::register_ctrl_command()
                 return std::string(e.to_string());
             }));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.deny-client"},
-            "replica.deny-client <true|false>",
-            "replica.deny-client - control if deny client read & write request",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(_deny_client, "deny-client", args);
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            _deny_client, "replica.deny-client", "control if deny client read & write request"));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.verbose-client-log"},
-            "replica.verbose-client-log <true|false>",
-            "replica.verbose-client-log - control if print verbose error log when reply read & "
-            "write request",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(
-                    _verbose_client_log, "verbose-client-log", args);
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            _verbose_client_log,
+            "replica.verbose-client-log",
+            "control if print verbose error log when reply read & write request"));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.verbose-commit-log"},
-            "replica.verbose-commit-log <true|false>",
-            "replica.verbose-commit-log - control if print verbose log when commit mutation",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(
-                    _verbose_commit_log, "verbose-commit-log", args);
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            _verbose_commit_log,
+            "replica.verbose-commit-log",
+            "control if print verbose log when commit mutation"));
 
         _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.trigger-checkpoint"},
@@ -2246,14 +2243,10 @@ void replica_stub::register_ctrl_command()
             }));
 
 #ifdef DSN_ENABLE_GPERF
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.release-tcmalloc-memory"},
-            "replica.release-tcmalloc-memory <true|false>",
-            "replica.release-tcmalloc-memory - control if try to release tcmalloc memory",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(
-                    _release_tcmalloc_memory, "release-tcmalloc-memory", args);
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            _release_tcmalloc_memory,
+            "replica.release-tcmalloc-memory",
+            "control if try to release tcmalloc memory"));
 
         _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.get-tcmalloc-status"},
@@ -2265,32 +2258,12 @@ void replica_stub::register_ctrl_command()
                 return std::string(buf);
             }));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.mem-release-max-reserved-percentage"},
-            "replica.mem-release-max-reserved-percentage [num | DEFAULT]",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_int_command(
+            _mem_release_max_reserved_mem_percentage,
+            FLAGS_mem_release_max_reserved_mem_percentage,
+            "replica.mem-release-max-reserved-percentage",
             "control tcmalloc max reserved but not-used memory percentage",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    // show current value
-                    result = "mem-release-max-reserved-percentage = " +
-                             std::to_string(_mem_release_max_reserved_mem_percentage);
-                    return result;
-                }
-                if (args[0] == "DEFAULT") {
-                    // set to default value
-                    _mem_release_max_reserved_mem_percentage =
-                        FLAGS_mem_release_max_reserved_mem_percentage;
-                    return result;
-                }
-                int32_t percentage = 0;
-                if (!dsn::buf2int32(args[0], percentage) || percentage <= 0 || percentage > 100) {
-                    result = std::string("ERR: invalid arguments");
-                } else {
-                    _mem_release_max_reserved_mem_percentage = percentage;
-                }
-                return result;
-            }));
+            &check_mem_release_max_reserved_mem_percentage));
 
         _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.release-all-reserved-memory"},
@@ -2303,33 +2276,11 @@ void replica_stub::register_ctrl_command()
 #elif defined(DSN_USE_JEMALLOC)
         register_jemalloc_ctrl_command();
 #endif
-        // TODO(yingchun): use http
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.max-concurrent-bulk-load-downloading-count"},
-            "replica.max-concurrent-bulk-load-downloading-count [num | DEFAULT]",
-            "control stub max_concurrent_bulk_load_downloading_count",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    result = "max_concurrent_bulk_load_downloading_count=" +
-                             std::to_string(_max_concurrent_bulk_load_downloading_count);
-                    return result;
-                }
-
-                if (args[0] == "DEFAULT") {
-                    _max_concurrent_bulk_load_downloading_count =
-                        _options.max_concurrent_bulk_load_downloading_count;
-                    return result;
-                }
-
-                int32_t count = 0;
-                if (!dsn::buf2int32(args[0], count) || count <= 0) {
-                    result = std::string("ERR: invalid arguments");
-                } else {
-                    _max_concurrent_bulk_load_downloading_count = count;
-                }
-                return result;
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_int_command(
+            FLAGS_max_concurrent_bulk_load_downloading_count,
+            FLAGS_max_concurrent_bulk_load_downloading_count,
+            "replica.max-concurrent-bulk-load-downloading-count",
+            kMaxConcurrentBulkLoadDownloadingCountDesc));
     });
 }
 

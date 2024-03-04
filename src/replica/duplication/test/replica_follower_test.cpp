@@ -219,9 +219,9 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
 
     resp.partitions.clear();
     p.pid = gpid(2, 1);
-    p.primary = rpc_address("127.0.0.1", 34801);
-    p.secondaries.emplace_back(rpc_address("127.0.0.2", 34801));
-    p.secondaries.emplace_back(rpc_address("127.0.0.3", 34801));
+    p.primary = rpc_address::from_ip_port("127.0.0.1", 34801);
+    p.secondaries.emplace_back(rpc_address::from_ip_port("127.0.0.2", 34801));
+    p.secondaries.emplace_back(rpc_address::from_ip_port("127.0.0.3", 34801));
     resp.partitions.emplace_back(p);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_OK);
     ASSERT_EQ(master_replica_config(follower).primary, p.primary);
@@ -240,7 +240,7 @@ TEST_P(replica_follower_test, test_nfs_copy_checkpoint)
     ASSERT_EQ(nfs_copy_checkpoint(follower, ERR_CORRUPTION, learn_response()), ERR_CORRUPTION);
 
     auto resp = learn_response();
-    resp.address = rpc_address("127.0.0.1", 34801);
+    resp.address = rpc_address::from_ip_port("127.0.0.1", 34801);
 
     std::string dest = utils::filesystem::path_combine(
         _mock_replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);

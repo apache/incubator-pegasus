@@ -28,9 +28,6 @@
 #include "utils/string_conv.h"
 #include "absl/strings/string_view.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_uint32(meta_server,
                   bulk_load_node_max_ingesting_count,
                   4,
@@ -39,6 +36,9 @@ DSN_TAG_VARIABLE(bulk_load_node_max_ingesting_count, FT_MUTABLE);
 
 DSN_DEFINE_uint32(meta_server, bulk_load_node_min_disk_count, 1, "min disk count of one node");
 DSN_TAG_VARIABLE(bulk_load_node_min_disk_count, FT_MUTABLE);
+
+namespace dsn {
+namespace replication {
 
 ingestion_context::ingestion_context() { reset_all(); }
 

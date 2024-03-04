@@ -43,6 +43,20 @@
 #include "utils/math.h"
 #include "utils/ports.h"
 
+DSN_DEFINE_int32(replication,
+                 disk_min_available_space_ratio,
+                 10,
+                 "if disk available space ratio "
+                 "is below this value, this "
+                 "disk will be considered as "
+                 "space insufficient");
+DSN_TAG_VARIABLE(disk_min_available_space_ratio, FT_MUTABLE);
+
+DSN_DEFINE_bool(replication,
+                ignore_broken_disk,
+                true,
+                "true means ignore broken data disk when initialize");
+
 METRIC_DEFINE_entity(disk);
 
 METRIC_DEFINE_gauge_int64(disk,
@@ -57,20 +71,6 @@ METRIC_DEFINE_gauge_int64(disk,
 
 namespace dsn {
 namespace replication {
-
-DSN_DEFINE_int32(replication,
-                 disk_min_available_space_ratio,
-                 10,
-                 "if disk available space ratio "
-                 "is below this value, this "
-                 "disk will be considered as "
-                 "space insufficient");
-DSN_TAG_VARIABLE(disk_min_available_space_ratio, FT_MUTABLE);
-
-DSN_DEFINE_bool(replication,
-                ignore_broken_disk,
-                true,
-                "true means ignore broken data disk when initialize");
 
 error_code disk_status_to_error_code(disk_status::type ds)
 {

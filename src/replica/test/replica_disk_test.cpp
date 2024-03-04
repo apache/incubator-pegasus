@@ -49,11 +49,12 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
+DSN_DECLARE_bool(fd_disabled);
+
 using pegasus::AssertEventually;
 
 namespace dsn {
 namespace replication {
-DSN_DECLARE_bool(fd_disabled);
 
 using query_disk_info_rpc = rpc_holder<query_disk_info_request, query_disk_info_response>;
 

@@ -67,12 +67,12 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
+DSN_DECLARE_int32(node_live_percentage_threshold_for_update);
+DSN_DECLARE_int64(replica_assign_delay_ms_for_dropouts);
+DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
+
 namespace dsn {
 namespace replication {
-
-DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
-DSN_DECLARE_uint64(node_live_percentage_threshold_for_update);
-DSN_DECLARE_uint64(replica_assign_delay_ms_for_dropouts);
 
 class fake_sender_meta_service : public dsn::replication::meta_service
 {

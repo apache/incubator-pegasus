@@ -29,6 +29,8 @@
 #include <string_view>
 #include <vector>
 
+#include <gtest/gtest_prod.h>
+
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
@@ -79,10 +81,6 @@ public:
     }
     void assign_group(const char *name);
 
-    // Resolve host_port to rpc_addresses.
-    // Trere may be multiple rpc_addresses for one host_port.
-    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
-
     // Construct a host_port object from 'addr'
     static host_port from_address(rpc_address addr);
 
@@ -97,6 +95,13 @@ public:
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 
 private:
+    friend class dns_resolver;
+    FRIEND_TEST(host_port_test, transfer_rpc_address);
+
+    // Resolve host_port to rpc_addresses.
+    // There may be multiple rpc_addresses for one host_port.
+    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
+
     std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;

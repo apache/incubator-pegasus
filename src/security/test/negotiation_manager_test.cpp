@@ -32,10 +32,11 @@
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 
-namespace dsn {
-namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(mandatory_auth);
+
+namespace dsn {
+namespace security {
 
 class negotiation_manager_test : public testing::Test
 {
@@ -44,8 +45,8 @@ public:
     {
         std::unique_ptr<tools::sim_network_provider> sim_net(
             new tools::sim_network_provider(nullptr, nullptr));
-        auto sim_session =
-            sim_net->create_server_session(rpc_address("localhost", 10086), rpc_session_ptr());
+        auto sim_session = sim_net->create_server_session(
+            rpc_address::from_host_port("localhost", 10086), rpc_session_ptr());
         auto rpc = negotiation_rpc(std::make_unique<negotiation_request>(), RPC_NEGOTIATION);
         rpc.dsn_request()->io_session = sim_session;
         return rpc;
@@ -56,9 +57,9 @@ public:
         std::unique_ptr<tools::sim_network_provider> sim_net(
             new tools::sim_network_provider(nullptr, nullptr));
         if (is_client) {
-            return sim_net->create_client_session(rpc_address("localhost", 10086));
+            return sim_net->create_client_session(rpc_address::from_host_port("localhost", 10086));
         } else {
-            return sim_net->create_server_session(rpc_address("localhost", 10086),
+            return sim_net->create_server_session(rpc_address::from_host_port("localhost", 10086),
                                                   rpc_session_ptr());
         }
     }

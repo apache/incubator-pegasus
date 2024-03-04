@@ -50,16 +50,15 @@ METRIC_DEFINE_gauge_int64(replica,
                           dsn::metric_unit::kTasks,
                           "The number of current running tasks of rocksdb manual compaction");
 
-namespace pegasus {
-namespace server {
-
-DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
-
 DSN_DEFINE_int32(pegasus.server,
                  manual_compact_min_interval_seconds,
                  0,
                  "minimal interval time in seconds to start a new manual compaction, <= 0 "
                  "means no interval limit");
+namespace pegasus {
+namespace server {
+
+DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
 
 const std::string
     pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");

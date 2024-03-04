@@ -49,9 +49,9 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
     l = type_from_string(_meta_function_level_VALUES_TO_NAMES,
                          std::string("fl_") + args.argv[1],
                          meta_function_level::fl_invalid);
-    verify_logged(l != meta_function_level::fl_invalid,
-                  "parse %s as meta function level failed\n",
-                  args.argv[1]);
+    PRINT_AND_RETURN_FALSE_IF_NOT(l != meta_function_level::fl_invalid,
+                                  "parse {} as meta function level failed\n",
+                                  args.argv[1]);
 
     configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(l);
     if (resp.err == dsn::ERR_OK) {
@@ -106,31 +106,32 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'g':
             ans = request.gpid.parse_from(optarg);
-            verify_logged(ans, "parse %s as gpid failed\n", optarg);
+            PRINT_AND_RETURN_FALSE_IF_NOT(ans, "parse {} as gpid failed\n", optarg);
             break;
         case 'p':
             proposal_type += optarg;
             break;
         case 't':
-            verify_logged(
-                target.from_string_ipv4(optarg), "parse %s as target_address failed\n", optarg);
+            target = dsn::rpc_address::from_host_port(optarg);
+            PRINT_AND_RETURN_FALSE_IF_NOT(target, "parse {} as target_address failed\n", optarg);
             break;
         case 'n':
-            verify_logged(node.from_string_ipv4(optarg), "parse %s as node failed\n", optarg);
+            node = dsn::rpc_address::from_host_port(optarg);
+            PRINT_AND_RETURN_FALSE_IF_NOT(node, "parse {} as node failed\n", optarg);
             break;
         default:
             return false;
         }
     }
 
-    verify_logged(!target.is_invalid(), "need set target by -t\n");
-    verify_logged(!node.is_invalid(), "need set node by -n\n");
-    verify_logged(request.gpid.get_app_id() != -1, "need set gpid by -g\n");
+    PRINT_AND_RETURN_FALSE_IF_NOT(!target.is_invalid(), "need set target by -t\n");
+    PRINT_AND_RETURN_FALSE_IF_NOT(!node.is_invalid(), "need set node by -n\n");
+    PRINT_AND_RETURN_FALSE_IF_NOT(request.gpid.get_app_id() != -1, "need set gpid by -g\n");
 
     config_type::type tp =
         type_from_string(_config_type_VALUES_TO_NAMES, proposal_type, config_type::CT_INVALID);
-    verify_logged(
-        tp != config_type::CT_INVALID, "parse %s as config_type failed.\n", proposal_type.c_str());
+    PRINT_AND_RETURN_FALSE_IF_NOT(
+        tp != config_type::CT_INVALID, "parse {} as config_type failed.\n", proposal_type);
     request.action_list = {new_proposal_action(target, node, tp)};
     dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send proposal response: " << err << std::endl;
@@ -173,13 +174,15 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
             balance_type = optarg;
             break;
         case 'f':
-            if (!from.from_string_ipv4(optarg)) {
+            from = dsn::rpc_address::from_host_port(optarg);
+            if (!from) {
                 fprintf(stderr, "parse %s as from_address failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if (!to.from_string_ipv4(optarg)) {
+            to = dsn::rpc_address::from_host_port(optarg);
+            if (!to) {
                 fprintf(stderr, "parse %s as target_address failed\n", optarg);
                 return false;
             }

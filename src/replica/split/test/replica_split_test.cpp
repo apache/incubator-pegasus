@@ -525,9 +525,9 @@ public:
     const int32_t APP_ID = 2;
     const int32_t OLD_PARTITION_COUNT = 8;
     const int32_t NEW_PARTITION_COUNT = 16;
-    const rpc_address PRIMARY = rpc_address("127.0.0.1", 18230);
-    const rpc_address SECONDARY = rpc_address("127.0.0.2", 10058);
-    const rpc_address SECONDARY2 = rpc_address("127.0.0.3", 10805);
+    const rpc_address PRIMARY = rpc_address::from_ip_port("127.0.0.1", 18230);
+    const rpc_address SECONDARY = rpc_address::from_ip_port("127.0.0.2", 10058);
+    const rpc_address SECONDARY2 = rpc_address::from_ip_port("127.0.0.3", 10805);
     const gpid PARENT_GPID = gpid(APP_ID, 1);
     const gpid CHILD_GPID = gpid(APP_ID, 9);
     const ballot INIT_BALLOT = 3;

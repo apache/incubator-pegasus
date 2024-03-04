@@ -30,7 +30,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -47,12 +46,16 @@
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+
+DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
+DSN_DEFINE_validator(tables_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
 
 double convert_to_ratio(double hit, double total)
 {
@@ -106,9 +109,8 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
         s = type_from_string(::dsn::_app_status_VALUES_TO_NAMES,
                              std::string("as_") + status,
                              ::dsn::app_status::AS_INVALID);
-        verify_logged(s != ::dsn::app_status::AS_INVALID,
-                      "parse %s as app_status::type failed",
-                      status.c_str());
+        PRINT_AND_RETURN_FALSE_IF_NOT(
+            s != ::dsn::app_status::AS_INVALID, "parse {} as app_status::type failed", status);
     }
     ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
     if (err != ::dsn::ERR_OK)
@@ -187,8 +189,6 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
                             std::map<int32_t, double> &count_map,
                             std::map<int32_t, double> &disk_map)
 {
-    dsn::error_s err;
-
     DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
     for (const auto &entity : query_snapshot.entities) {
@@ -198,15 +198,8 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
                            entity.type);
         }
 
-        const auto &partition = entity.attributes.find("partition_id");
-        if (dsn_unlikely(partition == entity.attributes.end())) {
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "partition_id field was not found");
-        }
-
         int32_t partition_id;
-        if (dsn_unlikely(!dsn::buf2int32(partition->second, partition_id))) {
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid partition_id: {}", partition->second);
-        }
+        RETURN_NOT_OK(dsn::parse_metric_partition_id(entity.attributes, partition_id));
 
         for (const auto &m : entity.metrics) {
             if (m.name == "rdb_total_sst_files") {
@@ -487,10 +480,11 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
-                                           {"only_qps", required_argument, 0, 'q'},
-                                           {"only_usage", required_argument, 0, 'u'},
+                                           {"only_qps", no_argument, 0, 'q'},
+                                           {"only_usage", no_argument, 0, 'u'},
                                            {"json", no_argument, 0, 'j'},
                                            {"output", required_argument, 0, 'o'},
+                                           {"sample_interval_ms", required_argument, 0, 't'},
                                            {0, 0, 0, 0}};
 
     std::string app_name;
@@ -498,14 +492,17 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     bool only_qps = false;
     bool only_usage = false;
     bool json = false;
+    uint32_t sample_interval_ms = FLAGS_tables_sample_interval_ms;
 
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "a:qujo:", long_options, &option_index);
-        if (c == -1)
+        int c = getopt_long(args.argc, args.argv, "a:qujo:t:", long_options, &option_index);
+        if (c == -1) {
+            // -1 means all command-line options have been parsed.
             break;
+        }
+
         switch (c) {
         case 'a':
             app_name = optarg;
@@ -522,6 +519,9 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             out_file = optarg;
             break;
+        case 't':
+            RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
+            break;
         default:
             return false;
         }
@@ -534,15 +534,14 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::vector<row_data> rows;
-    if (!get_app_stat(sc, app_name, rows)) {
+    if (!get_app_stat(sc, app_name, sample_interval_ms, rows)) {
         std::cout << "ERROR: query app stat from server failed" << std::endl;
         return true;
     }
 
-    rows.resize(rows.size() + 1);
-    row_data &sum = rows.back();
-    sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
-    for (int i = 0; i < rows.size() - 1; ++i) {
+    rows.emplace_back(fmt::format("(total:{})", rows.size() - 1));
+    auto &sum = rows.back();
+    for (size_t i = 0; i < rows.size() - 1; ++i) {
         row_data &row = rows[i];
         sum.partition_count += row.partition_count;
         sum.get_qps += row.get_qps;

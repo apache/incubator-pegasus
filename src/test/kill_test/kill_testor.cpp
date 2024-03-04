@@ -37,13 +37,14 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace pegasus {
-namespace test {
 DSN_DEFINE_uint32(pegasus.killtest, kill_interval_seconds, 30, "");
 DSN_DEFINE_uint32(pegasus.killtest, max_seconds_for_all_partitions_to_recover, 600, "");
 
 DSN_DECLARE_string(pegasus_cluster_name);
 DSN_DECLARE_string(verify_app_name);
+
+namespace pegasus {
+namespace test {
 
 kill_testor::kill_testor(const char *config_file)
 {
@@ -121,13 +122,13 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
             } else {
                 std::stringstream info;
                 info << "gpid=" << p.pid.get_app_id() << "." << p.pid.get_partition_index() << ", ";
-                info << "primay=" << p.primary.to_std_string() << ", ";
+                info << "primay=" << p.primary << ", ";
                 info << "secondaries=[";
                 for (int idx = 0; idx < p.secondaries.size(); idx++) {
                     if (idx != 0)
-                        info << "," << p.secondaries[idx].to_std_string();
+                        info << "," << p.secondaries[idx];
                     else
-                        info << p.secondaries[idx].to_std_string();
+                        info << p.secondaries[idx];
                 }
                 info << "], ";
                 info << "last_committed_decree=" << p.last_committed_decree;

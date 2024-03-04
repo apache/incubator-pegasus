@@ -56,10 +56,9 @@
 #include "utils/output_utils.h"
 #include "utils/time_utils.h"
 
-namespace dsn {
-namespace dist {
 DSN_DECLARE_string(hosts_list);
-} // namespace dist
+
+namespace dsn {
 namespace replication {
 
 struct list_nodes_helper
@@ -159,13 +158,13 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
             tp_details.append_data(oss.str());
-            tp_details.append_data((p.primary.is_invalid() ? "-" : p.primary.to_std_string()));
+            tp_details.append_data((p.primary.is_invalid() ? "-" : p.primary.to_string()));
             oss.str("");
             oss << "[";
             for (int j = 0; j < p.secondaries.size(); j++) {
                 if (j != 0)
                     oss << ",";
-                oss << p.secondaries[j].to_std_string();
+                oss << p.secondaries[j];
                 node_stat[p.secondaries[j]].second++;
             }
             oss << "]";
@@ -180,7 +179,7 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         tp_nodes.add_column("secondary");
         tp_nodes.add_column("total");
         for (auto &kv : node_stat) {
-            tp_nodes.add_row(kv.first.to_std_string());
+            tp_nodes.add_row(kv.first.to_string());
             tp_nodes.append_data(kv.second.first);
             tp_nodes.append_data(kv.second.second);
             tp_nodes.append_data(kv.second.first + kv.second.second);
@@ -387,10 +386,10 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
 
     std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
     for (const auto &node : _service->_alive_set) {
-        tmp_map.emplace(node, list_nodes_helper(node.to_std_string(), "ALIVE"));
+        tmp_map.emplace(node, list_nodes_helper(node.to_string(), "ALIVE"));
     }
     for (const auto &node : _service->_dead_set) {
-        tmp_map.emplace(node, list_nodes_helper(node.to_std_string(), "UNALIVE"));
+        tmp_map.emplace(node, list_nodes_helper(node.to_string(), "UNALIVE"));
     }
     int alive_node_count = (_service->_alive_set).size();
     int unalive_node_count = (_service->_dead_set).size();
@@ -470,14 +469,14 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
     std::string meta_servers_str;
     int ms_size = _service->_opts.meta_servers.size();
     for (int i = 0; i < ms_size; i++) {
-        meta_servers_str += _service->_opts.meta_servers[i].to_std_string();
+        meta_servers_str += _service->_opts.meta_servers[i].to_string();
         if (i != ms_size - 1) {
             meta_servers_str += ",";
         }
     }
     tp.add_row_name_and_data("meta_servers", meta_servers_str);
-    tp.add_row_name_and_data("primary_meta_server", dsn_primary_address().to_std_string());
-    tp.add_row_name_and_data("zookeeper_hosts", dsn::dist::FLAGS_hosts_list);
+    tp.add_row_name_and_data("primary_meta_server", dsn_primary_address().to_string());
+    tp.add_row_name_and_data("zookeeper_hosts", FLAGS_hosts_list);
     tp.add_row_name_and_data("zookeeper_root", _service->_cluster_root);
     tp.add_row_name_and_data(
         "meta_function_level",
@@ -853,7 +852,7 @@ bool meta_http_service::redirect_if_not_primary(const http_request &req, http_re
     }
 
     // set redirect response
-    resp.location = "http://" + leader.to_std_string() + '/' + req.path;
+    resp.location = fmt::format("http://{}/{}", leader, req.path);
     if (!req.query_args.empty()) {
         resp.location += '?';
         for (const auto &i : req.query_args) {

@@ -93,8 +93,8 @@ TEST(core, message_ex)
 
     { // create_response
         message_ex *request = message_ex::create_request(RPC_CODE_FOR_TEST, 0, 0);
-        request->header->from_address = rpc_address("127.0.0.1", 8080);
-        request->to_address = rpc_address("127.0.0.1", 9090);
+        request->header->from_address = rpc_address::from_ip_port("127.0.0.1", 8080);
+        request->to_address = rpc_address::from_ip_port("127.0.0.1", 9090);
         request->header->trace_id = 123456;
 
         message_ex *response = request->create_response();

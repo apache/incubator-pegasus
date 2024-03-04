@@ -42,18 +42,17 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "prepare_list.h"
+#include "ranger/access_type.h"
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
 #include "runtime/api_layer1.h"
-#include "ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
-#include "utils/flags.h"
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
@@ -127,8 +126,6 @@ class test_checker;
             return;                                                                                \
         }                                                                                          \
     } while (0)
-
-DSN_DECLARE_bool(reject_write_when_disk_insufficient);
 
 // get bool envs[name], return false if value is not bool
 bool get_bool_envs(const std::map<std::string, std::string> &envs,
@@ -644,7 +641,6 @@ private:
 
     std::unique_ptr<replica_follower> _replica_follower;
 
-    // perf counters
     METRIC_VAR_DECLARE_gauge_int64(private_log_size_mb);
     METRIC_VAR_DECLARE_counter(throttling_delayed_write_requests);
     METRIC_VAR_DECLARE_counter(throttling_rejected_write_requests);

@@ -42,6 +42,7 @@
 #include <vector>
 
 #include "client/replication_ddl_client.h"
+#include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "geo/lib/geo_client.h"
 #include "idl_utils.h"
@@ -60,8 +61,10 @@
 #include "utils/blob.h"
 #include "utils/defer.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
 
@@ -2212,6 +2215,93 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+namespace {
+
+inline dsn::metric_filters rdb_estimated_keys_filters(int32_t table_id)
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"replica"};
+    filters.entity_attrs = {"table_id", std::to_string(table_id)};
+    filters.entity_metrics = {"rdb_estimated_keys"};
+    return filters;
+}
+
+// Given a table and all of its partitions, aggregate partition-level stats for rdb_estimated_keys.
+// All selected partitions should have their primary replicas on this node.
+std::unique_ptr<aggregate_stats_calcs>
+create_rdb_estimated_keys_stats_calcs(const int32_t table_id,
+                                      const std::vector<dsn::partition_configuration> &partitions,
+                                      const dsn::rpc_address &node,
+                                      const std::string &entity_type,
+                                      std::vector<row_data> &rows)
+{
+    CHECK_EQ(rows.size(), partitions.size());
+
+    partition_stat_map sums;
+    for (size_t i = 0; i < rows.size(); ++i) {
+        if (partitions[i].primary != node) {
+            // Ignore once the replica of the metrics is not the primary of the partition.
+            continue;
+        }
+
+        // Add (table id, partition_id, metric_name) as dimensions.
+        sums.emplace(dsn::gpid(table_id, i),
+                     stat_var_map({{"rdb_estimated_keys", &rows[i].rdb_estimate_num_keys}}));
+    }
+
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_sums<partition_aggregate_stats>(entity_type, std::move(sums));
+    return calcs;
+}
+
+// Aggregate the partition-level rdb_estimated_keys for the specified table.
+bool get_rdb_estimated_keys_stats(shell_context *sc,
+                                  const std::string &table_name,
+                                  std::vector<row_data> &rows)
+{
+    std::vector<node_desc> nodes;
+    if (!fill_nodes(sc, "replica-server", nodes)) {
+        LOG_ERROR("get replica server node list failed");
+        return false;
+    }
+
+    int32_t table_id = 0;
+    int32_t partition_count = 0;
+    std::vector<dsn::partition_configuration> partitions;
+    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, partitions);
+    if (err != ::dsn::ERR_OK) {
+        LOG_ERROR("list app {} failed, error = {}", table_name, err);
+        return false;
+    }
+    CHECK_EQ(partitions.size(), partition_count);
+
+    const auto &results =
+        get_metrics(nodes, rdb_estimated_keys_filters(table_id).to_query_string());
+
+    rows.clear();
+    rows.reserve(partition_count);
+    for (int32_t i = 0; i < partition_count; ++i) {
+        rows.emplace_back(std::to_string(i));
+    }
+
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        RETURN_SHELL_IF_GET_METRICS_FAILED(
+            results[i], nodes[i], "rdb_estimated_keys for table(id={})", table_id);
+
+        auto calcs = create_rdb_estimated_keys_stats_calcs(
+            table_id, partitions, nodes[i].address, "replica", rows);
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(calcs->aggregate_metrics(results[i].body()),
+                                             nodes[i],
+                                             "rdb_estimated_keys for table(id={})",
+                                             table_id);
+    }
+
+    return true;
+}
+
+} // anonymous namespace
+
 bool count_data(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"precise", no_argument, 0, 'c'},
@@ -2352,18 +2442,18 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
             return false;
         }
 
-        // get estimate key number
         std::vector<row_data> rows;
-        std::string app_name = sc->pg_client->get_app_name();
-        if (!get_app_stat(sc, app_name, rows)) {
-            fprintf(stderr, "ERROR: query app stat from server failed");
+        const std::string table_name(sc->pg_client->get_app_name());
+        CHECK(!table_name.empty(), "table_name must be non-empty, see data_operations()");
+
+        if (!get_rdb_estimated_keys_stats(sc, table_name, rows)) {
+            fprintf(stderr, "ERROR: get rdb_estimated_keys stats failed");
             return true;
         }
 
-        rows.resize(rows.size() + 1);
-        row_data &sum = rows.back();
-        sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
-        for (int i = 0; i < rows.size() - 1; ++i) {
+        rows.emplace_back(fmt::format("(total:{})", rows.size() - 1));
+        auto &sum = rows.back();
+        for (size_t i = 0; i < rows.size() - 1; ++i) {
             const row_data &row = rows[i];
             sum.rdb_estimate_num_keys += row.rdb_estimate_num_keys;
         }

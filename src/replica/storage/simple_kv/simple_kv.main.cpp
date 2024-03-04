@@ -36,7 +36,7 @@
 
 static void dsn_app_registration_simple_kv()
 {
-    dsn::FLAGS_enable_http_server = false; // disable http server
+    FLAGS_enable_http_server = false; // disable http server
 
     dsn::replication::application::simple_kv_service_impl::register_service();
 

@@ -33,10 +33,10 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
+DSN_DECLARE_int32(manual_compact_min_interval_seconds);
+
 namespace pegasus {
 namespace server {
-
-DSN_DECLARE_int32(manual_compact_min_interval_seconds);
 
 class manual_compact_service_test : public pegasus_server_test_base
 {

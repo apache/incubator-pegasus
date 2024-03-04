@@ -26,14 +26,14 @@
 #include "utils/errors.h"
 #include "utils/flags.h"
 
-namespace dsn {
-namespace replication {
-struct dir_node;
-
 DSN_DECLARE_uint64(gc_disk_error_replica_interval_seconds);
 DSN_DECLARE_uint64(gc_disk_garbage_replica_interval_seconds);
 DSN_DECLARE_uint64(gc_disk_migration_tmp_replica_interval_seconds);
 DSN_DECLARE_uint64(gc_disk_migration_origin_replica_interval_seconds);
+
+namespace dsn {
+namespace replication {
+struct dir_node;
 
 // the invalid folder suffix, server will check disk folder and deal with them
 extern const std::string kFolderSuffixErr; // replica error dir
