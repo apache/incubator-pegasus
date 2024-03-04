@@ -172,7 +172,5 @@ func (c *metaCall) getMetaServiceForwardAddress(resp metaResponse) *base.RPCAddr
 		return nil
 	} else {
 		return rep.Partitions[0].Primary
-
 	}
-
 }

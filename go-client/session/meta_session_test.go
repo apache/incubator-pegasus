@@ -138,7 +138,6 @@ func TestNodeSession_ForwardToPrimaryMeta(t *testing.T) {
 		mm := NewMetaManager(metaList[i:i+1], NewNodeSession)
 		defer mm.Close()
 		resp, err := mm.QueryConfig(context.Background(), "temp")
-		println(resp)
 		assert.Nil(t, err)
 		assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
 	}
