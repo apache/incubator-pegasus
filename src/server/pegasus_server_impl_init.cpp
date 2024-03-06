@@ -37,7 +37,7 @@
 #include <utility>
 #include <vector>
 
-#include "base/meta_store.h"
+#include "base/meta_store.h" // IWYU pragma: keep
 #include "common/gpid.h"
 #include "hashkey_transform.h"
 #include "hotkey_collector.h"

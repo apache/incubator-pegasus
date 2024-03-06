@@ -23,7 +23,6 @@
 #include <rocksdb/status.h>
 
 #include "common/replica_envs.h"
-#include "server/pegasus_server_impl.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 
