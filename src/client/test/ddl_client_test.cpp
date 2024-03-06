@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <deque>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
@@ -30,8 +31,10 @@
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
