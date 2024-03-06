@@ -28,6 +28,7 @@
 #include <string>
 #include <utility>
 
+#include "base/meta_store.h"
 #include "common/replica_envs.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -35,7 +36,6 @@
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/serverlet.h"
-#include "base/meta_store.h"
 #include "server/pegasus_read_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
