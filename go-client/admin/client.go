@@ -124,9 +124,9 @@ func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, 
 			return fmt.Errorf("QueryConfig failed: %s", resp.GetErr().String())
 		}
 
-		readyCount := 0
+		readyCount := int32(0)
 		for _, part := range resp.Partitions {
-			if part.Primary.GetRawAddress() != 0 && len(part.Secondaries)+1 == replicaCount {
+			if part.Primary.GetRawAddress() != 0 && int32(len(part.Secondaries)+1) == replicaCount {
 				readyCount++
 			}
 		}
@@ -160,7 +160,7 @@ func (c *rpcBasedClient) CreateTable(tableName string, partitionCount int32, rep
 	err := c.callMeta("CreateApp", req, func(iresp interface{}) {
 		resp := iresp.(*admin.ConfigurationCreateAppResponse)
 		appID = resp.Appid
-		respErr = resp.GetErr().Errno
+		respErr = resp.GetErr()
 	})
 	if err != nil {
 		return appID, err
@@ -185,7 +185,7 @@ func (c *rpcBasedClient) DropTable(tableName string, reserveSeconds int64) error
 
 	var respErr error
 	err := c.callMeta("DropApp", req, func(iresp interface{}) {
-		respErr = iresp.(*admin.ConfigurationDropAppResponse).GetErr().Errno
+		respErr = iresp.(*admin.ConfigurationDropAppResponse).GetErr()
 	})
 	if err != nil {
 		return err
@@ -200,10 +200,11 @@ func (c *rpcBasedClient) ListTables(status replication.AppStatus) ([]*replicatio
 	}
 
 	var tables []*replication.AppInfo
+	var respErr error
 	err := c.callMeta("ListApps", req, func(iresp interface{}) {
 		resp := iresp.(*admin.ConfigurationListAppsResponse)
 		tables = resp.Infos
-		respErr = resp.GetErr().Errno
+		respErr = resp.GetErr()
 	})
 	if err != nil {
 		return tables, err

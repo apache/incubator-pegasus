@@ -136,6 +136,10 @@ func (ec *ErrorCode) String() string {
 	return fmt.Sprintf("ErrorCode(%+v)", *ec)
 }
 
+func (ec *ErrorCode) Error() string {
+	return ec.String()
+}
+
 //go:generate enumer -type=RocksDBErrCode -output=rocskdb_err_string.go
 type RocksDBErrCode int32
 
