@@ -136,8 +136,23 @@ func (ec *ErrorCode) String() string {
 	return fmt.Sprintf("ErrorCode(%+v)", *ec)
 }
 
-func (ec *ErrorCode) Error() string {
-	return ec.String()
+type baseError struct {
+	message string
+}
+
+// Implement error interface.
+func (e *baseError) Error() string {
+	if e == nil || e.message == ERR_OK.String() {
+		return ERR_OK.String()
+	}
+	return e.message
+}
+
+func (ec *ErrorCode) AsError() error {
+	if ec == nil || ec.Errno == ERR_OK.String() {
+		return nil
+	}
+	return &baseError(Message:ec.Errno)
 }
 
 //go:generate enumer -type=RocksDBErrCode -output=rocskdb_err_string.go

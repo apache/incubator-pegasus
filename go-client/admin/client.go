@@ -121,7 +121,7 @@ func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, 
 			return err
 		}
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return fmt.Errorf("QueryConfig failed: %s", resp.GetErr().String())
+			return fmt.Errorf("QueryConfig failed: %s", resp.GetErr().AsError())
 		}
 
 		readyCount := int32(0)
@@ -160,7 +160,7 @@ func (c *rpcBasedClient) CreateTable(tableName string, partitionCount int32, rep
 	err := c.callMeta("CreateApp", req, func(iresp interface{}) {
 		resp := iresp.(*admin.ConfigurationCreateAppResponse)
 		appID = resp.Appid
-		respErr = resp.GetErr()
+		respErr = resp.GetErr().AsError()
 	})
 	if err != nil {
 		return appID, err
