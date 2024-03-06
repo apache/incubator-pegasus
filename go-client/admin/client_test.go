@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package admin
+package admin_test
 
 import (
 	"context"
@@ -25,8 +25,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	replicaCount   = 3
+	maxWaitSeconds = 600
+	reserveSeconds = 1
 )
 
 func TestAdmin_Table(t *testing.T) {
@@ -34,7 +41,7 @@ func TestAdmin_Table(t *testing.T) {
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	})
 
-	hasTable := func(tables []*TableInfo, tableName string) bool {
+	hasTable := func(tables []*replication.AppInfo, tableName string) bool {
 		for _, tb := range tables {
 			if tb.Name == tableName {
 				return true
@@ -43,22 +50,22 @@ func TestAdmin_Table(t *testing.T) {
 		return false
 	}
 
-	err := c.DropTable(context.Background(), "admin_table_test")
+	err := c.DropTable("admin_table_test", reserveSeconds)
 	assert.Nil(t, err)
 
 	// no such table after deletion
-	tables, err := c.ListTables(context.Background())
+	tables, err := c.ListAvailTables()
 	assert.Nil(t, err)
 	assert.False(t, hasTable(tables, "admin_table_test"))
 
-	err = c.CreateTable(context.Background(), "admin_table_test", 16)
+	err = c.CreateTable("admin_table_test", 16, replicaCount, make(map[string]string), maxWaitSeconds)
 	assert.Nil(t, err)
 
-	tables, err = c.ListTables(context.Background())
+	tables, err = c.ListAvailTables()
 	assert.Nil(t, err)
 	assert.True(t, hasTable(tables, "admin_table_test"))
 
-	err = c.DropTable(context.Background(), "admin_table_test")
+	err = c.DropTable("admin_table_test", reserveSeconds)
 	assert.Nil(t, err)
 }
 
@@ -69,7 +76,7 @@ func TestAdmin_ListTablesTimeout(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
-	_, err := c.ListTables(ctx)
+	_, err := c.ListAvailTables(ctx)
 	assert.Equal(t, err, context.DeadlineExceeded)
 }
 
@@ -84,7 +91,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := c.CreateTable(context.Background(), tableName, 8)
+	err := c.CreateTable(tableName, 8, replicaCount, make(map[string]string), maxWaitSeconds)
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())
 	}
@@ -121,7 +128,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	}
 
 	// cleanup
-	err = c.DropTable(context.Background(), tableName)
+	err = c.DropTable(tableName, reserveSeconds)
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())
 	}
@@ -132,7 +139,7 @@ func TestAdmin_GetAppEnvs(t *testing.T) {
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	})
 
-	tables, err := c.ListTables(context.Background())
+	tables, err := c.ListAvailTables()
 	assert.Nil(t, err)
 	for _, tb := range tables {
 		assert.Empty(t, tb.Envs)

@@ -39,20 +39,12 @@ type Client interface {
 	GetTimeout() time.Duration
 	SetTimeout(timeout time.Duration)
 
-	CreateTable(ctx context.Context, tableName string, partitionCount int, successIfExist_optional ...bool) (int32, error)
+	CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (int32, error)
 
-	DropTable(ctx context.Context, tableName string) error
+	DropTable(tableName string, reserveSeconds int64) error
 
-	ListAvailTables() ([]*admin.AppInfo, error)
-	ListTables(ctx context.Context) ([]*TableInfo, error)
-}
-
-// TableInfo is the table information.
-type TableInfo struct {
-	Name string
-
-	// Envs is a set of attributes binding to this table.
-	Envs map[string]string
+	ListTables(status replication.AppStatus) ([]*replication.AppInfo, error)
+	ListAvailTables() ([]*replication.AppInfo, error)
 }
 
 type Config struct {
@@ -85,15 +77,16 @@ func (c *rpcBasedClient) SetTimeout(timeout time.Duration) {
 	c.rpcTimeout = timeout
 }
 
+// go-client/session/admin_rpc_types.go
 // `callback` always accepts non-nil `resp`.
-func (m *rpcBasedMeta) callMeta(methodName string, req interface{}, callback func(resp interface{})) error {
+func (c *rpcBasedClient) callMeta(methodName string, req interface{}, callback func(resp interface{})) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.rpcTimeout)
 	defer cancel()
 
-	// There are 2 kinds of structs for the retured slice:
-	// * [response, error], or
-	// * error.
-	result := reflect.ValueOf(m.meta).MethodByName(methodName).Call([]reflect.Value{
+	// There are 2 kinds of structs for the result which could be processed:
+	// * error
+	// * (response, error)
+	result := reflect.ValueOf(c.meta).MethodByName(methodName).Call([]reflect.Value{
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(req),
 	})
@@ -110,7 +103,7 @@ func (m *rpcBasedMeta) callMeta(methodName string, req interface{}, callback fun
 		return err
 	}
 
-	// The struct of returned slice must be [response, error].
+	// The struct of result must be (response, error).
 	if !result[0].IsNil() {
 		callback(result[0].Interface())
 	}
@@ -118,11 +111,12 @@ func (m *rpcBasedMeta) callMeta(methodName string, req interface{}, callback fun
 	return err
 }
 
-func (c *rpcBasedClient) waitTableReady(ctx context.Context, tableName string, partitionCount int) error {
-	const replicaCount int = 3
-
-	for {
-		resp, err := c.meta.QueryConfig(ctx, tableName)
+func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, replicaCount int32, maxWaitSeconds int32) error {
+	for ; maxWaitSeconds > 0; maxWaitSeconds-- {
+		var resp *replication.QueryCfgResponse
+		err := c.callMeta("QueryConfig", tableName, func(iresp interface{}) {
+			resp = iresp.(*replication.QueryCfgResponse)
+		})
 		if err != nil {
 			return err
 		}
@@ -144,52 +138,79 @@ func (c *rpcBasedClient) waitTableReady(ctx context.Context, tableName string, p
 	return nil
 }
 
-func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, partitionCount int, successIfExist_optional ...bool) error {
+func (c *rpcBasedClient) CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (int32, error) {
 	successIfExist := true
-	if len(successIfExist_optional) > 0 {
-		successIfExist = successIfExist_optional[0]
+	if len(successIfExistOptional) > 0 {
+		successIfExist = successIfExistOptional[0]
 	}
-	_, err := c.meta.CreateApp(ctx, &admin.ConfigurationCreateAppRequest{
+
+	req := &admin.ConfigurationCreateAppRequest{
 		AppName: tableName,
 		Options: &admin.CreateAppOptions{
 			PartitionCount: int32(partitionCount),
-			ReplicaCount:   3,
+			ReplicaCount:   replicaCount,
 			SuccessIfExist: successIfExist,
 			AppType:        "pegasus",
-			Envs:           make(map[string]string),
 			IsStateful:     true,
+			Envs:           envs,
+		}}
+
+	var appID int32
+	var respErr error
+	err := c.callMeta("CreateApp", req, func(iresp interface{}) {
+		resp := iresp.(*admin.ConfigurationCreateAppResponse)
+		appID = resp.Appid
+		respErr = resp.GetErr().Errno
+	})
+	if err != nil {
+		return appID, err
+	}
+
+	err = c.waitTableReady(tableName, partitionCount, replicaCount, maxWaitSeconds)
+	if err != nil {
+		return appID, err
+	}
+
+	return appID, respErr
+}
+
+func (c *rpcBasedClient) DropTable(tableName string, reserveSeconds int64) error {
+	req := &admin.ConfigurationDropAppRequest{
+		AppName: tableName,
+		Options: &admin.DropAppOptions{
+			SuccessIfNotExist: true,
+			ReserveSeconds:    &reserveSeconds, // Optional for thrift
 		},
+	}
+
+	var respErr error
+	err := c.callMeta("DropApp", req, func(iresp interface{}) {
+		respErr = iresp.(*admin.ConfigurationDropAppResponse).GetErr().Errno
 	})
 	if err != nil {
 		return err
 	}
-	err = c.waitTableReady(ctx, tableName, partitionCount)
-	return err
+
+	return respErr
 }
 
-func (c *rpcBasedClient) DropTable(ctx context.Context, tableName string) error {
-	req := admin.NewConfigurationDropAppRequest()
-	req.AppName = tableName
-	reserveSeconds := int64(1) // delete immediately. the caller is responsible for the soft deletion of table.
-	req.Options = &admin.DropAppOptions{
-		SuccessIfNotExist: true,
-		ReserveSeconds:    &reserveSeconds,
+func (c *rpcBasedClient) ListTables(status replication.AppStatus) ([]*replication.AppInfo, error) {
+	req := &admin.ConfigurationListAppsRequest{
+		Status: status,
 	}
-	_, err := c.meta.DropApp(ctx, req)
-	return err
-}
 
-func (c *rpcBasedClient) ListTables(ctx context.Context) ([]*TableInfo, error) {
-	resp, err := c.meta.ListApps(ctx, &admin.ConfigurationListAppsRequest{
-		Status: replication.AppStatus_AS_AVAILABLE,
+	var tables []*replication.AppInfo
+	err := c.callMeta("ListApps", req, func(iresp interface{}) {
+		resp := iresp.(*admin.ConfigurationListAppsResponse)
+		tables = resp.Infos
+		respErr = resp.GetErr().Errno
 	})
 	if err != nil {
-		return nil, err
+		return tables, err
 	}
 
-	var results []*TableInfo
-	for _, app := range resp.Infos {
-		results = append(results, &TableInfo{Name: app.AppName, Envs: app.Envs})
-	}
-	return results, nil
+	return tables, respErr
+}
+func (c *rpcBasedClient) ListAvailTables() ([]*replication.AppInfo, error) {
+	return c.ListTables(replication.AppStatus_AS_AVAILABLE)
 }

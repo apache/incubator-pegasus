@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package admin
+package admin_test
 
 import (
 	"context"
