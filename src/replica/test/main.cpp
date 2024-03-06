@@ -68,7 +68,8 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::service_app::register_factory<replication_service_test_app>("replica");
+    dsn::service_app::register_factory<replication_service_test_app>(
+        dsn::replication::replication_options::kReplicaAppType.c_str());
 
     dsn_run_config("config-test.ini", false);
     while (gtest_flags == 0) {

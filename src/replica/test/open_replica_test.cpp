@@ -48,7 +48,7 @@ INSTANTIATE_TEST_SUITE_P(, open_replica_test, ::testing::Values(false, true));
 TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
 {
     app_info ai;
-    ai.app_type = "replica";
+    ai.app_type = replication_options::kReplicaAppType;
     ai.is_stateful = true;
     ai.max_replica_count = 3;
     ai.partition_count = 8;

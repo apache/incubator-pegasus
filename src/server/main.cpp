@@ -69,7 +69,8 @@ void dsn_app_registration_pegasus()
 {
     dsn::service::meta_service_app::register_components();
     service_app::register_factory<pegasus::server::pegasus_meta_service_app>("meta");
-    service_app::register_factory<pegasus::server::pegasus_replication_service_app>("replica");
+    service_app::register_factory<pegasus::server::pegasus_replication_service_app>(
+        dsn::replication::replication_options::kReplicaAppType.c_str());
     service_app::register_factory<pegasus::server::info_collector_app>("collector");
     pegasus::server::pegasus_server_impl::register_service();
     pegasus::server::register_compaction_operations();

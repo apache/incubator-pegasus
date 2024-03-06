@@ -141,7 +141,7 @@ public:
     {
         _app_info.app_id = 2;
         _app_info.app_name = "replica_test";
-        _app_info.app_type = "replica";
+        _app_info.app_type = replication_options::kReplicaAppType;
         _app_info.is_stateful = true;
         _app_info.max_replica_count = 3;
         _app_info.partition_count = 8;

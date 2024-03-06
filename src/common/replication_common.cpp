@@ -110,7 +110,7 @@ DSN_DEFINE_string(replication,
 namespace dsn {
 namespace replication {
 const std::string replication_options::kRepsDir = "reps";
-const std::string replication_options::kAppType = "replica";
+const std::string replication_options::kReplicaAppType = "replica";
 
 replication_options::~replication_options() {}
 

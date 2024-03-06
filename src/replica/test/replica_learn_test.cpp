@@ -45,7 +45,7 @@ public:
     {
         gpid pid(1, 0);
         app_info ai;
-        ai.app_type = "replica";
+        ai.app_type = replication_options::kReplicaAppType;
         ai.duplicating = true;
 
         dir_node *dn = stub->get_fs_manager()->find_best_dir_for_new_replica(pid);

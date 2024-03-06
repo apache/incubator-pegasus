@@ -52,7 +52,8 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::service_app::register_factory<gtest_app>("replica");
+    dsn::service_app::register_factory<gtest_app>(
+        dsn::replication::replication_options::kReplicaAppType.c_str());
 
     dsn::replication::replication_app_base::register_storage_engine(
         "pegasus",

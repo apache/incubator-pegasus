@@ -63,7 +63,7 @@ TEST(replication_common, get_data_dir_test)
         data_dir_tags.clear();
         bool flag = replication_options::get_data_dir_and_tag(test.data_dir_str,
                                                               "test_dir",
-                                                              replication_options::kAppType,
+                                                              replication_options::kReplicaAppType,
                                                               data_dirs,
                                                               data_dir_tags,
                                                               err_msg);

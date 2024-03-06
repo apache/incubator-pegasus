@@ -18,6 +18,7 @@
 #include <functional>
 #include <string>
 
+#include "common/replication_common.h"
 #include "http/http_server.h"
 #include "metadata_types.h"
 #include "utils/fmt_logging.h"
@@ -58,7 +59,7 @@ public:
         deregister_http_call("replica/manual_compaction");
     }
 
-    std::string path() const override { return "replica"; }
+    std::string path() const override { return replication_options::kReplicaAppType; }
 
     void query_duplication_handler(const http_request &req, http_response &resp);
     void query_app_data_version_handler(const http_request &req, http_response &resp);
