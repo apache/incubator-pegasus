@@ -56,6 +56,10 @@ typedef rpc_holder<query_replica_info_request, query_replica_info_response> quer
 class replication_options
 {
 public:
+    static const std::string kRepsDir;
+    // TODO(yingchun): there are many duplicate "replica" words in the codebase, refactor it later.
+    static const std::string kAppType;
+
     std::vector<::dsn::rpc_address> meta_servers;
 
     std::string app_name;

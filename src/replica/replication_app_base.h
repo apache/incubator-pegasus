@@ -76,6 +76,9 @@ private:
 
 class replica_app_info
 {
+public:
+    static const std::string kAppInfo;
+
 private:
     app_info *_app;
 
@@ -123,6 +126,8 @@ public:
     typedef replication_app_base *factory(replica *r);
     static void register_storage_engine(const std::string &name, factory f);
     static replication_app_base *new_storage_instance(const std::string &name, replica *r);
+    static const std::string kDataDirPostfix;
+    static const std::string kRdbPostfix;
 
     virtual ~replication_app_base() {}
 

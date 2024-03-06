@@ -266,7 +266,7 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
 
     const auto &store_info_err = _replica->store_app_info(
         _replica->_app_info,
-        utils::filesystem::path_combine(_target_replica_dir, replica::kAppInfo));
+        utils::filesystem::path_combine(_target_replica_dir, replica_app_info::kAppInfo));
     if (store_info_err != ERR_OK) {
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app info failed({})",
                          req.origin_disk,
