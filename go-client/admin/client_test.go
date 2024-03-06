@@ -96,7 +96,9 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	}
 
 	// ensures the created table must be available for read and write
-	rwClient := pegasus.NewClient(defaultConfig())
+	rwClient := pegasus.NewClient(pegasus.Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	})
 	defer func() {
 		err = rwClient.Close()
 		assert.NoError(t, err)
