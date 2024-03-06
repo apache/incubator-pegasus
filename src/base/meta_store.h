@@ -24,7 +24,6 @@
 #include <stdint.h>
 #include <string>
 
-#include "replica/replica_base.h"
 #include "utils/error_code.h"
 
 namespace rocksdb {
@@ -34,8 +33,6 @@ class DB;
 
 namespace pegasus {
 namespace server {
-
-class pegasus_server_impl;
 
 // Manage meta data of Pegasus, now support
 // - pegasus_data_version
