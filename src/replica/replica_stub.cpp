@@ -1927,7 +1927,7 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
 
     dsn::app_info info;
     replica_app_info info2(&info);
-    std::string path = utils::filesystem::path_combine(dir, replica::kAppInfo);
+    std::string path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
     auto err = info2.load(path);
     if (ERR_OK != err) {
         LOG_ERROR("load app-info from {} failed, err = {}", path, err);
