@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package admin_test
+package admin
 
 import (
 	"context"
