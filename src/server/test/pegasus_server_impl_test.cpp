@@ -35,7 +35,7 @@
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/serverlet.h"
-#include "server/meta_store.h"
+#include "base/meta_store.h"
 #include "server/pegasus_read_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

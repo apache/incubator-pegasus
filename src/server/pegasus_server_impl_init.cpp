@@ -48,7 +48,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "server/capacity_unit_calculator.h" // IWYU pragma: keep
 #include "server/key_ttl_compaction_filter.h"
-#include "server/meta_store.h" // IWYU pragma: keep
+#include "base/meta_store.h" // IWYU pragma: keep
 #include "server/pegasus_read_service.h"
 #include "server/pegasus_server_write.h" // IWYU pragma: keep
 #include "server/range_read_limiter.h"

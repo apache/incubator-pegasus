@@ -29,7 +29,7 @@
 #include "pegasus_utils.h"
 #include "pegasus_write_service_impl.h"
 #include "server/logging_utils.h"
-#include "server/meta_store.h"
+#include "base/meta_store.h"
 #include "server/pegasus_server_impl.h"
 #include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
