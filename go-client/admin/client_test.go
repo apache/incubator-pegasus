@@ -43,7 +43,7 @@ func TestAdmin_Table(t *testing.T) {
 
 	hasTable := func(tables []*replication.AppInfo, tableName string) bool {
 		for _, tb := range tables {
-			if tb.Name == tableName {
+			if tb.AppName == tableName {
 				return true
 			}
 		}
@@ -58,7 +58,7 @@ func TestAdmin_Table(t *testing.T) {
 	assert.Nil(t, err)
 	assert.False(t, hasTable(tables, "admin_table_test"))
 
-	err = c.CreateTable("admin_table_test", 16, replicaCount, make(map[string]string), maxWaitSeconds)
+	_, err = c.CreateTable("admin_table_test", 16, replicaCount, make(map[string]string), maxWaitSeconds)
 	assert.Nil(t, err)
 
 	tables, err = c.ListAvailTables()
@@ -76,7 +76,7 @@ func TestAdmin_ListTablesTimeout(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
-	_, err := c.ListAvailTables(ctx)
+	_, err := c.ListAvailTables()
 	assert.Equal(t, err, context.DeadlineExceeded)
 }
 
@@ -91,7 +91,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := c.CreateTable(tableName, 8, replicaCount, make(map[string]string), maxWaitSeconds)
+	_, err := c.CreateTable(tableName, 8, replicaCount, make(map[string]string), maxWaitSeconds)
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())
 	}
