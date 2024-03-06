@@ -74,8 +74,6 @@ func TestAdmin_ListTablesTimeout(t *testing.T) {
 		MetaServers: []string{"0.0.0.0:123456"},
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-	defer cancel()
 	_, err := c.ListAvailTables()
 	assert.Equal(t, err, context.DeadlineExceeded)
 }
@@ -87,9 +85,6 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	c := NewClient(Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	})
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 
 	_, err := c.CreateTable(tableName, 8, replicaCount, make(map[string]string), maxWaitSeconds)
 	if !assert.NoError(t, err) {
@@ -121,6 +116,9 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 			break
 		}
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	err = tb.Set(ctx, []byte("a"), []byte("a"), []byte("a"))
 	if !assert.NoError(t, err) {
