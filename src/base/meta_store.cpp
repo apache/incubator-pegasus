@@ -29,7 +29,8 @@
 
 namespace pegasus {
 namespace server {
-
+const std::string meta_store::DATA_COLUMN_FAMILY_NAME = "default";
+const std::string meta_store::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
 const std::string meta_store::DATA_VERSION = "pegasus_data_version";
 const std::string meta_store::LAST_FLUSHED_DECREE = "pegasus_last_flushed_decree";
 const std::string meta_store::LAST_MANUAL_COMPACT_FINISH_TIME =
@@ -38,10 +39,10 @@ const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL = "normal";
 const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE = "prefer_write";
 const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD = "bulk_load";
 
-meta_store::meta_store(pegasus_server_impl *server,
+meta_store::meta_store(const char *log_prefix,
                        rocksdb::DB *db,
                        rocksdb::ColumnFamilyHandle *meta_cf)
-    : replica_base(server), _db(db), _meta_cf(meta_cf)
+    : _log_prefix(log_prefix), _db(db), _meta_cf(meta_cf)
 {
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
