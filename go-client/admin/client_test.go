@@ -36,10 +36,15 @@ const (
 	reserveSeconds = 1
 )
 
-func TestAdmin_Table(t *testing.T) {
-	c := NewClient(Config{
+func defaultConfig() Config {
+	return Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	})
+		Timeout:     30 * time.Second,
+	}
+}
+
+func TestAdmin_Table(t *testing.T) {
+	c := NewClient(defaultConfig())
 
 	hasTable := func(tables []*replication.AppInfo, tableName string) bool {
 		for _, tb := range tables {
@@ -72,6 +77,7 @@ func TestAdmin_Table(t *testing.T) {
 func TestAdmin_ListTablesTimeout(t *testing.T) {
 	c := NewClient(Config{
 		MetaServers: []string{"0.0.0.0:123456"},
+		Timeout:     500 * time.Millisecond,
 	})
 
 	_, err := c.ListAvailTables()
@@ -82,9 +88,7 @@ func TestAdmin_ListTablesTimeout(t *testing.T) {
 func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	const tableName = "admin_table_test"
 
-	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	})
+	c := NewClient(defaultConfig())
 
 	_, err := c.CreateTable(tableName, 8, replicaCount, make(map[string]string), maxWaitSeconds)
 	if !assert.NoError(t, err) {
@@ -92,9 +96,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	}
 
 	// ensures the created table must be available for read and write
-	rwClient := pegasus.NewClient(pegasus.Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	})
+	rwClient := pegasus.NewClient(defaultConfig())
 	defer func() {
 		err = rwClient.Close()
 		assert.NoError(t, err)
@@ -133,9 +135,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 }
 
 func TestAdmin_GetAppEnvs(t *testing.T) {
-	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	})
+	c := NewClient(defaultConfig())
 
 	tables, err := c.ListAvailTables()
 	assert.Nil(t, err)
