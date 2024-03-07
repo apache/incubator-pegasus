@@ -43,7 +43,9 @@ type Client interface {
 	SetTimeout(timeout time.Duration)
 
 	// `maxWaitSeconds` specify the number of seconds that is spent on waiting for
-	// the table to be created.
+	// the created table to be ready. This method would return error once the table
+	// is still not ready after `maxWaitSeconds`. The administrator should check if
+	// there is something wrong with the table.
 	CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (int32, error)
 
 	// `reserveSeconds` specify the retention interval for a table before it is actually dropped.
@@ -143,6 +145,11 @@ func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, 
 		}
 		time.Sleep(time.Second)
 	}
+
+	if maxWaitSeconds <= 0 {
+		return fmt.Errorf("After %d seconds, table '%s' is still not ready", tableName)
+	}
+
 	return nil
 }
 
