@@ -67,9 +67,8 @@ struct replica_base;
 DSN_DEFINE_uint64(replication,
                   dup_max_allowed_write_size,
                   1 << 20,
-                  "the send operation of duplication exceed this "
-                  "threshold will not be combine, "
-                  "default is 1MB, 0 means no check");
+                  "The maximum piece of request can be add to "
+                  "the duplication batch, 0 means no check");
 DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
 
 /// static definition of mutation_duplicator::creator.
