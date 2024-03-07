@@ -448,9 +448,5 @@ error_code partition_resolver_simple::get_address(int partition_index, /*out*/ r
     }
 }
 
-int partition_resolver_simple::get_partition_index(int partition_count, uint64_t partition_hash)
-{
-    return partition_hash % static_cast<uint64_t>(partition_count);
-}
 } // namespace replication
 } // namespace dsn
