@@ -147,7 +147,7 @@ func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, 
 	}
 
 	if maxWaitSeconds <= 0 {
-		return fmt.Errorf("After %d seconds, table '%s' is still not ready", tableName)
+		return fmt.Errorf("After %d seconds, table '%s' is still not ready", maxWaitSeconds, tableName)
 	}
 
 	return nil
