@@ -630,7 +630,8 @@ private:
     bool _is_manual_emergency_checkpointing{false};
     bool _is_duplication_master{false};
     bool _is_duplication_follower{false};
-    // replica is finding some private logs to load for duplication,avoid unexpected plog gc
+    // Indicate whether the replica is during finding out some private logs to
+    // load for duplication. It useful to prevent plog GCed unexpectedly.
     std::atomic<bool> _is_duplication_plog_checking{false};
 
     // backup
