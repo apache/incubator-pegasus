@@ -58,6 +58,7 @@ void load_mutation::run()
 {
     decree last_decree = _duplicator->progress().last_decree;
     _start_decree = last_decree + 1;
+    _duplicator->set_is_loading(true);
     if (_replica->private_log()->max_commit_on_disk() < _start_decree) {
         // wait 100ms for next try if no mutation was added.
         repeat(100_ms);

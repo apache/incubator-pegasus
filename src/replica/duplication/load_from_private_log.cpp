@@ -200,6 +200,7 @@ void load_from_private_log::replay_log_block()
         [this](int log_bytes_length, mutation_ptr &mu) -> bool {
             auto es = _mutation_batch.add(std::move(mu));
             CHECK_PREFIX_MSG(es.is_ok(), es.description());
+
             METRIC_VAR_INCREMENT_BY(dup_log_read_bytes, log_bytes_length);
             METRIC_VAR_INCREMENT(dup_log_read_mutations);
             return true;
@@ -270,6 +271,9 @@ void load_from_private_log::replay_log_block()
     // case2: !err.is_ok(err.code() == ERR_HANDLE_EOF) and no next file, need commit the last
     // mutations()
     step_down_next_stage(_mutation_batch.last_decree(), _mutation_batch.move_all_mutations());
+
+    // step to ship meaning load has been finished
+    _duplicator->set_is_loading(false);
 }
 
 load_from_private_log::load_from_private_log(replica *r, replica_duplicator *dup)

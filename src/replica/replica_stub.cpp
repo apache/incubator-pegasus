@@ -80,6 +80,7 @@
 #include "utils/rand.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
+#include "duplication/replica_duplicator_manager.h"
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
 #elif defined(DSN_USE_JEMALLOC)
@@ -1396,6 +1397,15 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
     replica_ptr replica = get_replica(id);
     if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY &&
         replica->status() != partition_status::PS_PARTITION_SPLIT) {
+
+        // deal with double close when duplication and balance function running at the same time
+        if (replica->status() == partition_status::PS_INACTIVE && replica->having_dup_loading()) {
+            LOG_INFO(
+                "{}: replica not exists on meta server,and still have dup on it. wait to close",
+                replica->name());
+            return;
+        }
+
         if (replica->status() == partition_status::PS_INACTIVE &&
             dsn_now_ms() - replica->create_time_milliseconds() <
                 FLAGS_gc_memory_replica_interval_ms) {
@@ -2033,6 +2043,8 @@ void replica_stub::close_replica(replica_ptr r)
     gpid id = r->get_gpid();
     std::string name = r->name();
 
+    // deal with duplication conflict with balance
+    r->get_duplication_manager()->remove_all_duplications();
     r->close();
 
     {
@@ -2773,6 +2785,15 @@ void replica_stub::wait_closing_replicas_finished()
                          first_gpid);
         }
     }
+}
+
+bool replica_stub::replica_is_closing_or_closed(gpid id)
+{
+    if (_closing_replicas.find(id) != _closing_replicas.end() ||
+        _closed_replicas.find(id) != _closed_replicas.end()) {
+        return true;
+    }
+    return false;
 }
 
 } // namespace replication

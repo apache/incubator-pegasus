@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <map>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -52,7 +53,7 @@ public:
     // - the app is not assigned with duplication (dup_map.empty())
     void update_duplication_map(const std::map<int32_t, duplication_entry> &new_dup_map)
     {
-        if (_replica->status() != partition_status::PS_PRIMARY || new_dup_map.empty()) {
+        if (new_dup_map.empty() || _replica->status() != partition_status::PS_PRIMARY) {
             remove_all_duplications();
             return;
         }
@@ -91,10 +92,15 @@ public:
     };
     std::vector<dup_state> get_dup_states() const;
 
-private:
-    void sync_duplication(const duplication_entry &ent);
-
-    void remove_non_existed_duplications(const std::map<dupid_t, duplication_entry> &);
+    bool check_still_have_dup_pipeline_loading()
+    {
+        for (auto &kv : _duplications) {
+            if (kv.second->get_is_loading()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     void remove_all_duplications()
     {
@@ -106,6 +112,11 @@ private:
                            enum_to_string(_replica->status()));
         _duplications.clear();
     }
+
+private:
+    void sync_duplication(const duplication_entry &ent);
+
+    void remove_non_existed_duplications(const std::map<dupid_t, duplication_entry> &);
 
 private:
     friend class duplication_sync_timer_test;

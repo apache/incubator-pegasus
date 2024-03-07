@@ -57,6 +57,7 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
       METRIC_VAR_INIT_replica(dup_confirmed_mutations)
 {
     _status = ent.status;
+    _is_loading.store(false);
 
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it->second == invalid_decree) {

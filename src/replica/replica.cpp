@@ -701,6 +701,14 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
     return err;
 }
 
+bool replica::having_dup_loading()
+{
+    if (_duplication_mgr == nullptr) {
+        return false;
+    }
+    return _duplication_mgr->check_still_have_dup_pipeline_loading();
+}
+
 bool replica::access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const
 {
     return !_access_controller->is_enable_ranger_acl() || _access_controller->allowed(msg, ac_type);
