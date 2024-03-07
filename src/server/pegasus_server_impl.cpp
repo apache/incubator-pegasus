@@ -1585,7 +1585,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     //          3, restore_dir is exist
     //
     bool db_exist = true;
-    auto rdb_path = dsn::utils::filesystem::path_combine(data_dir(), "rdb");
+    auto rdb_path = dsn::utils::filesystem::path_combine(data_dir(), replication_app_base::kRdbDir);
     auto duplication_path = duplication_dir();
     if (dsn::utils::filesystem::path_exists(rdb_path)) {
         // only case 1
@@ -1891,7 +1891,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
 
     if (clear_state) {
         // when clean the data dir, please clean the checkpoints first.
-        // otherwise, if the "rdb" is removed but the checkpoints remains,
+        // otherwise, if the replication_app_base::kRdbDir is removed but the checkpoints remains,
         // the storage engine can't be opened again
         for (auto iter = reserved_checkpoints.begin(); iter != reserved_checkpoints.end(); ++iter) {
             std::string chkpt_path =
@@ -2295,7 +2295,8 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
 
         // move learned files from learn_dir to data_dir/rdb
         std::string learn_dir = ::dsn::utils::filesystem::remove_file_name(state.files[0]);
-        std::string new_dir = ::dsn::utils::filesystem::path_combine(data_dir(), "rdb");
+        std::string new_dir =
+            ::dsn::utils::filesystem::path_combine(data_dir(), replication_app_base::kRdbDir);
         if (!::dsn::utils::filesystem::rename_path(learn_dir, new_dir)) {
             LOG_ERROR_PREFIX("rename directory {} to {} failed", learn_dir, new_dir);
             return ::dsn::ERR_FILE_OPERATION_FAILED;

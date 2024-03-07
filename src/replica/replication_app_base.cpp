@@ -120,8 +120,8 @@ error_code replica_app_info::store(const std::string &fname)
         fname, writer.get_buffer(), dsn::utils::FileDataType::kSensitive);
 }
 
-const std::string replication_app_base::kDataDirPostfix = "data";
-const std::string replication_app_base::kRdbPostfix = "rdb";
+const std::string replication_app_base::kDataDir = "data";
+const std::string replication_app_base::kRdbDir = "rdb";
 
 /*static*/
 void replication_app_base::register_storage_engine(const std::string &name, factory f)
@@ -139,7 +139,7 @@ replication_app_base *replication_app_base::new_storage_instance(const std::stri
 replication_app_base::replication_app_base(replica *replica)
     : replica_base(replica), METRIC_VAR_INIT_replica(committed_requests)
 {
-    _dir_data = utils::filesystem::path_combine(replica->dir(), kDataDirPostfix);
+    _dir_data = utils::filesystem::path_combine(replica->dir(), kDataDir);
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
     _dir_backup = utils::filesystem::path_combine(replica->dir(), "backup");
     _dir_bulk_load = utils::filesystem::path_combine(replica->dir(),

@@ -23,7 +23,6 @@
 
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
-#include "common/replication_common.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
 #include "replica/test/mock_utils.h"
@@ -71,7 +70,7 @@ public:
     error_code test_start_downloading()
     {
         const std::string remote_dir = _bulk_loader->get_remote_bulk_load_dir(
-            replication_options::kReplicaAppType, CLUSTER, ROOT_PATH, PID.get_partition_index());
+            APP_NAME, CLUSTER, ROOT_PATH, PID.get_partition_index());
         auto err = _bulk_loader->start_download(remote_dir, PROVIDER);
         _bulk_loader->tracker()->wait_outstanding_tasks();
         return err;
@@ -196,7 +195,7 @@ public:
     void
     create_bulk_load_request(bulk_load_status::type status, ballot b, int32_t downloading_count = 0)
     {
-        _req.app_name = replication_options::kReplicaAppType;
+        _req.app_name = APP_NAME;
         _req.ballot = b;
         _req.cluster_name = CLUSTER;
         _req.meta_bulk_load_status = status;
@@ -216,7 +215,7 @@ public:
 
     void create_group_bulk_load_request(bulk_load_status::type status, ballot b)
     {
-        _group_req.app_name = replication_options::kReplicaAppType;
+        _group_req.app_name = APP_NAME;
         _group_req.meta_bulk_load_status = status;
         _group_req.config.status = partition_status::PS_SECONDARY;
         _group_req.config.ballot = b;
@@ -405,6 +404,7 @@ public:
     file_meta _file_meta;
     bulk_load_metadata _metadata;
 
+    std::string APP_NAME = "replica_bulk_loader_test";
     std::string CLUSTER = "cluster";
     std::string PROVIDER = "local_service";
     std::string ROOT_PATH = "bulk_load_root";
