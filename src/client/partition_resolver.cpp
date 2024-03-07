@@ -45,6 +45,11 @@ partition_resolver_ptr partition_resolver::get_resolver(const char *cluster_name
     return partition_resolver_manager::instance().find_or_create(cluster_name, meta_list, app_name);
 }
 
+int partition_resolver::get_partition_index(int partition_count, uint64_t partition_hash)
+{
+    return partition_hash % static_cast<uint64_t>(partition_count);
+}
+
 DEFINE_TASK_CODE(LPC_RPC_DELAY_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 static inline bool error_retry(error_code err)

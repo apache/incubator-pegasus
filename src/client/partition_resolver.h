@@ -56,6 +56,16 @@ public:
                  const std::vector<dsn::rpc_address> &meta_list,
                  const char *app_name);
 
+    /**
+     * get zero-based partition index
+     *
+     * \param partition_count number of partitions.
+     * \param partition_hash  the partition hash.
+     *
+     * \return zero-based partition index.
+     */
+    static int get_partition_index(int partition_count, uint64_t partition_hash);
+
     template <typename TReq, typename TCallback>
     dsn::rpc_response_task_ptr call_op(dsn::task_code code,
                                        TReq &&request,
@@ -130,17 +140,6 @@ protected:
      this is usually to trigger new round of address resolve
      */
     virtual void on_access_failure(int partition_index, error_code err) = 0;
-
-    /**
-     * get zero-based partition index
-     *
-     * \param partition_count number of partitions.
-     * \param partition_hash  the partition hash.
-     *
-     * \return zero-based partition index.
-     */
-
-    virtual int get_partition_index(int partition_count, uint64_t partition_hash) = 0;
 
     std::string _cluster_name;
     std::string _app_name;

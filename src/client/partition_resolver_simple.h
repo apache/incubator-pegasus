@@ -59,8 +59,6 @@ public:
 
     virtual void on_access_failure(int partition_index, error_code err) override;
 
-    virtual int get_partition_index(int partition_count, uint64_t partition_hash) override;
-
     int get_partition_count() const { return _app_partition_count; }
 
 private:
