@@ -36,9 +36,14 @@ import (
 type Client interface {
 	Close() error
 
+	// The timeout specify the max duration that is spent on an client request. For
+	// example, if the client is based on RPC, it would be the timeout for the RPC
+	// request.
 	GetTimeout() time.Duration
 	SetTimeout(timeout time.Duration)
 
+	// `maxWaitSeconds` specify the max duration that is spent on waiting for the table
+	// to be created.
 	CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (int32, error)
 
 	DropTable(tableName string, reserveSeconds int64) error
