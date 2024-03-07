@@ -1930,7 +1930,7 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
 
     pid = gpid(app_id, pidx);
     replica_app_info rai(&ai);
-    const auto ai_path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
+    const auto ai_path = utils::filesystem::path_combine(dir, "replica");
     auto err = rai.load(ai_path);
     if (ERR_OK != err) {
         hint_message = fmt::format("load app-info from '{}' failed, err = {}", ai_path, err);
