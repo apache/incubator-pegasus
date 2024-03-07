@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "backup_types.h"
+#include "common/replication_common.h"
 #include "compaction_operation.h"
 #include "info_collector_app.h"
 #include "meta/meta_service_app.h"

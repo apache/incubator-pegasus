@@ -21,6 +21,7 @@
 #include <unordered_map>
 
 #include "common/gpid.h"
+#include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"

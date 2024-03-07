@@ -23,6 +23,7 @@
 
 #include "common/duplication_common.h"
 #include "common/gpid.h"
+#include "common/replication_common.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "duplication_test_base.h"

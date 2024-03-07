@@ -20,6 +20,7 @@
 #include <thread>
 #include <vector>
 
+#include "common/replication_common.h"
 #include "gtest/gtest.h"
 #include "replication_service_test_app.h"
 #include "runtime/app_model.h"

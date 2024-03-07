@@ -21,6 +21,7 @@
 #include <thread>
 #include <vector>
 
+#include "common/replication_common.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
 #include "utils/error_code.h"

@@ -23,6 +23,7 @@
 
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
+#include "common/replication_common.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
 #include "replica/test/mock_utils.h"

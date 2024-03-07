@@ -35,6 +35,7 @@
 
 #include "case.h"
 #include "checker.h"
+#include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "meta/meta_server_failure_detector.h"
