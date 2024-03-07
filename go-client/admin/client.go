@@ -42,10 +42,11 @@ type Client interface {
 	GetTimeout() time.Duration
 	SetTimeout(timeout time.Duration)
 
-	// `maxWaitSeconds` specify the max duration that is spent on waiting for the table
-	// to be created.
+	// `maxWaitSeconds` specify the number of seconds that is spent on waiting for
+	// the table to be created.
 	CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (int32, error)
 
+	// `reserveSeconds` specify the retention interval for a table before it is actually dropped.
 	DropTable(tableName string, reserveSeconds int64) error
 
 	// Empty `args` means "list all available tables"; Otherwise, the only parameter would
