@@ -43,6 +43,8 @@ type Client interface {
 
 	DropTable(tableName string, reserveSeconds int64) error
 
+	// Empty `args` means "list all available tables"; Otherwise, the only parameter would
+	// specify the status of the returned tables.
 	ListTables(args ...interface{}) ([]*replication.AppInfo, error)
 }
 
@@ -76,9 +78,10 @@ func (c *rpcBasedClient) SetTimeout(timeout time.Duration) {
 	c.rpcTimeout = timeout
 }
 
-// go-client/session/admin_rpc_types.go
-// `callback` always accepts non-nil `resp`.
-func (c *rpcBasedClient) callMeta(methodName string, req interface{}, callback func(iresp interface{})) error {
+// Call RPC methods(go-client/session/admin_rpc_types.go) of session.MetaManager by reflection.
+// `req` and `resp` are the request and response structs of RPC. `callback` always accepts
+// non-nil `resp`.
+func (c *rpcBasedClient) callMeta(methodName string, req interface{}, callback func(resp interface{})) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.rpcTimeout)
 	defer cancel()
 

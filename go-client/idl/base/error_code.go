@@ -149,6 +149,7 @@ func (e *baseError) Error() string {
 	return e.message
 }
 
+// Convert ErrorCode to error.
 func (ec *ErrorCode) AsError() error {
 	if ec == nil || ec.Errno == ERR_OK.String() {
 		return nil
@@ -158,8 +159,9 @@ func (ec *ErrorCode) AsError() error {
 	}
 }
 
-func GetResponseError(iresp interface{}) error {
-	result := reflect.ValueOf(iresp).MethodByName("GetErr").Call([]reflect.Value{})
+// `resp` is the thrift-generated response struct of RPC.
+func GetResponseError(resp interface{}) error {
+	result := reflect.ValueOf(resp).MethodByName("GetErr").Call([]reflect.Value{})
 	iec := result[0].Interface()
 	if iec == nil {
 		return nil
