@@ -23,7 +23,6 @@
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
-#include <algorithm>
 #include <memory>
 #include <tuple>
 #include <utility>
