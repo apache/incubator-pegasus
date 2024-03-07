@@ -22,9 +22,9 @@
 #include <gtest/gtest_prod.h>
 
 #include "base/idl_utils.h"
+#include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
 #include "logging_utils.h"
-#include "meta_store.h"
 #include "pegasus_server_impl.h"
 #include "pegasus_write_service.h"
 #include "rocksdb_wrapper.h"

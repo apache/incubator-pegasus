@@ -476,9 +476,6 @@ private:
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
-    // Column family names.
-    static const std::string DATA_COLUMN_FAMILY_NAME;
-    static const std::string META_COLUMN_FAMILY_NAME;
 
     dsn::gpid _gpid;
     std::string _primary_address;
