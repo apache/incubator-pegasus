@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <deque>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
@@ -30,14 +31,36 @@
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
 
 namespace dsn {
 namespace replication {
+
+TEST(DDLClientTest, ValidateAppName)
+{
+    struct test_case
+    {
+        std::string app_name;
+        bool valid;
+    } tests[] = {{"", false},
+                 {"abc!", false},
+                 {"abc-", false},
+                 {"abc@", false},
+                 {"abc", true},
+                 {"abc1", true},
+                 {"abc_", true},
+                 {"abc.", true},
+                 {"abc:", true}};
+    for (const auto &test : tests) {
+        CHECK_EQ(test.valid, replication_ddl_client::validate_app_name(test.app_name).is_ok());
+    }
+}
 
 TEST(DDLClientTest, RetryMetaRequest)
 {

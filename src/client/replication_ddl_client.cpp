@@ -70,16 +70,18 @@ DSN_DEFINE_uint32(ddl_client,
 namespace dsn {
 namespace replication {
 
-#define VALIDATE_TABLE_NAME(app_name)                                                              \
-    do {                                                                                           \
-        if (app_name.empty() ||                                                                    \
-            !std::all_of(app_name.cbegin(),                                                        \
-                         app_name.cend(),                                                          \
-                         (bool (*)(int))replication_ddl_client::valid_app_char))                   \
-            return FMT_ERR(ERR_INVALID_PARAMETERS, "Invalid name. Only 0-9a-zA-Z.:_ are valid!");  \
-    } while (false)
-
 using tp_output_format = ::dsn::utils::table_printer::output_format;
+
+error_s replication_ddl_client::validate_app_name(const std::string &app_name)
+{
+    if (app_name.empty() || !std::all_of(app_name.cbegin(), app_name.cend(), [](const char c) {
+            return static_cast<bool>(std::isalnum(c)) || c == '_' || c == '.' || c == ':';
+        })) {
+        return FMT_ERR(ERR_INVALID_PARAMETERS, "Invalid name: Only 0-9a-zA-Z.:_ are valid.");
+    }
+
+    return error_s::ok();
+}
 
 replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_address> &meta_servers)
 {
@@ -164,21 +166,8 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
         return ERR_INVALID_PARAMETERS;
     }
 
-    if (app_name.empty() ||
-        !std::all_of(app_name.cbegin(),
-                     app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        std::cout << "create app " << app_name << " failed: invalid app_name" << std::endl;
-        return ERR_INVALID_PARAMETERS;
-    }
-
-    if (app_type.empty() ||
-        !std::all_of(app_type.cbegin(),
-                     app_type.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        std::cout << "create app " << app_name << " failed: invalid app_type" << std::endl;
-        return ERR_INVALID_PARAMETERS;
-    }
+    RETURN_EC_NOT_OK_MSG(validate_app_name(app_name), "invalid app_name: '{}'", app_name);
+    RETURN_EC_NOT_OK_MSG(validate_app_name(app_type), "invalid app_type: '{}'", app_type);
 
     auto req = std::make_shared<configuration_create_app_request>();
     req->app_name = app_name;
@@ -214,11 +203,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
 
 dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, int reserve_seconds)
 {
-    if (app_name.empty() ||
-        !std::all_of(app_name.cbegin(),
-                     app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char))
-        return ERR_INVALID_PARAMETERS;
+    RETURN_EC_NOT_OK_MSG(validate_app_name(app_name), "invalid app_name: '{}'", app_name);
 
     auto req = std::make_shared<configuration_drop_app_request>();
     req->app_name = app_name;
@@ -241,10 +226,8 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
 
 dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::string &new_app_name)
 {
-    if (!std::all_of(new_app_name.cbegin(),
-                     new_app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char))
-        return ERR_INVALID_PARAMETERS;
+    RETURN_EC_NOT_OK_MSG(
+        validate_app_name(new_app_name), "invalid new_app_name: '{}'", new_app_name);
 
     auto req = std::make_shared<configuration_recall_app_request>();
     req->app_id = app_id;
@@ -824,11 +807,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
                                                  int32_t &partition_count,
                                                  std::vector<partition_configuration> &partitions)
 {
-    if (app_name.empty() ||
-        !std::all_of(app_name.cbegin(),
-                     app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char))
-        return ERR_INVALID_PARAMETERS;
+    RETURN_EC_NOT_OK_MSG(validate_app_name(app_name), "invalid app_name: '{}'", app_name);
 
     auto req = std::make_shared<query_cfg_request>();
     req->app_name = app_name;
@@ -965,21 +944,10 @@ dsn::error_code replication_ddl_client::do_restore(const std::string &backup_pro
                                                    bool skip_bad_partition,
                                                    const std::string &restore_path)
 {
-    if (old_app_name.empty() ||
-        !std::all_of(old_app_name.cbegin(),
-                     old_app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        std::cout << "restore app " << old_app_name << " failed: invalid old_app_name" << std::endl;
-        return ERR_INVALID_PARAMETERS;
-    }
-
-    if (new_app_name.empty() ||
-        !std::all_of(new_app_name.cbegin(),
-                     new_app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        std::cout << "restore app " << new_app_name << " failed: invalid new_app_name" << std::endl;
-        return ERR_INVALID_PARAMETERS;
-    }
+    RETURN_EC_NOT_OK_MSG(
+        validate_app_name(old_app_name), "invalid old_app_name: '{}'", old_app_name);
+    RETURN_EC_NOT_OK_MSG(
+        validate_app_name(new_app_name), "invalid new_app_name: '{}'", new_app_name);
 
     auto req = std::make_shared<configuration_restore_request>();
 
@@ -1396,11 +1364,6 @@ error_with<duplication_query_response> replication_ddl_client::query_dup(std::st
     return call_rpc_sync(duplication_query_rpc(std::move(req), RPC_CM_QUERY_DUPLICATION));
 }
 
-bool replication_ddl_client::valid_app_char(int c)
-{
-    return (bool)std::isalnum(c) || c == '_' || c == '.' || c == ':';
-}
-
 namespace {
 
 bool need_retry(uint32_t attempt_count, const dsn::error_code &err)
@@ -1753,8 +1716,10 @@ replication_ddl_client::set_max_replica_count(const std::string &app_name,
 error_with<configuration_rename_app_response>
 replication_ddl_client::rename_app(const std::string &old_app_name, const std::string &new_app_name)
 {
-    VALIDATE_TABLE_NAME(old_app_name);
-    VALIDATE_TABLE_NAME(new_app_name);
+    RETURN_ES_NOT_OK_MSG(
+        validate_app_name(old_app_name), "invalid old_app_name: '{}'", old_app_name);
+    RETURN_ES_NOT_OK_MSG(
+        validate_app_name(new_app_name), "invalid new_app_name: '{}'", new_app_name);
 
     auto req = std::make_unique<configuration_rename_app_request>();
     req->__set_old_app_name(old_app_name);
