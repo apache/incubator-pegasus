@@ -59,14 +59,14 @@ func TestAdmin_Table(t *testing.T) {
 	assert.Nil(t, err)
 
 	// no such table after deletion
-	tables, err := c.ListAvailTables()
+	tables, err := c.ListTables()
 	assert.Nil(t, err)
 	assert.False(t, hasTable(tables, "admin_table_test"))
 
 	_, err = c.CreateTable("admin_table_test", 16, replicaCount, make(map[string]string), maxWaitSeconds)
 	assert.Nil(t, err)
 
-	tables, err = c.ListAvailTables()
+	tables, err = c.ListTables()
 	assert.Nil(t, err)
 	assert.True(t, hasTable(tables, "admin_table_test"))
 
@@ -80,7 +80,7 @@ func TestAdmin_ListTablesTimeout(t *testing.T) {
 		Timeout:     500 * time.Millisecond,
 	})
 
-	_, err := c.ListAvailTables()
+	_, err := c.ListTables()
 	assert.Equal(t, err, context.DeadlineExceeded)
 }
 
@@ -139,7 +139,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 func TestAdmin_GetAppEnvs(t *testing.T) {
 	c := NewClient(defaultConfig())
 
-	tables, err := c.ListAvailTables()
+	tables, err := c.ListTables()
 	assert.Nil(t, err)
 	for _, tb := range tables {
 		assert.Empty(t, tb.Envs)
