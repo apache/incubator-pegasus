@@ -982,8 +982,12 @@ void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
     std::vector<std::string> data_dir_tags;
     std::string err_msg;
     if (disk_str.empty() ||
-        !replication_options::get_data_dir_and_tag(
-            disk_str, "", "replica", data_dirs, data_dir_tags, err_msg)) {
+        !replication_options::get_data_dir_and_tag(disk_str,
+                                                   "",
+                                                   replication_options::kReplicaAppType,
+                                                   data_dirs,
+                                                   data_dir_tags,
+                                                   err_msg)) {
         resp.err = ERR_INVALID_PARAMETERS;
         resp.__set_err_hint(fmt::format("invalid str({}), err_msg: {}", disk_str, err_msg));
         return;
@@ -1927,7 +1931,7 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
 
     dsn::app_info info;
     replica_app_info info2(&info);
-    std::string path = utils::filesystem::path_combine(dir, replica::kAppInfo);
+    std::string path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
     auto err = info2.load(path);
     if (ERR_OK != err) {
         LOG_ERROR("load app-info from {} failed, err = {}", path, err);

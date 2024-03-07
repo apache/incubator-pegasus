@@ -38,6 +38,7 @@
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
+#include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "consensus_types.h"
 #include "duplication/replica_duplicator_manager.h"
@@ -265,15 +266,13 @@ METRIC_DEFINE_counter(replica,
 namespace dsn {
 namespace replication {
 
-const std::string replica::kAppInfo = ".app-info";
-
 replica::replica(replica_stub *stub,
                  gpid gpid,
                  const app_info &app,
                  dir_node *dn,
                  bool need_restore,
                  bool is_duplication_follower)
-    : serverlet<replica>("replica"),
+    : serverlet<replica>(replication_options::kReplicaAppType.c_str()),
       replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str), app.app_name),
       _app_info(app),
       _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
@@ -693,7 +692,8 @@ uint32_t replica::query_data_version() const
 error_code replica::store_app_info(app_info &info, const std::string &path)
 {
     replica_app_info new_info((app_info *)&info);
-    const auto &info_path = path.empty() ? utils::filesystem::path_combine(_dir, kAppInfo) : path;
+    const auto &info_path =
+        path.empty() ? utils::filesystem::path_combine(_dir, replica_app_info::kAppInfo) : path;
     auto err = new_info.store(info_path);
     if (dsn_unlikely(err != ERR_OK)) {
         LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);

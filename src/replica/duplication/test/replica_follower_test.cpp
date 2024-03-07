@@ -23,6 +23,7 @@
 
 #include "common/duplication_common.h"
 #include "common/gpid.h"
+#include "common/replication_common.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "duplication_test_base.h"
@@ -48,7 +49,7 @@ public:
     {
         _app_info.app_id = 2;
         _app_info.app_name = "follower";
-        _app_info.app_type = "replica";
+        _app_info.app_type = replication_options::kReplicaAppType;
         _app_info.is_stateful = true;
         _app_info.max_replica_count = 3;
         _app_info.partition_count = 8;

@@ -286,8 +286,6 @@ public:
     METRIC_DEFINE_INCREMENT(backup_file_upload_successful_count)
     METRIC_DEFINE_INCREMENT_BY(backup_file_upload_total_bytes)
 
-    static const std::string kAppInfo;
-
 protected:
     // this method is marked protected to enable us to mock it in unit tests.
     virtual decree max_gced_decree_no_lock() const;

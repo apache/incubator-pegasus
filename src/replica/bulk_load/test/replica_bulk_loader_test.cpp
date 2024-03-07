@@ -404,7 +404,7 @@ public:
     file_meta _file_meta;
     bulk_load_metadata _metadata;
 
-    std::string APP_NAME = "replica";
+    std::string APP_NAME = "replica_bulk_loader_test";
     std::string CLUSTER = "cluster";
     std::string PROVIDER = "local_service";
     std::string ROOT_PATH = "bulk_load_root";

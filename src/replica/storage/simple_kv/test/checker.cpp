@@ -35,6 +35,7 @@
 
 #include "case.h"
 #include "checker.h"
+#include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "meta/meta_server_failure_detector.h"
@@ -186,7 +187,8 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
                 std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
             FLAGS_partition_guardian_type = "checker_partition_guardian";
             _meta_servers.push_back(meta_app);
-        } else if (app->info().type == "replica") {
+        } else if (app->info().type ==
+                   dsn::replication::replication_options::kReplicaAppType.c_str()) {
             replication_service_app *replica_app = (replication_service_app *)app;
             replica_app->_stub->set_replica_state_subscriber_for_test(
                 std::bind(&test_checker::on_replica_state_change,

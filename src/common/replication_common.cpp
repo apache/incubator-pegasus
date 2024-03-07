@@ -109,6 +109,8 @@ DSN_DEFINE_string(replication,
 
 namespace dsn {
 namespace replication {
+const std::string replication_options::kRepsDir = "reps";
+const std::string replication_options::kReplicaAppType = "replica";
 
 replication_options::~replication_options() {}
 
@@ -276,7 +278,7 @@ replication_options::get_data_dir_and_tag(const std::string &config_dirs_str,
     for (unsigned i = 0; i < dirs.size(); ++i) {
         const std::string &dir = dirs[i];
         LOG_INFO("data_dirs[{}] = {}, tag = {}", i + 1, dir, dir_tags[i]);
-        data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
+        data_dirs.push_back(utils::filesystem::path_combine(dir, kRepsDir));
         data_dir_tags.push_back(dir_tags[i]);
     }
     return true;

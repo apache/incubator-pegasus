@@ -125,7 +125,7 @@ public:
 
     void register_service()
     {
-        _app->register_storage_engine("replica",
+        _app->register_storage_engine(replication_options::kReplicaAppType,
                                       replication_app_base::create<mock_replication_app_base>);
     }
 
@@ -236,7 +236,7 @@ create_mock_replica(replica_stub *stub, int app_id = 1, int partition_index = 1)
 {
     gpid pid(app_id, partition_index);
     app_info app_info;
-    app_info.app_type = "replica";
+    app_info.app_type = replication_options::kReplicaAppType;
     app_info.app_name = "temp";
 
     auto *dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, pid);
