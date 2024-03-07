@@ -246,7 +246,7 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
     do {                                                                                           \
         const ::dsn::error_s &_s = (s);                                                            \
         if (dsn_unlikely(!_s)) {                                                                   \
-            fmt::print(stderr, "{}: {}", _s.description(), fmt::format(__VA_ARGS__));              \
+            fmt::print(stderr, "{}: {}\n", _s.description(), fmt::format(__VA_ARGS__));            \
             return _s.code();                                                                      \
         }                                                                                          \
     } while (false)
