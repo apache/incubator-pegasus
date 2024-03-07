@@ -299,6 +299,11 @@ public:
     void on_nfs_get_file_size(const ::dsn::service::get_file_size_request &request,
                               ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply);
 
+    static bool validate_replica_dir(const std::string &dir,
+                                     app_info &ai,
+                                     gpid &pid,
+                                     std::string &hint_message);
+
 private:
     enum replica_node_state
     {

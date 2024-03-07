@@ -1904,57 +1904,73 @@ replica *replica_stub::new_replica(gpid gpid,
     return rep;
 }
 
+bool replica_stub::validate_replica_dir(const std::string &dir,
+                                        app_info &ai,
+                                        gpid &pid,
+                                        std::string &hint_message)
+{
+    if (!utils::filesystem::directory_exists(dir)) {
+        hint_message = fmt::format("replica dir '{}' not exist", dir);
+        return false;
+    }
+
+    char splitters[] = {'\\', '/', 0};
+    const auto name = utils::get_last_component(dir, splitters);
+    if (name.empty()) {
+        hint_message = fmt::format("invalid replica dir '{}'", dir);
+        return false;
+    }
+
+    char app_type[128] = {0};
+    int32_t app_id, pidx;
+    if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
+        hint_message = fmt::format("invalid replica dir '{}'", dir);
+        return false;
+    }
+
+    pid = gpid(app_id, pidx);
+    replica_app_info rai(&ai);
+    const auto ai_path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
+    const auto err = rai.load(ai_path);
+    if (ERR_OK != err) {
+        hint_message = fmt::format("load app-info from '{}' failed, err = {}", ai_path, err);
+        return false;
+    }
+
+    if (ai.app_type != app_type) {
+        hint_message = fmt::format("unmatched app type '{}' for '{}'", ai.app_type, ai_path);
+        return false;
+    }
+
+    if (ai.partition_count < pidx) {
+        hint_message = fmt::format(
+            "partition[{}], count={}, this replica may be partition split garbage partition, "
+            "ignore it",
+            pid,
+            ai.partition_count);
+        return false;
+    }
+
+    return true;
+}
+
 replica *replica_stub::load_replica(dir_node *dn, const char *dir)
 {
     FAIL_POINT_INJECT_F("mock_replica_load",
                         [&](absl::string_view) -> replica * { return nullptr; });
 
-    char splitters[] = {'\\', '/', 0};
-    std::string name = utils::get_last_component(std::string(dir), splitters);
-    if (name.empty()) {
-        LOG_ERROR("invalid replica dir {}", dir);
+    app_info ai;
+    gpid pid;
+    std::string hint_message;
+    if (!validate_replica_dir(dir, ai, pid, hint_message)) {
+        LOG_ERROR("invalid replica dir '{}', hint: {}", dir, hint_message);
         return nullptr;
     }
 
-    char app_type[128];
-    int32_t app_id, pidx;
-    if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
-        LOG_ERROR("invalid replica dir {}", dir);
-        return nullptr;
-    }
-
-    gpid pid(app_id, pidx);
-    if (!utils::filesystem::directory_exists(dir)) {
-        LOG_ERROR("replica dir {} not exist", dir);
-        return nullptr;
-    }
-
-    dsn::app_info info;
-    replica_app_info info2(&info);
-    std::string path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
-    auto err = info2.load(path);
-    if (ERR_OK != err) {
-        LOG_ERROR("load app-info from {} failed, err = {}", path, err);
-        return nullptr;
-    }
-
-    if (info.app_type != app_type) {
-        LOG_ERROR("unmatched app type {} for {}", info.app_type, path);
-        return nullptr;
-    }
-
-    if (info.partition_count < pidx) {
-        LOG_ERROR("partition[{}], count={}, this replica may be partition split garbage partition, "
-                  "ignore it",
-                  pid,
-                  info.partition_count);
-        return nullptr;
-    }
-
-    // The replica's directory must exists when creating a replica.
-    CHECK_EQ(dir, dn->replica_dir(app_type, pid));
-    auto *rep = new replica(this, pid, info, dn, false);
-    err = rep->initialize_on_load();
+    // The replica's directory must exist when creating a replica.
+    CHECK_EQ(dir, dn->replica_dir(ai.app_type, pid));
+    auto *rep = new replica(this, pid, ai, dn, false);
+    const auto err = rep->initialize_on_load();
     if (err != ERR_OK) {
         LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
         rep->close();
