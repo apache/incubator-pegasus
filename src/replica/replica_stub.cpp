@@ -1930,8 +1930,8 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
 
     pid = gpid(app_id, pidx);
     replica_app_info rai(&ai);
-    const auto ai_path = utils::filesystem::path_combine(dir, replica::kAppInfo);
-    auto err = rai.load(ai_path);
+    const auto ai_path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
+    const auto err = rai.load(ai_path);
     if (ERR_OK != err) {
         hint_message = fmt::format("load app-info from '{}' failed, err = {}", ai_path, err);
         return false;
@@ -1970,7 +1970,7 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
     // The replica's directory must exist when creating a replica.
     CHECK_EQ(dir, dn->replica_dir(ai.app_type, pid));
     auto *rep = new replica(this, pid, ai, dn, false);
-    auto err = rep->initialize_on_load();
+    const auto err = rep->initialize_on_load();
     if (err != ERR_OK) {
         LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
         rep->close();
