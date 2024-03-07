@@ -43,8 +43,7 @@ type Client interface {
 
 	DropTable(tableName string, reserveSeconds int64) error
 
-	ListTables(status replication.AppStatus) ([]*replication.AppInfo, error)
-	ListAvailTables() ([]*replication.AppInfo, error)
+	ListTables(args ...interface{}) ([]*replication.AppInfo, error)
 }
 
 type Config struct {
@@ -79,7 +78,7 @@ func (c *rpcBasedClient) SetTimeout(timeout time.Duration) {
 
 // go-client/session/admin_rpc_types.go
 // `callback` always accepts non-nil `resp`.
-func (c *rpcBasedClient) callMeta(methodName string, req interface{}, callback func(resp interface{})) error {
+func (c *rpcBasedClient) callMeta(methodName string, req interface{}, callback func(iresp interface{})) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.rpcTimeout)
 	defer cancel()
 
@@ -121,7 +120,7 @@ func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, 
 			return err
 		}
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return fmt.Errorf("QueryConfig failed: %s", resp.GetErr().AsError())
+			return fmt.Errorf("QueryConfig failed: %s", base.GetResponseError(resp))
 		}
 
 		readyCount := int32(0)
@@ -160,7 +159,7 @@ func (c *rpcBasedClient) CreateTable(tableName string, partitionCount int32, rep
 	err := c.callMeta("CreateApp", req, func(iresp interface{}) {
 		resp := iresp.(*admin.ConfigurationCreateAppResponse)
 		appID = resp.Appid
-		respErr = resp.GetErr().AsError()
+		respErr = base.GetResponseError(resp)
 	})
 	if err != nil {
 		return appID, err
@@ -185,7 +184,7 @@ func (c *rpcBasedClient) DropTable(tableName string, reserveSeconds int64) error
 
 	var respErr error
 	err := c.callMeta("DropApp", req, func(iresp interface{}) {
-		respErr = iresp.(*admin.ConfigurationDropAppResponse).GetErr()
+		respErr = base.GetResponseError(iresp.(*admin.ConfigurationDropAppResponse))
 	})
 	if err != nil {
 		return err
@@ -194,7 +193,7 @@ func (c *rpcBasedClient) DropTable(tableName string, reserveSeconds int64) error
 	return respErr
 }
 
-func (c *rpcBasedClient) ListTables(status replication.AppStatus) ([]*replication.AppInfo, error) {
+func (c *rpcBasedClient) listTables(status replication.AppStatus) ([]*replication.AppInfo, error) {
 	req := &admin.ConfigurationListAppsRequest{
 		Status: status,
 	}
@@ -204,7 +203,7 @@ func (c *rpcBasedClient) ListTables(status replication.AppStatus) ([]*replicatio
 	err := c.callMeta("ListApps", req, func(iresp interface{}) {
 		resp := iresp.(*admin.ConfigurationListAppsResponse)
 		tables = resp.Infos
-		respErr = resp.GetErr()
+		respErr = base.GetResponseError(resp)
 	})
 	if err != nil {
 		return tables, err
@@ -212,6 +211,10 @@ func (c *rpcBasedClient) ListTables(status replication.AppStatus) ([]*replicatio
 
 	return tables, respErr
 }
-func (c *rpcBasedClient) ListAvailTables() ([]*replication.AppInfo, error) {
-	return c.ListTables(replication.AppStatus_AS_AVAILABLE)
+
+func (c *rpcBasedClient) ListTables(args ...interface{}) ([]*replication.AppInfo, error) {
+	if len(args) == 0 {
+		return c.listTables(replication.AppStatus_AS_AVAILABLE)
+	}
+	return c.listTables(args[0].(replication.AppStatus))
 }

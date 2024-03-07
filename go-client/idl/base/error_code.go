@@ -21,6 +21,7 @@ package base
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/apache/thrift/lib/go/thrift"
 )
@@ -152,7 +153,19 @@ func (ec *ErrorCode) AsError() error {
 	if ec == nil || ec.Errno == ERR_OK.String() {
 		return nil
 	}
-	return &baseError(Message:ec.Errno)
+	return &baseError{
+		message: ec.Errno,
+	}
+}
+
+func GetResponseError(iresp interface{}) error {
+	result := reflect.ValueOf(iresp).MethodByName("GetErr").Call([]reflect.Value{})
+	iec := result[0].Interface()
+	if iec == nil {
+		return nil
+	}
+
+	return iec.(*ErrorCode).AsError()
 }
 
 //go:generate enumer -type=RocksDBErrCode -output=rocskdb_err_string.go
