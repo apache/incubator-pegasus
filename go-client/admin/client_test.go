@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apache/incubator-pegasus/go-client/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +55,7 @@ func timeoutConfig() Config {
 	}
 }
 
-func testAdmin_Timeout(t *testing.T, exec func(c *admin.Client) error) {
+func testAdmin_Timeout(t *testing.T, exec func(c *Client) error) {
 	c := NewClient(timeoutConfig())
 	assert.Equal(t, context.DeadlineExceeded, exec(c))
 }
@@ -92,7 +92,7 @@ func TestAdmin_Table(t *testing.T) {
 }
 
 func TestAdmin_ListTablesTimeout(t *testing.T) {
-	testAdmin_Timeout(t, func(c *admin.Client) (err, error) {
+	testAdmin_Timeout(t, func(c *Client) (err, error) {
 		_, err := c.ListTables()
 	})
 }
@@ -182,7 +182,7 @@ func TestAdmin_ListNodes(t *testing.T) {
 }
 
 func TestAdmin_ListNodesTimeout(t *testing.T) {
-	testAdmin_Timeout(t, func(c *admin.Client) (err, error) {
+	testAdmin_Timeout(t, func(c *Client) (err, error) {
 		_, err := c.ListNodes()
 	})
 }
