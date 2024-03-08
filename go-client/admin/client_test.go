@@ -92,8 +92,9 @@ func TestAdmin_Table(t *testing.T) {
 }
 
 func TestAdmin_ListTablesTimeout(t *testing.T) {
-	testAdmin_Timeout(t, func(c Client) (err error) {
+	testAdmin_Timeout(t, func(c Client) error {
 		_, err := c.ListTables()
+		return err
 	})
 }
 
@@ -170,7 +171,7 @@ func TestAdmin_ListNodes(t *testing.T) {
 	// Compare slice length.
 	assert.Equal(t, len(expectedReplicaServers), len(nodes))
 
-	actualReplicaServers := make([]int, len(nodes))
+	actualReplicaServers := make([]string, len(nodes))
 	for i, node := range nodes {
 		// Each node should be alive.
 		assert.Equal(t, admin.NodeStatus_NS_ALIVE, node.Status)
@@ -182,7 +183,8 @@ func TestAdmin_ListNodes(t *testing.T) {
 }
 
 func TestAdmin_ListNodesTimeout(t *testing.T) {
-	testAdmin_Timeout(t, func(c Client) (err error) {
+	testAdmin_Timeout(t, func(c Client) error {
 		_, err := c.ListNodes()
+		return err
 	})
 }
