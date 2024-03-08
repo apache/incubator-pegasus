@@ -252,6 +252,7 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
 
         if ((const char *)header != buffers[0].data()) {
             memcpy(ptr, (const void *)header, sizeof(message_header));
+            i += sizeof(message_header);
             ptr += sizeof(message_header);
         }
 
