@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	"github.com/stretchr/testify/assert"
@@ -41,6 +42,22 @@ func defaultConfig() Config {
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 		Timeout:     30 * time.Second,
 	}
+}
+
+func defaultReplicaServers() []string {
+	return []string{"0.0.0.0:34801", "0.0.0.0:34802", "0.0.0.0:34803"}
+}
+
+func timeoutConfig() Config {
+	return Config{
+		MetaServers: []string{"0.0.0.0:123456"},
+		Timeout:     500 * time.Millisecond,
+	}
+}
+
+func testAdmin_Timeout(t *testing.T, exec func(c *admin.Client) error) {
+	c := NewClient(timeoutConfig())
+	assert.Equal(t, context.DeadlineExceeded, exec(c))
 }
 
 func TestAdmin_Table(t *testing.T) {
@@ -75,13 +92,9 @@ func TestAdmin_Table(t *testing.T) {
 }
 
 func TestAdmin_ListTablesTimeout(t *testing.T) {
-	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:123456"},
-		Timeout:     500 * time.Millisecond,
+	testAdmin_Timeout(t, func(c *admin.Client) (err, error) {
+		_, err := c.ListTables()
 	})
-
-	_, err := c.ListTables()
-	assert.Equal(t, err, context.DeadlineExceeded)
 }
 
 // Ensures after the call `CreateTable` ends, the table must be right available to access.
@@ -144,4 +157,32 @@ func TestAdmin_GetAppEnvs(t *testing.T) {
 	for _, tb := range tables {
 		assert.Empty(t, tb.Envs)
 	}
+}
+
+func TestAdmin_ListNodes(t *testing.T) {
+	c := NewClient(defaultConfig())
+
+	nodes, err := c.ListNodes()
+	assert.Nil(t, err)
+
+	expectedReplicaServers := defaultReplicaServers()
+
+	// Compare slice length.
+	assert.Equal(t, len(expectedReplicaServers), len(nodes))
+
+	actualReplicaServers := make([]int, len(nodes))
+	for _, node := range nodes {
+		// Each node should be alive.
+		assert.Equal(t, admin.NodeStatus_NS_ALIVE, node.Status)
+		actualReplicaServers[i] = node.Address.GetAddress()
+	}
+
+	// Match elements without extra ordering.
+	assert.ElementsMatch(t, expectedReplicaServers, actualReplicaServers)
+}
+
+func TestAdmin_ListNodesTimeout(t *testing.T) {
+	testAdmin_Timeout(t, func(c *admin.Client) (err, error) {
+		_, err := c.ListNodes()
+	})
 }
