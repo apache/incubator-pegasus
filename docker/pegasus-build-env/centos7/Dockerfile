@@ -49,6 +49,7 @@ RUN yum -y install centos-release-scl \
                    krb5-devel \
                    cyrus-sasl-devel \
                    patch; \
+		   yum -y install ca-certificates; \
                    yum clean all; \
                    rm -rf /var/cache/yum;
 
