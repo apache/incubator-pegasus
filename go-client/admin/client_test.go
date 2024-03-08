@@ -44,8 +44,8 @@ func defaultConfig() Config {
 	}
 }
 
-func defaultReplicaServers() []string {
-	return []string{"0.0.0.0:34801", "0.0.0.0:34802", "0.0.0.0:34803"}
+func defaultReplicaServerPorts() []int {
+	return []int{34801, 34802, 34803}
 }
 
 func timeoutConfig() Config {
@@ -166,20 +166,20 @@ func TestAdmin_ListNodes(t *testing.T) {
 	nodes, err := c.ListNodes()
 	assert.Nil(t, err)
 
-	expectedReplicaServers := defaultReplicaServers()
+	expectedReplicaServerPorts := defaultReplicaServerPorts()
 
 	// Compare slice length.
-	assert.Equal(t, len(expectedReplicaServers), len(nodes))
+	assert.Equal(t, len(expectedReplicaServerPorts), len(nodes))
 
-	actualReplicaServers := make([]string, len(nodes))
+	actualReplicaServerPorts := make([]int, len(nodes))
 	for i, node := range nodes {
 		// Each node should be alive.
 		assert.Equal(t, admin.NodeStatus_NS_ALIVE, node.Status)
-		actualReplicaServers[i] = node.Address.GetAddress()
+		actualReplicaServerPorts[i] = node.Address.GetPort()
 	}
 
 	// Match elements without extra ordering.
-	assert.ElementsMatch(t, expectedReplicaServers, actualReplicaServers)
+	assert.ElementsMatch(t, expectedReplicaServerPorts, actualReplicaServerPorts)
 }
 
 func TestAdmin_ListNodesTimeout(t *testing.T) {
