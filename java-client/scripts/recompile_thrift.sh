@@ -21,15 +21,19 @@
 
 function GenThriftTool() {
     set -e
-    wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -O thrift-0.11.0.tar.gz
-    tar xzf thrift-0.11.0.tar.gz
-    pushd thrift-0.11.0
+    VERSION=0.14.0
+    DIR_NAME=thrift-${VERSION}
+    TAR_NAME=${DIR_NAME}.tar.gz
+    DOWNLOAD_URL=https://archive.apache.org/dist/thrift/0.14.0/${TAR_NAME}
+    wget --progress=dot:giga ${DOWNLOAD_URL}
+    tar xzf ${TAR_NAME}
+    pushd ${DIR_NAME}
     ./bootstrap.sh
     ./configure --enable-libs=no
     make -j$(($(nproc)/2+1))
     make install
     popd
-    rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz
+    rm -rf ${DIR_NAME} ${TAR_NAME}
     set +e
 }
 
