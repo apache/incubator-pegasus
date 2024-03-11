@@ -28,7 +28,6 @@ class gpid;
 
 namespace replication {
 
-
 // TODO(heyuchen): implement it
 
 class replica;

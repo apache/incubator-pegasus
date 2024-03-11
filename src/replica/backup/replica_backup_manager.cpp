@@ -66,12 +66,7 @@ namespace replication {
 
 // TODO(heyuchen): implement it
 
-
-replica_backup_manager::replica_backup_manager(replica *r)
-    : replica_base(r),
-      _replica(r)
-{
-}
+replica_backup_manager::replica_backup_manager(replica *r) : replica_base(r), _replica(r) {}
 
 replica_backup_manager::~replica_backup_manager() {}
 

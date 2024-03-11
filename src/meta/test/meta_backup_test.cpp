@@ -45,9 +45,7 @@
 namespace dsn {
 namespace replication {
 
-
 // TODO(heyuchen): implement it
-
 
 } // namespace replication
 } // namespace dsn

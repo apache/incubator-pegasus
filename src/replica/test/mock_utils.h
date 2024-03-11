@@ -201,7 +201,6 @@ public:
                 _primary_states.secondary_bulk_load_states.size() == 0);
     }
 
-
     void update_last_durable_decree(decree decree)
     {
         dynamic_cast<mock_replication_app_base *>(_app.get())->set_last_durable_decree(decree);

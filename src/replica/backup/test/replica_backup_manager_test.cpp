@@ -34,6 +34,5 @@ class replica_backup_manager_test : public replica_test_base
 public:
 };
 
-
 } // namespace replication
 } // namespace dsn

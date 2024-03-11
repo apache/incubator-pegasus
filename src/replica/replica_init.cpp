@@ -241,7 +241,6 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                                            std::chrono::seconds(FLAGS_checkpoint_interval_seconds),
                                            get_gpid().thread_hash());
             }
-
         }
     }
 

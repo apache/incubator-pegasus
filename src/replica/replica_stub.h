@@ -125,7 +125,6 @@ class duplication_sync_timer;
 class replica_bulk_loader;
 class replica_split_manager;
 
-
 // The replica_stub is the *singleton* entry to access all replica managed in the same process
 //   replica_stub(singleton) --> replica --> replication_app_base
 class replica_stub : public serverlet<replica_stub>, public ref_counter
@@ -468,7 +467,6 @@ private:
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
     std::unique_ptr<dsn::security::kms_key_provider> _key_provider;
-
 
     // command_handlers
     std::vector<std::unique_ptr<command_deregister>> _cmds;

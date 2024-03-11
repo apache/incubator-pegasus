@@ -76,7 +76,6 @@ namespace replication {
 class replica_test : public replica_test_base
 {
 public:
-
     replica_test() : pid(gpid(2, 1)) {}
 
     void SetUp() override
@@ -137,7 +136,6 @@ public:
         _app_info.max_replica_count = 3;
         _app_info.partition_count = 8;
     }
-
 
     void force_update_checkpointing(bool running)
     {
@@ -340,7 +338,6 @@ TEST_P(replica_test, update_allow_ingest_behind_test)
         reset_allow_ingest_behind();
     }
 }
-
 
 TEST_F(replica_test, test_trigger_manual_emergency_checkpoint)
 {

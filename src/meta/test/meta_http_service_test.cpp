@@ -108,7 +108,6 @@ public:
 class meta_backup_test_base : public meta_test_base
 {
 public:
-
 protected:
     const std::string _policy_root = "/test";
 
@@ -120,10 +119,8 @@ TEST_F(meta_http_service_test, get_app_from_primary) { test_get_app_from_primary
 
 TEST_F(meta_http_service_test, get_app_envs) { test_get_app_envs(); }
 
-
 // TODO(heyuchen): implement it
 TEST_F(meta_backup_test_base, get_backup_policy) {}
-
 
 class meta_bulk_load_http_test : public meta_test_base
 {

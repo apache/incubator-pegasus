@@ -97,4 +97,4 @@ private:
 } // namespace replication
 } // namespace dsn
 
-//USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::backup_start_time);
+// USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::backup_start_time);

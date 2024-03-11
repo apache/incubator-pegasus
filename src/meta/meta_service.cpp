@@ -906,7 +906,6 @@ void meta_service::on_query_backup_policy(query_backup_policy_rpc policy_rpc) {}
 // TODO(heyuchen): implement it
 void meta_service::on_modify_backup_policy(configuration_modify_backup_policy_rpc rpc) {}
 
-
 void meta_service::on_report_restore_status(configuration_report_restore_status_rpc rpc)
 {
     if (!check_status_and_authz(rpc)) {
@@ -1212,7 +1211,6 @@ void meta_service::on_start_backup_app(start_backup_app_rpc rpc) {}
 
 // TODO(heyuchen): implement it
 void meta_service::on_query_backup_status(query_backup_status_rpc rpc) {}
-
 
 size_t meta_service::get_alive_node_count() const
 {

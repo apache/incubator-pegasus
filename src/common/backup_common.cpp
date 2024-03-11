@@ -21,7 +21,6 @@
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 
-
 namespace dsn {
 namespace replication {
 const std::string cold_backup_constant::APP_METADATA("app_metadata");

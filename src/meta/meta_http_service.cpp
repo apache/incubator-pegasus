@@ -556,7 +556,6 @@ std::string set_to_string(const std::set<int32_t> &s)
 // TODO(heyuchen): implement it
 void meta_http_service::query_backup_policy_handler(const http_request &req, http_response &resp) {}
 
-
 void meta_http_service::query_duplication_handler(const http_request &req, http_response &resp)
 {
     if (!redirect_if_not_primary(req, resp)) {
