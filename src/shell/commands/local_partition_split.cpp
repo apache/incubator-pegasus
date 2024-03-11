@@ -15,24 +15,52 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "shell/commands.h"
-
-#include <cmath>
+#include <ext/alloc_traits.h>
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <rocksdb/db.h>
+#include <rocksdb/env.h>
+#include <rocksdb/iterator.h>
+#include <rocksdb/metadata.h>
+#include <rocksdb/options.h>
+#include <rocksdb/slice.h>
 #include <rocksdb/sst_file_reader.h>
 #include <rocksdb/sst_file_writer.h>
+#include <rocksdb/table_properties.h>
 #include <rocksdb/threadpool.h>
+#include <stdio.h>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "base/idl_utils.h"
 #include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
 #include "base/value_schema_manager.h"
 #include "client/partition_resolver.h"
-#include "replica/replication_app_base.h"
+#include "client/replication_ddl_client.h"
+#include "common/gpid.h"
+#include "common/replication_common.h"
+#include "dsn.layer2_types.h"
+#include "pegasus_value_schema.h"
 #include "replica/replica_stub.h"
+#include "replica/replication_app_base.h"
 #include "shell/argh.h"
+#include "shell/command_executor.h"
 #include "shell/command_helper.h"
+#include "shell/commands.h"
+#include "utils/blob.h"
+#include "utils/errors.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 #include "utils/load_dump_object.h"
-#include "utils/string_conv.h"
+#include "utils/output_utils.h"
 
 const std::string local_partition_split_help =
     "<src_data_dirs> <dst_data_dirs> <src_app_id> "
