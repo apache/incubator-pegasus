@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	"github.com/stretchr/testify/assert"
@@ -41,6 +42,22 @@ func defaultConfig() Config {
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 		Timeout:     30 * time.Second,
 	}
+}
+
+func defaultReplicaServerPorts() []int {
+	return []int{34801, 34802, 34803}
+}
+
+func timeoutConfig() Config {
+	return Config{
+		MetaServers: []string{"0.0.0.0:123456"},
+		Timeout:     500 * time.Millisecond,
+	}
+}
+
+func testAdmin_Timeout(t *testing.T, exec func(c Client) error) {
+	c := NewClient(timeoutConfig())
+	assert.Equal(t, context.DeadlineExceeded, exec(c))
 }
 
 func TestAdmin_Table(t *testing.T) {
@@ -75,13 +92,10 @@ func TestAdmin_Table(t *testing.T) {
 }
 
 func TestAdmin_ListTablesTimeout(t *testing.T) {
-	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:123456"},
-		Timeout:     500 * time.Millisecond,
+	testAdmin_Timeout(t, func(c Client) error {
+		_, err := c.ListTables()
+		return err
 	})
-
-	_, err := c.ListTables()
-	assert.Equal(t, err, context.DeadlineExceeded)
 }
 
 // Ensures after the call `CreateTable` ends, the table must be right available to access.
@@ -144,4 +158,33 @@ func TestAdmin_GetAppEnvs(t *testing.T) {
 	for _, tb := range tables {
 		assert.Empty(t, tb.Envs)
 	}
+}
+
+func TestAdmin_ListNodes(t *testing.T) {
+	c := NewClient(defaultConfig())
+
+	nodes, err := c.ListNodes()
+	assert.Nil(t, err)
+
+	expectedReplicaServerPorts := defaultReplicaServerPorts()
+
+	// Compare slice length.
+	assert.Equal(t, len(expectedReplicaServerPorts), len(nodes))
+
+	actualReplicaServerPorts := make([]int, len(nodes))
+	for i, node := range nodes {
+		// Each node should be alive.
+		assert.Equal(t, admin.NodeStatus_NS_ALIVE, node.Status)
+		actualReplicaServerPorts[i] = node.Address.GetPort()
+	}
+
+	// Match elements without extra ordering.
+	assert.ElementsMatch(t, expectedReplicaServerPorts, actualReplicaServerPorts)
+}
+
+func TestAdmin_ListNodesTimeout(t *testing.T) {
+	testAdmin_Timeout(t, func(c Client) error {
+		_, err := c.ListNodes()
+		return err
+	})
 }

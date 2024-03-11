@@ -54,6 +54,10 @@ type Client interface {
 	// Empty `args` means "list all available tables"; Otherwise, the only parameter would
 	// specify the status of the returned tables.
 	ListTables(args ...interface{}) ([]*replication.AppInfo, error)
+
+	// Empty `args` means "list all alive nodes"; Otherwise, the only parameter would
+	// specify the status of the returned nodes.
+	ListNodes(args ...interface{}) ([]*admin.NodeInfo, error)
 }
 
 type Config struct {
@@ -233,4 +237,30 @@ func (c *rpcBasedClient) ListTables(args ...interface{}) ([]*replication.AppInfo
 		return c.listTables(replication.AppStatus_AS_AVAILABLE)
 	}
 	return c.listTables(args[0].(replication.AppStatus))
+}
+
+func (c *rpcBasedClient) listNodes(status admin.NodeStatus) ([]*admin.NodeInfo, error) {
+	req := &admin.ConfigurationListNodesRequest{
+		Status: status,
+	}
+
+	var nodes []*admin.NodeInfo
+	var respErr error
+	err := c.callMeta("ListNodes", req, func(iresp interface{}) {
+		resp := iresp.(*admin.ConfigurationListNodesResponse)
+		nodes = resp.Infos
+		respErr = base.GetResponseError(resp)
+	})
+	if err != nil {
+		return nodes, err
+	}
+
+	return nodes, respErr
+}
+
+func (c *rpcBasedClient) ListNodes(args ...interface{}) ([]*admin.NodeInfo, error) {
+	if len(args) == 0 {
+		return c.listNodes(admin.NodeStatus_NS_ALIVE)
+	}
+	return c.listNodes(args[0].(admin.NodeStatus))
 }
