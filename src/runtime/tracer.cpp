@@ -260,8 +260,6 @@ static std::string tracer_log_flow_error(const char *msg)
 
 static std::string tracer_log_flow(const std::vector<std::string> &args)
 {
-    // forward|f|backward|b rpc|r|task|t trace_id|task_id(e.g., 002a003920302390)
-    // log_file_name(log.xx.txt)
     if (args.size() < 4) {
         return tracer_log_flow_error("not enough arguments");
     }
@@ -406,11 +404,11 @@ void tracer::install(service_spec &spec)
 
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _tracer_find_cmd = command_manager::instance().register_command(
-            {"tracer.find"},
-            "tracer.find - find related logs",
-            "tracer.find forward|f|backward|b rpc|r|task|t trace_id|task_id(e.g., "
-            "a023003920302390) log_file_name(log.xx.txt)",
+        _tracer_find_cmd = command_manager::instance().register_single_command(
+            "tracer.find",
+            "Find related logs",
+            "[forward|f|backward|b] [rpc|r|task|t] [trace_id|task_id(e.g., a023003920302390)] "
+            "<log_file_name(e.g., log.xx.txt)>",
             tracer_log_flow);
     });
 }

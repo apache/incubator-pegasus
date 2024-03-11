@@ -26,6 +26,9 @@
 
 #include "runtime/task/task_engine.h"
 
+#include <fmt/core.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <stdio.h>
 
 #include "gtest/gtest.h"
@@ -57,10 +60,7 @@ TEST(core, task_engine)
     ASSERT_NE(nullptr, engine);
 
     ASSERT_TRUE(engine->is_started());
-    std::vector<std::string> args;
-    std::stringstream oss;
-    engine->get_runtime_info("  ", args, oss);
-    printf("%s\n", oss.str().c_str());
+    fmt::print(stdout, "{}\n", engine->get_runtime_info({}).dump());
 
     std::vector<task_worker_pool *> &pools = engine->pools();
     for (size_t i = 0; i < pools.size(); ++i) {

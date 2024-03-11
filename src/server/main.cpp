@@ -17,12 +17,14 @@
  * under the License.
  */
 
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <pegasus/git_commit.h>
 #include <pegasus/version.h>
 #include <unistd.h>
 #include <cstdio>
+#include <map>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -93,17 +95,18 @@ int main(int argc, char **argv)
     dsn_app_registration_pegasus();
 
     std::unique_ptr<command_deregister> server_info_cmd =
-        dsn::command_manager::instance().register_command(
-            {"server-info"},
-            "server-info - query server information",
+        dsn::command_manager::instance().register_single_command(
             "server-info",
+            "Query server information",
+            "",
             [](const std::vector<std::string> &args) {
-                char str[100];
-                ::dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), str, 100);
-                std::ostringstream oss;
-                oss << "Pegasus Server " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
-                    << PEGASUS_BUILD_TYPE << ", Started at " << str;
-                return oss.str();
+                nlohmann::json info;
+                info["version"] = PEGASUS_VERSION;
+                info["build_type"] = PEGASUS_BUILD_TYPE;
+                info["git_SHA"] = PEGASUS_GIT_COMMIT;
+                info["start_time"] =
+                    ::dsn::utils::time_s_to_date_time(dsn::utils::process_start_millis() / 1000);
+                return info.dump();
             });
 
     dsn_run(argc, argv, true);
