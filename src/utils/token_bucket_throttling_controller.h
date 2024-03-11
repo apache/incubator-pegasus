@@ -85,13 +85,11 @@ public:
                         bool &changed,
                         std::string &old_env_value);
 
-    static bool string_to_value(std::string str, int64_t &value);
-
     // wrapper of transform_env_string, check if the env string is validated.
     static bool validate(const std::string &env, std::string &hint_message);
 
     static bool transform_env_string(const std::string &env,
-                                     int64_t &reject_size_value,
+                                     uint64_t &reject_size_value,
                                      bool &enabled,
                                      std::string &hint_message);
 };
