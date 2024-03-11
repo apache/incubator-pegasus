@@ -72,9 +72,11 @@ namespace replication {
 
 using tp_output_format = ::dsn::utils::table_printer::output_format;
 
-error_s replication_ddl_client::validate_app_name(const std::string &app_name)
+error_s replication_ddl_client::validate_app_name(const std::string &app_name,
+                                                  bool allow_empty_name)
 {
-    if (app_name.empty() || !std::all_of(app_name.cbegin(), app_name.cend(), [](const char c) {
+    if ((app_name.empty() && !allow_empty_name) ||
+        !std::all_of(app_name.cbegin(), app_name.cend(), [](const char c) {
             return static_cast<bool>(std::isalnum(c)) || c == '_' || c == '.' || c == ':';
         })) {
         return FMT_ERR(ERR_INVALID_PARAMETERS, "Invalid name: Only 0-9a-zA-Z.:_ are valid.");
@@ -227,8 +229,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
 dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::string &new_app_name)
 {
     RETURN_EC_NOT_OK_MSG(
-        validate_app_name(new_app_name), "invalid new_app_name: '{}'", new_app_name);
-
+        validate_app_name(new_app_name, true), "invalid new_app_name: '{}'", new_app_name);
     auto req = std::make_shared<configuration_recall_app_request>();
     req->app_id = app_id;
     req->new_app_name = new_app_name;
