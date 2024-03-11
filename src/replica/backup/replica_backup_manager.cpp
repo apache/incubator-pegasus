@@ -17,6 +17,20 @@
 
 #include "replica_backup_manager.h"
 
+#include <absl/strings/string_view.h>
+#include <stdint.h>
+#include <algorithm>
+#include <chrono>
+#include <map>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "backup_types.h"
+#include "common/gpid.h"
+#include "common/replication.codes.h"
+#include "dsn.layer2_types.h"
+#include "metadata_types.h"
 #include "replica/replica.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
@@ -55,13 +69,9 @@ namespace replication {
 
 replica_backup_manager::replica_backup_manager(replica *r)
     : replica_base(r),
-      _replica(r),
-      METRIC_VAR_INIT_replica(backup_running_count),
-      METRIC_VAR_INIT_replica(backup_max_duration_ms),
-      METRIC_VAR_INIT_replica(backup_file_upload_max_bytes)
+      _replica(r)
 {
 }
-
 
 replica_backup_manager::~replica_backup_manager() {}
 

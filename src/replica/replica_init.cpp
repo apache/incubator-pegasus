@@ -242,7 +242,6 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                                            get_gpid().thread_hash());
             }
 
-            _backup_mgr->start_collect_backup_info();
         }
     }
 

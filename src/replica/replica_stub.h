@@ -467,6 +467,7 @@ private:
     ::dsn::task_ptr _mem_release_timer_task;
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
+    std::unique_ptr<dsn::security::kms_key_provider> _key_provider;
 
 
     // command_handlers

@@ -26,7 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include "backup/cold_backup_context.h"
 #include "backup_types.h"
 #include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"
@@ -42,7 +41,20 @@
 
 #include "block_service/block_service_manager.h"
 #include "common/backup_common.h"
-
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/autoref_ptr.h"
+#include "utils/blob.h"
+#include "utils/env.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/load_dump_object.h"
 
 using namespace dsn::dist::block_service;
 

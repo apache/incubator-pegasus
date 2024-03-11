@@ -438,9 +438,8 @@ error_code meta_service::start()
         LOG_INFO("initialize backup handler");
         _backup_handler = std::make_shared<backup_service>(
             this,
-            meta_options::concat_path_unix_style(_cluster_root, "backup"),
-            _opts.cold_backup_root);
-
+            utils::filesystem::concat_path_unix_style(_cluster_root, "backup"),
+            FLAGS_cold_backup_root);
     }
 
     _bulk_load_svc = std::make_unique<bulk_load_service>(

@@ -93,7 +93,8 @@ private:
     // the root of cold backup data, stored on block service
     std::string _backup_root;
 };
+
 } // namespace replication
 } // namespace dsn
 
-USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::backup_start_time);
+//USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::backup_start_time);

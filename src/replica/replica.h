@@ -43,7 +43,6 @@
 #include "mutation_log.h"
 #include "prepare_list.h"
 #include "ranger/access_type.h"
-#include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
 #include "runtime/api_layer1.h"
