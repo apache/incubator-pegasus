@@ -27,6 +27,7 @@ import (
 	"syscall"
 
 	"github.com/apache/incubator-pegasus/collector/avail"
+	"github.com/apache/incubator-pegasus/collector/hotspot"
 	"github.com/apache/incubator-pegasus/collector/metrics"
 	"github.com/apache/incubator-pegasus/collector/webui"
 	"github.com/prometheus/client_golang/prometheus"
@@ -87,18 +88,34 @@ func main() {
 
 	tom := &tomb.Tomb{}
 	setupSignalHandler(func() {
-		tom.Kill(errors.New("collector terminates")) // kill other goroutines
-	})
-	tom.Go(func() error {
-		// Set detect inteverl and detect timeout 10s.
-		return avail.NewDetector(10000000000, 10000000000, 16).Start(tom)
-	})
-	tom.Go(func() error {
-		return metrics.NewMetaServerMetricCollector().Start(tom)
-	})
-	tom.Go(func() error {
-		return metrics.NewReplicaServerMetricCollector().Start(tom)
+		tom.Kill(errors.New("Collector terminates")) // kill other goroutines
 	})
 
-	<-tom.Dead() // gracefully wait until all goroutines dead
+	tom.Go(func() error {
+		// Set detect inteverl and detect timeout 10s.
+		return avail.NewDetector(10000000000, 10000000000, 16).Run(tom)
+	})
+
+	tom.Go(func() error {
+		return metrics.NewMetaServerMetricCollector().Run(tom)
+	})
+
+	tom.Go(func() error {
+		return metrics.NewReplicaServerMetricCollector().Run(tom)
+	})
+
+	tom.Go(func() error {
+		conf := hotspot.Config{
+			DetectInterval: viper.GetDuration("hotspot.detect_interval"),
+		}
+		return hotspot.NewHotspotDetector(conf).Run(tom)
+	})
+
+	err := tom.Wait()
+	if err != nil {
+		log.Error("Collector exited abnormally:", err)
+		return
+	}
+
+	log.Info("Collector exited normally.")
 }

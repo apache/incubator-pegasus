@@ -44,3 +44,6 @@ falcon_agent:
 
 availablity_detect:
   table_name : test
+
+hotspot:
+  detect_interval : 10s

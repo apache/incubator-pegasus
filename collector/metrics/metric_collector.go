@@ -56,7 +56,7 @@ var SummaryMetricsMap map[string]prometheus.Summary
 var TableNameByID map[string]string
 
 type MetricCollector interface {
-	Start(tom *tomb.Tomb) error
+	Run(tom *tomb.Tomb) error
 }
 
 func NewMetricCollector(
@@ -79,7 +79,7 @@ type Collector struct {
 	role           string
 }
 
-func (collector *Collector) Start(tom *tomb.Tomb) error {
+func (collector *Collector) Run(tom *tomb.Tomb) error {
 	ticker := time.NewTicker(collector.detectInterval)
 	for {
 		select {
