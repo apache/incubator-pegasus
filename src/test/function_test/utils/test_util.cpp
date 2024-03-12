@@ -82,8 +82,8 @@ void test_util::SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize
 
 void test_util::SetUp()
 {
-    ASSERT_TRUE(replica_helper::load_meta_servers(
-        meta_list_, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), kClusterName.c_str()));
+    ASSERT_TRUE(replica_helper::load_servers_from_config(
+        dsn::PEGASUS_CLUSTER_SECTION_NAME, kClusterName, meta_list_));
     ASSERT_FALSE(meta_list_.empty());
 
     ddl_client_ = std::make_shared<replication_ddl_client>(meta_list_);

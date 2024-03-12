@@ -120,18 +120,21 @@ struct service_app_spec
 };
 
 CONFIG_BEGIN(service_app_spec)
-CONFIG_FLD_STRING(type, "", "app type name, as given when registering by dsn_register_app")
+CONFIG_FLD_STRING(type,
+                  "",
+                  "The app type name, as given when registering by "
+                  "dsn::service_app::register_factory<T>(\"<type>\")")
 CONFIG_FLD_STRING(arguments, "", "arguments for the app instances")
 CONFIG_FLD_INT_LIST(ports, "RPC server listening ports needed for this app")
-CONFIG_FLD_ID_LIST(threadpool_code, pools, "thread pools need to be started")
+CONFIG_FLD_ID_LIST(threadpool_code, pools, "Thread pools needed to be started for this app")
 CONFIG_FLD(int, uint64, delay_seconds, 0, "delay seconds for when the apps should be started")
 CONFIG_FLD(int,
            uint64,
            count,
            1,
-           "count of app instances for this type (ports are automatically "
-           "calculated accordingly to avoid confliction)")
-CONFIG_FLD(bool, bool, run, true, "whether to run the app instances or not")
+           "The count of app instances for this type (ports are automatically "
+           "calculated accordingly to avoid conflict, i.e., ports, ports+1, ports+2, ...)")
+CONFIG_FLD(bool, bool, run, true, "Whether to run the app instances or not")
 CONFIG_END
 
 struct service_spec
@@ -175,11 +178,14 @@ struct service_spec
 };
 
 CONFIG_BEGIN(service_spec)
-CONFIG_FLD_STRING(tool, "", "use what tool to run this process, e.g., native or simulator")
-CONFIG_FLD_STRING_LIST(toollets, "use what toollets, e.g., tracer, profiler, fault_injector")
+CONFIG_FLD_STRING(tool, "", "Which tool is used to run this process, e.g., 'native' or 'simulator'")
+CONFIG_FLD_STRING_LIST(toollets,
+                       "Which toollets are used to run this process, e.g., 'tracer', "
+                       "'profiler' and 'fault_injector'. Multiple toollets are allowed "
+                       "to set in one service.")
 CONFIG_FLD_STRING(data_dir,
                   "./data",
-                  "The default directory to place the all the data/log/coredump, etc..")
+                  "The default directory to place the all the data, logs, coredump files, and etc.")
 CONFIG_FLD(
     bool,
     bool,
@@ -195,6 +201,6 @@ CONFIG_FLD_STRING(lock_factory_name, "", "recursive exclusive lock provider")
 CONFIG_FLD_STRING(lock_nr_factory_name, "", "non-recurisve exclusive lock provider")
 CONFIG_FLD_STRING(rwlock_nr_factory_name, "", "non-recurisve rwlock provider")
 CONFIG_FLD_STRING(semaphore_factory_name, "", "semaphore provider")
-CONFIG_FLD_STRING(logging_factory_name, "", "logging provider")
+CONFIG_FLD_STRING(logging_factory_name, "", "The implementation class of logging service")
 CONFIG_END
 } // namespace dsn

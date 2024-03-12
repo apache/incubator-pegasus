@@ -553,8 +553,7 @@ DSN_DEFINE_string(pegasus.server,
                   rocksdb_compression_type,
                   "lz4",
                   "Corresponding to RocksDB's options.compression. Available config: "
-                  "'[none|snappy|zstd|lz4]' for all "
-                  "level 1 and higher levels, and "
+                  "'[none|snappy|zstd|lz4]' for all level 1 and higher levels, and "
                   "'per_level:[none|snappy|zstd|lz4],[none|snappy|zstd|lz4],...' for each level "
                   "0,1,..., the last compression type will be used for levels not specified in the "
                   "list.");

@@ -214,15 +214,14 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                                            remote_cluster_id.get_error());
 
     std::vector<host_port> meta_list;
-    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(dsn::replication::replica_helper::load_meta_servers(
-                                               meta_list,
-                                               duplication_constants::kClustersSectionName.c_str(),
-                                               request.remote_cluster_name.c_str()),
-                                           response,
-                                           ERR_INVALID_PARAMETERS,
-                                           "failed to find cluster[{}] address in config [{}]",
-                                           request.remote_cluster_name,
-                                           duplication_constants::kClustersSectionName);
+    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(
+        dsn::replication::replica_helper::load_servers_from_config(
+            duplication_constants::kClustersSectionName, request.remote_cluster_name, meta_list),
+        response,
+        ERR_INVALID_PARAMETERS,
+        "failed to find cluster[{}] address in config [{}]",
+        request.remote_cluster_name,
+        duplication_constants::kClustersSectionName);
 
     std::shared_ptr<app_state> app;
     duplication_info_s_ptr dup;

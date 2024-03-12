@@ -410,52 +410,59 @@ error_code server_state::restore_from_local_storage(const char *local_path)
 
 error_code server_state::initialize_default_apps()
 {
-    std::vector<const char *> sections;
+    std::vector<std::string> sections;
     dsn_config_get_all_sections(sections);
     LOG_INFO("start to do initialize");
 
     app_info default_app;
-    for (int i = 0; i < sections.size(); i++) {
-        // TODO(yingchun): dose it mean sections[i] equals to "meta_server.apps" or
-        //  "replication.app" ?
-        if (strstr(sections[i], "meta_server.apps") == sections[i] ||
-            utils::equals(sections[i], "replication.app")) {
-            const char *s = sections[i];
-
+    for (const auto &section : sections) {
+        // Match a section prefixed by "meta_server.apps" or equal to "replication.app"
+        // TODO(yingchun): Move "replication.app" out of the loop, and define it as flags, then we
+        // can get it by HTTP.
+        if (section.find("meta_server.apps") == 0 || section == "replication.app") {
             default_app.status = app_status::AS_CREATING;
             default_app.app_id = _all_apps.size() + 1;
 
             // TODO(yingchun): the old configuration launch methods should be kept to launch repeat
             //  configs.
-            default_app.app_name = dsn_config_get_value_string(s, "app_name", "", "Table name");
+            default_app.app_name =
+                dsn_config_get_value_string(section.c_str(), "app_name", "", "Table name");
             if (default_app.app_name.length() == 0) {
-                LOG_WARNING("'[{}] app_name' not specified, ignore this section", s);
+                LOG_WARNING("'[{}] app_name' not specified, ignore this section", section);
                 continue;
             }
 
             default_app.app_type = dsn_config_get_value_string(
-                s,
+                section.c_str(),
                 "app_type",
                 "",
                 "The storage engine type, 'pegasus' represents the storage engine based on "
                 "Rocksdb. Currently, only 'pegasus' is available");
             default_app.partition_count =
-                (int)dsn_config_get_value_uint64(s, "partition_count", 1, "Partition count");
+                (int)dsn_config_get_value_uint64(section.c_str(),
+                                                 "partition_count",
+                                                 1,
+                                                 "Partition count, i.e., the shards of the table");
             // TODO(yingchun): always true, remove it.
             default_app.is_stateful = dsn_config_get_value_bool(
-                s,
+                section.c_str(),
                 "stateful",
                 true,
                 "Whether this is a stateful table, it must be true if 'app_type = pegasus'");
-            default_app.max_replica_count = (int)dsn_config_get_value_uint64(
-                s, "max_replica_count", 3, "The maximum replica count of each partition");
+            default_app.max_replica_count =
+                (int)dsn_config_get_value_uint64(section.c_str(),
+                                                 "max_replica_count",
+                                                 3,
+                                                 "The maximum replica count of each partition");
             default_app.create_second = dsn_now_ms() / 1000;
-            std::string envs_str = dsn_config_get_value_string(s, "envs", "", "app envs");
+            std::string envs_str = dsn_config_get_value_string(
+                section.c_str(), "envs", "", "Table environment variables");
             bool parse = dsn::utils::parse_kv_map(envs_str.c_str(), default_app.envs, ',', '=');
 
-            CHECK_GT_MSG(default_app.app_type.length(), 0, "'[{}] app_type' not specified", s);
+            CHECK_GT_MSG(
+                default_app.app_type.length(), 0, "'[{}] app_type' not specified", section);
             CHECK_GT(default_app.partition_count, 0);
-            CHECK(parse, "'[{}] envs' is invalid, envs = {}", s, envs_str);
+            CHECK(parse, "'[{}] envs' is invalid, envs = {}", section, envs_str);
 
             std::shared_ptr<app_state> app = app_state::create(default_app);
             _all_apps.emplace(app->app_id, app);
