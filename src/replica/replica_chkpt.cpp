@@ -74,13 +74,13 @@ DSN_DEFINE_int32(replication,
                  "The maximum size of useless private log to be reserved. NOTE: only when "
                  "'log_private_reserve_max_size_mb' and 'log_private_reserve_max_time_seconds' are "
                  "both satisfied, the useless logs can be reserved");
-DSN_DEFINE_int32(replication,
-                 log_private_reserve_max_time_seconds,
-                 36000,
-                 "The maximum time in seconds of useless private log to be reserved. NOTE: only "
-                 "when 'log_private_reserve_max_size_mb' and "
-                 "'log_private_reserve_max_time_seconds' are both satisfied, the useless logs can "
-                 "be reserved");
+DSN_DEFINE_int32(
+    replication,
+    log_private_reserve_max_time_seconds,
+    36000,
+    "The maximum time in seconds of useless private log to be reserved. NOTE: only "
+    "when 'log_private_reserve_max_size_mb' and 'log_private_reserve_max_time_seconds' "
+    "are both satisfied, the useless logs can be reserved");
 
 namespace dsn {
 namespace replication {

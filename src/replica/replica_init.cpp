@@ -55,13 +55,15 @@
 DSN_DEFINE_bool(replication,
                 checkpoint_disabled,
                 false,
-                "Whether to disable to generate replica checkpoints periodically");
+                "Whether to disable to generate replica checkpoints periodically. The "
+                "checkpoints are meaningful for data integrity but consuming some disk "
+                "space");
 
 DSN_DEFINE_int32(replication,
                  checkpoint_interval_seconds,
                  100,
-                 "The interval in seconds to generate replica checkpoints. Note that "
-                 "the checkpoint may not be generated when attempt");
+                 "The interval in seconds to attempt to generate replica checkpoints. "
+                 "Note that the checkpoint may not be generated when attempt");
 
 DSN_DEFINE_int32(replication,
                  log_private_file_size_mb,

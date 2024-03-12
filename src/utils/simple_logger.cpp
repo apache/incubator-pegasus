@@ -47,7 +47,7 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "whether to flush immediately");
+DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "Whether to flush logs immediately");
 DSN_DEFINE_bool(tools.simple_logger,
                 short_header,
                 false,
@@ -55,15 +55,17 @@ DSN_DEFINE_bool(tools.simple_logger,
                 "file, file number and function name "
                 "fields in each line)");
 
-DSN_DEFINE_uint64(tools.simple_logger,
-                  max_number_of_log_files_on_disk,
-                  20,
-                  "max number of log files reserved on disk, older logs are auto deleted");
+DSN_DEFINE_uint64(
+    tools.simple_logger,
+    max_number_of_log_files_on_disk,
+    20,
+    "The maximum number of log files to be reserved on disk, older logs are deleted automatically");
 
-DSN_DEFINE_string(tools.simple_logger,
-                  stderr_start_level,
-                  "LOG_LEVEL_WARNING",
-                  "copy log messages at or above this level to stderr in addition to logfiles");
+DSN_DEFINE_string(
+    tools.simple_logger,
+    stderr_start_level,
+    "LOG_LEVEL_WARNING",
+    "The lowest level of log messages to be copied to stderr in addition to log files");
 DSN_DEFINE_validator(stderr_start_level, [](const char *level) -> bool {
     return !dsn::utils::equals(level, "LOG_LEVEL_INVALID");
 });

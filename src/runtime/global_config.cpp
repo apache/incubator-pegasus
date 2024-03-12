@@ -46,32 +46,31 @@ static bool build_client_network_confs(const char *section,
 {
     nss.clear();
 
-    std::vector<const char *> keys;
+    std::vector<std::string> keys;
     dsn_config_get_all_keys(section, keys);
 
-    for (const char *item : keys) {
-        std::string k(item);
-        if (k.length() <= strlen("network.client."))
+    for (const auto &key : keys) {
+        if (key.length() <= strlen("network.client."))
             continue;
 
-        if (k.substr(0, strlen("network.client.")) != std::string("network.client."))
+        if (key.substr(0, strlen("network.client.")) != std::string("network.client."))
             continue;
 
-        auto k2 = k.substr(strlen("network.client."));
-        if (rpc_channel::is_exist(k2.c_str())) {
+        const auto sub_key = key.substr(strlen("network.client."));
+        if (rpc_channel::is_exist(sub_key.c_str())) {
             /*
             ;channel = network_provider_name,buffer_block_size
             network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
             network.client.RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
             */
 
-            rpc_channel ch = rpc_channel::from_string(k2.c_str(), RPC_CHANNEL_TCP);
+            rpc_channel ch = rpc_channel::from_string(sub_key.c_str(), RPC_CHANNEL_TCP);
 
             // dsn::tools::asio_network_provider,65536
             std::list<std::string> vs;
             std::string v = dsn_config_get_value_string(
                 section,
-                k.c_str(),
+                key.c_str(),
                 "",
                 "network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
             utils::split_args(v.c_str(), vs, ',');
@@ -94,7 +93,7 @@ static bool build_client_network_confs(const char *section,
 
             nss[ch] = ns;
         } else {
-            printf("invalid rpc channel type: %s\n", k2.c_str());
+            printf("invalid rpc channel type: %s\n", sub_key.c_str());
             return false;
         }
     }
@@ -118,24 +117,23 @@ static bool build_server_network_confs(const char *section,
 {
     nss.clear();
 
-    std::vector<const char *> keys;
+    std::vector<std::string> keys;
     dsn_config_get_all_keys(section, keys);
 
-    for (const char *item : keys) {
-        std::string k(item);
-        if (k.length() <= strlen("network.server."))
+    for (const auto &key : keys) {
+        if (key.length() <= strlen("network.server."))
             continue;
 
-        if (k.substr(0, strlen("network.server.")) != std::string("network.server."))
+        if (key.substr(0, strlen("network.server.")) != std::string("network.server."))
             continue;
 
-        auto k2 = k.substr(strlen("network.server."));
+        const auto sub_key = key.substr(strlen("network.server."));
         std::list<std::string> ks;
-        utils::split_args(k2.c_str(), ks, '.');
+        utils::split_args(sub_key.c_str(), ks, '.');
         if (ks.size() != 2) {
             printf("invalid network server config '%s', should be like "
                    "'network.server.12345.RPC_CHANNEL_TCP' instead\n",
-                   k.c_str());
+                   key.c_str());
             return false;
         }
 
@@ -144,7 +142,7 @@ static bool build_server_network_confs(const char *section,
 
         if (is_template) {
             if (port != 0) {
-                printf("invalid network server configuration '%s'\n", k.c_str());
+                printf("invalid network server configuration '%s'\n", key.c_str());
                 printf("port must be zero in [apps..default]\n");
                 printf(" e.g., network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, "
                        "dsn::tools::asio_network_provider,65536\n");
@@ -170,7 +168,7 @@ static bool build_server_network_confs(const char *section,
             std::list<std::string> vs;
             std::string v = dsn_config_get_value_string(
                 section,
-                k.c_str(),
+                key.c_str(),
                 "",
                 "network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
             utils::split_args(v.c_str(), vs, ',');
