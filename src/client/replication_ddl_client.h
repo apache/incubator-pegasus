@@ -265,7 +265,7 @@ public:
 
     void set_max_wait_app_ready_secs(uint32_t max_wait_secs) { _max_wait_secs = max_wait_secs; }
 
-    static error_s validate_app_name(const std::string &app_name);
+    static error_s validate_app_name(const std::string &app_name, bool allow_empty_name = false);
 
 private:
     bool static valid_app_char(int c);
