@@ -24,7 +24,7 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
-type HotspotDetector interface {
+type PartitionDetector interface {
 	Run(tom *tomb.Tomb) error
 }
 
@@ -32,17 +32,17 @@ type Config struct {
 	DetectInterval time.Duration
 }
 
-func NewHotspotDetector(conf Config) HotspotDetector {
-	return &hotspotDetector{
+func NewPartitionDetector(conf Config) PartitionDetector {
+	return &partitionDetector{
 		detectInterval: conf.DetectInterval,
 	}
 }
 
-type hotspotDetector struct {
+type partitionDetector struct {
 	detectInterval time.Duration
 }
 
-func (d *hotspotDetector) Run(tom *tomb.Tomb) error {
+func (d *partitionDetector) Run(tom *tomb.Tomb) error {
 	ticker := time.NewTicker(d.detectInterval)
 	defer ticker.Stop()
 
@@ -51,11 +51,11 @@ func (d *hotspotDetector) Run(tom *tomb.Tomb) error {
 		case <-ticker.C:
 			d.detect()
 		case <-tom.Dying():
-			log.Info("HotspotDetector exited.")
+			log.Info("Hotspot detector exited.")
 			return nil
 		}
 	}
 }
 
-func (d *hotspotDetector) detect() {
+func (d *partitionDetector) detect() {
 }

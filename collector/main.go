@@ -108,7 +108,7 @@ func main() {
 		conf := hotspot.Config{
 			DetectInterval: viper.GetDuration("hotspot.detect_interval"),
 		}
-		return hotspot.NewHotspotDetector(conf).Run(tom)
+		return hotspot.NewPartitionDetector(conf).Run(tom)
 	})
 
 	err := tom.Wait()
