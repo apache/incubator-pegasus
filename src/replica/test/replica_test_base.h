@@ -72,8 +72,8 @@ public:
         mu->data.header.timestamp = decree;
 
         mu->data.updates.emplace_back(mutation_update());
-        mu->data.updates.back().code =
-            RPC_COLD_BACKUP; // whatever code it is, but never be WRITE_EMPTY
+//        mu->data.updates.back().code =
+//            RPC_COLD_BACKUP; // whatever code it is, but never be WRITE_EMPTY
         mu->data.updates.back().data = blob::create_from_bytes(std::string(data));
         mu->client_requests.push_back(nullptr);
 
