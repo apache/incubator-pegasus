@@ -17,50 +17,14 @@
 
 #pragma once
 
-#include <gtest/gtest_prod.h>
-#include <algorithm>
-#include <atomic>
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <functional>
-#include <iomanip> // std::setfill, std::setw
-#include <map>
-#include <memory>
-#include <set>
-#include <sstream>
 #include <string>
-#include <vector>
 
-#include "backup_types.h"
-#include "common/gpid.h"
-#include "common/json_helper.h"
-#include "common/replication_other_types.h"
 #include "meta_rpc_types.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
-#include "utils/api_utilities.h"
-#include "utils/autoref_ptr.h"
-#include "utils/error_code.h"
-#include "utils/fmt_utils.h"
-#include "utils/metrics.h"
-#include "utils/ports.h"
-#include "utils/zlocks.h"
 
 namespace dsn {
-class message_ex;
-class rpc_address;
-
-namespace dist {
-namespace block_service {
-class block_filesystem;
-} // namespace block_service
-} // namespace dist
 
 namespace replication {
 
-class backup_engine;
-class backup_service;
 class meta_service;
 class server_state;
 

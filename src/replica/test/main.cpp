@@ -25,7 +25,6 @@
 #include "replication_service_test_app.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
-#include "test_util/test_util.h"
 #include "utils/error_code.h"
 
 int gtest_flags = 0;

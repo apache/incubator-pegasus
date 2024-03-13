@@ -15,15 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <memory>
-#include <string>
-
-#include "gtest/gtest.h"
-#include "replica/backup/replica_backup_manager.h"
-#include "replica/replication_app_base.h"
-#include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
-#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {

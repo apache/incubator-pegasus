@@ -26,7 +26,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include "backup_types.h"
 #include "bulk_load_types.h"
 #include "common//duplication_common.h"
 #include "common/bulk_load_common.h"
@@ -39,9 +38,7 @@
 #include "duplication_types.h"
 #include "http/http_status_code.h"
 #include "meta/duplication/meta_duplication_service.h"
-#include "meta/meta_backup_service.h"
 #include "meta/meta_bulk_load_service.h"
-#include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
 #include "meta_admin_types.h"
 #include "meta_http_service.h"

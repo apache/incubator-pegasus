@@ -15,38 +15,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <vector>
 
-#include "backup_types.h"
 #include "bulk_load_types.h"
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "gtest/gtest.h"
 #include "http/http_server.h"
 #include "http/http_status_code.h"
-#include "meta/meta_backup_service.h"
 #include "meta/meta_bulk_load_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_http_service.h"
-#include "meta/meta_service.h"
-#include "meta/meta_state_service.h"
-#include "meta_service_test_app.h"
 #include "meta_test_base.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "utils/autoref_ptr.h"
 #include "utils/blob.h"
-#include "utils/chrono_literals.h"
-#include "utils/error_code.h"
 #include "utils/fail_point.h"
 
 namespace dsn {

@@ -25,18 +25,14 @@
  */
 
 #include <string.h>
-#include <cstdint>
 #include <iostream>
-#include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
 #include "common/json_helper.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
-#include "meta/meta_backup_service.h"
 #include "meta_service_test_app.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/blob.h"

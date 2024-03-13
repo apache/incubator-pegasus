@@ -38,9 +38,6 @@
 #include "metadata_types.h"
 #include "replica.h"
 #include "replica_stub.h"
-
-#include "block_service/block_service_manager.h"
-#include "common/backup_common.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"

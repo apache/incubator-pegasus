@@ -34,7 +34,9 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
@@ -79,8 +81,6 @@ class access_controller;
 } // namespace security
 namespace replication {
 
-class backup_request;
-class backup_response;
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;

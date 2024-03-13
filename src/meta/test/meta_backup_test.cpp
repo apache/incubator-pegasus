@@ -15,37 +15,3 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <cstdint>
-#include <map>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "backup_types.h"
-#include "common/backup_common.h"
-#include "common/gpid.h"
-#include "common/replication.codes.h"
-#include "gtest/gtest.h"
-#include "meta/backup_engine.h"
-#include "meta/meta_backup_service.h"
-#include "meta/meta_data.h"
-#include "meta/meta_rpc_types.h"
-#include "meta/meta_service.h"
-#include "meta/server_state.h"
-#include "meta_test_base.h"
-#include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/env.h"
-#include "utils/error_code.h"
-#include "utils/fail_point.h"
-#include "utils/filesystem.h"
-#include "utils/zlocks.h"
-
-namespace dsn {
-namespace replication {
-
-// TODO(heyuchen): implement it
-
-} // namespace replication
-} // namespace dsn

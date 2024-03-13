@@ -17,14 +17,9 @@
 
 #pragma once
 
-#include <string>
-
 #include "replica/replica_base.h"
-#include "runtime/task/task.h"
-#include "utils/metrics.h"
 
 namespace dsn {
-class gpid;
 
 namespace replication {
 

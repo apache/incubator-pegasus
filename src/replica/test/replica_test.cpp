@@ -27,8 +27,6 @@
 #include <utility>
 #include <vector>
 
-#include "backup_types.h"
-#include "common/backup_common.h"
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
@@ -50,7 +48,6 @@
 #include "replica/replication_app_base.h"
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
-#include "runtime/api_layer1.h"
 #include "runtime/rpc/network.sim.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
@@ -58,7 +55,6 @@
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/defer.h"
-#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"

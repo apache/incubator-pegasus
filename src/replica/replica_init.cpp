@@ -30,7 +30,6 @@
 #include <memory>
 #include <string>
 
-#include "backup/replica_backup_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"

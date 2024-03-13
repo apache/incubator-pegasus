@@ -50,17 +50,17 @@
 #include "failure_detector/failure_detector_multimaster.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
+#include "ranger/access_type.h"
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
-#include "ranger/access_type.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "security/access_controller.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
+#include "security/access_controller.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
@@ -74,6 +74,7 @@ namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+
 namespace security {
 class kms_key_provider;
 } // namespace security
@@ -121,9 +122,6 @@ class replica_stub;
 typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
 class duplication_sync_timer;
-
-class replica_bulk_loader;
-class replica_split_manager;
 
 // The replica_stub is the *singleton* entry to access all replica managed in the same process
 //   replica_stub(singleton) --> replica --> replication_app_base
