@@ -36,6 +36,7 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "fmt/core.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/service_app.h"
 #include "utils/config_api.h"
 #include "utils/filesystem.h"
@@ -161,33 +162,22 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     }
 }
 
-/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node,
-                                            /*inout*/ std::vector<::dsn::rpc_address> &nodeList)
-{
-    auto it = std::find(nodeList.begin(), nodeList.end(), node);
-    if (it != nodeList.end()) {
-        nodeList.erase(it);
-        return true;
-    } else {
-        return false;
-    }
-}
-
 /*static*/ bool replica_helper::get_replica_config(const partition_configuration &partition_config,
-                                                   ::dsn::rpc_address node,
+                                                   ::dsn::host_port node,
                                                    /*out*/ replica_configuration &replica_config)
 {
     replica_config.pid = partition_config.pid;
     replica_config.primary = partition_config.primary;
     replica_config.ballot = partition_config.ballot;
     replica_config.learner_signature = invalid_signature;
+    replica_config.__set_hp_primary(partition_config.hp_primary);
 
-    if (node == partition_config.primary) {
+    if (node == partition_config.hp_primary) {
         replica_config.status = partition_status::PS_PRIMARY;
         return true;
-    } else if (std::find(partition_config.secondaries.begin(),
-                         partition_config.secondaries.end(),
-                         node) != partition_config.secondaries.end()) {
+    } else if (std::find(partition_config.hp_secondaries.begin(),
+                         partition_config.hp_secondaries.end(),
+                         node) != partition_config.hp_secondaries.end()) {
         replica_config.status = partition_status::PS_SECONDARY;
         return true;
     } else {
@@ -196,7 +186,7 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     }
 }
 
-bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
+bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::host_port> &servers,
                                        const char *section,
                                        const char *key)
 {
@@ -205,17 +195,20 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
     std::vector<std::string> host_ports;
     ::dsn::utils::split_args(server_list.c_str(), host_ports, ',');
     for (const auto &host_port : host_ports) {
-        auto addr = dsn::rpc_address::from_host_port(host_port);
-        if (!addr) {
-            LOG_ERROR("invalid address '{}' specified in config [{}]{}", host_port, section, key);
+        auto hp = dsn::host_port::from_string(host_port);
+        if (!hp) {
+            LOG_ERROR("invalid host_port '{}' specified in config [{}]{}", host_port, section, key);
             return false;
         }
-        servers.push_back(addr);
+        servers.push_back(hp);
     }
 
-    // TODO(yingchun): check there is no duplicates
     if (servers.empty()) {
         LOG_ERROR("no meta server specified in config [{}].{}", section, key);
+        return false;
+    }
+    if (servers.size() != host_ports.size()) {
+        LOG_ERROR("server_list {} have duplicate server", server_list);
         return false;
     }
     return true;

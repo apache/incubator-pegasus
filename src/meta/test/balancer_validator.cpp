@@ -48,6 +48,7 @@
 #include "meta_service_test_app.h"
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
@@ -67,22 +68,23 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
             break;
         switch (act.type) {
         case config_type::CT_ASSIGN_PRIMARY:
-            CHECK(pc.primary.is_invalid(), "");
-            CHECK(pc.secondaries.empty(), "");
-            CHECK_EQ(act.node, act.target);
-            CHECK(nodes.find(act.node) != nodes.end(), "");
+            CHECK(pc.hp_primary.is_invalid(), "");
+            CHECK(pc.hp_secondaries.empty(), "");
+            CHECK_EQ(act.hp_node, act.hp_target);
+            CHECK(nodes.find(act.hp_node) != nodes.end(), "");
 
-            CHECK_EQ(nodes[act.node].served_as(pc.pid), partition_status::PS_INACTIVE);
-            nodes[act.node].put_partition(pc.pid, true);
+            CHECK_EQ(nodes[act.hp_node].served_as(pc.pid), partition_status::PS_INACTIVE);
+            nodes[act.hp_node].put_partition(pc.pid, true);
             pc.primary = act.node;
+            pc.hp_primary = act.hp_node;
             break;
 
         case config_type::CT_ADD_SECONDARY:
-            CHECK(!is_member(pc, act.node), "");
-            CHECK_EQ(pc.primary, act.target);
-            CHECK(nodes.find(act.node) != nodes.end(), "");
-            pc.secondaries.push_back(act.node);
-            ns = &nodes[act.node];
+            CHECK(!is_member(pc, act.hp_node), "");
+            CHECK_EQ(pc.hp_primary, act.hp_target);
+            CHECK(nodes.find(act.hp_node) != nodes.end(), "");
+            pc.hp_secondaries.push_back(act.hp_node);
+            ns = &nodes[act.hp_node];
             CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
             ns->put_partition(pc.pid, false);
             break;
@@ -94,20 +96,23 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
     }
 
     // test upgrade to primary
-    CHECK_EQ(nodes[pc.primary].served_as(pc.pid), partition_status::PS_PRIMARY);
-    nodes[pc.primary].remove_partition(pc.pid, true);
+    CHECK_EQ(nodes[pc.hp_primary].served_as(pc.pid), partition_status::PS_PRIMARY);
+    nodes[pc.hp_primary].remove_partition(pc.pid, true);
     pc.primary.set_invalid();
+    pc.hp_primary.reset();
 
     ps = guardian.cure({&apps, &nodes}, pc.pid, act);
     CHECK_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
-    CHECK(pc.primary.is_invalid(), "");
-    CHECK_EQ(act.node, act.target);
-    CHECK(is_secondary(pc, act.node), "");
-    CHECK(nodes.find(act.node) != nodes.end(), "");
+    CHECK(pc.hp_primary.is_invalid(), "");
+    CHECK_EQ(act.hp_node, act.hp_target);
+    CHECK(is_secondary(pc, act.hp_node), "");
+    CHECK(nodes.find(act.hp_node) != nodes.end(), "");
 
-    ns = &nodes[act.node];
+    ns = &nodes[act.hp_node];
     pc.primary = act.node;
+    pc.__set_hp_primary(act.hp_node);
     std::remove(pc.secondaries.begin(), pc.secondaries.end(), pc.primary);
+    std::remove(pc.hp_secondaries.begin(), pc.hp_secondaries.end(), pc.hp_primary);
 
     CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
     ns->put_partition(pc.pid, true);
@@ -115,8 +120,12 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
 
 void meta_service_test_app::balancer_validator()
 {
-    std::vector<dsn::rpc_address> node_list;
-    generate_node_list(node_list, 20, 100);
+    std::vector<std::pair<dsn::host_port, dsn::rpc_address>> node_pairs;
+    std::vector<dsn::host_port> node_list;
+    generate_node_list(node_pairs, 20, 100);
+    for (const auto &p : node_pairs) {
+        node_list.emplace_back(p.first);
+    }
 
     app_mapper apps;
     node_mapper nodes;
@@ -156,17 +165,19 @@ void meta_service_test_app::balancer_validator()
 
     std::shared_ptr<app_state> &the_app = apps[1];
     for (::dsn::partition_configuration &pc : the_app->partitions) {
-        CHECK(!pc.primary.is_invalid(), "");
+        CHECK(!pc.hp_primary.is_invalid(), "");
         CHECK_GE(pc.secondaries.size(), pc.max_replica_count - 1);
     }
 
     // now test the cure
     ::dsn::partition_configuration &pc = the_app->partitions[0];
-    nodes[pc.primary].remove_partition(pc.pid, false);
-    for (const dsn::rpc_address &addr : pc.secondaries)
-        nodes[addr].remove_partition(pc.pid, false);
+    nodes[pc.hp_primary].remove_partition(pc.pid, false);
+    for (const dsn::host_port &hp : pc.hp_secondaries)
+        nodes[hp].remove_partition(pc.pid, false);
     pc.primary.set_invalid();
     pc.secondaries.clear();
+    pc.hp_primary.reset();
+    pc.hp_secondaries.clear();
 
     // cure test
     check_cure(apps, nodes, pc);
@@ -182,10 +193,10 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
     infile >> total_nodes;
 
     std::string ip_port;
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<dsn::host_port> node_list;
     for (int i = 0; i < total_nodes; ++i) {
         infile >> ip_port;
-        node_list.push_back(rpc_address::from_ip_port(ip_port));
+        node_list.push_back(host_port::from_string(ip_port));
     }
 
     int total_apps;
@@ -205,10 +216,10 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
             int n;
             infile >> n;
             infile >> ip_port;
-            app->partitions[j].primary = rpc_address::from_ip_port(ip_port);
+            app->partitions[j].hp_primary = host_port::from_string(ip_port);
             for (int k = 1; k < n; ++k) {
                 infile >> ip_port;
-                app->partitions[j].secondaries.push_back(rpc_address::from_ip_port(ip_port));
+                app->partitions[j].hp_secondaries.push_back(host_port::from_string(ip_port));
             }
         }
     }

@@ -32,7 +32,7 @@
 #include "hotspot_partition_calculator.h"
 #include "pegasus/client.h"
 #include "result_writer.h"
-#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/group_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "shell/command_executor.h"
@@ -71,12 +71,12 @@ DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
 
 info_collector::info_collector()
 {
-    std::vector<::dsn::rpc_address> meta_servers;
+    std::vector<::dsn::host_port> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
 
     _meta_servers.assign_group("meta-servers");
     for (auto &ms : meta_servers) {
-        CHECK(_meta_servers.group_address()->add(ms), "");
+        CHECK(_meta_servers.group_host_port()->add(ms), "");
     }
 
     _cluster_name = dsn::get_current_cluster_name();

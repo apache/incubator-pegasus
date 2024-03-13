@@ -271,6 +271,7 @@ TEST_P(replica_test, write_size_limited)
 
     auto write_request = dsn::message_ex::create_request(RPC_TEST);
     auto cleanup = dsn::defer([=]() { delete write_request; });
+    header.context.u.is_forwarded = false;
     write_request->header = &header;
     std::unique_ptr<tools::sim_network_provider> sim_net(
         new tools::sim_network_provider(nullptr, nullptr));

@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "runtime/rpc/group_address.h"
-#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
@@ -55,7 +54,7 @@ public:
     void add_list(const std::vector<host_port> &hps)
     {
         for (const auto &hp : hps) {
-            LOG_WARNING_IF(!add(hp), "duplicate adress {}", hp);
+            LOG_WARNING_IF(!add(hp), "duplicate host_port {}", hp);
         }
     }
     void set_leader(const host_port &hp);

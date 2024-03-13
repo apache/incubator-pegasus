@@ -35,7 +35,7 @@
 
 #include "common.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/fmt_utils.h"
 #include "utils/singleton.h"
@@ -424,9 +424,9 @@ public:
     bool parse_type_name(const std::string &name);
     void get_write_params(int &id, std::string &key, std::string &value, int &timeout_ms) const;
     void get_read_params(int &id, std::string &key, int &timeout_ms) const;
-    void get_replica_config_params(rpc_address &receiver,
+    void get_replica_config_params(host_port &receiver,
                                    dsn::replication::config_type::type &type,
-                                   rpc_address &node) const;
+                                   host_port &node) const;
     bool check_write_result(int id, ::dsn::error_code err, int32_t resp);
     bool check_read_result(int id, ::dsn::error_code err, const std::string &resp);
 
@@ -445,9 +445,9 @@ private:
     int _write_resp;
     std::string _read_resp;
 
-    rpc_address _config_receiver;
+    host_port _config_receiver;
     dsn::replication::config_type::type _config_type;
-    rpc_address _config_node;
+    host_port _config_node;
 };
 USER_DEFINED_ENUM_FORMATTER(client_case_line::client_type)
 
@@ -476,9 +476,9 @@ public:
     void wait_check_client();
     void notify_check_client();
     bool check_client_write(int &id, std::string &key, std::string &value, int &timeout_ms);
-    bool check_replica_config(rpc_address &receiver,
+    bool check_replica_config(host_port &receiver,
                               dsn::replication::config_type::type &type,
-                              rpc_address &node);
+                              host_port &node);
     bool check_client_read(int &id, std::string &key, int &timeout_ms);
     void on_end_write(int id, ::dsn::error_code err, int32_t resp);
     void on_end_read(int id, ::dsn::error_code err, const std::string &resp);

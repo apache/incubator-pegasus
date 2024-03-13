@@ -27,6 +27,7 @@
 #pragma once
 #include <iostream>
 #include "utils/optional.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/task/async_calls.h"
 #include "client/partition_resolver.h"
 #include "simple_kv.code.definition.h"
@@ -39,7 +40,7 @@ class simple_kv_client
 {
 public:
     simple_kv_client(const char *cluster_name,
-                     const std::vector<dsn::rpc_address> &meta_list,
+                     const std::vector<dsn::host_port> &meta_list,
                      const char *app_name)
     {
         _resolver = partition_resolver::get_resolver(cluster_name, meta_list, app_name);

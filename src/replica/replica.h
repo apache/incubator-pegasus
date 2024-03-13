@@ -67,7 +67,7 @@ class rocksdb_wrapper_test;
 
 namespace dsn {
 class gpid;
-class rpc_address;
+class host_port;
 
 namespace dist {
 namespace block_service {
@@ -316,7 +316,7 @@ private:
     // See more about it in `replica_bulk_loader.cpp`
     void
     init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations = false);
-    void send_prepare_message(::dsn::rpc_address addr,
+    void send_prepare_message(::dsn::host_port addr,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
@@ -342,7 +342,7 @@ private:
                                         learn_response &&resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err, bool is_local_error);
-    error_code handle_learning_succeeded_on_primary(::dsn::rpc_address node,
+    error_code handle_learning_succeeded_on_primary(::dsn::host_port node,
                                                     uint64_t learn_signature);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state &state);
@@ -371,7 +371,7 @@ private:
     // failure handling
     void handle_local_failure(error_code error);
     void handle_remote_failure(partition_status::type status,
-                               ::dsn::rpc_address node,
+                               ::dsn::host_port node,
                                error_code error,
                                const std::string &caused_by);
 
@@ -379,12 +379,12 @@ private:
     // reconfiguration
     void assign_primary(configuration_update_request &proposal);
     void add_potential_secondary(configuration_update_request &proposal);
-    void upgrade_to_secondary_on_primary(::dsn::rpc_address node);
+    void upgrade_to_secondary_on_primary(::dsn::host_port node);
     void downgrade_to_secondary_on_primary(configuration_update_request &proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request &proposal);
     void remove(configuration_update_request &proposal);
     void update_configuration_on_meta_server(config_type::type type,
-                                             ::dsn::rpc_address node,
+                                             ::dsn::host_port node,
                                              partition_configuration &newConfig);
     void
     on_update_configuration_on_meta_server_reply(error_code err,

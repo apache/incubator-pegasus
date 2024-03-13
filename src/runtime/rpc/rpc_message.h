@@ -33,6 +33,7 @@
 
 #include "common/gpid.h"
 #include "rpc_address.h"
+#include "rpc_host_port.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
@@ -95,13 +96,13 @@ typedef struct message_header
 
     // Attention:
     // here, from_address must be IPv4 address, namely we can regard from_address as a
-    // POD-type structure, so no memory-leak will occur even if we don't call it's
+    // POD-type structure, so no memory-leak will occur even if we don't call its
     // destructor.
     //
     // generally, it is the from_node's primary address, except the
     // case described in message_ex::create_response()'s ATTENTION comment.
     //
-    // in the forwarding case, the from_address is always the orignal client's address
+    // in the forwarding case, the from_address is always the original client's address
     rpc_address from_address;
 
     struct
@@ -137,6 +138,8 @@ public:
     rpc_session_ptr io_session; // send/recv session
     rpc_address to_address;     // always ipv4/v6 address, it is the to_node's net address
     rpc_address server_address; // used by requests, and may be of uri/group address
+    host_port to_host_port;     // fqdn from 'to_address'
+    host_port server_host_port; // fqdn from 'server_address'
     dsn::task_code local_rpc_code;
     network_header_format hdr_format;
     int send_retry_count;

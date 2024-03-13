@@ -141,7 +141,7 @@ public:
 
         switch (type()) {
         case HOST_TYPE_IPV4:
-            return ip() == r.ip() && _addr.v4.port == r.port();
+            return ip() == r.ip() && port() == r.port();
         case HOST_TYPE_GROUP:
             return _addr.group.group == r._addr.group.group;
         default:

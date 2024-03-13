@@ -30,7 +30,7 @@
 #include "utils/strings.h"
 
 namespace dsn {
-class rpc_address;
+class host_port;
 }
 struct shell_context;
 
@@ -67,7 +67,7 @@ inline bool validate_cmd(const argh::parser &cmd,
 
 bool validate_ip(shell_context *sc,
                  const std::string &ip_str,
-                 /*out*/ dsn::rpc_address &target_address,
+                 /*out*/ dsn::host_port &target_hp,
                  /*out*/ std::string &err_info);
 
 // Print messages to stderr and return false if `exp` is evaluated to false.
