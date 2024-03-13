@@ -533,6 +533,37 @@ static command_executor commands[] = {
         set_max_replica_count,
     },
     {
+        "local_partition_split",
+        "Split the local partitions offline. It's helpful to split the table which has large "
+        "amount of data but with a few partitions into more partitions to improve the throughput "
+        "and lower latency. Note:\n"
+        "  * Make sure the table to be split is in HEALTH status\n"
+        "  * Stop the replica servers before executing this command\n"
+        "  * Execute this tool on all replica servers which have the partitions of the "
+        "    <src_app_id>\n"
+        "  * <src_data_dirs> and <dst_data_dirs> are ',' split data directories, and have the same "
+        "    size\n"
+        "  * <src_app_id> is the app id to be split\n"
+        "  * <dst_app_id> is the new app id after splitting, make sure it's not exist in the "
+        "    cluster\n"
+        "  * <src_partition_ids> is the partitions to be split, it's allowed to specify partial "
+        "    partition ids on a single replica server once, but make sure the union set is all "
+        "    the partitions of the <src_app_id> among all replica servers using this tool\n"
+        "  * <src_partition_count> is the partition count of the <src_app_id>\n"
+        "  * <dst_partition_count> is the partition count of the <dst_app_id>, it must be 2^n "
+        "    times of <src_app_id> where n > 1\n"
+        "  * <dst_app_name> is the new app name after splitting\n"
+        "  * --post_full_compact indicate whether do the post full compact for the new partitions\n"
+        "  * --post_count indicate whether do the post data counting for the new partitions\n"
+        "  * --threads_per_data_dir indicate the threads count for each data directory\n"
+        "  * --threads_per_partition indicate the threads count for each partition\n"
+        "  * Use 'recover' tool to build the metadata of the new table on Zookeeper after "
+        "    splitting\n"
+        "  * Use 'rename' tool to rename the tables if needed\n",
+        local_partition_split_help.c_str(),
+        local_partition_split,
+    },
+    {
         "exit", "exit shell", "", exit_shell,
     },
     {
