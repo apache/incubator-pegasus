@@ -554,8 +554,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.incr_qps += row.incr_qps;
         sum.check_and_set_qps += row.check_and_set_qps;
         sum.check_and_mutate_qps += row.check_and_mutate_qps;
-        sum.force_receive_non_idempotent_duplicate_request +=
-            row.force_receive_non_idempotent_duplicate_request;
+        sum.dup_unsafe_received_non_idempotent_duplicate_request +=
+            row.dup_unsafe_received_non_idempotent_duplicate_request;
 
         sum.scan_qps += row.scan_qps;
         sum.recent_read_cu += row.recent_read_cu;
@@ -653,7 +653,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.incr_qps);
             tp.append_data(row.check_and_set_qps);
             tp.append_data(row.check_and_mutate_qps);
-            tp.append_data(row.force_receive_non_idempotent_duplicate_request);
+            tp.append_data(row.dup_unsafe_received_non_idempotent_duplicate_request);
             tp.append_data(row.scan_qps);
             tp.append_data(row.recent_read_cu);
             tp.append_data(row.recent_write_cu);

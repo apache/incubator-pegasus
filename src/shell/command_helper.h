@@ -1159,8 +1159,8 @@ struct row_data
         incr_qps += row.incr_qps;
         check_and_set_qps += row.check_and_set_qps;
         check_and_mutate_qps += row.check_and_mutate_qps;
-        force_receive_non_idempotent_duplicate_request +=
-            row.force_receive_non_idempotent_duplicate_request;
+        dup_unsafe_received_non_idempotent_duplicate_request +=
+            row.dup_unsafe_received_non_idempotent_duplicate_request;
         scan_qps += row.scan_qps;
         duplicate_qps += row.duplicate_qps;
         dup_shipped_ops += row.dup_shipped_ops;
@@ -1230,7 +1230,7 @@ struct row_data
     double incr_qps = 0;
     double check_and_set_qps = 0;
     double check_and_mutate_qps = 0;
-    double force_receive_non_idempotent_duplicate_request = 0;
+    double dup_unsafe_received_non_idempotent_duplicate_request = 0;
     double scan_qps = 0;
     double duplicate_qps = 0;
     double dup_shipped_ops = 0;
@@ -1553,8 +1553,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_set_qps += value;
     else if (counter_name == "check_and_mutate_qps")
         row.check_and_mutate_qps += value;
-    else if (counter_name == "force_receive_non_idempotent_duplicate_request")
-        row.force_receive_non_idempotent_duplicate_request += value;
+    else if (counter_name == "dup_unsafe_received_non_idempotent_duplicate_request")
+        row.dup_unsafe_received_non_idempotent_duplicate_request += value;
     else if (counter_name == "scan_qps")
         row.scan_qps += value;
     else if (counter_name == "duplicate_qps")

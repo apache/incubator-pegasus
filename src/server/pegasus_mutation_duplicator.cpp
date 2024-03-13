@@ -232,7 +232,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
 
 void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicate_rpc &rpc)
 {
-    if (!FLAGS_force_send_non_idempotent_when_duplication) {
+    if (!FLAGS_duplication_unsafe_allow_non_idempotent) {
         return;
     }
 

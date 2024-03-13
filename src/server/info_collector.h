@@ -66,8 +66,8 @@ public:
             incr_qps->set(row_stats.incr_qps);
             check_and_set_qps->set(row_stats.check_and_set_qps);
             check_and_mutate_qps->set(row_stats.check_and_mutate_qps);
-            force_receive_non_idempotent_duplicate_request->set(
-                row_stats.force_receive_non_idempotent_duplicate_request);
+            dup_unsafe_received_non_idempotent_duplicate_request->set(
+                row_stats.dup_unsafe_received_non_idempotent_duplicate_request);
             scan_qps->set(row_stats.scan_qps);
             duplicate_qps->set(row_stats.duplicate_qps);
             dup_shipped_ops->set(row_stats.dup_shipped_ops);
@@ -148,7 +148,7 @@ public:
         ::dsn::perf_counter_wrapper incr_qps;
         ::dsn::perf_counter_wrapper check_and_set_qps;
         ::dsn::perf_counter_wrapper check_and_mutate_qps;
-        ::dsn::perf_counter_wrapper force_receive_non_idempotent_duplicate_request;
+        ::dsn::perf_counter_wrapper dup_unsafe_received_non_idempotent_duplicate_request;
         ::dsn::perf_counter_wrapper scan_qps;
         ::dsn::perf_counter_wrapper duplicate_qps;
         ::dsn::perf_counter_wrapper dup_shipped_ops;

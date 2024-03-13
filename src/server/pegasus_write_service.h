@@ -232,7 +232,7 @@ private:
     METRIC_VAR_DECLARE_percentile_int64(check_and_mutate_latency_ns);
 
     METRIC_VAR_DECLARE_counter(dup_requests);
-    METRIC_VAR_DECLARE_counter(force_receive_non_idempotent_duplicate_request);
+    METRIC_VAR_DECLARE_counter(dup_unsafe_received_non_idempotent_duplicate_request);
     METRIC_VAR_DECLARE_percentile_int64(dup_time_lag_ms);
     METRIC_VAR_DECLARE_counter(dup_lagging_writes);
 
