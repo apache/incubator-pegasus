@@ -50,6 +50,7 @@ type metaCall struct {
 	// After a Run successfully ends, the current leader will be set in this field.
 	// If there is no meta failover, `newLead` equals to `lead`.
 	newLead uint32
+	lock    sync.RWMutex
 }
 
 func newMetaCall(lead int, metas []*metaSession, callFunc metaCallFunc, meatIPAddr []string) *metaCall {
@@ -121,18 +122,22 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 		}
 		addr := forwardAddr.GetAddress()
 		found := false
+		c.lock.Lock()
 		for i := range c.metaIPAddrs {
 			if addr == c.metaIPAddrs[i] {
 				found = true
 				break
 			}
 		}
+		c.lock.Unlock()
 		if !found {
+			c.lock.Lock()
 			c.metaIPAddrs = append(c.metaIPAddrs, addr)
 			c.metas = append(c.metas, &metaSession{
 				NodeSession: newNodeSession(addr, NodeTypeMeta),
 				logger:      pegalog.GetLogger(),
 			})
+			c.lock.Unlock()
 			curLeader = len(c.metas) - 1
 			c.metas[curLeader].logger.Printf("add forward address %s as meta server", addr)
 			resp, err = c.callFunc(ctx, c.metas[curLeader])
