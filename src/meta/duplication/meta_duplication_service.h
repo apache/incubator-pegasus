@@ -31,7 +31,7 @@
 #include "utils/fmt_logging.h"
 
 namespace dsn {
-class rpc_address;
+class host_port;
 class zrwlock_nr;
 
 namespace replication {
@@ -122,7 +122,7 @@ private:
     // Thread-Safe
     std::shared_ptr<duplication_info>
     new_dup_from_init(const std::string &follower_cluster_name,
-                      std::vector<rpc_address> &&follower_cluster_metas,
+                      std::vector<host_port> &&follower_cluster_metas,
                       std::shared_ptr<app_state> &app) const;
 
     // get lock to protect access of app table

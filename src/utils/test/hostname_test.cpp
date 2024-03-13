@@ -25,34 +25,6 @@
 namespace dsn {
 namespace replication {
 
-TEST(ip_to_hostname, ipv4_validate)
-{
-    rpc_address rpc_test_ipv4;
-    struct ip_test
-    {
-        std::string ip;
-        bool result;
-    } tests[] = {{"127.0.0.1:8080", true},
-                 {"172.16.254.1:1234", true},
-                 {"172.16.254.1:222222", false},
-                 {"172.16.254.1", false},
-                 {"2222,123,33,1:8080", false},
-                 {"123.456.789.1:8080", false},
-                 {"001.223.110.002:8080", false},
-                 {"172.16.254.1.8080", false},
-                 {"172.16.254.1:8080.", false},
-                 {"127.0.0.11:123!", false},
-                 {"127.0.0.11:123", true},
-                 {"localhost:34601", true},
-                 {"localhost:3460100022212312312213", false},
-                 {"localhost:-12", false},
-                 {"localhost:1@2", false}};
-
-    for (auto test : tests) {
-        ASSERT_EQ(rpc_test_ipv4.from_string_ipv4(test.ip.c_str()), test.result);
-    }
-}
-
 TEST(ip_to_hostname, localhost)
 {
     std::string hostname_result;
@@ -69,8 +41,7 @@ TEST(ip_to_hostname, localhost)
     const std::string valid_ip_port_list = "127.0.0.1:8080,127.0.0.1:8080,127.0.0.1:8080";
     const std::string expected_hostname_port_list = "localhost:8080,localhost:8080,localhost:8080";
 
-    rpc_address rpc_example_valid;
-    rpc_example_valid.assign_ipv4(valid_ip.c_str(), 23010);
+    const auto rpc_example_valid = rpc_address::from_ip_port(valid_ip, 23010);
 
     // static bool hostname(const rpc_address &address,std::string *hostname_result);
     ASSERT_TRUE(dsn::utils::hostname(rpc_example_valid, &hostname_result));

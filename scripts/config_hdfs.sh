@@ -58,6 +58,11 @@ if [ ! -d "$HADOOP_HOME/etc/hadoop" ] || [ ! -d "$HADOOP_HOME/share/hadoop" ]; t
   echo "HADOOP_HOME must be set to the location of your Hadoop jars and core-site.xml."
   return 1
 fi
+
+# Reduces the use of operating system signals by the JVM. See details:
+# https://docs.oracle.com/javase/8/docs/technotes/tools/unix/java.html
+export LIBHDFS_OPTS="-Xrs"
+
 export CLASSPATH=$CLASSPATH:$HADOOP_HOME/etc/hadoop/
 for f in $HADOOP_HOME/share/hadoop/common/lib/*.jar; do
   export CLASSPATH=$CLASSPATH:$f

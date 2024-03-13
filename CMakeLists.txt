@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-cmake_minimum_required(VERSION 3.11.0)
+cmake_minimum_required(VERSION 3.24.0)
 project(pegasus)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")

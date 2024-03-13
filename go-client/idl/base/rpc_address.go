@@ -57,16 +57,16 @@ func (r *RPCAddress) String() string {
 	return fmt.Sprintf("RPCAddress(%s)", r.GetAddress())
 }
 
-func (r *RPCAddress) getIp() net.IP {
+func (r *RPCAddress) GetIP() net.IP {
 	return net.IPv4(byte(0xff&(r.address>>56)), byte(0xff&(r.address>>48)), byte(0xff&(r.address>>40)), byte(0xff&(r.address>>32)))
 }
 
-func (r *RPCAddress) getPort() int {
+func (r *RPCAddress) GetPort() int {
 	return int(0xffff & (r.address >> 16))
 }
 
 func (r *RPCAddress) GetAddress() string {
-	return fmt.Sprintf("%s:%d", r.getIp(), r.getPort())
+	return fmt.Sprintf("%s:%d", r.GetIP(), r.GetPort())
 }
 
 func (r *RPCAddress) GetRawAddress() int64 {

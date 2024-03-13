@@ -46,6 +46,7 @@
 
 #include "absl/strings/string_view.h"
 #include "base/idl_utils.h" // IWYU pragma: keep
+#include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
@@ -56,7 +57,6 @@
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "hotkey_collector.h"
-#include "meta_store.h"
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "replica_admin_types.h"
@@ -89,7 +89,7 @@
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_verbose_log,
                 false,
-                "whether to print verbose log for debugging");
+                "Whether to print RocksDB related verbose log for debugging");
 DSN_DEFINE_int32(pegasus.server,
                  hotkey_analyse_time_interval_s,
                  10,
@@ -142,8 +142,6 @@ std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffe
 METRIC_VAR_DEFINE_gauge_int64(rdb_block_cache_mem_usage_bytes, pegasus_server_impl);
 METRIC_VAR_DEFINE_gauge_int64(rdb_write_rate_limiter_through_bytes_per_sec, pegasus_server_impl);
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
-const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
-const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
 const std::chrono::seconds pegasus_server_impl::kServerStatUpdateTimeSec = std::chrono::seconds(10);
 
 // should be same with items in dsn::backup_restore_constant
@@ -1585,7 +1583,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     //          3, restore_dir is exist
     //
     bool db_exist = true;
-    auto rdb_path = dsn::utils::filesystem::path_combine(data_dir(), "rdb");
+    auto rdb_path = dsn::utils::filesystem::path_combine(data_dir(), replication_app_base::kRdbDir);
     auto duplication_path = duplication_dir();
     if (dsn::utils::filesystem::path_exists(rdb_path)) {
         // only case 1
@@ -1691,7 +1689,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 
         if (!has_incompatible_db_options) {
             for (int i = 0; i < loaded_cf_descs.size(); ++i) {
-                if (loaded_cf_descs[i].name == DATA_COLUMN_FAMILY_NAME) {
+                if (loaded_cf_descs[i].name == meta_store::DATA_COLUMN_FAMILY_NAME) {
                     loaded_data_cf_opts = loaded_cf_descs[i].options;
                 }
             }
@@ -1710,7 +1708,8 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     }
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-        {{DATA_COLUMN_FAMILY_NAME, _table_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
+        {{meta_store::DATA_COLUMN_FAMILY_NAME, _table_data_cf_opts},
+         {meta_store::META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
     rocksdb::ConfigOptions config_options;
     config_options.ignore_unknown_options = true;
     config_options.ignore_unsupported_options = true;
@@ -1730,13 +1729,13 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         return dsn::ERR_LOCAL_APP_FAILURE;
     }
     CHECK_EQ_PREFIX(2, handles_opened.size());
-    CHECK_EQ_PREFIX(handles_opened[0]->GetName(), DATA_COLUMN_FAMILY_NAME);
-    CHECK_EQ_PREFIX(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
+    CHECK_EQ_PREFIX(handles_opened[0]->GetName(), meta_store::DATA_COLUMN_FAMILY_NAME);
+    CHECK_EQ_PREFIX(handles_opened[1]->GetName(), meta_store::META_COLUMN_FAMILY_NAME);
     _data_cf = handles_opened[0];
     _meta_cf = handles_opened[1];
 
     // Create _meta_store which provide Pegasus meta data read and write.
-    _meta_store = std::make_unique<meta_store>(this, _db, _meta_cf);
+    _meta_store = std::make_unique<meta_store>(replica_name(), _db, _meta_cf);
 
     if (db_exist) {
         auto cleanup = dsn::defer([this]() { release_db(); });
@@ -1891,7 +1890,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
 
     if (clear_state) {
         // when clean the data dir, please clean the checkpoints first.
-        // otherwise, if the "rdb" is removed but the checkpoints remains,
+        // otherwise, if the replication_app_base::kRdbDir is removed but the checkpoints remains,
         // the storage engine can't be opened again
         for (auto iter = reserved_checkpoints.begin(); iter != reserved_checkpoints.end(); ++iter) {
             std::string chkpt_path =
@@ -2192,8 +2191,8 @@ private:
         // Because of RocksDB's restriction, we have to to open default column family even though
         // not use it
         std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-            {{DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
-             {META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
+            {{meta_store::DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
+             {meta_store::META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
         status = rocksdb::DB::OpenForReadOnly(
             _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
         if (!status.ok()) {
@@ -2204,7 +2203,7 @@ private:
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
         CHECK_EQ_PREFIX(handles_opened.size(), 2);
-        CHECK_EQ_PREFIX(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
+        CHECK_EQ_PREFIX(handles_opened[1]->GetName(), meta_store::META_COLUMN_FAMILY_NAME);
         uint64_t last_flushed_decree =
             _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
         *checkpoint_decree = last_flushed_decree;
@@ -2295,7 +2294,8 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
 
         // move learned files from learn_dir to data_dir/rdb
         std::string learn_dir = ::dsn::utils::filesystem::remove_file_name(state.files[0]);
-        std::string new_dir = ::dsn::utils::filesystem::path_combine(data_dir(), "rdb");
+        std::string new_dir =
+            ::dsn::utils::filesystem::path_combine(data_dir(), replication_app_base::kRdbDir);
         if (!::dsn::utils::filesystem::rename_path(learn_dir, new_dir)) {
             LOG_ERROR_PREFIX("rename directory {} to {} failed", learn_dir, new_dir);
             return ::dsn::ERR_FILE_OPERATION_FAILED;
@@ -3322,9 +3322,9 @@ bool pegasus_server_impl::set_options(
     }
 
     for (const auto &column_family : column_families) {
-        if (column_family == META_COLUMN_FAMILY_NAME) {
+        if (column_family == meta_store::META_COLUMN_FAMILY_NAME) {
             *missing_meta_cf = false;
-        } else if (column_family == DATA_COLUMN_FAMILY_NAME) {
+        } else if (column_family == meta_store::DATA_COLUMN_FAMILY_NAME) {
             *missing_data_cf = false;
         } else {
             LOG_ERROR_PREFIX("unknown column family name: {}", column_family);

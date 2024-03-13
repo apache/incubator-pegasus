@@ -32,6 +32,7 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
@@ -130,7 +131,7 @@ void newly_partitions::newly_remove_partition(int32_t app_id)
     --total_partitions;
 }
 
-newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::rpc_address &addr)
+newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::host_port &addr)
 {
     node_state *ns = get_node_state(mapper, addr, false);
     if (ns == nullptr)
@@ -174,9 +175,10 @@ void server_load_balancer::register_proposals(meta_view view,
         // for these proposals, they should keep the target empty and
         // the meta-server will fill primary as target.
         if (act.target.is_invalid()) {
-            if (!pc.primary.is_invalid())
+            if (!pc.hp_primary.is_invalid()) {
                 act.target = pc.primary;
-            else {
+                act.__set_hp_target(pc.hp_primary);
+            } else {
                 resp.err = ERR_INVALID_PARAMETERS;
                 return;
             }

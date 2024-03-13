@@ -34,6 +34,7 @@
 
 #include "rpc_address.h"
 #include "runtime/rpc/message_parser.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
@@ -91,6 +92,7 @@ public:
     // the named address
     //
     virtual ::dsn::rpc_address address() = 0;
+    virtual ::dsn::host_port host_port() = 0;
 
     //
     // this is where the upper rpc engine calls down for a RPC call
@@ -227,6 +229,7 @@ public:
     bool is_client() const { return _is_client; }
 
     dsn::rpc_address remote_address() const { return _remote_addr; }
+    dsn::host_port remote_host_port() const { return _remote_host_port; }
     connection_oriented_network &net() const { return _net; }
     message_parser_ptr parser() const { return _parser; }
 
@@ -328,6 +331,7 @@ protected:
     // constant info
     connection_oriented_network &_net;
     dsn::rpc_address _remote_addr;
+    dsn::host_port _remote_host_port;
     int _max_buffer_block_count_per_send;
     message_reader _reader;
     message_parser_ptr _parser;

@@ -134,14 +134,14 @@ private:
     {
         app_info_1.app_id = 1;
         app_info_1.app_name = "disk_test_1";
-        app_info_1.app_type = "replica";
+        app_info_1.app_type = replication_options::kReplicaAppType;
         app_info_1.is_stateful = true;
         app_info_1.max_replica_count = 3;
         app_info_1.partition_count = 8;
 
         app_info_2.app_id = 2;
         app_info_2.app_name = "disk_test_2";
-        app_info_2.app_type = "replica";
+        app_info_2.app_type = replication_options::kReplicaAppType;
         app_info_2.is_stateful = true;
         app_info_2.max_replica_count = 3;
         app_info_2.partition_count = 16;

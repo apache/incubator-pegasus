@@ -21,9 +21,12 @@
 
 #include <getopt.h>
 #include <fstream>
+#include <functional>
 #include <iomanip>
+#include <memory>
 #include <queue>
 #include <thread>
+#include <utility>
 
 #include <boost/algorithm/string.hpp>
 #include <fmt/ostream.h>
@@ -56,6 +59,7 @@
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
@@ -72,6 +76,12 @@ using namespace dsn::replication;
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+#define RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID()                                               \
+    PRINT_AND_RETURN_FALSE_IF_NOT(dsn::buf2uint32(optarg, sample_interval_ms),                     \
+                                  "parse sample_interval_ms({}) failed\n",                         \
+                                  optarg);                                                         \
+    PRINT_AND_RETURN_FALSE_IF_NOT(sample_interval_ms > 0, "sample_interval_ms should be > 0\n")
 
 enum scan_data_operator
 {
@@ -615,20 +625,21 @@ inline void scan_data_next(scan_data_context *context)
 struct node_desc
 {
     std::string desc;
-    dsn::rpc_address address;
-    node_desc(const std::string &s, const dsn::rpc_address &n) : desc(s), address(n) {}
+    dsn::host_port hp;
+    node_desc(const std::string &s, const dsn::host_port &n) : desc(s), hp(n) {}
 };
+
 // type: all | replica-server | meta-server
 inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<node_desc> &nodes)
 {
     if (type == "all" || type == "meta-server") {
-        for (auto &addr : sc->meta_list) {
-            nodes.emplace_back("meta-server", addr);
+        for (auto &hp : sc->meta_list) {
+            nodes.emplace_back("meta-server", hp);
         }
     }
 
     if (type == "all" || type == "replica-server") {
-        std::map<dsn::rpc_address, dsn::replication::node_status::type> rs_nodes;
+        std::map<dsn::host_port, dsn::replication::node_status::type> rs_nodes;
         ::dsn::error_code err =
             sc->ddl_client->list_nodes(dsn::replication::node_status::NS_ALIVE, rs_nodes);
         if (err != ::dsn::ERR_OK) {
@@ -643,6 +654,7 @@ inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<n
     return true;
 }
 
+// Fetch the metrics according to `query_string` for each target node.
 inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &nodes,
                                                  const std::string &query_string)
 {
@@ -663,8 +675,8 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
         }                                                                                          \
     } while (0)
 
-                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(host, nodes[i].address.ipv4_str());
-                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(port, nodes[i].address.port());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(host, nodes[i].hp.host().c_str());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(port, nodes[i].hp.port());
                 SET_RESULT_AND_RETURN_IF_URL_NOT_OK(
                     path, dsn::metrics_http_service::kMetricsQueryPath.c_str());
                 SET_RESULT_AND_RETURN_IF_URL_NOT_OK(query, query_string.c_str());
@@ -678,89 +690,366 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     return results;
 }
 
-#define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what)                                     \
+#define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what, ...)                                \
     do {                                                                                           \
         if (dsn_unlikely(!result.error())) {                                                       \
-            std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
-                      << node.address << " failed: " << result.error() << std::endl;               \
+            std::cout << "ERROR: send http request to query " << fmt::format(what, ##__VA_ARGS__)  \
+                      << " metrics from node " << node.hp << " failed: " << result.error()         \
+                      << std::endl;                                                                \
             return true;                                                                           \
         }                                                                                          \
         if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {                         \
             std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
-                      << node.address                                                              \
-                      << " failed: " << dsn::get_http_status_message(result.status()) << std::endl \
+                      << node.hp << " failed: " << dsn::get_http_status_message(result.status())   \
+                      << std::endl                                                                 \
                       << result.body() << std::endl;                                               \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
 
-#define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what)                                     \
+#define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what, ...)                                \
     do {                                                                                           \
         const auto &res = (expr);                                                                  \
         if (dsn_unlikely(!res)) {                                                                  \
-            std::cout << "ERROR: parse " << what << " metrics response from node " << node.address \
-                      << " failed: " << res << std::endl;                                          \
+            std::cout << "ERROR: parse " << fmt::format(what, ##__VA_ARGS__)                       \
+                      << " metrics response from node " << node.hp << " failed: " << res           \
+                      << std::endl;                                                                \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
 
 using stat_var_map = std::unordered_map<std::string, double *>;
-inline dsn::error_s calc_metric_deltas(const std::string &json_string_1,
-                                       const std::string &json_string_2,
-                                       const std::string &entity_type,
-                                       stat_var_map &incs,
-                                       stat_var_map &rates)
+
+// Abstract class used to aggregate the stats based on the custom filters while iterating over
+// the fetched metrics.
+//
+// Given the type and attributes of an entity, derived classes need to implement a custom filter
+// to return the selected `stat_var_map`, if any. Calculations including addition and subtraction
+// are also provided for aggregating the stats. The metric name would be a dimension for the
+// aggregation.
+class aggregate_stats
 {
-    // Currently only Gauge and Counter are considered to have "increase" and "rate", thus brief
-    // `value` field is enough.
-    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_1, query_snapshot_1);
-    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_2, query_snapshot_2);
+public:
+    aggregate_stats() = default;
 
-    if (query_snapshot_2.timestamp_ns <= query_snapshot_1.timestamp_ns) {
-        return FMT_ERR(dsn::ERR_INVALID_DATA,
-                       "duration for metric samples should be > 0: timestamp_ns_1={}, "
-                       "timestamp_ns_2={}",
-                       query_snapshot_1.timestamp_ns,
-                       query_snapshot_2.timestamp_ns);
-    }
+    virtual ~aggregate_stats() = default;
 
-    const std::vector<stat_var_map *> stat_vars = {&incs, &rates};
-
-#define CALC_STAT_VAR(op)                                                                          \
-    do {                                                                                           \
-        if (entity.type != entity_type) {                                                          \
+#define CALC_STAT_VARS(entities, op)                                                               \
+    for (const auto &entity : entities) {                                                          \
+        stat_var_map *stat_vars = nullptr;                                                         \
+        RETURN_NOT_OK(get_stat_vars(entity.type, entity.attributes, &stat_vars));                  \
+                                                                                                   \
+        if (stat_vars == nullptr || stat_vars->empty()) {                                          \
             continue;                                                                              \
         }                                                                                          \
                                                                                                    \
         for (const auto &m : entity.metrics) {                                                     \
-            for (auto &stat : stat_vars) {                                                         \
-                auto iter = stat->find(m.name);                                                    \
-                if (iter != stat->end()) {                                                         \
-                    *iter->second op m.value;                                                      \
-                }                                                                                  \
+            auto iter = stat_vars->find(m.name);                                                   \
+            if (iter != stat_vars->end()) {                                                        \
+                *iter->second op m.value;                                                          \
             }                                                                                      \
+        }                                                                                          \
+    }                                                                                              \
+    return dsn::error_s::ok()
+
+    // Following interfaces provide calculations over the fetched metrics. They would perform
+    // each calculation on each metric whose name was found in `stat_var_map` returned by
+    // `get_stat_vars`.
+
+    // Assign the matched metric value directly to the selected member of `stat_var_map` without
+    // extra calculation.
+    dsn::error_s assign(const std::vector<dsn::metric_entity_brief_value_snapshot> &entities)
+    {
+        CALC_STAT_VARS(entities, =);
+    }
+
+    // Add and assign the matched metric value to the selected member of `stat_var_map`.
+    dsn::error_s add_assign(const std::vector<dsn::metric_entity_brief_value_snapshot> &entities)
+    {
+        CALC_STAT_VARS(entities, +=);
+    }
+
+    // Subtract and assign the matched metric value to the selected member of `stat_var_map`.
+    dsn::error_s sub_assign(const std::vector<dsn::metric_entity_brief_value_snapshot> &entities)
+    {
+        CALC_STAT_VARS(entities, -=);
+    }
+
+    void calc_rates(uint64_t timestamp_ns_start, uint64_t timestamp_ns_end)
+    {
+        calc_rates(dsn::calc_metric_sample_duration_s(timestamp_ns_start, timestamp_ns_end));
+    }
+
+#undef CALC_STAT_VARS
+
+protected:
+    // Given the type and attributes of an entity, decide which `stat_var_map` is selected, if any.
+    // Otherwise, `*stat_vars` would be set to nullptr.
+    virtual dsn::error_s get_stat_vars(const std::string &entity_type,
+                                       const dsn::metric_entity::attr_map &entity_attrs,
+                                       stat_var_map **stat_vars) = 0;
+
+    // Implement self-defined calculation for rates, such as QPS.
+    virtual void calc_rates(double duration_s) = 0;
+};
+
+// Support multiple kinds of aggregations over the fetched metrics, such as sums, increases and
+// rates. Users could choose to create aggregations as needed.
+class aggregate_stats_calcs
+{
+public:
+    aggregate_stats_calcs() noexcept = default;
+
+    ~aggregate_stats_calcs() = default;
+
+    aggregate_stats_calcs(aggregate_stats_calcs &&) noexcept = default;
+    aggregate_stats_calcs &operator=(aggregate_stats_calcs &&) noexcept = default;
+
+#define DEF_CALC_CREATOR(name)                                                                     \
+    template <typename T, typename... Args>                                                        \
+    void create_##name(Args &&... args)                                                            \
+    {                                                                                              \
+        _##name = std::make_unique<T>(std::forward<Args>(args)...);                                \
+    }
+
+    // Create the aggregations as needed.
+    DEF_CALC_CREATOR(sums)
+    DEF_CALC_CREATOR(increases)
+    DEF_CALC_CREATOR(rates)
+
+#undef DEF_CALC_CREATOR
+
+#define CALC_ACCUM_STATS(entities)                                                                 \
+    do {                                                                                           \
+        if (_sums) {                                                                               \
+            RETURN_NOT_OK(_sums->add_assign(entities));                                            \
         }                                                                                          \
     } while (0)
 
-    for (const auto &entity : query_snapshot_2.entities) {
-        CALC_STAT_VAR(+=);
+    // Perform the chosen accum aggregations on the fetched metrics.
+    dsn::error_s aggregate_metrics(const std::string &json_string)
+    {
+        DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
+
+        CALC_ACCUM_STATS(query_snapshot.entities);
+
+        return dsn::error_s::ok();
     }
 
-    for (const auto &entity : query_snapshot_1.entities) {
-        CALC_STAT_VAR(-=);
+    // Perform all of the chosen aggregations (both accum and delta) on the fetched metrics.
+    dsn::error_s aggregate_metrics(const std::string &json_string_start,
+                                   const std::string &json_string_end)
+    {
+        DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
+            json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
+
+        // Apply ending sample to the accum aggregations.
+        CALC_ACCUM_STATS(query_snapshot_end.entities);
+
+        const std::array deltas_list = {&_increases, &_rates};
+        for (const auto stats : deltas_list) {
+            if (!(*stats)) {
+                continue;
+            }
+
+            RETURN_NOT_OK((*stats)->add_assign(query_snapshot_end.entities));
+            RETURN_NOT_OK((*stats)->sub_assign(query_snapshot_start.entities));
+        }
+
+        if (_rates) {
+            _rates->calc_rates(query_snapshot_start.timestamp_ns, query_snapshot_end.timestamp_ns);
+        }
+
+        return dsn::error_s::ok();
     }
 
-#undef CALC_STAT_VAR
+#undef CALC_ACCUM_STATS
 
-    const std::chrono::duration<double, std::nano> duration_ns(
-        static_cast<double>(query_snapshot_2.timestamp_ns - query_snapshot_1.timestamp_ns));
-    const std::chrono::duration<double> duration_s = duration_ns;
-    for (auto &rate : rates) {
-        *rate.second /= duration_s.count();
+private:
+    DISALLOW_COPY_AND_ASSIGN(aggregate_stats_calcs);
+
+    std::unique_ptr<aggregate_stats> _sums;
+    std::unique_ptr<aggregate_stats> _increases;
+    std::unique_ptr<aggregate_stats> _rates;
+};
+
+// Convenient macros for `get_stat_vars` to set `*stat_vars` to nullptr and return under some
+// circumstances.
+#define RETURN_NULL_STAT_VARS_IF(expr)                                                             \
+    do {                                                                                           \
+        if (expr) {                                                                                \
+            *stat_vars = nullptr;                                                                  \
+            return dsn::error_s::ok();                                                             \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_NULL_STAT_VARS_IF_NOT_OK(expr)                                                      \
+    do {                                                                                           \
+        const auto &err = (expr);                                                                  \
+        if (dsn_unlikely(!err)) {                                                                  \
+            *stat_vars = nullptr;                                                                  \
+            return err;                                                                            \
+        }                                                                                          \
+    } while (0)
+
+// Total aggregation over the fetched metrics. The only dimension is the metric name, which
+// is also the key of `stat_var_map`.
+class total_aggregate_stats : public aggregate_stats
+{
+public:
+    total_aggregate_stats(const std::string &entity_type, stat_var_map &&stat_vars)
+        : _my_entity_type(entity_type), _my_stat_vars(std::move(stat_vars))
+    {
     }
 
-    return dsn::error_s::ok();
-}
+    ~total_aggregate_stats() = default;
+
+protected:
+    dsn::error_s get_stat_vars(const std::string &entity_type,
+                               const dsn::metric_entity::attr_map &entity_attrs,
+                               stat_var_map **stat_vars) override
+    {
+        *stat_vars = (entity_type == _my_entity_type) ? &_my_stat_vars : nullptr;
+        return dsn::error_s::ok();
+    }
+
+    void calc_rates(double duration_s) override
+    {
+        for (auto &stat_var : _my_stat_vars) {
+            *stat_var.second /= duration_s;
+        }
+    }
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(total_aggregate_stats);
+
+    const std::string _my_entity_type;
+    stat_var_map _my_stat_vars;
+};
+
+using table_stat_map = std::unordered_map<int32_t, stat_var_map>;
+
+// Table-level aggregation over the fetched metrics. There are 2 dimensions for the aggregation:
+// * the table id, from the attributes of the metric entity;
+// * the metric name, which is also the key of `stat_var_map`.
+//
+// It should be noted that `partitions` argument is also provided as the filter. The reason is
+// that partition-level metrics from a node should be excluded under some circumstances. For
+// example, the partition-level QPS we care about must be from the primary replica. The fetched
+// metrics would be ignored once they are from a node that is not the primary replica of the
+// target partition. However, empty `partitions` means there is no restriction.
+class table_aggregate_stats : public aggregate_stats
+{
+public:
+    table_aggregate_stats(const std::string &entity_type,
+                          table_stat_map &&table_stats,
+                          const std::unordered_set<dsn::gpid> &partitions)
+        : _my_entity_type(entity_type),
+          _my_table_stats(std::move(table_stats)),
+          _my_partitions(std::move(partitions))
+    {
+    }
+
+    ~table_aggregate_stats() override = default;
+
+protected:
+    dsn::error_s get_stat_vars(const std::string &entity_type,
+                               const dsn::metric_entity::attr_map &entity_attrs,
+                               stat_var_map **stat_vars) override
+    {
+        RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
+
+        int32_t metric_table_id;
+        RETURN_NULL_STAT_VARS_IF_NOT_OK(dsn::parse_metric_table_id(entity_attrs, metric_table_id));
+
+        // Empty `_my_partitions` means there is no restriction; otherwise, the partition id
+        // should be found in `_my_partitions`.
+        if (!_my_partitions.empty()) {
+            int32_t metric_partition_id;
+            RETURN_NULL_STAT_VARS_IF_NOT_OK(
+                dsn::parse_metric_partition_id(entity_attrs, metric_partition_id));
+
+            dsn::gpid metric_pid(metric_table_id, metric_partition_id);
+            RETURN_NULL_STAT_VARS_IF(_my_partitions.find(metric_pid) == _my_partitions.end());
+        }
+
+        const auto &table_stat = _my_table_stats.find(metric_table_id);
+        CHECK_TRUE(table_stat != _my_table_stats.end());
+
+        *stat_vars = &table_stat->second;
+        return dsn::error_s::ok();
+    }
+
+    void calc_rates(double duration_s) override
+    {
+        for (auto &table_stats : _my_table_stats) {
+            for (auto &stat_var : table_stats.second) {
+                *stat_var.second /= duration_s;
+            }
+        }
+    }
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(table_aggregate_stats);
+
+    const std::string _my_entity_type;
+    table_stat_map _my_table_stats;
+    std::unordered_set<dsn::gpid> _my_partitions;
+};
+
+using partition_stat_map = std::unordered_map<dsn::gpid, stat_var_map>;
+
+// Partition-level aggregation over the fetched metrics. There are 3 dimensions for the aggregation:
+// * the table id, from the attributes of the metric entity;
+// * the partition id, also from the attributes of the metric entity;
+// * the metric name, which is also the key of `stat_var_map`.
+class partition_aggregate_stats : public aggregate_stats
+{
+public:
+    partition_aggregate_stats(const std::string &entity_type, partition_stat_map &&partition_stats)
+        : _my_entity_type(entity_type), _my_partition_stats(std::move(partition_stats))
+    {
+    }
+
+    ~partition_aggregate_stats() override = default;
+
+protected:
+    dsn::error_s get_stat_vars(const std::string &entity_type,
+                               const dsn::metric_entity::attr_map &entity_attrs,
+                               stat_var_map **stat_vars) override
+    {
+        RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
+
+        int32_t metric_table_id;
+        RETURN_NULL_STAT_VARS_IF_NOT_OK(dsn::parse_metric_table_id(entity_attrs, metric_table_id));
+
+        int32_t metric_partition_id;
+        RETURN_NULL_STAT_VARS_IF_NOT_OK(
+            dsn::parse_metric_partition_id(entity_attrs, metric_partition_id));
+
+        dsn::gpid metric_pid(metric_table_id, metric_partition_id);
+        const auto &partition_stat = _my_partition_stats.find(metric_pid);
+        RETURN_NULL_STAT_VARS_IF(partition_stat == _my_partition_stats.end());
+
+        *stat_vars = &partition_stat->second;
+        return dsn::error_s::ok();
+    }
+
+    void calc_rates(double duration_s) override
+    {
+        for (auto &partition_stats : _my_partition_stats) {
+            for (auto &stat_var : partition_stats.second) {
+                *stat_var.second /= duration_s;
+            }
+        }
+    }
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(partition_aggregate_stats);
+
+    const std::string _my_entity_type;
+    partition_stat_map _my_partition_stats;
+};
 
 inline std::vector<std::pair<bool, std::string>>
 call_remote_command(shell_context *sc,
@@ -783,7 +1072,11 @@ call_remote_command(shell_context *sc,
             }
         };
         tasks[i] = dsn::dist::cmd::async_call_remote(
-            nodes[i].address, cmd, arguments, callback, std::chrono::milliseconds(5000));
+            dsn::dns_resolver::instance().resolve_address(nodes[i].hp),
+            cmd,
+            arguments,
+            callback,
+            std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
         tasks[i]->wait();
@@ -839,7 +1132,7 @@ inline bool parse_app_perf_counter_name(const std::string &name,
 struct row_data
 {
     row_data() = default;
-    explicit row_data(const std::string &row_name) : row_name(row_name) {}
+    explicit row_data(const std::string &name) : row_name(name) {}
 
     double get_total_read_qps() const { return get_qps + multi_get_qps + batch_get_qps + scan_qps; }
 
@@ -988,6 +1281,253 @@ struct row_data
     double rdb_write_amplification = 0;
     double rdb_read_amplification = 0;
 };
+
+// TODO(wangdan): there are still dozens of fields to be added to the following functions.
+inline dsn::metric_filters row_data_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"replica"};
+    filters.entity_metrics = {
+        "get_requests",
+        "multi_get_requests",
+        "batch_get_requests",
+        "put_requests",
+        "multi_put_requests",
+        "remove_requests",
+        "multi_remove_requests",
+        "incr_requests",
+        "check_and_set_requests",
+        "check_and_mutate_requests",
+        "scan_requests",
+        "dup_requests",
+        "dup_shipped_successful_requests",
+        "dup_shipped_failed_requests",
+        "dup_recent_lost_mutations",
+        "read_capacity_units",
+        "write_capacity_units",
+        "read_expired_values",
+        "read_filtered_values",
+        "abnormal_read_requests",
+        "throttling_delayed_write_requests",
+        "throttling_rejected_write_requests",
+        "throttling_delayed_read_requests",
+        "throttling_rejected_read_requests",
+        "throttling_delayed_backup_requests",
+        "throttling_rejected_backup_requests",
+        "splitting_rejected_write_requests",
+        "splitting_rejected_read_requests",
+        "bulk_load_ingestion_rejected_write_requests",
+        "rdb_total_sst_size_mb",
+        "rdb_total_sst_files",
+        "rdb_block_cache_hit_count",
+        "rdb_block_cache_total_count",
+        "rdb_index_and_filter_blocks_mem_usage_bytes",
+        "rdb_memtable_mem_usage_bytes",
+        "rdb_estimated_keys",
+        "rdb_bloom_filter_seek_negatives",
+        "rdb_bloom_filter_seek_total",
+        "rdb_bloom_filter_point_lookup_true_positives",
+        "rdb_bloom_filter_point_lookup_positives",
+        "rdb_bloom_filter_point_lookup_negatives",
+        "backup_requests",
+        "backup_request_bytes",
+        "get_bytes",
+        "multi_get_bytes",
+        "batch_get_bytes",
+        "scan_bytes",
+        "put_bytes",
+        "multi_put_bytes",
+        "check_and_set_bytes",
+        "check_and_mutate_bytes",
+        "rdb_compaction_input_bytes",
+        "rdb_compaction_output_bytes",
+        "rdb_l2_and_up_hit_count",
+        "rdb_l1_hit_count",
+        "rdb_l0_hit_count",
+        "rdb_memtable_hit_count",
+        "rdb_write_amplification",
+        "rdb_read_amplification",
+    };
+    return filters;
+}
+
+inline dsn::metric_filters row_data_filters(int32_t table_id)
+{
+    auto filters = row_data_filters();
+    filters.entity_attrs = {"table_id", std::to_string(table_id)};
+    return filters;
+}
+
+#define BIND_ROW(metric_name, member)                                                              \
+    {                                                                                              \
+        #metric_name, &row.member                                                                  \
+    }
+
+inline stat_var_map create_sums(row_data &row)
+{
+    return stat_var_map({
+        BIND_ROW(dup_recent_lost_mutations, dup_recent_mutation_loss_count),
+        BIND_ROW(rdb_total_sst_size_mb, storage_mb),
+        BIND_ROW(rdb_total_sst_files, storage_count),
+        BIND_ROW(rdb_block_cache_hit_count, rdb_block_cache_hit_count),
+        BIND_ROW(rdb_block_cache_total_count, rdb_block_cache_total_count),
+        BIND_ROW(rdb_index_and_filter_blocks_mem_usage_bytes,
+                 rdb_index_and_filter_blocks_mem_usage),
+        BIND_ROW(rdb_memtable_mem_usage_bytes, rdb_memtable_mem_usage),
+        BIND_ROW(rdb_estimated_keys, rdb_estimate_num_keys),
+        BIND_ROW(rdb_bloom_filter_seek_negatives, rdb_bf_seek_negatives),
+        BIND_ROW(rdb_bloom_filter_seek_total, rdb_bf_seek_total),
+        BIND_ROW(rdb_bloom_filter_point_lookup_true_positives, rdb_bf_point_positive_true),
+        BIND_ROW(rdb_bloom_filter_point_lookup_positives, rdb_bf_point_positive_total),
+        BIND_ROW(rdb_bloom_filter_point_lookup_negatives, rdb_bf_point_negatives),
+        BIND_ROW(rdb_l2_and_up_hit_count, rdb_read_l2andup_hit_count),
+        BIND_ROW(rdb_l1_hit_count, rdb_read_l1_hit_count),
+        BIND_ROW(rdb_l0_hit_count, rdb_read_l0_hit_count),
+        BIND_ROW(rdb_memtable_hit_count, rdb_read_memtable_hit_count),
+        BIND_ROW(rdb_write_amplification, rdb_write_amplification),
+        BIND_ROW(rdb_read_amplification, rdb_read_amplification),
+    });
+}
+
+inline stat_var_map create_increases(row_data &row)
+{
+    return stat_var_map({
+        BIND_ROW(read_capacity_units, recent_read_cu),
+        BIND_ROW(write_capacity_units, recent_write_cu),
+        BIND_ROW(read_expired_values, recent_expire_count),
+        BIND_ROW(read_filtered_values, recent_filter_count),
+        BIND_ROW(abnormal_read_requests, recent_abnormal_count),
+        BIND_ROW(throttling_delayed_write_requests, recent_write_throttling_delay_count),
+        BIND_ROW(throttling_rejected_write_requests, recent_write_throttling_reject_count),
+        BIND_ROW(throttling_delayed_read_requests, recent_read_throttling_delay_count),
+        BIND_ROW(throttling_rejected_read_requests, recent_read_throttling_reject_count),
+        BIND_ROW(throttling_delayed_backup_requests, recent_backup_request_throttling_delay_count),
+        BIND_ROW(throttling_rejected_backup_requests,
+                 recent_backup_request_throttling_reject_count),
+        BIND_ROW(splitting_rejected_write_requests, recent_write_splitting_reject_count),
+        BIND_ROW(splitting_rejected_read_requests, recent_read_splitting_reject_count),
+        BIND_ROW(bulk_load_ingestion_rejected_write_requests,
+                 recent_write_bulk_load_ingestion_reject_count),
+        BIND_ROW(rdb_compaction_input_bytes, recent_rdb_compaction_input_bytes),
+        BIND_ROW(rdb_compaction_output_bytes, recent_rdb_compaction_output_bytes),
+    });
+}
+
+inline stat_var_map create_rates(row_data &row)
+{
+    return stat_var_map({
+        BIND_ROW(get_requests, get_qps),
+        BIND_ROW(multi_get_requests, multi_get_qps),
+        BIND_ROW(batch_get_requests, batch_get_qps),
+        BIND_ROW(put_requests, put_qps),
+        BIND_ROW(multi_put_requests, multi_put_qps),
+        BIND_ROW(remove_requests, remove_qps),
+        BIND_ROW(multi_remove_requests, multi_remove_qps),
+        BIND_ROW(incr_requests, incr_qps),
+        BIND_ROW(check_and_set_requests, check_and_set_qps),
+        BIND_ROW(check_and_mutate_requests, check_and_mutate_qps),
+        BIND_ROW(scan_requests, scan_qps),
+        BIND_ROW(dup_requests, duplicate_qps),
+        BIND_ROW(dup_shipped_successful_requests, dup_shipped_ops),
+        BIND_ROW(dup_shipped_failed_requests, dup_failed_shipping_ops),
+        BIND_ROW(backup_requests, backup_request_qps),
+        BIND_ROW(backup_request_bytes, backup_request_bytes),
+        BIND_ROW(get_bytes, get_bytes),
+        BIND_ROW(multi_get_bytes, multi_get_bytes),
+        BIND_ROW(batch_get_bytes, batch_get_bytes),
+        BIND_ROW(scan_bytes, scan_bytes),
+        BIND_ROW(put_bytes, put_bytes),
+        BIND_ROW(multi_put_bytes, multi_put_bytes),
+        BIND_ROW(check_and_set_bytes, check_and_set_bytes),
+        BIND_ROW(check_and_mutate_bytes, check_and_mutate_bytes),
+    });
+}
+
+#undef BIND_ROW
+
+// Given all tables, create all aggregations needed for the table-level stats. All selected
+// partitions should have their primary replicas on this node.
+inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs(
+    const std::map<int32_t, std::vector<dsn::partition_configuration>> &table_partitions,
+    const dsn::host_port &node,
+    const std::string &entity_type,
+    std::vector<row_data> &rows)
+{
+    table_stat_map sums;
+    table_stat_map increases;
+    table_stat_map rates;
+    std::unordered_set<dsn::gpid> partitions;
+    for (auto &row : rows) {
+        const std::vector<std::pair<table_stat_map *, std::function<stat_var_map(row_data &)>>>
+            processors = {
+                {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
+            };
+        for (auto &processor : processors) {
+            // Put both dimensions of table id and metric name into filters for each kind of
+            // aggregation.
+            processor.first->emplace(row.app_id, processor.second(row));
+        }
+
+        const auto &table = table_partitions.find(row.app_id);
+        CHECK(table != table_partitions.end(),
+              "table could not be found in table_partitions: table_id={}",
+              row.app_id);
+
+        for (const auto &partition : table->second) {
+            if (partition.hp_primary != node) {
+                // Ignore once the replica of the metrics is not the primary of the partition.
+                continue;
+            }
+
+            partitions.insert(partition.pid);
+        }
+    }
+
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_sums<table_aggregate_stats>(entity_type, std::move(sums), partitions);
+    calcs->create_increases<table_aggregate_stats>(entity_type, std::move(increases), partitions);
+    calcs->create_rates<table_aggregate_stats>(entity_type, std::move(rates), partitions);
+    return calcs;
+}
+
+// Given a table and all of its partitions, create all aggregations needed for the partition-level
+// stats. All selected partitions should have their primary replicas on this node.
+inline std::unique_ptr<aggregate_stats_calcs>
+create_partition_aggregate_stats_calcs(const int32_t table_id,
+                                       const std::vector<dsn::partition_configuration> &partitions,
+                                       const dsn::host_port &node,
+                                       const std::string &entity_type,
+                                       std::vector<row_data> &rows)
+{
+    CHECK_EQ(rows.size(), partitions.size());
+
+    partition_stat_map sums;
+    partition_stat_map increases;
+    partition_stat_map rates;
+    for (size_t i = 0; i < rows.size(); ++i) {
+        if (partitions[i].hp_primary != node) {
+            // Ignore once the replica of the metrics is not the primary of the partition.
+            continue;
+        }
+
+        const std::vector<std::pair<partition_stat_map *, std::function<stat_var_map(row_data &)>>>
+            processors = {
+                {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
+            };
+        for (auto &processor : processors) {
+            // Put all dimensions of table id, partition_id,  and metric name into filters for
+            // each kind of aggregation.
+            processor.first->emplace(dsn::gpid(table_id, i), processor.second(rows[i]));
+        }
+    }
+
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_sums<partition_aggregate_stats>(entity_type, std::move(sums));
+    calcs->create_increases<partition_aggregate_stats>(entity_type, std::move(increases));
+    calcs->create_rates<partition_aggregate_stats>(entity_type, std::move(rates));
+    return calcs;
+}
 
 inline bool
 update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, double value)
@@ -1151,24 +1691,22 @@ get_app_partitions(shell_context *sc,
     return true;
 }
 
-inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
+inline bool decode_node_perf_counter_info(const dsn::host_port &hp,
                                           const std::pair<bool, std::string> &result,
                                           dsn::perf_counter_info &info)
 {
     if (!result.first) {
-        LOG_ERROR("query perf counter info from node {} failed", node_addr);
+        LOG_ERROR("query perf counter info from node {} failed", hp);
         return false;
     }
     dsn::blob bb(result.second.data(), 0, result.second.size());
     if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-        LOG_ERROR(
-            "decode perf counter info from node {} failed, result = {}", node_addr, result.second);
+        LOG_ERROR("decode perf counter info from node {} failed, result = {}", hp, result.second);
         return false;
     }
     if (info.result != "OK") {
-        LOG_ERROR("query perf counter info from node {} returns error, error = {}",
-                  node_addr,
-                  info.result);
+        LOG_ERROR(
+            "query perf counter info from node {} returns error, error = {}", hp, info.result);
         return false;
     }
     return true;
@@ -1207,7 +1745,7 @@ inline bool get_app_partition_stat(shell_context *sc,
     for (int i = 0; i < nodes.size(); ++i) {
         // decode info of perf-counters on node i
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(nodes[i].address, results[i], info)) {
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
             return false;
         }
 
@@ -1222,7 +1760,7 @@ inline bool get_app_partition_stat(shell_context *sc,
                 // only primary partition will be counted
                 auto find = app_partitions.find(app_id_x);
                 if (find != app_partitions.end() &&
-                    find->second[partition_index_x].primary == nodes[i].address) {
+                    find->second[partition_index_x].hp_primary == nodes[i].hp) {
                     row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
                     row.row_name = std::to_string(partition_index_x);
                     row.app_id = app_id_x;
@@ -1244,112 +1782,115 @@ inline bool get_app_partition_stat(shell_context *sc,
     return true;
 }
 
+// Aggregate the table-level stats for all tables since table name is not specified.
 inline bool
-get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_data> &rows)
+get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_data> &rows)
 {
     std::vector<::dsn::app_info> apps;
     std::vector<node_desc> nodes;
-    if (!get_apps_and_nodes(sc, apps, nodes))
+    if (!get_apps_and_nodes(sc, apps, nodes)) {
         return false;
-
-    ::dsn::app_info *app_info = nullptr;
-    if (!app_name.empty()) {
-        for (auto &app : apps) {
-            if (app.app_name == app_name) {
-                app_info = &app;
-                break;
-            }
-        }
-        if (app_info == nullptr) {
-            LOG_ERROR("app {} not found", app_name);
-            return false;
-        }
     }
 
-    std::vector<std::string> arguments;
-    char tmp[256];
-    if (app_name.empty()) {
-        sprintf(tmp, ".*@.*");
-    } else {
-        sprintf(tmp, ".*@%d\\..*", app_info->app_id);
+    const auto &query_string = row_data_filters().to_query_string();
+    const auto &results_start = get_metrics(nodes, query_string);
+    std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+    const auto &results_end = get_metrics(nodes, query_string);
+
+    std::map<int32_t, std::vector<dsn::partition_configuration>> table_partitions;
+    if (!get_app_partitions(sc, apps, table_partitions)) {
+        return false;
     }
-    arguments.emplace_back(tmp);
-    std::vector<std::pair<bool, std::string>> results =
-        call_remote_command(sc, nodes, "perf-counters", arguments);
 
-    if (app_name.empty()) {
-        std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
-        if (!get_app_partitions(sc, apps, app_partitions))
-            return false;
+    rows.clear();
+    rows.reserve(apps.size());
+    std::transform(
+        apps.begin(), apps.end(), std::back_inserter(rows), [](const dsn::app_info &app) {
+            row_data row;
+            row.row_name = app.app_name;
+            row.app_id = app.app_id;
+            row.partition_count = app.partition_count;
+            return row;
+        });
+    CHECK_EQ(rows.size(), table_partitions.size());
 
-        rows.resize(app_partitions.size());
-        int idx = 0;
-        std::map<int32_t, int> app_row_idx; // app_id --> row_idx
-        for (::dsn::app_info &app : apps) {
-            rows[idx].row_name = app.app_name;
-            rows[idx].app_id = app.app_id;
-            rows[idx].partition_count = app.partition_count;
-            app_row_idx[app.app_id] = idx;
-            idx++;
-        }
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        RETURN_SHELL_IF_GET_METRICS_FAILED(
+            results_start[i], nodes[i], "starting row data requests");
+        RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending row data requests");
 
-        for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            dsn::perf_counter_info info;
-            if (!decode_node_perf_counter_info(node_addr, results[i], info))
-                return false;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                int32_t app_id_x, partition_index_x;
-                std::string counter_name;
-                if (!parse_app_pegasus_perf_counter_name(
-                        m.name, app_id_x, partition_index_x, counter_name)) {
-                    continue;
-                }
-                auto find = app_partitions.find(app_id_x);
-                if (find == app_partitions.end())
-                    continue;
-                dsn::partition_configuration &pc = find->second[partition_index_x];
-                if (pc.primary != node_addr)
-                    continue;
-                update_app_pegasus_perf_counter(rows[app_row_idx[app_id_x]], counter_name, m.value);
-            }
-        }
-    } else {
-        rows.resize(app_info->partition_count);
-        for (int i = 0; i < app_info->partition_count; i++)
-            rows[i].row_name = std::to_string(i);
-        int32_t app_id = 0;
-        int32_t partition_count = 0;
-        std::vector<dsn::partition_configuration> partitions;
-        dsn::error_code err =
-            sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
-        if (err != ::dsn::ERR_OK) {
-            LOG_ERROR("list app {} failed, error = {}", app_name, err);
-            return false;
-        }
-        CHECK_EQ(app_id, app_info->app_id);
-        CHECK_EQ(partition_count, app_info->partition_count);
-
-        for (int i = 0; i < nodes.size(); ++i) {
-            dsn::rpc_address node_addr = nodes[i].address;
-            dsn::perf_counter_info info;
-            if (!decode_node_perf_counter_info(node_addr, results[i], info))
-                return false;
-            for (dsn::perf_counter_metric &m : info.counters) {
-                int32_t app_id_x, partition_index_x;
-                std::string counter_name;
-                bool parse_ret = parse_app_pegasus_perf_counter_name(
-                    m.name, app_id_x, partition_index_x, counter_name);
-                CHECK(parse_ret, "name = {}", m.name);
-                CHECK_EQ_MSG(app_id_x, app_id, "name = {}", m.name);
-                CHECK_LT_MSG(partition_index_x, partition_count, "name = {}", m.name);
-                if (partitions[partition_index_x].primary != node_addr)
-                    continue;
-                update_app_pegasus_perf_counter(rows[partition_index_x], counter_name, m.value);
-            }
-        }
+        auto calcs =
+            create_table_aggregate_stats_calcs(table_partitions, nodes[i].hp, "replica", rows);
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+            calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
+            nodes[i],
+            "row data requests");
     }
+
     return true;
+}
+
+// Aggregate the partition-level stats for the specified table.
+inline bool get_partition_stats(shell_context *sc,
+                                const std::string &table_name,
+                                uint32_t sample_interval_ms,
+                                std::vector<row_data> &rows)
+{
+    std::vector<node_desc> nodes;
+    if (!fill_nodes(sc, "replica-server", nodes)) {
+        LOG_ERROR("get replica server node list failed");
+        return false;
+    }
+
+    int32_t table_id = 0;
+    int32_t partition_count = 0;
+    std::vector<dsn::partition_configuration> partitions;
+    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, partitions);
+    if (err != ::dsn::ERR_OK) {
+        LOG_ERROR("list app {} failed, error = {}", table_name, err);
+        return false;
+    }
+    CHECK_EQ(partitions.size(), partition_count);
+
+    const auto &query_string = row_data_filters(table_id).to_query_string();
+    const auto &results_start = get_metrics(nodes, query_string);
+    std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+    const auto &results_end = get_metrics(nodes, query_string);
+
+    rows.clear();
+    rows.reserve(partition_count);
+    for (int32_t i = 0; i < partition_count; ++i) {
+        rows.emplace_back(std::to_string(i));
+    }
+
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        RETURN_SHELL_IF_GET_METRICS_FAILED(
+            results_start[i], nodes[i], "starting row data requests for table(id={})", table_id);
+        RETURN_SHELL_IF_GET_METRICS_FAILED(
+            results_end[i], nodes[i], "ending row data requests for table(id={})", table_id);
+
+        auto calcs = create_partition_aggregate_stats_calcs(
+            table_id, partitions, nodes[i].hp, "replica", rows);
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+            calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
+            nodes[i],
+            "row data requests for table(id={})",
+            table_id);
+    }
+
+    return true;
+}
+
+inline bool get_app_stat(shell_context *sc,
+                         const std::string &table_name,
+                         uint32_t sample_interval_ms,
+                         std::vector<row_data> &rows)
+{
+    if (table_name.empty()) {
+        return get_table_stats(sc, sample_interval_ms, rows);
+    }
+
+    return get_partition_stats(sc, table_name, sample_interval_ms, rows);
 }
 
 struct node_capacity_unit_stat
@@ -1390,14 +1931,14 @@ inline bool get_capacity_unit_stat(shell_context *sc,
 
     nodes_stat.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
+            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", nodes[i].hp);
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
-        nodes_stat[i].node_address = node_addr.to_string();
+        nodes_stat[i].node_address =
+            dsn::dns_resolver::instance().resolve_address(nodes[i].hp).to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
             int32_t app_id, pidx;
             std::string counter_name;
@@ -1457,10 +1998,9 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         sc, nodes, "perf-counters-by-prefix", {"replica*app.pegasus*disk.storage.sst(MB)"});
 
     for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
+            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", nodes[i].hp);
             continue;
         }
         for (dsn::perf_counter_metric &m : info.counters) {
@@ -1475,7 +2015,7 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             if (find == app_partitions.end()) // app id not found
                 continue;
             dsn::partition_configuration &pc = find->second[partition_index_x];
-            if (pc.primary != node_addr) // not primary replica
+            if (pc.hp_primary != nodes[i].hp) // not primary replica
                 continue;
             if (pc.partition_flags != 0) // already calculated
                 continue;
@@ -1497,11 +2037,15 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
 
 inline configuration_proposal_action new_proposal_action(const dsn::rpc_address &target,
                                                          const dsn::rpc_address &node,
+                                                         const dsn::host_port &hp_target,
+                                                         const dsn::host_port &hp_node,
                                                          config_type::type type)
 {
     configuration_proposal_action act;
     act.__set_target(target);
     act.__set_node(node);
+    act.__set_hp_target(hp_target);
+    act.__set_hp_node(hp_node);
     act.__set_type(type);
     return act;
 }

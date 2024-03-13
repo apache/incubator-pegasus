@@ -36,8 +36,9 @@
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -169,7 +170,7 @@ error_code backup_engine::backup_app_meta()
 
 void backup_engine::backup_app_partition(const gpid &pid)
 {
-    dsn::rpc_address partition_primary;
+    dsn::host_port partition_primary;
     {
         zauto_read_lock l;
         _backup_service->get_state()->lock_read(l);
@@ -181,7 +182,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
             _is_backup_failed = true;
             return;
         }
-        partition_primary = app->partitions[pid.get_partition_index()].primary;
+        partition_primary = app->partitions[pid.get_partition_index()].hp_primary;
     }
 
     if (partition_primary.is_invalid()) {
@@ -214,10 +215,11 @@ void backup_engine::backup_app_partition(const gpid &pid)
              pid,
              partition_primary);
     backup_rpc rpc(std::move(req), RPC_COLD_BACKUP, 10000_ms, 0, pid.thread_hash());
-    rpc.call(
-        partition_primary, &_tracker, [this, rpc, pid, partition_primary](error_code err) mutable {
-            on_backup_reply(err, rpc.response(), pid, partition_primary);
-        });
+    rpc.call(dsn::dns_resolver::instance().resolve_address(partition_primary),
+             &_tracker,
+             [this, rpc, pid, partition_primary](error_code err) mutable {
+                 on_backup_reply(err, rpc.response(), pid, partition_primary);
+             });
 
     zauto_lock l(_lock);
     _backup_status[pid.get_partition_index()] = backup_status::ALIVE;
@@ -251,7 +253,7 @@ inline void backup_engine::retry_backup(const dsn::gpid pid)
 void backup_engine::on_backup_reply(const error_code err,
                                     const backup_response &response,
                                     const gpid pid,
-                                    const rpc_address &primary)
+                                    const host_port &primary)
 {
     {
         zauto_lock l(_lock);

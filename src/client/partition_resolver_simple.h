@@ -34,7 +34,7 @@
 
 #include "client/partition_resolver.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
@@ -49,7 +49,7 @@ namespace replication {
 class partition_resolver_simple : public partition_resolver
 {
 public:
-    partition_resolver_simple(rpc_address meta_server, const char *app_name);
+    partition_resolver_simple(host_port meta_server, const char *app_name);
 
     virtual ~partition_resolver_simple();
 
@@ -58,8 +58,6 @@ public:
                          int timeout_ms) override;
 
     virtual void on_access_failure(int partition_index, error_code err) override;
-
-    virtual int get_partition_index(int partition_count, uint64_t partition_hash) override;
 
     int get_partition_count() const { return _app_partition_count; }
 
@@ -109,8 +107,8 @@ private:
 
 private:
     // local routines
-    rpc_address get_address(const partition_configuration &config) const;
-    error_code get_address(int partition_index, /*out*/ rpc_address &addr);
+    host_port get_host_port(const partition_configuration &config) const;
+    error_code get_host_port(int partition_index, /*out*/ host_port &hp);
     void handle_pending_requests(std::deque<request_context_ptr> &reqs, error_code err);
     void clear_all_pending_requests();
 
@@ -120,7 +118,7 @@ private:
     // request_context_ptr rc);
     void end_request(request_context_ptr &&request,
                      error_code err,
-                     rpc_address addr,
+                     host_port addr,
                      bool called_by_timer = false) const;
     void on_timeout(request_context_ptr &&rc) const;
 

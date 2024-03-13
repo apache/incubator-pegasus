@@ -113,6 +113,7 @@ public:
 
     unsigned int length() const noexcept { return _length; }
     unsigned int size() const noexcept { return _length; }
+    bool empty() const noexcept { return _length == 0; }
 
     std::shared_ptr<char> buffer() const { return _holder; }
 

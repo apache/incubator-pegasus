@@ -31,6 +31,7 @@
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_spec.h"
 #include "utils/error_code.h"
@@ -91,6 +92,7 @@ public:
     virtual error_code start(rpc_channel channel, int port, bool client_only);
 
     virtual ::dsn::rpc_address address() { return _address; }
+    virtual ::dsn::host_port host_port() { return _hp; }
 
     virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
     {
@@ -109,6 +111,7 @@ public:
 
 private:
     ::dsn::rpc_address _address;
+    ::dsn::host_port _hp;
 };
 
 //------------- inline implementations -------------

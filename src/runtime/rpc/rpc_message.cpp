@@ -35,6 +35,7 @@
 
 #include "network.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/crc.h"
 #include "utils/flags.h"
@@ -221,6 +222,7 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
 
     message_ex *msg = new message_ex();
     msg->to_address = to_address;
+    msg->to_host_port = to_host_port;
     msg->local_rpc_code = local_rpc_code;
     msg->hdr_format = hdr_format;
 
@@ -355,6 +357,7 @@ message_ex *message_ex::create_response()
     // the primary address.
     msg->header->from_address = to_address;
     msg->to_address = header->from_address;
+    msg->to_host_port = host_port::from_address(header->from_address);
     msg->io_session = io_session;
     msg->hdr_format = hdr_format;
 

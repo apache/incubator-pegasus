@@ -51,6 +51,7 @@
 #include "runtime/global_config.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "security/init.h"
 #include "security/negotiation_manager.h"
@@ -78,10 +79,11 @@
 #include "utils/sys_exit_hook.h"
 #include "utils/threadpool_spec.h"
 
-DSN_DEFINE_bool(core,
-                pause_on_start,
-                false,
-                "whether to pause at startup time for easier debugging");
+DSN_DEFINE_bool(
+    core,
+    pause_on_start,
+    false,
+    "Whether to pause during startup to wait for interactive input, often for debugging perpose");
 #ifdef DSN_ENABLE_GPERF
 DSN_DEFINE_double(core,
                   tcmalloc_release_rate,
@@ -137,6 +139,11 @@ void dsn_coredump()
 // rpc calls
 dsn::rpc_address dsn_primary_address() { return ::dsn::task::get_current_rpc()->primary_address(); }
 
+dsn::host_port dsn_primary_host_port()
+{
+    return ::dsn::task::get_current_rpc()->primary_host_port();
+}
+
 bool dsn_rpc_register_handler(dsn::task_code code,
                               const char *extra_name,
                               const dsn::rpc_request_handler &cb)
@@ -155,6 +162,7 @@ void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
 
     auto msg = rpc_call->get_request();
     msg->server_address = server;
+    msg->server_host_port = dsn::host_port::from_address(server);
     ::dsn::task::get_current_rpc()->call(msg, dsn::rpc_response_task_ptr(rpc_call));
 }
 
@@ -162,6 +170,7 @@ dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *req
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
+    msg->server_host_port = dsn::host_port::from_address(server);
 
     ::dsn::rpc_response_task *rtask = new ::dsn::rpc_response_task(msg, nullptr, 0);
     rtask->add_ref();
@@ -182,6 +191,7 @@ void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request)
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
+    msg->server_host_port = dsn::host_port::from_address(server);
 
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }

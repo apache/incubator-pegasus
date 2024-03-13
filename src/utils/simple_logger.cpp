@@ -50,8 +50,10 @@
 DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "whether to flush immediately");
 DSN_DEFINE_bool(tools.simple_logger,
                 short_header,
-                true,
-                "whether to use short header (excluding file/function etc.)");
+                false,
+                "Whether to use short header (excluding "
+                "file, file number and function name "
+                "fields in each line)");
 
 DSN_DEFINE_uint64(tools.simple_logger,
                   max_number_of_log_files_on_disk,

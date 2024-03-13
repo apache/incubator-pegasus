@@ -21,6 +21,7 @@ package base
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/apache/thrift/lib/go/thrift"
 )
@@ -134,6 +135,39 @@ func (ec *ErrorCode) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("ErrorCode(%+v)", *ec)
+}
+
+type baseError struct {
+	message string
+}
+
+// Implement error interface.
+func (e *baseError) Error() string {
+	if e == nil || e.message == ERR_OK.String() {
+		return ERR_OK.String()
+	}
+	return e.message
+}
+
+// Convert ErrorCode to error.
+func (ec *ErrorCode) AsError() error {
+	if ec == nil || ec.Errno == ERR_OK.String() {
+		return nil
+	}
+	return &baseError{
+		message: ec.Errno,
+	}
+}
+
+// `resp` is the thrift-generated response struct of RPC.
+func GetResponseError(resp interface{}) error {
+	result := reflect.ValueOf(resp).MethodByName("GetErr").Call([]reflect.Value{})
+	iec := result[0].Interface()
+	if iec == nil {
+		return nil
+	}
+
+	return iec.(*ErrorCode).AsError()
 }
 
 //go:generate enumer -type=RocksDBErrCode -output=rocskdb_err_string.go

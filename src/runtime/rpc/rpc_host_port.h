@@ -29,6 +29,8 @@
 #include <string_view>
 #include <vector>
 
+#include <gtest/gtest_prod.h>
+
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
@@ -41,6 +43,16 @@ class TProtocol;
 } // namespace protocol
 } // namespace thrift
 } // namespace apache
+
+#define GET_HOST_PORT(obj, field, target)                                                          \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        if (_obj.__isset.hp_##field) {                                                             \
+            target = _obj.hp_##field;                                                              \
+        } else {                                                                                   \
+            target = std::move(dsn::host_port::from_address(_obj.field));                          \
+        }                                                                                          \
+    } while (0)
 
 namespace dsn {
 
@@ -65,6 +77,8 @@ public:
 
     [[nodiscard]] bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
 
+    operator bool() const { return !is_invalid(); }
+
     std::string to_string() const;
 
     friend std::ostream &operator<<(std::ostream &os, const host_port &hp)
@@ -79,10 +93,6 @@ public:
     }
     void assign_group(const char *name);
 
-    // Resolve host_port to rpc_addresses.
-    // Trere may be multiple rpc_addresses for one host_port.
-    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
-
     // Construct a host_port object from 'addr'
     static host_port from_address(rpc_address addr);
 
@@ -96,7 +106,17 @@ public:
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 
+    static void fill_host_ports_from_addresses(const std::vector<rpc_address> &addr_v,
+                                               /*output*/ std::vector<host_port> &hp_v);
+
 private:
+    friend class dns_resolver;
+    FRIEND_TEST(host_port_test, transfer_rpc_address);
+
+    // Resolve host_port to rpc_addresses.
+    // There may be multiple rpc_addresses for one host_port.
+    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
+
     std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;

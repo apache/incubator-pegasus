@@ -26,11 +26,11 @@ set(MY_PROJ_SRC
         "../capacity_unit_calculator.cpp"
         "../pegasus_mutation_duplicator.cpp"
         "../hotspot_partition_calculator.cpp"
-        "../meta_store.cpp"
         "../hotkey_collector.cpp"
         "../rocksdb_wrapper.cpp"
         "../compaction_filter_rule.cpp"
         "../compaction_operation.cpp")
+
 set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS
         dsn_replica_server

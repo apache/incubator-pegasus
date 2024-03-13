@@ -34,6 +34,7 @@
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica/backup/cold_backup_context.h"
+#include "runtime/rpc/rpc_host_port.h"
 
 DSN_DECLARE_int32(log_private_file_size_mb);
 
@@ -125,7 +126,7 @@ public:
 
     void register_service()
     {
-        _app->register_storage_engine("replica",
+        _app->register_storage_engine(replication_options::kReplicaAppType,
                                       replication_app_base::create<mock_replication_app_base>);
     }
 
@@ -179,11 +180,11 @@ public:
     {
         _primary_states.membership = pconfig;
     }
-    partition_bulk_load_state get_secondary_bulk_load_state(const rpc_address &node)
+    partition_bulk_load_state get_secondary_bulk_load_state(const host_port &node)
     {
         return _primary_states.secondary_bulk_load_states[node];
     }
-    void set_secondary_bulk_load_state(const rpc_address &node,
+    void set_secondary_bulk_load_state(const host_port &node,
                                        const partition_bulk_load_state &state)
     {
         _primary_states.secondary_bulk_load_states[node] = state;
@@ -236,7 +237,7 @@ create_mock_replica(replica_stub *stub, int app_id = 1, int partition_index = 1)
 {
     gpid pid(app_id, partition_index);
     app_info app_info;
-    app_info.app_type = "replica";
+    app_info.app_type = replication_options::kReplicaAppType;
     app_info.app_name = "temp";
 
     auto *dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, pid);
@@ -275,7 +276,10 @@ public:
 
     void set_state_connected() { _state = replica_node_state::NS_Connected; }
 
-    rpc_address get_meta_server_address() const override { return rpc_address("127.0.0.2", 12321); }
+    rpc_address get_meta_server_address() const override
+    {
+        return rpc_address::from_ip_port("127.0.0.1", 12321);
+    }
 
     std::map<gpid, mock_replica *> mock_replicas;
 
@@ -371,7 +375,7 @@ public:
         _bulk_load_downloading_count.store(count);
     }
 
-    void set_rpc_address(const rpc_address &address) { _primary_address = address; }
+    void set_host_port(const host_port &address) { _primary_host_port = address; }
 };
 
 class mock_log_file : public log_file

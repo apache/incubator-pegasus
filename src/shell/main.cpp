@@ -86,15 +86,16 @@ static command_executor commands[] = {
     {
         "ls",
         "list all apps",
-        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name]"
+        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name] "
         "[-s|--status all|available|creating|dropping|dropped]",
         ls_apps,
     },
     {
         "nodes",
         "get the node status for this cluster",
-        "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage]"
-        "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps]",
+        "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage] "
+        "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps] "
+        "[-t|--sample_interval_ms num]",
         ls_nodes,
     },
     {
@@ -352,7 +353,7 @@ static command_executor commands[] = {
         "app_stat",
         "get stat of apps",
         "[-a|--app_name str] [-q|--only_qps] [-u|--only_usage] [-j|--json] "
-        "[-o|--output file_name]",
+        "[-o|--output file_name] [-t|--sample_interval_ms num]",
         app_stat,
     },
     {
