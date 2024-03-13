@@ -142,14 +142,15 @@ public:
                                 const std::string &outfile);
 
     error_with<duplication_add_response>
-    add_dup(std::string app_name, std::string remote_address, bool is_duplicating_checkpoint);
+    add_dup(const std::string &app_name, const std::string &remote_address, bool is_duplicating_checkpoint,
+            const std::string &remote_app_name);
 
     error_with<duplication_modify_response>
-    change_dup_status(std::string app_name, int dupid, duplication_status::type status);
+    change_dup_status(const std::string &app_name, int dupid, duplication_status::type status);
     error_with<duplication_modify_response>
-    update_dup_fail_mode(std::string app_name, int dupid, duplication_fail_mode::type fmode);
+    update_dup_fail_mode(const std::string &app_name, int dupid, duplication_fail_mode::type fmode);
 
-    error_with<duplication_query_response> query_dup(std::string app_name);
+    error_with<duplication_query_response> query_dup(const std::string &app_name);
 
     dsn::error_code do_restore(const std::string &backup_provider_name,
                                const std::string &cluster_name,

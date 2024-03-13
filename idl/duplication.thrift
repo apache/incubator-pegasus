@@ -66,6 +66,7 @@ struct duplication_add_request
     // - if false, duplication start state=DS_LOG,
     // server will replay and send plog mutation to follower cluster derectly
     3:optional bool is_duplicating_checkpoint = true;
+    4:optional string remote_app_name;
 }
 
 struct duplication_add_response

@@ -1362,43 +1362,45 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
 }
 
 error_with<duplication_add_response> replication_ddl_client::add_dup(
-    std::string app_name, std::string remote_cluster_name, bool is_duplicating_checkpoint)
+    const std::string &app_name, const std::string &remote_cluster_name, bool is_duplicating_checkpoint,
+    const std::string &remote_app_name)
 {
     auto req = std::make_unique<duplication_add_request>();
-    req->app_name = std::move(app_name);
-    req->remote_cluster_name = std::move(remote_cluster_name);
+    req->app_name = app_name;
+    req->remote_cluster_name = remote_cluster_name;
     req->is_duplicating_checkpoint = is_duplicating_checkpoint;
+    req->remote_app_name = remote_app_name;
     return call_rpc_sync(duplication_add_rpc(std::move(req), RPC_CM_ADD_DUPLICATION));
 }
 
 error_with<duplication_modify_response> replication_ddl_client::change_dup_status(
-    std::string app_name, int dupid, duplication_status::type status)
+    const std::string &app_name, int dupid, duplication_status::type status)
 {
     auto req = std::make_unique<duplication_modify_request>();
-    req->app_name = std::move(app_name);
+    req->app_name = app_name;
     req->dupid = dupid;
     req->__set_status(status);
     return call_rpc_sync(duplication_modify_rpc(std::move(req), RPC_CM_MODIFY_DUPLICATION));
 }
 
 error_with<duplication_modify_response> replication_ddl_client::update_dup_fail_mode(
-    std::string app_name, int dupid, duplication_fail_mode::type fmode)
+    const std::string &app_name, int dupid, duplication_fail_mode::type fmode)
 {
     if (_duplication_fail_mode_VALUES_TO_NAMES.find(fmode) ==
         _duplication_fail_mode_VALUES_TO_NAMES.end()) {
         return FMT_ERR(ERR_INVALID_PARAMETERS, "unexpected duplication_fail_mode {}", fmode);
     }
     auto req = std::make_unique<duplication_modify_request>();
-    req->app_name = std::move(app_name);
+    req->app_name = app_name;
     req->dupid = dupid;
     req->__set_fail_mode(fmode);
     return call_rpc_sync(duplication_modify_rpc(std::move(req), RPC_CM_MODIFY_DUPLICATION));
 }
 
-error_with<duplication_query_response> replication_ddl_client::query_dup(std::string app_name)
+error_with<duplication_query_response> replication_ddl_client::query_dup(const std::string &app_name)
 {
     auto req = std::make_unique<duplication_query_request>();
-    req->app_name = std::move(app_name);
+    req->app_name = app_name;
     return call_rpc_sync(duplication_query_rpc(std::move(req), RPC_CM_QUERY_DUPLICATION));
 }
 

@@ -158,9 +158,15 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     const auto &request = rpc.request();
     auto &response = rpc.response();
 
-    LOG_INFO("add duplication for app({}), remote cluster name is {}",
+    std::string remote_app_name_msg(request.remote_app_name);
+    if (request.__isset.remote_app_name) {
+
+    }
+    LOG_INFO("add duplication for app({}), remote cluster name is {}"
+             "remote app name is {}",
              request.app_name,
-             request.remote_cluster_name);
+             request.remote_cluster_name,
+             remote_app_name_msg);
 
     response.err = ERR_OK;
 
