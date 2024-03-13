@@ -63,7 +63,7 @@ METRIC_DEFINE_counter(replica,
 METRIC_DEFINE_counter(replica,
                       dup_retry_non_idempotent_duplicate_request,
                       dsn::metric_unit::kRequests,
-                      "The qps of Non-idempotent write when doing DUPLICATE which is Retried");
+                      "The number of retried non-idempotent DUPLICATE requests sent from client");
 
 namespace dsn {
 namespace replication {
