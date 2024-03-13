@@ -28,11 +28,11 @@ type PartitionDetector interface {
 	Run(tom *tomb.Tomb) error
 }
 
-type Config struct {
+type PartitionDetectorConfig struct {
 	DetectInterval time.Duration
 }
 
-func NewPartitionDetector(conf Config) PartitionDetector {
+func NewPartitionDetector(conf PartitionDetectorConfig) PartitionDetector {
 	return &partitionDetector{
 		detectInterval: conf.DetectInterval,
 	}
@@ -43,15 +43,12 @@ type partitionDetector struct {
 }
 
 func (d *partitionDetector) Run(tom *tomb.Tomb) error {
-	ticker := time.NewTicker(d.detectInterval)
-	defer ticker.Stop()
-
 	for {
 		select {
-		case <-ticker.C:
+		case <-time.After(d.detectInterval):
 			d.detect()
 		case <-tom.Dying():
-			log.Info("Hotspot detector exited.")
+			log.Info("Hotspot partition detector exited.")
 			return nil
 		}
 	}

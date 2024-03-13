@@ -105,8 +105,8 @@ func main() {
 	})
 
 	tom.Go(func() error {
-		conf := hotspot.Config{
-			DetectInterval: viper.GetDuration("hotspot.detect_interval"),
+		conf := hotspot.PartitionDetectorConfig{
+			DetectInterval: viper.GetDuration("hotspot.partition_detect_interval"),
 		}
 		return hotspot.NewPartitionDetector(conf).Run(tom)
 	})
