@@ -34,11 +34,11 @@
 #include "utils/threadpool_code.h"
 #include "runtime/task/task_code.h"
 #include "common/gpid.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_worker.h"
@@ -93,20 +93,20 @@ public:
         ::dsn::unmarshall(message, command);
 
         if (command == "expect_talk_to_others") {
-            dsn::rpc_address next_addr = dsn::service_app::primary_address();
-            if (next_addr.port() != TEST_PORT_END) {
-                next_addr._addr.v4.port++;
-                LOG_INFO("test_client_server, talk_to_others: {}", next_addr);
-                dsn_rpc_forward(message, next_addr);
+            auto next_hp = dsn::service_app::primary_host_port();
+            if (next_hp.port() != TEST_PORT_END) {
+                next_hp = dsn::host_port(next_hp.host(), next_hp.port() + 1);
+                LOG_INFO("test_client_server, talk_to_others: {}", next_hp);
+                dsn_rpc_forward(message, dsn::dns_resolver::instance().resolve_address(next_hp));
             } else {
-                LOG_INFO("test_client_server, talk_to_me: {}", next_addr);
-                reply(message, std::string(next_addr.to_string()));
+                LOG_INFO("test_client_server, talk_to_me: {}", next_hp);
+                reply(message, next_hp.to_string());
             }
         } else if (command == "expect_no_reply") {
-            if (dsn::service_app::primary_address().port() == TEST_PORT_END) {
+            if (dsn::service_app::primary_host_port().port() == TEST_PORT_END) {
                 LOG_INFO("test_client_server, talk_with_reply: {}",
-                         dsn::service_app::primary_address());
-                reply(message, std::string(dsn::service_app::primary_address().to_string()));
+                         dsn::service_app::primary_host_port());
+                reply(message, dsn::service_app::primary_host_port().to_string());
             }
         } else if (command.substr(0, 5) == "echo ") {
             reply(message, command.substr(5));

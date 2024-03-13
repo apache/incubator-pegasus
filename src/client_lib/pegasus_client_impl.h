@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/zlocks.h"
 
@@ -364,7 +364,7 @@ private:
 private:
     std::string _cluster_name;
     std::string _app_name;
-    ::dsn::rpc_address _meta_server;
+    ::dsn::host_port _meta_server;
     ::dsn::apps::rrdb_client *_client;
 
     ///

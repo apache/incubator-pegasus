@@ -28,6 +28,7 @@
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task_tracker.h"
 #include "test_util/test_util.h"
 #include "utils/fail_point.h"
@@ -165,8 +166,8 @@ public:
         mock_group_progress(status, 10, 50, 50);
         partition_bulk_load_state state;
         state.__set_is_paused(true);
-        _replica->set_secondary_bulk_load_state(SECONDARY, state);
-        _replica->set_secondary_bulk_load_state(SECONDARY2, state);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP, state);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP2, state);
 
         bulk_load_response response;
         _bulk_loader->report_group_is_paused(response);
@@ -219,7 +220,8 @@ public:
         _group_req.meta_bulk_load_status = status;
         _group_req.config.status = partition_status::PS_SECONDARY;
         _group_req.config.ballot = b;
-        _group_req.target_address = SECONDARY;
+        _group_req.target = SECONDARY;
+        _group_req.__set_hp_target(SECONDARY_HP);
     }
 
     void mock_replica_config(partition_status::type status)
@@ -228,6 +230,7 @@ public:
         rconfig.ballot = BALLOT;
         rconfig.pid = PID;
         rconfig.primary = PRIMARY;
+        rconfig.__set_hp_primary(PRIMARY_HP);
         rconfig.status = status;
         _replica->set_replica_config(rconfig);
     }
@@ -242,6 +245,10 @@ public:
         config.primary = PRIMARY;
         config.secondaries.emplace_back(SECONDARY);
         config.secondaries.emplace_back(SECONDARY2);
+        config.__set_hp_primary(PRIMARY_HP);
+        config.__set_hp_secondaries({});
+        config.hp_secondaries.emplace_back(SECONDARY_HP);
+        config.hp_secondaries.emplace_back(SECONDARY_HP2);
         _replica->set_primary_partition_configuration(config);
     }
 
@@ -309,8 +316,8 @@ public:
         state1.__set_download_progress(secondary_progress1);
         state2.__set_download_status(ERR_OK);
         state2.__set_download_progress(secondary_progress2);
-        _replica->set_secondary_bulk_load_state(SECONDARY, state1);
-        _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP, state1);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP2, state2);
     }
 
     void mock_group_progress(bulk_load_status::type p_status,
@@ -346,8 +353,8 @@ public:
         partition_bulk_load_state state1, state2;
         state1.__set_ingest_status(status1);
         state2.__set_ingest_status(status2);
-        _replica->set_secondary_bulk_load_state(SECONDARY, state1);
-        _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP, state1);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP2, state2);
     }
 
     void mock_group_ingestion_states(ingestion_status::type s1_status,
@@ -372,8 +379,8 @@ public:
         partition_bulk_load_state state1, state2;
         state1.__set_is_cleaned_up(s1_cleaned_up);
         state2.__set_is_cleaned_up(s2_cleaned_up);
-        _replica->set_secondary_bulk_load_state(SECONDARY, state1);
-        _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP, state1);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP2, state2);
     }
 
     // helper functions
@@ -382,7 +389,8 @@ public:
     int32_t get_download_progress() { return _bulk_loader->_download_progress.load(); }
     bool is_secondary_bulk_load_state_reset()
     {
-        const partition_bulk_load_state &state = _replica->get_secondary_bulk_load_state(SECONDARY);
+        const partition_bulk_load_state &state =
+            _replica->get_secondary_bulk_load_state(SECONDARY_HP);
         bool is_download_state_reset =
             (state.__isset.download_progress && state.__isset.download_status &&
              state.download_progress == 0 && state.download_status == ERR_OK);
@@ -413,6 +421,9 @@ public:
     rpc_address PRIMARY = rpc_address::from_ip_port("127.0.0.2", 34801);
     rpc_address SECONDARY = rpc_address::from_ip_port("127.0.0.3", 34801);
     rpc_address SECONDARY2 = rpc_address::from_ip_port("127.0.0.4", 34801);
+    const host_port PRIMARY_HP = host_port("localhost", 34801);
+    const host_port SECONDARY_HP = host_port("localhost", 34801);
+    const host_port SECONDARY_HP2 = host_port("localhost", 34801);
     int32_t MAX_DOWNLOADING_COUNT = 5;
     std::string LOCAL_DIR = bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR;
     std::string METADATA = bulk_load_constant::BULK_LOAD_METADATA;

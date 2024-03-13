@@ -38,7 +38,7 @@
 #include "metadata_types.h"
 #include "replica.h"
 #include "replica_stub.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -402,7 +402,8 @@ void replica::tell_meta_to_restore_rollback()
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_DROP_APP);
     ::dsn::marshall(msg, request);
 
-    rpc_address target(_stub->_failure_detector->get_servers());
+    const auto &target =
+        dsn::dns_resolver::instance().resolve_address(_stub->_failure_detector->get_servers());
     rpc::call(target,
               msg,
               &_tracker,
@@ -431,7 +432,8 @@ void replica::report_restore_status_to_meta()
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_REPORT_RESTORE_STATUS);
     ::dsn::marshall(msg, request);
-    rpc_address target(_stub->_failure_detector->get_servers());
+    const auto &target =
+        dsn::dns_resolver::instance().resolve_address(_stub->_failure_detector->get_servers());
     rpc::call(target,
               msg,
               &_tracker,

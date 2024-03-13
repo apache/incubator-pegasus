@@ -84,20 +84,21 @@ struct file_meta
 
 struct replica_configuration
 {
-    1:dsn.gpid            pid;
-    2:i64                 ballot;
-    3:dsn.rpc_address     primary;
-    4:partition_status    status = partition_status.PS_INVALID;
-    5:i64                 learner_signature;
+    1:dsn.gpid               pid;
+    2:i64                    ballot;
+    3:dsn.rpc_address        primary;
+    4:partition_status       status = partition_status.PS_INVALID;
+    5:i64                    learner_signature;
     // Used for bulk load
     // secondary will pop all committed mutations even if buffer is not full
-    6:optional bool       pop_all = false;
+    6:optional bool          pop_all = false;
     // Used for partition split when primary send prepare message to secondary
     // 1. true - secondary should copy mutation in this prepare message synchronously,
     //           and _is_sync_to_child in mutation structure should set true
     // 2. false - secondary copy mutation in this prepare message asynchronously
     // NOTICE: it should always be false when update_local_configuration
-    7:optional bool       split_sync_to_child = false;
+    7:optional bool          split_sync_to_child = false;
+    8:optional dsn.host_port hp_primary;
 }
 
 struct replica_info

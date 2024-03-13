@@ -50,7 +50,7 @@
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "shell/args.h"
 #include "shell/command_executor.h"
@@ -2232,7 +2232,7 @@ inline dsn::metric_filters rdb_estimated_keys_filters(int32_t table_id)
 std::unique_ptr<aggregate_stats_calcs>
 create_rdb_estimated_keys_stats_calcs(const int32_t table_id,
                                       const std::vector<dsn::partition_configuration> &partitions,
-                                      const dsn::rpc_address &node,
+                                      const dsn::host_port &node,
                                       const std::string &entity_type,
                                       std::vector<row_data> &rows)
 {
@@ -2240,7 +2240,7 @@ create_rdb_estimated_keys_stats_calcs(const int32_t table_id,
 
     partition_stat_map sums;
     for (size_t i = 0; i < rows.size(); ++i) {
-        if (partitions[i].primary != node) {
+        if (partitions[i].hp_primary != node) {
             // Ignore once the replica of the metrics is not the primary of the partition.
             continue;
         }
@@ -2290,7 +2290,7 @@ bool get_rdb_estimated_keys_stats(shell_context *sc,
             results[i], nodes[i], "rdb_estimated_keys for table(id={})", table_id);
 
         auto calcs = create_rdb_estimated_keys_stats_calcs(
-            table_id, partitions, nodes[i].address, "replica", rows);
+            table_id, partitions, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(calcs->aggregate_metrics(results[i].body()),
                                              nodes[i],
                                              "rdb_estimated_keys for table(id={})",
@@ -2885,13 +2885,13 @@ bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args
         tp.add_row_name_and_data("partition_index", partition_index);
         if (partitions.size() > partition_index) {
             ::dsn::partition_configuration &pc = partitions[partition_index];
-            tp.add_row_name_and_data("primary", pc.primary.to_string());
+            tp.add_row_name_and_data("primary", pc.hp_primary.to_string());
 
             std::ostringstream oss;
-            for (int i = 0; i < pc.secondaries.size(); ++i) {
+            for (int i = 0; i < pc.hp_secondaries.size(); ++i) {
                 if (i != 0)
                     oss << ",";
-                oss << pc.secondaries[i];
+                oss << pc.hp_secondaries[i];
             }
             tp.add_row_name_and_data("secondaries", oss.str());
         }

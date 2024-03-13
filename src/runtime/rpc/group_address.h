@@ -32,6 +32,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
 #include "utils/synchronize.h"
 
@@ -46,10 +47,7 @@ public:
     void add_list(const std::vector<rpc_address> &addrs)
     {
         for (const auto &addr : addrs) {
-            // TODO(yingchun): add LOG_WARNING_IF/LOG_ERROR_IF
-            if (!add(addr)) {
-                LOG_WARNING("duplicate adress {}", addr);
-            }
+            LOG_WARNING_IF(!add(addr), "duplicate adress {}", addr);
         }
     }
     void set_leader(rpc_address addr);

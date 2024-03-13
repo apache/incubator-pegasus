@@ -625,20 +625,21 @@ inline void scan_data_next(scan_data_context *context)
 struct node_desc
 {
     std::string desc;
-    dsn::rpc_address address;
-    node_desc(const std::string &s, const dsn::rpc_address &n) : desc(s), address(n) {}
+    dsn::host_port hp;
+    node_desc(const std::string &s, const dsn::host_port &n) : desc(s), hp(n) {}
 };
+
 // type: all | replica-server | meta-server
 inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<node_desc> &nodes)
 {
     if (type == "all" || type == "meta-server") {
-        for (auto &addr : sc->meta_list) {
-            nodes.emplace_back("meta-server", addr);
+        for (auto &hp : sc->meta_list) {
+            nodes.emplace_back("meta-server", hp);
         }
     }
 
     if (type == "all" || type == "replica-server") {
-        std::map<dsn::rpc_address, dsn::replication::node_status::type> rs_nodes;
+        std::map<dsn::host_port, dsn::replication::node_status::type> rs_nodes;
         ::dsn::error_code err =
             sc->ddl_client->list_nodes(dsn::replication::node_status::NS_ALIVE, rs_nodes);
         if (err != ::dsn::ERR_OK) {
@@ -674,8 +675,8 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
         }                                                                                          \
     } while (0)
 
-                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(host, nodes[i].address.ipv4_str());
-                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(port, nodes[i].address.port());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(host, nodes[i].hp.host().c_str());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(port, nodes[i].hp.port());
                 SET_RESULT_AND_RETURN_IF_URL_NOT_OK(
                     path, dsn::metrics_http_service::kMetricsQueryPath.c_str());
                 SET_RESULT_AND_RETURN_IF_URL_NOT_OK(query, query_string.c_str());
@@ -693,14 +694,14 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     do {                                                                                           \
         if (dsn_unlikely(!result.error())) {                                                       \
             std::cout << "ERROR: send http request to query " << fmt::format(what, ##__VA_ARGS__)  \
-                      << " metrics from node " << node.address << " failed: " << result.error()    \
+                      << " metrics from node " << node.hp << " failed: " << result.error()         \
                       << std::endl;                                                                \
             return true;                                                                           \
         }                                                                                          \
         if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {                         \
             std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
-                      << node.address                                                              \
-                      << " failed: " << dsn::get_http_status_message(result.status()) << std::endl \
+                      << node.hp << " failed: " << dsn::get_http_status_message(result.status())   \
+                      << std::endl                                                                 \
                       << result.body() << std::endl;                                               \
             return true;                                                                           \
         }                                                                                          \
@@ -711,7 +712,7 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
         const auto &res = (expr);                                                                  \
         if (dsn_unlikely(!res)) {                                                                  \
             std::cout << "ERROR: parse " << fmt::format(what, ##__VA_ARGS__)                       \
-                      << " metrics response from node " << node.address << " failed: " << res      \
+                      << " metrics response from node " << node.hp << " failed: " << res           \
                       << std::endl;                                                                \
             return true;                                                                           \
         }                                                                                          \
@@ -1071,7 +1072,11 @@ call_remote_command(shell_context *sc,
             }
         };
         tasks[i] = dsn::dist::cmd::async_call_remote(
-            nodes[i].address, cmd, arguments, callback, std::chrono::milliseconds(5000));
+            dsn::dns_resolver::instance().resolve_address(nodes[i].hp),
+            cmd,
+            arguments,
+            callback,
+            std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
         tasks[i]->wait();
@@ -1445,7 +1450,7 @@ inline stat_var_map create_rates(row_data &row)
 // partitions should have their primary replicas on this node.
 inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs(
     const std::map<int32_t, std::vector<dsn::partition_configuration>> &table_partitions,
-    const dsn::rpc_address &node,
+    const dsn::host_port &node,
     const std::string &entity_type,
     std::vector<row_data> &rows)
 {
@@ -1470,7 +1475,7 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
               row.app_id);
 
         for (const auto &partition : table->second) {
-            if (partition.primary != node) {
+            if (partition.hp_primary != node) {
                 // Ignore once the replica of the metrics is not the primary of the partition.
                 continue;
             }
@@ -1491,7 +1496,7 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
 inline std::unique_ptr<aggregate_stats_calcs>
 create_partition_aggregate_stats_calcs(const int32_t table_id,
                                        const std::vector<dsn::partition_configuration> &partitions,
-                                       const dsn::rpc_address &node,
+                                       const dsn::host_port &node,
                                        const std::string &entity_type,
                                        std::vector<row_data> &rows)
 {
@@ -1501,7 +1506,7 @@ create_partition_aggregate_stats_calcs(const int32_t table_id,
     partition_stat_map increases;
     partition_stat_map rates;
     for (size_t i = 0; i < rows.size(); ++i) {
-        if (partitions[i].primary != node) {
+        if (partitions[i].hp_primary != node) {
             // Ignore once the replica of the metrics is not the primary of the partition.
             continue;
         }
@@ -1686,24 +1691,22 @@ get_app_partitions(shell_context *sc,
     return true;
 }
 
-inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
+inline bool decode_node_perf_counter_info(const dsn::host_port &hp,
                                           const std::pair<bool, std::string> &result,
                                           dsn::perf_counter_info &info)
 {
     if (!result.first) {
-        LOG_ERROR("query perf counter info from node {} failed", node_addr);
+        LOG_ERROR("query perf counter info from node {} failed", hp);
         return false;
     }
     dsn::blob bb(result.second.data(), 0, result.second.size());
     if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-        LOG_ERROR(
-            "decode perf counter info from node {} failed, result = {}", node_addr, result.second);
+        LOG_ERROR("decode perf counter info from node {} failed, result = {}", hp, result.second);
         return false;
     }
     if (info.result != "OK") {
-        LOG_ERROR("query perf counter info from node {} returns error, error = {}",
-                  node_addr,
-                  info.result);
+        LOG_ERROR(
+            "query perf counter info from node {} returns error, error = {}", hp, info.result);
         return false;
     }
     return true;
@@ -1742,7 +1745,7 @@ inline bool get_app_partition_stat(shell_context *sc,
     for (int i = 0; i < nodes.size(); ++i) {
         // decode info of perf-counters on node i
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(nodes[i].address, results[i], info)) {
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
             return false;
         }
 
@@ -1757,7 +1760,7 @@ inline bool get_app_partition_stat(shell_context *sc,
                 // only primary partition will be counted
                 auto find = app_partitions.find(app_id_x);
                 if (find != app_partitions.end() &&
-                    find->second[partition_index_x].primary == nodes[i].address) {
+                    find->second[partition_index_x].hp_primary == nodes[i].hp) {
                     row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
                     row.row_name = std::to_string(partition_index_x);
                     row.app_id = app_id_x;
@@ -1817,7 +1820,7 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
         RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending row data requests");
 
         auto calcs =
-            create_table_aggregate_stats_calcs(table_partitions, nodes[i].address, "replica", rows);
+            create_table_aggregate_stats_calcs(table_partitions, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
@@ -1867,7 +1870,7 @@ inline bool get_partition_stats(shell_context *sc,
             results_end[i], nodes[i], "ending row data requests for table(id={})", table_id);
 
         auto calcs = create_partition_aggregate_stats_calcs(
-            table_id, partitions, nodes[i].address, "replica", rows);
+            table_id, partitions, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
@@ -1928,14 +1931,14 @@ inline bool get_capacity_unit_stat(shell_context *sc,
 
     nodes_stat.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
+            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", nodes[i].hp);
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
-        nodes_stat[i].node_address = node_addr.to_string();
+        nodes_stat[i].node_address =
+            dsn::dns_resolver::instance().resolve_address(nodes[i].hp).to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
             int32_t app_id, pidx;
             std::string counter_name;
@@ -1995,10 +1998,9 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         sc, nodes, "perf-counters-by-prefix", {"replica*app.pegasus*disk.storage.sst(MB)"});
 
     for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
+            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", nodes[i].hp);
             continue;
         }
         for (dsn::perf_counter_metric &m : info.counters) {
@@ -2013,7 +2015,7 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             if (find == app_partitions.end()) // app id not found
                 continue;
             dsn::partition_configuration &pc = find->second[partition_index_x];
-            if (pc.primary != node_addr) // not primary replica
+            if (pc.hp_primary != nodes[i].hp) // not primary replica
                 continue;
             if (pc.partition_flags != 0) // already calculated
                 continue;
@@ -2035,11 +2037,15 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
 
 inline configuration_proposal_action new_proposal_action(const dsn::rpc_address &target,
                                                          const dsn::rpc_address &node,
+                                                         const dsn::host_port &hp_target,
+                                                         const dsn::host_port &hp_node,
                                                          config_type::type type)
 {
     configuration_proposal_action act;
     act.__set_target(target);
     act.__set_node(node);
+    act.__set_hp_target(hp_target);
+    act.__set_hp_node(hp_node);
     act.__set_type(type);
     return act;
 }

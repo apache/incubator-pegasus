@@ -27,7 +27,8 @@ export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
 export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${ROOT}/lib:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 # Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
-export ASAN_OPTIONS=detect_odr_violation=0
+# Add parameters in order to be able to generate coredump file when run ASAN tests
+export ASAN_OPTIONS=detect_odr_violation=0:abort_on_error=1:disable_coredump=0:unmap_shadow_on_exit=1
 # See https://github.com/gperftools/gperftools/wiki/gperftools'-stacktrace-capturing-methods-and-their-issues.
 # Now we choose libgcc, because of https://github.com/apache/incubator-pegasus/issues/1685.
 export TCMALLOC_STACKTRACE_METHOD=libgcc  # Can be generic_fp, generic_fp_unsafe, libunwind or libgcc
@@ -241,6 +242,7 @@ function run_build()
 
     if [ ! -z "${SANITIZER}" ]; then
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSANITIZER=${SANITIZER}"
+        echo "ASAN_OPTIONS=$ASAN_OPTIONS"
     fi
 
     MAKE_OPTIONS="-j$JOB_NUM"
@@ -484,7 +486,9 @@ function run_test()
             # Update options if needed, this should be done before starting onebox to make new options take effect.
             if [ "${module}" == "recovery_test" ]; then
                 master_count=1
-                opts="meta_state_service_type=meta_state_service_simple;distributed_lock_service_type=distributed_lock_service_simple"
+                # all test case in recovery_test just run one meta_server, so we should change it
+                fqdn=`hostname -f`
+                opts="server_list=$fqdn:34601;meta_state_service_type=meta_state_service_simple;distributed_lock_service_type=distributed_lock_service_simple"
             fi
             if [ "${module}" == "backup_restore_test" ]; then
                 opts="cold_backup_disabled=false;cold_backup_checkpoint_reserve_minutes=0;cold_backup_root=onebox"
@@ -509,6 +513,20 @@ function run_test()
 
         # Run server test.
         pushd ${BUILD_LATEST_DIR}/bin/${module}
+        local function_tests=(
+	      backup_restore_test
+	      recovery_test
+	      restore_test
+	      base_api_test
+	      throttle_test
+	      bulk_load_test
+	      detect_hotspot_test
+	      partition_split_test
+        )
+        # function_tests need client used meta_server_list to connect
+        if [[ "${function_tests[@]}"  =~ "${module}" ]]; then
+          sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  ./config.ini
+        fi
         REPORT_DIR=${REPORT_DIR} TEST_BIN=${module} TEST_OPTS=${test_opts} ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"

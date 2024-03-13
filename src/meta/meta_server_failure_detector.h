@@ -34,7 +34,7 @@
 
 #include "failure_detector/failure_detector.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
@@ -70,22 +70,22 @@ public:
         {
         }
     };
-    typedef std::map<dsn::rpc_address, worker_stability> stability_map;
+    typedef std::map<dsn::host_port, worker_stability> stability_map;
 
 public:
     meta_server_failure_detector(meta_service *svc);
     virtual ~meta_server_failure_detector();
 
     // get the meta-server's leader
-    // leader: the leader's address. Invalid if no leader selected
+    // leader: the leader's host_port. Invalid if no leader selected
     //         if leader==nullptr, then the new leader won't be returned
     // ret true if i'm the current leader; false if not.
-    bool get_leader(/*output*/ dsn::rpc_address *leader);
+    bool get_leader(/*output*/ dsn::host_port *leader);
 
     // return if acquire the leader lock, or-else blocked forever
     void acquire_leader_lock();
 
-    void reset_stability_stat(const dsn::rpc_address &node);
+    void reset_stability_stat(const dsn::host_port &node);
 
     // _fd_opts is initialized in constructor with a fd_suboption stored in meta_service.
     // so usually you don't need to call this.
@@ -94,18 +94,18 @@ public:
     void set_options(fd_suboptions *options) { _fd_opts = options; }
 
     // client side
-    virtual void on_master_disconnected(const std::vector<rpc_address> &)
+    virtual void on_master_disconnected(const std::vector<host_port> &)
     {
         CHECK(false, "unsupported method");
     }
-    virtual void on_master_connected(rpc_address) { CHECK(false, "unsupported method"); }
+    virtual void on_master_connected(host_port) { CHECK(false, "unsupported method"); }
 
     // server side
     // it is in the protection of failure_detector::_lock
-    virtual void on_worker_disconnected(const std::vector<rpc_address> &nodes) override;
+    virtual void on_worker_disconnected(const std::vector<host_port> &nodes) override;
     // it is in the protection of failure_detector::_lock
-    virtual void on_worker_connected(rpc_address node) override;
-    virtual bool is_worker_connected(rpc_address node) const override
+    virtual void on_worker_connected(host_port node) override;
+    virtual bool is_worker_connected(host_port node) const override
     {
         // we treat all nodes not in the worker list alive in the first grace period.
         // For the reason, please consider this situation:
@@ -122,7 +122,7 @@ public:
     virtual void on_ping(const fd::beacon_msg &beacon, rpc_replier<fd::beacon_ack> &reply) override;
 
 private:
-    // return value: return true if beacon.from_addr is stable; or-else, false
+    // return value: return true if beacon.from_node is stable; or-else, false
     bool update_stability_stat(const fd::beacon_msg &beacon);
     void leader_initialize(const std::string &lock_service_owner);
 
@@ -150,8 +150,8 @@ private:
 
 public:
     /* these two functions are for test */
-    meta_server_failure_detector(rpc_address leader_address, bool is_myself_leader);
-    void set_leader_for_test(rpc_address leader_address, bool is_myself_leader);
+    meta_server_failure_detector(host_port leader_host_port, bool is_myself_leader);
+    void set_leader_for_test(host_port leader_host_port, bool is_myself_leader);
     stability_map *get_stability_map_for_test();
 };
 }

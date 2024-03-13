@@ -27,7 +27,7 @@
 
 #include "dsn.layer2_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/synchronize.h"
@@ -76,7 +76,7 @@ private:
     // client to access server.
     pegasus_client *_client;
     std::shared_ptr<replication_ddl_client> _ddl_client;
-    std::vector<dsn::rpc_address> _meta_list;
+    std::vector<dsn::host_port> _meta_list;
     ::dsn::utils::ex_lock_nr _alert_lock;
     // for record partition fail times.
     std::vector<std::shared_ptr<std::atomic<int32_t>>> _fail_count;

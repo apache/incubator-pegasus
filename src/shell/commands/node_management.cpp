@@ -38,7 +38,9 @@
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
@@ -52,7 +54,6 @@
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
 
 DSN_DEFINE_uint32(shell, nodes_sample_interval_ms, 1000, "The interval between sampling metrics.");
 DSN_DEFINE_validator(nodes_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
@@ -312,24 +313,23 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                                       status);
     }
 
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
+    std::map<dsn::host_port, dsn::replication::node_status::type> nodes;
     auto r = sc->ddl_client->list_nodes(s, nodes);
     if (r != dsn::ERR_OK) {
         std::cout << "list nodes failed, error=" << r << std::endl;
         return true;
     }
 
-    std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
+    std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
     for (auto &kv : nodes) {
         if (kv.second == dsn::replication::node_status::NS_ALIVE)
             alive_node_count++;
         std::string status_str = dsn::enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        std::string node_name = kv.first.to_string();
+        auto node_name = kv.first.to_string();
         if (resolve_ip) {
-            // TODO: put hostname_from_ip_port into common utils
-            dsn::utils::hostname_from_ip_port(node_name.c_str(), &node_name);
+            node_name = dsn::dns_resolver::instance().resolve_address(kv.first).to_string();
         }
         tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
@@ -353,14 +353,14 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             }
 
             for (const dsn::partition_configuration &p : partitions) {
-                if (!p.primary.is_invalid()) {
-                    auto find = tmp_map.find(p.primary);
+                if (!p.hp_primary.is_invalid()) {
+                    auto find = tmp_map.find(p.hp_primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (const dsn::rpc_address &addr : p.secondaries) {
-                    auto find = tmp_map.find(addr);
+                for (const auto &hp : p.hp_secondaries) {
+                    auto find = tmp_map.find(hp);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;
                     }
@@ -379,7 +379,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         const auto &results = get_metrics(nodes, resource_usage_filters().to_query_string());
 
         for (size_t i = 0; i < nodes.size(); ++i) {
-            auto tmp_it = tmp_map.find(nodes[i].address);
+            auto tmp_it = tmp_map.find(nodes[i].hp);
             if (tmp_it == tmp_map.end()) {
                 continue;
             }
@@ -405,7 +405,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         const auto &results_end = get_metrics(nodes, query_string);
 
         for (size_t i = 0; i < nodes.size(); ++i) {
-            auto tmp_it = tmp_map.find(nodes[i].address);
+            auto tmp_it = tmp_map.find(nodes[i].hp);
             if (tmp_it == tmp_map.end()) {
                 continue;
             }
@@ -444,7 +444,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         const auto &results = get_metrics(nodes, profiler_latency_filters().to_query_string());
 
         for (size_t i = 0; i < nodes.size(); ++i) {
-            auto tmp_it = tmp_map.find(nodes[i].address);
+            auto tmp_it = tmp_map.find(nodes[i].hp);
             if (tmp_it == tmp_map.end()) {
                 continue;
             }
@@ -641,7 +641,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
 
         for (std::string &token : tokens) {
-            const auto node = dsn::rpc_address::from_host_port(token);
+            const auto node = dsn::host_port::from_string(token);
             if (!node) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
@@ -666,9 +666,9 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         node_desc &n = node_list[i];
         std::string hostname;
         if (resolve_ip) {
-            dsn::utils::hostname_from_ip_port(n.address.to_string(), &hostname);
+            hostname = dsn::dns_resolver::instance().resolve_address(n.hp).to_string();
         } else {
-            hostname = n.address.to_string();
+            hostname = n.hp.to_string();
         }
         fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {

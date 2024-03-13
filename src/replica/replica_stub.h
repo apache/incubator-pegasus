@@ -114,7 +114,7 @@ class replica_split_manager;
 
 typedef std::unordered_map<gpid, replica_ptr> replicas;
 typedef std::function<void(
-    ::dsn::rpc_address /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
+    ::dsn::host_port /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
     replica_state_subscriber;
 
 class replica_stub;
@@ -196,8 +196,15 @@ public:
     replication_options &options() { return _options; }
     const replication_options &options() const { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
-    virtual rpc_address get_meta_server_address() const { return _failure_detector->get_servers(); }
-    rpc_address primary_address() const { return _primary_address; }
+    virtual rpc_address get_meta_server_address() const
+    {
+        return dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+    }
+    rpc_address primary_address() const
+    {
+        return dsn::dns_resolver::instance().resolve_address(_primary_host_port);
+    }
+    const host_port &primary_host_port() const { return _primary_host_port; }
 
     //
     // helper methods
@@ -217,7 +224,7 @@ public:
     //
 
     // called by parent partition, executed by child partition
-    void create_child_replica(dsn::rpc_address primary_address,
+    void create_child_replica(dsn::host_port primary_address,
                               app_info app,
                               ballot init_ballot,
                               gpid child_gpid,
@@ -444,8 +451,9 @@ private:
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
 
-    ::dsn::rpc_address _primary_address;
-    char _primary_address_str[64];
+    ::dsn::host_port _primary_host_port;
+    // The stringify of '_primary_host_port', used by logging usually.
+    std::string _primary_host_port_cache;
 
     std::shared_ptr<dsn::dist::slave_failure_detector_with_multimaster> _failure_detector;
     mutable zlock _state_lock;

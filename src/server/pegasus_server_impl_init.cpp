@@ -46,7 +46,7 @@
 #include "pegasus_value_schema.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "server/capacity_unit_calculator.h" // IWYU pragma: keep
 #include "server/key_ttl_compaction_filter.h"
 #include "server/pegasus_read_service.h"
@@ -629,7 +629,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_positives),
       METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_true_positives)
 {
-    _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
+    _primary_address = dsn_primary_host_port().to_string();
     _gpid = get_gpid();
 
     _read_hotkey_collector =

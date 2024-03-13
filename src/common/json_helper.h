@@ -715,7 +715,10 @@ NON_MEMBER_JSON_SERIALIZATION(dsn::partition_configuration,
                               secondaries,
                               last_drops,
                               last_committed_decree,
-                              partition_flags)
+                              partition_flags,
+                              hp_primary,
+                              hp_secondaries,
+                              hp_last_drops)
 
 NON_MEMBER_JSON_SERIALIZATION(dsn::app_info,
                               status,

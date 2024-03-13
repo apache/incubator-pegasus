@@ -57,7 +57,9 @@
 #include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
 #include "meta_test_base.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
@@ -127,11 +129,13 @@ public:
     }
 
     duplication_sync_response
-    duplication_sync(const rpc_address &node,
+    duplication_sync(const rpc_address &addr,
+                     const host_port &hp,
                      std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list)
     {
         auto req = std::make_unique<duplication_sync_request>();
-        req->node = node;
+        req->node = addr;
+        req->__set_hp_node(hp);
         req->confirm_list = confirm_list;
 
         duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC);
@@ -180,8 +184,7 @@ public:
 
         int last_dup = 0;
         for (int i = 0; i < 1000; i++) {
-            auto dup = dup_svc().new_dup_from_init(
-                remote_cluster_address, std::vector<rpc_address>(), app);
+            auto dup = dup_svc().new_dup_from_init(remote_cluster_address, {}, app);
 
             ASSERT_GT(dup->id, 0);
             ASSERT_FALSE(dup->is_altering());
@@ -537,8 +540,9 @@ TEST_F(meta_duplication_service_test, remove_dup)
 
 TEST_F(meta_duplication_service_test, duplication_sync)
 {
-    std::vector<rpc_address> server_nodes = ensure_enough_alive_nodes(3);
-    rpc_address node = server_nodes[0];
+    const auto &server_nodes = ensure_enough_alive_nodes(3);
+    const auto &node = server_nodes[0];
+    const auto &addr = dsn::dns_resolver::instance().resolve_address(server_nodes[0]);
 
     std::string test_app = "test_app_0";
     create_app(test_app);
@@ -547,9 +551,10 @@ TEST_F(meta_duplication_service_test, duplication_sync)
     // generate all primaries on node[0]
     for (partition_configuration &pc : app->partitions) {
         pc.ballot = random32(1, 10000);
-        pc.primary = server_nodes[0];
-        pc.secondaries.push_back(server_nodes[1]);
-        pc.secondaries.push_back(server_nodes[2]);
+        pc.primary = addr;
+        pc.__set_hp_primary(server_nodes[0]);
+        pc.hp_secondaries.push_back(server_nodes[1]);
+        pc.hp_secondaries.push_back(server_nodes[2]);
     }
 
     initialize_node_state();
@@ -574,7 +579,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ce.confirmed_decree = 7;
         confirm_list[gpid(app->app_id, 3)].push_back(ce);
 
-        duplication_sync_response resp = duplication_sync(node, confirm_list);
+        duplication_sync_response resp = duplication_sync(addr, node, confirm_list);
         ASSERT_EQ(resp.err, ERR_OK);
         ASSERT_EQ(resp.dup_map.size(), 1);
         ASSERT_EQ(resp.dup_map[app->app_id].size(), 1);
@@ -605,7 +610,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ce.confirmed_decree = 5;
         confirm_list[gpid(app->app_id, 1)].push_back(ce);
 
-        duplication_sync_response resp = duplication_sync(node, confirm_list);
+        duplication_sync_response resp = duplication_sync(addr, node, confirm_list);
         ASSERT_EQ(resp.err, ERR_OK);
         ASSERT_EQ(resp.dup_map.size(), 1);
         ASSERT_TRUE(resp.dup_map[app->app_id].find(dupid + 1) == resp.dup_map[app->app_id].end());
@@ -619,7 +624,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ce.confirmed_decree = 5;
         confirm_list[gpid(app->app_id + 1, 1)].push_back(ce);
 
-        duplication_sync_response resp = duplication_sync(node, confirm_list);
+        const auto resp = duplication_sync(addr, node, confirm_list);
         ASSERT_EQ(resp.err, ERR_OK);
         ASSERT_EQ(resp.dup_map.size(), 1);
         ASSERT_TRUE(resp.dup_map.find(app->app_id + 1) == resp.dup_map.end());
@@ -635,7 +640,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ce.confirmed_decree = 5;
         confirm_list[gpid(app->app_id, 1)].push_back(ce);
 
-        duplication_sync_response resp = duplication_sync(node, confirm_list);
+        const auto resp = duplication_sync(addr, node, confirm_list);
         ASSERT_EQ(resp.err, ERR_OK);
         ASSERT_EQ(resp.dup_map.size(), 0);
     }
@@ -772,13 +777,13 @@ TEST_F(meta_duplication_service_test, fail_mode)
     ASSERT_EQ(dup->status(), duplication_status::DS_PAUSE);
 
     // ensure dup_sync will synchronize fail_mode
-    std::vector<rpc_address> server_nodes = generate_node_list(3);
-    rpc_address node = server_nodes[0];
+    auto node = generate_node_list(3)[0];
     for (partition_configuration &pc : app->partitions) {
-        pc.primary = server_nodes[0];
+        pc.primary = node.second;
+        pc.__set_hp_primary(node.first);
     }
     initialize_node_state();
-    duplication_sync_response sync_resp = duplication_sync(node, {});
+    auto sync_resp = duplication_sync(node.second, node.first, {});
     ASSERT_TRUE(sync_resp.dup_map[app->app_id][dup->id].__isset.fail_mode);
     ASSERT_EQ(sync_resp.dup_map[app->app_id][dup->id].fail_mode, duplication_fail_mode::FAIL_SKIP);
 

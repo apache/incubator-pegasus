@@ -268,7 +268,7 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
     const auto &dn = get_dir_node(pid_dir);
     if (dsn_unlikely(nullptr == dn)) {
         LOG_ERROR(
-            "{}: dir({}) of gpid({}) haven't registered", dsn_primary_address(), pid_dir, pid);
+            "{}: dir({}) of gpid({}) haven't registered", dsn_primary_host_port(), pid_dir, pid);
         return;
     }
 
@@ -280,11 +280,11 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
     }
     if (!emplace_success) {
         LOG_WARNING(
-            "{}: gpid({}) already in the dir_node({})", dsn_primary_address(), pid, dn->tag);
+            "{}: gpid({}) already in the dir_node({})", dsn_primary_host_port(), pid, dn->tag);
         return;
     }
 
-    LOG_INFO("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, dn->tag);
+    LOG_INFO("{}: add gpid({}) to dir_node({})", dsn_primary_host_port(), pid, dn->tag);
 }
 
 dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
@@ -318,7 +318,7 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
     if (selected != nullptr) {
         LOG_INFO(
             "{}: put pid({}) to dir({}), which has {} replicas of current app, {} replicas totally",
-            dsn_primary_address(),
+            dsn_primary_host_port(),
             pid,
             selected->tag,
             least_app_replicas_count,
@@ -358,7 +358,7 @@ void fs_manager::remove_replica(const gpid &pid)
                      pid,
                      dn->tag);
         if (r != 0) {
-            LOG_INFO("{}: remove gpid({}) from dir({})", dsn_primary_address(), pid, dn->tag);
+            LOG_INFO("{}: remove gpid({}) from dir({})", dsn_primary_host_port(), pid, dn->tag);
         }
         remove_count += r;
     }
