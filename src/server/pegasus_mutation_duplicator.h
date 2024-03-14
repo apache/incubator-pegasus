@@ -76,7 +76,7 @@ private:
 
     void on_duplicate_reply(uint64_t hash, callback, duplicate_rpc, dsn::error_code err);
 
-    void type_force_send_no_idempotent_if_need(duplicate_rpc &rpc);
+    void type_force_send_non_idempotent_if_need(duplicate_rpc &rpc);
 
 private:
     friend class pegasus_mutation_duplicator_test;

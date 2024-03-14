@@ -212,7 +212,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
             _inflights[hash].push_front(rpc);
             _env.schedule([hash, cb, this]() { send(hash, cb); }, 1_s);
 
-            type_force_send_no_idempotent_if_need(rpc);
+            type_force_send_non_idempotent_if_need(rpc);
 
             return;
         }
@@ -230,7 +230,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
     }
 }
 
-void pegasus_mutation_duplicator::type_force_send_no_idempotent_if_need(duplicate_rpc &rpc)
+void pegasus_mutation_duplicator::type_force_send_non_idempotent_if_need(duplicate_rpc &rpc)
 {
     if (!FLAGS_duplication_unsafe_allow_non_idempotent) {
         return;
