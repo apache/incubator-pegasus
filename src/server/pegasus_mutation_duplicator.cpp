@@ -254,8 +254,7 @@ void pegasus_mutation_duplicator::type_force_send_non_idempotent_if_need(duplica
             incr_rpc raw_rpc(write);
 
             LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_INCR has been retried when doing "
-                      "duplication,"
-                      "key is [{}]",
+                      "duplication, key is '{}'",
                       raw_rpc.request().key);
             continue;
         }
