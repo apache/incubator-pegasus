@@ -47,6 +47,8 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 
+DSN_DECLARE_uint32(duplicate_log_batch_bytes);
+
 namespace pegasus {
 namespace server {
 

@@ -57,6 +57,8 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kMutations,
                       "The number of mutations read from private log for dup");
 
+DSN_DECLARE_uint32(duplicate_log_batch_bytes);
+
 namespace dsn {
 namespace replication {
 

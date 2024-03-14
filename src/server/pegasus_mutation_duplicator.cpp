@@ -65,6 +65,9 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of retried non-idempotent DUPLICATE requests sent from client");
 
+DSN_DECLARE_uint32(duplicate_log_batch_bytes);
+DSN_DECLARE_bool(duplication_unsafe_allow_non_idempotent);
+
 namespace dsn {
 namespace replication {
 struct replica_base;
@@ -239,7 +242,7 @@ void pegasus_mutation_duplicator::type_force_send_non_idempotent_if_need(duplica
     // there maybe more than one mutation in one dup rpc
     for (auto entry : rpc.request().entries) {
         // not a non idempotent request
-        if (!_non_idempotent_code.count(entry.task_code)) {
+        if (!_non_idempotent_codes.count(entry.task_code)) {
             continue;
         }
 

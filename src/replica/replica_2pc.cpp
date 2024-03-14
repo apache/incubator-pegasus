@@ -105,6 +105,7 @@ DSN_DEFINE_uint64(
 
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
 DSN_DECLARE_int32(staleness_for_commit);
+DSN_DECLARE_bool(duplication_unsafe_allow_non_idempotent);
 
 namespace dsn {
 namespace replication {

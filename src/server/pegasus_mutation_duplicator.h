@@ -94,7 +94,7 @@ private:
 
     size_t _total_shipped_size{0};
 
-    const std::set<dsn::task_code> _non_idempotent_code = {
+    const std::set<dsn::task_code> _non_idempotent_codes = {
         dsn::apps::RPC_RRDB_RRDB_INCR,
         dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
         dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE};

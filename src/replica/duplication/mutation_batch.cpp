@@ -35,6 +35,8 @@
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
+DSN_DECLARE_bool(duplication_unsafe_allow_non_idempotent);
+
 METRIC_DEFINE_gauge_int64(replica,
                           dup_recent_lost_mutations,
                           dsn::metric_unit::kMutations,

@@ -30,9 +30,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_utils.h"
 
-DSN_DECLARE_uint32(duplicate_log_batch_bytes);
-DSN_DECLARE_bool(duplication_unsafe_allow_non_idempotent);
-
 namespace dsn {
 namespace replication {
 
