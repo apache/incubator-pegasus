@@ -42,8 +42,8 @@ DSN_DEFINE_bool(
     duplication_unsafe_allow_non_idempotent,
     false,
     "Turn on the switch so that the cluster can accept non-idempotent writes and forward these "
-    "writes via duplication "
-    "Note that this switch may cause data inconsistency between clusters. So we say it is unsafe ");
+    "writes via duplication. Note that this switch may cause data inconsistency between "
+    "clusters. So we say it is unsafe.");
 DSN_TAG_VARIABLE(duplication_unsafe_allow_non_idempotent, FT_MUTABLE);
 
 namespace dsn {
