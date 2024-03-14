@@ -44,3 +44,6 @@ falcon_agent:
 
 availablity_detect:
   table_name : test
+
+hotspot:
+  partition_detect_interval : 10s
