@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "common/duplication_common.h"
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "metadata_types.h"
@@ -33,6 +32,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
 DSN_DECLARE_bool(duplication_unsafe_allow_non_idempotent);

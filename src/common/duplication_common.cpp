@@ -27,6 +27,7 @@
 #include "nlohmann/json_fwd.hpp"
 #include "utils/config_api.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/singleton.h"
 #include "utils/time_utils.h"

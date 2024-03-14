@@ -36,6 +36,7 @@
 #include "duplication_internal_types.h"
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
+#include "pegasus_rpc_types.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
@@ -46,9 +47,9 @@
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
-#include "pegasus_rpc_types.h"
 
 METRIC_DEFINE_counter(replica,
                       dup_shipped_successful_requests,

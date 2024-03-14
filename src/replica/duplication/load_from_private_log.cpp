@@ -21,7 +21,6 @@
 #include <utility>
 
 #include "absl/strings/string_view.h"
-#include "common/duplication_common.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"
 #include "replica/duplication/mutation_batch.h"
@@ -33,6 +32,7 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
