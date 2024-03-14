@@ -1365,11 +1365,15 @@ error_with<duplication_add_response> replication_ddl_client::add_dup(
     const std::string &app_name, const std::string &remote_cluster_name, bool is_duplicating_checkpoint,
     const std::string &remote_app_name)
 {
+    // Empty remote_app_name means using source app_name as remote_app_name.
+    RETURN_EW_NOT_OK_MSG(
+        validate_app_name(remote_app_name), "invalid remote_app_name: '{}'", remote_app_name);
+
     auto req = std::make_unique<duplication_add_request>();
     req->app_name = app_name;
     req->remote_cluster_name = remote_cluster_name;
     req->is_duplicating_checkpoint = is_duplicating_checkpoint;
-    req->remote_app_name = remote_app_name;
+    req->__set_remote_app_name(remote_app_name);
     return call_rpc_sync(duplication_add_rpc(std::move(req), RPC_CM_ADD_DUPLICATION));
 }
 

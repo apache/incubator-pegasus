@@ -122,6 +122,7 @@ private:
     // Thread-Safe
     std::shared_ptr<duplication_info>
     new_dup_from_init(const std::string &follower_cluster_name,
+                      const std::string &follower_app_name,
                       std::vector<host_port> &&follower_cluster_metas,
                       std::shared_ptr<app_state> &app) const;
 

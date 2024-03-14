@@ -80,7 +80,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
 
     bool is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
 
-    std::string remote_app_name(cmd({"-s", "--sst"}, app_name).str());
+    std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
 
     auto err_resp =
         sc->ddl_client->add_dup(app_name, remote_cluster_name, is_duplicating_checkpoint, remote_app_name);

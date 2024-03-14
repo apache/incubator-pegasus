@@ -251,6 +251,15 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
         }                                                                                          \
     } while (false)
 
+#define RETURN_EW_NOT_OK_MSG(s, T, ...)                                                               \
+    do {                                                                                           \
+        ::dsn::error_s _s = (s);                                                            \
+        if (dsn_unlikely(!_s)) {                                                                   \
+            fmt::print(stderr, "{}: {}\n", _s.description(), fmt::format(__VA_ARGS__));            \
+            return dsn::error_with<T>(std::move(_s));                                                                             \
+        }                                                                                          \
+    } while (false)
+
 #define CHECK_OK(s, ...)                                                                           \
     do {                                                                                           \
         const ::dsn::error_s &_s = (s);                                                            \

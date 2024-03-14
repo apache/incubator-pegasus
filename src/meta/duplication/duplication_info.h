@@ -54,17 +54,19 @@ public:
     /// \see duplication_info::decode_from_blob
     duplication_info(dupid_t dupid,
                      int32_t appid,
-                     std::string app_name,
+                     const std::string &app_name,
                      int32_t partition_count,
                      uint64_t create_now_ms,
-                     std::string follower_cluster_name,
+                     const std::string &follower_cluster_name,
+                     const std::string &follower_app_name,
                      std::vector<host_port> &&follower_cluster_metas,
                      std::string meta_store_path)
         : id(dupid),
           app_id(appid),
-          app_name(std::move(app_name)),
+          app_name(app_name),
           partition_count(partition_count),
-          follower_cluster_name(std::move(follower_cluster_name)),
+          follower_cluster_name(follower_cluster_name),
+          follower_app_name(follower_app_name),
           follower_cluster_metas(std::move(follower_cluster_metas)),
           store_path(std::move(meta_store_path)),
           create_timestamp_ms(create_now_ms),
@@ -247,6 +249,7 @@ public:
     const int32_t partition_count{0};
 
     const std::string follower_cluster_name;
+    const std::string follower_app_name;
     const std::vector<host_port> follower_cluster_metas;
     const std::string store_path; // store path on meta service = get_duplication_path(app, dupid)
     const uint64_t create_timestamp_ms{0}; // the time when this dup is created.

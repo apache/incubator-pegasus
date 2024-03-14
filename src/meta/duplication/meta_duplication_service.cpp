@@ -158,15 +158,20 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     const auto &request = rpc.request();
     auto &response = rpc.response();
 
-    std::string remote_app_name_msg(request.remote_app_name);
+    std::string remote_app_name(request.remote_app_name);
     if (request.__isset.remote_app_name) {
-
+        remote_app_name = request.remote_app_name;
+    } else {
+        // Once remote_app_name is not specified by client, use source app_name
+        // as remote_app_name to be compatible with old versions.
+        remote_app_name = request.app_name;
     }
+
     LOG_INFO("add duplication for app({}), remote cluster name is {}"
              "remote app name is {}",
              request.app_name,
              request.remote_cluster_name,
-             remote_app_name_msg);
+             remote_app_name);
 
     response.err = ERR_OK;
 
@@ -175,6 +180,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         response.__set_hint("illegal operation: adding duplication to itself");
         return;
     }
+
     auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
     if (!remote_cluster_id.is_ok()) {
         response.err = ERR_INVALID_PARAMETERS;
@@ -210,7 +216,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         }
     }
     if (!dup) {
-        dup = new_dup_from_init(request.remote_cluster_name, std::move(meta_list), app);
+        dup = new_dup_from_init(request.remote_cluster_name, remote_app_name, std::move(meta_list), app);
     }
     do_add_duplication(app, dup, rpc);
 }
@@ -534,6 +540,7 @@ void meta_duplication_service::do_update_partition_confirmed(
 
 std::shared_ptr<duplication_info>
 meta_duplication_service::new_dup_from_init(const std::string &follower_cluster_name,
+                                            const std::string &follower_app_name,
                                             std::vector<host_port> &&follower_cluster_metas,
                                             std::shared_ptr<app_state> &app) const
 {
