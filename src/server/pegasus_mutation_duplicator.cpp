@@ -276,8 +276,7 @@ void pegasus_mutation_duplicator::type_force_send_non_idempotent_if_need(duplica
             check_and_mutate_rpc raw_rpc(write);
 
             LOG_DEBUG("Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_MUTATE has been "
-                      "retried when doing duplication,"
-                      "hash key is [{}] , sort key is [{}] .",
+                      "retried when doing duplication, hash key is '{}', sort key is '{}'.",
                       raw_rpc.request().hash_key,
                       raw_rpc.request().check_sort_key);
             continue;
