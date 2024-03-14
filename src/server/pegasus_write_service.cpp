@@ -426,7 +426,10 @@ int pegasus_write_service::duplicate(int64_t decree,
         if (request.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
             request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
             request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
-            // receive no idempotent request from master cluster via duplication
+            // receive non-idempotent request from master cluster via duplication when
+            // FLAG_duplication_unsafe_allow_non_idempotent set as true.
+            // This metric greater than zero means that there is already the possibility of
+            // inconsistency between clusters
             METRIC_VAR_INCREMENT(dup_unsafe_received_non_idempotent_duplicate_request);
 
             if (request.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
