@@ -44,7 +44,7 @@ class TProtocol;
 } // namespace thrift
 } // namespace apache
 
-// Get host_port from 'obj', the result is stored in 'target', the source is from host_port type
+// Get host_port from 'obj', the result is filled in 'target', the source is from host_port type
 // field 'hp_<field>' if it is set, otherwise, reverse resolve from the rpc_address '<field>'.
 #define GET_HOST_PORT(obj, field, target)                                                          \
     do {                                                                                           \
@@ -56,7 +56,7 @@ class TProtocol;
         }                                                                                          \
     } while (0)
 
-// Set 'src_ip' and 'src_hp' to the '<field>' and optional 'hp_<field>' of 'obj'. The type of the
+// Set 'addr' and 'hp' to the '<field>' and optional 'hp_<field>' of 'obj'. The type of the
 // fields are rpc_address and host_port, respectively.
 #define SET_IP_AND_HOST_PORT(obj, field, addr, hp)                                                 \
     do {                                                                                           \
@@ -65,6 +65,8 @@ class TProtocol;
         _obj.__set_hp_##field(hp);                                                                 \
     } while (0)
 
+// Set 'value' to the '<field>' map and optional 'hp_<field>' map of 'obj'. The key of the
+// maps are rpc_address and host_port type and indexed by 'addr' and 'hp', respectively.
 #define SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, hp, value)                               \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
@@ -75,6 +77,9 @@ class TProtocol;
         _obj.hp_##field[hp] = value;                                                               \
     } while (0)
 
+// Set 'value' to the '<field>' map and optional 'hp_<field>' map of 'obj'. The key of the
+// maps are rpc_address and host_port type and indexed by 'addr' and reverse resolve result of
+// 'addr', respectively.
 #define SET_VALUE_FROM_HOST_PORT(obj, field, hp, value)                                            \
     do {                                                                                           \
         const auto addr = dsn::dns_resolver::instance().resolve_address(hp);                       \

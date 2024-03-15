@@ -804,13 +804,14 @@ public:
 
     void fill_partition_bulk_load_states(
         const std::map<std::pair<::dsn::rpc_address, ::dsn::host_port>, partition_bulk_load_state>
-            &state_by_hosts,
-        std::map<::dsn::rpc_address, partition_bulk_load_state> &group_bulk_load_state,
-        std::map<::dsn::host_port, partition_bulk_load_state> &hp_group_bulk_load_state)
+            &state_by_hosts)
     {
+        if (!_resp.__isset.hp_group_bulk_load_state) {
+            _resp.__set_hp_group_bulk_load_state({});
+        }
         for (const auto & [ addr_and_hp, state ] : state_by_hosts) {
-            group_bulk_load_state[addr_and_hp.first] = state;
-            hp_group_bulk_load_state[addr_and_hp.second] = state;
+            _resp.group_bulk_load_state[addr_and_hp.first] = state;
+            _resp.hp_group_bulk_load_state[addr_and_hp.second] = state;
         }
     }
 
@@ -826,12 +827,9 @@ public:
         state2.__set_download_status(progress_err);
         state2.__set_download_progress(secondary2_progress);
 
-        _resp.__set_hp_group_bulk_load_state({});
         fill_partition_bulk_load_states({{{PRIMARY, PRIMARY_HP}, state},
                                          {{SECONDARY1, SECONDARY1_HP}, state},
-                                         {{SECONDARY2, SECONDARY2_HP}, state2}},
-                                        _resp.group_bulk_load_state,
-                                        _resp.hp_group_bulk_load_state);
+                                         {{SECONDARY2, SECONDARY2_HP}, state2}});
 
         _resp.__set_total_download_progress(total_progress);
     }
@@ -861,12 +859,9 @@ public:
         state.__set_ingest_status(ingestion_status::IS_SUCCEED);
         state2.__set_ingest_status(secondary_istatus);
 
-        _resp.__set_hp_group_bulk_load_state({});
         fill_partition_bulk_load_states({{{PRIMARY, PRIMARY_HP}, state},
                                          {{SECONDARY1, SECONDARY1_HP}, state},
-                                         {{SECONDARY2, SECONDARY2_HP}, state2}},
-                                        _resp.group_bulk_load_state,
-                                        _resp.hp_group_bulk_load_state);
+                                         {{SECONDARY2, SECONDARY2_HP}, state2}});
 
         _resp.__set_is_group_ingestion_finished(secondary_istatus == ingestion_status::IS_SUCCEED);
 
@@ -880,16 +875,11 @@ public:
         partition_bulk_load_state state, state2;
         state.__set_is_cleaned_up(true);
 
-        _resp.__set_hp_group_bulk_load_state({});
         fill_partition_bulk_load_states(
-            {{{PRIMARY, PRIMARY_HP}, state}, {{SECONDARY1, SECONDARY1_HP}, state}},
-            _resp.group_bulk_load_state,
-            _resp.hp_group_bulk_load_state);
+            {{{PRIMARY, PRIMARY_HP}, state}, {{SECONDARY1, SECONDARY1_HP}, state}});
 
         state2.__set_is_cleaned_up(all_cleaned_up);
-        fill_partition_bulk_load_states({{{SECONDARY2, SECONDARY2_HP}, state2}},
-                                        _resp.group_bulk_load_state,
-                                        _resp.hp_group_bulk_load_state);
+        fill_partition_bulk_load_states({{{SECONDARY2, SECONDARY2_HP}, state2}});
 
         _resp.__set_is_group_bulk_load_context_cleaned_up(all_cleaned_up);
     }
@@ -902,12 +892,9 @@ public:
         state.__set_is_paused(true);
         state2.__set_is_paused(is_group_paused);
 
-        _resp.__set_hp_group_bulk_load_state({});
         fill_partition_bulk_load_states({{{PRIMARY, PRIMARY_HP}, state},
                                          {{SECONDARY1, SECONDARY1_HP}, state},
-                                         {{SECONDARY2, SECONDARY2_HP}, state2}},
-                                        _resp.group_bulk_load_state,
-                                        _resp.hp_group_bulk_load_state);
+                                         {{SECONDARY2, SECONDARY2_HP}, state2}});
 
         _resp.__set_is_group_bulk_load_paused(is_group_paused);
     }
