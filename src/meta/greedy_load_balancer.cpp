@@ -244,7 +244,9 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
     }
 
     ::memcpy(t_operation_counters, counters, sizeof(counters));
-    LOG_DEBUG("balance checker operation count = %d, due to meta server hasn't collected all replica", t_operation_counters[ALL_COUNT]);
+    LOG_DEBUG(
+        "balance checker operation count = %d, due to meta server hasn't collected all replica",
+        t_operation_counters[ALL_COUNT]);
     METRIC_SET_GREEDY_BALANCE_STATS(_svc->get_server_state()->get_table_metric_entities(),
                                     balance_stats);
 
