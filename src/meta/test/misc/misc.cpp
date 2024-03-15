@@ -68,7 +68,7 @@ void generate_node_list(std::vector<std::pair<dsn::host_port, dsn::rpc_address>>
     const auto count = random32(min_count, max_count);
     output_list.resize(count);
     for (int i = 0; i < count; ++i) {
-        const dsn::host_port hp = dsn::host_port("localhost", i + 1);
+        const dsn::host_port hp("localhost", i + 1);
         output_list[i] = std::make_pair(hp, dsn::dns_resolver::instance().resolve_address(hp));
     }
 }

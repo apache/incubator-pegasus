@@ -40,6 +40,7 @@
 #include "replica/split/replica_split_manager.h"
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
