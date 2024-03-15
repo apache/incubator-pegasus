@@ -39,6 +39,7 @@
 #include "meta/meta_data.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "runtime/rpc/dns_resolver.h"
 
 namespace dsn {
 class gpid;
@@ -77,9 +78,9 @@ generate_node_list(size_t size, int start_port = 12321)
     std::vector<std::pair<dsn::host_port, dsn::rpc_address>> result;
     result.resize(size);
     for (int i = 0; i < size; ++i) {
-        result[i].first = dsn::host_port("localhost", static_cast<uint16_t>(start_port + i + 1));
-        result[i].second =
-            dsn::rpc_address::from_ip_port("127.0.0.1", static_cast<uint16_t>(start_port + i + 1));
+        const dsn::host_port hp("localhost", static_cast<uint16_t>(start_port + i + 1));
+        result[i].first = hp;
+        result[i].second = dsn::dns_resolver::instance().resolve_address(hp);
     }
     return result;
 }

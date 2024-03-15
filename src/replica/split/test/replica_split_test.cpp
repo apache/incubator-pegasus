@@ -535,12 +535,13 @@ public:
     const int32_t APP_ID = 2;
     const int32_t OLD_PARTITION_COUNT = 8;
     const int32_t NEW_PARTITION_COUNT = 16;
+
     const host_port PRIMARY = host_port("localhost", 18230);
-    const rpc_address PRIMARY_ADDR = rpc_address::from_ip_port("127.0.0.1", 18230);
+    const rpc_address PRIMARY_ADDR = dsn::dns_resolver::instance().resolve_address(PRIMARY);
     const host_port SECONDARY = host_port("localhost", 10058);
-    const rpc_address SECONDARY_ADDR = rpc_address::from_ip_port("127.0.0.1", 10058);
+    const rpc_address SECONDARY_ADDR = dsn::dns_resolver::instance().resolve_address(SECONDARY);
     const host_port SECONDARY2 = host_port("localhost", 10805);
-    const rpc_address SECONDARY_ADDR2 = rpc_address::from_ip_port("127.0.0.1", 10805);
+    const rpc_address SECONDARY_ADDR2 = dsn::dns_resolver::instance().resolve_address(SECONDARY2);
     const gpid PARENT_GPID = gpid(APP_ID, 1);
     const gpid CHILD_GPID = gpid(APP_ID, 9);
     const ballot INIT_BALLOT = 3;
