@@ -60,7 +60,7 @@ public:
                      const std::string &follower_cluster_name,
                      const std::string &follower_app_name,
                      std::vector<host_port> &&follower_cluster_metas,
-                     std::string meta_store_path)
+                     const std::string &meta_store_path)
         : id(dupid),
           app_id(appid),
           app_name(app_name),
@@ -139,7 +139,7 @@ public:
                                                    int32_t app_id,
                                                    const std::string &app_name,
                                                    int32_t partition_count,
-                                                   std::string store_path,
+                                                   const std::string &store_path,
                                                    const blob &json);
 
     // duplication_query_rpc is handled in THREAD_POOL_META_SERVER,
@@ -238,8 +238,12 @@ private:
         duplication_status::type status;
         int64_t create_timestamp_ms;
         duplication_fail_mode::type fail_mode;
+        std::string remote_app_name;
 
-        DEFINE_JSON_SERIALIZATION(remote, status, create_timestamp_ms, fail_mode);
+        // Since there is no remote_cluster_name for old versions, remote_app_name is optional.
+        // Following deserialization functions could be compatible with the situations where
+        // remote_app_name is missing.
+        DEFINE_JSON_SERIALIZATION(remote, status, create_timestamp_ms, fail_mode, remote_app_name);
     };
 
 public:

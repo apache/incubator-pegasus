@@ -205,13 +205,19 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
                                                           int32_t app_id,
                                                           const std::string &app_name,
                                                           int32_t partition_count,
-                                                          std::string store_path,
+                                                          const std::string &store_path,
                                                           const blob &json)
 {
     json_helper info;
     if (!json::json_forwarder<json_helper>::decode(json, info)) {
         return nullptr;
     }
+
+    if (info.remote_app_name.emtpy()) {
+        // remote_app_name is missing, which means remote storage is still of old versions.
+        info.remote_app_name = app_name;
+    }
+
     std::vector<host_port> meta_list;
     if (!dsn::replication::replica_helper::load_meta_servers(
             meta_list, duplication_constants::kClustersSectionName.c_str(), info.remote.c_str())) {
@@ -223,9 +229,10 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
                                                   app_name,
                                                   partition_count,
                                                   info.create_timestamp_ms,
-                                                  std::move(info.remote),
+                                                  info.remote,
+                                                  info.remote_app_name,
                                                   std::move(meta_list),
-                                                  std::move(store_path));
+                                                  store_path);
     dup->_status = info.status;
     dup->_fail_mode = info.fail_mode;
     return dup;

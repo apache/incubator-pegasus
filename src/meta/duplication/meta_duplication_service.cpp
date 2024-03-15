@@ -547,13 +547,12 @@ meta_duplication_service::new_dup_from_init(const std::string &follower_cluster_
     duplication_info_s_ptr dup;
 
     // use current time to identify this duplication.
-    auto dupid = static_cast<dupid_t>(dsn_now_ms() / 1000);
+    auto dupid = static_cast<dupid_t>(dsn_now_s());
     {
         zauto_write_lock l(app_lock());
 
         // hold write lock here to ensure that dupid is unique
-        while (app->duplications.find(dupid) != app->duplications.end())
-            dupid++;
+        for (;app->duplications.find(dupid) != app->duplications.end();++dupid) {}
 
         std::string dup_path = get_duplication_path(*app, std::to_string(dupid));
         dup = std::make_shared<duplication_info>(dupid,
@@ -562,6 +561,7 @@ meta_duplication_service::new_dup_from_init(const std::string &follower_cluster_
                                                  app->partition_count,
                                                  dsn_now_ms(),
                                                  follower_cluster_name,
+                                                 follower_app_name,
                                                  std::move(follower_cluster_metas),
                                                  std::move(dup_path));
         for (int32_t i = 0; i < app->partition_count; i++) {
