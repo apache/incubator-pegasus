@@ -331,6 +331,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     if (print_download_progress) {
         for (auto i = 0; i < partition_count; ++i) {
             auto progress = 0;
+            // The 'bulk_load_states' must be set whatever the version of the server is.
             for (const auto &kv : resp.bulk_load_states[i]) {
                 progress += kv.second.download_progress;
             }
@@ -357,6 +358,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
         }
 
         for (auto i = 0; i < partition_count; ++i) {
+            // The 'bulk_load_states' must be set whatever the version of the server is.
             auto states = resp.bulk_load_states[i];
             tp_all.add_row(i);
             tp_all.append_data(get_short_status(resp.partitions_status[i]));
@@ -408,6 +410,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
                 tp_single.add_column("is_paused");
             }
 
+            // The 'bulk_load_states' must be set whatever the version of the server is.
             auto states = resp.bulk_load_states[pidx];
             for (auto iter = states.begin(); iter != states.end(); ++iter) {
                 tp_single.add_row(pidx);

@@ -91,7 +91,7 @@ struct bulk_load_request
 {
     1:dsn.gpid                pid;
     2:string                  app_name;
-    3:dsn.rpc_address         primary_addr;
+    3:dsn.rpc_address         primary;
     4:string                  remote_provider_name;
     5:string                  cluster_name;
     6:i64                     ballot;

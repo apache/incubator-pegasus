@@ -220,8 +220,7 @@ public:
         _group_req.meta_bulk_load_status = status;
         _group_req.config.status = partition_status::PS_SECONDARY;
         _group_req.config.ballot = b;
-        _group_req.target = SECONDARY;
-        _group_req.__set_hp_target(SECONDARY_HP);
+        SET_IP_AND_HOST_PORT(_group_req, target, PRIMARY, PRIMARY_HP);
     }
 
     void mock_replica_config(partition_status::type status)

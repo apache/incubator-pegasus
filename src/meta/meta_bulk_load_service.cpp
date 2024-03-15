@@ -24,7 +24,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <type_traits>
 
+#include "absl/strings/string_view.h"
 #include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"
 #include "common/replica_envs.h"
@@ -51,7 +53,6 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 
 DSN_DEFINE_uint32(meta_server,
                   bulk_load_max_rollback_times,
@@ -430,8 +431,7 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
         const app_bulk_load_info &ainfo = _app_bulk_load_info[pid.get_app_id()];
         req->pid = pid;
         req->app_name = app_name;
-        req->primary_addr = pconfig.primary;
-        req->__set_hp_primary(pconfig.hp_primary);
+        SET_IP_AND_HOST_PORT(*req, primary, pconfig.primary, pconfig.hp_primary);
         req->remote_provider_name = ainfo.file_provider_type;
         req->cluster_name = ainfo.cluster_name;
         req->meta_bulk_load_status = get_partition_bulk_load_status_unlocked(pid);
@@ -440,10 +440,9 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
         req->remote_root_path = ainfo.remote_root_path;
     }
 
-    LOG_INFO("send bulk load request to node({}({})), app({}), partition({}), partition "
+    LOG_INFO("send bulk load request to node({}), app({}), partition({}), partition "
              "status = {}, remote provider = {}, cluster_name = {}, remote_root_path = {}",
-             pconfig.hp_primary,
-             pconfig.primary,
+             FMT_HOST_PORT_AND_IP(pconfig, primary),
              app_name,
              pid,
              dsn::enum_to_string(req->meta_bulk_load_status),
@@ -458,9 +457,8 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
         auto &bulk_load_resp = rpc.response();
         if (!bulk_load_resp.__isset.hp_group_bulk_load_state) {
             bulk_load_resp.__set_hp_group_bulk_load_state({});
-            for (const auto &kv : bulk_load_resp.group_bulk_load_state) {
-                bulk_load_resp.hp_group_bulk_load_state[host_port::from_address(kv.first)] =
-                    kv.second;
+            for (const auto & [ addr, pbls ] : bulk_load_resp.group_bulk_load_state) {
+                bulk_load_resp.hp_group_bulk_load_state[host_port::from_address(addr)] = pbls;
             }
         }
 
@@ -475,16 +473,15 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
 {
     const std::string &app_name = request.app_name;
     const gpid &pid = request.pid;
-    const auto &primary_addr = request.primary_addr;
+    const auto &primary_addr = request.primary;
     const auto &primary_hp = request.hp_primary;
 
     if (err != ERR_OK) {
-        LOG_ERROR("app({}), partition({}) failed to receive bulk load response from node({}({})), "
+        LOG_ERROR("app({}), partition({}) failed to receive bulk load response from node({}), "
                   "error = {}",
                   app_name,
                   pid,
-                  primary_hp,
-                  primary_addr,
+                  FMT_HOST_PORT_AND_IP(request, primary),
                   err);
         try_rollback_to_downloading(app_name, pid);
         try_resend_bulk_load_request(app_name, pid);
@@ -493,11 +490,10 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
 
     if (response.err == ERR_OBJECT_NOT_FOUND || response.err == ERR_INVALID_STATE) {
         LOG_ERROR(
-            "app({}), partition({}) doesn't exist or has invalid state on node({}({})), error = {}",
+            "app({}), partition({}) doesn't exist or has invalid state on node({}), error = {}",
             app_name,
             pid,
-            primary_hp,
-            primary_addr,
+            FMT_HOST_PORT_AND_IP(request, primary),
             response.err);
         try_rollback_to_downloading(app_name, pid);
         try_resend_bulk_load_request(app_name, pid);
@@ -506,10 +502,9 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
 
     if (response.err == ERR_BUSY) {
         LOG_WARNING(
-            "node({}({})) has enough replicas downloading, wait for next round to send bulk load "
+            "node({}) has enough replicas downloading, wait for next round to send bulk load "
             "request for app({}), partition({})",
-            primary_hp,
-            primary_addr,
+            FMT_HOST_PORT_AND_IP(request, primary),
             app_name,
             pid);
         try_resend_bulk_load_request(app_name, pid);
@@ -517,15 +512,13 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
     }
 
     if (response.err != ERR_OK) {
-        LOG_ERROR(
-            "app({}), partition({}) from node({}({})) handle bulk load response failed, error = "
-            "{}, primary status = {}",
-            app_name,
-            pid,
-            primary_hp,
-            primary_addr,
-            response.err,
-            dsn::enum_to_string(response.primary_bulk_load_status));
+        LOG_ERROR("app({}), partition({}) from node({}) handle bulk load response failed, error = "
+                  "{}, primary status = {}",
+                  app_name,
+                  pid,
+                  FMT_HOST_PORT_AND_IP(request, primary),
+                  response.err,
+                  dsn::enum_to_string(response.primary_bulk_load_status));
         handle_bulk_load_failed(pid.get_app_id(), response.err);
         try_resend_bulk_load_request(app_name, pid);
         return;
@@ -544,7 +537,7 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
         LOG_WARNING(
             "receive out-date response from node({}), app({}), partition({}), request ballot = "
             "{}, current ballot= {}",
-            primary_addr,
+            FMT_HOST_PORT_AND_IP(request, primary),
             app_name,
             pid,
             request.ballot,
@@ -1614,19 +1607,20 @@ void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
         }
     }
 
+    // Fill bulk_load_states and hp_bulk_load_states fileds.
     response.bulk_load_states.resize(partition_count);
     response.__set_hp_bulk_load_states(
         std::vector<std::map<host_port, partition_bulk_load_state>>(partition_count));
-    for (const auto &kv : _partitions_bulk_load_state) {
-        if (kv.first.get_app_id() == app_id) {
-            auto pidx = kv.first.get_partition_index();
-            response.hp_bulk_load_states[pidx] = kv.second;
+    for (const auto & [ pid, pbls_by_hps ] : _partitions_bulk_load_state) {
+        if (pid.get_app_id() == app_id) {
+            auto pidx = pid.get_partition_index();
+            response.hp_bulk_load_states[pidx] = pbls_by_hps;
 
-            std::map<rpc_address, partition_bulk_load_state> addr_pbls;
-            for (const auto &bls : kv.second) {
-                addr_pbls[dsn::dns_resolver::instance().resolve_address(bls.first)] = bls.second;
+            std::map<rpc_address, partition_bulk_load_state> pbls_by_addrs;
+            for (const auto & [ hp, pbls ] : pbls_by_hps) {
+                pbls_by_addrs[dsn::dns_resolver::instance().resolve_address(hp)] = pbls;
             }
-            response.bulk_load_states[pidx] = addr_pbls;
+            response.bulk_load_states[pidx] = pbls_by_addrs;
         }
     }
 
