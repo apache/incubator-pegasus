@@ -17,6 +17,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <string.h>
+#include <type_traits>
 #include <algorithm>
 #include <atomic>
 #include <cstdint>

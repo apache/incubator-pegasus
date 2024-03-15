@@ -24,7 +24,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <type_traits>
 
+#include "absl/strings/string_view.h"
 #include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"
 #include "common/replica_envs.h"
@@ -51,7 +53,6 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 
 DSN_DEFINE_uint32(meta_server,
                   bulk_load_max_rollback_times,
