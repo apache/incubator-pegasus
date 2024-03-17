@@ -155,6 +155,7 @@ public:
         entry.remote = follower_cluster_name;
         entry.status = _status;
         entry.__set_fail_mode(_fail_mode);
+        entry.__set_remote_app_name(follower_app_name);
         entry.__isset.progress = true;
         for (const auto &kv : _progress) {
             if (!kv.second.is_inited) {

@@ -122,7 +122,7 @@ ship_mutation::ship_mutation(replica_duplicator *duplicator)
       METRIC_VAR_INIT_replica(dup_shipped_bytes)
 {
     _mutation_duplicator = new_mutation_duplicator(
-        duplicator, _duplicator->remote_cluster_name(), _replica->get_app_info()->app_name);
+        duplicator, duplicator->remote_cluster_name(), duplicator->_remote_app_name);
     _mutation_duplicator->set_task_environment(duplicator);
 }
 

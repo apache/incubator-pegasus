@@ -111,6 +111,8 @@ struct duplication_entry
     5:optional map<i32, i64> progress;
 
     7:optional duplication_fail_mode fail_mode;
+
+    8:optional string remote_app_name;
 }
 
 // This request is sent from client to meta.
