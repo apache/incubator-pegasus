@@ -248,20 +248,17 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
         int total_length = body_size() + sizeof(dsn::message_header);
         std::shared_ptr<char> recv_buffer(dsn::utils::make_shared_array<char>(total_length));
         char *ptr = recv_buffer.get();
-        int i = 0;
 
         if ((const char *)header != buffers[0].data()) {
             memcpy(ptr, (const void *)header, sizeof(message_header));
-            i += sizeof(message_header);
             ptr += sizeof(message_header);
         }
 
         for (dsn::blob &bb : buffers) {
             memcpy(ptr, bb.data(), bb.length());
-            i += bb.length();
             ptr += bb.length();
         }
-        CHECK_EQ_MSG(i, total_length, "rpc_name = {}", msg->header->rpc_name);
+        CHECK_EQ_MSG(ptr - recv_buffer.get(), total_length, "rpc_name = {}", msg->header->rpc_name);
 
         auto data = dsn::blob(recv_buffer, total_length);
 
