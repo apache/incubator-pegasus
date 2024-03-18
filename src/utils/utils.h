@@ -36,10 +36,6 @@
 #include <string>
 #include <utility>
 
-namespace dsn {
-class rpc_address;
-} // namespace dsn
-
 #define TIME_MS_MAX 0xffffffff
 
 // The COMPILE_ASSERT macro can be used to verify that a compile time
