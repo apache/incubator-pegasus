@@ -1367,9 +1367,10 @@ replication_ddl_client::add_dup(const std::string &app_name,
                                 bool is_duplicating_checkpoint,
                                 const std::string &remote_app_name)
 {
-    // Empty remote_app_name means using source app_name as remote_app_name.
-    RETURN_EW_NOT_OK_MSG(
-        validate_app_name(remote_app_name), "invalid remote_app_name: '{}'", remote_app_name);
+    RETURN_EW_NOT_OK_MSG(validate_app_name(remote_app_name, false),
+                         duplication_add_response,
+                         "invalid remote_app_name: '{}'",
+                         remote_app_name);
 
     auto req = std::make_unique<duplication_add_request>();
     req->app_name = app_name;
