@@ -1361,9 +1361,11 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
     return ERR_OK;
 }
 
-error_with<duplication_add_response> replication_ddl_client::add_dup(
-    const std::string &app_name, const std::string &remote_cluster_name, bool is_duplicating_checkpoint,
-    const std::string &remote_app_name)
+error_with<duplication_add_response>
+replication_ddl_client::add_dup(const std::string &app_name,
+                                const std::string &remote_cluster_name,
+                                bool is_duplicating_checkpoint,
+                                const std::string &remote_app_name)
 {
     // Empty remote_app_name means using source app_name as remote_app_name.
     RETURN_EW_NOT_OK_MSG(
@@ -1401,7 +1403,8 @@ error_with<duplication_modify_response> replication_ddl_client::update_dup_fail_
     return call_rpc_sync(duplication_modify_rpc(std::move(req), RPC_CM_MODIFY_DUPLICATION));
 }
 
-error_with<duplication_query_response> replication_ddl_client::query_dup(const std::string &app_name)
+error_with<duplication_query_response>
+replication_ddl_client::query_dup(const std::string &app_name)
 {
     auto req = std::make_unique<duplication_query_request>();
     req->app_name = app_name;

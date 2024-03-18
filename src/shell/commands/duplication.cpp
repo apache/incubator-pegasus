@@ -82,8 +82,8 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
 
     std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
 
-    auto err_resp =
-        sc->ddl_client->add_dup(app_name, remote_cluster_name, is_duplicating_checkpoint, remote_app_name);
+    auto err_resp = sc->ddl_client->add_dup(
+        app_name, remote_cluster_name, is_duplicating_checkpoint, remote_app_name);
     auto err = err_resp.get_error();
     std::string hint;
     if (err.is_ok()) {

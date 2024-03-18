@@ -216,7 +216,8 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         }
     }
     if (!dup) {
-        dup = new_dup_from_init(request.remote_cluster_name, remote_app_name, std::move(meta_list), app);
+        dup = new_dup_from_init(
+            request.remote_cluster_name, remote_app_name, std::move(meta_list), app);
     }
     do_add_duplication(app, dup, rpc);
 }
@@ -554,7 +555,8 @@ meta_duplication_service::new_dup_from_init(const std::string &follower_cluster_
         zauto_write_lock l(app_lock());
 
         // hold write lock here to ensure that dupid is unique
-        for (;app->duplications.find(dupid) != app->duplications.end();++dupid) {}
+        for (; app->duplications.find(dupid) != app->duplications.end(); ++dupid) {
+        }
 
         std::string dup_path = get_duplication_path(*app, std::to_string(dupid));
         dup = std::make_shared<duplication_info>(dupid,
