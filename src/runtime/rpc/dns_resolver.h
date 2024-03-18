@@ -45,8 +45,7 @@ public:
     // Resolve this host_port to an unique rpc_address.
     rpc_address resolve_address(const host_port &hp);
 
-    // Reolve comma separated host:port list 'host_ports' to comma separated ip:port list
-    // 'ip_ports'.
+    // Resolve comma separated host:port list 'host_ports' to comma separated ip:port list.
     static std::string ip_ports_from_host_ports(const std::string &host_ports);
 
 private:

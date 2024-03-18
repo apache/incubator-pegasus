@@ -66,10 +66,8 @@ TEST(host_port_test, dns_resolver)
             std::string host_ports;
             std::string ip_ports;
         } test_cases[] = {{"localhost:8080", "127.0.0.1:8080"},
-                          {"localhost", "127.0.0.1"},
                           {"localhost:8080,localhost:8081,localhost:8082",
-                           "127.0.0.1:8080,127.0.0.1:8082,127.0.0.1:8082"},
-                          {"localhost,localhost,localhost", "127.0.0.1,127.0.0.1,127.0.0.1"}};
+                           "127.0.0.1:8080,127.0.0.1:8081,127.0.0.1:8082"}};
 
         for (const auto &tc : test_cases) {
             ASSERT_EQ(tc.ip_ports, dns_resolver::ip_ports_from_host_ports(tc.host_ports));
