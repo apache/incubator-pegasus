@@ -52,6 +52,7 @@ typedef bool (*executor)(command_executor *this_, shell_context *sc, arguments a
 struct command_executor
 {
     const char *name;
+    // TODO(yingchun): the 'description' is not output in the help message, fix it.
     const char *description;
     const char *option_usage;
     executor exec;
