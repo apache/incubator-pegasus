@@ -269,8 +269,14 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	assert.True(t, confUpdate)
 	assert.False(t, retry)
 
+	confUpdate, retry, err = ptb.handleReplicaError(context.DeadlineExceeded, nil)
+	<-ptb.confUpdateCh
+	assert.Error(t, err)
+	assert.True(t, confUpdate)
+	assert.False(t, retry)
+
 	{ // Ensure: The following errors should not trigger configuration update
-		errorTypes := []error{base.ERR_TIMEOUT, context.DeadlineExceeded, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY, base.ERR_SPLITTING, base.ERR_DISK_INSUFFICIENT}
+		errorTypes := []error{base.ERR_TIMEOUT, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY, base.ERR_SPLITTING, base.ERR_DISK_INSUFFICIENT}
 
 		for _, err := range errorTypes {
 			channelEmpty := false

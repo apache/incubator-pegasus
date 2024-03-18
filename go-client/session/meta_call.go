@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
 )
 
 type metaCallFunc func(context.Context, *metaSession) (metaResponse, error)
@@ -42,21 +44,24 @@ type metaCall struct {
 	backupCh chan interface{}
 	callFunc metaCallFunc
 
-	metas []*metaSession
-	lead  int
+	metaIPAddrs []string
+	metas       []*metaSession
+	lead        int
 	// After a Run successfully ends, the current leader will be set in this field.
 	// If there is no meta failover, `newLead` equals to `lead`.
 	newLead uint32
+	lock    sync.RWMutex
 }
 
-func newMetaCall(lead int, metas []*metaSession, callFunc metaCallFunc) *metaCall {
+func newMetaCall(lead int, metas []*metaSession, callFunc metaCallFunc, meatIPAddr []string) *metaCall {
 	return &metaCall{
-		metas:    metas,
-		lead:     lead,
-		newLead:  uint32(lead),
-		respCh:   make(chan metaResponse),
-		callFunc: callFunc,
-		backupCh: make(chan interface{}),
+		metas:       metas,
+		metaIPAddrs: meatIPAddr,
+		lead:        lead,
+		newLead:     uint32(lead),
+		respCh:      make(chan metaResponse),
+		callFunc:    callFunc,
+		backupCh:    make(chan interface{}),
 	}
 }
 
@@ -106,14 +111,44 @@ func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 }
 
 // issueSingleMeta returns false if we should try another meta
-func (c *metaCall) issueSingleMeta(ctx context.Context, i int) bool {
-	meta := c.metas[i]
+func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
+	meta := c.metas[curLeader]
 	resp, err := c.callFunc(ctx, meta)
+
+	if err == nil && resp.GetErr().Errno == base.ERR_FORWARD_TO_OTHERS.String() {
+		forwardAddr := c.getMetaServiceForwardAddress(resp)
+		if forwardAddr == nil {
+			return false
+		}
+		addr := forwardAddr.GetAddress()
+		found := false
+		c.lock.Lock()
+		for i := range c.metaIPAddrs {
+			if addr == c.metaIPAddrs[i] {
+				found = true
+				break
+			}
+		}
+		c.lock.Unlock()
+		if !found {
+			c.lock.Lock()
+			c.metaIPAddrs = append(c.metaIPAddrs, addr)
+			c.metas = append(c.metas, &metaSession{
+				NodeSession: newNodeSession(addr, NodeTypeMeta),
+				logger:      pegalog.GetLogger(),
+			})
+			c.lock.Unlock()
+			curLeader = len(c.metas) - 1
+			c.metas[curLeader].logger.Printf("add forward address %s as meta server", addr)
+			resp, err = c.callFunc(ctx, c.metas[curLeader])
+		}
+	}
+
 	if err != nil || resp.GetErr().Errno == base.ERR_FORWARD_TO_OTHERS.String() {
 		return false
 	}
 	// the RPC succeeds, this meta becomes the new leader now.
-	atomic.StoreUint32(&c.newLead, uint32(i))
+	atomic.StoreUint32(&c.newLead, uint32(curLeader))
 	select {
 	case <-ctx.Done():
 	case c.respCh <- resp:
@@ -131,5 +166,16 @@ func (c *metaCall) issueBackupMetas(ctx context.Context) {
 		go func(idx int) {
 			c.issueSingleMeta(ctx, idx)
 		}(i)
+	}
+}
+
+func (c *metaCall) getMetaServiceForwardAddress(resp metaResponse) *base.RPCAddress {
+	rep, ok := resp.(*replication.QueryCfgResponse)
+	if !ok || rep.GetErr().Errno != base.ERR_FORWARD_TO_OTHERS.String() {
+		return nil
+	} else if rep.GetPartitions() == nil || len(rep.GetPartitions()) == 0 {
+		return nil
+	} else {
+		return rep.Partitions[0].Primary
 	}
 }
