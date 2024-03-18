@@ -417,7 +417,7 @@ public:
     void set_alive(bool alive) { is_alive = alive; }
     bool has_collected() { return has_collected_replicas; }
     void set_replicas_collect_flag(bool has_collected) { has_collected_replicas = has_collected; }
-    dsn::host_port host_port() const { return hp; }
+    const dsn::host_port &host_port() const { return hp; }
     void set_hp(const dsn::host_port &val) { hp = val; }
 
     void put_partition(const dsn::gpid &pid, bool is_primary);
