@@ -355,7 +355,7 @@ void meta_duplication_service::create_follower_app_for_duplication(
     const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
 {
     configuration_create_app_request request;
-    request.app_name = app->app_name;
+    request.app_name = dup->follower_app_name;
     request.options.app_type = app->app_type;
     request.options.partition_count = app->partition_count;
     request.options.replica_count = app->max_replica_count;
@@ -371,6 +371,8 @@ void meta_duplication_service::create_follower_app_for_duplication(
                                  get_current_cluster_name());
     request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
                                  _meta_svc->get_meta_list_string());
+    request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterAppNameKey,
+                                 app->app_name);
 
     host_port meta_servers;
     meta_servers.assign_group(dup->follower_cluster_name.c_str());

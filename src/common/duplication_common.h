@@ -86,6 +86,7 @@ struct duplication_constants
     // These will fill into app env and mark one app as a "follower app" and record master info
     const static std::string kDuplicationEnvMasterClusterKey;
     const static std::string kDuplicationEnvMasterMetasKey;
+    const static std::string kDuplicationEnvMasterAppNameKey;
 };
 
 USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)

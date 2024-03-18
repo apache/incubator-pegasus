@@ -46,6 +46,8 @@ const std::string duplication_constants::kDuplicationEnvMasterClusterKey /*NOLIN
     "duplication.master_cluster";
 const std::string duplication_constants::kDuplicationEnvMasterMetasKey /*NOLINT*/ =
     "duplication.master_metas";
+const std::string duplication_constants::kDuplicationEnvMasterAppNameKey /*NOLINT*/ =
+    "duplication.master_app_name";
 
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {
