@@ -101,6 +101,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
                    remote_cluster_name,
                    is_duplicating_checkpoint,
                    err.description());
+
         if (!hint.empty()) {
             fmt::print(stderr, "detail:\n  {}\n", hint);
         }
@@ -165,32 +166,39 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
                    "querying duplications of app [{}] failed, error={}\n",
                    app_name,
                    err.description());
-    } else if (detail) {
+
+        return true;
+    }
+
+    if (detail) {
         fmt::print("duplications of app [{}] in detail:\n", app_name);
         fmt::print("{}\n\n", duplication_query_response_to_string(err_resp.get_value()));
-    } else {
-        const auto &resp = err_resp.get_value();
-        fmt::print("duplications of app [{}] are listed as below:\n", app_name);
 
-        dsn::utils::table_printer printer;
-        printer.add_title("dup_id");
-        printer.add_column("status");
-        printer.add_column("remote cluster");
-        printer.add_column("create time");
-
-        char create_time[25];
-        for (auto info : resp.entry_list) {
-            dsn::utils::time_ms_to_date_time(info.create_ts, create_time, sizeof(create_time));
-
-            printer.add_row(info.dupid);
-            printer.append_data(duplication_status_to_string(info.status));
-            printer.append_data(info.remote);
-            printer.append_data(create_time);
-
-            printer.output(std::cout);
-            std::cout << std::endl;
-        }
+        return true;
     }
+
+    const auto &resp = err_resp.get_value();
+    fmt::print("duplications of app [{}] are listed as below:\n", app_name);
+
+    dsn::utils::table_printer printer;
+    printer.add_title("dup_id");
+    printer.add_column("status");
+    printer.add_column("remote cluster");
+    printer.add_column("create time");
+
+    char create_time[25];
+    for (auto info : resp.entry_list) {
+        dsn::utils::time_ms_to_date_time(info.create_ts, create_time, sizeof(create_time));
+
+        printer.add_row(info.dupid);
+        printer.append_data(duplication_status_to_string(info.status));
+        printer.append_data(info.remote);
+        printer.append_data(create_time);
+
+        printer.output(std::cout);
+        std::cout << std::endl;
+    }
+
     return true;
 }
 

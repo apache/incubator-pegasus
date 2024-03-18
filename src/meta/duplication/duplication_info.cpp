@@ -213,7 +213,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
         return nullptr;
     }
 
-    if (info.remote_app_name.emtpy()) {
+    if (info.remote_app_name.empty()) {
         // remote_app_name is missing, which means remote storage is still of old versions.
         info.remote_app_name = app_name;
     }
