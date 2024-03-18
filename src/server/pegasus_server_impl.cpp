@@ -418,7 +418,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     if (dsn_unlikely(FLAGS_inject_read_error_for_test != rocksdb::Status::kOk)) {
         resp.error = FLAGS_inject_read_error_for_test;
@@ -496,7 +496,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -906,7 +906,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     auto &response = rpc.response();
     response.app_id = _gpid.get_app_id();
     response.partition_index = _gpid.get_partition_index();
-    response.server = _primary_address;
+    response.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1018,7 +1018,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1091,7 +1091,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1151,7 +1151,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1398,7 +1398,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
