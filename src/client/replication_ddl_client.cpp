@@ -34,6 +34,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <type_traits>
 
 #include "backup_types.h"
 #include "common//duplication_common.h"
@@ -54,7 +55,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
 #include "utils/time_utils.h"
-#include "utils/utils.h"
 
 DSN_DEFINE_uint32(ddl_client,
                   ddl_client_max_attempt_count,

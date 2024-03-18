@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"

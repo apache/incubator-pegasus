@@ -19,8 +19,6 @@
 
 #include <memory>
 #include <string>
-#include <utility>
-#include <vector>
 
 #include "gtest/gtest.h"
 #include "runtime/rpc/dns_resolver.h"
@@ -28,16 +26,6 @@
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_spec.h"
-#include "runtime/task/task_tracker.h"
-#include "runtime/test_utils.h"
-#include "utils/autoref_ptr.h"
-#include "utils/error_code.h"
-#include "utils/errors.h"
 
 namespace dsn {
 
@@ -84,7 +72,7 @@ TEST(host_port_test, dns_resolver)
                           {"localhost,localhost,localhost", "127.0.0.1,127.0.0.1,127.0.0.1"}};
 
         for (const auto &tc : test_cases) {
-            ASSERT_EQ(tc.ip_ports, dsn::utils::ip_ports_from_host_ports(tc.host_ports));
+            ASSERT_EQ(tc.ip_ports, dns_resolver::ip_ports_from_host_ports(tc.host_ports));
         }
     }
 }

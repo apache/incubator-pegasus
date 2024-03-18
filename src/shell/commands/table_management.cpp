@@ -52,7 +52,6 @@
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
 
 DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
 DSN_DEFINE_validator(tables_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });

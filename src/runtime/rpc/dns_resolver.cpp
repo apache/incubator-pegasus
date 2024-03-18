@@ -30,6 +30,7 @@
 #include "runtime/rpc/group_host_port.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 
 METRIC_DEFINE_gauge_int64(server,
