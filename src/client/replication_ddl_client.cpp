@@ -524,14 +524,13 @@ struct list_nodes_helper
     }
 };
 
-std::string host_name_resolve(bool resolve_ip, std::string value)
+std::string replication_ddl_client::node_name(const host_port &hp, bool resolve_ip)
 {
-    if (resolve_ip) {
-        std::string temp;
-        if (dsn::utils::hostname_from_ip_port(value.c_str(), &temp))
-            return temp;
+    if (!resolve_ip) {
+        return hp.to_string();
     }
-    return value;
+
+    return dns_resolver::instance().resolve_address(hp).to_string();
 }
 
 dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status,
@@ -547,14 +546,13 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
 
     std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
-    for (auto &kv : nodes) {
-        if (kv.second == dsn::replication::node_status::NS_ALIVE)
+    for (const auto & [ hp, type ] : nodes) {
+        if (type == dsn::replication::node_status::NS_ALIVE) {
             alive_node_count++;
-        std::string status_str = enum_to_string(kv.second);
+        }
+        std::string status_str = enum_to_string(type);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        tmp_map.emplace(
-            kv.first,
-            list_nodes_helper(host_name_resolve(resolve_ip, kv.first.to_string()), status_str));
+        tmp_map.emplace(hp, list_nodes_helper(node_name(hp, resolve_ip), status_str));
     }
 
     if (detailed) {
@@ -691,10 +689,8 @@ replication_ddl_client::cluster_info(const std::string &file_name, bool resolve_
 
     if (resolve_ip) {
         for (int i = 0; i < resp.keys.size(); ++i) {
-            if (resp.keys[i] == "meta_servers") {
-                dsn::utils::list_hostname_from_ip_port(resp.values[i].c_str(), &resp.values[i]);
-            } else if (resp.keys[i] == "primary_meta_server") {
-                dsn::utils::hostname_from_ip_port(resp.values[i].c_str(), &resp.values[i]);
+            if (resp.keys[i] == "meta_servers" || resp.keys[i] == "primary_meta_server") {
+                resp.values[i] = dns_resolver::ip_ports_from_host_ports(resp.values[i]);
             }
         }
     }
@@ -812,11 +808,11 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
         tp_nodes.add_column("primary");
         tp_nodes.add_column("secondary");
         tp_nodes.add_column("total");
-        for (auto &kv : node_stat) {
-            tp_nodes.add_row(host_name_resolve(resolve_ip, kv.first.to_string()));
-            tp_nodes.append_data(kv.second.first);
-            tp_nodes.append_data(kv.second.second);
-            tp_nodes.append_data(kv.second.first + kv.second.second);
+        for (const auto & [ hp, pri_and_sec_rep_cnts ] : node_stat) {
+            tp_nodes.add_row(node_name(hp, resolve_ip));
+            tp_nodes.append_data(pri_and_sec_rep_cnts.first);
+            tp_nodes.append_data(pri_and_sec_rep_cnts.second);
+            tp_nodes.append_data(pri_and_sec_rep_cnts.first + pri_and_sec_rep_cnts.second);
         }
         tp_nodes.add_row("");
         tp_nodes.append_data(total_prim_count);

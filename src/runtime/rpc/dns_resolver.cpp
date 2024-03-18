@@ -30,6 +30,7 @@
 #include "runtime/rpc/group_host_port.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 METRIC_DEFINE_gauge_int64(server,
                           dns_resolver_cache_size,
@@ -139,6 +140,25 @@ rpc_address dns_resolver::resolve_address(const host_port &hp)
     default:
         return {};
     }
+}
+
+std::string dns_resolver::ip_ports_from_host_ports(const std::string &host_ports)
+{
+    std::vector<std::string> host_port_vec;
+    dsn::utils::split_args(host_ports.c_str(), host_port_vec, ',');
+
+    if (dsn_unlikely(host_port_vec.empty())) {
+        return host_ports;
+    }
+
+    std::vector<std::string> ip_port_vec;
+    ip_port_vec.reserve(host_port_vec.size());
+    for (const auto &hp : host_port_vec) {
+        const auto addr = dsn::dns_resolver::instance().resolve_address(host_port::from_string(hp));
+        ip_port_vec.emplace_back(addr.to_string());
+    }
+
+    return fmt::format("{}", fmt::join(ip_port_vec, ","));
 }
 
 } // namespace dsn

@@ -376,13 +376,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
             }
             std::stringstream oss;
-            std::string hostname;
-            const auto &ip = p.hp_primary.to_string();
-            if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
-                oss << hostname << "(";
-            } else {
-                oss << p.hp_primary << "(";
-            };
+            oss << replication_ddl_client::node_name(p.hp_primary, resolve_ip) << "(";
             if (disk_found)
                 oss << disk_value;
             else
@@ -427,13 +421,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                     }
                 }
 
-                std::string hostname;
-                const auto &ip = p.hp_secondaries[j].to_string();
-                if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
-                    oss << hostname << "(";
-                } else {
-                    oss << p.hp_secondaries[j] << "(";
-                };
+                oss << replication_ddl_client::node_name(p.hp_secondaries[j], resolve_ip) << "(";
                 if (found)
                     oss << value;
                 else

@@ -327,10 +327,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             alive_node_count++;
         std::string status_str = dsn::enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        auto node_name = kv.first.to_string();
-        if (resolve_ip) {
-            node_name = dsn::dns_resolver::instance().resolve_address(kv.first).to_string();
-        }
+        const auto node_name = replication_ddl_client::node_name(kv.first, resolve_ip);
         tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
 
@@ -664,12 +661,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     // TODO (yingchun) output is hard to read, need do some refactor
     for (int i = 0; i < node_list.size(); ++i) {
         node_desc &n = node_list[i];
-        std::string hostname;
-        if (resolve_ip) {
-            hostname = dsn::dns_resolver::instance().resolve_address(n.hp).to_string();
-        } else {
-            hostname = n.hp.to_string();
-        }
+        const auto hostname = replication_ddl_client::node_name(n.hp, resolve_ip);
         fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
         if (results[i].first) {
             fprintf(stderr, "succeed: %s\n", results[i].second.c_str());

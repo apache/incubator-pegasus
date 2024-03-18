@@ -269,6 +269,9 @@ public:
 
     static error_s validate_app_name(const std::string &app_name, bool allow_empty_name = false);
 
+    // Resolve the host:port 'hp' to ip:port if 'resolve_ip' is true.
+    static std::string node_name(const host_port &hp, bool resolve_ip);
+
 private:
     bool static valid_app_char(int c);
 

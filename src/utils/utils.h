@@ -81,29 +81,7 @@ std::shared_ptr<T> make_shared_array(size_t size)
 // and hostname_result
 // will be the hostname, or it will be ip address or error message
 
-// valid a.b.c.d -> return TRUE && hostname_result=hostname | invalid a.b.c.d:port1 -> return
-// FALSE
-// && hostname_result=a.b.c.d
-bool hostname_from_ip(const char *ip, std::string *hostname_result);
-
-// valid a.b.c.d：port -> return TRUE && hostname_result=hostname:port | invalid a.b.c.d:port1
-// ->
-// return FALSE  && hostname_result=a.b.c.d:port
-bool hostname_from_ip_port(const char *ip_port, std::string *hostname_result);
-
-// valid a.b.c.d,e.f.g.h -> return TRUE && hostname_result_list=hostname1,hostname2 | invalid
-// a.b.c.d,e.f.g.h -> return TRUE && hostname_result_list=a.b.c.d,e.f.g.h
-bool list_hostname_from_ip(const char *ip_port_list, std::string *hostname_result_list);
-
-// valid a.b.c.d:port1,e.f.g.h:port2 -> return TRUE &&
-// hostname_result_list=hostname1:port1,hostname2:port2 | invalid a.b.c.d:port1,e.f.g.h:port2 ->
-// return TRUE && hostname_result_list=a.b.c.d:port1,e.f.g.h:port2
-bool list_hostname_from_ip_port(const char *ip_port_list, std::string *hostname_result_list);
-
-// valid_ipv4_rpc_address return TRUE && hostname_result=hostname:port | invalid_ipv4 -> return
-// FALSE
-bool hostname(const dsn::rpc_address &address, std::string *hostname_result);
-
+// TODO(yingchun): Consider to move it to rpc_address.
 // valid_ip_network_order -> return TRUE && hostname_result=hostname	|
 // invalid_ip_network_order -> return FALSE
 bool hostname_from_ip(uint32_t ip, std::string *hostname_result);
