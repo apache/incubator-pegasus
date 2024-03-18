@@ -133,7 +133,7 @@ public:
         ASSERT_EQ(response.app_id, _gpid.get_app_id());
         ASSERT_EQ(response.partition_index, _gpid.get_partition_index());
         ASSERT_EQ(response.decree, decree);
-        ASSERT_EQ(response.server, _server_write->_write_svc->_impl->_primary_address);
+        ASSERT_EQ(response.server, _server_write->_write_svc->_impl->_primary_host_port);
     }
 };
 

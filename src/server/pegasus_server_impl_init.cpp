@@ -629,7 +629,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_positives),
       METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_true_positives)
 {
-    _primary_address = dsn_primary_host_port().to_string();
+    _primary_host_port = dsn_primary_host_port().to_string();
     _gpid = get_gpid();
 
     _read_hotkey_collector =
