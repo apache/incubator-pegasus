@@ -37,9 +37,7 @@
 #include "utils/defer.h"
 >>>>>>> master
 #include "utils/flags.h"
-#include "utils/metrics.h"
-
-DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+#include "utils/metrics.h" DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
 DSN_DECLARE_int32(fd_lease_seconds);
 
 METRIC_DEFINE_entity(backup_policy);

@@ -90,13 +90,13 @@ private:
 const std::string backup_restore_test::s_new_app_name = "new_app";
 const std::string backup_restore_test::s_provider_type = "local_service";
 
-
- //TODO(heyuchen): implement it
-TEST_F(backup_restore_test, test_backup_and_restore) {
-    //test_backup_and_restore();
+// TODO(heyuchen): implement it
+TEST_F(backup_restore_test, test_backup_and_restore)
+{
+    // test_backup_and_restore();
 }
 
 TEST_F(backup_restore_test, test_backup_and_restore_with_user_specified_path)
 {
-    //test_backup_and_restore("test/path");
+    // test_backup_and_restore("test/path");
 }

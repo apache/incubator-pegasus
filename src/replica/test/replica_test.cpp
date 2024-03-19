@@ -79,7 +79,8 @@ public:
         FLAGS_enable_http_server = false;
         mock_app_info();
 
-        _mock_replica = stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
+        _mock_replica =
+            stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
     }
 
     int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
