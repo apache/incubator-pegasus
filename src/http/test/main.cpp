@@ -46,14 +46,14 @@ public:
                                    dsn::http_method::GET,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/test/get");
+                         "Test GET.");
         register_handler("post",
                          std::bind(&test_http_service::method_handler,
                                    this,
                                    dsn::http_method::POST,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/test/post");
+                         "Test POST.");
     }
 
     ~test_http_service() = default;

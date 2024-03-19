@@ -76,9 +76,10 @@ struct http_call
         callback = std::move(cb);
         return *this;
     }
-    http_call &with_help(std::string hp)
+    http_call &with_help(std::string hp) { return with_help("", std::move(hp)); }
+    http_call &with_help(std::string parameters, std::string hp)
     {
-        help = std::move(hp);
+        help = fmt::format("{}{}{}", parameters, parameters.empty() ? "" : ". ", hp);
         return *this;
     }
 };
@@ -95,6 +96,11 @@ public:
     virtual std::string path() const = 0;
 
     void register_handler(std::string sub_path, http_callback cb, std::string help) const;
+
+    void register_handler(std::string sub_path,
+                          http_callback cb,
+                          std::string parameters,
+                          std::string help) const;
 
 private:
     // If sub_path is 'app/duplication', the built path would be '<root_path>/app/duplication',
@@ -114,7 +120,8 @@ public:
                                        this,
                                        std::placeholders::_1,
                                        std::placeholders::_2),
-                             "ip:port/updateConfig?<key>=<value>");
+                             "<key>=<new_value>",
+                             "Update the config to the new value.");
         });
     }
 
@@ -134,7 +141,7 @@ protected:
 //                              this,
 //                              std::placeholders::_1,
 //                              std::placeholders::_2))
-//     .with_help("Gets the app information")
+//     .with_help("Gets the app information.")
 //     .add_argument("app_name", HTTP_ARG_STRING);
 // ```
 extern http_call &register_http_call(std::string full_path);

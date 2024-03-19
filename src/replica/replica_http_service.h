@@ -37,19 +37,22 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/replica/duplication?appid=<appid>");
+                         "appid=<appid>",
+                         "Query the duplication status of an app.");
         register_handler("data_version",
                          std::bind(&replica_http_service::query_app_data_version_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/replica/data_version?app_id=<app_id>");
+                         "app_id=<app_id>",
+                         "Query the data version of an app.");
         register_handler("manual_compaction",
                          std::bind(&replica_http_service::query_manual_compaction_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/replica/manual_compaction?app_id=<app_id>");
+                         "app_id=<app_id>",
+                         "Query the manual compaction status of an app.");
     }
 
     ~replica_http_service()
