@@ -100,7 +100,7 @@ public:
 
     // Return true if 'server_list' is a valid comma-separated list of servers, otherwise return
     // false. The result is filled into 'servers' if success.
-    static bool parse_server_list(const std::string &server_list,
+    static bool parse_server_list(const char *server_list,
                                   /*out*/ std::vector<dsn::host_port> &servers);
 
     // Return true if load server list from config value located in 'section' and 'key', the value

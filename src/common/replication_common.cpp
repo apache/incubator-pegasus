@@ -194,18 +194,18 @@ bool replica_helper::load_servers_from_config(const std::string &section,
                                               const std::string &key,
                                               /*out*/ std::vector<dsn::host_port> &servers)
 {
-    std::string server_list_str = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
-    return dsn::replication::replica_helper::parse_server_list(server_list_str, servers);
+    const auto *server_list = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
+    return dsn::replication::replica_helper::parse_server_list(server_list, servers);
 }
 
-bool replica_helper::parse_server_list(const std::string &server_list,
+bool replica_helper::parse_server_list(const char *server_list,
                                        /*out*/ std::vector<dsn::host_port> &servers)
 {
     servers.clear();
     std::vector<std::string> host_port_strs;
-    ::dsn::utils::split_args(server_list.c_str(), host_port_strs, ',');
+    ::dsn::utils::split_args(server_list, host_port_strs, ',');
     for (const auto &host_port_str : host_port_strs) {
-        auto hp = dsn::host_port::from_string(host_port_str);
+        const auto hp = dsn::host_port::from_string(host_port_str);
         if (!hp) {
             LOG_ERROR("invalid host_port '{}' specified in '{}'", host_port_str, server_list);
             return false;
