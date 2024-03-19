@@ -192,12 +192,13 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::host_port> &serv
 {
     servers.clear();
     std::string server_list = dsn_config_get_value_string(section, key, "", "");
-    std::vector<std::string> host_ports;
-    ::dsn::utils::split_args(server_list.c_str(), host_ports, ',');
-    for (const auto &hp : host_ports) {
-        const auto hp = dsn::host_port::from_string(hp);
+    std::vector<std::string> host_port_strs;
+    ::dsn::utils::split_args(server_list.c_str(), host_port_strs, ',');
+    for (const auto &host_port_str : host_port_strs) {
+        const auto hp = dsn::host_port::from_string(host_port_str);
         if (!hp) {
-            LOG_ERROR("invalid host_port '{}' specified in config [{}]{}", hp, section, key);
+            LOG_ERROR(
+                "invalid host_port '{}' specified in config [{}]{}", host_port_str, section, key);
             return false;
         }
         servers.push_back(hp);
@@ -207,7 +208,7 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::host_port> &serv
         LOG_ERROR("no meta server specified in config [{}].{}", section, key);
         return false;
     }
-    if (servers.size() != host_ports.size()) {
+    if (servers.size() != host_port_strs.size()) {
         LOG_ERROR("server_list {} have duplicate server", server_list);
         return false;
     }
