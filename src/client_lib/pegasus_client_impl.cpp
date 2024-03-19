@@ -64,7 +64,7 @@ pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *a
     : _cluster_name(cluster_name), _app_name(app_name)
 {
     std::vector<dsn::host_port> meta_servers;
-    dsn::replication::replica_helper::load_server_list_from_config(
+    dsn::replication::replica_helper::load_servers_from_config(
         dsn::PEGASUS_CLUSTER_SECTION_NAME, cluster_name, meta_servers);
     CHECK_GT(meta_servers.size(), 0);
     _meta_server.assign_group("meta-servers");

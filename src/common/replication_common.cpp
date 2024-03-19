@@ -190,9 +190,9 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     }
 }
 
-bool replica_helper::load_server_list_from_config(const std::string &section,
-                                                  const std::string &key,
-                                                  /*out*/ std::vector<dsn::host_port> &servers)
+bool replica_helper::load_servers_from_config(const std::string &section,
+                                              const std::string &key,
+                                              /*out*/ std::vector<dsn::host_port> &servers)
 {
     std::string server_list_str = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
     return dsn::replication::replica_helper::parse_server_list(server_list_str, servers);

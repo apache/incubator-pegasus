@@ -213,7 +213,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
         return nullptr;
     }
     std::vector<host_port> meta_list;
-    if (!dsn::replication::replica_helper::load_server_list_from_config(
+    if (!dsn::replication::replica_helper::load_servers_from_config(
             duplication_constants::kClustersSectionName, info.remote, meta_list)) {
         return nullptr;
     }

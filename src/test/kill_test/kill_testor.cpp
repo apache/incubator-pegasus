@@ -52,7 +52,7 @@ kill_testor::kill_testor(const char *config_file)
     }
 
     // load meta_list
-    dsn::replication::replica_helper::load_server_list_from_config(
+    dsn::replication::replica_helper::load_servers_from_config(
         dsn::PEGASUS_CLUSTER_SECTION_NAME, FLAGS_pegasus_cluster_name, meta_list);
     if (meta_list.empty()) {
         LOG_ERROR("Should config the meta address for killer");

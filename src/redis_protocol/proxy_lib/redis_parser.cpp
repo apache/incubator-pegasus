@@ -97,7 +97,7 @@ redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
     ::dsn::apps::rrdb_client *r;
     if (op) {
         std::vector<dsn::host_port> meta_list;
-        dsn::replication::replica_helper::load_server_list_from_config(
+        dsn::replication::replica_helper::load_servers_from_config(
             dsn::PEGASUS_CLUSTER_SECTION_NAME, op->get_cluster(), meta_list);
         r = new ::dsn::apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
         if (!dsn::utils::is_empty(op->get_geo_app())) {

@@ -106,9 +106,9 @@ public:
     // Return true if load server list from config value located in 'section' and 'key', the value
     // should be a valid comma-separated list of servers, otherwise return false. The result is
     // filled into 'servers' if success.
-    static bool load_server_list_from_config(const std::string &section,
-                                             const std::string &key,
-                                             /*out*/ std::vector<dsn::host_port> &servers);
+    static bool load_servers_from_config(const std::string &section,
+                                         const std::string &key,
+                                         /*out*/ std::vector<dsn::host_port> &servers);
 };
 }
 } // namespace
