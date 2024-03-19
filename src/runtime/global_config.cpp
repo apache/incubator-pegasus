@@ -24,10 +24,11 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "runtime/global_config.h"
@@ -36,6 +37,7 @@
 #include "utils/config_api.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 namespace dsn {

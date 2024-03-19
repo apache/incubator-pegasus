@@ -77,7 +77,7 @@ DSN_DEFINE_bool(task..default, is_profile, false, "Whether to profile task");
 DSN_DEFINE_bool(task..default,
                 collect_call_count,
                 true,
-                "Whether to collect the times this kind of tasks invoke each of other kinds tasks");
+                "Whether to collect the times of the task invoke each of other kinds tasks");
 
 METRIC_DEFINE_entity(profiler);
 
