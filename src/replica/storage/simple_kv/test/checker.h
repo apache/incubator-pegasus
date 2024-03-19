@@ -76,7 +76,7 @@ public:
     std::string address_to_node_name(host_port addr);
     host_port node_name_to_address(const std::string &name);
 
-    void on_replica_state_change(::dsn::host_port from,
+    void on_replica_state_change(const host_port &from,
                                  const replica_configuration &new_config,
                                  bool is_closing);
     void on_config_change(const app_mapper &new_config);

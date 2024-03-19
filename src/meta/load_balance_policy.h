@@ -130,8 +130,8 @@ private:
     dsn::gpid select_moving(std::list<dsn::gpid> &potential_moving,
                             disk_load *prev_load,
                             disk_load *current_load,
-                            host_port from,
-                            host_port to);
+                            const host_port &from,
+                            const host_port &to);
     void number_nodes(const node_mapper &nodes);
 
     std::string remote_command_balancer_ignored_app_ids(const std::vector<std::string> &args);

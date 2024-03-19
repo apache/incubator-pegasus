@@ -633,7 +633,7 @@ struct node_desc
 inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<node_desc> &nodes)
 {
     if (type == "all" || type == "meta-server") {
-        for (auto &hp : sc->meta_list) {
+        for (const auto &hp : sc->meta_list) {
             nodes.emplace_back("meta-server", hp);
         }
     }

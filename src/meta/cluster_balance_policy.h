@@ -116,7 +116,7 @@ private:
         {
             return app_id == another.app_id;
         }
-        partition_status::type get_partition_status(int32_t pidx, host_port node)
+        partition_status::type get_partition_status(int32_t pidx, const host_port &node)
         {
             for (const auto &kv : partitions[pidx]) {
                 if (kv.first == node) {

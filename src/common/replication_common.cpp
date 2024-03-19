@@ -163,7 +163,7 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
 }
 
 /*static*/ bool replica_helper::get_replica_config(const partition_configuration &partition_config,
-                                                   ::dsn::host_port node,
+                                                   const ::dsn::host_port &node,
                                                    /*out*/ replica_configuration &replica_config)
 {
     replica_config.pid = partition_config.pid;
@@ -192,12 +192,13 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::host_port> &serv
 {
     servers.clear();
     std::string server_list = dsn_config_get_value_string(section, key, "", "");
-    std::vector<std::string> host_ports;
-    ::dsn::utils::split_args(server_list.c_str(), host_ports, ',');
-    for (const auto &host_port : host_ports) {
-        auto hp = dsn::host_port::from_string(host_port);
+    std::vector<std::string> host_port_strs;
+    ::dsn::utils::split_args(server_list.c_str(), host_port_strs, ',');
+    for (const auto &host_port_str : host_port_strs) {
+        const auto hp = dsn::host_port::from_string(host_port_str);
         if (!hp) {
-            LOG_ERROR("invalid host_port '{}' specified in config [{}]{}", host_port, section, key);
+            LOG_ERROR(
+                "invalid host_port '{}' specified in config [{}]{}", host_port_str, section, key);
             return false;
         }
         servers.push_back(hp);
@@ -207,7 +208,7 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::host_port> &serv
         LOG_ERROR("no meta server specified in config [{}].{}", section, key);
         return false;
     }
-    if (servers.size() != host_ports.size()) {
+    if (servers.size() != host_port_strs.size()) {
         LOG_ERROR("server_list {} have duplicate server", server_list);
         return false;
     }
