@@ -182,7 +182,7 @@ public:
     error_code dump_from_remote_storage(const char *local_path, bool sync_immediately);
     error_code restore_from_local_storage(const char *local_path);
 
-    void on_change_node_state(host_port node, bool is_alive);
+    void on_change_node_state(const host_port &node, bool is_alive);
     void on_propose_balancer(const configuration_balancer_request &request,
                              configuration_balancer_response &response);
     void on_start_recovery(const configuration_recovery_request &request,
@@ -289,7 +289,7 @@ private:
     void on_partition_node_dead(std::shared_ptr<app_state> &app,
                                 int pidx,
                                 const dsn::host_port &address);
-    void send_proposal(host_port target, const configuration_update_request &proposal);
+    void send_proposal(const host_port &target, const configuration_update_request &proposal);
     void send_proposal(const configuration_proposal_action &action,
                        const partition_configuration &pc,
                        const app_state &app);

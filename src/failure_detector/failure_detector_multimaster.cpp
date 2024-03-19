@@ -131,7 +131,7 @@ void slave_failure_detector_with_multimaster::on_master_disconnected(
     }
 }
 
-void slave_failure_detector_with_multimaster::on_master_connected(::dsn::host_port node)
+void slave_failure_detector_with_multimaster::on_master_connected(const host_port &node)
 {
     /*
     * well, this is called in on_ping_internal, which is called by rep::end_ping.

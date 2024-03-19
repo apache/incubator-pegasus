@@ -57,14 +57,14 @@ public:
 
     // client side
     void on_master_disconnected(const std::vector<::dsn::host_port> &nodes) override;
-    void on_master_connected(::dsn::host_port node) override;
+    void on_master_connected(const host_port &node) override;
 
     // server side
     void on_worker_disconnected(const std::vector<::dsn::host_port> &nodes) override
     {
         CHECK(false, "invalid execution flow");
     }
-    void on_worker_connected(::dsn::host_port node) override
+    void on_worker_connected(const host_port &node) override
     {
         CHECK(false, "invalid execution flow");
     }

@@ -104,8 +104,8 @@ public:
     void get_replica_config(partition_status::type status,
                             /*out*/ replica_configuration &config,
                             uint64_t learner_signature = invalid_signature);
-    bool check_exist(::dsn::host_port node, partition_status::type status);
-    partition_status::type get_node_status(::dsn::host_port hp) const;
+    bool check_exist(const ::dsn::host_port &node, partition_status::type status);
+    partition_status::type get_node_status(const ::dsn::host_port &hp) const;
 
     void do_cleanup_pending_mutations(bool clean_pending_mutations = true);
 
@@ -295,7 +295,7 @@ public:
 
 //---------------inline impl----------------------------------------------------------------
 
-inline partition_status::type primary_context::get_node_status(::dsn::host_port hp) const
+inline partition_status::type primary_context::get_node_status(const ::dsn::host_port &hp) const
 {
     auto it = statuses.find(hp);
     return it != statuses.end() ? it->second : partition_status::PS_INACTIVE;

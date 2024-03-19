@@ -357,7 +357,7 @@ ErrOut:
     return;
 }
 
-void replica::send_prepare_message(::dsn::host_port hp,
+void replica::send_prepare_message(const ::dsn::host_port &hp,
                                    partition_status::type status,
                                    const mutation_ptr &mu,
                                    int timeout_milliseconds,

@@ -280,7 +280,7 @@ void test_checker::check()
     }
 }
 
-void test_checker::on_replica_state_change(::dsn::host_port from,
+void test_checker::on_replica_state_change(const host_port &from,
                                            const replica_configuration &new_config,
                                            bool is_closing)
 {

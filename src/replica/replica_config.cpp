@@ -245,7 +245,7 @@ void replica::add_potential_secondary(configuration_update_request &proposal)
         proposal.node, RPC_LEARN_ADD_LEARNER, request, get_gpid().thread_hash());
 }
 
-void replica::upgrade_to_secondary_on_primary(::dsn::host_port node)
+void replica::upgrade_to_secondary_on_primary(const ::dsn::host_port &node)
 {
     LOG_INFO_PREFIX("upgrade potential secondary {} to secondary", node);
 
@@ -367,7 +367,7 @@ void replica::on_remove(const replica_configuration &request)
 }
 
 void replica::update_configuration_on_meta_server(config_type::type type,
-                                                  ::dsn::host_port node,
+                                                  const host_port &node,
                                                   partition_configuration &newConfig)
 {
     // type should never be `CT_REGISTER_CHILD`
