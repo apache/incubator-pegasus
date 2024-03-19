@@ -425,8 +425,8 @@ void migration_check_and_apply(app_mapper &apps,
 
         CHECK(!pc.hp_primary.is_invalid(), "");
         CHECK_EQ(pc.hp_secondaries.size(), 2);
-        for (auto &host_port : pc.hp_secondaries) {
-            CHECK(!host_port.is_invalid(), "");
+        for (const auto &hp : pc.hp_secondaries) {
+            CHECK(hp, "");
         }
         CHECK(!is_secondary(pc, pc.hp_primary), "");
 

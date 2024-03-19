@@ -194,10 +194,10 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::host_port> &serv
     std::string server_list = dsn_config_get_value_string(section, key, "", "");
     std::vector<std::string> host_ports;
     ::dsn::utils::split_args(server_list.c_str(), host_ports, ',');
-    for (const auto &host_port : host_ports) {
-        const auto hp = dsn::host_port::from_string(host_port);
+    for (const auto &hp : host_ports) {
+        const auto hp = dsn::host_port::from_string(hp);
         if (!hp) {
-            LOG_ERROR("invalid host_port '{}' specified in config [{}]{}", host_port, section, key);
+            LOG_ERROR("invalid host_port '{}' specified in config [{}]{}", hp, section, key);
             return false;
         }
         servers.push_back(hp);
