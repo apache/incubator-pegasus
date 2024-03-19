@@ -80,6 +80,9 @@ struct duplication_add_response
     2:i32              appid;
     3:i32              dupid;
     4:optional string  hint;
+
+    // Only for checking if meta server supports remote_app_name.
+    5:optional string remote_app_name;
 }
 
 // This request is sent from client to meta.

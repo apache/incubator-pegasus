@@ -69,12 +69,13 @@ void meta_duplication_service::query_duplication_info(const duplication_query_re
         std::shared_ptr<app_state> app = _state->get_app(request.app_name);
         if (!app || app->status != app_status::AS_AVAILABLE) {
             response.err = ERR_APP_NOT_EXIST;
-        } else {
-            response.appid = app->app_id;
-            for (auto &dup_id_to_info : app->duplications) {
-                const duplication_info_s_ptr &dup = dup_id_to_info.second;
-                dup->append_if_valid_for_query(*app, response.entry_list);
-            }
+            return;
+        }
+
+        response.appid = app->app_id;
+        for (auto &dup_id_to_info : app->duplications) {
+            const duplication_info_s_ptr &dup = dup_id_to_info.second;
+            dup->append_if_valid_for_query(*app, response.entry_list);
         }
     }
 }
@@ -150,6 +151,19 @@ void meta_duplication_service::do_modify_duplication(std::shared_ptr<app_state> 
         });
 }
 
+#define LOG_DUP_HINT_AND_RETURN(resp, level, ...)                                                  \
+    do {                                                                                           \
+        std::string _msg(fmt::format(__VA_ARGS__));                                                \
+        (resp).__set_hint(_msg);                                                                   \
+        LOG(level, _msg);                                                                          \
+        return;                                                                                    \
+    } while (0)
+
+#define LOG_WARNING_DUP_HINT_AND_RETURN(resp, ...)                                                 \
+    LOG_DUP_HINT_AND_RETURN(resp, LOG_LEVEL_WARNING, __VA_ARGS__)
+#define LOG_ERROR_DUP_HINT_AND_RETURN(resp, ...)                                                   \
+    LOG_DUP_HINT_AND_RETURN(resp, LOG_LEVEL_ERROR, __VA_ARGS__)
+
 // This call will not recreate if the duplication
 // with the same app name and remote end point already exists.
 // ThreadPool(WRITE): THREAD_POOL_META_STATE
@@ -163,7 +177,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         remote_app_name = request.remote_app_name;
     } else {
         // Once remote_app_name is not specified by client, use source app_name
-        // as remote_app_name to be compatible with old versions.
+        // as remote_app_name to be compatible with old versions of client.
         remote_app_name = request.app_name;
     }
 
@@ -173,20 +187,20 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
              request.remote_cluster_name,
              remote_app_name);
 
-    response.err = ERR_OK;
-
     if (request.remote_cluster_name == get_current_cluster_name()) {
         response.err = ERR_INVALID_PARAMETERS;
-        response.__set_hint("illegal operation: adding duplication to itself");
+        LOG_WARNING_DUP_HINT_AND_RETURN(response,
+                                        "illegal operation: adding duplication to itself");
         return;
     }
 
     auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
     if (!remote_cluster_id.is_ok()) {
         response.err = ERR_INVALID_PARAMETERS;
-        response.__set_hint(fmt::format("get_duplication_cluster_id({}) failed, error: {}",
+        LOG_WARNING_DUP_HINT_AND_RETURN(response,
+                                        "get_duplication_cluster_id({}) failed, error: {}",
                                         request.remote_cluster_name,
-                                        remote_cluster_id.get_error()));
+                                        remote_cluster_id.get_error());
         return;
     }
 
@@ -196,17 +210,20 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
             duplication_constants::kClustersSectionName.c_str(),
             request.remote_cluster_name.c_str())) {
         response.err = ERR_INVALID_PARAMETERS;
-        response.__set_hint(fmt::format("failed to find cluster[{}] address in config [{}]",
+        LOG_WARNING_DUP_HINT_AND_RETURN(response,
+                                        "failed to find cluster[{}] address in config [{}]",
                                         request.remote_cluster_name,
-                                        duplication_constants::kClustersSectionName));
+                                        duplication_constants::kClustersSectionName);
         return;
     }
 
     auto app = _state->get_app(request.app_name);
     if (!app || app->status != app_status::AS_AVAILABLE) {
         response.err = ERR_APP_NOT_EXIST;
+        LOG_WARNING("app {} was not found", request.app_name);
         return;
     }
+
     duplication_info_s_ptr dup;
     for (const auto &ent : app->duplications) {
         auto it = ent.second;
@@ -219,21 +236,23 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         dup = new_dup_from_init(
             request.remote_cluster_name, remote_app_name, std::move(meta_list), app);
     }
-    do_add_duplication(app, dup, rpc);
+
+    do_add_duplication(app, dup, rpc, remote_app_name);
 }
 
 // ThreadPool(WRITE): THREAD_POOL_META_STATE
 void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &app,
                                                   duplication_info_s_ptr &dup,
-                                                  duplication_add_rpc &rpc)
+                                                  duplication_add_rpc &rpc,
+                                                  const std::string &remote_app_name)
 {
-    const auto err = dup->start(rpc.request().is_duplicating_checkpoint);
+    const auto &err = dup->start(rpc.request().is_duplicating_checkpoint);
     if (dsn_unlikely(err != ERR_OK)) {
-        LOG_ERROR("start dup[{}({})] failed: err = {}", app->app_name, dup->id, err);
-        return;
+        LOG_ERROR_DUP_HINT_AND_RETURN(
+            rpc.response(), "start dup[{}({})] failed: err = {}", app->app_name, dup->id, err);
     }
-    blob value = dup->to_json_blob();
 
+    auto value = dup->to_json_blob();
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
     _meta_svc->get_meta_storage()->create_node_recursively(
         std::move(nodes), std::move(value), [app, this, dup, rpc]() mutable {
@@ -249,6 +268,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
             resp.err = ERR_OK;
             resp.appid = app->app_id;
             resp.dupid = dup->id;
+            resp.__set_remote_app_name(remote_app_name) = remote_app_name;
 
             zauto_write_lock l(app_lock());
             refresh_duplicating_no_lock(app);

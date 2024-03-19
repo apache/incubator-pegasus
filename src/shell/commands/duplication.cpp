@@ -47,6 +47,8 @@ using dsn::replication::duplication_status;
 
 bool add_dup(command_executor *e, shell_context *sc, arguments args)
 {
+    // add_dup <app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str]
+
     argh::parser cmd(args.argc, args.argv);
     if (cmd.pos_args().size() > 4) {
         fmt::print(stderr, "too many params\n");
@@ -82,7 +84,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     bool is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
 
     // Read the app name of the remote cluster, if any.
-    // Otherwise, use app_name.
+    // Otherwise, use app_name as the remote_app_name.
     std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
 
     auto err_resp = sc->ddl_client->add_dup(
@@ -100,7 +102,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
                    app_name,
                    remote_cluster_name,
                    is_duplicating_checkpoint,
-                   err.description());
+                   err);
 
         if (!hint.empty()) {
             fmt::print(stderr, "detail:\n  {}\n", hint);
@@ -111,12 +113,21 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
 
     const auto &resp = err_resp.get_value();
     fmt::print("adding duplication succeed [app: {}, remote: {}, appid: {}, dupid: "
-               "{}], checkpoint: {}\n",
+               "{}], checkpoint: {}",
                app_name,
                remote_cluster_name,
                resp.appid,
                resp.dupid,
                is_duplicating_checkpoint);
+
+    if (resp.__isset.remote_app_name) {
+        fmt::print(", remote_app_name: {}\n", remote_app_name);
+    } else {
+        fmt::print("\nWARNING: meta server does NOT support specifying remote_app_name, "
+                   "remote_app_name might has been specified with {}\n",
+                   remote_app_name,
+                   app_name);
+    }
 
     return true;
 }
@@ -154,18 +165,16 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
     }
     std::string app_name = cmd(1).str();
 
+    // Check if the boolean option is specified.
     bool detail = cmd[{"-d", "--detail"}];
 
     auto err_resp = sc->ddl_client->query_dup(app_name);
     dsn::error_s err = err_resp.get_error();
-    if (err.is_ok()) {
+    if (err) {
         err = dsn::error_s::make(err_resp.get_value().err);
     }
-    if (!err.is_ok()) {
-        fmt::print(stderr,
-                   "querying duplications of app [{}] failed, error={}\n",
-                   app_name,
-                   err.description());
+    if (!err) {
+        fmt::print(stderr, "querying duplications of app [{}] failed, error={}\n", app_name, err);
 
         return true;
     }
