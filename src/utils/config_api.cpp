@@ -84,22 +84,12 @@ void dsn_config_get_all_sections(/*out*/ std::vector<std::string> &sections)
     g_config.get_all_sections(sections);
 }
 
-void dsn_config_get_all_sections(/*out*/ std::vector<const char *> &sections)
-{
-    g_config.get_all_section_ptrs(sections);
-}
-
 void dsn_config_get_all_keys(const char *section, std::vector<std::string> &keys)
 {
     std::vector<const char *> key_ptrs;
     g_config.get_all_keys(section, key_ptrs);
     for (const char *p : key_ptrs)
         keys.emplace_back(std::string(p));
-}
-
-void dsn_config_get_all_keys(const char *section, /*out*/ std::vector<const char *> &keys)
-{
-    g_config.get_all_keys(section, keys);
 }
 
 void dsn_config_set(const char *section, const char *key, const char *value, const char *dsptr)

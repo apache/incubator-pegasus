@@ -97,10 +97,18 @@ public:
     static bool get_replica_config(const partition_configuration &partition_config,
                                    ::dsn::host_port node,
                                    /*out*/ replica_configuration &replica_config);
-    // true if meta_list's value of config is valid, otherwise return false
-    static bool load_meta_servers(/*out*/ std::vector<dsn::host_port> &servers,
-                                  const char *section = "meta_server",
-                                  const char *key = "server_list");
+
+    // Return true if 'server_list' is a valid comma-separated list of servers, otherwise return
+    // false. The result is filled into 'servers' if success.
+    static bool parse_server_list(const char *server_list,
+                                  /*out*/ std::vector<dsn::host_port> &servers);
+
+    // Return true if load server list from config value located in 'section' and 'key', the value
+    // should be a valid comma-separated list of servers, otherwise return false. The result is
+    // filled into 'servers' if success.
+    static bool load_servers_from_config(const std::string &section,
+                                         const std::string &key,
+                                         /*out*/ std::vector<dsn::host_port> &servers);
 };
 }
 } // namespace

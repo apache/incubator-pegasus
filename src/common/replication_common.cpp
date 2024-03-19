@@ -59,7 +59,7 @@ DSN_DEFINE_int32(replication,
 DSN_DEFINE_int32(replication,
                  fd_check_interval_seconds,
                  2,
-                 "The interval seconds of failure detector to check healthness of remote peers");
+                 "The interval seconds of failure detector to check healthiness of remote peers");
 DSN_DEFINE_int32(replication,
                  fd_beacon_interval_seconds,
                  3,
@@ -107,6 +107,10 @@ DSN_DEFINE_string(replication,
                   cold_backup_root,
                   "",
                   "The prefix of cold backup data path on remote storage");
+DSN_DEFINE_string(meta_server,
+                  server_list,
+                  "",
+                  "Comma-separated list of MetaServers in the Pegasus cluster");
 
 namespace dsn {
 namespace replication {
@@ -148,8 +152,8 @@ void replication_options::initialize()
     }
 
     CHECK(!data_dirs.empty(), "no replica data dir found, maybe not set or excluded by black list");
-
-    CHECK(replica_helper::load_meta_servers(meta_servers), "invalid meta server config");
+    CHECK(replica_helper::parse_server_list(FLAGS_server_list, meta_servers),
+          "invalid meta server config");
 }
 
 int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_replica_count) const
@@ -186,28 +190,34 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     }
 }
 
-bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::host_port> &servers,
-                                       const char *section,
-                                       const char *key)
+bool replica_helper::load_servers_from_config(const std::string &section,
+                                              const std::string &key,
+                                              /*out*/ std::vector<dsn::host_port> &servers)
+{
+    const auto *server_list = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
+    return dsn::replication::replica_helper::parse_server_list(server_list, servers);
+}
+
+bool replica_helper::parse_server_list(const char *server_list,
+                                       /*out*/ std::vector<dsn::host_port> &servers)
 {
     servers.clear();
-    std::string server_list = dsn_config_get_value_string(section, key, "", "");
-    std::vector<std::string> host_ports;
-    ::dsn::utils::split_args(server_list.c_str(), host_ports, ',');
-    for (const auto &host_port : host_ports) {
-        auto hp = dsn::host_port::from_string(host_port);
+    std::vector<std::string> host_port_strs;
+    ::dsn::utils::split_args(server_list, host_port_strs, ',');
+    for (const auto &host_port_str : host_port_strs) {
+        const auto hp = dsn::host_port::from_string(host_port_str);
         if (!hp) {
-            LOG_ERROR("invalid host_port '{}' specified in config [{}]{}", host_port, section, key);
+            LOG_ERROR("invalid host_port '{}' specified in '{}'", host_port_str, server_list);
             return false;
         }
         servers.push_back(hp);
     }
 
     if (servers.empty()) {
-        LOG_ERROR("no meta server specified in config [{}].{}", section, key);
+        LOG_ERROR("no meta server specified");
         return false;
     }
-    if (servers.size() != host_ports.size()) {
+    if (servers.size() != host_port_strs.size()) {
         LOG_ERROR("server_list {} have duplicate server", server_list);
         return false;
     }

@@ -94,7 +94,7 @@ public:
         get_config(req, resp);
         ASSERT_EQ(resp.status_code, http_status_code::kOk);
         const string unfilled_resp =
-            R"({{"name":"config_sync_interval_ms","section":"replication","type":"FV_UINT32","tags":"flag_tag::FT_MUTABLE","description":"The interval milliseconds of replica server to syncs replica configuration with meta server","value":"{}"}})"
+            R"({{"name":"config_sync_interval_ms","section":"replication","type":"FV_UINT32","tags":"flag_tag::FT_MUTABLE","description":"The interval milliseconds of replica server to send replica config-sync requests to meta server","value":"{}"}})"
             "\n";
         ASSERT_EQ(fmt::format(unfilled_resp, expect_value), resp.body);
     }

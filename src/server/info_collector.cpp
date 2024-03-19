@@ -58,6 +58,8 @@ DSN_DEFINE_string(pegasus.collector,
 DSN_DEFINE_validator(usage_stat_app,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
+DSN_DECLARE_string(server_list);
+
 namespace pegasus {
 namespace server {
 
@@ -72,7 +74,7 @@ DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
 info_collector::info_collector()
 {
     std::vector<::dsn::host_port> meta_servers;
-    replica_helper::load_meta_servers(meta_servers);
+    replica_helper::parse_server_list(FLAGS_server_list, meta_servers);
 
     _meta_servers.assign_group("meta-servers");
     for (auto &ms : meta_servers) {

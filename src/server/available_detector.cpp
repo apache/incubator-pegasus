@@ -77,6 +77,8 @@ DSN_DEFINE_string(pegasus.collector,
                   "",
                   "available detect alert email address, empty means not send email");
 
+DSN_DECLARE_string(server_list);
+
 namespace pegasus {
 namespace server {
 
@@ -97,7 +99,7 @@ available_detector::available_detector()
     // initialize information for available_detector.
     _cluster_name = dsn::get_current_cluster_name();
     _meta_list.clear();
-    dsn::replication::replica_helper::load_meta_servers(_meta_list);
+    dsn::replication::replica_helper::parse_server_list(FLAGS_server_list, _meta_list);
     CHECK(!_meta_list.empty(), "");
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {

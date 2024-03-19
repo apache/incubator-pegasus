@@ -179,10 +179,8 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     }
 
     std::vector<host_port> meta_list;
-    if (!dsn::replication::replica_helper::load_meta_servers(
-            meta_list,
-            duplication_constants::kClustersSectionName.c_str(),
-            request.remote_cluster_name.c_str())) {
+    if (!dsn::replication::replica_helper::load_servers_from_config(
+            duplication_constants::kClustersSectionName, request.remote_cluster_name, meta_list)) {
         response.err = ERR_INVALID_PARAMETERS;
         response.__set_hint(fmt::format("failed to find cluster[{}] address in config [{}]",
                                         request.remote_cluster_name,

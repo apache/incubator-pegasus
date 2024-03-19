@@ -24,10 +24,11 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "runtime/global_config.h"
@@ -36,6 +37,7 @@
 #include "utils/config_api.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -46,57 +48,60 @@ static bool build_client_network_confs(const char *section,
 {
     nss.clear();
 
-    std::vector<const char *> keys;
+    std::vector<std::string> keys;
     dsn_config_get_all_keys(section, keys);
 
-    for (const char *item : keys) {
-        std::string k(item);
-        if (k.length() <= strlen("network.client."))
+    static const std::string kNetworkClientPrefix = "network.client.";
+    static const auto kNetworkClientPrefixLength = kNetworkClientPrefix.length();
+    for (const auto &key : keys) {
+        if (key.length() <= kNetworkClientPrefixLength) {
             continue;
+        }
 
-        if (k.substr(0, strlen("network.client.")) != std::string("network.client."))
+        if (key.substr(0, kNetworkClientPrefixLength) != kNetworkClientPrefix) {
             continue;
+        }
 
-        auto k2 = k.substr(strlen("network.client."));
-        if (rpc_channel::is_exist(k2.c_str())) {
-            /*
-            ;channel = network_provider_name,buffer_block_size
-            network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-            network.client.RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
-            */
-
-            rpc_channel ch = rpc_channel::from_string(k2.c_str(), RPC_CHANNEL_TCP);
-
-            // dsn::tools::asio_network_provider,65536
-            std::list<std::string> vs;
-            std::string v = dsn_config_get_value_string(
-                section,
-                k.c_str(),
-                "",
-                "network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
-            utils::split_args(v.c_str(), vs, ',');
-
-            if (vs.size() != 2) {
-                printf("invalid client network specification '%s', should be "
-                       "'$network-factory,$msg-buffer-size'\n",
-                       v.c_str());
-                return false;
-            }
-
-            network_client_config ns;
-            ns.factory_name = vs.begin()->c_str();
-            ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
-
-            if (ns.message_buffer_block_size == 0) {
-                printf("invalid message buffer size specified: '%s'\n", vs.rbegin()->c_str());
-                return false;
-            }
-
-            nss[ch] = ns;
-        } else {
-            printf("invalid rpc channel type: %s\n", k2.c_str());
+        const auto channel_str = key.substr(kNetworkClientPrefixLength);
+        if (!rpc_channel::is_exist(channel_str.c_str())) {
+            printf("invalid rpc channel type: %s\n", channel_str.c_str());
             return false;
         }
+
+        /*
+         * ;network.client.<channel> = <network_provider_name>,<buffer_block_size>
+         * e.g.,
+         * network.client.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
+         * network.client.RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
+         */
+
+        // e.g., RPC_CHANNEL_TCP
+        const auto ch = rpc_channel::from_string(channel_str.c_str(), RPC_CHANNEL_TCP);
+
+        // e.g., dsn::tools::asio_network_provider,65536
+        const auto *value = dsn_config_get_value_string(
+            section,
+            key.c_str(),
+            "",
+            "Network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
+        std::vector<std::string> value_params;
+        utils::split_args(value, value_params, ',');
+        if (value_params.size() != 2) {
+            printf("invalid client network specification '%s', should be "
+                   "'$network-factory,$msg-buffer-size'\n",
+                   value);
+            return false;
+        }
+
+        network_client_config ns;
+        ns.factory_name = value_params[0];
+        if (!buf2int32(value_params[1], ns.message_buffer_block_size) ||
+            ns.message_buffer_block_size == 0) {
+            printf("invalid message buffer size specified: '%s'\n", value_params[1].c_str());
+            return false;
+        }
+
+        nss[ch] = ns;
     }
 
     if (default_spec) {
@@ -118,33 +123,48 @@ static bool build_server_network_confs(const char *section,
 {
     nss.clear();
 
-    std::vector<const char *> keys;
+    std::vector<std::string> keys;
     dsn_config_get_all_keys(section, keys);
 
-    for (const char *item : keys) {
-        std::string k(item);
-        if (k.length() <= strlen("network.server."))
+    static const std::string kNetworkServerPrefix = "network.server.";
+    static const auto kNetworkServerPrefixLength = kNetworkServerPrefix.length();
+    for (const auto &key : keys) {
+        if (key.length() <= kNetworkServerPrefixLength) {
             continue;
+        }
 
-        if (k.substr(0, strlen("network.server.")) != std::string("network.server."))
+        if (key.substr(0, kNetworkServerPrefixLength) != kNetworkServerPrefix) {
             continue;
+        }
 
-        auto k2 = k.substr(strlen("network.server."));
-        std::list<std::string> ks;
-        utils::split_args(k2.c_str(), ks, '.');
-        if (ks.size() != 2) {
+        /*
+         * ;network.server.<port>.<channel> = <network_provider_name>,<buffer_block_size>
+         * e.g.,
+         * network.server.0.RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
+         * network.server.9090.RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
+         */
+
+        // e.g., 0.RPC_CHANNEL_TCP
+        const auto port_and_channel = key.substr(kNetworkServerPrefixLength);
+        std::vector<std::string> params;
+        utils::split_args(port_and_channel.c_str(), params, '.');
+        if (params.size() != 2) {
             printf("invalid network server config '%s', should be like "
                    "'network.server.12345.RPC_CHANNEL_TCP' instead\n",
-                   k.c_str());
+                   key.c_str());
             return false;
         }
 
-        int port = atoi(ks.begin()->c_str());
-        auto k3 = *ks.rbegin();
-
+        // 1. Port
+        int port;
+        if (!buf2int32(params[0], port)) {
+            printf("invalid port '%s' specified in '%s'\n", params[0].c_str(), key.c_str());
+            return false;
+        }
+        // port = 0 for default setting in [apps..default]
         if (is_template) {
             if (port != 0) {
-                printf("invalid network server configuration '%s'\n", k.c_str());
+                printf("invalid network server configuration '%s'\n", key.c_str());
                 printf("port must be zero in [apps..default]\n");
                 printf(" e.g., network.server.0.RPC_CHANNEL_TCP = NET_HDR_DSN, "
                        "dsn::tools::asio_network_provider,65536\n");
@@ -152,50 +172,45 @@ static bool build_server_network_confs(const char *section,
             }
         } else {
             if (std::find(ports.begin(), ports.end(), port) == ports.end()) {
+                // TODO(yingchun): return false or continue?
                 continue;
             }
         }
 
-        if (rpc_channel::is_exist(k3.c_str())) {
-            /*
-            port = 0 for default setting in [apps..default]
-            port.channel = network_provider_name,buffer_block_size
-            network.server.port().RPC_CHANNEL_TCP = dsn::tools::asio_network_provider,65536
-            network.server.port().RPC_CHANNEL_UDP = dsn::tools::asio_network_provider,65536
-            */
-
-            rpc_channel ch = rpc_channel::from_string(k3.c_str(), RPC_CHANNEL_TCP);
-
-            // dsn::tools::asio_network_provider,65536
-            std::list<std::string> vs;
-            std::string v = dsn_config_get_value_string(
-                section,
-                k.c_str(),
-                "",
-                "network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
-            utils::split_args(v.c_str(), vs, ',');
-
-            if (vs.size() != 2) {
-                printf("invalid server network specification '%s', should be "
-                       "'$network-factory,$msg-buffer-size'\n",
-                       v.c_str());
-                return false;
-            }
-
-            network_server_config ns(port, ch);
-            ns.factory_name = vs.begin()->c_str();
-            ns.message_buffer_block_size = atoi(vs.rbegin()->c_str());
-
-            if (ns.message_buffer_block_size == 0) {
-                printf("invalid message buffer size specified: '%s'\n", vs.rbegin()->c_str());
-                return false;
-            }
-
-            nss[ns] = ns;
-        } else {
-            printf("invalid rpc channel type: %s\n", k3.c_str());
+        // 2. Channel
+        const auto &channel_str = params[1];
+        if (!rpc_channel::is_exist(channel_str.c_str())) {
+            printf("invalid rpc channel type: %s\n", channel_str.c_str());
             return false;
         }
+        // e.g., RPC_CHANNEL_TCP
+        const auto ch = rpc_channel::from_string(channel_str.c_str(), RPC_CHANNEL_TCP);
+
+        // dsn::tools::asio_network_provider,65536
+        const auto *value = dsn_config_get_value_string(
+            section,
+            key.c_str(),
+            "",
+            "Network channel configuration, e.g., dsn::tools::asio_network_provider,65536");
+
+        std::vector<std::string> value_params;
+        utils::split_args(value, value_params, ',');
+        if (value_params.size() != 2) {
+            printf("invalid server network specification '%s', should be "
+                   "'$network-factory,$msg-buffer-size'\n",
+                   value);
+            return false;
+        }
+
+        network_server_config ns(port, ch);
+        ns.factory_name = value_params[0];
+        if (!buf2int32(value_params[1], ns.message_buffer_block_size) ||
+            ns.message_buffer_block_size == 0) {
+            printf("invalid message buffer size specified: '%s'\n", value_params[1].c_str());
+            return false;
+        }
+
+        nss[ns] = ns;
     }
 
     if (default_spec) {
