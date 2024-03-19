@@ -20,8 +20,6 @@
 #include "meta/meta_rpc_types.h"
 #include "meta_backup_service.h"
 #include "meta_service.h"
-<<<<<<< HEAD
-=======
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_holder.h"
@@ -35,9 +33,10 @@
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/defer.h"
->>>>>>> master
 #include "utils/flags.h"
-#include "utils/metrics.h" DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+#include "utils/metrics.h"
+
+DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
 DSN_DECLARE_int32(fd_lease_seconds);
 
 METRIC_DEFINE_entity(backup_policy);
