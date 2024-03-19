@@ -93,7 +93,7 @@ public:
 
     std::string get_app_name() const { return _app_name; }
 
-    dsn::host_port get_meta_server() const { return _meta_server; }
+    const dsn::host_port &get_meta_server() const { return _meta_server; }
 
     const char *log_prefix() const { return _app_name.c_str(); }
 

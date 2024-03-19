@@ -96,7 +96,7 @@ void generate_node_mapper(
     const std::vector<dsn::host_port> &input_node_list)
 {
     output_nodes.clear();
-    for (auto &hp : input_node_list) {
+    for (const auto &hp : input_node_list) {
         get_node_state(output_nodes, hp, true)->set_alive(true);
     }
 
@@ -108,7 +108,7 @@ void generate_node_mapper(
                 ns = get_node_state(output_nodes, pc.hp_primary, true);
                 ns->put_partition(pc.pid, true);
             }
-            for (const dsn::host_port &sec : pc.hp_secondaries) {
+            for (const auto &sec : pc.hp_secondaries) {
                 CHECK(!sec.is_invalid(), "");
                 ns = get_node_state(output_nodes, sec, true);
                 ns->put_partition(pc.pid, false);
@@ -159,7 +159,7 @@ void generate_app_serving_replica_info(/*out*/ std::shared_ptr<dsn::replication:
         ri.disk_tag = buffer;
         cc.collect_serving_replica(pc.hp_primary, ri);
 
-        for (const dsn::host_port &hp : pc.hp_secondaries) {
+        for (const auto &hp : pc.hp_secondaries) {
             snprintf(buffer, 256, "disk%u", dsn::rand::next_u32(1, total_disks));
             ri.disk_tag = buffer;
             cc.collect_serving_replica(hp, ri);
@@ -425,8 +425,8 @@ void migration_check_and_apply(app_mapper &apps,
 
         CHECK(!pc.hp_primary.is_invalid(), "");
         CHECK_EQ(pc.hp_secondaries.size(), 2);
-        for (auto &host_port : pc.hp_secondaries) {
-            CHECK(!host_port.is_invalid(), "");
+        for (const auto &hp : pc.hp_secondaries) {
+            CHECK(hp, "");
         }
         CHECK(!is_secondary(pc, pc.hp_primary), "");
 

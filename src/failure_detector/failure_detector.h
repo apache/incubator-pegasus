@@ -64,11 +64,11 @@ public:
 
     // worker side
     virtual void on_master_disconnected(const std::vector<::dsn::host_port> &nodes) = 0;
-    virtual void on_master_connected(::dsn::host_port node) = 0;
+    virtual void on_master_connected(const host_port &node) = 0;
 
     // master side
     virtual void on_worker_disconnected(const std::vector<::dsn::host_port> &nodes) = 0;
-    virtual void on_worker_connected(::dsn::host_port node) = 0;
+    virtual void on_worker_connected(const ::dsn::host_port &node) = 0;
 };
 
 // The interface for a perfect failure detector.
@@ -121,30 +121,30 @@ public:
     uint32_t get_lease_ms() const { return _lease_milliseconds; }
     uint32_t get_grace_ms() const { return _grace_milliseconds; }
 
-    void register_master(::dsn::host_port target);
+    void register_master(const host_port &target);
 
-    bool switch_master(::dsn::host_port from, ::dsn::host_port to, uint32_t delay_milliseconds);
+    bool switch_master(const host_port &from, const host_port &to, uint32_t delay_milliseconds);
 
-    bool unregister_master(::dsn::host_port node);
+    bool unregister_master(const host_port &node);
 
-    virtual bool is_master_connected(::dsn::host_port node) const;
+    virtual bool is_master_connected(const host_port &node) const;
 
     // ATTENTION: be very careful to set is_connected to false as
     // workers are always considered *connected* initially which is ok even when workers think
     // master is disconnected
     // Considering workers *disconnected* initially is *dangerous* coz it may violate the invariance
     // when workers think they are online
-    void register_worker(::dsn::host_port node, bool is_connected = true);
+    void register_worker(const host_port &node, bool is_connected = true);
 
-    bool unregister_worker(::dsn::host_port node);
+    bool unregister_worker(const host_port &node);
 
     void clear_workers();
 
-    virtual bool is_worker_connected(::dsn::host_port node) const;
+    virtual bool is_worker_connected(const host_port &node) const;
 
-    void add_allow_list(::dsn::host_port node);
+    void add_allow_list(const host_port &node);
 
-    bool remove_from_allow_list(::dsn::host_port node);
+    bool remove_from_allow_list(const host_port &node);
 
     void set_allow_list(const std::vector<std::string> &replica_hps);
 
@@ -162,7 +162,7 @@ protected:
 
     bool is_time_greater_than(uint64_t ts, uint64_t base);
 
-    void report(::dsn::host_port node, bool is_master, bool is_connected);
+    void report(const host_port &node, bool is_master, bool is_connected);
 
 private:
     void check_all_records();
@@ -179,7 +179,7 @@ private:
 
         // masters are always considered *disconnected* initially which is ok even when master
         // thinks workers are connected
-        master_record(::dsn::host_port n, uint64_t last_send_time_for_beacon_with_ack_)
+        master_record(const host_port &n, uint64_t last_send_time_for_beacon_with_ack_)
         {
             node = n;
             last_send_time_for_beacon_with_ack = last_send_time_for_beacon_with_ack_;
@@ -197,7 +197,7 @@ private:
 
         // workers are always considered *connected* initially which is ok even when workers think
         // master is disconnected
-        worker_record(::dsn::host_port node, uint64_t last_beacon_recv_time)
+        worker_record(const host_port &node, uint64_t last_beacon_recv_time)
         {
             this->node = node;
             this->last_beacon_recv_time = last_beacon_recv_time;
@@ -235,7 +235,7 @@ protected:
     dsn::task_tracker _tracker;
 
     // subClass can rewrite these method.
-    virtual void send_beacon(::dsn::host_port node, uint64_t time);
+    virtual void send_beacon(const host_port &node, uint64_t time);
 };
 }
 } // end namespace

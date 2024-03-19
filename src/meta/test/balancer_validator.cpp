@@ -172,7 +172,7 @@ void meta_service_test_app::balancer_validator()
     // now test the cure
     ::dsn::partition_configuration &pc = the_app->partitions[0];
     nodes[pc.hp_primary].remove_partition(pc.pid, false);
-    for (const dsn::host_port &hp : pc.hp_secondaries)
+    for (const auto &hp : pc.hp_secondaries)
         nodes[hp].remove_partition(pc.pid, false);
     pc.primary.set_invalid();
     pc.secondaries.clear();

@@ -82,7 +82,7 @@ private:
         _ddd_partitions[partition.config.pid] = std::move(partition);
     }
 
-    bool in_black_list(dsn::host_port hp)
+    bool in_black_list(const dsn::host_port &hp)
     {
         dsn::zauto_read_lock l(_black_list_lock);
         return _assign_secondary_black_list.count(hp) != 0;
