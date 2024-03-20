@@ -89,7 +89,7 @@ public:
                                    std::placeholders::_1,
                                    std::placeholders::_2),
                          "[detail]",
-                         "Query the node info.");
+                         "Query the replica servers info.");
         register_handler("cluster",
                          std::bind(&meta_http_service::get_cluster_info_handler,
                                    this,
