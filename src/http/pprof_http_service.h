@@ -37,31 +37,38 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/pprof/heap");
+                         "[seconds=<heap_profile_seconds>]",
+                         "Query a sample of live objects and the stack traces that allocated these "
+                         "objects (an environment variable TCMALLOC_SAMPLE_PARAMETER should set to "
+                         "a positive value, such as 524288), or the current heap profiling "
+                         "information if 'seconds' parameter is specified.");
         register_handler("symbol",
                          std::bind(&pprof_http_service::symbol_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/pprof/symbol");
+                         "[symbol_address]",
+                         "Query the process' symbols. Return the symbol count of the process if "
+                         "using GET, return the symbol of the 'symbol_address' if using POST.");
         register_handler("cmdline",
                          std::bind(&pprof_http_service::cmdline_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/pprof/cmdline");
+                         "Query the process' cmdline.");
         register_handler("growth",
                          std::bind(&pprof_http_service::growth_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/pprof/growth");
+                         "Query the stack traces that caused growth in the address space size.");
         register_handler("profile",
                          std::bind(&pprof_http_service::profile_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/pprof/profile");
+                         "[seconds=<cpu_profile_seconds>]",
+                         "Query the CPU profile. 'seconds' is 60 if not specified.");
     }
 
     std::string path() const override { return "pprof"; }

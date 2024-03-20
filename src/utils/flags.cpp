@@ -322,7 +322,7 @@ public:
     {
         const auto iter = _flags.find(name);
         if (iter == _flags.end()) {
-            return error_s::make(ERR_OBJECT_NOT_FOUND, fmt::format("{} is not found", name));
+            return error_s::make(ERR_OBJECT_NOT_FOUND, fmt::format("'{}' is not found", name));
         }
 
         return iter->second.to_json();

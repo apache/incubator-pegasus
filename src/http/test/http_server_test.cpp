@@ -99,22 +99,23 @@ TEST(bultin_http_calls_test, get_help)
     register_http_call("")
         .with_callback(
             [](const http_request &req, http_response &resp) { get_help_handler(req, resp); })
-        .with_help("ip:port/");
+        .with_help("Empty test");
 
     http_request req;
     http_response resp;
     get_help_handler(req, resp);
     ASSERT_EQ(resp.status_code, http_status_code::kOk);
-    ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\"}\n");
+    ASSERT_EQ(resp.body, "{\"/\":\"Empty test\"}\n");
 
     register_http_call("recentStartTime")
         .with_callback([](const http_request &req, http_response &resp) {
             get_recent_start_time_handler(req, resp);
         })
-        .with_help("ip:port/recentStartTime");
+        .with_help("Gets recentStartTime test");
 
     get_help_handler(req, resp);
-    ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\",\"/recentStartTime\":\"ip:port/recentStartTime\"}\n");
+    ASSERT_EQ(resp.body,
+              "{\"/\":\"Empty test\",\"/recentStartTime\":\"Gets recentStartTime test\"}\n");
 
     // Remove all http calls, especially `recentStartTime`.
     for (const auto &call : http_call_registry::instance().list_all_calls()) {

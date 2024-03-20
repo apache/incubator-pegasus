@@ -90,6 +90,12 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
     if (!redirect_if_not_primary(req, resp))
         return;
 
+    if (app_name.empty()) {
+        resp.status_code = http_status_code::kBadRequest;
+        resp.body = "app name shouldn't be empty";
+        return;
+    }
+
     query_cfg_request request;
     query_cfg_response response;
 
@@ -674,6 +680,7 @@ void meta_http_service::start_bulk_load_handler(const http_request &req, http_re
         resp.status_code = http_status_code::kBadRequest;
         return;
     }
+    // TODO(yingchun): Also deal the 'ingest_behind' parameter.
 
     auto rpc_req = std::make_unique<start_bulk_load_request>(request);
     start_bulk_load_rpc rpc(std::move(rpc_req), LPC_META_CALLBACK);
@@ -799,7 +806,7 @@ void meta_http_service::update_scenario_handler(const http_request &req, http_re
         return;
     }
 
-    // validate paramters
+    // validate parameters
     usage_scenario_info info;
     bool ret = json::json_forwarder<usage_scenario_info>::decode(req.body, info);
     if (!ret) {

@@ -481,12 +481,12 @@ void pprof_http_service::growth_handler(const http_request &req, http_response &
 //                             //
 // == ip:port/pprof/profile == //
 //                             //
-static bool get_cpu_profile(std::string &result, useconds_t seconds)
+static bool get_cpu_profile(std::string &result, useconds_t micro_seconds)
 {
     const char *file_name = "cpu.prof";
 
     ProfilerStart(file_name);
-    usleep(seconds);
+    usleep(micro_seconds);
     ProfilerStop();
 
     std::ifstream in(file_name);
@@ -514,7 +514,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
         return;
     }
 
-    useconds_t seconds = 60000000;
+    useconds_t micro_seconds = 60000000;
 
     std::string req_url = req.full_url.to_string();
     size_t len = req.full_url.length();
@@ -526,7 +526,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
             std::string key(kv_sp.field(), kv_sp.length());
             if (kv_sp != NULL && key == "seconds" && ++kv_sp != NULL) {
                 char *end_ptr;
-                seconds = strtoul(kv_sp.field(), &end_ptr, 10) * 1000000;
+                micro_seconds = strtoul(kv_sp.field(), &end_ptr, 10) * 1000000;
                 break;
             }
             param_sp++;
@@ -535,7 +535,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
 
     resp.status_code = http_status_code::kOk;
 
-    get_cpu_profile(resp.body, seconds);
+    get_cpu_profile(resp.body, micro_seconds);
 
     _in_pprof_action.store(false);
 }

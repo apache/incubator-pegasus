@@ -285,7 +285,10 @@ metrics_http_service::metrics_http_service(metric_registry *registry) : _registr
                                this,
                                std::placeholders::_1,
                                std::placeholders::_2),
-                     fmt::format("ip:port{}", kMetricsQueryPath));
+                     "[with_metric_fields=field1,field2,...][&types=type1,type2,...][&ids=id1,id2,."
+                     "..][&attributes=attr1,value1,attr2,value2,...][&metrics=metric1,metric2,...]["
+                     "&detail=true|false]"
+                     "Query the node metrics.");
 }
 
 namespace {
