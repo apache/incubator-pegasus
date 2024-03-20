@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "fmt/core.h"
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "runtime/task/task_code.h"
