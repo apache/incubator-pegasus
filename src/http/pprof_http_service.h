@@ -46,7 +46,9 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "Query the process' symbols.");
+                         "[symbol_address]",
+                         "Query the process' symbols. Return the symbol count of the process if "
+                         "using GET, return the symbol of the 'symbol_address' if using POST.");
         register_handler("cmdline",
                          std::bind(&pprof_http_service::cmdline_handler,
                                    this,
