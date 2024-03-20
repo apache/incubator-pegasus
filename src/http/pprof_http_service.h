@@ -39,8 +39,9 @@ public:
                                    std::placeholders::_2),
                          "[seconds=<heap_profile_seconds>]",
                          "Query a sample of live objects and the stack traces that allocated these "
-                         "objects, or the current heap profiling information if 'seconds' "
-                         "parameter is specified.");
+                         "objects (an environment variable TCMALLOC_SAMPLE_PARAMETER should set to "
+                         "a positive value, such as 524288), or the current heap profiling "
+                         "information if 'seconds' parameter is specified.");
         register_handler("symbol",
                          std::bind(&pprof_http_service::symbol_handler,
                                    this,
