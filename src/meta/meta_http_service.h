@@ -67,7 +67,7 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "name=<app_name>[&detail=]",
+                         "name=<app_name>[&detail]",
                          "Query app info.");
         register_handler("app/duplication",
                          std::bind(&meta_http_service::query_duplication_handler,
@@ -81,14 +81,14 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "[detail=]",
+                         "[detail]",
                          "List all apps in the cluster.");
         register_handler("nodes",
                          std::bind(&meta_http_service::list_node_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "[detail=]",
+                         "[detail]",
                          "Query the node info.");
         register_handler("cluster",
                          std::bind(&meta_http_service::get_cluster_info_handler,
