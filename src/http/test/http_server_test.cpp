@@ -105,7 +105,7 @@ TEST(bultin_http_calls_test, get_help)
     http_response resp;
     get_help_handler(req, resp);
     ASSERT_EQ(resp.status_code, http_status_code::kOk);
-    ASSERT_EQ(resp.body, "{\"/\":\"Empty test/\"}\n");
+    ASSERT_EQ(resp.body, "{\"/\":\"Empty test\"}\n");
 
     register_http_call("recentStartTime")
         .with_callback([](const http_request &req, http_response &resp) {
@@ -115,7 +115,7 @@ TEST(bultin_http_calls_test, get_help)
 
     get_help_handler(req, resp);
     ASSERT_EQ(resp.body,
-              "{\"/\":\"ip:port/\",\"/recentStartTime\":\"Gets recentStartTime test\"}\n");
+              "{\"/\":\"Empty test\",\"/recentStartTime\":\"Gets recentStartTime test\"}\n");
 
     // Remove all http calls, especially `recentStartTime`.
     for (const auto &call : http_call_registry::instance().list_all_calls()) {
