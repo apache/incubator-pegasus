@@ -53,7 +53,8 @@ public:
         // appid:2 -> dupid:1
         duplication_entry ent;
         ent.dupid = 1;
-        ent.remote = "slave-cluster";
+        ent.remote = "follower-cluster";
+        ent.remote_app_name = "test_follower";
         ent.status = duplication_status::DS_PAUSE;
         ent.progress[1] = 1000; // partition 1 => confirmed 1000
         duplication_sync_response resp;
@@ -65,9 +66,10 @@ public:
             stub->find_replica(2, 1)->get_replica_duplicator_manager()._duplications[1].get();
 
         ASSERT_TRUE(dup);
-        ASSERT_EQ(dup->_status, duplication_status::DS_PAUSE);
-        ASSERT_EQ(dup->_progress.confirmed_decree, 1000);
-        ASSERT_EQ(dup_sync->_rpc_task, nullptr);
+        ASSERT_EQ(ent.remote_app_name, dup->_remote_cluster_name);
+        ASSERT_EQ(duplication_status::DS_PAUSE, dup->_status);
+        ASSERT_EQ(1000, dup->_progress.confirmed_decree);
+        ASSERT_EQ(nullptr, dup_sync->_rpc_task);
     }
 
     void test_duplication_sync()

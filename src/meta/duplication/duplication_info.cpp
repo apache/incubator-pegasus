@@ -186,9 +186,10 @@ blob duplication_info::to_json_blob() const
 {
     json_helper copy;
     copy.create_timestamp_ms = create_timestamp_ms;
-    copy.remote = follower_cluster_name;
+    copy.remote = remote_cluster_name;
     copy.status = _next_status;
     copy.fail_mode = _next_fail_mode;
+    copy.remote_app_name = remote_app_name;
     return json::json_forwarder<json_helper>::encode(copy);
 }
 
@@ -214,7 +215,8 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
     }
 
     if (info.remote_app_name.empty()) {
-        // remote_app_name is missing, which means remote storage is still of old versions.
+        // remote_app_name is missing, which means meta data in remote storage(zk) is
+        // still of old version.
         info.remote_app_name = app_name;
     }
 

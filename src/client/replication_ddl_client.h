@@ -272,8 +272,6 @@ public:
     static error_s validate_app_name(const std::string &app_name, bool allow_empty_name = false);
 
 private:
-    bool static valid_app_char(int c);
-
     void end_meta_request(const rpc_response_task_ptr &callback,
                           uint32_t attempt_count,
                           const error_code &err,

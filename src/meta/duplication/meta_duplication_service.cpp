@@ -227,7 +227,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     duplication_info_s_ptr dup;
     for (const auto &ent : app->duplications) {
         auto it = ent.second;
-        if (it->follower_cluster_name == request.remote_cluster_name) {
+        if (it->remote_cluster_name == request.remote_cluster_name) {
             dup = ent.second;
             break;
         }
@@ -259,7 +259,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
             LOG_INFO("[{}] add duplication successfully [app_name: {}, follower: {}]",
                      dup->log_prefix(),
                      app->app_name,
-                     dup->follower_cluster_name);
+                     dup->remote_cluster_name);
 
             // The duplication starts only after it's been persisted.
             dup->persist_status();
@@ -376,7 +376,7 @@ void meta_duplication_service::create_follower_app_for_duplication(
     const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
 {
     configuration_create_app_request request;
-    request.app_name = dup->follower_app_name;
+    request.app_name = dup->remote_app_name;
     request.options.app_type = app->app_type;
     request.options.partition_count = app->partition_count;
     request.options.replica_count = app->max_replica_count;
@@ -396,8 +396,8 @@ void meta_duplication_service::create_follower_app_for_duplication(
                                  app->app_name);
 
     host_port meta_servers;
-    meta_servers.assign_group(dup->follower_cluster_name.c_str());
-    meta_servers.group_host_port()->add_list(dup->follower_cluster_metas);
+    meta_servers.assign_group(dup->remote_cluster_name.c_str());
+    meta_servers.group_host_port()->add_list(dup->remote_cluster_metas);
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CREATE_APP);
     dsn::marshall(msg, request);
@@ -431,7 +431,7 @@ void meta_duplication_service::create_follower_app_for_duplication(
             } else {
                 LOG_ERROR("created follower app[{}.{}] to trigger duplicate checkpoint failed: "
                           "duplication_status = {}, create_err = {}, update_err = {}",
-                          dup->follower_cluster_name,
+                          dup->remote_cluster_name,
                           dup->app_name,
                           duplication_status_to_string(dup->status()),
                           create_err,
@@ -444,8 +444,8 @@ void meta_duplication_service::check_follower_app_if_create_completed(
     const std::shared_ptr<duplication_info> &dup)
 {
     host_port meta_servers;
-    meta_servers.assign_group(dup->follower_cluster_name.c_str());
-    meta_servers.group_host_port()->add_list(dup->follower_cluster_metas);
+    meta_servers.assign_group(dup->remote_cluster_name.c_str());
+    meta_servers.group_host_port()->add_list(dup->remote_cluster_metas);
 
     query_cfg_request meta_config_request;
     meta_config_request.app_name = dup->app_name;
@@ -519,7 +519,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                       LOG_ERROR(
                           "query follower app[{}.{}] replica configuration completed, result: "
                           "duplication_status = {}, query_err = {}, update_err = {}",
-                          dup->follower_cluster_name,
+                          dup->remote_cluster_name,
                           dup->app_name,
                           duplication_status_to_string(dup->status()),
                           query_err,
@@ -562,9 +562,9 @@ void meta_duplication_service::do_update_partition_confirmed(
 }
 
 std::shared_ptr<duplication_info>
-meta_duplication_service::new_dup_from_init(const std::string &follower_cluster_name,
-                                            const std::string &follower_app_name,
-                                            std::vector<host_port> &&follower_cluster_metas,
+meta_duplication_service::new_dup_from_init(const std::string &remote_cluster_name,
+                                            const std::string &remote_app_name,
+                                            std::vector<host_port> &&remote_cluster_metas,
                                             std::shared_ptr<app_state> &app) const
 {
     duplication_info_s_ptr dup;
@@ -584,9 +584,9 @@ meta_duplication_service::new_dup_from_init(const std::string &follower_cluster_
                                                  app->app_name,
                                                  app->partition_count,
                                                  dsn_now_ms(),
-                                                 follower_cluster_name,
-                                                 follower_app_name,
-                                                 std::move(follower_cluster_metas),
+                                                 remote_cluster_name,
+                                                 remote_app_name,
+                                                 std::move(remote_cluster_metas),
                                                  std::move(dup_path));
         for (int32_t i = 0; i < app->partition_count; i++) {
             dup->init_progress(i, invalid_decree);
