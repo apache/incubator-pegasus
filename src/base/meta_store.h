@@ -101,7 +101,6 @@ private:
     static const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
     static const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
 
-
     const std::string _log_prefix;
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_meta_cf;

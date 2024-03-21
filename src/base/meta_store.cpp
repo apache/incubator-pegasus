@@ -41,7 +41,6 @@ const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL = "normal";
 const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE = "prefer_write";
 const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD = "bulk_load";
 
-
 meta_store::meta_store(const char *log_prefix,
                        rocksdb::DB *db,
                        rocksdb::ColumnFamilyHandle *meta_cf)
