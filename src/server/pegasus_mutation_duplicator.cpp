@@ -242,8 +242,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             batch_bytes += raw_message.length();
         }
 
-        if (batch_count == muts.size() ||
-            batch_bytes >= FLAGS_duplicate_log_batch_bytes ||
+        if (batch_count == muts.size() || batch_bytes >= FLAGS_duplicate_log_batch_bytes ||
             batch_bytes >= dsn::replication::FLAGS_dup_max_allowed_write_size) {
             // since all the plog's mutations of replica belong to same gpid though the hash of
             // mutation is different, use the last mutation of one batch to get and represents the
