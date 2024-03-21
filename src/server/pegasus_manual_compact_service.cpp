@@ -22,6 +22,7 @@
 #include <absl/strings/string_view.h>
 #include <limits.h>
 #include <rocksdb/options.h>
+#include <chrono>
 #include <list>
 #include <ostream>
 #include <set>
@@ -308,6 +309,20 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
         LOG_INFO_PREFIX("ignored compact because exceed max_concurrent_running_count({})",
                         _max_concurrent_running_count.load());
         _manual_compact_enqueue_time_ms.store(0);
+
+        _pfc_manual_compact_enqueue_count->increment();
+        int loop_enqueue_time = now_timestamp() + 60 * 1000;
+        _manual_compact_enqueue_time_ms.store(loop_enqueue_time);
+        dsn::tasking::enqueue(LPC_MANUAL_COMPACT,
+                              &_app->_tracker,
+                              [this, options]() {
+                                  _pfc_manual_compact_enqueue_count->decrement();
+                                  manual_compact(options);
+                              },
+                              0,
+                              std::chrono::seconds(60));
+        LOG_INFO_PREFIX("retry 60 seconds later,now task enqueue time({})ms",
+                        _manual_compact_enqueue_time_ms.load());
         return;
     }
 
