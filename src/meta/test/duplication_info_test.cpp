@@ -191,7 +191,7 @@ public:
 };
 
 const std::string duplication_info_test::kTestAppName = "temp";
-const std::string duplication_info_test::kTestRemoteClusterName = "follower-cluster";
+const std::string duplication_info_test::kTestRemoteClusterName = "slave-cluster";
 const std::string duplication_info_test::kTestRemoteAppName = "remote_temp";
 const std::string duplication_info_test::kTestMetaStorePath = "/meta_test/101/duplication/1";
 
