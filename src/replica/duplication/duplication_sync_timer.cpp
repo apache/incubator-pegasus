@@ -42,7 +42,7 @@
 
 namespace dsn {
 class app_info;
-}  // namespace dsn
+} // namespace dsn
 
 DSN_DEFINE_uint64(
     replication,
